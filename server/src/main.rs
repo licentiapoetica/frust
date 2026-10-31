@@ -26,6 +26,7 @@ mod state;
 mod tpl;
 mod util;
 mod webauthn;
+mod wordfilter;
 
 use anyhow::{Context, Result};
 use arc_swap::ArcSwap;

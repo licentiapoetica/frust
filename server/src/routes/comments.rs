@@ -372,7 +372,7 @@ async fn post_comment(st: AppState, mut req: Req) -> Res {
     let item_id = js_str(body.get("item_id")).as_deref().and_then(js_parse_int);
     let parent_id = if h::js_truthy(body.get("parent_id")) { js_str(body.get("parent_id")).as_deref().and_then(js_parse_int).filter(|p| *p != 0) } else { None };
     let raw_content = if h::js_truthy(body.get("content")) { js_str(body.get("content")).unwrap_or_default() } else { String::new() };
-    let content = h::apply_word_filter(&st, &raw_content).await;
+    let content = crate::wordfilter::apply_word_filter(&st, &raw_content).await;
     let video_time = js_str(body.get("video_time")).filter(|v| !v.is_empty()).as_deref().and_then(js_parse_float);
     let file_ids = parse_file_ids(&js_str(body.get("file_ids")).unwrap_or_default());
     let has_poll = matches!(js_str(body.get("has_poll")).as_deref(), Some("1" | "true"));
@@ -882,7 +882,7 @@ async fn edit_comment(st: AppState, mut req: Req) -> Res {
     }
     let body = req.post_value().await;
     let content = match js_str(body.get("content")) {
-        Some(c) => h::apply_word_filter(&st, &c).await,
+        Some(c) => crate::wordfilter::apply_word_filter(&st, &c).await,
         None => String::new(),
     };
     if content.trim().is_empty() {

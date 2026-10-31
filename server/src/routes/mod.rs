@@ -14,6 +14,7 @@ pub mod subscriptions;
 pub mod theme;
 pub mod uploads;
 pub mod user_halls;
+pub mod wordfilter;
 
 pub fn build() -> Router {
     let mut r = Router::new();
@@ -23,6 +24,7 @@ pub fn build() -> Router {
     register::register(&mut r);
     apiv2::anon::register(&mut r);
     apiv2::passkeys::register(&mut r);
+    wordfilter::register(&mut r);
     static_files::register(&mut r);
     theme::register(&mut r);
     uploads::register(&mut r);

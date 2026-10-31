@@ -99,4 +99,11 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       last_used timestamp with time zone DEFAULT now()
     )"#,
     r#"CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user_id ON webauthn_credentials(user_id)"#,
+    // routes/wordfilter.mjs created its table at startup
+    r#"CREATE TABLE IF NOT EXISTS public.wordfilter (
+      id SERIAL PRIMARY KEY,
+      word VARCHAR(255) NOT NULL UNIQUE,
+      replacement VARCHAR(255) NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )"#,
 ];
