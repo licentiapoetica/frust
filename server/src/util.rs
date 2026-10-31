@@ -426,3 +426,132 @@ pub fn json_for_script(v: &Value) -> String {
 pub fn json_string(v: &Value) -> String {
     serde_json::to_string(v).unwrap_or_else(|_| "null".into())
 }
+
+// ── lib.mjs: tags & favorites (added with the feed port) ───────────────────
+
+/// lib.userHasFavorited(session, favorites)
+pub fn user_has_favorited(session: Option<&crate::session::Session>, favorites: &[Value]) -> bool {
+    let Some(s) = session else { return false };
+    if favorites.is_empty() {
+        return false;
+    }
+    let sess_id = Some(s.id).filter(|&i| i != 0);
+    let sess_user = s.user.to_lowercase();
+    let sess_login = s.login.to_lowercase();
+    let sess_anon = s.anon_login.as_deref().unwrap_or("").to_lowercase();
+    favorites.iter().any(|f| {
+        let f_id = crate::config::as_int(&f["user_id"]).filter(|&i| i != 0).or_else(|| crate::config::as_int(&f["id"]).filter(|&i| i != 0));
+        if sess_id.is_some() && f_id.is_some() && f_id == sess_id {
+            return true;
+        }
+        let f_user = f["user"].as_str().unwrap_or("").to_lowercase();
+        let f_login = f["login"].as_str().unwrap_or("").to_lowercase();
+        if !sess_user.is_empty() && sess_user != "anonymous" && (f_user == sess_user || f_login == sess_user) {
+            return true;
+        }
+        if !sess_login.is_empty() && (f_user == sess_login || f_login == sess_login) {
+            return true;
+        }
+        !sess_anon.is_empty() && (f_user == sess_anon || f_login == sess_anon)
+    })
+}
+
+/// lib.getTags(itemid, session, subf0ckId) — the item's tags (rating first) with badge and
+/// exclusion flags; tagger names only for regular sessions.
+pub async fn get_tags(
+    st: &crate::state::AppState,
+    itemid: i64,
+    session: Option<&crate::session::Session>,
+    subf0ck_id: Option<&str>,
+) -> anyhow::Result<Vec<Value>> {
+    use crate::db::{RowExt, Sql};
+    let cfg = st.cfg();
+    let anonymized = crate::settings::is_anonymize_session(&cfg, session);
+    let has_session = !anonymized && session.map(|s| !s.is_anon && (s.id != 0 || !s.user.is_empty())).unwrap_or(false);
+    let itemid32 = itemid as i32;
+
+    let mut album_item_id: Option<i32> = None;
+    if let Some(sub) = subf0ck_id.filter(|s| !s.is_empty()) {
+        if let Some(n) = sub.trim().parse::<i64>().ok().filter(|&n| n > 0) {
+            album_item_id = crate::sql!(
+                "SELECT id FROM album_items WHERE (id = ", n as i32, " OR (item_id = ", itemid32, " AND order_index = ", n as i32,
+                ")) AND item_id = ", itemid32, " LIMIT 1"
+            )
+            .fetch_scalar(&st.db)
+            .await?;
+        }
+        if album_item_id.is_none() {
+            album_item_id = crate::sql!("SELECT id FROM album_items WHERE slug = ", sub, " AND item_id = ", itemid32, " LIMIT 1")
+                .fetch_scalar(&st.db)
+                .await?;
+        }
+    }
+
+    const ORDER: &str = r#" order by (case when "tags".id = 1 then 0 when "tags".id = 2 then 1 when "tags".normalized = 'nsfl' then 2 else 3 end) asc"#;
+    let cols = |assign: &str| -> Sql {
+        let mut q = Sql::new(r#"select "tags".id, "tags".tag, "tags".normalized"#);
+        if has_session {
+            q.push(r#", "user".user, uo.display_name"#);
+        }
+        q.push(&format!(r#" from "{assign}" left join "tags" on "tags".id = "{assign}".tag_id "#));
+        if has_session {
+            q.push(&format!(r#"left join "user" on "user".id = "{assign}".user_id left join user_options uo on uo.user_id = "user".id "#));
+        }
+        q
+    };
+    let mut tags: Vec<crate::db::Row> = match album_item_id {
+        Some(aid) => {
+            let mut q = cols("album_items_tags_assign");
+            q.push(r#"where "album_items_tags_assign".album_item_id = "#).bind(aid).push(ORDER).push(r#", "tags".id asc"#);
+            let mut tags = q.fetch_all(&st.db).await?;
+            let has_sub_rating = tags.iter().any(|t| {
+                matches!(t.str("normalized"), Some("sfw" | "nsfw" | "nsfl")) || matches!(t.i64("id"), Some(1 | 2))
+            });
+            if !has_sub_rating {
+                let mut q = cols("tags_assign");
+                q.push(r#"where "tags_assign".item_id = "#)
+                    .bind(itemid32)
+                    .push(r#" and ("tags".id in (1, 2) or "tags".normalized in ('sfw', 'nsfw', 'nsfl'))"#)
+                    .push(ORDER)
+                    .push(" limit 1");
+                if let Some(parent) = q.fetch_all(&st.db).await?.into_iter().next() {
+                    tags.insert(0, parent);
+                }
+            }
+            tags
+        }
+        None => {
+            let mut q = cols("tags_assign");
+            q.push(r#"where "tags_assign".item_id = "#).bind(itemid32).push(ORDER).push(r#", "tags".id asc"#);
+            q.fetch_all(&st.db).await?
+        }
+    };
+
+    let excluded: &[i64] = session.map(|s| s.excluded_tags.as_slice()).unwrap_or(&[]);
+    let can_exclude = match session {
+        Some(s) if !s.is_anon => true,
+        _ => crate::settings::can_anon_do(&cfg, "exclude_tags"),
+    };
+    let mut has_rating = false;
+    let mut out = Vec::with_capacity(tags.len());
+    for mut t in tags.drain(..) {
+        let is_rating = matches!(t.str("normalized"), Some("sfw" | "nsfw" | "nsfl"));
+        if is_rating {
+            if has_rating {
+                continue;
+            }
+            has_rating = true;
+        }
+        let badge = get_badge(&cfg, t.str("tag").unwrap_or(""), t.str("normalized").unwrap_or(""));
+        t.insert("badge".into(), json!(badge));
+        let excl = !is_rating && t.i64("id").map(|id| excluded.contains(&id)).unwrap_or(false);
+        t.insert("is_excluded".into(), json!(excl));
+        t.insert("can_exclude".into(), json!(can_exclude));
+        if !has_session {
+            t.remove("user");
+            t.remove("display_name");
+        }
+        out.push(Value::Object(t));
+    }
+    Ok(out)
+}

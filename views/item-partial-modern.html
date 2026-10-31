@@ -219,7 +219,7 @@
         </div>
 
         {% if enable_comments %}
-        <script id="initial-subscription" type="application/json">{{ isSubscribed|safe }}</script>
+        <script id="initial-subscription" type="application/json">{{ (isSubscribed == true)|tojson }}</script>
         {% endif %}
     </div>
 

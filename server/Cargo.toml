@@ -63,3 +63,4 @@ ciborium = "0.2"
 httpdate = "1"
 webauthn-rs = { version = "0.5", features = ["conditional-ui", "danger-allow-state-serialisation"] }
 argon2 = "0.5"
+unicode-normalization = "0.1"

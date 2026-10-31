@@ -313,7 +313,7 @@
         {% endif %}
         <button class="mobile-scroll-to-top" title="Back to top" aria-label="Scroll to top"><i class="fa-solid fa-chevron-up"></i></button>
         {% if enable_comments %}
-        <script id="initial-subscription" type="application/json">{{ isSubscribed|safe }}</script>
+        <script id="initial-subscription" type="application/json">{{ (isSubscribed == true)|tojson }}</script>
         {% endif %}
 
     </div>

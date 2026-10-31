@@ -5,6 +5,7 @@ mod app;
 mod bot;
 mod config;
 mod db;
+mod f0cklib;
 mod gate;
 mod hidden_items;
 mod http;
