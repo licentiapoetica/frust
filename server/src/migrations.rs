@@ -88,6 +88,34 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       data JSONB,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
+    // migrations/add_session_passkey_credential.sql: the passkey that opened a session
+    r#"ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS passkey_credential_id TEXT"#,
+    // migrations/add_report_categories.sql
+    r#"ALTER TABLE reports ADD COLUMN IF NOT EXISTS categories text[] DEFAULT '{}'"#,
+    // migrations/add_invite_requests.sql: anonymous users asking admins for an invite token
+    r#"CREATE TABLE IF NOT EXISTS invite_requests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES "user"(id) ON DELETE SET NULL,
+      fingerprint VARCHAR(128) NOT NULL,
+      ip_hash VARCHAR(128),
+      reason TEXT DEFAULT '',
+      status VARCHAR(16) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied', 'revoked')),
+      token_id INTEGER REFERENCES invite_tokens(id) ON DELETE SET NULL,
+      reviewed_by INTEGER REFERENCES "user"(id) ON DELETE SET NULL,
+      reviewed_at TIMESTAMP WITH TIME ZONE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_invite_requests_fingerprint ON invite_requests(fingerprint)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_invite_requests_status ON invite_requests(status)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_invite_requests_pending ON invite_requests(created_at) WHERE (status = 'pending')"#,
+    // migrations/fix_null_visibility.sql, then make the column NOT NULL (only touches the table once)
+    r#"DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'public' AND table_name = 'items' AND column_name = 'visibility' AND is_nullable = 'YES') THEN
+        UPDATE items SET visibility = 0 WHERE visibility IS NULL;
+        ALTER TABLE items ALTER COLUMN visibility SET NOT NULL;
+      END IF;
+    END $$"#,
 ];
 
 #[cfg(test)]
