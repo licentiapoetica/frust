@@ -2,7 +2,7 @@ services:
   f0ckm:
     container_name: f0ckm
     user: "${UID:-1000}:${GID:-1000}"
-    image: ${f0ckm_IMAGE:-f0ckm}:${f0ckm_TAG:-latest}
+    image: ${F0CKM_IMAGE:-f0ckm}:${F0CKM_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -12,9 +12,9 @@ services:
       - f0ckm-net
     volumes:
       - ./config.yaml:/opt/f0ckm/config.yaml:ro,Z
-      - ./src/:/opt/f0ckm/src/:Z
+      # Templates and translations are re-read when they change, so edits apply without a rebuild
       - ./views/:/opt/f0ckm/views/:Z
-      - ./scripts/:/opt/f0ckm/scripts/:Z
+      - ./locales/:/opt/f0ckm/locales/:Z
       - ./f0ckm-data/a/:/opt/f0ckm/public/a/:Z
       - ./f0ckm-data/b/:/opt/f0ckm/public/b/:Z
       - ./f0ckm-data/c/:/opt/f0ckm/public/c/:Z
@@ -38,7 +38,7 @@ services:
       - ./f0ckm-data/s/img/navbar/:/opt/f0ckm/public/s/img/navbar/:Z
 
     environment:
-      - GIT_HASH=${f0ckm_TAG:-unknown}
+      - GIT_HASH=${F0CKM_TAG:-unknown}
       - VIRTUAL_HOST=${VIRTUAL_HOST:-localhost}
       - VIRTUAL_PORT=1337
       - LETSENCRYPT_HOST=${LETSENCRYPT_HOST:-}
@@ -48,7 +48,8 @@ services:
       - DB_USER=${POSTGRES_USER:-f0ckm}
       - DB_PASS=${POSTGRES_PASSWORD:-f0ckm}
       - DB_NAME=${POSTGRES_DB:-f0ckm}
-      - NODE_ENV=production
+      - CONTAINER=true
+      - F0CKM_PORT=1337
       # Dedicated secret for IP hashing (HMAC). Set in .env, keep it out of config.yaml and DB backups.
       - IP_HASH_SECRET=${IP_HASH_SECRET:-}
     ports:

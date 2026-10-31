@@ -5,8 +5,21 @@
 .gitea
 .eslintrc.json
 
-# Dependencies (rebuilt in container)
+# Node (no longer part of the image)
 node_modules
+src/
+debug/
+scripts/*.mjs
+package.json
+package-lock.json
+
+# Rust build output (the image compiles its own)
+server/target
+**/target
+
+# Built in the image
+public/s/ruffle
+public/s/css/bundle.css
 
 # Docker files
 Dockerfile
@@ -14,6 +27,22 @@ Dockerfile
 # Config (mounted at runtime)
 config.yaml
 config.json
+.env
+
+# Media and runtime data (mounted at runtime)
+public/a
+public/b
+public/c
+public/ca
+public/cu
+public/e
+public/t
+public/memes
+public/tag_cache
+public/hall_cache
+public/hall_custom
+deleted/
+pending/
 
 # Development
 logs/
