@@ -118,6 +118,8 @@ async fn image_upload(st: AppState, mut req: Req) -> Res {
     }
     let dir = custom_dir(&st);
     tokio::fs::create_dir_all(&dir).await?;
+    // `public/s/../hall_custom`: ImageMagick's policy refuses paths containing `..`
+    let dir = tokio::fs::canonicalize(&dir).await?;
     let final_name = format!("{fslug}.webp");
     let (src, out) = (file.path.display().to_string(), dir.join(&final_name).display().to_string());
     // -coalesce composites animated GIF frames before resizing
@@ -169,13 +171,15 @@ async fn delete(st: AppState, req: Req) -> Res {
     if let Err(e) = sql!("DELETE FROM halls_assign WHERE hall_id = (SELECT id FROM halls WHERE slug = ", &slug, ")").execute(&st.db).await {
         tracing::warn!("[HALL] halls_assign cleanup failed: {e}");
     }
-    sql!("DELETE FROM halls WHERE slug = ", &slug).execute(&st.db).await?;
+    let deleted = sql!("DELETE FROM halls WHERE slug = ", &slug).execute(&st.db).await?;
     if let Some(fs) = file_slug(&slug) {
         let _ = tokio::fs::remove_file(custom_dir(&st).join(format!("{fs}.webp"))).await;
     }
     clear_hall_cache(&st, &slug).await;
     st.update_halls_cache().await;
-    crate::audit::log(&st, session.id, "delete_hall", "hall", slug.clone(), json!({ "slug": slug })).await;
+    if deleted > 0 {
+        crate::audit::log(&st, session.id, "delete_hall", "hall", slug.clone(), json!({ "slug": slug })).await;
+    }
     tracing::info!("[HALL] Deleted hall: {slug}");
     send(json!({ "success": true, "msg": "Hall deleted" }), 200)
 }

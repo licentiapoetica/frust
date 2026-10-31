@@ -63,11 +63,11 @@
 
         <script>
             window.memeTemplate = {
-                id: "{{ template.id }}",
-                url: "{{ template.url }}",
-                name: "{{ template.name }}",
-                category: "{{ (template.category or "General") }}",
-                sub_category: "{{ (template.sub_category or "") }}"
+                id: {{ template.id|string|tojson }},
+                url: {{ template.url|string|tojson }},
+                name: {{ template.name|string|tojson }},
+                category: {{ (template.category or "General")|string|tojson }},
+                sub_category: {{ (template.sub_category or "")|string|tojson }}
             };
             window.csrf_token = {{ csrf_token|string|tojson }};
         </script>

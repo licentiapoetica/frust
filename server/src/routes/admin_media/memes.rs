@@ -1,7 +1,7 @@
 //! Meme templates: the admin manager (src/inc/routes/meme-manager.mjs), template upload/edit
 //! (src/meme_upload_handler.mjs) and the meme creator pages (src/inc/routes/meme.mjs).
 
-use super::{admin_session, csrf_header_ok, file_size, pg_code, read_form, send, trimmed};
+use super::{admin_session, csrf_header_ok, err_msg, file_size, pg_code, read_form, send, trimmed};
 use crate::db::RowExt;
 use crate::http::{Guard, Req, Res, Router, html, raw};
 use crate::sql;
@@ -177,6 +177,13 @@ async fn store_meme_file(st: &AppState, template_id: &str, file: &crate::media::
     Ok(Ok(format!("/memes/{filename}")))
 }
 
+/// Delete a file we stored for a template (`/memes/<plain name>` only).
+async fn remove_meme_file(st: &AppState, url: &str) {
+    if let Some(name) = url.strip_prefix("/memes/").filter(|n| crate::media::is_plain_name(n)) {
+        let _ = tokio::fs::remove_file(st.cfg().paths.memes.join(name)).await;
+    }
+}
+
 struct MemeFields {
     template_id: String,
     name: String,
@@ -205,7 +212,7 @@ fn db_fail(e: anyhow::Error) -> Res {
         return msg(400, "Template ID is already in use by another template");
     }
     tracing::error!("[MEME HANDLER ERROR] {e:#}");
-    msg(500, &e.to_string())
+    msg(500, &err_msg(&e))
 }
 
 async fn upload_meme(st: AppState, mut req: Req) -> Res {
@@ -238,7 +245,16 @@ async fn upload_meme(st: AppState, mut req: Req) -> Res {
             ") RETURNING id, template_id, name, url, category"
         )
         .fetch_optional(&st.db)
-        .await?;
+        .await;
+        let row = match row {
+            Ok(r) => r,
+            Err(e) => {
+                if form.file("file").is_some_and(|x| x.size > 0) {
+                    remove_meme_file(&st, &f.url).await;
+                }
+                return Err(e);
+            }
+        };
         Ok(send(json!({ "success": true, "meme": row }), 200))
     }
     .await;
@@ -270,11 +286,13 @@ async fn edit_meme(st: AppState, mut req: Req) -> Res {
         if sql!("SELECT id FROM meme_templates WHERE template_id = ", &f.template_id, " AND id != ", id).fetch_optional(&st.db).await?.is_some() {
             return Ok(msg(400, "Template ID is already in use by another template"));
         }
+        let mut replaced_file = false;
         if let Some(file) = form.file("file").filter(|x| x.size > 0) {
             match store_meme_file(&st, &f.template_id, file).await? {
                 Ok(u) => f.url = u,
                 Err(m) => return Ok(msg(400, &m)),
             }
+            replaced_file = true;
         }
         if f.url.is_empty() {
             f.url = current.string("url");
@@ -284,6 +302,10 @@ async fn edit_meme(st: AppState, mut req: Req) -> Res {
         )
         .execute(&st.db)
         .await?;
+        // The old handler left the replaced upload behind
+        if replaced_file && current.str("url") != Some(f.url.as_str()) {
+            remove_meme_file(&st, current.str("url").unwrap_or("")).await;
+        }
         Ok(send(json!({ "success": true }), 200))
     }
     .await;

@@ -68,7 +68,7 @@ async fn koepfe_upload(st: AppState, mut req: Req) -> Res {
         Ok(url) => send(json!({ "success": true, "file": url }), 200),
         Err(e) => {
             tracing::error!("[KOEPFE] {e:#}");
-            msg(500, &e.to_string())
+            msg(500, &super::err_msg(&e))
         }
     }
 }
@@ -198,7 +198,7 @@ async fn brand_upload(st: AppState, mut req: Req) -> Res {
     .await;
     r.unwrap_or_else(|e| {
         tracing::error!("[BRAND UPLOAD ERROR] {e:#}");
-        msg(500, &format!("Upload failed: {e}"))
+        msg(500, &format!("Upload failed: {}", super::err_msg(&e)))
     })
 }
 
@@ -210,7 +210,7 @@ async fn brand_delete(st: AppState, req: Req) -> Res {
     delete_old_brand_file(&st).await;
     if let Err(e) = persist_brand(&st, "").await {
         tracing::error!("[BRAND DELETE ERROR] {e:#}");
-        return msg(500, &format!("Delete failed: {e}"));
+        return msg(500, &format!("Delete failed: {}", super::err_msg(&e)));
     }
     let _ = crate::sql!("SELECT pg_notify('brand_image', ", json!({ "url": null }).to_string(), ")").execute(&st.db).await;
     crate::audit::log(&st, session.id, "delete_brand_image", "system", "0".to_string(), json!({})).await;

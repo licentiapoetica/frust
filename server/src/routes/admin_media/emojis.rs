@@ -1,7 +1,7 @@
 //! Custom emojis and sticker packs: src/inc/routes/emojis.mjs, src/emoji_upload_handler.mjs and
 //! src/sticker_pack_handler.mjs (Telegram import).
 
-use super::{admin_session, convert_to_webp, csrf_header_ok, file_size, local_emoji_file, magick, pg_code, read_form, send, trimmed};
+use super::{admin_session, convert_to_webp, csrf_header_ok, err_msg, file_size, local_emoji_file, magick, pg_code, read_form, send, trimmed};
 use crate::db::{Row, RowExt};
 use crate::http::{Guard, Req, Res, Router, html};
 use crate::sql;
@@ -257,7 +257,7 @@ async fn rename_pack(st: AppState, mut req: Req) -> Res {
         }
         Err(e) => {
             tracing::error!("[RENAME PACK] {e:#}");
-            msg(500, &format!("Database error: {e}"))
+            msg(500, &format!("Database error: {}", err_msg(&e)))
         }
     }
 }
@@ -327,7 +327,7 @@ async fn reconvert(st: AppState, req: Req) -> Res {
         Ok(r) => r,
         Err(e) => {
             tracing::error!("[EMOJI RECONVERT] Fatal error: {e}");
-            return msg(500, &e.to_string());
+            return msg(500, &err_msg(&e));
         }
     };
     let (mut converted, mut skipped, mut errors) = (0, 0, 0);
@@ -470,13 +470,25 @@ async fn upload_emoji(st: AppState, mut req: Req) -> Res {
         return msg(400, "Invalid name. Use lowercase a-z, 0-9, _, - only.");
     }
     let r: anyhow::Result<Res> = async {
+        let mut stored = false;
         if let Some(file) = form.file("file").filter(|f| f.size > 0) {
             url = store_emoji_file(&st, &file.path).await?;
+            stored = true;
         }
         if url.is_empty() {
             return Ok(msg(400, "Either image URL or File is required"));
         }
-        let row = sql!("INSERT INTO custom_emojis (name, url) VALUES (", &name, ", ", &url, ") RETURNING id, name, url").fetch_optional(&st.db).await?;
+        let row = match sql!("INSERT INTO custom_emojis (name, url) VALUES (", &name, ", ", &url, ") RETURNING id, name, url").fetch_optional(&st.db).await {
+            Ok(r) => r,
+            Err(e) => {
+                if stored {
+                    if let Some(f) = local_emoji_file(&url) {
+                        let _ = tokio::fs::remove_file(st.cfg().paths.emojis.join(f)).await;
+                    }
+                }
+                return Err(e);
+            }
+        };
         tracing::info!("[EMOJI HANDLER] Success: {name}");
         notify_emojis(&st).await;
         Ok(send(json!({ "success": true, "emoji": row }), 200))
@@ -487,7 +499,7 @@ async fn upload_emoji(st: AppState, mut req: Req) -> Res {
         Err(e) if pg_code(&e).as_deref() == Some("23505") => msg(400, "Emoji name already exists"),
         Err(e) => {
             tracing::error!("[EMOJI HANDLER ERROR] {e:#}");
-            msg(500, &e.to_string())
+            msg(500, &err_msg(&e))
         }
     }
 }
@@ -542,7 +554,7 @@ async fn edit_emoji(st: AppState, mut req: Req) -> Res {
         Err(e) if pg_code(&e).as_deref() == Some("23505") => msg(400, "Emoji name already exists"),
         Err(e) => {
             tracing::error!("[EMOJI EDIT ERROR] {e:#}");
-            msg(500, &e.to_string())
+            msg(500, &err_msg(&e))
         }
     }
 }

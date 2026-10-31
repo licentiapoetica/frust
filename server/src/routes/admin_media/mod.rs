@@ -56,12 +56,20 @@ pub(crate) fn declared_len(req: &Req) -> Option<u64> {
     req.header("content-length").and_then(|v| v.trim().parse().ok())
 }
 
-/// Postgres error code of a failed query (`err.code` in postgres.js).
+/// Postgres error code of a failed query (`err.code` in postgres.js). `db::Sql` turns sqlx errors
+/// into message strings, so a unique violation is also recognised by its message.
 pub(crate) fn pg_code(e: &anyhow::Error) -> Option<String> {
-    e.chain()
+    let code = e
+        .chain()
         .find_map(|c| c.downcast_ref::<sqlx::Error>())
         .and_then(|e| e.as_database_error())
-        .and_then(|d| d.code().map(|c| c.into_owned()))
+        .and_then(|d| d.code().map(|c| c.into_owned()));
+    code.or_else(|| e.to_string().contains("duplicate key value violates unique constraint").then(|| "23505".to_string()))
+}
+
+/// Error text for the client: the first line only (`db::Sql` errors append the query).
+pub(crate) fn err_msg(e: &anyhow::Error) -> String {
+    e.to_string().lines().next().unwrap_or("").to_string()
 }
 
 /// `magick` with the project's policy (`config/magick-policy` raises list-length for big GIFs).
