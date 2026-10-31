@@ -1,4 +1,13 @@
 (function () {
+    F0ckActions.define({
+        // Thumbnail failed: hide it and reveal the placeholder that follows it
+        'sidebar-thumb-fail': (el) => {
+            el.style.display = 'none';
+            if (el.nextElementSibling) el.nextElementSibling.classList.remove('hidden');
+        },
+        'sidebar-img-loaded': (el) => { el.classList.add('loaded'); },
+    });
+
     let customEmojis = {};
     let loading = false;
     let loadingMore = false;
@@ -552,7 +561,7 @@
                 `;
             } else {
                 mediaHtml = `
-                    <img src="${thumbUrl}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 2px;" loading="lazy" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.classList.remove('hidden');" />
+                    <img src="${thumbUrl}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 2px;" loading="lazy" data-on="error:sidebar-thumb-fail" />
                     <div class="sidebar-media-placeholder ${isAudio ? 'audio' : ''} hidden">
                         <i class="${isAudio ? 'fa-solid fa-music' : 'fa-solid fa-image'}"></i>
                     </div>
@@ -584,7 +593,7 @@
         const effectiveBannerStyle = isAnonGuest ? '' : bannerStyle;
         const authorAvatarHtml = isAnonGuest
             ? `<span class="sidebar-avatar-link"><img src="/a/default.png" class="sidebar-avatar" loading="eager" /></span>`
-            : `<a href="/user/${c.username.toLowerCase()}" class="sidebar-avatar-link"><img src="${avatarSrc}" class="sidebar-avatar" loading="eager" onload="this.classList.add('loaded')" onerror="this.classList.add('loaded');this.src='/a/default.png'" /></a>`;
+            : `<a href="/user/${c.username.toLowerCase()}" class="sidebar-avatar-link"><img src="${avatarSrc}" class="sidebar-avatar" loading="eager" data-on="load:sidebar-img-loaded error:sidebar-img-loaded,img-fallback" data-fallback="/a/default.png" /></a>`;
         const authorNameHtml = isAnonGuest
             ? `<span class="comment-author">anonymous</span>`
             : `<a href="/user/${c.username.toLowerCase()}" class="comment-author" ${c.username_color ? `style="color: ${c.username_color}"` : ''}>${escapeHtml(c.display_name || c.username)}</a>`;
@@ -1246,7 +1255,7 @@
             `;
         } else {
             thumbContentHtml = `
-                <img src="${thumbUrl}" class="sidebar-video-thumb" alt="${escapeHtml(displayTitle)}" loading="lazy" draggable="false" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.classList.remove('hidden');" />
+                <img src="${thumbUrl}" class="sidebar-video-thumb" alt="${escapeHtml(displayTitle)}" loading="lazy" draggable="false" data-on="error:sidebar-thumb-fail" />
                 <div class="sidebar-media-placeholder ${isAudio ? 'audio' : ''} hidden">
                     <i class="${overlayIcon}"></i>
                 </div>
@@ -2222,7 +2231,7 @@
                         <div class="sidebar-video-card${activeClass}" data-id="${v.no}">
                             <a href="${targetHref}" class="sidebar-video-link" data-inherit-context="false">
                                 <div class="sidebar-video-thumb-wrap">
-                                    <img src="${escapeHtml(v.thumb)}" class="sidebar-video-thumb" alt="${escapeHtml(displayTitle)}" loading="lazy" draggable="false" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.classList.remove('hidden');" />
+                                    <img src="${escapeHtml(v.thumb)}" class="sidebar-video-thumb" alt="${escapeHtml(displayTitle)}" loading="lazy" draggable="false" data-on="error:sidebar-thumb-fail" />
                                     <div class="sidebar-media-placeholder hidden">
                                         <i class="${overlayIcon}"></i>
                                     </div>

@@ -54,14 +54,13 @@
     } catch { return false; }
   };
 
-  const runScripts = (root) => {
+  // Re-create the page's scripts while `root` is still detached: connecting an element clears its
+  // nonce attribute, which cloneScript checks. The copies run once `root` is inserted.
+  const prepareScripts = (root, nonce) => {
     root.querySelectorAll('script').forEach((old) => {
-      // JSON data blocks are read by the page scripts, not executed
-      if (old.type && old.type !== 'text/javascript' && old.type !== 'module') return;
-      const s = document.createElement('script');
-      for (const a of old.attributes) s.setAttribute(a.name, a.value);
-      s.textContent = old.textContent;
-      old.replaceWith(s);
+      const s = F0ckActions.cloneScript(old, nonce);
+      if (s) old.replaceWith(s);
+      else old.remove();
     });
   };
 
@@ -82,6 +81,7 @@
       const wrap = document.createElement('div');
       wrap.className = `${main.className} pgm-main`.trim();
       wrap.innerHTML = main.innerHTML;
+      prepareScripts(wrap, F0ckActions.responseNonce(res));
       body.innerHTML = '';
       body.appendChild(wrap);
       body.scrollTop = 0;
@@ -91,7 +91,6 @@
         titleEl.textContent = h ? h.textContent.trim() : '';
       }
       if (doc.title) document.title = doc.title;
-      runScripts(wrap);
     } catch (e) {
       if (seq !== loadSeq) return;
       body.innerHTML = `<div class="pgm-loading">Could not load this page. <a href="${url}" class="pgm-fallback">Open it directly</a>.</div>`;

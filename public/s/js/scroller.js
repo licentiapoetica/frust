@@ -21,6 +21,9 @@
   if (initFeed.__scrollerBound) return; // already bound to THIS feed element
   initFeed.__scrollerBound = true;
 
+  // "Adjust filters" button in the empty-feed message
+  F0ckActions.define('scroller-open-filters', () => { document.getElementById('filter-open-btn')?.click(); });
+
   // ── DOM ─────────────────────────────────────────────────────────────────
   const feed             = initFeed;
   const sentinel         = document.getElementById('scroller-sentinel');
@@ -1438,7 +1441,7 @@
         </div>`
       : `<div class="scroll-meta-top">
           <a href="/user/${esc(item.username)}" class="scroll-user-link">
-            <img class="scroll-avatar" src="${esc(item.avatar)}" alt="" loading="lazy" onerror="this.src='/a/default.png'">
+            <img class="scroll-avatar" src="${esc(item.avatar)}" alt="" loading="lazy" data-on="error:img-fallback" data-fallback="/a/default.png">
           </a>
           <div>
             <a href="/user/${esc(item.username)}" class="scroll-user-link">
@@ -2107,7 +2110,7 @@
     if (chanGalleryBtn) chanGalleryBtn.style.display = 'none';
     feed.querySelectorAll('.scroll-slide').forEach(s => { slideObserver.unobserve(s); s.remove(); });
     emptyEl.classList.remove('show');
-    emptyEl.innerHTML = `<i class="fa-solid fa-binoculars"></i><p>${(window.f0ckI18n && window.f0ckI18n.nothing_found) || 'Nothing found with current filters'}</p><button onclick="document.getElementById('filter-open-btn').click()" style="margin-top:8px;padding:8px 20px;border-radius:50px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:.8rem;">${(window.f0ckI18n && window.f0ckI18n.adjust_filters) || 'Adjust filters'}</button>`;
+    emptyEl.innerHTML = `<i class="fa-solid fa-binoculars"></i><p>${(window.f0ckI18n && window.f0ckI18n.nothing_found) || 'Nothing found with current filters'}</p><button data-on="click:scroller-open-filters" style="margin-top:8px;padding:8px 20px;border-radius:50px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:.8rem;">${(window.f0ckI18n && window.f0ckI18n.adjust_filters) || 'Adjust filters'}</button>`;
 
     hasMore = true; isFetching = false; lastCursor = null; consecutiveEmpty = 0; seenIds = new Set();
     feed.scrollTop = 0;
@@ -2245,7 +2248,7 @@
     const _i = window.f0ckI18n || {};
     const uname = isAnonGuest ? 'anonymous' : (c.display_name || c.username || 'anon');
     el.innerHTML = `
-      <img class="comment-avatar" src="${esc(av)}" alt="" loading="lazy" onerror="this.src='/a/default.png'">
+      <img class="comment-avatar" src="${esc(av)}" alt="" loading="lazy" data-on="error:img-fallback" data-fallback="/a/default.png">
       <div class="comment-body">
         <div class="comment-username" style="${nc}">${esc(uname)}</div>
         <div class="comment-content" data-raw="${esc(c.content || '')}">${renderCommentContent(c.content || '')}</div>
@@ -2354,7 +2357,7 @@
     const row = document.createElement('div');
     row.className = 'share-user-row';
     const av = u.avatar_file ? `/a/${u.avatar_file}` : (u.avatar ? `/t/${u.avatar}.webp` : '/a/default.png');
-    row.innerHTML = `<img src="${esc(av)}" onerror="this.src='/a/default.png'" alt=""><span class="share-user-row-name">${esc(u.display_name || u.user)}</span>`;
+    row.innerHTML = `<img src="${esc(av)}" data-on="error:img-fallback" data-fallback="/a/default.png" alt=""><span class="share-user-row-name">${esc(u.display_name || u.user)}</span>`;
     if (label) {
       const lbl = document.createElement('span');
       lbl.className = 'share-user-row-label'; lbl.textContent = label;
@@ -2709,7 +2712,7 @@
     users.forEach((u, i) => {
       const item = document.createElement('div'); item.className = 'mention-item'; item.dataset.idx = i;
       const av = u.avatar_file ? `/a/${u.avatar_file}` : (u.avatar ? `/t/${u.avatar}.webp` : '/a/default.png');
-      item.innerHTML = `<img class="mention-avatar" src="${esc(av)}" onerror="this.src='/a/default.png'">${esc(u.display_name || u.user)}`;
+      item.innerHTML = `<img class="mention-avatar" src="${esc(av)}" data-on="error:img-fallback" data-fallback="/a/default.png">${esc(u.display_name || u.user)}`;
       item.addEventListener('mousedown', e => { e.preventDefault(); insertMention(u.user); });
       mentionDropdown.appendChild(item);
     });
@@ -3539,7 +3542,7 @@
       card.dataset.search = `${(t.sub || '')} ${(t.com || '')}`.toLowerCase();
       const thumbUrl = t.tim ? `/api/v2/scroller/external/4chan/${board}/media/${t.tim}s.jpg` : '';
       card.innerHTML = `
-        ${thumbUrl ? `<img class="chan-thread-thumb" src="${thumbUrl}" loading="lazy" alt="" onerror="this.style.display='none'">` : '<div class="chan-thread-thumb" style="background:rgba(255,255,255,.06)"></div>'}
+        ${thumbUrl ? `<img class="chan-thread-thumb" src="${thumbUrl}" loading="lazy" alt="" data-on="error:hide">` : '<div class="chan-thread-thumb" style="background:rgba(255,255,255,.06)"></div>'}
         <div class="chan-thread-info">
           <div class="chan-thread-sub">${esc(t.sub || t.com || 'No subject')}</div>
           ${t.com && t.sub ? `<div class="chan-thread-com">${esc(t.com)}</div>` : ''}
@@ -3834,7 +3837,7 @@
           } else {
             // Pending items aren't in /t/ yet: fall back to /pending/t/ (uploader + staff only)
             const thumbSrc = n.type === 'admin_pending' ? `/pending/t/${n.item_id}.webp` : `/t/${n.item_id}.webp`;
-            thumb = n.item_id ? `<div class="notif-thumb"><img src="${thumbSrc}" alt="" onerror="this.onerror=function(){this.style.display='none'};this.src='/pending/t/${n.item_id}.webp'"></div>` : '';
+            thumb = n.item_id ? `<div class="notif-thumb"><img src="${thumbSrc}" alt="" data-on="error:img-fallback" data-fallback="/pending/t/${n.item_id}.webp" data-fallback-hide></div>` : '';
           }
           return `<a href="${link}" target="_blank" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}">
             ${thumb}

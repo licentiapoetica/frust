@@ -7,17 +7,17 @@
         <p style="color: #ccc; margin-bottom: 20px;">This text is displayed on the <strong>/about</strong> page. Supports Markdown. Leave empty to show the default static template.</p>
 
         <div class="admin-motd-form">
-            <form id="about-form" action="/admin/about" method="POST" onsubmit="event.preventDefault(); savePage(this, 'about');">
+            <form id="about-form" action="/admin/about" method="POST" data-on="submit:prevent,savePage" data-arg="about">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div style="margin-bottom: 20px;">
                     <label for="about-text" style="display: block; margin-bottom: 8px; color: var(--accent);">About Page Content (Markdown supported)</label>
                     <textarea id="about-text" name="about_text" style="width: 100%; min-height: 300px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 15px; border-radius: 4px; font-family: inherit; font-size: 1.1em; resize: vertical;"></textarea>
-                    <script>document.getElementById('about-text').value = new TextDecoder('utf-8').decode(Uint8Array.from(atob({{ about_text_b64|string|tojson }}), function(c) { return c.charCodeAt(0); }));</script>
+                    <script nonce="{{ csp_nonce }}">document.getElementById('about-text').value = new TextDecoder('utf-8').decode(Uint8Array.from(atob({{ about_text_b64|string|tojson }}), function(c) { return c.charCodeAt(0); }));</script>
                 </div>
 
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <button type="submit" class="btn-primary" style="width: auto; padding: 10px 30px;">Save</button>
-                    <button type="button" class="btn-remove" style="width: auto; padding: 10px 20px;" onclick="document.getElementById('about-text').value=''; savePage(document.getElementById('about-form'), 'about');">Clear</button>
+                    <button type="button" class="btn-remove" style="width: auto; padding: 10px 20px;" data-on="click:clearPage" data-arg="about">Clear</button>
                     <span id="about-status" style="margin-left: 10px; font-weight: bold; display: none;"></span>
                 </div>
             </form>
@@ -30,7 +30,15 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
+        F0ckActions.define({
+            savePage: (el, e, page) => savePage(el, page),
+            clearPage: (el, e, page) => {
+                document.getElementById(page + '-text').value = '';
+                savePage(document.getElementById(page + '-form'), page);
+            },
+        });
+
         async function savePage(form, page) {
             const statusId = page + '-status';
             const status = document.getElementById(statusId);

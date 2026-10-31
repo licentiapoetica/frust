@@ -58,6 +58,9 @@
           background: var(--bg, #111); border-bottom: 1px solid var(--st-border, rgba(255,255,255,0.1));
           box-shadow: none;
         }
+        /* Full width on the page too, like in the page modal. The global .settings grid with
+           justify-content: center shrank the page to its content and centered it. */
+        .settings { display: block; }
         /* In the page modal: the quicknav sticks to the top of the modal body (no fixed offset needed) */
         /* overflow: the global .settings { overflow-x: hidden } would make .settings its own scroll
            container, so the sticky quicknav would stick inside a box that never scrolls. clip cuts off
@@ -234,7 +237,7 @@
         .settings .button:disabled { opacity: 0.5; cursor: not-allowed; }
         .settings :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--st-accent); outline-offset: 2px; }
       </style>
-      <script>
+      <script nonce="{{ csp_nonce }}">
       (function(){
         var nav = document.getElementById('settings-quicknav');
         var root = nav && nav.closest('.settings');
@@ -825,7 +828,7 @@
 
           <!-- Avatar with Hover Overlay -->
           <div class="user-infobox-avatar editable-avatar-container" id="avatar-choose-btn" title="Click to change avatar">
-            <a href="#" onclick="event.preventDefault(); document.getElementById('avatar-file-input').click();" style="display:block; position:relative; width:100%; height:100%;">
+            <a href="#" data-on="click:prevent,chooseAvatarFile" style="display:block; position:relative; width:100%; height:100%;">
               {% if avatar_file %}
                 <img id="live-preview-avatar" class="avatar-preview-img" src="/a/{{ avatar_file }}" />
               {% elif (session.avatar and (session.avatar > 0)) %}
@@ -954,7 +957,10 @@
         .settings #pw-disable-form { flex-direction: column; gap: 8px; width: 100%; }
         .settings .pk-count { font-size: 0.72em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--st-muted); margin-bottom: 8px; }
       </style>
-      <script>
+      <script nonce="{{ csp_nonce }}">
+      F0ckActions.define({
+        chooseAvatarFile: () => { document.getElementById('avatar-file-input').click(); },
+      });
       (function() {
         if (window.f0ckPasskeyCard) return;
         function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -1013,7 +1019,13 @@
 
         <div class="pk-count" id="settings-anon-pk-count"></div>
         <div class="pk-list" id="settings-anon-pk-list"><p style="color: var(--text-muted); font-size: 0.9em; margin: 0;">Loading…</p></div>
-        <script>
+        <script nonce="{{ csp_nonce }}">
+        F0ckActions.define({
+          settingsOpenAnonPasskey: () => {
+            if (window.f0ckAnonPasskey) { window.f0ckAnonPasskey.openModal(); }
+            else { const m = document.getElementById('anon-passkey-modal'); if (m) m.style.display = 'flex'; }
+          },
+        });
         (function() {
           var list = document.getElementById('settings-anon-pk-list');
           var count = document.getElementById('settings-anon-pk-count');
@@ -1041,7 +1053,7 @@
         </script>
 
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
-          <button type="button" class="button button-primary" onclick="if(window.f0ckAnonPasskey) { window.f0ckAnonPasskey.openModal(); } else { const m = document.getElementById('anon-passkey-modal'); if(m) m.style.display='flex'; }"><i class="fa-solid fa-fingerprint"></i> Manage Passkey</button>
+          <button type="button" class="button button-primary" data-on="click:settingsOpenAnonPasskey"><i class="fa-solid fa-fingerprint"></i> Manage Passkey</button>
         </div>
 
         <div id="invite-request-section" style="padding: 16px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); font-size: 0.88em; color: var(--text-muted);">
@@ -1073,7 +1085,7 @@
           <div id="invite-req-error" style="display: none; margin-top: 10px; padding: 8px 12px; background: rgba(255,80,80,0.12); border: 1px solid rgba(255,80,80,0.25); border-radius: 4px; color: #ff6b6b; font-size: 0.9em;"></div>
         </div>
 
-        <script>
+        <script nonce="{{ csp_nonce }}">
         (function() {
           var statusEl = document.getElementById('invite-req-status');
           var formWrapper = document.getElementById('invite-req-form-wrapper');
@@ -1243,13 +1255,13 @@
         </div>
 
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button type="button" class="button button-primary" id="settings-passkey-add-btn" onclick="settingsPasskeyAdd()">
+          <button type="button" class="button button-primary" id="settings-passkey-add-btn" data-on="click:settingsPasskeyAdd">
             <i class="fa-solid fa-plus"></i> Add a passkey
           </button>
         </div>
         <div id="settings-passkey-status" style="margin-top: 10px; font-size: 0.88em; display: none;"></div>
       </div>
-      <script>
+      <script nonce="{{ csp_nonce }}">
       (function() {
         async function loadPasskeys() {
           const container = document.getElementById('settings-passkey-list');
@@ -1265,7 +1277,7 @@
             container.classList.add('pk-list');
             container.innerHTML = passkeys.map(function(pk) {
               return window.f0ckPasskeyCard(pk, {
-                actions: '<button class="button button-danger" title="Remove this passkey" onclick="settingsPasskeyDelete(' + escHtml(JSON.stringify(pk.credential_id)) + ')"><i class="fa-solid fa-trash"></i></button>'
+                actions: '<button class="button button-danger" title="Remove this passkey" data-on="click:settingsPasskeyDelete" data-args="' + escHtml(JSON.stringify([pk.credential_id])) + '"><i class="fa-solid fa-trash"></i></button>'
               });
             }).join('');
           } catch (e) {
@@ -1314,6 +1326,11 @@
             if (status) { status.style.display = 'block'; status.style.color = '#e06c75'; status.textContent = 'Error: ' + err.message; }
           }
         };
+
+        F0ckActions.define({
+          settingsPasskeyAdd: () => { window.settingsPasskeyAdd(); },
+          settingsPasskeyDelete: (el, e, credentialId) => { window.settingsPasskeyDelete(credentialId); },
+        });
 
         loadPasskeys();
       })();
@@ -1387,7 +1404,7 @@
               </form>
               <div id="pw-disable-status" class="avatar-status"></div>
             </div>
-            <script>
+            <script nonce="{{ csp_nonce }}">
             (function() {
               var openBtn = document.getElementById('btn-pw-disable-open');
               var form = document.getElementById('pw-disable-form');
@@ -1628,7 +1645,7 @@
         data-admin-desc="{{ t("invites.admin_desc") }}"
       ></div>
 
-      <script>
+      <script nonce="{{ csp_nonce }}">
       (function() {
         const ds = document.getElementById('invite-i18n')?.dataset || {};
         const T = (key, vars) => {

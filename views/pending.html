@@ -117,7 +117,7 @@
       .up-status { width: 100%; padding-left: 78px; }
     }
   </style>
-  <script>
+  <script nonce="{{ csp_nonce }}">
     (() => {
       // Highlight + scroll to #i<id> (AJAX navigation uses pushState, which doesn't trigger :target)
       const focusRow = () => {

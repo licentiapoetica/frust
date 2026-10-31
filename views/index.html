@@ -34,7 +34,7 @@
   {% include "snippets/navbar.html" %}
   {% include "snippets/footer.html" %}
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
   function openLoginGate() {
     const container = document.getElementById('gate-container');
     container.style.display = 'block';

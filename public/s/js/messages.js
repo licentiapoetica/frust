@@ -256,7 +256,7 @@ if (window.__dmLoaded) {
         const avatarSrc = c.avatar_file ? `/a/${c.avatar_file}` : (c.avatar ? `/t/${c.avatar}.webp` : '/a/default.png');
         const color = c.username_color ? `color:${escHtml(c.username_color)}` : '';
         el.innerHTML = `
-            <img class="dm-convo-avatar" src="${escHtml(avatarSrc)}" alt="" onerror="this.src='/a/default.png'">
+            <img class="dm-convo-avatar" src="${escHtml(avatarSrc)}" alt="" data-on="error:img-fallback" data-fallback="/a/default.png">
             <div class="dm-convo-info">
                 <span class="dm-convo-name" style="${color}">${escHtml(c.display_name || c.username)}</span>
                 <span class="dm-convo-time" data-ts="${escHtml(c.last_message_at)}">${escHtml(timeAgo(c.last_message_at))}</span>
@@ -1109,7 +1109,7 @@ if (window.__dmLoaded) {
             card.href = `/${id}`;
             card.innerHTML =
                 `<span class="dm-post-card__thumb-wrap">`+
-                    `<img class="dm-post-card__thumb" src="${escHtml(thumbSrc)}" alt="#${id}" loading="lazy" onerror="this.style.display='none'">`+
+                    `<img class="dm-post-card__thumb" src="${escHtml(thumbSrc)}" alt="#${id}" loading="lazy" data-on="error:hide">`+
                     (typeBadge ? `<span class="dm-post-card__type-badge">${typeBadge}</span>` : '') +
                 `</span>`+
                 `<span class="dm-post-card__info">`+

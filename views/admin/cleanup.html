@@ -7,7 +7,7 @@
         <p style="color: #ccc; margin-bottom: 20px;">Delete old posts that have no engagement (no comments, no favorites, and no subscriptions) to regain disk space.</p>
 
         <div class="admin-cleanup-form" style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-            <form id="cleanup-form" action="/admin/cleanup" method="POST" onsubmit="event.preventDefault(); saveCleanupSettings(this);">
+            <form id="cleanup-form" action="/admin/cleanup" method="POST" data-on="submit:prevent,saveCleanupSettings">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 
 
@@ -47,7 +47,7 @@
             <p>Click the button below to start the cleanup process based on the timeframe saved above.</p>
             
             <div style="display: flex; gap: 20px; align-items: center; margin-top: 20px;">
-                <button onclick="runCleanup()" id="run-cleanup-btn" class="btn-remove" style="width: auto; padding: 15px 40px; font-weight: bold; font-size: 1.1em; background: #c0392b;">RUN CLEANUP NOW</button>
+                <button data-on="click:runCleanup" id="run-cleanup-btn" class="btn-remove" style="width: auto; padding: 15px 40px; font-weight: bold; font-size: 1.1em; background: #c0392b;">RUN CLEANUP NOW</button>
                 <div id="run-status" style="font-weight: bold; font-size: 1.1em;"></div>
             </div>
         </div>
@@ -69,7 +69,12 @@
         .btn-remove:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
+        F0ckActions.define({
+            saveCleanupSettings: (el) => saveCleanupSettings(el),
+            runCleanup: () => runCleanup(),
+        });
+
         async function saveCleanupSettings(form) {
             const status = document.getElementById('cleanup-status');
             

@@ -83,8 +83,8 @@
                 </div>
             </div>
             <div class="modal-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-                <button onclick="window.emojiAdmin.closeEditModal()" class="btn-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); color: var(--white); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; cursor: pointer;">Cancel</button>
-                <button onclick="window.emojiAdmin.saveEmoji()" class="btn-save" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Changes</button>
+                <button data-on="click:emojiCloseEditModal" class="btn-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); color: var(--white); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; cursor: pointer;">Cancel</button>
+                <button data-on="click:emojiSave" class="btn-save" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Changes</button>
             </div>
         </div>
     </div>
@@ -111,7 +111,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
         (() => {
             var i18n = window.f0ckI18n || {};
             var csrf = {{ csrf_token|string|tojson }};
@@ -164,10 +164,10 @@
                 }
                 grid.innerHTML = standalone.map(function(e) {
                     return '<div class="emoji-card">' +
-                        '<button class="emoji-delete" onclick="window.emojiAdmin.deleteEmoji(' + e.id + ')" title="Delete">x</button>' +
+                        '<button class="emoji-delete" data-on="click:emojiDelete" data-args="[' + e.id + ']" title="Delete">x</button>' +
                         stickerEl(e.url, e.name) +
                         '<span class="emoji-label">:' + esc(e.name) + ':</span>' +
-                        '<button onclick="window.emojiAdmin.openEditModal(' + e.id + ')" style="margin-top:6px;width:100%;padding:4px 0;font-size:0.75em;background:#28a745;color:white;border:none;border-radius:3px;cursor:pointer;">Edit</button>' +
+                        '<button data-on="click:emojiOpenEditModal" data-args="[' + e.id + ']" style="margin-top:6px;width:100%;padding:4px 0;font-size:0.75em;background:#28a745;color:white;border:none;border-radius:3px;cursor:pointer;">Edit</button>' +
                         '</div>';
                 }).join('');
             }
@@ -195,9 +195,9 @@
                                 '<div style="font-size:0.76em;opacity:0.5;margin-top:2px;">' + count + ' sticker(s)</div>' +
                             '</div>' +
                             '<div style="display:flex;gap:8px;flex-shrink:0;">' +
-                                '<button onclick="window.emojiAdmin.renamePack(' + p.id + ')" style="padding:5px 12px;border-radius:5px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.07);color:#fff;cursor:pointer;font-size:0.8em;">Rename</button>' +
-                                '<button onclick="window.emojiAdmin.togglePackEmojis(' + p.id + ')" style="padding:5px 12px;border-radius:5px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.07);color:#fff;cursor:pointer;font-size:0.8em;">View</button>' +
-                                '<button onclick="window.emojiAdmin.deletePack(' + p.id + ')" style="padding:5px 12px;border-radius:5px;border:1px solid rgba(180,40,40,0.5);background:rgba(180,40,40,0.15);color:#e55;cursor:pointer;font-size:0.8em;">Delete</button>' +
+                                '<button data-on="click:emojiRenamePack" data-args="[' + p.id + ']" style="padding:5px 12px;border-radius:5px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.07);color:#fff;cursor:pointer;font-size:0.8em;">Rename</button>' +
+                                '<button data-on="click:emojiTogglePack" data-args="[' + p.id + ']" style="padding:5px 12px;border-radius:5px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.07);color:#fff;cursor:pointer;font-size:0.8em;">View</button>' +
+                                '<button data-on="click:emojiDeletePack" data-args="[' + p.id + ']" style="padding:5px 12px;border-radius:5px;border:1px solid rgba(180,40,40,0.5);background:rgba(180,40,40,0.15);color:#e55;cursor:pointer;font-size:0.8em;">Delete</button>' +
                             '</div>' +
                         '</div>' +
                         '<div id="sp-emojis-' + p.id + '" style="display:none;margin-top:12px;"></div>' +
@@ -224,10 +224,10 @@
                             var btnBdr = isCurrent ? 'rgba(40,167,69,0.35)' : 'rgba(255,200,0,0.3)';
                             var btnLbl = isCurrent ? '\u2713 Current Icon' : '\u2B50 Set as icon';
                             return '<div class="emoji-card" style="position:relative;">' +
-                                '<button class="emoji-delete" onclick="window.emojiAdmin.deleteEmoji(' + e.id + ')" title="Delete">x</button>' +
+                                '<button class="emoji-delete" data-on="click:emojiDelete" data-args="[' + e.id + ']" title="Delete">x</button>' +
                                 stickerEl(e.url, e.name, ' loading="lazy"') +
                                 '<span class="emoji-label">:' + esc(e.name) + ':</span>' +
-                                '<button onclick="window.emojiAdmin.setPackThumb(' + packId + ',' + e.id + ')"' +
+                                '<button data-on="click:emojiSetPackThumb" data-args="[' + packId + ',' + e.id + ']"' +
                                 ' title="Use as tab icon" style="margin-top:5px;width:100%;padding:3px 0;font-size:0.72em;background:' + btnBg + ';color:' + btnClr + ';border:1px solid ' + btnBdr + ';border-radius:3px;cursor:pointer;">' + btnLbl + '</button>' +
                                 '</div>';
                         }).join('') +
@@ -523,6 +523,17 @@
                 emojis: [],
                 packs: []
             };
+
+            F0ckActions.define({
+                emojiDelete: function(el, ev, id) { deleteEmoji(id); },
+                emojiOpenEditModal: function(el, ev, id) { openEditModal(id); },
+                emojiCloseEditModal: function() { closeEditModal(); },
+                emojiSave: function() { saveEmoji(); },
+                emojiRenamePack: function(el, ev, id) { renamePack(id); },
+                emojiTogglePack: function(el, ev, id) { togglePackEmojis(id); },
+                emojiDeletePack: function(el, ev, id) { deletePack(id); },
+                emojiSetPackThumb: function(el, ev, packId, emojiId) { setPackThumb(packId, emojiId); }
+            });
 
             document.getElementById('add-emoji').addEventListener('click', addEmoji);
             document.getElementById('sp-import-btn').addEventListener('click', importPack);

@@ -25,7 +25,7 @@
             <span class="loading-spinner" style="color: #888;">{{ t("notifications.scroll_for_more") }}</span>
         </div>
         {% endif %}
-        <script>
+        <script nonce="{{ csp_nonce }}">
             // Tab switching for notification history page
             (function () {
                 const USER_TYPES = ['comment_reply', 'subscription', 'mention', 'upload_comment'];

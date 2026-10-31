@@ -17,7 +17,7 @@
     <!-- Rule Add Section -->
     <div class="wordfilter-form-container" style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 6px; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);">
         <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 15px;">Create Wordfilter Rule</h4>
-        <form id="wordfilter-form" onsubmit="event.preventDefault(); window.wordfilterAdmin.addRule(this);" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+        <form id="wordfilter-form" data-on="submit:prevent,wfAddRule" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 200px;">
                 <label for="word" style="display: block; margin-bottom: 6px; font-size: 0.9em; color: #ccc;">Target Word</label>
                 <input type="text" id="word" name="word" required placeholder="Word to match..." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 4px; font-size: 1em;">
@@ -51,7 +51,7 @@
          </div>
      </div>
  
-     <script>
+     <script nonce="{{ csp_nonce }}">
         (function() {
             const escapeHtml = (str) => {
                 if (!str) return '';
@@ -80,7 +80,7 @@
                                 '<td data-label="Replacement" style="font-family: monospace; color: #fff;">' + escapeHtml(f.replacement) + '</td>' +
                                 '<td data-label="Created">' + (f.created_at ? new Date(f.created_at).toLocaleString() : '—') + '</td>' +
                                 '<td data-label="Actions" style="text-align: right;">' +
-                                    '<button onclick="window.wordfilterAdmin.deleteRule(' + f.id + ')" class="btn-remove" style="padding: 5px 12px; font-size: 0.85em; border-radius: 4px; border: 0; cursor: pointer;">Delete</button>' +
+                                    '<button data-on="click:wfDeleteRule" data-args="[' + f.id + ']" class="btn-remove" style="padding: 5px 12px; font-size: 0.85em; border-radius: 4px; border: 0; cursor: pointer;">Delete</button>' +
                                 '</td>' +
                             '</tr>'
                         ).join('');
@@ -147,6 +147,11 @@
                 addRule,
                 deleteRule
             };
+
+            F0ckActions.define({
+                wfAddRule: (el) => addRule(el),
+                wfDeleteRule: (el, e, id) => deleteRule(id),
+            });
 
             // Initialize view
             loadRules();

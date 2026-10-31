@@ -12,6 +12,9 @@
     if (window.location.pathname.startsWith('/abyss')) return;
 
 
+    // Embedded chat images hide their wrapper when they fail to load
+    F0ckActions.define('gchat-hide-parent', (el) => { if (el.parentNode) el.parentNode.style.display = 'none'; });
+
     const MAX_VISIBLE_MSGS = 100;
     const RATE_LIMIT_MS    = 800;
 
@@ -203,7 +206,7 @@
             'gi'
         );
         html = html.replace(imageRegex, url =>
-            `<span class="gchat-embed-img"><img data-lazy-src="${url}" src="" loading="lazy" alt="" onerror="this.parentNode.style.display='none'"></span>`
+            `<span class="gchat-embed-img"><img data-lazy-src="${url}" src="" loading="lazy" alt="" data-on="error:gchat-hide-parent"></span>`
         );
 
         // 6b. Raw video URLs from allowed hosts → <video>
@@ -286,7 +289,7 @@
                     if (/\.(mp4|webm|ogv|mov)(\?.*)?$/i.test(path))
                         return `${pre}<span class="gchat-embed-video"><video src="${url}" controls loop muted playsinline preload="metadata"></video></span>`;
                     if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(path))
-                        return `${pre}<span class="gchat-embed-img"><img data-lazy-src="${url}" src="" loading="lazy" alt="" onerror="this.parentNode.style.display='none'"></span>`;
+                        return `${pre}<span class="gchat-embed-img"><img data-lazy-src="${url}" src="" loading="lazy" alt="" data-on="error:gchat-hide-parent"></span>`;
                     if (/\.(mp3|ogg|wav|flac|aac|opus|m4a)(\?.*)?$/i.test(path))
                         return `${pre}<span class="gchat-embed-audio"><audio src="${url}" controls preload="metadata"></audio></span>`;
                 }
@@ -468,7 +471,7 @@
         card.href = `/${id}`;
         card.innerHTML =
             `<span class="gchat-post-card__thumb-wrap">` +
-                `<img class="gchat-post-card__thumb" src="${esc(thumbSrc)}" alt="#${id}" loading="lazy" onerror="this.style.display='none'">` +
+                `<img class="gchat-post-card__thumb" src="${esc(thumbSrc)}" alt="#${id}" loading="lazy" data-on="error:hide">` +
                 (typeBadge ? `<span class="gchat-post-card__type-badge">${typeBadge}</span>` : '') +
             `</span>` +
             `<span class="gchat-post-card__info">` +

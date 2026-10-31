@@ -2,6 +2,7 @@
 <html theme="{% if theme is defined %}{{ theme }}{% else %}{{ (default_theme or "amoled") }}{% endif %}">
 <head>
   <meta charset="utf-8" />
+  <script src="/s/js/csp-actions.js?v={{ mtime("/public/s/js/csp-actions.js") }}"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ domain }}</title>
   <link rel="icon" type="image/gif" href="/s/img/favicon.gif" />
@@ -11,7 +12,7 @@
        
   <div class="wrapper" style="text-align: center;">
       <h2>Example Gate</h2>
-      <button type="button" onclick="openLoginGate();">Login</button>
+      <button type="button" data-on="click:openLoginGate">Login</button>
       
       <div id="gate-container" style="display:none;">
           {% include "snippets/navbar.html" %}
@@ -19,7 +20,7 @@
       </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     function openLoginGate() {
       document.getElementById('gate-container').style.display = 'block';
       const tryOpen = () => {
@@ -29,6 +30,7 @@
       };
       tryOpen();
     }
+    F0ckActions.define({ openLoginGate: function() { openLoginGate(); } });
   </script>
 
 </body>

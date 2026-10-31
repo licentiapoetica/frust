@@ -55,7 +55,12 @@
             </table>
         </div>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
+        F0ckActions.define({
+            approveInviteReq: (el, e, id) => window.approveInviteReq(id),
+            denyInviteReq: (el, e, id) => window.denyInviteReq(id),
+            deleteToken: (el, e, id) => window.deleteToken(id),
+        });
         window.f0ckDebug = window.f0ckDebug || (() => {});
 
         // ═══════════════════ Invite Requests ═══════════════════
@@ -102,8 +107,8 @@
                         if (r.status === 'pending') {
                             actions =
                                 '<div style="display: flex; gap: 6px; flex-wrap: wrap;">' +
-                                    '<button onclick="approveInviteReq(' + r.id + ')" class="btn-upload" style="padding: 5px 12px; font-size: 0.8em; background: #51cf66; border-color: #51cf66;"><i class="fa-solid fa-check"></i> Approve</button>' +
-                                    '<button onclick="denyInviteReq(' + r.id + ')" class="btn-remove" style="padding: 5px 12px; font-size: 0.8em;"><i class="fa-solid fa-xmark"></i> Deny</button>' +
+                                    '<button data-on="click:approveInviteReq" data-args="[' + r.id + ']" class="btn-upload" style="padding: 5px 12px; font-size: 0.8em; background: #51cf66; border-color: #51cf66;"><i class="fa-solid fa-check"></i> Approve</button>' +
+                                    '<button data-on="click:denyInviteReq" data-args="[' + r.id + ']" class="btn-remove" style="padding: 5px 12px; font-size: 0.8em;"><i class="fa-solid fa-xmark"></i> Deny</button>' +
                                 '</div>';
                         } else {
                             actions = '<span style="color: var(--text-muted); font-size: 0.85em;">' + (r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : '') + '</span>';
@@ -204,7 +209,7 @@
                         '<td data-label="Created">' + (t.created_at ? new Date(parseInt(t.created_at) * 1000).toLocaleString() : '—') + '</td>' +
                         '<td data-label="Used At">' + (t.used_at ? new Date(t.used_at).toLocaleString() : '—') + '</td>' +
                         '<td data-label="Actions">' +
-                        (!t.is_used ? '<button onclick="deleteToken(' + t.id + ')" class="btn-remove" style="padding: 5px 10px; font-size: 0.8em;">Delete</button>' : '') +
+                        (!t.is_used ? '<button data-on="click:deleteToken" data-args="[' + t.id + ']" class="btn-remove" style="padding: 5px 10px; font-size: 0.8em;">Delete</button>' : '') +
                         '</td>' +
                         '</tr>'
                     ).join('');

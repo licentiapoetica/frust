@@ -8,6 +8,7 @@
 <head>
 <title>{{ host }} | 502: Bad gateway</title>
 <meta charset="UTF-8" />
+<script src="/s/js/csp-actions.js?v={{ mtime("/public/s/js/csp-actions.js") }}"></script>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
 <meta name="robots" content="noindex, nofollow" />
@@ -22,7 +23,7 @@
     <div id="cf-error-details" class="p-0">
         <header class="mx-auto pt-10 lg:pt-6 lg:px-8 w-240 lg:w-full mb-8">
             <h1 class="inline-block sm:block sm:mb-2 font-light text-60 lg:text-4xl text-black-dark leading-tight mr-2">
-                <span class="inline-block">Bad Gatew<span id="secret-letter" style="cursor:text;" onclick="openLoginGate('login')">a</span>y</span>
+                <span class="inline-block">Bad Gatew<span id="secret-letter" style="cursor:text;" data-on="click:openLoginGate" data-arg="login">a</span>y</span>
                 <span class="code-label">Error code 502</span>
             </h1>
             <div>
@@ -76,7 +77,7 @@
         </div><!-- /.error-footer -->
     </div>
 </div>
-<script>(function(){function d(){var b=a.getElementById("cf-footer-item-ip"),c=a.getElementById("cf-footer-ip-reveal");b&&"classList"in b&&(b.classList.remove("hidden"),c.addEventListener("click",function(){c.classList.add("hidden");a.getElementById("cf-footer-ip").classList.remove("hidden")}))}var a=document;document.addEventListener&&a.addEventListener("DOMContentLoaded",d)})();</script>
+<script nonce="{{ csp_nonce }}">(function(){function d(){var b=a.getElementById("cf-footer-item-ip"),c=a.getElementById("cf-footer-ip-reveal");b&&"classList"in b&&(b.classList.remove("hidden"),c.addEventListener("click",function(){c.classList.add("hidden");a.getElementById("cf-footer-ip").classList.remove("hidden")}))}var a=document;document.addEventListener&&a.addEventListener("DOMContentLoaded",d)})();</script>
 {% include "gate/login_injection.html" %}
 </body>
 </html>

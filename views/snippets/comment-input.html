@@ -14,11 +14,15 @@
     </div>
 </div>
 {% else %}
-<div class="comment-input main-input is-guest" aria-disabled="true" title="Log in to comment" onclick="const b=document.getElementById('nav-login-btn'); if (b) b.click();">
+<div class="comment-input main-input is-guest" aria-disabled="true" title="Log in to comment" data-on="click:comments-guest-login">
     <textarea placeholder="Log in to comment" readonly tabindex="-1" aria-disabled="true"></textarea>
     <div class="comment-file-preview"></div>
     <div class="input-actions">
         <button class="submit-comment" type="button" tabindex="-1" aria-disabled="true"><span class="submit-label">{{ t("comments.post") }}</span><i class="fa-solid fa-spinner fa-spin submit-spinner"></i></button>
     </div>
 </div>
+<script nonce="{{ csp_nonce }}">
+// Same action comments.js registers for renderGuestInput(); defined here too so the server copy works before comments.js (deferred) has run
+F0ckActions.define('comments-guest-login', () => { const b = document.getElementById('nav-login-btn'); if (b) b.click(); });
+</script>
 {% endif %}

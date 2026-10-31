@@ -2,7 +2,7 @@
 {% if n.type == "approve" %}
 <a href="/{{ (n.item_slug or n.item_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
-        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/{{ n.item_id }}.webp';this.onerror=function(){this.onerror=null;this.src='/mod/deleted/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none';};};"/>
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" data-on="error:img-fallback" data-fallback="/pending/t/{{ n.item_id }}.webp /mod/deleted/t/{{ n.item_id }}.webp" data-fallback-hide/>
     </div>
     <div class="notif-content">
         <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
@@ -13,7 +13,7 @@
 {% elif n.type == "admin_pending" %}
 <a href="/mod/approve" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
-        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none';};"/>
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" data-on="error:img-fallback" data-fallback="/t/{{ n.item_id }}.webp" data-fallback-hide/>
     </div>
     <div class="notif-content">
         <div class="notif-user"><strong>{{ t("notifications.admin") }}</strong></div>
@@ -24,7 +24,7 @@
 {% elif n.type == "report" %}
 <a href="/mod/reports" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
-        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/{{ n.item_id }}.webp';this.onerror=function(){this.onerror=null;this.src='/mod/deleted/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none';};};"/>
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" data-on="error:img-fallback" data-fallback="/pending/t/{{ n.item_id }}.webp /mod/deleted/t/{{ n.item_id }}.webp" data-fallback-hide/>
     </div>
     <div class="notif-content">
         <div class="notif-user"><strong>{{ t("notifications.moderation") }}</strong></div>
@@ -35,7 +35,7 @@
 {% elif n.type == "deny" %}
 <a href="/{{ (n.item_slug or n.item_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
-        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none'};" />
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" data-on="error:img-fallback" data-fallback="/t/{{ n.item_id }}.webp" data-fallback-hide />
     </div>
     <div class="notif-content">
         <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
@@ -49,7 +49,7 @@
 {% elif n.type == "item_deleted" %}
 <a href="/{{ (n.item_slug or n.item_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
-        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none'};" />
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" data-on="error:img-fallback" data-fallback="/t/{{ n.item_id }}.webp" data-fallback-hide />
     </div>
     <div class="notif-content">
         <div class="notif-user"><strong>{{ t("notifications.moderation") }}</strong></div>
@@ -63,7 +63,7 @@
 {% elif n.type == "upload_comment" %}
 <a href="/{{ (n.item_slug or n.item_id) }}#c{{ n.reference_id }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
-        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumbnail" onerror="this.style.display='none'">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumbnail" data-on="error:hide">
     </div>
     <div class="notif-content">
         <div class="notif-info"><strong>{{ t("notifications.new_comments") }}</strong></div>
@@ -74,7 +74,7 @@
 {% elif n.type == "upload_success" %}
 <a href="/{{ (n.item_slug or n.item_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
-        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.style.display='none'" />
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" data-on="error:hide" />
     </div>
     <div class="notif-content">
         <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
@@ -86,7 +86,7 @@
 <a href="{{ ("/" ~ (n.item_slug or n.item_id) if n.item_id else "#") }}" class="notif-item {{ ("" if n.is_read else "unread") }} {{ ("notif-with-thumb" if n.item_id else "") }}" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     {% if n.item_id %}
     <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
-        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none'};" />
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" data-on="error:img-fallback" data-fallback="/pending/t/{{ n.item_id }}.webp" data-fallback-hide />
     </div>
     {% endif %}
     <div class="notif-content">
@@ -119,7 +119,7 @@
 <a href="/{{ (n.item_slug or n.item_id) }}#c{{ (n.comment_id or n.reference_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     {% if n.item_id %}
     <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
-        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.style.display='none'" />
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" data-on="error:hide" />
     </div>
     {% endif %}
     <div class="notif-content">

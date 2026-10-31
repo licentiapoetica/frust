@@ -115,6 +115,7 @@ fn security_headers(st: &AppState, req: &Req) -> Option<Response> {
     req.set_header("x-content-type-options", "nosniff");
     req.set_header("referrer-policy", "strict-origin-when-cross-origin");
     req.set_header("permissions-policy", "geolocation=(), microphone=(), camera=()");
+    crate::csp::apply(&cfg, req);
 
     if cfg.is_false("websrv.enable_tor_hs") && req.is_onion() {
         return Some(raw(503, ""));
@@ -612,7 +613,7 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
     // Private society: login required for everything else
     if cfg.truthy("websrv.private_society") && req.session.is_none() {
         static PUBLIC: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
-            regex::Regex::new(r"^/(s|login|logout|register|activate|forgot-password|reset-password|banned|api/v2/auth|api/v2/upload|api/chat/upload|api/chat/preview|cu|manifest\.json|sw\.js|robots\.txt|favicon\.(ico|png|gif)|s/img/duck-icon-(192|512)\.png)(/.*)?$").unwrap()
+            regex::Regex::new(r"^/(s|login|logout|register|api/cap|api/csp-report|flash-frame|activate|forgot-password|reset-password|banned|api/v2/auth|api/v2/upload|api/chat/upload|api/chat/preview|cu|manifest\.json|sw\.js|robots\.txt|favicon\.(ico|png|gif)|s/img/duck-icon-(192|512)\.png)(/.*)?$").unwrap()
         });
         if !PUBLIC.is_match(&path) {
             if req.is_xhr() {

@@ -3,6 +3,12 @@
 // Calling through this helper defers the lookup to invocation time, not parse time.
 const _f0ckDebug = (...args) => (typeof window.f0ckDebug === 'function' ? window.f0ckDebug(...args) : void 0);
 
+// Guest comment box (renderGuestInput): clicking it opens the login modal
+F0ckActions.define('comments-guest-login', () => {
+    const b = document.getElementById('nav-login-btn');
+    if (b) b.click();
+});
+
 class CommentSystem {
     get isMainSubmitting() {
         return this._globalState ? this._globalState.isMainSubmitting : false;
@@ -1851,7 +1857,7 @@ class CommentSystem {
 
             renderer.image = (href, title, text) => {
                 const src = (typeof href === 'object' && href !== null) ? (href.href || '') : (href || '');
-                const imgHtml = `<img src="${src}" alt="${text || ''}"${title ? ` title="${title}"` : ''} onerror="this.onerror=null; this.outerHTML='<span class=\\'broken-image-text\\'>[image not found]</span>';">`;
+                const imgHtml = `<img src="${src}" alt="${text || ''}"${title ? ` title="${title}"` : ''}>`;
                 if (this.isAdmin && src && src.startsWith('/c/')) {
                     const filename = src.substring(3); // Remove '/c/'
                     return `<span class="image-embed-wrap">${imgHtml}<button class="admin-delete-attachment-btn" data-filename="${filename}" title="Delete attachment">[x]</button></span>`;
@@ -2403,7 +2409,7 @@ class CommentSystem {
         const postLabel = i18n.post || 'Post';
         return `
             <div class="comment-input main-input is-guest" aria-disabled="true" title="${placeholder}"
-                 onclick="const b=document.getElementById('nav-login-btn'); if (b) b.click();">
+                 data-on="click:comments-guest-login">
                 <textarea placeholder="${placeholder}" readonly tabindex="-1" aria-disabled="true"></textarea>
                 <div class="comment-file-preview"></div>
                 <div class="input-actions">

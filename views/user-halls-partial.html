@@ -55,7 +55,7 @@
 </div>
 
 {% if (isOwner or (session and session.admin)) %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
   function getCsrf() { return (window.f0ckSession && window.f0ckSession.csrf_token) || ''; }
   var i18n = window.f0ckI18n || {};

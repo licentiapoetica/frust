@@ -50,7 +50,8 @@ class Sanitizer {
                             const attrName = attr.name.toLowerCase();
                             
                             // Check if attribute is on whitelist or is a data- attribute
-                            if (!this.ALLOWED_ATTRS.includes(attrName) && !attrName.startsWith('data-')) {
+                            // data-on/data-args/data-arg bind site actions (csp-actions.js): never from user content
+                            if ((!this.ALLOWED_ATTRS.includes(attrName) && !attrName.startsWith('data-')) || /^data-(on|args?)$/.test(attrName)) {
                                 node.removeAttribute(attr.name);
                                 continue;
                             }

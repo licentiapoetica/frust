@@ -61,7 +61,7 @@
             </div>
         </div>
 
-        <script>
+        <script nonce="{{ csp_nonce }}">
             window.memeTemplate = {
                 id: {{ template.id|string|tojson }},
                 url: {{ template.url|string|tojson }},

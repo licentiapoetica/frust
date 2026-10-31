@@ -277,7 +277,7 @@ if (!window.UserCommentSystem) {
 
             renderer.image = (href, title, text) => {
                 const src = (typeof href === 'object' && href !== null) ? (href.href || '') : (href || '');
-                const imgHtml = `<img src="${src}" alt="${text || ''}"${title ? ` title="${title}"` : ''} onerror="this.onerror=null; this.outerHTML='<span class=\\'broken-image-text\\'>[image not found]</span>';">`;
+                const imgHtml = `<img src="${src}" alt="${text || ''}"${title ? ` title="${title}"` : ''}>`;
                 if (window.f0ckSession?.is_admin && src && src.startsWith('/c/')) {
                     const filename = src.substring(3); // Remove '/c/'
                     return `<span class="image-embed-wrap">${imgHtml}<button class="admin-delete-attachment-btn" data-filename="${filename}" title="Delete attachment">[x]</button></span>`;

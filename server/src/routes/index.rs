@@ -595,6 +595,7 @@ fn req_with_session(req: &Req, session: Option<Session>) -> Req {
     r.theme = req.theme.clone();
     r.fullscreen = req.fullscreen.clone();
     r.out = req.out.clone();
+    r.csp_nonce = req.csp_nonce.clone();
     r
 }
 

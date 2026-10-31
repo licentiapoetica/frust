@@ -81,7 +81,7 @@
     </div>
     {# Inside #main so AJAX navigation (which only swaps #main) brings the styles, modal and scripts along #}
     {% include "snippets/mod-cards.html" %}
-    <script>
+    <script nonce="{{ csp_nonce }}">
       (() => {
         // Restore → public again (no "approved" notification)
         document.querySelectorAll('.btn-approve-async').forEach(btn => {

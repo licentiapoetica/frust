@@ -7,9 +7,9 @@
         <a href="/messages" class="dm-back-btn" title="Back to inbox">←</a>
         <div class="dm-convo-header-info">
             {% if other.avatar_file %}
-            <img class="dm-header-avatar" src="/a/{{ other.avatar_file }}" alt="" onerror="this.src='/a/default.png'">
+            <img class="dm-header-avatar" src="/a/{{ other.avatar_file }}" alt="" data-on="error:img-fallback" data-fallback="/a/default.png">
             {% elif (other.avatar and (other.avatar > 0)) %}
-            <img class="dm-header-avatar" src="/t/{{ other.avatar }}.webp" alt="" onerror="this.src='/a/default.png'">
+            <img class="dm-header-avatar" src="/t/{{ other.avatar }}.webp" alt="" data-on="error:img-fallback" data-fallback="/a/default.png">
             {% else %}
             <img class="dm-header-avatar" src="/a/default.png" alt="">
             {% endif %}

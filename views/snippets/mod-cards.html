@@ -89,7 +89,7 @@
   .mq-modal .mq-btn { height: 38px; padding: 0 16px; }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce }}">
   // Shared helpers for the moderation card pages. Re-assigned on every (AJAX) page load.
   window.mq = (() => {
     const modal = document.getElementById('mq-modal');

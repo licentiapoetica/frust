@@ -15,7 +15,7 @@
           /{{ b.id }}/
         </a>
         {% endfor %}
-        <form class="chan-board-custom-form" onsubmit="event.preventDefault(); const b = document.getElementById('custom-board-input').value.trim().toLowerCase(); if(b) window.location.href='/4/' + b + '/catalogue';">
+        <form class="chan-board-custom-form" data-on="submit:prevent,chanGoToBoard">
           <input type="text" id="custom-board-input" placeholder="board…" maxlength="12" class="chan-custom-board-input" />
           <button type="submit" class="chan-custom-board-btn" title="Go to board"><i class="fa-solid fa-arrow-right"></i></button>
         </form>
@@ -42,13 +42,23 @@
       </div>
     </div>
 
+    <script nonce="{{ csp_nonce }}">
+    // Defined before the grid so thumbnail error handlers are registered before any image can fail
+    F0ckActions.define({
+      chanThumbDim: (el) => { el.style.opacity = '0.2'; },
+      chanGoToBoard: () => {
+        const b = document.getElementById('custom-board-input').value.trim().toLowerCase();
+        if (b) window.location.href = '/4/' + b + '/catalogue';
+      },
+    });
+    </script>
     <!-- Catalogue Thread Grid -->
     <div class="chan-catalogue-grid" id="chan-catalogue-grid">
       {% for key, t in threads|entries %}
       <div class="chan-thread-card" data-no="{{ t.no }}" data-replies="{{ t.replies }}" data-images="{{ t.images }}" data-time="{{ t.time }}" data-sticky="{{ (1 if t.sticky else 0) }}">
         <a href="/4/{{ board }}/{{ t.no }}" class="chan-thread-thumb-link">
           {% if t.thumb %}
-          <img src="{{ t.thumb }}" alt="Thread #{{ t.no }}" loading="lazy" class="chan-thread-thumb" onerror="this.style.opacity='0.2';" />
+          <img src="{{ t.thumb }}" alt="Thread #{{ t.no }}" loading="lazy" class="chan-thread-thumb" data-on="error:chanThumbDim" />
           {% else %}
           <div class="chan-thread-thumb-empty"><i class="fa-solid fa-file"></i></div>
           {% endif %}
@@ -405,7 +415,7 @@
 }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (() => {
   const searchInput = document.getElementById('chan-catalog-search');
   const searchClear = document.getElementById('chan-search-clear');

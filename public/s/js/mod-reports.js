@@ -27,6 +27,13 @@ function relTime(d) {
 
 window.currentPage = window.currentPage || 1;
 
+// Report card / pagination buttons: data-on="click:rp-call" data-args='["fnName", ...args]' calls window[fnName](...args)
+var RP_CALLABLE = ['resolveReport', 'adminDeleteItem', 'modToggleUnavailable', 'adminDeleteComment', 'modWarnUser', 'adminBanUser', 'loadReports'];
+F0ckActions.define('rp-call', function(el, e, fn) {
+    if (RP_CALLABLE.indexOf(fn) === -1 || typeof window[fn] !== 'function') return;
+    window[fn].apply(window, Array.prototype.slice.call(arguments, 3));
+});
+
 window.loadReports = async function(page) {
     page = page || 1;
     window.currentPage = page;
@@ -118,28 +125,28 @@ window.loadReports = async function(page) {
 
             var actions = '';
             if (status === 'pending') {
-                actions += '<button class="rp-btn rp-btn-resolve" onclick="window.resolveReport(' + r.id + ',\'resolved\')"><i class="fa-solid fa-check"></i> Resolve</button>';
-                actions += '<button class="rp-btn rp-btn-reject" onclick="window.resolveReport(' + r.id + ',\'rejected\')"><i class="fa-solid fa-xmark"></i> Reject</button>';
+                actions += '<button class="rp-btn rp-btn-resolve" data-on="click:rp-call" data-args=\'["resolveReport",' + r.id + ',"resolved"]\'><i class="fa-solid fa-check"></i> Resolve</button>';
+                actions += '<button class="rp-btn rp-btn-reject" data-on="click:rp-call" data-args=\'["resolveReport",' + r.id + ',"rejected"]\'><i class="fa-solid fa-xmark"></i> Reject</button>';
                 actions += '<span class="rp-sep"></span>';
             }
             if (isItem && !isComment) {
                 var isUnav = r.resolved_item_visibility === 3;
-                actions += '<button class="rp-btn rp-btn-delete" onclick="window.adminDeleteItem(' + r.resolved_item_id + ')"><i class="fa-solid fa-trash"></i> Delete</button>';
-                actions += '<button class="rp-btn ' + (isUnav ? 'rp-btn-avail' : 'rp-btn-unavail') + '" onclick="window.modToggleUnavailable(' + r.resolved_item_id + ',' + (r.resolved_item_visibility||0) + ')">' + (isUnav ? '<i class="fa-solid fa-eye"></i> Restore' : '<i class="fa-solid fa-ban"></i> 451') + '</button>';
+                actions += '<button class="rp-btn rp-btn-delete" data-on="click:rp-call" data-args=\'["adminDeleteItem",' + r.resolved_item_id + ']\'><i class="fa-solid fa-trash"></i> Delete</button>';
+                actions += '<button class="rp-btn ' + (isUnav ? 'rp-btn-avail' : 'rp-btn-unavail') + '" data-on="click:rp-call" data-args=\'["modToggleUnavailable",' + r.resolved_item_id + ',' + (r.resolved_item_visibility||0) + ']\'>' + (isUnav ? '<i class="fa-solid fa-eye"></i> Restore' : '<i class="fa-solid fa-ban"></i> 451') + '</button>';
             }
             if (isComment) {
-                actions += '<button class="rp-btn rp-btn-delete" onclick="window.adminDeleteComment(' + r.comment_id + ')"><i class="fa-solid fa-trash"></i> Del Comment</button>';
+                actions += '<button class="rp-btn rp-btn-delete" data-on="click:rp-call" data-args=\'["adminDeleteComment",' + r.comment_id + ']\'><i class="fa-solid fa-trash"></i> Del Comment</button>';
             }
             if (r.reported_user_id && (isAdmin || !r.reported_user_is_admin)) {
                 var who = r.reported_user_name ? rpEsc(r.reported_user_name) : 'user';
                 actions += '<span class="rp-sep"></span>';
-                actions += '<button class="rp-btn rp-btn-warn" onclick="window.modWarnUser(' + r.reported_user_id + ')"><i class="fa-solid fa-triangle-exclamation"></i> Warn ' + who + '</button>';
-                actions += '<button class="rp-btn rp-btn-ban" onclick="window.adminBanUser(' + r.reported_user_id + ')"><i class="fa-solid fa-gavel"></i> Ban ' + who + '</button>';
+                actions += '<button class="rp-btn rp-btn-warn" data-on="click:rp-call" data-args=\'["modWarnUser",' + r.reported_user_id + ']\'><i class="fa-solid fa-triangle-exclamation"></i> Warn ' + who + '</button>';
+                actions += '<button class="rp-btn rp-btn-ban" data-on="click:rp-call" data-args=\'["adminBanUser",' + r.reported_user_id + ']\'><i class="fa-solid fa-gavel"></i> Ban ' + who + '</button>';
             } else if (!r.reported_user_id) {
                 actions += '<span class="rp-anon-note">Anonymous reporter</span>';
             }
             if (r.reporter_id && r.reporter_name) {
-                actions += '<button class="rp-btn rp-btn-secondary" onclick="window.modWarnUser(' + r.reporter_id + ')">Warn Reporter</button>';
+                actions += '<button class="rp-btn rp-btn-secondary" data-on="click:rp-call" data-args=\'["modWarnUser",' + r.reporter_id + ']\'>Warn Reporter</button>';
             }
 
             var ts = new Date(r.created_at).toLocaleString();
@@ -173,10 +180,10 @@ window.loadReports = async function(page) {
         pag.innerHTML = '';
         if (data.pages > 1) {
             if (data.page > 1)
-                pag.innerHTML += '<button onclick="window.loadReports(' + (data.page-1) + ')"><i class="fa-solid fa-chevron-left"></i> Prev</button>';
+                pag.innerHTML += '<button data-on="click:rp-call" data-args=\'["loadReports",' + (data.page-1) + ']\'><i class="fa-solid fa-chevron-left"></i> Prev</button>';
             pag.innerHTML += '<span class="rp-page-info">Page ' + data.page + ' of ' + data.pages + '</span>';
             if (data.page < data.pages)
-                pag.innerHTML += '<button onclick="window.loadReports(' + (data.page+1) + ')">Next <i class="fa-solid fa-chevron-right"></i></button>';
+                pag.innerHTML += '<button data-on="click:rp-call" data-args=\'["loadReports",' + (data.page+1) + ']\'>Next <i class="fa-solid fa-chevron-right"></i></button>';
         }
 
     } catch(e) {

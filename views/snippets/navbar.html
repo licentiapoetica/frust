@@ -5,7 +5,7 @@
   <!-- Brand: always visible, flush left -->
   <a class="navbar-brand" href="/">
     {% if custom_brand_image %}
-      <img id="navbar-logo" src="{{ custom_brand_image }}" alt="{{ domain }}" onload="if(window.syncNavbarHeight)window.syncNavbarHeight();" style="max-height: 40px; vertical-align: middle; max-width: 180px; width: auto;">
+      <img id="navbar-logo" src="{{ custom_brand_image }}" alt="{{ domain }}" data-on="load:sync-navbar" style="max-height: 40px; vertical-align: middle; max-width: 180px; width: auto;">
     {% else %}
       <span class="f0ck">{{ (custom_navbar_brand_text or domain) }}</span>
     {% endif %}
@@ -45,13 +45,13 @@
       <div class="nav-user-dropdown">
         <button class="nav-user-btn nav-avatar-btn" id="nav-user-toggle">
           {% if session.is_anon %}
-            <img class="nav-avatar-img" src="/a/default.png" onclick="event.stopPropagation(); const u = '{{ session.login|lower }}'; if(typeof window.loadPageAjax==='function'){ window.loadPageAjax('/user/' + u, true); } else { window.location.href='/user/' + u; }" title="{{ session.login }}">
+            <img class="nav-avatar-img" src="/a/default.png" data-on="click:stop,ajax-nav" data-href="/user/{{ session.login|lower }}" title="{{ session.login }}">
           {% elif session.avatar_file %}
-            <img class="nav-avatar-img" src="/a/{{ session.avatar_file }}" onerror="this.src='/a/default.png'" onclick="event.stopPropagation(); if(typeof window.loadPageAjax==='function'){ window.loadPageAjax('/user/{{ session.user|lower }}', true); } else { window.location.href='/user/{{ session.user|lower }}'; }" title="{{ session.user }}">
+            <img class="nav-avatar-img" src="/a/{{ session.avatar_file }}" data-on="error:img-fallback click:stop,ajax-nav" data-fallback="/a/default.png" data-href="/user/{{ session.user|lower }}" title="{{ session.user }}">
           {% elif (session.avatar and (session.avatar > 0)) %}
-            <img class="nav-avatar-img" src="/t/{{ session.avatar }}.webp" onerror="this.src='/a/default.png'" onclick="event.stopPropagation(); if(typeof window.loadPageAjax==='function'){ window.loadPageAjax('/user/{{ session.user|lower }}', true); } else { window.location.href='/user/{{ session.user|lower }}'; }" title="{{ session.user }}">
+            <img class="nav-avatar-img" src="/t/{{ session.avatar }}.webp" data-on="error:img-fallback click:stop,ajax-nav" data-fallback="/a/default.png" data-href="/user/{{ session.user|lower }}" title="{{ session.user }}">
           {% else %}
-            <img class="nav-avatar-img" src="/a/default.png" onclick="event.stopPropagation(); if(typeof window.loadPageAjax==='function'){ window.loadPageAjax('/user/{{ session.user|lower }}', true); } else { window.location.href='/user/{{ session.user|lower }}'; }" title="{{ session.user }}">
+            <img class="nav-avatar-img" src="/a/default.png" data-on="click:stop,ajax-nav" data-href="/user/{{ session.user|lower }}" title="{{ session.user }}">
           {% endif %}
           <span class="nav-avatar-name" id="nav-display-name" {% if session.username_color %}style="color: {{ session.username_color }}"{% endif %}>{{ (session.display_name or session.user) }}</span>
           <span class="nav-avatar-caret">▾</span>
@@ -67,7 +67,7 @@
           {% endif %}
           <a href="/pending" class="nav-menu-pending">Pending{% if session.own_pending_count is number %}<span class="nav-menu-count {% if session.own_pending_count == 0 %}is-zero{% endif %}" title="{{ session.own_pending_count }} upload(s) awaiting approval">{{ session.own_pending_count }}</span>{% endif %}</a>
           {% if (enable_anonymous_access and session.is_anon) %}
-          <a href="#" id="nav-user-anon-identity-btn" style="white-space: nowrap;" onclick="event.preventDefault(); if(window.f0ckAnonPasskey) { window.f0ckAnonPasskey.openModal(); } else { const m = document.getElementById('anon-passkey-modal'); if (m) m.style.display='flex'; }">Passkey Identity</a>
+          <a href="#" id="nav-user-anon-identity-btn" style="white-space: nowrap;" data-on="click:prevent,openAnonPasskey">Passkey Identity</a>
           {% endif %}
           <a href="/user/{{ ((session.login if (session.is_anon and session.login) else session.user))|lower }}/favs" class="mobile-only">{{ t("nav.favs") }}</a>
           <a href="/settings" class="mobile-only" data-page-modal title="{{ t("nav.settings") }}">{{ t("nav.settings") }}</a>
@@ -156,7 +156,7 @@
 
       <!-- Hamburger: mobile only -->
       <button class="navbar-toggler" type="button" id="nav-toggler"
-        onclick="document.getElementById('navbarContent').classList.toggle('show'); this.classList.toggle('is-open')">
+        data-on="click:toggleNavbar">
         <span></span><span></span><span></span>
       </button>
 
@@ -246,7 +246,7 @@
 
   <a class="navbar-brand" href="/">
     {% if custom_brand_image %}
-      <img id="navbar-logo" src="{{ custom_brand_image }}" alt="{{ domain }}" onload="if(window.syncNavbarHeight)window.syncNavbarHeight();" style="max-height: 40px; vertical-align: middle; max-width: 180px; width: auto;">
+      <img id="navbar-logo" src="{{ custom_brand_image }}" alt="{{ domain }}" data-on="load:sync-navbar" style="max-height: 40px; vertical-align: middle; max-width: 180px; width: auto;">
     {% else %}
       <span class="f0ck">{{ (custom_navbar_brand_text or domain) }}</span>
     {% endif %}
@@ -293,7 +293,7 @@
         {% endif %}
         {% if enable_anonymous_access %}
 
-        <a href="#" id="nav-anon-identity-btn" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %} onclick="event.preventDefault(); if(window.f0ckAnonPasskey) { window.f0ckAnonPasskey.openModal(); } else { const m = document.getElementById('anon-passkey-modal'); if (m) m.style.display='flex'; }"><i class="fa-solid fa-fingerprint"></i> Passkey Identity</a>
+        <a href="#" id="nav-anon-identity-btn" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %} data-on="click:prevent,openAnonPasskey"><i class="fa-solid fa-fingerprint"></i> Passkey Identity</a>
         <a href="/settings" id="nav-anon-settings-btn" data-page-modal title="Settings" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}><i class="fa-solid fa-gear"></i> Settings</a>
         {% endif %}
         <a href="#" id="nav-login-btn">{{ t("nav.login") }}</a>
@@ -311,7 +311,7 @@
     <a href="/favs" id="nav-guest-favs" title="{{ t("nav.favs") }}" class="desktop-only"><i class="fa-solid fa-heart"></i></a>
     {% endif %}
     <button class="navbar-toggler" type="button" id="nav-toggler"
-      onclick="document.getElementById('navbarContent').classList.toggle('show'); this.classList.toggle('is-open')">
+      data-on="click:toggleNavbar">
       <span></span><span></span><span></span>
     </button>
   </div>
@@ -327,7 +327,7 @@
 
 
 
-<script>
+<script nonce="{{ csp_nonce }}">
 // Passkey login for registered users — fires only on explicit button click
 async function loginWithPasskey() {
   const btn = document.getElementById('modal-login-passkey-btn');
@@ -385,6 +385,26 @@ async function loginWithPasskey() {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-fingerprint"></i> Use my passkey'; }
   }
 }
+
+// CSP-safe markup actions for the navbar and login/register modals (see /s/js/csp-actions.js).
+// switchLoginTab / toggleLoginPassword are declared further down in this template; they are looked up at click time.
+F0ckActions.define({
+  loginWithPasskey: () => { loginWithPasskey(); },
+  switchLoginTab: (el, e, tab) => { switchLoginTab(tab); },
+  toggleLoginPassword: (el) => { toggleLoginPassword(el); },
+  toggleNavbar: (el) => {
+    document.getElementById('navbarContent').classList.toggle('show');
+    el.classList.toggle('is-open');
+  },
+  openAnonPasskey: () => {
+    if (window.f0ckAnonPasskey) { window.f0ckAnonPasskey.openModal(); }
+    else { const m = document.getElementById('anon-passkey-modal'); if (m) m.style.display = 'flex'; }
+  },
+  openAnonSetup: () => {
+    if (window.f0ckAnonPasskey) window.f0ckAnonPasskey.openSetupModal();
+    else { const m = document.getElementById('anon-setup-modal'); if (m) m.style.display = 'flex'; }
+  },
+});
 </script>
 
 <div id="login-modal" style="display: none;">
@@ -400,10 +420,10 @@ async function loginWithPasskey() {
 
       <!-- Tab bar -->
       <div id="login-tabs" class="lm-tabs" role="tablist">
-        <button type="button" id="login-tab-creds" class="lm-tab is-active" role="tab" aria-selected="true" onclick="switchLoginTab('creds')">
+        <button type="button" id="login-tab-creds" class="lm-tab is-active" role="tab" aria-selected="true" data-on="click:switchLoginTab" data-arg="creds">
           <i class="fa-solid fa-key"></i>Credentials
         </button>
-        <button type="button" id="login-tab-passkey" class="lm-tab" role="tab" aria-selected="false" onclick="switchLoginTab('passkey')">
+        <button type="button" id="login-tab-passkey" class="lm-tab" role="tab" aria-selected="false" data-on="click:switchLoginTab" data-arg="passkey">
           <i class="fa-solid fa-fingerprint"></i>Passkey
         </button>
       </div>
@@ -418,7 +438,7 @@ async function loginWithPasskey() {
           <label class="lm-field">
             <i class="fa-solid fa-lock lm-field-icon"></i>
             <input class="lm-input" type="password" name="password" id="modal-login-password" placeholder="{{ t("auth.password_placeholder_min") }}" aria-label="{{ t("auth.password_placeholder_min") }}" autocomplete="current-password" required />
-            <button type="button" class="lm-reveal" onclick="toggleLoginPassword(this)" aria-label="Show password" title="Show password">
+            <button type="button" class="lm-reveal" data-on="click:toggleLoginPassword" aria-label="Show password" title="Show password">
               <i class="fa-solid fa-eye"></i>
             </button>
           </label>
@@ -442,7 +462,7 @@ async function loginWithPasskey() {
 
       <!-- Tab: Passkey -->
       <div id="login-panel-passkey" class="lm-panel lm-panel-passkey" style="display: none;">
-        <button type="button" id="modal-login-passkey-btn" class="lm-btn lm-btn-primary" onclick="loginWithPasskey()">
+        <button type="button" id="modal-login-passkey-btn" class="lm-btn lm-btn-primary" data-on="click:loginWithPasskey">
           <i class="fa-solid fa-fingerprint"></i> Use my passkey
         </button>
         <div id="modal-passkey-error" class="lm-error" style="display:none;"></div>
@@ -452,7 +472,7 @@ async function loginWithPasskey() {
       <div class="lm-anon">
         <div class="lm-divider"><span>or</span></div>
         <button type="button" id="modal-login-as-anon-btn" class="lm-btn lm-btn-ghost"
-          onclick="event.preventDefault(); if(window.f0ckAnonPasskey) window.f0ckAnonPasskey.openSetupModal(); else { const m=document.getElementById('anon-setup-modal'); if(m) m.style.display='flex'; }">
+          data-on="click:prevent,openAnonSetup">
           <i class="fa-solid fa-user-secret"></i> Login as Anonymous
         </button>
         {% if registration_open %}
@@ -690,7 +710,7 @@ async function loginWithPasskey() {
     }
     </style>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
     function switchLoginTab(tab) {
       var isCreds = tab === 'creds';
       document.getElementById('login-panel-creds').style.display = isCreds ? '' : 'none';
@@ -775,7 +795,7 @@ async function loginWithPasskey() {
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function(){
   // Keep legacy modal ID working for any nav onclick handlers that reference anon-ssh-modal
   var legacyAlias = document.getElementById('anon-ssh-modal');
@@ -903,7 +923,7 @@ async function loginWithPasskey() {
     #privacy-consent-modal .pc-accept { justify-content: center; }
   }
 </style>
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
   function closeSetupModal() {
     var m = document.getElementById('anon-setup-modal'); if (m) m.style.display = 'none';
@@ -1176,14 +1196,14 @@ async function loginWithPasskey() {
           <i class="fa-solid fa-lock lm-field-icon"></i>
           <input class="lm-input" type="password" name="password" placeholder="{{ t("auth.password_placeholder") }}" aria-label="{{ t("auth.password_placeholder") }}" autocomplete="new-password" required minlength="20"
             title="Must be at least 20 characters long." />
-          <button type="button" class="lm-reveal" onclick="toggleLoginPassword(this)" aria-label="Show password" title="Show password">
+          <button type="button" class="lm-reveal" data-on="click:toggleLoginPassword" aria-label="Show password" title="Show password">
             <i class="fa-solid fa-eye"></i>
           </button>
         </label>
         <label class="lm-field">
           <i class="fa-solid fa-lock lm-field-icon"></i>
           <input class="lm-input" type="password" name="password_confirm" placeholder="{{ t("auth.confirm_password") }}" aria-label="{{ t("auth.confirm_password") }}" autocomplete="new-password" required minlength="20" />
-          <button type="button" class="lm-reveal" onclick="toggleLoginPassword(this)" aria-label="Show password" title="Show password">
+          <button type="button" class="lm-reveal" data-on="click:toggleLoginPassword" aria-label="Show password" title="Show password">
             <i class="fa-solid fa-eye"></i>
           </button>
         </label>
@@ -1748,7 +1768,7 @@ body.preview-as-mod .btn-infobox-action { display: none !important; }
 }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
   'use strict';
 

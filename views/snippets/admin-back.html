@@ -64,7 +64,7 @@
   }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce }}">
   (() => {
     // Breadcrumb = the page's own heading (first h1/h2 in #main). The rest of the page isn't in the
     // DOM yet when this runs (parser / AJAX insert), so wait until it is.

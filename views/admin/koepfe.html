@@ -19,7 +19,7 @@
         <div id="koepfe-list" class="emoji-grid"></div>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
         (() => {
             var csrf = {{ csrf_token|string|tojson }};
 
@@ -52,7 +52,7 @@
                 }
                 grid.innerHTML = koepfe.map(function(k) {
                     return '<div class="emoji-card">' +
-                        '<button class="emoji-delete" onclick="deleteKoepfe(&quot;' + esc(k.filename) + '&quot;)" title="Delete">x</button>' +
+                        '<button class="emoji-delete" data-on="click:deleteKoepfe" data-arg="' + esc(k.filename) + '" title="Delete">x</button>' +
                         '<img class="emoji-preview" src="' + esc(k.url) + '" alt="">' +
                         '<span class="emoji-label" style="font-size: 0.6em;">' + esc(k.filename) + '</span>' +
                         '</div>';
@@ -100,6 +100,8 @@
                 .then(function(data) { if (data.success) loadAll(); else alert('Löschen fehlgeschlagen: ' + (data.msg || '')); })
                 .catch(function(err) { console.error(err); });
             };
+
+            F0ckActions.define({ deleteKoepfe: function(el, e, filename) { window.deleteKoepfe(filename); } });
 
             document.getElementById('add-koepfe').addEventListener('click', addKoepfe);
 

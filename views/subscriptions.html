@@ -19,7 +19,7 @@
         </div>
         {% endif %}
     </div>
-    <script>
+    <script nonce="{{ csp_nonce }}">
         // Use a self-invoking function to avoid global scope pollution if possible
         // but since it's a click listener on document, it's already global.
         // We only want to add it once.

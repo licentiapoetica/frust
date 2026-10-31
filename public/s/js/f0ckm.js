@@ -12121,6 +12121,7 @@ window.cancelAnimFrame = (function () {
         }
 
         const html = await response.text();
+        const responseNonce = F0ckActions.responseNonce(response);
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         const incomingMain = doc.getElementById('main');
@@ -12252,26 +12253,30 @@ window.cancelAnimFrame = (function () {
                 continue;
             }
 
+            // Execute scripts. The copies are made before the move into the page: connecting an
+            // element clears its nonce attribute, which cloneScript checks.
+            if (child.tagName === 'SCRIPT') {
+              const newScript = F0ckActions.cloneScript(child, responseNonce);
+              child.remove();
+              if (newScript) main.appendChild(newScript);
+              continue;
+            }
+            const nestedScripts = child.querySelectorAll
+              ? Array.from(child.querySelectorAll('script'), s => [s, F0ckActions.cloneScript(s, responseNonce)])
+              : [];
+
             main.appendChild(child);
 
-            // Execute scripts
-            if (child.tagName === 'SCRIPT') {
-              const newScript = document.createElement('script');
-              Array.from(child.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-              newScript.appendChild(document.createTextNode(child.innerHTML));
-              child.parentNode.replaceChild(newScript, child);
-            } else if (child.tagName === 'STYLE') {
+            if (child.tagName === 'STYLE') {
               const newStyle = document.createElement('style');
               Array.from(child.attributes).forEach(attr => newStyle.setAttribute(attr.name, attr.value));
               newStyle.appendChild(document.createTextNode(child.innerHTML));
               child.parentNode.replaceChild(newStyle, child);
             } else if (child.querySelectorAll) {
               // Execute scripts inside child
-              child.querySelectorAll('script').forEach(oldScript => {
-                const newScript = document.createElement('script');
-                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                oldScript.parentNode.replaceChild(newScript, oldScript);
+              nestedScripts.forEach(([oldScript, newScript]) => {
+                if (newScript) oldScript.replaceWith(newScript);
+                else oldScript.remove();
               });
               // Execute styles inside child
               child.querySelectorAll('style').forEach(oldStyle => {
@@ -19789,7 +19794,7 @@ class NotificationSystem {
       const itemLink = `/${itemKey}`;
       return `
         <a href="${itemLink}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="${n.item_id || ''}" data-item-slug="${n.item_slug || n.slug || ''}">
-            <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/mod/deleted/t/${n.item_id}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/${n.item_id}.webp';this.onerror=function(){this.style.display='none';}"></div>
+            <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/mod/deleted/t/${n.item_id}.webp" alt="thumb"></div>
             <div class="notif-content">
                 <div class="notif-user"><strong>${userLabel}</strong></div>
                 <div class="notif-msg">
@@ -19837,7 +19842,7 @@ class NotificationSystem {
     }
 
     // Pending thumbnails live in /pending/t/ until approved (served to the uploader and to staff only)
-    let thumbSrc, thumbOnerror;
+    let thumbSrc;
     if (n.type === 'warning') {
       return `
         <div class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="${n.item_id || ''}" data-item-slug="${n.item_slug || n.slug || ''}">
@@ -19851,12 +19856,10 @@ class NotificationSystem {
       `;
     } else if (n.type === 'admin_pending') {
       thumbSrc = `/pending/t/${n.item_id}.webp`;
-      thumbOnerror = `this.onerror=null;this.src='/t/${n.item_id}.webp';this.onerror=function(){this.style.display='none';}`;
     } else {
       thumbSrc = `/t/${n.item_id}.webp`;
-      thumbOnerror = `this.onerror=null;this.src='/pending/t/${n.item_id}.webp';this.onerror=function(){this.onerror=null;this.src='/mod/deleted/t/${n.item_id}.webp';this.onerror=function(){this.style.display='none';};}`;
     }
-    const thumb = n.item_id ? `<div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="${thumbSrc}" alt="thumb" onerror="${thumbOnerror}"></div>` : '';
+    const thumb = n.item_id ? `<div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="${thumbSrc}" alt="thumb"></div>` : '';
     return `
       <a href="${link}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="${n.item_id || ''}" data-item-slug="${n.item_slug || n.slug || ''}">
           ${thumb}
@@ -19924,7 +19927,7 @@ class NotificationSystem {
       const link = `/${itemKey}`;
       return `
             <a href="${link}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="${n.item_id || ''}" data-item-slug="${n.item_slug || n.slug || ''}">
-                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/t/${n.item_id}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/${n.item_id}.webp';this.onerror=function(){this.onerror=null;this.src='/mod/deleted/t/${n.item_id}.webp';this.onerror=function(){this.style.display='none';};}"></div>
+                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/t/${n.item_id}.webp" alt="thumb"></div>
                 <div class="notif-content">
                     <div>
                     <strong>${(window.f0ckI18n && window.f0ckI18n.notif_upload_approved) || 'Your Upload has been approved'}</strong>
@@ -19939,7 +19942,7 @@ class NotificationSystem {
         const link = `/${itemKey}`;
         return `
             <a href="${link}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="${n.item_id || ''}" data-item-slug="${n.item_slug || n.slug || ''}">
-                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/t/${n.item_id}.webp" alt="thumb" onerror="this.style.display='none';"></div>
+                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/t/${n.item_id}.webp" alt="thumb"></div>
                 <div class="notif-content">
                     <div>
                     <strong>${(window.f0ckI18n && window.f0ckI18n.notif_upload_success) || 'Your background upload is finished!'}</strong>
@@ -19976,7 +19979,7 @@ class NotificationSystem {
       const link = `/notifications#notif-${n.id}`;
       return `
             <a href="${link}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="${n.item_id || ''}" data-item-slug="${n.item_slug || n.slug || ''}" data-notif-nav="true">
-                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/mod/deleted/t/${n.item_id}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/${n.item_id}.webp';this.onerror=function(){this.style.display='none';}"></div>
+                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/mod/deleted/t/${n.item_id}.webp" alt="thumb"></div>
                 <div class="notif-content">
                     <div>
                         <strong>${label} #${itemKey}</strong>
@@ -19992,7 +19995,7 @@ class NotificationSystem {
       const link = '/mod/approve';
       return `
             <a href="${link}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="${n.item_id || ''}" data-item-slug="${n.item_slug || n.slug || ''}">
-                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/pending/t/${n.item_id}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/${n.item_id}.webp';this.onerror=function(){this.style.display='none';}"></div>
+                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/pending/t/${n.item_id}.webp" alt="thumb"></div>
                 <div class="notif-content">
                     <div>
                         <strong>${(window.f0ckI18n && window.f0ckI18n.notif_upload_pending) || 'A new upload needs approval'}</strong>
@@ -20007,7 +20010,7 @@ class NotificationSystem {
       const link = '/mod/reports';
       return `
             <a href="${link}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="${n.item_id || ''}" data-item-slug="${n.item_slug || n.slug || ''}">
-                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/t/${n.item_id}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/${n.item_id}.webp';this.onerror=function(){this.onerror=null;this.src='/mod/deleted/t/${n.item_id}.webp';this.onerror=function(){this.style.display='none';};}"></div>
+                <div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/t/${n.item_id}.webp" alt="thumb"></div>
                 <div class="notif-content">
                     <div>
                         <strong>${(window.f0ckI18n && window.f0ckI18n.notif_new_report) || 'A new user report has been submitted'}</strong>
@@ -20043,7 +20046,7 @@ class NotificationSystem {
     const cid = n.comment_id || n.reference_id;
     const link = `/${itemKey}#c${cid}`;
 
-      const thumb = n.item_id ? `<div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/t/${n.item_id}.webp" alt="thumb" onerror="this.style.display='none'"></div>` : '';
+      const thumb = n.item_id ? `<div class="notif-thumb"${n.item_mode ? ` data-mode="${n.item_mode}"` : ''}><img src="/t/${n.item_id}.webp" alt="thumb"></div>` : '';
       return `
             <a href="${link}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="${n.item_id || ''}" data-item-slug="${n.item_slug || n.slug || ''}">
                 ${thumb}

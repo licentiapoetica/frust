@@ -2,16 +2,16 @@
 <div class="profile_head" id="live-profile-preview-box" data-banner-user="{{ (user.user or "") }}" style="position: relative; {% if (user.banner_file and user_banner_enabled) %} --author-banner: url('/a/{{ user.banner_file }}'); --author-banner-position: {{ ("center top" if user.banner_position == "center" else (user.banner_position or "center top")) }}; --author-banner-size: {{ (user.banner_size or "cover") }}; {% endif %}">
     {% if (((session and session.id == user.user_id) and not session.is_anon) and user_banner_enabled) %}
     <div id="inline-banner-edit-wrapper" style="display: none; position:absolute; top: 5px; right: 5px; z-index: 10;">
-        <button id="inline-banner-edit-btn" onclick="const menu = document.getElementById('banner-edit-menu'); menu.style.display = menu.style.display === 'none' ? 'block' : 'none';" type="button" title="{{ t("profile.edit_banner", "Edit Banner") }}">
+        <button id="inline-banner-edit-btn" data-on="click:toggleBannerEditMenu" type="button" title="{{ t("profile.edit_banner", "Edit Banner") }}">
             <i class="fa-solid fa-panorama"></i>
         </button>
         <div id="banner-edit-menu" style="display: none; position: absolute; right: 0; top: 100%; margin-top: 5px; background: #222; border: 1px solid #444; border-radius: 4px; padding: 5px; min-width: 120px; box-shadow: 0 2px 10px rgba(0,0,0,0.5);">
             {% if user.banner_file %}
-            <button id="banner-edit-btn" onclick="document.getElementById('banner-edit-menu').style.display='none';" style="display: block; width: 100%; text-align: left; padding: 5px 8px; background: none; border: none; color: #fff; cursor: pointer; font-size: 0.8em;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='none'">Edit Position</button>
-            <button id="banner-remove-btn" onclick="document.getElementById('banner-edit-menu').style.display='none';" style="display: block; width: 100%; text-align: left; padding: 5px 8px; background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 0.8em;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='none'">Remove Banner</button>
+            <button id="banner-edit-btn" class="banner-menu-item" data-on="click:closeBannerEditMenu" style="display: block; width: 100%; text-align: left; padding: 5px 8px; background: none; border: none; color: #fff; cursor: pointer; font-size: 0.8em;">Edit Position</button>
+            <button id="banner-remove-btn" class="banner-menu-item" data-on="click:closeBannerEditMenu" style="display: block; width: 100%; text-align: left; padding: 5px 8px; background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 0.8em;">Remove Banner</button>
             <hr id="banner-menu-hr" style="border: none; border-top: 1px solid #444; margin: 5px 0;">
             {% endif %}
-            <button onclick="document.getElementById('banner-choose-btn').click(); document.getElementById('banner-edit-menu').style.display='none';" style="display: block; width: 100%; text-align: left; padding: 5px 8px; background: none; border: none; color: #fff; cursor: pointer; font-size: 0.8em;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='none'">Upload New</button>
+            <button class="banner-menu-item" data-on="click:chooseBannerFile,closeBannerEditMenu" style="display: block; width: 100%; text-align: left; padding: 5px 8px; background: none; border: none; color: #fff; cursor: pointer; font-size: 0.8em;">Upload New</button>
         </div>
     </div>
     <div style="display:none;">
@@ -41,7 +41,7 @@
             {% endif %}
         </div>
         {% if ((session and session.id == user.user_id) and not session.is_anon) %}
-        <button id="edit-profile-btn" type="button" class="btn btn-sm" onclick="const box = document.getElementById('live-profile-preview-box'); const on = box.classList.toggle('edit-mode-active'); this.classList.toggle('is-active', on); this.innerHTML = on ? '<i class=&quot;fa-solid fa-check&quot;></i>' : '<i class=&quot;fa-solid fa-pen&quot;></i>';" title="{{ t("profile.edit_btn", "Edit Profile") }}"><i class="fa-solid fa-pen"></i></button>
+        <button id="edit-profile-btn" type="button" class="btn btn-sm" data-on="click:toggleProfileEditMode" title="{{ t("profile.edit_btn", "Edit Profile") }}"><i class="fa-solid fa-pen"></i></button>
         {% endif %}
     </div>
     <div class="layersoffear">
@@ -240,7 +240,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
     (function () {
         const banBtn = document.getElementById('ban-user-btn');
         const unbanBtn = document.getElementById('unban-user-btn');
@@ -420,9 +420,27 @@
 #live-profile-preview-box.edit-mode-active .avatar-image-wrapper:hover .avatar-edit-btn {
     opacity: 1;
 }
+#banner-edit-menu .banner-menu-item:hover {
+    background: #333 !important;
+}
 </style>
 <script src="/s/js/settings.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
+    F0ckActions.define({
+        toggleBannerEditMenu: () => {
+            const menu = document.getElementById('banner-edit-menu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        },
+        closeBannerEditMenu: () => { document.getElementById('banner-edit-menu').style.display = 'none'; },
+        chooseBannerFile: () => { document.getElementById('banner-choose-btn').click(); },
+        toggleProfileEditMode: (el) => {
+            const box = document.getElementById('live-profile-preview-box');
+            const on = box.classList.toggle('edit-mode-active');
+            el.classList.toggle('is-active', on);
+            el.innerHTML = on ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-pen"></i>';
+        },
+    });
+
     (function() {
 
 

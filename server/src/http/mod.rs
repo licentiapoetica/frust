@@ -71,6 +71,8 @@ pub struct Req {
     body_cache: Option<Bytes>,
     post_cache: Option<Value>,
     pub out: Arc<Mutex<OutExtras>>,
+    /// Nonce for inline scripts in this response's Content-Security-Policy (`csp_nonce` in templates).
+    pub csp_nonce: String,
 }
 
 /// JavaScript `decodeURI`: like decodeURIComponent but keeps reserved characters encoded.
@@ -182,6 +184,7 @@ impl Req {
             body_cache: None,
             post_cache: None,
             out: Arc::new(Mutex::new(OutExtras::default())),
+            csp_nonce: crate::csp::new_nonce(),
         }
     }
 

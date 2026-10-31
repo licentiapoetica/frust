@@ -2,7 +2,7 @@
 <div id="mod-action-modal" class="modal-overlay" style="display:none;">
   <div class="modal-content ma-modal-content">
     <div class="ma-header">
-      <button type="button" class="modal-x" aria-label="Close" title="Close" onclick="document.getElementById('mod-action-cancel').click()">&times;</button>
+      <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="mod-action-cancel">&times;</button>
       <h3 id="mod-action-title">{{ t("mod.confirm_action") }}</h3>
     </div>
     <div class="ma-body">
@@ -144,7 +144,7 @@
 <div id="report-modal" class="modal-overlay" style="display:none;">
   <div class="modal-content report-modal-content">
     <div class="rm-header">
-      <button type="button" class="modal-x" aria-label="Close" title="Close" onclick="document.getElementById('report-cancel').click()">&times;</button>
+      <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="report-cancel">&times;</button>
       <h3>{{ t("report.title") }}</h3>
       <p>Select one or more reasons and optionally add details below.</p>
     </div>
@@ -439,7 +439,7 @@
 <script async src="/s/js/theme.js?v={{ ts|safe }}"></script>
 {% endif %}
 {% if (private_society and not session) %}
-<script>
+<script nonce="{{ csp_nonce }}">
   window.f0ckSession = { logged_in: false, is_anon: false, excluded_tags: [], onara: {% if onara %} true {% else %} false {% endif %}, onara_cfg: {% if (onara_cfg != none and onara_cfg != none) %} {% if onara_cfg %} true {% else %} false {% endif %} {% else %} null {% endif %}, enable_item_slugs: {% if enable_item_slugs %} true {% else %} false {% endif %}, enable_anonymous_access: {% if enable_anonymous_access %} true {% else %} false {% endif %}, anon_permissions: {{ (anon_permissions_json or "{}")|safe }}, hide_comments_from_public: {% if hide_comments_from_public %} true {% else %} false {% endif %}, guest_anonymize: {% if guest_anonymize %} true {% else %} false {% endif %}, anon_anonymize: {% if anon_anonymize %} true {% else %} false {% endif %}, is_anonymized: {% if is_anonymized %} true {% else %} false {% endif %}, enable_xd_score: {% if enable_xd_score %} true {% else %} false {% endif %}, default_theme: {{ default_theme|string|tojson }}, show_content_warning: {% if show_content_warning %} true {% else %} false {% endif %}, use_new_layout: {% if default_layout == "legacy" %}false {% else %} true {% endif %}, comment_display_mode: {{ comment_display_mode|safe }}, comment_max_length: {{ (comment_max_length if (comment_max_length != none and comment_max_length != none) else "null")|safe }}, development: {% if development %} true {% else %} false {% endif %}, allow_comment_deletion: {% if allow_comment_deletion %} true {% else %} false {% endif %}, hide_sidebar_default: {% if hide_sidebar_default %} true {% else %} false {% endif %}, public_untagged: {% if public_untagged %} true {% else %} false {% endif %}, public_nsfw: {% if public_nsfw %} true {% else %} false {% endif %} };
   window.f0ckDebug = window.f0ckSession.development ? console.log.bind(console) : () => {};
   window.f0ckDefaultThumbSize = {{ default_thumb_size|string|tojson }};
@@ -966,7 +966,7 @@
 <script src="/s/js/flash_yank.js?v={{ ts|safe }}"></script>
 <script src="/s/js/laser-cursor.js?v={{ ts|safe }}"></script>
 {% if (show_koepfe and not (session and session.hide_koepfe)) %}
-<script>window.f0ckKoepfe = {{ koepfe_json|safe }};</script>
+<script nonce="{{ csp_nonce }}">window.f0ckKoepfe = {{ koepfe_json|safe }};</script>
 <script src="/s/js/koepfe.js?v={{ ts|safe }}"></script>
 {% endif %}
 
@@ -988,7 +988,7 @@
 <script src="/s/js/admin.js?v={{ ts|safe }}"></script>
 {% endif %}
 {% endif %}
-<script>
+<script nonce="{{ csp_nonce }}">
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.getRegistrations().then((registrations) => {

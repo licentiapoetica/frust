@@ -26,7 +26,7 @@
         {% endif %}
         <span class="session-id">#{{ s.id }}</span>
         {% if s.id != session.sess_id %}
-        <a href="javascript:void(0)" onclick="deleteSession({{ s.id }}, this)" class="session-delete"
+        <a href="#" data-on="click:prevent,deleteSession" data-args='[{{ s.id|tojson }}]' class="session-delete"
           title="Delete Session">&#10006;</a>
         {% endif %}
       </div>
@@ -57,7 +57,9 @@
     </div>
   </div>
   {% endfor %}
-  <script>
+  <script nonce="{{ csp_nonce }}">
+    F0ckActions.define({ deleteSession: (el, e, id) => deleteSession(id, el) });
+
     async function deleteSession(id, el) {
       if (!confirm('Are you sure you want to delete this session?')) return;
 

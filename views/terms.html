@@ -5,7 +5,7 @@
     {% if terms_text %}
     <div class="dynamic-page-content" id="terms-dynamic-content"></div>
     <script id="terms-raw-data" type="application/json">{{ terms_text_b64|safe }}</script>
-    <script>
+    <script nonce="{{ csp_nonce }}">
       (function() {
         var raw = document.getElementById('terms-raw-data');
         var el  = document.getElementById('terms-dynamic-content');
@@ -18,7 +18,7 @@
           tmp.querySelectorAll('script,iframe,object,embed,form,input,button,select,meta,link,base,style').forEach(function(el) { el.remove(); });
           tmp.querySelectorAll('*').forEach(function(node) {
             Array.from(node.attributes).forEach(function(attr) {
-              if (/^on/i.test(attr.name) || (attr.name === 'href' && /^javascript:/i.test(attr.value.trim()))) {
+              if (/^on/i.test(attr.name) || /^data-(on|args?)$/i.test(attr.name) || (attr.name === 'href' && /^javascript:/i.test(attr.value.trim()))) {
                 node.removeAttribute(attr.name);
               }
             });

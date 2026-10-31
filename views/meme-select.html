@@ -38,7 +38,7 @@
             </div>
         </div>
 
-        <script>
+        <script nonce="{{ csp_nonce }}">
         document.querySelectorAll('.category-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 const category = chip.getAttribute('data-category');

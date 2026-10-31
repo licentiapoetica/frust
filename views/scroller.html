@@ -955,7 +955,7 @@
 </head>
 <body class="scroller-active">
   <div id="main">
-  <script>
+  <script nonce="{{ csp_nonce }}">
     window.f0ckThemes = {{ themes_json|safe }};
     window.f0ckDomain = {{ domain|string|tojson }};
     window.scrollerMode = {% if (session is defined and session) %}{{ (session.mode or 0)|safe }}{% else %} 0{% endif %};
@@ -1147,7 +1147,7 @@
     <div id="scroller-empty">
       <i class="fa-solid fa-binoculars"></i>
       <p>{{ t("scroller.nothing_found") }}</p>
-      <button onclick="document.getElementById('filter-open-btn').click()" style="margin-top:8px;padding:8px 20px;border-radius:50px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:.8rem;">{{ t("scroller.adjust_filters") }}</button>
+      <button data-on="click:click-by-id" data-arg="filter-open-btn" style="margin-top:8px;padding:8px 20px;border-radius:50px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:.8rem;">{{ t("scroller.adjust_filters") }}</button>
     </div>
   </div>
 

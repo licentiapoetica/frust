@@ -149,7 +149,7 @@
       .mq-review .mq-filename { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .mq-review .mq-actions .mq-btn { height: 38px; }
     </style>
-    <script>
+    <script nonce="{{ csp_nonce }}">
       (() => {
         // Album viewer: swap the main viewer to the clicked strip item
         const buildViewer = (m) => {
@@ -227,7 +227,7 @@
         });
       })();
     </script>
-    <script>
+    <script nonce="{{ csp_nonce }}">
       (() => {
         // Approve → public
         document.querySelectorAll('.btn-approve-async').forEach(btn => {

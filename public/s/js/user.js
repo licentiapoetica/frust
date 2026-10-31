@@ -136,7 +136,7 @@
 
         const del = document.createElement("a");
         del.className = "removetag admin-deltag";
-        del.href = "javascript:void(0)";
+        del.href = "#"; // same as the server-rendered removetag link; the delegated click handler prevents navigation
         del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
         span.insertAdjacentElement("beforeend", del);
       }

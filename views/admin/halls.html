@@ -84,7 +84,7 @@
     {% endif %}
   </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
   var grid = document.getElementById('hall-manager-grid');
   var i18n = window.f0ckI18n || {};

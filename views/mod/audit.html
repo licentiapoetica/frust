@@ -183,7 +183,7 @@
         </div>
         <br>
         {% endif %}
-        <script>
+        <script nonce="{{ csp_nonce }}">
             (function () {
                 var grid = document.getElementById('audit-grid');
                 var loader = document.getElementById('audit-loading');

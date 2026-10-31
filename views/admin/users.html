@@ -295,7 +295,7 @@
     <!-- Create User Modal -->
     <div id="create-user-modal">
         <div class="cum-box">
-            <button class="cum-close-btn" onclick="closeCreateUserModal()" title="Close">&times;</button>
+            <button class="cum-close-btn" data-on="click:closeCreateUserModal" title="Close">&times;</button>
             <h3><i class="fa fa-user-plus" style="margin-right: 8px; color: var(--accent);"></i>Create New User</h3>
 
             <div class="cum-field">
@@ -322,8 +322,8 @@
             <div id="cum-error"></div>
 
             <div class="cum-actions">
-                <button class="btn-modern" style="background:#333;" onclick="closeCreateUserModal()">Cancel</button>
-                <button class="btn-modern btn-create" id="cum-submit-btn" onclick="submitCreateUser()">
+                <button class="btn-modern" style="background:#333;" data-on="click:closeCreateUserModal">Cancel</button>
+                <button class="btn-modern btn-create" id="cum-submit-btn" data-on="click:submitCreateUser">
                     <i class="fa fa-plus"></i> Create User
                 </button>
             </div>
@@ -338,7 +338,7 @@
                 <p style="color: #888; margin: 5px 0 0 0;">Administration hub for <span id="total-count">{{ total }}</span> <span id="total-label">{{ totalLabel }}</span>.</p>
             </div>
             <div>
-                <button class="btn-modern btn-create" onclick="openCreateUserModal()" style="padding: 11px 18px; font-size: 0.85rem; white-space: nowrap; height: 42px;" title="Create new user">
+                <button class="btn-modern btn-create" data-on="click:openCreateUserModal" style="padding: 11px 18px; font-size: 0.85rem; white-space: nowrap; height: 42px;" title="Create new user">
                     <i class="fa fa-user-plus"></i> Create User
                 </button>
             </div>
@@ -409,7 +409,20 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
+        // Row buttons in admin/users_list.html (also rendered alone for paging/search): each calls window[name](button)
+        F0ckActions.define(Object.fromEntries([
+            'activateUser', 'unbanUser', 'banUser', 'deleteUploads', 'deleteComments',
+            'adminBulkDeleteHalls', 'adminReassignUploads', 'adminResetLoginAttempts',
+            'adminSetDisplayName', 'adminRenameUser', 'adminSetPassword', 'adminLockLayout',
+            'adminSetRole', 'adminSetGroups', 'adminDeleteUser'
+        ].map(function(name) { return [name, function(el) { return window[name](el); }]; })));
+        F0ckActions.define({
+            openCreateUserModal: function() { openCreateUserModal(); },
+            closeCreateUserModal: function() { closeCreateUserModal(); },
+            submitCreateUser: function() { submitCreateUser(); }
+        });
+
         function updateUI(id, data, action) {
             var rowId = id ? id : ('ghost-' + data.username);
             var statusCell = document.getElementById('status-cell-' + rowId);

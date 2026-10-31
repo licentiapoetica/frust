@@ -2,12 +2,12 @@
 <div id="visibility-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content vis-modal-content">
         <div class="vis-header">
-            <button type="button" class="modal-x" aria-label="Close" title="Close" onclick="document.getElementById('visibility-modal-cancel').click()">&times;</button>
+            <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="visibility-modal-cancel">&times;</button>
             <h3><i class="fa-solid fa-eye"></i> Change visibility</h3>
             <p>Choose who can see this post.</p>
         </div>
         <div class="vis-body">
-            <form id="visibility-form" onsubmit="return false;">
+            <form id="visibility-form" data-on="submit:prevent">
                 <input type="hidden" id="visibility-item-id" value="{{ item.id }}" />
                 <div class="visibility-options">
                     <label class="visibility-option">

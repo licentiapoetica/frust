@@ -251,7 +251,7 @@
                 <option value="resolved">Resolved</option>
                 <option value="rejected">Rejected</option>
             </select>
-            <button onclick="loadReports(1)"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+            <button data-on="click:rp-call" data-args='["loadReports",1]'><i class="fa-solid fa-rotate-right"></i> Refresh</button>
         </div>
 
         <div id="reports-feed" class="rp-feed">

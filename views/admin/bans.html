@@ -18,13 +18,13 @@
                     </p>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button onclick="openBanModal('fingerprint')" class="btn-upload" style="width: auto; padding: 8px 16px; background: #e74c3c; border-color: #c0392b; font-size: 0.85rem; cursor: pointer; border-radius: 4px; color: #fff;">
+                    <button data-on="click:openBanModal" data-args='["fingerprint"]\' class="btn-upload" style="width: auto; padding: 8px 16px; background: #e74c3c; border-color: #c0392b; font-size: 0.85rem; cursor: pointer; border-radius: 4px; color: #fff;">
                         <i class="fa-solid fa-ban"></i> Ban Fingerprint
                     </button>
-                    <button onclick="openBanModal('hardware')" class="btn-upload" style="width: auto; padding: 8px 16px; background: #8e44ad; border-color: #7d3c98; font-size: 0.85rem; cursor: pointer; border-radius: 4px; color: #fff;">
+                    <button data-on="click:openBanModal" data-args='["hardware"]\' class="btn-upload" style="width: auto; padding: 8px 16px; background: #8e44ad; border-color: #7d3c98; font-size: 0.85rem; cursor: pointer; border-radius: 4px; color: #fff;">
                         <i class="fa-solid fa-microchip"></i> Ban Hardware ID
                     </button>
-                    <button onclick="openBanModal('ip')" class="btn-upload" style="width: auto; padding: 8px 16px; background: #d35400; border-color: #ba4a00; font-size: 0.85rem; cursor: pointer; border-radius: 4px; color: #fff;">
+                    <button data-on="click:openBanModal" data-args='["ip"]\' class="btn-upload" style="width: auto; padding: 8px 16px; background: #d35400; border-color: #ba4a00; font-size: 0.85rem; cursor: pointer; border-radius: 4px; color: #fff;">
                         <i class="fa-solid fa-network-wired"></i> Ban IP
                     </button>
                 </div>
@@ -57,19 +57,19 @@
 
         <!-- Navigation Tabs -->
         <div style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 20px; overflow-x: auto;">
-            <button onclick="switchTab('fingerprints')" id="tab-btn-fingerprints" class="admin-tab-btn active-tab">
+            <button data-on="click:switchTab" data-arg="fingerprints" id="tab-btn-fingerprints" class="admin-tab-btn active-tab">
                 <i class="fa-solid fa-key"></i> Banned Fingerprints ({{ (bannedFingerprints|length if bannedFingerprints else 0) }})
             </button>
-            <button onclick="switchTab('hardware')" id="tab-btn-hardware" class="admin-tab-btn">
+            <button data-on="click:switchTab" data-arg="hardware" id="tab-btn-hardware" class="admin-tab-btn">
                 <i class="fa-solid fa-microchip"></i> Banned Hardware ({{ (bannedHardware|length if bannedHardware else 0) }})
             </button>
-            <button onclick="switchTab('ips')" id="tab-btn-ips" class="admin-tab-btn">
+            <button data-on="click:switchTab" data-arg="ips" id="tab-btn-ips" class="admin-tab-btn">
                 <i class="fa-solid fa-network-wired"></i> Banned IPs ({{ (bannedIps|length if bannedIps else 0) }})
             </button>
-            <button onclick="switchTab('identities')" id="tab-btn-identities" class="admin-tab-btn">
+            <button data-on="click:switchTab" data-arg="identities" id="tab-btn-identities" class="admin-tab-btn">
                 <i class="fa-solid fa-user-secret"></i> Anonymous Identities ({{ (anonIdentities|length if anonIdentities else 0) }})
             </button>
-            <button onclick="switchTab('activity')" id="tab-btn-activity" class="admin-tab-btn">
+            <button data-on="click:switchTab" data-arg="activity" id="tab-btn-activity" class="admin-tab-btn">
                 <i class="fa-solid fa-list-check"></i> Activity Audit ({{ (recentActivity|length if recentActivity else 0) }})
             </button>
         </div>
@@ -95,10 +95,10 @@
                             <tr>
                                 <td data-label="Fingerprint">
                                     <div style="display: flex; align-items: center; gap: 6px;">
-                                        <code class="clickable-code" onclick="copyText('{{ fp.fingerprint }}')" title="Click to copy full fingerprint">
+                                        <code class="clickable-code" data-on="click:copyText" data-arg="{{ fp.fingerprint }}" title="Click to copy full fingerprint">
                                             {{ fp.fingerprint }}
                                         </code>
-                                        <button onclick="copyText('{{ fp.fingerprint }}')" class="btn-icon" title="Copy fingerprint">
+                                        <button data-on="click:copyText" data-arg="{{ fp.fingerprint }}" class="btn-icon" title="Copy fingerprint">
                                             <i class="fa-regular fa-copy"></i>
                                         </button>
                                     </div>
@@ -129,7 +129,7 @@
                                     {% endif %}
                                 </td>
                                 <td data-label="Action">
-                                    <button onclick="unbanFingerprint('{{ fp.fingerprint }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
+                                    <button data-on="click:unbanFingerprint" data-arg="{{ fp.fingerprint }}" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
                                         <i class="fa-solid fa-unlock"></i> Unban
                                     </button>
                                 </td>
@@ -167,10 +167,10 @@
                             <tr>
                                 <td data-label="Hardware ID">
                                     <div style="display: flex; align-items: center; gap: 6px;">
-                                        <code class="clickable-code" onclick="copyText('{{ hw.hw_fingerprint }}')" title="Click to copy hardware ID">
+                                        <code class="clickable-code" data-on="click:copyText" data-arg="{{ hw.hw_fingerprint }}" title="Click to copy hardware ID">
                                             {{ hw.hw_fingerprint[0:24] }}...
                                         </code>
-                                        <button onclick="copyText('{{ hw.hw_fingerprint }}')" class="btn-icon" title="Copy Hardware ID">
+                                        <button data-on="click:copyText" data-arg="{{ hw.hw_fingerprint }}" class="btn-icon" title="Copy Hardware ID">
                                             <i class="fa-regular fa-copy"></i>
                                         </button>
                                     </div>
@@ -196,7 +196,7 @@
                                     {% endif %}
                                 </td>
                                 <td data-label="Action">
-                                    <button onclick="unbanHardware('{{ hw.hw_fingerprint }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
+                                    <button data-on="click:unbanHardware" data-arg="{{ hw.hw_fingerprint }}" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
                                         <i class="fa-solid fa-unlock"></i> Unban
                                     </button>
                                 </td>
@@ -234,10 +234,10 @@
                             <tr>
                                 <td data-label="IP / Hash">
                                     <div style="display: flex; align-items: center; gap: 6px;">
-                                        <code class="clickable-code" onclick="copyText('{{ item.ip }}')" title="Click to copy IP">
+                                        <code class="clickable-code" data-on="click:copyText" data-arg="{{ item.ip }}" title="Click to copy IP">
                                             {{ item.ip }}
                                         </code>
-                                        <button onclick="copyText('{{ item.ip }}')" class="btn-icon" title="Copy IP">
+                                        <button data-on="click:copyText" data-arg="{{ item.ip }}" class="btn-icon" title="Copy IP">
                                             <i class="fa-regular fa-copy"></i>
                                         </button>
                                     </div>
@@ -264,7 +264,7 @@
                                     {% endif %}
                                 </td>
                                 <td data-label="Action">
-                                    <button onclick="unbanIp('{{ item.ip }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
+                                    <button data-on="click:unbanIp" data-arg="{{ item.ip }}" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
                                         <i class="fa-solid fa-unlock"></i> Unban
                                     </button>
                                 </td>
@@ -313,10 +313,10 @@
                                 </td>
                                 <td data-label="Fingerprint">
                                     <div style="display: flex; align-items: center; gap: 6px;">
-                                        <code class="clickable-code" onclick="copyText('{{ idn.fingerprint }}')" title="Click to copy full fingerprint">
+                                        <code class="clickable-code" data-on="click:copyText" data-arg="{{ idn.fingerprint }}" title="Click to copy full fingerprint">
                                             {{ idn.fingerprint[0:22] }}...
                                         </code>
-                                        <button onclick="copyText('{{ idn.fingerprint }}')" class="btn-icon" title="Copy fingerprint">
+                                        <button data-on="click:copyText" data-arg="{{ idn.fingerprint }}" class="btn-icon" title="Copy fingerprint">
                                             <i class="fa-regular fa-copy"></i>
                                         </button>
                                     </div>
@@ -324,16 +324,16 @@
                                 <td data-label="Hardware ID">
                                     {% if idn.hw_fingerprint %}
                                         <div style="display: flex; align-items: center; gap: 6px;">
-                                            <code class="clickable-code" onclick="copyText('{{ idn.hw_fingerprint }}')" title="Click to copy full hardware ID">
+                                            <code class="clickable-code" data-on="click:copyText" data-arg="{{ idn.hw_fingerprint }}" title="Click to copy full hardware ID">
                                                 {{ idn.hw_fingerprint[0:18] }}...
                                             </code>
-                                            <button onclick="copyText('{{ idn.hw_fingerprint }}')" class="btn-icon" title="Copy hardware ID">
+                                            <button data-on="click:copyText" data-arg="{{ idn.hw_fingerprint }}" class="btn-icon" title="Copy hardware ID">
                                                 <i class="fa-regular fa-copy"></i>
                                             </button>
                                             {% if idn.is_hw_banned %}
                                                 <span class="badge" style="background: #e74c3c; color: #fff; padding: 2px 5px; border-radius: 3px; font-size: 0.65rem;">HW BANNED</span>
                                             {% else %}
-                                                <button onclick="openBanModal('hardware', '{{ idn.hw_fingerprint }}', {{ idn.user_id }})" class="btn-icon" title="Ban Hardware ID" style="color: #e74c3c; margin-left: 2px;">
+                                                <button data-on="click:openBanModal" data-args='{{ ["hardware", idn.hw_fingerprint, idn.user_id]|tojson }}' class="btn-icon" title="Ban Hardware ID" style="color: #e74c3c; margin-left: 2px;">
                                                     <i class="fa-solid fa-ban"></i>
                                                 </button>
                                             {% endif %}
@@ -363,11 +363,11 @@
                                 </td>
                                 <td data-label="Actions">
                                     {% if (idn.is_banned or idn.is_fp_banned) %}
-                                        <button onclick="unbanFingerprint('{{ idn.fingerprint }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
+                                        <button data-on="click:unbanFingerprint" data-arg="{{ idn.fingerprint }}" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
                                             <i class="fa-solid fa-unlock"></i> Unban Key
                                         </button>
                                     {% else %}
-                                        <button onclick="promptBanIdentity({{ idn.user_id }}, '{{ idn.fingerprint }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #e74c3c; border-color: #c0392b; color: #fff; cursor: pointer; border-radius: 4px;">
+                                        <button data-on="click:promptBanIdentity" data-args='{{ [idn.user_id, idn.fingerprint]|tojson }}' class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #e74c3c; border-color: #c0392b; color: #fff; cursor: pointer; border-radius: 4px;">
                                             <i class="fa-solid fa-ban"></i> Ban Key
                                         </button>
                                     {% endif %}
@@ -448,10 +448,10 @@
                                 <td data-label="Hardware ID" style="font-family: monospace; font-size: 0.8rem;">
                                     {% if act.hw_fingerprint %}
                                         <div style="display: flex; align-items: center; gap: 6px;">
-                                            <code class="clickable-code" onclick="copyText('{{ act.hw_fingerprint }}')" title="Click to copy Hardware ID">
+                                            <code class="clickable-code" data-on="click:copyText" data-arg="{{ act.hw_fingerprint }}" title="Click to copy Hardware ID">
                                                 {{ act.hw_fingerprint[0:16] }}...
                                             </code>
-                                            <button onclick="copyText('{{ act.hw_fingerprint }}')" class="btn-icon" title="Copy Hardware ID">
+                                            <button data-on="click:copyText" data-arg="{{ act.hw_fingerprint }}" class="btn-icon" title="Copy Hardware ID">
                                                 <i class="fa-regular fa-copy"></i>
                                             </button>
                                         </div>
@@ -483,7 +483,7 @@
             <i class="fa-solid fa-ban" style="color: #e74c3c;"></i> Ban Target
         </h3>
 
-        <form id="ban-form" onsubmit="submitBan(event)">
+        <form id="ban-form" data-on="submit:submitBan">
             <input type="hidden" id="ban-target-type" value="fingerprint">
             <input type="hidden" id="ban-target-user-id" value="">
 
@@ -516,7 +516,7 @@
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" onclick="closeBanModal()" style="background: transparent; border: 1px solid #555; color: #ccc; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
+                <button type="button" data-on="click:closeBanModal" style="background: transparent; border: 1px solid #555; color: #ccc; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
                 <button type="submit" style="background: #e74c3c; border: 1px solid #c0392b; color: #fff; padding: 8px 18px; border-radius: 4px; font-weight: bold; cursor: pointer;">Enforce Ban</button>
             </div>
         </form>
@@ -586,7 +586,19 @@
 .action-handshake { background: rgba(132, 94, 247, 0.2); color: #b197fc; border: 1px solid #845ef7; }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce }}">
+F0ckActions.define({
+    switchTab: (el, e, tabId) => switchTab(tabId),
+    copyText: (el, e, text) => copyText(text),
+    openBanModal: (el, e, ...args) => openBanModal(...args),
+    closeBanModal: () => closeBanModal(),
+    promptBanIdentity: (el, e, userId, fingerprint) => promptBanIdentity(userId, fingerprint),
+    submitBan: (el, e) => submitBan(e),
+    unbanFingerprint: (el, e, fp) => unbanFingerprint(fp),
+    unbanHardware: (el, e, hw) => unbanHardware(hw),
+    unbanIp: (el, e, ip) => unbanIp(ip),
+});
+
 function switchTab(tabId) {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active-tab'));
     document.querySelectorAll('.tab-pane').forEach(pane => {

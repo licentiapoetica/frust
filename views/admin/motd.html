@@ -7,7 +7,7 @@
         <p style="color: #ccc; margin-bottom: 20px;">This message is displayed <strong>inside the navbar</strong> (at the bottom) so it stays visible while scrolling. Supports Markdown and HTML.</p>
 
         <div class="admin-motd-form">
-            <form id="motd-form" action="/admin/motd" method="POST" onsubmit="event.preventDefault(); saveMotd(this);">
+            <form id="motd-form" action="/admin/motd" method="POST" data-on="submit:prevent,saveMotd">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div style="margin-bottom: 20px;">
                     <label for="motd-text" style="display: block; margin-bottom: 8px; color: var(--accent);">MOTD Content (Markdown supported)</label>
@@ -16,7 +16,7 @@
 
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <button type="submit" class="btn-primary" style="width: auto; padding: 10px 30px;">Save MOTD</button>
-                    <button type="button" class="btn-remove" style="width: auto; padding: 10px 20px;" onclick="document.getElementById('motd-text').value=''; saveMotd(document.getElementById('motd-form'));">Clear MOTD</button>
+                    <button type="button" class="btn-remove" style="width: auto; padding: 10px 20px;" data-on="click:clearMotd">Clear MOTD</button>
                     <span id="motd-status" style="margin-left: 10px; font-weight: bold; display: none;"></span>
                 </div>
             </form>
@@ -29,7 +29,15 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
+        F0ckActions.define({
+            saveMotd: (el) => saveMotd(el),
+            clearMotd: () => {
+                document.getElementById('motd-text').value = '';
+                saveMotd(document.getElementById('motd-form'));
+            },
+        });
+
         async function saveMotd(form) {
             const status = document.getElementById('motd-status');
             const textarea = document.getElementById('motd-text');
