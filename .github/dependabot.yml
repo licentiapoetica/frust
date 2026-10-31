@@ -1,0 +1,18 @@
+# Dependabot version updates. Security alerts are switched on separately in the GitHub repo settings.
+version: 2
+updates:
+  # Browser libraries (package.json is a manifest only; the files are vendored)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+  # Rust server
+  - package-ecosystem: cargo
+    directory: /server
+    schedule:
+      interval: weekly
+  # Base images in the Dockerfile
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

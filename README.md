@@ -116,10 +116,27 @@ Passwords left out on the command line are read from stdin.
 
 ### Vendored browser libraries
 
-`public/s/js/jszip.min.js` (JSZip 3.10.1, MIT/GPLv3) and `public/s/js/marked.min.js` are committed.
-Ruffle is too large for the repository: `scripts/fetch-ruffle.sh` downloads the pinned release and
-checks its SHA-256 (the Docker build does the same). To update Ruffle, change `RUFFLE_VERSION` and
-`RUFFLE_SHA256` in both `scripts/fetch-ruffle.sh` and the `Dockerfile`.
+`public/s/js/jszip.min.js` (JSZip 3.10.1, MIT/GPLv3), `public/s/js/marked.min.js` (marked 15.0.12, MIT)
+and the Cap captcha in `public/s/cap/` (`cap.min.js` from @cap.js/widget 0.1.58 and `cap_wasm_bg.wasm`
+from @cap.js/wasm 0.0.8, Apache-2.0) are committed. Ruffle is too large for the repository:
+`scripts/fetch-ruffle.sh` downloads the pinned release and checks its SHA-256 (the Docker build does
+the same). To update Ruffle, change `RUFFLE_VERSION` and `RUFFLE_SHA256` in both
+`scripts/fetch-ruffle.sh` and the `Dockerfile`.
+
+`package.json` lists these versions so Dependabot reports vulnerabilities and new releases; nothing
+is installed from it. When you bump a version there, replace the vendored file too.
+
+### Browser security
+
+- **Content-Security-Policy** (`server/src/csp.rs`): scripts run only from this site or with the
+  per-request nonce, so inline `<script>` tags need `nonce="{{ csp_nonce }}"` and markup can't use
+  inline handlers (`onclick="…"`). Bind events with `data-on="click:action"` instead
+  (`public/s/js/csp-actions.js`). Violations are logged as `[CSP]`; `websrv.csp.report_only: true`
+  logs without blocking.
+- **Flash** plays in a sandboxed iframe (`/flash-frame`, `public/s/js/flash-embed.js`): uploaded SWFs
+  run without the viewer's session and can only reach this site.
+- **Captcha**: Cap (`cap:` in the config), a self-hosted proof-of-work captcha, on registration and
+  guest reports.
 
 ## Configuration
 

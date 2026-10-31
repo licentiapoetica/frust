@@ -1,0 +1,13 @@
+{
+  "name": "f0ckm-browser-vendor",
+  "private": true,
+  "description": "necessities",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@cap.js/wasm": "0.0.8",
+    "@cap.js/widget": "0.1.58",
+    "@ruffle-rs/ruffle": "0.2.0-nightly.2026.4.21",
+    "jszip": "3.10.1",
+    "marked": "15.0.12"
+  }
+}

@@ -70,7 +70,7 @@
   <script nonce="{{ csp_nonce }}">window.f0ckThemes = {{ themes_json|safe }}; window.f0ckDefaultTheme = {{ default_theme|string|tojson }}; window.f0ckDefaultLayout = {{ default_layout|string|tojson }}; window.f0ckDomain = {{ domain|string|tojson }}; window.f0ckGitHash = {{ git_hash|string|tojson }}; window.f0ckAllowedImages = {{ allowed_comment_images_json|safe }}; window.f0ckEmbedYoutubeInComments = {{ ("true" if embed_youtube_in_comments else "false")|safe }}; window.f0ckEnableYoutubeUpload = {{ ("true" if enable_youtube_upload else "false")|safe }}; window.f0ckBrandImages = {{ custom_brand_images_json|safe }}; window.f0ckCustomBrandText = {{ (custom_navbar_brand_text or "")|string|tojson }}; window.f0ckMediaBase = {{ paths_images|string|tojson }}; window.f0ckShitpostMode = {{ ("true" if shitpost_mode else "false")|safe }}; window.f0ckShitpostRequireRating = {{ ("true" if shitpost_require_rating else "false")|safe }}; window.f0ckShitpostMinTags = {{ (shitpost_min_tags or 0)|safe }}; window.f0ckEnableItemTitle = {{ ("true" if enable_item_title else "false")|safe }}; window.f0ckCommentBannerEnabled = {% if comment_banner_enabled %} true {% else %} false {% endif %}; window.f0ckServerAudioTuner = {{ (audio_tuner_json or "null")|safe }}; window.f0ckEnableComments = {{ ("true" if enable_comments else "false")|safe }}; window.f0ckHwFingerprint = {{ ("true" if hw_fingerprint_enabled else "false")|safe }};</script>
   {% if (not private_society or session) %}
   {% if enable_comments %}
-  <script src="/s/js/marked.min.js" defer></script>
+  <script src="/s/js/marked.min.js?v={{ mtime("/public/s/js/marked.min.js") }}" defer></script>
   <script src="/s/js/comments.js?v={{ ts|safe }}" defer></script>
   {% endif %}
   {% endif %}
