@@ -364,7 +364,8 @@ async function loginWithPasskey() {
         credentialId: arrToB64url(cred.rawId),
         clientDataJSON: arrToB64url(cred.response.clientDataJSON),
         authenticatorData: arrToB64url(cred.response.authenticatorData),
-        signature: arrToB64url(cred.response.signature)
+        signature: arrToB64url(cred.response.signature),
+        userHandle: cred.response.userHandle ? arrToB64url(cred.response.userHandle) : null
       })
     });
     const finishData = await finishRes.json();

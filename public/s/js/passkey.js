@@ -352,6 +352,7 @@
           clientDataJSON: arrToB64url(assertion.response.clientDataJSON),
           authenticatorData: arrToB64url(assertion.response.authenticatorData),
           signature: arrToB64url(assertion.response.signature),
+          userHandle: assertion.response.userHandle ? arrToB64url(assertion.response.userHandle) : null,
           hw_fingerprint: hwFp,
           tombstone: tombstone
         })

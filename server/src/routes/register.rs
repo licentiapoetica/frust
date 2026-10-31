@@ -46,8 +46,8 @@ async fn login_page(_st: AppState, req: Req) -> Res {
     Ok(redirect("/?login=1"))
 }
 
-/// Verified against when the account doesn't exist, so both paths cost one scrypt run.
-const DUMMY_HASH: &str = "$f0ck$00000000000000000000000000000000:00";
+/// Verified against when the account doesn't exist, so both paths cost one Argon2 run.
+static DUMMY_HASH: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_new();
 
 async fn login(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
@@ -93,10 +93,12 @@ async fn login(st: AppState, mut req: Req) -> Res {
     .await?;
 
     let Some(user) = user else {
-        let _ = crate::util::verify_password(password, DUMMY_HASH.into()).await;
+        let dummy = DUMMY_HASH.get_or_init(|| crate::util::hash_password(crate::util::random_hex(16))).await;
+        let _ = crate::util::verify_password(password, dummy.clone()).await;
         return Ok(fail("user doesn't exist or wrong password").await);
     };
-    if !crate::util::verify_password(password, user.string("password")).await {
+    let stored_hash = user.string("password");
+    if !crate::util::verify_password(password.clone(), stored_hash.clone()).await {
         return Ok(fail("user doesn't exist or wrong password").await);
     }
     // activated is nullable (default true): only an explicit false blocks
@@ -126,6 +128,14 @@ async fn login(st: AppState, mut req: Req) -> Res {
 
     crate::security::record_attempt(&st, &ip, Some(&username), "login", true).await;
     crate::security::clear_attempts(&st, &ip, Some(&username)).await;
+
+    // Upgrade old (scrypt) hashes to Argon2id
+    if crate::util::password_needs_rehash(&stored_hash) {
+        let new_hash = crate::util::hash_password(password).await;
+        if !new_hash.is_empty() {
+            sql!(r#"update "user" set password = "#, new_hash, " where id = ", user_id as i32, " and password = ", stored_hash).execute(&st.db).await?;
+        }
+    }
 
     // Clean up stale non-KMSI sessions unused for 7 days
     let stamp = crate::util::now_secs();

@@ -7,7 +7,7 @@
 //! Ceremony state stays on the server: `start_*` stores it in memory keyed by the challenge it sent
 //! (5-minute expiry, single use, bounded), `take` removes it again. The HTTP API keeps the old flat
 //! JSON shapes (`options.challenge`, `options.rp`, …; finish bodies with `challenge`, `credentialId`,
-//! `clientDataJSON`, …) so the frontend needs no changes beyond sending `userHandle` on login.
+//! `clientDataJSON`, …); logins additionally send `userHandle`, which is checked when present.
 //!
 //! rpId: the configured domain (`websrv.passkey_rp_id`, else `main.url.domain`); requests to
 //! localhost use `localhost` (any port) for development. The old code took the rpId from the Host
@@ -325,14 +325,17 @@ pub fn decorate_rows(rows: Vec<Row>, in_use: Option<&str>) -> Vec<Value> {
 // ── webauthn-rs backend ─────────────────────────────────────────────────────
 
 mod backend {
-    //! TODO(port): `webauthn-rs` is not in the offline cargo cache yet. Until it is, this backend
-    //! fails closed: no ceremony can be started, nothing verifies.
+    //! The webauthn-rs calls. Requests arrive as the frontend's flat JSON and are rebuilt into the
+    //! `RegisterPublicKeyCredential` / `PublicKeyCredential` shapes webauthn-rs expects.
 
     use super::{Rp, Stored};
-    use serde_json::Value;
-    use uuid::Uuid;
+    use serde_json::{Value, json};
+    use webauthn_rs::prelude::*;
 
-    pub enum State {}
+    pub enum State {
+        Register(Box<PasskeyRegistration>),
+        Auth(Box<DiscoverableAuthentication>),
+    }
 
     pub struct Assertion<'a> {
         pub credential_id: &'a str,
@@ -342,21 +345,340 @@ mod backend {
         pub user_handle: Option<&'a str>,
     }
 
-    const UNAVAILABLE: &str = "Passkeys are not available on this server build";
-
-    pub fn start_registration(_rp: &Rp, _handle: Uuid, _name: &str, _display: &str, _exclude: &[String]) -> anyhow::Result<(Value, State)> {
-        anyhow::bail!(UNAVAILABLE)
+    fn webauthn(rp: &Rp) -> anyhow::Result<Webauthn> {
+        let primary = Url::parse(rp.origins.first().map(String::as_str).unwrap_or("https://localhost"))?;
+        let mut b = WebauthnBuilder::new(&rp.id, &primary)?.rp_name(&rp.name).allow_any_port(rp.any_port);
+        for o in rp.origins.iter().skip(1) {
+            match Url::parse(o) {
+                Ok(u) => b = b.append_allowed_origin(&u),
+                Err(e) => tracing::warn!("[PASSKEY] ignoring invalid origin {o}: {e}"),
+            }
+        }
+        Ok(b.build()?)
     }
 
-    pub fn start_authentication(_rp: &Rp) -> anyhow::Result<(Value, State)> {
-        anyhow::bail!(UNAVAILABLE)
+    fn b64url(b: &[u8]) -> String {
+        use base64::Engine;
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(b)
     }
 
-    pub fn finish_registration(_rp: &Rp, state: State, _id: &str, _cdj: &str, _att: &str) -> Result<(String, Value, Option<String>), String> {
-        match state {}
+    fn from_b64url(s: &str) -> Option<Vec<u8>> {
+        use base64::Engine;
+        let norm: String = s.trim().trim_end_matches('=').chars().map(|c| match c {
+            '+' => '-',
+            '/' => '_',
+            c => c,
+        }).collect();
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(norm).ok()
     }
 
-    pub fn finish_authentication(_rp: &Rp, state: State, _a: Assertion, _stored: Stored) -> Result<Option<Value>, String> {
-        match state {}
+    pub fn start_registration(rp: &Rp, handle: Uuid, name: &str, display: &str, exclude: &[String]) -> anyhow::Result<(Value, State)> {
+        let wa = webauthn(rp)?;
+        let exclude: Vec<CredentialID> = exclude.iter().filter_map(|c| from_b64url(c)).map(CredentialID::from).collect();
+        let (ccr, state) = wa.start_passkey_registration(handle, name, display, (!exclude.is_empty()).then_some(exclude))?;
+        let mut options = serde_json::to_value(&ccr)?["publicKey"].take();
+        // Logins are username-less (discoverable), so the credential must be a resident key.
+        if let Some(sel) = options.get_mut("authenticatorSelection").and_then(Value::as_object_mut) {
+            sel.insert("residentKey".into(), json!("required"));
+            sel.insert("requireResidentKey".into(), json!(true));
+        }
+        Ok((options, State::Register(Box::new(state))))
+    }
+
+    pub fn start_authentication(rp: &Rp) -> anyhow::Result<(Value, State)> {
+        let wa = webauthn(rp)?;
+        let (rcr, state) = wa.start_discoverable_authentication()?;
+        let options = serde_json::to_value(&rcr)?["publicKey"].take();
+        Ok((options, State::Auth(Box::new(state))))
+    }
+
+    /// AAGUID (hex) from the attested credential data; display only (attestation is `none`).
+    fn aaguid(attestation_object: &[u8]) -> Option<String> {
+        let v: ciborium::Value = ciborium::de::from_reader(attestation_object).ok()?;
+        let auth_data = v.as_map()?.iter().find(|(k, _)| k.as_text() == Some("authData"))?.1.as_bytes()?.clone();
+        if auth_data.len() < 53 || auth_data[32] & 0x40 == 0 {
+            return None;
+        }
+        Some(hex::encode(&auth_data[37..53]))
+    }
+
+    pub fn finish_registration(rp: &Rp, state: State, id: &str, cdj: &str, att: &str) -> Result<(String, Value, Option<String>), String> {
+        let State::Register(state) = state else { return Err("not a registration".into()) };
+        let wa = webauthn(rp).map_err(|e| e.to_string())?;
+        let reg: RegisterPublicKeyCredential = serde_json::from_value(json!({
+            "id": id,
+            "rawId": id,
+            "type": "public-key",
+            "response": { "attestationObject": att, "clientDataJSON": cdj }
+        }))
+        .map_err(|_| "Malformed credential".to_string())?;
+        let passkey = wa.finish_passkey_registration(&reg, &state).map_err(|e| e.to_string())?;
+        let cred_id = b64url(passkey.cred_id().as_ref());
+        let aaguid = from_b64url(att).and_then(|a| aaguid(&a));
+        let value = serde_json::to_value(&passkey).map_err(|e| e.to_string())?;
+        Ok((cred_id, value, aaguid))
+    }
+
+    pub fn finish_authentication(rp: &Rp, state: State, a: Assertion, stored: Stored) -> Result<Option<Value>, String> {
+        let State::Auth(state) = state else { return Err("not an authentication".into()) };
+        // The user handle the authenticator returned must belong to the stored credential.
+        if let (Some(sent), Some(expected)) = (a.user_handle, stored.user_handle.and_then(|h| Uuid::parse_str(h).ok())) {
+            if from_b64url(sent).as_deref() != Some(expected.as_bytes().as_slice()) {
+                return Err("User handle does not match this passkey".into());
+            }
+        }
+        let wa = webauthn(rp).map_err(|e| e.to_string())?;
+        let mut passkey: Passkey = serde_json::from_value(stored.passkey.clone()).map_err(|_| "Stored passkey is corrupt".to_string())?;
+        let mut response = json!({
+            "authenticatorData": a.authenticator_data,
+            "clientDataJSON": a.client_data_json,
+            "signature": a.signature,
+        });
+        if let Some(h) = a.user_handle {
+            response["userHandle"] = json!(h);
+        }
+        let pkc: PublicKeyCredential = serde_json::from_value(json!({
+            "id": a.credential_id,
+            "rawId": a.credential_id,
+            "type": "public-key",
+            "response": response
+        }))
+        .map_err(|_| "Malformed credential".to_string())?;
+        let res = wa
+            .finish_discoverable_authentication(&pkc, *state, &[DiscoverableKey::from(&passkey)])
+            .map_err(|e| e.to_string())?;
+        Ok(match passkey.update_credential(&res) {
+            Some(true) => serde_json::to_value(&passkey).ok(),
+            _ => None,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Full ceremonies against webauthn-rs with a software P-256 authenticator.
+
+    use super::backend::{self, Assertion};
+    use super::{Rp, Stored};
+    use base64::Engine;
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64;
+    use p256::ecdsa::{Signature, SigningKey, signature::Signer};
+    use serde_json::{Value, json};
+    use sha2::{Digest, Sha256};
+    use uuid::Uuid;
+
+    const RP: &str = "example.com";
+    const ORIGIN: &str = "https://example.com";
+
+    fn rp() -> Rp {
+        Rp { id: RP.into(), name: "test".into(), origins: vec![ORIGIN.into()], any_port: false }
+    }
+
+    struct Authenticator {
+        key: SigningKey,
+        cred_id: Vec<u8>,
+        counter: u32,
+    }
+
+    impl Authenticator {
+        fn new() -> Self {
+            Authenticator { key: SigningKey::random(&mut rand::rngs::OsRng), cred_id: crate::util::random_bytes(32), counter: 0 }
+        }
+
+        fn cose_key(&self) -> Vec<u8> {
+            let point = self.key.verifying_key().to_encoded_point(false);
+            use ciborium::Value as C;
+            let m = C::Map(vec![
+                (C::Integer(1.into()), C::Integer(2.into())),
+                (C::Integer(3.into()), C::Integer((-7).into())),
+                (C::Integer((-1).into()), C::Integer(1.into())),
+                (C::Integer((-2).into()), C::Bytes(point.x().unwrap().to_vec())),
+                (C::Integer((-3).into()), C::Bytes(point.y().unwrap().to_vec())),
+            ]);
+            let mut out = Vec::new();
+            ciborium::ser::into_writer(&m, &mut out).unwrap();
+            out
+        }
+
+        fn auth_data(&self, rp_id: &str, flags: u8, attested: bool) -> Vec<u8> {
+            let mut ad = Sha256::digest(rp_id.as_bytes()).to_vec();
+            ad.push(flags);
+            ad.extend_from_slice(&self.counter.to_be_bytes());
+            if attested {
+                ad.extend_from_slice(&[0xab; 16]);
+                ad.extend_from_slice(&(self.cred_id.len() as u16).to_be_bytes());
+                ad.extend_from_slice(&self.cred_id);
+                ad.extend_from_slice(&self.cose_key());
+            }
+            ad
+        }
+
+        fn id(&self) -> String {
+            B64.encode(&self.cred_id)
+        }
+
+        /// Answer to `navigator.credentials.create` as the frontend posts it.
+        fn create(&self, options: &Value, origin: &str, flags: u8) -> Value {
+            let challenge = options["challenge"].as_str().unwrap();
+            let cdj = json!({ "type": "webauthn.create", "challenge": challenge, "origin": origin, "crossOrigin": false }).to_string();
+            use ciborium::Value as C;
+            let att = C::Map(vec![
+                (C::Text("fmt".into()), C::Text("none".into())),
+                (C::Text("attStmt".into()), C::Map(vec![])),
+                (C::Text("authData".into()), C::Bytes(self.auth_data(RP, flags, true))),
+            ]);
+            let mut att_bytes = Vec::new();
+            ciborium::ser::into_writer(&att, &mut att_bytes).unwrap();
+            json!({
+                "challenge": challenge,
+                "credentialId": self.id(),
+                "clientDataJSON": B64.encode(cdj),
+                "attestationObject": B64.encode(att_bytes),
+            })
+        }
+
+        /// Answer to `navigator.credentials.get`.
+        fn get(&mut self, options: &Value, origin: &str, flags: u8, handle: &Uuid) -> Value {
+            self.counter += 1;
+            let challenge = options["challenge"].as_str().unwrap();
+            let cdj = json!({ "type": "webauthn.get", "challenge": challenge, "origin": origin, "crossOrigin": false }).to_string();
+            let ad = self.auth_data(RP, flags, false);
+            let mut msg = ad.clone();
+            msg.extend_from_slice(&Sha256::digest(cdj.as_bytes()));
+            let sig: Signature = self.key.sign(&msg);
+            json!({
+                "challenge": challenge,
+                "credentialId": self.id(),
+                "clientDataJSON": B64.encode(cdj),
+                "authenticatorData": B64.encode(ad),
+                "signature": B64.encode(sig.to_der().as_bytes()),
+                "userHandle": B64.encode(handle.as_bytes()),
+            })
+        }
+    }
+
+    const UP_UV_AT: u8 = 0x01 | 0x04 | 0x40;
+    const UP_UV: u8 = 0x01 | 0x04;
+
+    fn register(a: &Authenticator, handle: Uuid) -> Value {
+        let (opts, state) = backend::start_registration(&rp(), handle, "anon", "Anonymous", &[]).unwrap();
+        assert_eq!(opts["authenticatorSelection"]["residentKey"], "required");
+        assert_eq!(opts["rp"]["id"], RP);
+        let body = a.create(&opts, ORIGIN, UP_UV_AT);
+        let (cred_id, passkey, aaguid) = backend::finish_registration(
+            &rp(),
+            state,
+            body["credentialId"].as_str().unwrap(),
+            body["clientDataJSON"].as_str().unwrap(),
+            body["attestationObject"].as_str().unwrap(),
+        )
+        .expect("registration");
+        assert_eq!(cred_id, a.id());
+        assert_eq!(aaguid.as_deref(), Some("abababababababababababababababab"));
+        passkey
+    }
+
+    fn login(a: &mut Authenticator, passkey: &Value, handle: &Uuid, origin: &str, flags: u8, tamper: impl FnOnce(&mut Value)) -> Result<Option<Value>, String> {
+        let (opts, state) = backend::start_authentication(&rp()).unwrap();
+        assert_eq!(opts["userVerification"], "required");
+        let mut body = a.get(&opts, origin, flags, handle);
+        tamper(&mut body);
+        let s = |k: &str| body[k].as_str().map(str::to_string);
+        let (id, cdj, ad, sig, uh) = (s("credentialId").unwrap(), s("clientDataJSON").unwrap(), s("authenticatorData").unwrap(), s("signature").unwrap(), s("userHandle"));
+        let stored_handle = handle.to_string();
+        backend::finish_authentication(
+            &rp(),
+            state,
+            Assertion { credential_id: &id, client_data_json: &cdj, authenticator_data: &ad, signature: &sig, user_handle: uh.as_deref() },
+            Stored { passkey, user_handle: Some(&stored_handle) },
+        )
+    }
+
+    #[test]
+    fn register_and_login() {
+        let mut a = Authenticator::new();
+        let handle = Uuid::new_v4();
+        let passkey = register(&a, handle);
+        let updated = login(&mut a, &passkey, &handle, ORIGIN, UP_UV, |_| {}).expect("login");
+        assert!(updated.is_some(), "counter update is reported");
+        // and again with the updated credential
+        login(&mut a, &updated.unwrap(), &handle, ORIGIN, UP_UV, |_| {}).expect("second login");
+    }
+
+    #[test]
+    fn rejects_bad_assertions() {
+        let mut a = Authenticator::new();
+        let handle = Uuid::new_v4();
+        let passkey = register(&a, handle);
+
+        assert!(login(&mut a, &passkey, &handle, "https://evil.example", UP_UV, |_| {}).is_err(), "foreign origin");
+        assert!(login(&mut a, &passkey, &handle, ORIGIN, 0x04, |_| {}).is_err(), "no user presence");
+        assert!(login(&mut a, &passkey, &handle, ORIGIN, 0x01, |_| {}).is_err(), "no user verification");
+        assert!(
+            login(&mut a, &passkey, &handle, ORIGIN, UP_UV, |b| {
+                let mut sig = B64.decode(b["signature"].as_str().unwrap()).unwrap();
+                let n = sig.len();
+                sig[n - 1] ^= 1;
+                b["signature"] = json!(B64.encode(sig));
+            })
+            .is_err(),
+            "bad signature"
+        );
+        assert!(
+            login(&mut a, &passkey, &handle, ORIGIN, UP_UV, |b| b["userHandle"] = json!(B64.encode(Uuid::new_v4().as_bytes()))).is_err(),
+            "foreign user handle"
+        );
+        // A different authenticator presenting this credential id
+        let mut other = Authenticator::new();
+        other.cred_id = a.cred_id.clone();
+        assert!(login(&mut other, &passkey, &handle, ORIGIN, UP_UV, |_| {}).is_err(), "wrong key");
+    }
+
+    #[test]
+    fn rejects_counter_regression() {
+        let mut a = Authenticator::new();
+        let handle = Uuid::new_v4();
+        let passkey = register(&a, handle);
+        a.counter = 10;
+        let updated = login(&mut a, &passkey, &handle, ORIGIN, UP_UV, |_| {}).unwrap().unwrap();
+        a.counter = 3; // clone with an older counter
+        assert!(login(&mut a, &updated, &handle, ORIGIN, UP_UV, |_| {}).is_err());
+    }
+
+    #[test]
+    fn rejects_registration_problems() {
+        let a = Authenticator::new();
+        let (opts, state) = backend::start_registration(&rp(), Uuid::new_v4(), "x", "x", &[]).unwrap();
+        let body = a.create(&opts, "https://evil.example", UP_UV_AT);
+        let r = backend::finish_registration(&rp(), state, &a.id(), body["clientDataJSON"].as_str().unwrap(), body["attestationObject"].as_str().unwrap());
+        assert!(r.is_err(), "foreign origin");
+
+        let (opts, state) = backend::start_registration(&rp(), Uuid::new_v4(), "x", "x", &[]).unwrap();
+        let body = a.create(&opts, ORIGIN, 0x04 | 0x40);
+        let r = backend::finish_registration(&rp(), state, &a.id(), body["clientDataJSON"].as_str().unwrap(), body["attestationObject"].as_str().unwrap());
+        assert!(r.is_err(), "no user presence");
+
+        // Answer for another challenge
+        let (opts1, _s1) = backend::start_registration(&rp(), Uuid::new_v4(), "x", "x", &[]).unwrap();
+        let (_opts2, s2) = backend::start_registration(&rp(), Uuid::new_v4(), "x", "x", &[]).unwrap();
+        let body = a.create(&opts1, ORIGIN, UP_UV_AT);
+        let r = backend::finish_registration(&rp(), s2, &a.id(), body["clientDataJSON"].as_str().unwrap(), body["attestationObject"].as_str().unwrap());
+        assert!(r.is_err(), "challenge mismatch");
+    }
+
+    #[test]
+    fn ceremony_state_is_single_use_and_expires() {
+        let (opts, state) = backend::start_authentication(&rp()).unwrap();
+        let ch = opts["challenge"].as_str().unwrap().to_string();
+        super::remember(ch.clone(), super::Pending { kind: "x".into(), user_id: None, user_handle: None, rp_id: RP.into(), state }).unwrap();
+        assert!(super::take(&ch).is_ok());
+        assert!(super::take(&ch).is_err(), "second use");
+
+        let (_, state) = backend::start_authentication(&rp()).unwrap();
+        super::PENDING.insert(
+            "old".into(),
+            (std::time::Instant::now() - std::time::Duration::from_secs(1), super::Pending { kind: "x".into(), user_id: None, user_handle: None, rp_id: RP.into(), state }),
+        );
+        assert!(super::take("old").is_err(), "expired");
     }
 }
