@@ -326,6 +326,7 @@ async fn main() -> Result<()> {
     let _ = st.router.set(Arc::new(router));
 
     spawn_background_tasks(&st);
+    bot::start(&st);
     let _config_watcher = watch_config(&st);
 
     let app = axum::Router::new().fallback(app::handle).with_state(st.clone());
