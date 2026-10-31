@@ -5,6 +5,7 @@ mod anon_auth;
 mod app;
 mod auth;
 mod bot;
+mod chan_http;
 mod config;
 mod db;
 mod f0cklib;
