@@ -879,7 +879,7 @@
           iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&loop=1&playlist=${ytId}`;
         }
       }
-      // Check for Ruffle SWF container — poll until RufflePlayer WASM is ready
+      // Flash (SWF) slide
       const ruffleEl = slide.querySelector('.ruffle-container');
       if (ruffleEl && window.scrollerEnableSwf) {
         if (ruffleEl._rufflePlayer) {
@@ -887,59 +887,18 @@
           try { ruffleEl._rufflePlayer.play(); } catch {}
           currentMedia = ruffleEl._rufflePlayer;
         } else {
-          // Try to init Ruffle — returns true when player is created, false to keep retrying
-          const tryInitRuffle = () => {
-            if (!ruffleEl.isConnected) return true; // slide removed — stop polling
-            if (!window.RufflePlayer || typeof window.RufflePlayer.newest !== 'function') return false;
-            try {
-              const ruffle = window.RufflePlayer.newest();
-              if (!ruffle) return false; // WASM not ready yet
-              const player = ruffle.createPlayer();
-              player.style.cssText = 'width:100%;height:100%;display:block;';
-              const ph = ruffleEl.querySelector('.ruffle-placeholder');
-              if (ph) ph.style.display = 'none';
-              ruffleEl.appendChild(player);
-              player.load({ 
-                url: ruffleEl.dataset.swf,
-                config: { volume: isMuted ? 0 : volume }
-              });
-              player.volume = isMuted ? 0 : volume;
-              // Failsafe: some Ruffle versions reset volume after WASM init
-              setTimeout(() => { if (player.isConnected) player.volume = isMuted ? 0 : volume; }, 100);
-              ruffleEl._rufflePlayer = player;
-              // If slide was deactivated while we were loading, destroy immediately
-              if (slide._deactivated) {
-                try { player.pause(); player.remove(); } catch {}
-                ruffleEl._rufflePlayer = null;
-                const ph2 = ruffleEl.querySelector('.ruffle-placeholder');
-                if (ph2) ph2.style.display = 'block';
-                return true;
-              }
-              if (currentSlide === slide) currentMedia = player;
-              return true;
-            } catch (e) { console.warn('[Ruffle] init error', e); return false; }
-          };
-          // Ensure ruffle.js is in the DOM (handles PJAX context with ?v= query string)
-          const ensureRuffle = (cb) => {
-            if (window.RufflePlayer) { cb(); return; }
-            if (document.querySelector('script[src*="/s/ruffle/ruffle.js"]')) { cb(); return; }
-            const s = document.createElement('script');
-            s.src = '/s/ruffle/ruffle.js';
-            s.onload = cb;
-            document.head.appendChild(s);
-          };
-          ensureRuffle(() => {
-            if (currentSlide !== slide) return; // Don't init if user scrolled away
-            if (tryInitRuffle()) return;
-            let attempts = 0;
-            const poll = setInterval(() => {
-              attempts++;
-              if (currentSlide !== slide || tryInitRuffle() || attempts >= 100) {
-                clearInterval(poll);
-                if (attempts >= 100 && currentSlide === slide) console.warn('[Ruffle] timed out waiting for WASM');
-              }
-            }, 100);
-          });
+          if (!window.customElements.get('f0ck-flash')) {
+            console.error('[Flash] flash-embed.js is not loaded');
+          } else {
+            // Sandboxed player (flash-embed.js): the SWF runs without the viewer's session
+            const player = document.createElement('f0ck-flash');
+            const ph = ruffleEl.querySelector('.ruffle-placeholder');
+            if (ph) ph.style.display = 'none';
+            ruffleEl.appendChild(player);
+            player.load({ url: ruffleEl.dataset.swf, volume: isMuted ? 0 : volume })
+              .catch(e => console.warn('[Flash] load failed', e));
+            ruffleEl._rufflePlayer = player;
+          }
         }
       }
       // Only set currentMedia to null if we didn't find a ruffle player

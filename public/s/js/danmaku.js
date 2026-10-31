@@ -787,7 +787,7 @@ class Danmaku {
     }
 
     _checkRuffleState() {
-        const rp = document.querySelector('ruffle-player, ruffle-object');
+        const rp = document.querySelector('f0ck-flash');
         if (!rp) return;
         const isPlaying = rp.is_playing !== undefined ? !!rp.is_playing : true;
         if (isPlaying && this._paused)  this._onPlay();

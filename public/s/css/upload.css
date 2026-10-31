@@ -1476,8 +1476,7 @@
     min-height: auto !important;
 }
 
-.upload-form:not(.shitpost-mode-active) .swf-upload-preview ruffle-player,
-.upload-form:not(.shitpost-mode-active) .swf-upload-preview ruffle-object {
+.upload-form:not(.shitpost-mode-active) .swf-upload-preview f0ck-flash {
     aspect-ratio: 16 / 9;
     width: 100% !important;
     height: auto !important;
@@ -1493,8 +1492,7 @@
     aspect-ratio: unset;
 }
 
-.upload-form.shitpost-mode-active .swf-upload-preview ruffle-player,
-.upload-form.shitpost-mode-active .swf-upload-preview ruffle-object {
+.upload-form.shitpost-mode-active .swf-upload-preview f0ck-flash {
     width: 100% !important;
     height: 220px !important;
     min-height: 220px;

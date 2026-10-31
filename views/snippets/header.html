@@ -75,6 +75,8 @@
   {% endif %}
   {% endif %}
   <meta charset="utf-8" />
+  <script src="/s/js/csp-actions.js?v={{ mtime("/public/s/js/csp-actions.js") }}"></script>
+  {% if enable_swf %}<script src="/s/js/flash-embed.js?v={{ mtime("/public/s/js/flash-embed.js") }}"></script>{% endif %}
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
   {% if item is defined %}
   <link rel="canonical" href="https://{{ domain }}/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" />

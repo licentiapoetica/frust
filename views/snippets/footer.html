@@ -673,13 +673,7 @@
 {% else %}
 <script src="/s/js/v0ck.js?v={{ ts|safe }}"></script>
 <script src="/s/js/danmaku.js?v={{ ts|safe }}"></script>
-{% if ((enable_swf and item is defined) and item.mime == "application/x-shockwave-flash") %}
-{# Ruffle: self-hosted. Place ruffle.js + wasm bundle in public/s/ruffle/ #}
-<script src="/s/ruffle/ruffle.js"></script>
-{% elif ((enable_swf and item is defined) and item.mime == "application/vnd.adobe.flash.movie") %}
-<script src="/s/ruffle/ruffle.js"></script>
-{% endif %}
-<script>
+<script nonce="{{ csp_nonce }}">
   window.f0ckSession = {
     onara: {% if onara %} true {% else %} false {% endif %},
     onara_cfg: {% if (onara_cfg != none and onara_cfg != none) %} {% if onara_cfg %} true {% else %} false {% endif %} {% else %} null {% endif %},

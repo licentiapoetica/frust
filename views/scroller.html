@@ -3,6 +3,8 @@
 <head>
   <title>{{ domain }} — doomscroll</title>
   <meta charset="utf-8" />
+  <script src="/s/js/csp-actions.js?v={{ mtime("/public/s/js/csp-actions.js") }}"></script>
+  {% if enable_swf %}<script src="/s/js/flash-embed.js?v={{ mtime("/public/s/js/flash-embed.js") }}"></script>{% endif %}
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#000" />
   <link rel="manifest" href="/manifest.json">
@@ -1412,9 +1414,6 @@
     {% endif %}
   </div>
 
-  {% if enable_swf %}
-  <script src="/s/ruffle/ruffle.js"></script>
-  {% endif %}
   <script src="/s/js/theme.js?v={{ ts|safe }}"></script>
   <script src="/s/js/scroller.js?v={{ ts|safe }}"></script>
   </div><!-- /#main -->

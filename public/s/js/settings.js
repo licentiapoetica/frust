@@ -2434,19 +2434,7 @@
                     if (window.f0ckSession) {
                         window.f0ckSession.ruffle_background = ruffle_background;
 
-                        // Apply to the active Ruffle player if it exists so user doesn't need to refresh
-                        const ruffleContainer = document.getElementById('ruffle-container');
-                        if (ruffleContainer) {
-                            const player = ruffleContainer.querySelector('ruffle-player') || ruffleContainer.querySelector('ruffle-object');
-                            if (player) {
-                                // Ruffle doesn't dynamically toggle pageVisibility well without recreation,
-                                // but we can update the config for subsequent initializations
-                                if (window.RufflePlayer && window.RufflePlayer.config) {
-                                    window.RufflePlayer.config.pageVisibility = !ruffle_background;
-                                    window.RufflePlayer.config.backgroundExecution = ruffle_background ? "Unthrottled" : undefined;
-                                }
-                            }
-                        }
+                        // Flash players read this when they load, so it applies to the next item
                     }
                 } else {
                     showAccountStatus(ruffleStatus, data.msg || 'Failed to update Flash settings', 'error');

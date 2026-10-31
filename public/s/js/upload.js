@@ -1723,141 +1723,51 @@ window.initUploadForm = (selector) => {
                     mediaElem.dataset.swfFile = 'pending';
                     // Placeholder shown while Ruffle loads
                     mediaElem.innerHTML = `<div class="swf-upload-placeholder"><span class="swf-upload-placeholder-icon">⚡</span><span class="swf-upload-placeholder-text">Loading Flash preview…</span></div>`;
-                    // Load Ruffle asynchronously once the element is in the DOM
-                    const swfObjectUrl = URL.createObjectURL(file);
-                    const ensureRuffleUpload = (cb) => {
-                        if (window.RufflePlayer && typeof window.RufflePlayer.newest === 'function') { cb(); return; }
-                        if (document.querySelector('script[src*="/s/ruffle/ruffle.js"]')) {
-                            // Script is loading, poll for it
-                            let attempts = 0;
-                            const poll = setInterval(() => {
-                                attempts++;
-                                if ((window.RufflePlayer && typeof window.RufflePlayer.newest === 'function') || attempts >= 80) {
-                                    clearInterval(poll);
-                                    cb();
-                                }
-                            }, 100);
+                    // Sandboxed player (flash-embed.js), started once mediaElem is in the DOM
+                    Promise.resolve().then(() => {
+                        if (!mediaElem.isConnected) return;
+                        if (!window.customElements.get('f0ck-flash')) {
+                            mediaElem.innerHTML = `<div class="swf-upload-placeholder"><span class="swf-upload-placeholder-icon">⚡</span><span class="swf-upload-placeholder-text">Flash preview unavailable</span></div>`;
                             return;
                         }
-                        const s = document.createElement('script');
-                        s.src = '/s/ruffle/ruffle.js';
-                        s.onload = () => cb();
-                        s.onerror = () => cb(); // proceed even if fail
-                        document.head.appendChild(s);
-                    };
-                    // Defer init until next microtask so mediaElem is appended to DOM first
-                    Promise.resolve().then(() => {
-                        ensureRuffleUpload(() => {
-                            if (!mediaElem.isConnected) { URL.revokeObjectURL(swfObjectUrl); return; }
-                            const ruffle = window.RufflePlayer && window.RufflePlayer.newest ? window.RufflePlayer.newest() : null;
-                            if (!ruffle) {
-                                mediaElem.innerHTML = `<div class="swf-upload-placeholder"><span class="swf-upload-placeholder-icon">⚡</span><span class="swf-upload-placeholder-text">Flash preview unavailable</span></div>`;
-                                return;
-                            }
-                            try {
-                                // Patch getContext BEFORE creating the player so that Ruffle's WebGL
-                                // context is created with preserveDrawingBuffer:true.
-                                // Without this, WebGL clears the drawing buffer after each frame
-                                // presentation, making canvas readback produce solid black.
-                                const _origGetCtx = HTMLCanvasElement.prototype.getContext;
-                                HTMLCanvasElement.prototype.getContext = function(type, attrs) {
-                                    if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
-                                        attrs = Object.assign({}, attrs || {}, { preserveDrawingBuffer: true });
-                                    }
-                                    return _origGetCtx.call(this, type, attrs);
-                                };
-                                const player = ruffle.createPlayer();
-                                player.style.cssText = 'width:100%;height:100%;display:block;border-radius:8px;';
-                                const placeholder = mediaElem.querySelector('.swf-upload-placeholder');
-                                if (placeholder) placeholder.remove();
-                                mediaElem.appendChild(player);
-                                player.load({ url: swfObjectUrl, config: { volume: 0.5 } });
-                                // Restore getContext after Ruffle's WASM finishes creating its GL context
-                                // (typically within ~2s of load; 6s is a safe upper bound)
-                                setTimeout(() => { HTMLCanvasElement.prototype.getContext = _origGetCtx; }, 6000);
-                                mediaElem._rufflePlayer = player;
-                                mediaElem._swfObjectUrl = swfObjectUrl;
+                        const player = document.createElement('f0ck-flash');
+                        player.style.borderRadius = '8px';
+                        player.style.overflow = 'hidden';
+                        const placeholder = mediaElem.querySelector('.swf-upload-placeholder');
+                        if (placeholder) placeholder.remove();
+                        mediaElem.appendChild(player);
+                        player.load({ data: file, volume: 0.5 }).catch((err) => {
+                            console.warn('[Flash upload preview]', err);
+                            mediaElem.innerHTML = `<div class="swf-upload-placeholder"><span class="swf-upload-placeholder-icon">⚡</span><span class="swf-upload-placeholder-text">Flash preview error</span></div>`;
+                        });
+                        mediaElem._rufflePlayer = player;
 
-                                // Inject snapshot button directly below the Ruffle player
-                                // (inside the .swf-upload-preview, so it travels with each file-preview-item)
-                                if (!mediaElem.querySelector('.btn-ruffle-snapshot')) {
-                                    const snapBtn = document.createElement('button');
-                                    snapBtn.type = 'button';
-                                    snapBtn.className = 'btn-ruffle-snapshot';
-                                    snapBtn.textContent = 'Capture Thumbnail';
-                                    snapBtn.title = 'Capture the current frame of the Flash preview as the thumbnail';
-                                    mediaElem.appendChild(snapBtn);
-                                }
-
-                                // Wire snapshot button — scoped to this previewItem / mediaElem
-                                const wireSnapshot = () => {
-                                    const snapBtn = mediaElem.querySelector('.btn-ruffle-snapshot');
-                                    if (!snapBtn) return;
-                                    snapBtn.onclick = async (e) => {
-                                        e.preventDefault();
-                                        try {
-                                            // Try to find Ruffle's internal canvas via shadow DOM
-                                            let canvas = null;
-                                            const tryFindCanvas = (root) => {
-                                                if (!root) return null;
-                                                const c = root.querySelector('canvas');
-                                                if (c) return c;
-                                                for (const el of root.querySelectorAll('*')) {
-                                                    if (el.shadowRoot) {
-                                                        const found = tryFindCanvas(el.shadowRoot);
-                                                        if (found) return found;
-                                                    }
-                                                }
-                                                return null;
-                                            };
-                                            canvas = tryFindCanvas(player.shadowRoot || player);
-                                            if (!canvas) canvas = tryFindCanvas(player);
-                                            if (canvas && canvas.width > 0 && canvas.height > 0) {
-                                                const out = document.createElement('canvas');
-                                                const MAX = 640;
-                                                const w = canvas.width, h = canvas.height;
-                                                if (w > MAX || h > MAX) {
-                                                    const ratio = Math.min(MAX / w, MAX / h);
-                                                    out.width = Math.round(w * ratio);
-                                                    out.height = Math.round(h * ratio);
-                                                } else {
-                                                    out.width = w || 320;
-                                                    out.height = h || 240;
-                                                }
-                                                const ctx = out.getContext('2d');
-                                                ctx.drawImage(canvas, 0, 0, out.width, out.height);
-                                                out.toBlob((blob) => {
-                                                    if (!blob) { snapBtn.textContent = '❌ Capture failed'; return; }
-                                                    const snapFile = new File([blob], 'ruffle-snapshot.jpg', { type: 'image/jpeg' });
-                                                    const dt = new DataTransfer();
-                                                    dt.items.add(snapFile);
-                                                    if (thumbInput) {
-                                                        thumbInput.files = dt.files;
-                                                        thumbInput.dispatchEvent(new Event('change', { bubbles: true }));
-                                                    }
-                                                    // Replace snapshot preview in its grid row (between player and button)
-                                                    const existingPrev = mediaElem.querySelector('.ruffle-snapshot-preview');
-                                                    if (existingPrev) existingPrev.remove();
-                                                    const prevImg = document.createElement('img');
-                                                    prevImg.src = URL.createObjectURL(blob);
-                                                    prevImg.className = 'ruffle-snapshot-preview';
-                                                    mediaElem.insertBefore(prevImg, snapBtn);
-                                                }, 'image/jpeg', 0.92);
-                                            } else {
-                                                snapBtn.textContent = 'Capture Thumbnail';
-                                            }
-                                        } catch(err) {
-                                            console.warn('[Ruffle snapshot]', err);
-                                            snapBtn.textContent = 'Capture Thumbnail';
-                                        }
-                                    };
-                                };
-                                // Wire after a short delay (Ruffle may not be fully ready)
-                                setTimeout(wireSnapshot, 200);
-                            } catch(err) {
-                                console.warn('[Ruffle upload preview]', err);
-                                mediaElem.innerHTML = `<div class="swf-upload-placeholder"><span class="swf-upload-placeholder-icon">⚡</span><span class="swf-upload-placeholder-text">Flash preview error</span></div>`;
+                        // Snapshot button directly below the player (inside .swf-upload-preview, so it travels with each file-preview-item)
+                        const snapBtn = document.createElement('button');
+                        snapBtn.type = 'button';
+                        snapBtn.className = 'btn-ruffle-snapshot';
+                        snapBtn.textContent = 'Capture Thumbnail';
+                        snapBtn.title = 'Capture the current frame of the Flash preview as the thumbnail';
+                        mediaElem.appendChild(snapBtn);
+                        snapBtn.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            const blob = await player.snapshot({ max: 640, quality: 0.92 });
+                            if (!blob) { snapBtn.textContent = '❌ Capture failed'; return; }
+                            snapBtn.textContent = 'Capture Thumbnail';
+                            const snapFile = new File([blob], 'ruffle-snapshot.jpg', { type: 'image/jpeg' });
+                            const dt = new DataTransfer();
+                            dt.items.add(snapFile);
+                            if (thumbInput) {
+                                thumbInput.files = dt.files;
+                                thumbInput.dispatchEvent(new Event('change', { bubbles: true }));
                             }
+                            // Replace snapshot preview in its grid row (between player and button)
+                            const existingPrev = mediaElem.querySelector('.ruffle-snapshot-preview');
+                            if (existingPrev) existingPrev.remove();
+                            const prevImg = document.createElement('img');
+                            prevImg.src = URL.createObjectURL(blob);
+                            prevImg.className = 'ruffle-snapshot-preview';
+                            mediaElem.insertBefore(prevImg, snapBtn);
                         });
                     });
                 } else if (file.type === 'application/pdf' || fileExt === 'pdf') {

@@ -5327,7 +5327,7 @@ window.cancelAnimFrame = (function () {
           elem = mount.querySelector('#f0ck-album-audio');
         }
         if (!elem) {
-          elem = mount.querySelector("#my-video, video, audio, img, ruffle-player");
+          elem = mount.querySelector("#my-video, video, audio, img, f0ck-flash");
         }
       }
     }
@@ -5349,17 +5349,10 @@ window.cancelAnimFrame = (function () {
       }
     }
     if (!elem) {
-        const rp = document.querySelector('ruffle-player');
-        if (rp) {
-            elem = rp.shadowRoot ? rp.shadowRoot.querySelector('canvas') : null;
-            if (!elem) {
-                // If we have a player but no canvas yet, it's likely still initializing.
-                // Re-init background in a moment.
-                setTimeout(window.initBackground, 200);
-                return;
-            }
-        }
+        elem = document.querySelector('f0ck-flash');
     }
+    // Flash plays in a sandboxed frame; its ambientCanvas mirrors the movie at low resolution
+    if (elem && elem.tagName === 'F0CK-FLASH') elem = elem.ambientCanvas;
     // Audio items: don't swap to cover art — the visualizer handles #bg directly
     if (!elem) {
         elem = document.querySelector("#f0ck-image");
@@ -11168,25 +11161,9 @@ window.cancelAnimFrame = (function () {
   window.initBackground();
   window.initVisualizer();
 
-  // Ruffle / SWF support — only register when the site has SWF enabled.
-  // The static ruffle.js <script> tag is injected by the server only on SWF item pages.
-  // This listener handles AJAX navigation TO a SWF item from any other page.
+  // Flash (SWF) items play in a sandboxed <f0ck-flash> player (flash-embed.js): the SWF runs in an
+  // iframe without the viewer's session. This handles item pages and AJAX navigation to them.
   if (window.f0ckSession?.enable_swf) {
-    // Global Ruffle configuration
-    window.RufflePlayer = window.RufflePlayer || {};
-    window.RuffleConfig = window.RuffleConfig || {};
-    window.RufflePlayer.config = window.RuffleConfig = {
-        "pageVisibility": window.f0ckSession?.ruffle_background === false,
-        "backgroundExecution": "Unthrottled",
-        "autoplay": "on",
-        "unmuteOverlay": "hidden",
-        "letterbox": "on",
-        "warnOnUnsupportedContent": false,
-        "contextMenu": "on",
-        "splashScreen": true
-      };
-
-    let ruffleKeepAliveApplied = false;
     let activeRuffleGesture = null;
 
     // Window-level listeners for desktop mouse gestures (singleton)
@@ -11202,71 +11179,18 @@ window.cancelAnimFrame = (function () {
         }
     });
 
-    const applyRuffleKeepAlive = () => {
-      if (ruffleKeepAliveApplied) return;
-      
-      window.f0ckDebug("[Ruffle] Registering background keep-alive patches (Browser Level)...");
-      
-      try {
-        const docProto = Object.getPrototypeOf(document);
-        const visProp = Object.getOwnPropertyDescriptor(docProto, 'visibilityState') || Object.getOwnPropertyDescriptor(document, 'visibilityState');
-        const hiddenProp = Object.getOwnPropertyDescriptor(docProto, 'hidden') || Object.getOwnPropertyDescriptor(document, 'hidden');
-
-        if (visProp && visProp.get) {
-          const originalVisGet = visProp.get;
-          Object.defineProperty(document, 'visibilityState', {
-            get: () => {
-              if (window.f0ckSession?.ruffle_background !== false && document.getElementById('ruffle-container')) {
-                return 'visible';
-              }
-              return originalVisGet.call(document);
-            },
-            configurable: true
-          });
-        }
-
-        if (hiddenProp && hiddenProp.get) {
-          const originalHiddenGet = hiddenProp.get;
-          Object.defineProperty(document, 'hidden', {
-            get: () => {
-              if (window.f0ckSession?.ruffle_background !== false && document.getElementById('ruffle-container')) {
-                return false;
-              }
-              return originalHiddenGet.call(document);
-            },
-            configurable: true
-          });
-        }
-
-        document.addEventListener('visibilitychange', (e) => {
-          if (window.f0ckSession?.ruffle_background !== false && document.getElementById('ruffle-container')) {
-            e.stopImmediatePropagation();
-          }
-        }, true);
-
-        window.addEventListener('blur', (e) => {
-          if (window.f0ckSession?.ruffle_background !== false && document.getElementById('ruffle-container')) {
-            e.stopImmediatePropagation();
-          }
-        }, true);
-
-      } catch (e) {
-        console.error("[Ruffle] Failed to apply keep-alive patches:", e);
-      }
-
-      ruffleKeepAliveApplied = true;
-    };
-
     function initRuffle() {
       const container = document.getElementById('ruffle-container');
-      if (!container || container.querySelector('ruffle-player') || container.querySelector('ruffle-object')) return;
+      if (!container || container.querySelector('f0ck-flash')) return;
+      if (!window.customElements.get('f0ck-flash')) {
+        console.error('[Flash] flash-embed.js is not loaded');
+        return;
+      }
 
       // Ensure v0ck.css is loaded for HUD styles
       if (!document.querySelector('link[href^="/s/css/v0ck.css"]')) {
           document.head.insertAdjacentHTML("beforeend", `<link rel="stylesheet" href="/s/css/v0ck.css">`);
       }
-
-      applyRuffleKeepAlive();
 
       // Detect whether the item is currently behind a blur overlay.
       // If so, load the SWF with autoplay:"off" so it stays paused until the user reveals it.
@@ -11285,60 +11209,34 @@ window.cancelAnimFrame = (function () {
           (mode === 'untagged' && blurUntagged);
       }
 
-      // Update config with latest session preferences just before creation
-      if (window.RufflePlayer) {
-        window.RufflePlayer.config = window.RuffleConfig = {
-          ...window.RuffleConfig,
-          "autoplay": blurActive ? "off" : "on",
-          "pageVisibility": window.f0ckSession?.ruffle_background === false,
-          "backgroundExecution": window.f0ckSession?.ruffle_background === false ? undefined : "Unthrottled",
-          "splashScreen": true
-        };
-      }
+      const player = document.createElement('f0ck-flash');
+      container.appendChild(player);
 
-      // Patch WebGL getContext to force preserveDrawingBuffer:true so canvas
-      // frames can be captured after Ruffle renders (WebGL clears buffers by default)
-      const _origGetCtx = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function(type, attrs) {
-        if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
-          attrs = Object.assign({}, attrs, { preserveDrawingBuffer: true });
-        }
-        return _origGetCtx.call(this, type, attrs);
-      };
-      // Restore after Ruffle has created its context
-      setTimeout(() => { HTMLCanvasElement.prototype.getContext = _origGetCtx; }, 8000);
+      // Apply volume after the SWF has loaded to prevent it from being overwritten
+      player.addEventListener('loadedmetadata', () => {
+          const sessionVolume = window.f0ckSession?.ruffle_volume;
+          const savedVolume = localStorage.getItem('volume');
+          
+          if (sessionVolume !== undefined && sessionVolume !== null) {
+              player.volume = parseFloat(sessionVolume);
+          } else if (savedVolume !== null) {
+              player.volume = parseFloat(savedVolume);
+          } else {
+              player.volume = 0.5;
+          }
+      });
 
-      function createPlayer() {
-        if (!window.RufflePlayer) return;
-        if (typeof window.RufflePlayer.newest !== 'function') return; // WASM still initializing
-        const ruffle = window.RufflePlayer.newest();
-        if (!ruffle) return;
-        const player = ruffle.createPlayer();
-        player.style.width = '100%';
-        player.style.height = '100%';
+      player.load({
+        url: container.dataset.swf,
+        autoplay: !blurActive,
+        background: window.f0ckSession?.ruffle_background !== false,
+      }).catch(err => {
+        console.error('[Flash] Failed to load SWF:', err);
+        container.innerHTML = '<div style="color:#e040fb;text-align:center;padding:2em;">⚡ SWF playback failed</div>';
+      });
+      window.initBackground();
 
-        container.appendChild(player);
-        window.initBackground();
-
-        // Apply volume after the SWF has loaded to prevent it from being overwritten
-        player.addEventListener('loadedmetadata', () => {
-            const sessionVolume = window.f0ckSession?.ruffle_volume;
-            const savedVolume = localStorage.getItem('volume');
-            
-            if (sessionVolume !== undefined && sessionVolume !== null) {
-                player.volume = parseFloat(sessionVolume);
-            } else if (savedVolume !== null) {
-                player.volume = parseFloat(savedVolume);
-            } else {
-                player.volume = 0.5;
-            }
-        });
-
-        player.load(container.dataset.swf).catch(err => {
-          console.error('[Ruffle] Failed to load SWF:', err);
-          container.innerHTML = '<div style="color:#e040fb;text-align:center;padding:2em;">⚡ SWF playback failed</div>';
-        });
-
+      {
         // --- Gesture Support (Mobile & Desktop) ---
         // Inject HUD, Overlay, and Danmaku toggle
         const existingHUD = container.querySelector('.v0ck_hud');
@@ -11431,6 +11329,7 @@ window.cancelAnimFrame = (function () {
                         }, 3000);
                     };
                     container.addEventListener('touchstart', showDmBtn, { passive: true });
+                    container.addEventListener('flash-touchstart', showDmBtn); // touches inside the player frame
                     // Keep visible while interacting with the button itself
                     dmBtn.addEventListener('touchstart', (e) => {
                         e.stopPropagation();
@@ -11525,11 +11424,19 @@ window.cancelAnimFrame = (function () {
             isDragging = false;
         };
 
-        // Touch listeners (attached to container for mobile)
-        container.addEventListener('touchstart', e => handleStart(e.touches[0].clientX, e.touches[0].clientY), { passive: false });
-        container.addEventListener('touchmove', e => handleMove(e.touches[0].clientX, e.touches[0].clientY, e), { passive: false });
-        container.addEventListener('touchend', handleEnd, { passive: true });
- 
+        // Touches inside the player happen in its iframe; it forwards them as flash-touch events
+        player.addEventListener('flash-touch', e => {
+          const d = e.detail;
+          if (d.phase === 'start') {
+            handleStart(d.clientX, d.clientY);
+            container.dispatchEvent(new Event('flash-touchstart'));
+          } else if (d.phase === 'move') {
+            handleMove(d.clientX, d.clientY, null);
+          } else {
+            handleEnd();
+          }
+        });
+
         // Mouse gesture listeners attached to overlay to bypass Ruffle capture on desktop
         const overlay = container.querySelector('.ruffle-gesture-overlay');
         if (overlay) {
@@ -11542,38 +11449,6 @@ window.cancelAnimFrame = (function () {
             });
         }
       }
-
-      const tryCreatePlayer = () => {
-        // createPlayer() has its own internal checks (RufflePlayer exists, newest() is a function, returns value)
-        createPlayer();
-        return !!container.querySelector('ruffle-player, ruffle-object');
-      };
-
-      const pollForPlayer = () => {
-        const wait = setInterval(() => {
-          if (tryCreatePlayer()) {
-            clearInterval(wait);
-          }
-        }, 100);
-        setTimeout(() => clearInterval(wait), 10000);
-      };
-
-      // Check if ruffle.js has actually been loaded (not just our pre-config stub)
-      const ruffleScriptLoaded = !!document.querySelector('script[src="/s/ruffle/ruffle.js"]');
-
-      if (ruffleScriptLoaded) {
-        // Script is in the DOM — WASM may still be initializing, poll for player
-        if (!tryCreatePlayer()) {
-          pollForPlayer();
-        }
-      } else {
-        // Inject ruffle.js dynamically (AJAX navigation from a non-flash page)
-        const s = document.createElement('script');
-        s.src = '/s/ruffle/ruffle.js';
-        s.onload = () => pollForPlayer();
-        document.head.appendChild(s);
-      }
-
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initRuffle, { once: true });
@@ -11585,7 +11460,7 @@ window.cancelAnimFrame = (function () {
     // Synchronize volume across tabs (e.g. if changed in a v0ck player elsewhere)
     window.addEventListener('storage', (e) => {
       if (e.key === 'volume' && e.newValue !== null) {
-        const player = document.querySelector('ruffle-player');
+        const player = document.querySelector('f0ck-flash');
         if (player) {
           player.volume = parseFloat(e.newValue);
         }
@@ -11775,7 +11650,7 @@ window.cancelAnimFrame = (function () {
 
       // Stop all media
       document.querySelectorAll('video, audio').forEach(el => { try { el.pause(); el.removeAttribute('src'); el.load(); } catch {} });
-      document.querySelectorAll('ruffle-player').forEach(el => { try { el.remove(); } catch {} });
+      document.querySelectorAll('f0ck-flash').forEach(el => { try { el.remove(); } catch {} });
     }
 
     // Immediately close image modal on any navigation
@@ -12818,7 +12693,7 @@ window.cancelAnimFrame = (function () {
         document.querySelectorAll('video:not(#gchat-messages video), audio:not(#gchat-messages audio)').forEach(el => { try { el.pause(); } catch {} });
       } else {
         document.querySelectorAll('video:not(#gchat-messages video), audio:not(#gchat-messages audio)').forEach(el => { try { el.pause(); el.removeAttribute('src'); el.load(); } catch {} });
-        document.querySelectorAll('ruffle-player').forEach(el => { try { el.remove(); } catch {} });
+        document.querySelectorAll('f0ck-flash').forEach(el => { try { el.remove(); } catch {} });
       }
     }
 
@@ -14645,7 +14520,7 @@ window.cancelAnimFrame = (function () {
         };
 
         // For Flash items: show a capture modal instead of a file picker
-        const rufflePlayer = document.querySelector('#ruffle-container ruffle-player');
+        const rufflePlayer = document.querySelector('#ruffle-container f0ck-flash');
         if (rufflePlayer) {
 
             // POST blob to thumbnail API and close modal
@@ -14670,26 +14545,9 @@ window.cancelAnimFrame = (function () {
                 .catch(err => { window.flashError('Upload error'); console.error(err); });
             };
 
-            // Capture current Ruffle frame → return blob via callback
+            // Capture the current Flash frame (JPEG, max 640px) → blob via callback
             const captureFrame = (cb) => {
-                const canvas = tryFindCanvas(rufflePlayer.shadowRoot || rufflePlayer) || tryFindCanvas(rufflePlayer);
-                if (!canvas || canvas.width === 0 || canvas.height === 0) {
-                    cb(null);
-                    return;
-                }
-                const out = document.createElement('canvas');
-                const MAX = 640;
-                const w = canvas.width, h = canvas.height;
-                if (w > MAX || h > MAX) {
-                    const ratio = Math.min(MAX / w, MAX / h);
-                    out.width = Math.round(w * ratio);
-                    out.height = Math.round(h * ratio);
-                } else {
-                    out.width = w || 320;
-                    out.height = h || 240;
-                }
-                out.getContext('2d').drawImage(canvas, 0, 0, out.width, out.height);
-                out.toBlob(cb, 'image/jpeg', 0.92);
+                rufflePlayer.snapshot({ max: 640, quality: 0.92 }).then(cb, () => cb(null));
             };
 
             // Build & show modal using site CSS classes
@@ -15014,7 +14872,7 @@ window.cancelAnimFrame = (function () {
     // Leaving abyss — stop all media
     if (wasOnAbyss) {
       document.querySelectorAll('video, audio').forEach(el => { try { el.pause(); el.removeAttribute('src'); el.load(); } catch {} });
-      document.querySelectorAll('ruffle-player').forEach(el => { try { el.remove(); } catch {} });
+      document.querySelectorAll('f0ck-flash').forEach(el => { try { el.remove(); } catch {} });
     }
 
     // Item detection logic MUST match loadPageAjax/loadItemAjax analysis
@@ -21913,7 +21771,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportUserInput = document.getElementById('report-user-id');
     const reportReason = document.getElementById('report-reason');
     const reportError = document.getElementById('report-error');
-    let _reportRcWidgetId = null;
+    // Cap captcha, only rendered for guests (footer.html)
+    const reportCaptcha = () => document.getElementById('modal-report-captcha');
+    const resetReportCaptcha = () => { const el = reportCaptcha(); if (el) window.f0ckCapReset?.(el.parentNode); };
 
     const showReportError = (msg, targetEl) => {
         if (!reportError) return;
@@ -24192,7 +24052,7 @@ document.addEventListener('click', (e) => {
         }
 
         // Start Ruffle playback if this is a Flash item — it was loaded with autoplay:"off"
-        const rufflePlayer = mediaObj.querySelector('ruffle-player');
+        const rufflePlayer = mediaObj.querySelector('f0ck-flash');
         if (rufflePlayer) {
           try { rufflePlayer.play(); } catch(err) {}
         }
