@@ -87,6 +87,11 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
         return Ok(2);
     }
     let st = state(base).await?;
+    // Say which database this runs against, so a missing DB_NAME doesn't go unnoticed
+    if let Ok(Some(row)) = crate::sql!("select current_database() as db").fetch_optional(&st.db).await {
+        use crate::db::RowExt;
+        eprintln!("[database: {}]", row.string("db"));
+    }
     if matches!(cmd, "seed" | "create-admin") {
         // Fresh setups: create the schema on an empty database first, like the server does at boot
         crate::prepare_db(&st).await;
