@@ -1,5 +1,4 @@
 f0ckm-data/
-node_modules/
 logs/*.log
 config.json
 public/b

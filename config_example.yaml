@@ -130,7 +130,7 @@ websrv:
   dm_attachments: true
   dm_unencrypted: false
   dm_attachment_expiry_days: 90
-  # Temporary chat file hosting for external clients, keys via scripts/chat-upload-key.mjs
+  # Temporary chat file hosting for external clients, keys via `f0ckm chat-upload-key create`
   chat_uploads: true
   chat_upload_max_bytes: 104857600
   chat_upload_expiry_days: 30

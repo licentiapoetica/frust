@@ -12,13 +12,7 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/s\/emojis\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.emojis, "/s/emojis/").await) });
     r.get(r"^\/s\/koepfe\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.koepfe, "/s/koepfe/").await) });
     r.get(r"^\/s\/fonts\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.fonts, "/s/fonts/").await) });
-    r.get(r"^\/s\/ruffle\/", |st: AppState, req: Req| async move {
-        // Vendored Ruffle (copied into public/s/ruffle by the build); falls back to node_modules.
-        let cfg = st.cfg();
-        let vendored = cfg.paths.s.join("ruffle");
-        let dir = if vendored.exists() { vendored } else { cfg.base.join("node_modules/@ruffle-rs/ruffle") };
-        Ok(serve_dir(&req, &dir, "/s/ruffle/").await)
-    });
+    // /s/ruffle/ is served from public/s/ruffle by the /s/ route (scripts/fetch-ruffle.sh installs it)
     r.get(r"^\/s\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.s, "/s/").await) });
     r.get(r"^\/t\/(?<file>.+)$", thumb);
     r.get(r"^\/ca\/(?<file>.+)$", cover);

@@ -3,15 +3,8 @@
 .gitignore
 .gitattributes
 .gitea
-.eslintrc.json
 
-# Node (no longer part of the image)
 node_modules
-src/
-debug/
-scripts/*.mjs
-package.json
-package-lock.json
 
 # Rust build output (the image compiles its own)
 server/target

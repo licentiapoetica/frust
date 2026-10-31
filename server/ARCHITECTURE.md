@@ -1,20 +1,13 @@
-# Porting guide (Node → Rust)
+# Server architecture and conventions
 
-The Node backend in `src/` is being replaced by the Rust server in `server/`. Port behaviour
-faithfully: same URLs, same status codes, same JSON shapes, same template data. Where the old code
-has an obvious bug or security hole, fix it and mention it in your report (don't silently change
-behaviour otherwise).
-
-There is no production deployment: stored data (password hashes, passkeys, file layouts) does not
-need to stay compatible, so prefer best practice over mirroring old internals. What must keep
-working is the browser frontend (`public/s/js`, `views/`) — keep endpoints, JSON shapes and
-template data, or update the frontend alongside. Don't alter existing tables in the dev database
-(the Node reference server still runs on it); add new tables/columns via a `migrations/*.sql` file
-and `server/src/migrations.rs`.
+The f0ckm backend is a single Rust binary (`server/`). It replaced the earlier Node.js server; the
+module comments still name the old file a part was ported from. Behaviour the browser frontend
+(`public/s/js`, `views/`) relies on — URLs, status codes, JSON shapes, template data — is kept
+stable; change the frontend alongside when changing it.
 
 ## Layout
 
-| Rust | Old |
+| Module | Ported from (Node) |
 |---|---|
 | `server/src/main.rs` | boot sequence of `src/index.mjs` |
 | `server/src/app.rs` | middleware chain of `src/index.mjs` (sessions, bans, CSRF, …) |
@@ -27,6 +20,7 @@ and `server/src/migrations.rs`.
 | `server/src/util.rs` | `src/inc/lib.mjs` (helpers) |
 | `server/src/private_items.rs`, `hidden_items.rs` | same names in `src/inc/` |
 | `server/src/proc.rs` | `queue.spawn` (external tools, no shell) |
+| `server/src/net_guard.rs` | SSRF guard: URL validation and the egress proxy for curl/yt-dlp |
 | `server/src/chan_http.rs` | `src/inc/chan_http.mjs` (4chan requests: host allow-list, curl-impersonate, media streaming) |
 | `server/src/routes/<name>.rs` | `src/inc/routes/<name>.mjs` (apiv2 → `routes/apiv2/<name>.rs`) |
 | `server/src/bot/` | `cuffeo` + `src/inc/events` + `src/inc/trigger` |
@@ -156,34 +150,16 @@ Templates in `views/` are MiniJinja now (converted automatically from flummpress
 ## External tools, files, HTTP
 
 * `crate::proc::spawn("ffmpeg", &[...]).await?` / `spawn_with(.., Opts { timeout, .. })` — never a shell.
+* User-supplied URLs: check with `net_guard::validate_remote_url`, and pass `media::proxy_url(cfg)` as
+  `--proxy` to curl/yt-dlp so every connection (incl. redirects) goes through the SSRF guard.
 * Paths from URLs: `http::files::safe_join(dir, rel)` (refuses `..`).
 * Outgoing HTTP: `st.http` (reqwest). Chat notifications: `st.bot.notify_matrix(&cfg, msg)`,
   `st.bot.send(network, target, msg)`.
 
-## Rules for parallel work
+## Tooling
 
-* Work only in your own worktree and branch. Commit there (small logical commits, message ending
-  with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`). Don't push, don't touch `master`.
-* Don't restructure foundation files. You may **add** functions/fields to shared files
-  (`util.rs`, `state.rs`, `settings.rs`, `http/mod.rs`, `tpl.rs`) when needed — append, don't
-  rewrite — and list every such change in your final report so merges stay easy.
-* Build with `cargo check --offline` (fast) and `cargo build --offline` when you need to run.
-  No network: all crates are already in `~/.cargo`. Keep `CARGO_BUILD_JOBS=4` (shared machine).
-* Running for tests: from the worktree root,
-  `STORAGE_DIR=/home/nx/Projects/f0ckm/f0ckm-data DB_HOST=localhost DB_PORT=5454 F0CKM_PORT=<your port> ./server/target/debug/f0ckm`.
-  The old Node server (reference) runs at `http://localhost:1337` against the same database.
-  The database is the owner's development data: read freely; only write rows you create for a test
-  and remove them afterwards. Never delete or alter existing data, never run destructive SQL.
-* Unported dependencies: if you need a function another agent is porting, write a minimal local
-  version or a clearly marked `TODO(port): ...` stub and mention it in the report.
-
-## Tooling and removing Node
-
-The Node scripts are replaced by subcommands of the binary (`server/src/cli/`, `f0ckm help`); the
-Docker image has no Node. What still has to go in the final cleanup step (nothing in the Rust server
-reads these):
-
-* `src/` (the Node server), `scripts/*.mjs`, `debug/`, `package.json`, `package-lock.json`,
-  `node_modules/`, `.eslintrc.json`
-* the fallbacks to them: `locales_dir()` in `main.rs` (`src/inc/locales`) and the
-  `node_modules/@ruffle-rs/ruffle` fallback in `routes/static_files.rs`
+* `f0ckm help` lists the CLI commands (`server/src/cli/`): setup (seed, create-admin, users, API keys),
+  media maintenance (import, regen, rehash, clean, …) and build steps (build-css, check-templates).
+* Ruffle is not in git: `scripts/fetch-ruffle.sh` installs a pinned, checksummed release into
+  `public/s/ruffle` (the Docker build does this itself).
+* Tests: `cargo test --offline` in `server/`; templates: `f0ckm check-templates`.

@@ -265,10 +265,9 @@ fn watch_config(st: &state::AppState) -> Option<notify::RecommendedWatcher> {
     Some(w)
 }
 
-/// Translations: `locales/` (falls back to the old `src/inc/locales` of the Node server).
+/// Translations directory.
 pub fn locales_dir(base: &std::path::Path) -> std::path::PathBuf {
-    let dir = base.join("locales");
-    if dir.is_dir() { dir } else { base.join("src/inc/locales") }
+    base.join("locales")
 }
 
 /// Shared state for the server and the CLI commands.
