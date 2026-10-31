@@ -5,6 +5,8 @@ main:
     regex: example\.com
   onion: http://your-onion-address.onion
   socks: socks5://127.0.0.1:9050
+  # JavaScript runtime yt-dlp uses for YouTube (chat link uploads): node, deno, bun or quickjs
+  # ytdlp_js_runtime: node
   mail: admin@example.com
   maxfilesize: 104857600
   adminmultiplier: 3.5
@@ -247,6 +249,12 @@ clients:
     realname: bot
     channels:
       - "#example"
+  # Slack via Socket Mode: token = bot token (xoxb-, scopes chat:write, channels:read, users:read,
+  # event subscriptions message.channels/message.groups), appToken = app-level token (xapp-, connections:write)
+  - type: slack
+    enabled: false
+    token: ""
+    appToken: ""
 sql:
   host: localhost
   port: 5432

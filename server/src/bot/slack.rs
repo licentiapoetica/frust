@@ -6,7 +6,7 @@
 //! `channels:read`, `users:read`, plus the `message.*` event subscriptions), `appToken` = app-level
 //! token (`xapp-…`, scope `connections:write`).
 
-use super::ws::{self, WsMessage};
+use tokio_tungstenite::tungstenite::Message as WsMsg;
 use super::{Backoff, Client, Emitter, Event, Kind, Message, User};
 use parking_lot::Mutex;
 use serde_json::{Value, json};
@@ -128,34 +128,14 @@ impl Slack {
     }
 
     async fn session(&self, backoff: &mut Backoff) -> anyhow::Result<()> {
+        use futures::{SinkExt, StreamExt};
         let open = self.call("apps.connections.open", &self.app_token, &json!({})).await?;
         let url = open["url"].as_str().ok_or_else(|| anyhow::anyhow!("apps.connections.open: no url"))?;
-        let (mut rd, mut wr) = ws::connect(url).await?;
-        // read in a separate task: a timed-out read in the middle of a frame would desync the stream
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<anyhow::Result<WsMessage>>(16);
-        let reader = tokio::spawn(async move {
-            loop {
-                let m = rd.next().await;
-                let stop = m.is_err();
-                if tx.send(m).await.is_err() || stop {
-                    break;
-                }
-            }
-        });
-        let res = self.pump(&mut rx, &mut wr, backoff).await;
-        reader.abort();
-        res
-    }
-
-    async fn pump(
-        &self,
-        rx: &mut tokio::sync::mpsc::Receiver<anyhow::Result<WsMessage>>,
-        wr: &mut ws::WsWriter,
-        backoff: &mut Backoff,
-    ) -> anyhow::Result<()> {
+        let (ws, _) = tokio_tungstenite::connect_async(url).await?;
+        let (mut sink, mut stream) = ws.split();
         let mut pinged = false;
         loop {
-            let msg = match tokio::time::timeout(Duration::from_secs(if pinged { 30 } else { 120 }), rx.recv()).await {
+            let msg = match tokio::time::timeout(Duration::from_secs(if pinged { 30 } else { 120 }), stream.next()).await {
                 Ok(Some(m)) => {
                     pinged = false;
                     m?
@@ -164,16 +144,15 @@ impl Slack {
                 Err(_) if !pinged => {
                     // keepalive; Slack pings us regularly, so silence means a dead connection
                     pinged = true;
-                    wr.send(ws::OP_PING, b"").await?;
+                    sink.send(WsMsg::Ping(Vec::new())).await?;
                     continue;
                 }
                 Err(_) => anyhow::bail!("connection timed out"),
             };
             match msg {
-                WsMessage::Ping(p) => wr.send(ws::OP_PONG, &p).await?,
-                WsMessage::Close => return Ok(()),
-                WsMessage::Binary(_) | WsMessage::Pong => {}
-                WsMessage::Text(t) => {
+                WsMsg::Ping(p) => sink.send(WsMsg::Pong(p)).await?,
+                WsMsg::Close(_) => return Ok(()),
+                WsMsg::Text(t) => {
                     let Ok(v) = serde_json::from_str::<Value>(&t) else { continue };
                     match v["type"].as_str() {
                         Some("hello") => {
@@ -185,7 +164,7 @@ impl Slack {
                     }
                     let (envelope, event) = parse_envelope(&v);
                     if let Some(id) = envelope {
-                        wr.send(ws::OP_TEXT, json!({ "envelope_id": id }).to_string().as_bytes()).await?;
+                        sink.send(WsMsg::Text(json!({ "envelope_id": id }).to_string())).await?;
                     }
                     if let (Some(ev), Some(this)) = (event, self.arc()) {
                         tokio::spawn(async move {
@@ -194,6 +173,7 @@ impl Slack {
                         });
                     }
                 }
+                _ => {}
             }
         }
     }

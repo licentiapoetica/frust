@@ -5,7 +5,7 @@
 //! Layout:
 //! * `irc.rs`, `telegram.rs`, `matrix.rs`, `slack.rs` — protocol clients (`cuffeo/src/clients/*`).
 //!   Each client runs its own reconnect loop with backoff and never blocks or crashes the web server.
-//! * `net.rs` (TCP/TLS), `ws.rs` (minimal websocket client for Slack RTM).
+//! * `net.rs` (TCP/TLS for IRC).
 //! * `events.rs` — `src/inc/events/*` (message dispatch, CTCP, logging).
 //! * `triggers.rs` — `src/inc/trigger/*` except the link parser; `parser.rs` — `trigger/parser.mjs`.
 //! * `pipeline.rs` — the parts of the upload pipeline (`queue.mjs`, `lib_delete.mjs`, …) the
@@ -22,7 +22,6 @@ pub mod pipeline;
 pub mod slack;
 pub mod telegram;
 pub mod triggers;
-pub mod ws;
 
 use crate::config::Config;
 use crate::state::AppState;
