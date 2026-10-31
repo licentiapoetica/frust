@@ -425,7 +425,7 @@
     <a href="/about" data-page-modal title="{{ t("footer.about") }}" aria-label="{{ t("footer.about") }}"><i class="fa-solid fa-info"></i></a>
     <a href="/privacy" data-page-modal title="Privacy" aria-label="Privacy"><i class="fa-solid fa-shield-halved"></i></a>
     <div id="help-button" style="color: var(--accent); font-weight: bold; opacity: 0.7;" title="Keyboard Shortcuts" aria-label="Keyboard Shortcuts"><i class="fa-solid fa-keyboard"></i></div>
-    {% if PORT_TODO %}{# PORT_TODO: !/^\/\d$/.test(url.pathname) #}
+    {% if not (url.pathname|length == 2 and url.pathname[1:] in "0123456789") %}
     {# id kept: f0ckm.js / sidebar-activity.js hook the AJAX random transition on #nav-random #}
     <a href="/random" id="nav-random" title="{{ t("nav.random") }}" aria-label="{{ t("nav.random") }}"><i class="fa-solid fa-shuffle"></i></a>
     {% endif %}
