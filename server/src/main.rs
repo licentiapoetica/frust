@@ -16,6 +16,7 @@ mod routes;
 mod security;
 mod session;
 mod settings;
+mod social;
 mod state;
 mod tpl;
 mod util;
