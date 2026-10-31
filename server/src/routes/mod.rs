@@ -32,6 +32,7 @@ pub mod tag_image;
 pub mod toptags;
 pub mod user_tags;
 pub mod messages;
+pub mod chat;
 
 pub fn build() -> Router {
     let mut r = Router::new();
@@ -68,6 +69,7 @@ pub fn build() -> Router {
     toptags::register(&mut r);
     user_tags::register(&mut r);
     messages::register(&mut r);
+    chat::register(&mut r);
     r.finalize();
     r
 }
