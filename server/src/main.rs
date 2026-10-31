@@ -165,8 +165,9 @@ fn spawn_background_tasks(st: &state::AppState) {
     // Postgres LISTEN → live event stream (/api/notifications/stream)
     routes::notifications::spawn_listener(st);
 
-    // Expired DM attachments, every 6 hours
+    // Expired DM attachments (every 6 hours) and chat uploads (hourly)
     routes::messages::spawn_cleanup(st);
+    routes::chat_upload::spawn_cleanup(st);
 
     // Private/unavailable item index, every 30 s
     let s = st.clone();
@@ -303,6 +304,10 @@ async fn main() -> Result<()> {
         }
         println!("{} template(s) with errors", errors.len());
         std::process::exit(if errors.is_empty() { 0 } else { 1 });
+    }
+    if std::env::args().nth(1).as_deref() == Some("chat-upload-key") {
+        let args: Vec<String> = std::env::args().skip(2).collect();
+        std::process::exit(routes::chat_upload::cli(&pool, &args).await);
     }
     let port = std::env::var("F0CKM_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(cfg.port());
     let st = state::AppState(Arc::new(state::Inner {
