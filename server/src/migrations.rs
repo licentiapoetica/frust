@@ -81,5 +81,10 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       word VARCHAR(255) NOT NULL UNIQUE,
       replacement VARCHAR(255) NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
+    // URL metadata cache (routes/apiv2/index.mjs)
+    r#"CREATE TABLE IF NOT EXISTS meta_cache (
+      url TEXT PRIMARY KEY,
+      data JSONB,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
 ];

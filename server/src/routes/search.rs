@@ -51,8 +51,7 @@ async fn search(st: AppState, req: Req) -> Res {
     if !tag.is_empty() {
         if let Some(s) = req.session().filter(|s| s.id != 0) {
             if !tag.starts_with("src:") && !tag.starts_with("title:") {
-                // TODO(port): use crate::f0cklib::recommend::update_user_tag_affinity once it exists.
-                super::index::update_user_tag_affinity(&st, s.id, &tag);
+                crate::f0cklib::recommend::spawn_update_user_tag_affinity(&st, s.id, &tag, 2.0);
             }
         }
         if let Some(src) = tag.strip_prefix("src:") {

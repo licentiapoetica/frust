@@ -385,7 +385,7 @@ async fn generic(st: AppState, req: Req) -> Res {
 
     if let (Some(tag), Some(s)) = (&req_tag, sref) {
         if s.id != 0 && !tag.starts_with("title:") {
-            update_user_tag_affinity(&st, s.id, tag);
+            f0cklib::recommend::spawn_update_user_tag_affinity(&st, s.id, tag, 2.0);
         }
     }
 
@@ -806,62 +806,6 @@ async fn subscription_status(st: &AppState, user_id: i64, item_id: i64) -> bool 
     .await
     .map(|r| r.is_some())
     .unwrap_or(false)
-}
-
-/// `f0cklib.updateUserTagAffinity({ user_id, tag, scoreDelta: 2.0 })`, fire and forget.
-/// TODO(port): replace with the recommendations port of updateUserTagAffinity once it exists.
-pub(crate) fn update_user_tag_affinity(st: &AppState, user_id: i64, tag: &str) {
-    let tags: Vec<String> = tag
-        .split(',')
-        .map(|t| t.trim().to_lowercase())
-        .filter(|t| !t.is_empty() && !t.starts_with("title:") && !t.starts_with("src:"))
-        .take(10)
-        .collect();
-    if tags.is_empty() {
-        return;
-    }
-    let slugs: Vec<String> = tags.iter().map(|t| crate::util::slugify(t)).filter(|s| !s.is_empty()).collect();
-    let db = st.db.clone();
-    let delta: f64 = 2.0;
-    tokio::spawn(async move {
-        let ids: Vec<i32> = match sql!(
-            "SELECT DISTINCT id FROM tags WHERE LOWER(tag) = ANY(",
-            tags,
-            "::text[]) OR (normalized != '' AND normalized = ANY(",
-            slugs,
-            "::text[]))"
-        )
-        .fetch_scalar_list(&db)
-        .await
-        {
-            Ok(ids) if !ids.is_empty() => ids,
-            Ok(_) => return,
-            Err(e) => {
-                tracing::error!("[AFFINITY] Failed to update user tag affinity from search: {e}");
-                return;
-            }
-        };
-        let r = sql!(
-            "INSERT INTO user_tag_affinity (user_id, tag_id, score, interaction_count, last_interacted) SELECT ",
-            user_id as i32,
-            ", unnest(",
-            ids,
-            "::int[]), ",
-            delta,
-            r#", 1, now()
-        ON CONFLICT (user_id, tag_id) DO UPDATE SET
-          score = CASE WHEN user_tag_affinity.last_interacted < now() - interval '10 seconds'
-            THEN GREATEST(-10.0, LEAST(1000.0, user_tag_affinity.score + EXCLUDED.score)) ELSE user_tag_affinity.score END,
-          interaction_count = CASE WHEN user_tag_affinity.last_interacted < now() - interval '10 seconds'
-            THEN user_tag_affinity.interaction_count + 1 ELSE user_tag_affinity.interaction_count END,
-          last_interacted = now()"#
-        )
-        .execute(&db)
-        .await;
-        if let Err(e) = r {
-            tracing::error!("[AFFINITY] Failed to update user tag affinity from search: {e}");
-        }
-    });
 }
 
 // ── static pages ────────────────────────────────────────────────────────────

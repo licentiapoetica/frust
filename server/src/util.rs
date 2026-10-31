@@ -586,3 +586,17 @@ mod password_tests {
         assert!(!verify_password("".into(), "!".into()).await);
     }
 }
+
+/// `s.substring(0, n)` — the first `n` UTF-16 code units (a split surrogate pair is dropped).
+pub fn utf16_prefix(s: &str, n: usize) -> String {
+    let mut out = String::new();
+    let mut units = 0;
+    for c in s.chars() {
+        units += c.len_utf16();
+        if units > n {
+            break;
+        }
+        out.push(c);
+    }
+    out
+}

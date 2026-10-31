@@ -45,6 +45,9 @@ pub fn build() -> Router {
     settings::register(&mut r);
     wordfilter::register(&mut r);
     apiv2::tags::register(&mut r);
+    apiv2::index::register(&mut r);
+    apiv2::ambient::register(&mut r);
+    apiv2::upload_url::register(&mut r);
     static_files::register(&mut r);
     theme::register(&mut r);
     uploads::register(&mut r);
