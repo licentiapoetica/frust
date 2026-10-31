@@ -119,7 +119,7 @@ impl Settings {
         self.inner.write().min_tags = as_int(v).unwrap_or(0).max(0);
     }
     pub fn set_trusted_uploads(&self, v: &Value) {
-        self.inner.write().trusted_uploads = as_int(v).unwrap_or(3).max(0);
+        self.inner.write().trusted_uploads = as_int(v).unwrap_or(0).max(0);
     }
     pub fn set_default_layout(&self, v: &str) {
         self.inner.write().default_layout = if v == "legacy" { "legacy".into() } else { "modern".into() };
@@ -405,7 +405,7 @@ pub async fn load_from_db(st: &crate::state::AppState) {
                 "manual_approval" => s.manual_approval = b,
                 "min_tags" => s.min_tags = as_int(&Value::String(val)).unwrap_or(0).max(0),
                 "registration_open" => s.registration_open = b,
-                "trusted_uploads" => s.trusted_uploads = as_int(&Value::String(val)).unwrap_or(3).max(0),
+                "trusted_uploads" => s.trusted_uploads = as_int(&Value::String(val)).unwrap_or(0).max(0),
                 "enable_cleanup" => s.enable_cleanup = b,
                 "cleanup_start_date" => s.cleanup_start_date = val,
                 "cleanup_end_date" => s.cleanup_end_date = val,

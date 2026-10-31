@@ -422,7 +422,7 @@ async fn settings_save(st: AppState, mut req: Req) -> Res {
     let registration_open = body_str(&body, "registration_open").as_deref() == Some("on");
     let min_tags = parse_int(body_str(&body, "min_tags")).unwrap_or(0).max(0);
     // The old `Math.max(0, parseInt(x) ?? 3)` stored "NaN" for a non-numeric value; default to 3 instead.
-    let trusted_uploads = parse_int(body_str(&body, "trusted_uploads")).unwrap_or(3).max(0);
+    let trusted_uploads = parse_int(body_str(&body, "trusted_uploads")).unwrap_or(0).max(0);
 
     save_setting(&st, "manual_approval", if manual_approval { "true" } else { "false" }).await?;
     let web_toggle = cfg.enabled("websrv.open_registration_web_toggle");

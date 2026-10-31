@@ -16,7 +16,7 @@ const SETTINGS: [(&str, &str); 8] = [
     ("min_tags", "0"),
     // true: open registration with e-mail; false: registration by invite token
     ("registration_open", "true"),
-    ("trusted_uploads", "3"),
+    ("trusted_uploads", "0"),
     ("about_text", ""),
     ("rules_text", ""),
     ("terms_text", ""),
