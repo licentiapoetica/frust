@@ -9,6 +9,7 @@ mod gate;
 mod hidden_items;
 mod http;
 mod i18n;
+mod media;
 mod migrations;
 mod private_items;
 mod proc;
@@ -144,6 +145,9 @@ fn spawn_background_tasks(st: &state::AppState) {
             tokio::time::sleep(Duration::from_secs(6 * 3600)).await;
         }
     });
+
+    // Expired uploads, 10 s after boot then every 30 s
+    media::delete::spawn_expiry_purger(st);
 
     // Private/unavailable item index, every 30 s
     let s = st.clone();
