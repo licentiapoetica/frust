@@ -194,13 +194,13 @@
     <div class="admin-bar-links">
       <a href="/admin" class="admin-bar-link" title="Admin panel">
         <i class="fa-solid fa-cog"></i> Admin
-        {% if (session.pending_count is defined and (session.pending_count > 0)) %}
+        {% if (session.pending_count is defined and (session.pending_count|int > 0)) %}
         <span class="admin-bar-badge">{{ session.pending_count }}</span>
         {% endif %}
       </a>
       <a href="/admin/approve" class="admin-bar-link" title="Pending approvals">
         <i class="fa-solid fa-clock"></i> Pending
-        {% if (session.pending_count is defined and (session.pending_count > 0)) %}
+        {% if (session.pending_count is defined and (session.pending_count|int > 0)) %}
         <span class="admin-bar-badge">{{ session.pending_count }}</span>
         {% endif %}
       </a>

@@ -17,6 +17,12 @@ pub mod user_halls;
 pub mod profile_media;
 pub mod settings;
 pub mod wordfilter;
+pub mod mod_panel;
+pub mod notifications;
+pub mod nsfp;
+pub mod pending;
+pub mod reports;
+pub mod warnings;
 
 pub fn build() -> Router {
     let mut r = Router::new();
@@ -37,6 +43,12 @@ pub fn build() -> Router {
     halls::register(&mut r);
     user_halls::register(&mut r);
     subscriptions::register(&mut r);
+    mod_panel::register(&mut r);
+    reports::register(&mut r);
+    warnings::register(&mut r);
+    pending::register(&mut r);
+    nsfp::register(&mut r);
+    notifications::register(&mut r);
     r.finalize();
     r
 }

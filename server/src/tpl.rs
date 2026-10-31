@@ -106,12 +106,23 @@ fn to_datetime(v: &JValue) -> Option<DateTime<Local>> {
     Local.timestamp_millis_opt(ms as i64).single()
 }
 
-/// Locale for date formatting: the given language, else the server locale (LC_ALL / LC_TIME /
-/// LANG), like Node's default `toLocaleString()`.
+/// The process locale (`LC_ALL` / `LC_MESSAGES` / `LANG`): what `toLocaleString()` without a
+/// locale argument used in Node.
+pub fn process_lang() -> Option<String> {
+    static LANG: once_cell::sync::Lazy<Option<String>> = once_cell::sync::Lazy::new(|| {
+        ["LC_ALL", "LC_MESSAGES", "LANG"]
+            .iter()
+            .filter_map(|k| std::env::var(k).ok())
+            .find(|v| !v.is_empty())
+            .map(|v| v.split(['_', '.', '-', '@']).next().unwrap_or("").to_string())
+            .filter(|l| !l.is_empty() && l != "C" && l != "POSIX")
+    });
+    LANG.clone()
+}
+
 fn locale_of(lang: Option<&str>) -> &'static str {
-    let env_lang = || ["LC_ALL", "LC_TIME", "LANG"].iter().find_map(|k| std::env::var(k).ok().filter(|v| !v.is_empty() && v != "C" && v != "POSIX"));
-    let lang = lang.map(str::to_string).or_else(env_lang);
-    match lang.map(|l| l.split(['-', '_', '.']).next().unwrap_or("").to_lowercase()) {
+    let lang = lang.map(str::to_string).or_else(process_lang);
+    match lang.map(|l| l.split(['-', '_']).next().unwrap_or("").to_lowercase()) {
         Some(l) if l == "de" => "de",
         Some(l) if l == "nl" => "nl",
         _ => "en",
