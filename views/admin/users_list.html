@@ -1,4 +1,4 @@
-{# PORT_TODO @for(let u of users) #}{% for PORT_TODO in [] %}
+{% for u in users %}
 <tr id="user-row-{{ (u.id or "ghost-" ~ u.login) }}">
     <td data-label="User & Contact">
         <div class="user-info-cell" style="display: flex; align-items: center; gap: 15px;">

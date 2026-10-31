@@ -12,7 +12,7 @@ use crate::session::Session;
 use crate::settings::{can_anon_do, enable_item_slugs, is_anon_session, is_anonymize_session};
 use crate::social::comments as sc;
 use crate::social::helpers::{
-    self as h, audit_log, comment_globalfilter_tags, compute_base_mode, js_parse_float, js_parse_int, js_str, log_anon_activity, mode_override, notify,
+    self as h, comment_globalfilter_tags, compute_base_mode, js_parse_float, js_parse_int, js_str, log_anon_activity, mode_override, notify,
     ratings_from_cookie, resolve_audit_ip, resolve_mime_sql,
 };
 use crate::sql;
@@ -724,14 +724,7 @@ async fn delete_comment(st: AppState, mut req: Req) -> Res {
         } else {
             req.query("reason").filter(|r| !r.is_empty()).unwrap_or("No reason provided").to_string()
         };
-        audit_log(
-            &st,
-            session.id,
-            "delete_comment",
-            "comment",
-            &comment_id.to_string(),
-            Some(json!({ "item_id": comment.val("item_id"), "reason": reason, "old_content": comment.val("content") })),
-        )
+        crate::audit::log(&st, session.id, "delete_comment", "comment", comment_id.to_string(), json!({ "item_id": comment.val("item_id"), "reason": reason, "old_content": comment.val("content") }))
         .await;
         if session.is_anon {
             log_anon_activity(&st, &req, "comment_delete", Some(comment_id as i64), Some(json!({ "item_id": comment.val("item_id") }))).await;
@@ -851,14 +844,7 @@ async fn delete_attachment(st: AppState, mut req: Req) -> Res {
         if let Some(p) = crate::http::files::safe_join(&cfg.paths.t, &format!("cf_{}.webp", filename.split('.').next().unwrap_or(""))) {
             let _ = tokio::fs::remove_file(p).await;
         }
-        audit_log(
-            &st,
-            session.id,
-            "delete_attachment",
-            "comment",
-            &comment_id.to_string(),
-            Some(json!({ "filename": filename, "old_content": comment.val("content"), "new_content": final_content })),
-        )
+        crate::audit::log(&st, session.id, "delete_attachment", "comment", comment_id.to_string(), json!({ "filename": filename, "old_content": comment.val("content"), "new_content": final_content }))
         .await;
         notify(&st, "comments", &json!({ "type": "edit", "item_id": comment.val("item_id"), "comment_id": comment_id, "content": final_content })).await;
         Ok(json_resp(&json!({ "success": true }), 200))
@@ -894,14 +880,7 @@ async fn edit_comment(st: AppState, mut req: Req) -> Res {
             return Ok(json_resp(&json!({ "success": false, "message": "Not found" }), 404));
         };
         let old = comment.string("content");
-        audit_log(
-            &st,
-            session.id,
-            "edit_comment",
-            "comment",
-            &comment_id.to_string(),
-            Some(json!({ "item_id": comment.val("item_id"), "old_content": utf16_prefix(&old, 2000), "new_content": utf16_prefix(&content, 2000) })),
-        )
+        crate::audit::log(&st, session.id, "edit_comment", "comment", comment_id.to_string(), json!({ "item_id": comment.val("item_id"), "old_content": utf16_prefix(&old, 2000), "new_content": utf16_prefix(&content, 2000) }))
         .await;
         sql!("UPDATE comments SET content = ", &content, ", updated_at = NOW() WHERE id = ", comment_id).execute(&st.db).await?;
         notify(&st, "comments", &json!({ "type": "edit", "item_id": comment.val("item_id"), "comment_id": comment_id.to_string(), "content": content })).await;
@@ -931,7 +910,7 @@ async fn pin_comment(st: AppState, req: Req) -> Res {
         };
         let pinned = !c.bool("is_pinned");
         sql!("UPDATE comments SET is_pinned = ", pinned, " WHERE id = ", comment_id).execute(&st.db).await?;
-        audit_log(&st, session.id, "pin_comment", "comment", &comment_id.to_string(), Some(json!({ "item_id": c.val("item_id"), "is_pinned": pinned }))).await;
+        crate::audit::log(&st, session.id, "pin_comment", "comment", comment_id.to_string(), json!({ "item_id": c.val("item_id"), "is_pinned": pinned })).await;
         Ok(json_resp(&json!({ "success": true, "is_pinned": pinned }), 200))
     }
     .await;
@@ -958,7 +937,7 @@ async fn lock_thread(st: AppState, req: Req) -> Res {
         };
         let locked = !item.bool("is_locked");
         sql!("UPDATE items SET is_comments_locked = ", locked, " WHERE id = ", item_id).execute(&st.db).await?;
-        audit_log(&st, session.id, if locked { "lock_thread" } else { "unlock_thread" }, "item", &item_id.to_string(), None).await;
+        crate::audit::log(&st, session.id, if locked { "lock_thread" } else { "unlock_thread" }, "item", item_id.to_string(), Value::Null).await;
         Ok(json_resp(&json!({ "success": true, "is_locked": locked }), 200))
     }
     .await;

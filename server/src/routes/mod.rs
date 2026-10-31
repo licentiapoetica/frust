@@ -2,6 +2,8 @@
 
 use crate::http::Router;
 
+pub mod admin_media;
+pub mod admin;
 pub mod apiv2;
 pub mod banned;
 pub mod index;
@@ -69,6 +71,8 @@ pub fn build() -> Router {
     tag_image::register(&mut r);
     toptags::register(&mut r);
     user_tags::register(&mut r);
+    admin_media::register(&mut r);
+    admin::register(&mut r);
     r.finalize();
     r
 }

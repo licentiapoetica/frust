@@ -3,9 +3,11 @@
 
 mod anon_auth;
 mod app;
+mod audit;
 mod auth;
 mod bot;
 mod config;
+mod config_write;
 mod db;
 mod f0cklib;
 mod gate;
@@ -115,7 +117,7 @@ async fn ensure_nsfl_tag(st: &state::AppState) {
     }
 }
 
-async fn backfill_slugs(st: &state::AppState) {
+pub(crate) async fn backfill_slugs(st: &state::AppState) {
     for table in ["items", "album_items"] {
         let ids: Vec<i32> = match sql!("SELECT id FROM ").push(table).push(" WHERE slug IS NULL OR slug = ''").fetch_scalar_list(&st.db).await {
             Ok(v) => v,
