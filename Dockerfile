@@ -2,7 +2,7 @@
 
 # ── 1. f0ckm binary ──────────────────────────────────────────────────────────────
 # Rust on Alpine targets musl and links statically, so the binary runs on the plain Alpine runtime.
-FROM rust:1.90-alpine3.22 AS build
+FROM rust:1.98-alpine3.22 AS build
 RUN apk add --no-cache musl-dev gcc
 WORKDIR /build/server
 COPY server/Cargo.toml server/Cargo.lock ./
