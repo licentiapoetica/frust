@@ -9,6 +9,7 @@ pub mod random;
 pub mod register;
 pub mod static_files;
 pub mod theme;
+pub mod uploads;
 
 pub fn build() -> Router {
     let mut r = Router::new();
@@ -20,6 +21,7 @@ pub fn build() -> Router {
     apiv2::passkeys::register(&mut r);
     static_files::register(&mut r);
     theme::register(&mut r);
+    uploads::register(&mut r);
     r.finalize();
     r
 }
