@@ -147,7 +147,8 @@ pub async fn safe_delete_album_files(st: &AppState, item_id: i64) {
         Ok(r) => r,
         Err(e) => return tracing::error!("[DELETE] Failed to delete album files for item #{item_id}: {e}"),
     };
-    let t_dir = st.cfg().paths.t.clone();
+    let cfg = st.cfg();
+    let (t_dir, pending) = (cfg.paths.t.clone(), cfg.paths.pending.clone());
     for r in rows {
         let dest = r.string("dest");
         if dest.is_empty() {
@@ -156,7 +157,12 @@ pub async fn safe_delete_album_files(st: &AppState, item_id: i64) {
         safe_delete_media_file(st, &dest, item_id).await;
         let thumb = album_thumb_name(&dest);
         if is_plain_name(&thumb) {
-            let _ = tokio::fs::remove_file(t_dir.join(thumb)).await;
+            let _ = tokio::fs::remove_file(t_dir.join(&thumb)).await;
+            let _ = tokio::fs::remove_file(pending.join("t").join(&thumb)).await;
+        }
+        // Sub-files of items still pending approval
+        if is_plain_name(&dest) {
+            let _ = tokio::fs::remove_file(pending.join("b").join(&dest)).await;
         }
     }
     let _ = sql!("DELETE FROM album_items WHERE item_id = ", item_id as i32).execute(&st.db).await;
@@ -201,6 +207,15 @@ pub async fn purge_expired_uploads(st: &AppState) {
             let _ = tokio::fs::remove_file(cfg.paths.t.join(format!("{id}_blur.webp"))).await;
             if item.string("mime").starts_with("audio") {
                 let _ = tokio::fs::remove_file(cfg.paths.ca.join(format!("{id}.webp"))).await;
+            }
+            // Items that expired while still pending approval: their files live in pending/
+            // (never a symlink target — reposts only link to files in b/).
+            let p = &cfg.paths.pending;
+            if is_plain_name(&dest) {
+                let _ = tokio::fs::remove_file(p.join("b").join(&dest)).await;
+            }
+            for f in [p.join("t").join(format!("{id}.webp")), p.join("t").join(format!("{id}_blur.webp")), p.join("ca").join(format!("{id}.webp"))] {
+                let _ = tokio::fs::remove_file(f).await;
             }
             sql!("UPDATE items SET is_deleted = true, is_purged = true, active = false WHERE id = ", id as i32).execute(&st.db).await?;
             crate::private_items::remove_private(st, id, &dest);

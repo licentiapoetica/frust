@@ -136,7 +136,7 @@ pub async fn handle_meta_extract(st: AppState, mut req: Req) -> Res {
     let mut results = Results::default();
 
     if is_image {
-        match crate::proc::spawn_with("exiftool", &["-json", "-charset", "utf8", "--", &path], crate::proc::Opts { quiet: true, ..Default::default() }).await {
+        match crate::proc::spawn_with("exiftool", &["-json", "-charset", "utf8", "-c", "%+.6f", "--", &path], crate::proc::Opts { quiet: true, ..Default::default() }).await {
             Ok(o) => {
                 let parsed: Value = serde_json::from_slice(&o.stdout).unwrap_or(Value::Null);
                 if let Some(tags) = parsed.get(0).and_then(Value::as_object) {

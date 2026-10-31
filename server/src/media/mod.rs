@@ -36,6 +36,15 @@ pub async fn move_file(src: &Path, dst: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Media files are served to everyone: 0644 (upload temp files are created 0600).
+pub async fn make_public(path: &Path) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = tokio::fs::set_permissions(path, std::fs::Permissions::from_mode(0o644)).await;
+    }
+}
+
 /// Move a file that may be a relative symlink (repost) so the link still resolves at `dst`.
 pub async fn move_safe(src: &Path, dst: &Path) {
     let r = async {

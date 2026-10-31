@@ -807,6 +807,7 @@ async fn file_upload(
     let size = tokio::fs::metadata(&tmp.path).await.map(|m| m.len() as i64).unwrap_or(0);
     if !linked {
         media::move_file(&tmp.path, &dest_path).await?;
+        media::make_public(&dest_path).await;
     }
     drop(tmp);
     let insert_checksum = if bypass { format!("{checksum}_bypass_{}", crate::util::now_ms()) } else { checksum.clone() };
@@ -996,6 +997,7 @@ async fn album_items(
         let sub_dest = b_dir.join(&sub_filename);
         let sub_size = tokio::fs::metadata(&sub_tmp.path).await.map(|m| m.len() as i64).unwrap_or(sub.size as i64);
         media::move_file(&sub_tmp.path, &sub_dest).await?;
+        media::make_public(&sub_dest).await;
         drop(sub_tmp);
         let sub_id = insert_album_item(st, item_id, &sub_filename, &sub_mime, sub_size, &sum, sub_phash, sub_dims, i as i64, &crate::util::generate_slug(11)).await?;
 
