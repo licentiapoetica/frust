@@ -30,7 +30,18 @@ and `server/src/migrations.rs`.
 | `server/src/routes/<name>.rs` | `src/inc/routes/<name>.mjs` (apiv2 → `routes/apiv2/<name>.rs`) |
 | `server/src/bot/` | `cuffeo` + `src/inc/events` + `src/inc/trigger` |
 
-Reference ports: `routes/banned.rs`, `routes/theme.rs`, `routes/static_files.rs`.
+Already ported modules you should reuse (don't duplicate them):
+
+| Module | Contents |
+|---|---|
+| `f0cklib/` | feeds and item pages: `getf0cks`, `getf0ck`, `get_item_page`, `get_random(_pool)`, `FeedOpts`, `compute_base_mode`, `resolve_mime_sql`, search scoring |
+| `social/` | comments (`get_comments`, mentions/embeds, xD score), subscriptions, halls, user halls; `social::helpers` has audit log, word filter, anon activity log |
+| `media/` | upload pipeline: `queue` (thumbnails, phash, repost checks, ffprobe), `delete` (`safe_delete_media_file`, `move_to_deleted`), `multipart` (streaming parser with limits), `mime`, `transcode`, `autotagger` |
+| `auth.rs`, `anon_auth.rs`, `webauthn.rs` | session create/destroy, reCAPTCHA, anonymous identities, passkeys (table `webauthn_credentials`; the old `passkey_credentials` is unused) |
+| `smtp.rs`, `gate.rs`, `bot/` | mail, private-society gate, chat bots (`st.bot`) |
+
+Reference ports: `routes/banned.rs`, `routes/theme.rs`, `routes/comments.rs`, `routes/index.rs`.
+Login/logout/forgot/reset password (from `admin.mjs`) are already in `routes/register.rs`.
 
 ## Routes
 
@@ -44,6 +55,8 @@ pub fn register(r: &mut Router) {
 async fn banned(st: AppState, mut req: Req) -> Res { ... }
 ```
 
+* JS string paths (`router.get('/api/chat', …)`) match the exact path only: register them with
+  `r.exact(Method::GET, "/api/chat", None, h)` — `r.get` treats its argument as a regex.
 * Copy the regex source **exactly** as written in the JS literal (keep the `\/` escapes). The router
   reproduces flummpress' route ordering from that string, so changing it changes which route wins.
 * Register your module in `routes/mod.rs` (`pub mod x;` + `x::register(&mut r);`).
