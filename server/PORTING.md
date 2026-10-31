@@ -5,6 +5,13 @@ faithfully: same URLs, same status codes, same JSON shapes, same template data. 
 has an obvious bug or security hole, fix it and mention it in your report (don't silently change
 behaviour otherwise).
 
+There is no production deployment: stored data (password hashes, passkeys, file layouts) does not
+need to stay compatible, so prefer best practice over mirroring old internals. What must keep
+working is the browser frontend (`public/s/js`, `views/`) — keep endpoints, JSON shapes and
+template data, or update the frontend alongside. Don't alter existing tables in the dev database
+(the Node reference server still runs on it); add new tables/columns via a `migrations/*.sql` file
+and `server/src/migrations.rs`.
+
 ## Layout
 
 | Rust | Old |
