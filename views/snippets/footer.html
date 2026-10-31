@@ -185,8 +185,8 @@
       </label>
     </div>
     <textarea id="report-reason" class="mod-reason" placeholder="{{ t("report.placeholder") }}"></textarea>
-    {% if (recaptcha_enabled and not session) %}
-    <div id="modal-report-recaptcha" data-sitekey="{{ recaptcha_site_key }}" style="margin: 10px 0; display: flex; justify-content: center;"></div>
+    {% if (captcha_enabled and not session) %}
+    <cap-widget id="modal-report-captcha" class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %} style="display: block; margin: 10px auto;"></cap-widget>
     {% endif %}
     <div id="report-error" class="error-msg"></div>
     </div>
@@ -662,6 +662,7 @@
           if (status) { status.textContent = json.msg || ''; status.className = json.success ? 'flash-success' : 'flash-error'; }
           if (json.success && json.upgraded) setTimeout(() => { location.reload(); }, 1500);
           else if (json.success) setTimeout(() => { close(registerModal); open(loginModal); }, 2000);
+          else window.f0ckCapReset?.(regForm); // captcha tokens are single-use
         } catch (err) {
           if (status) { status.textContent = 'Network error.'; status.className = 'flash-error'; }
         } finally { btn.disabled = false; btn.textContent = 'Create Account'; }

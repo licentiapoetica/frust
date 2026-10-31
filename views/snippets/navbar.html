@@ -691,7 +691,7 @@ F0ckActions.define({
     /* Register-only */
     #register-modal #modal-register-view .lm-check-multiline { align-items: flex-start; line-height: 1.5; }
     #register-modal #modal-register-view .lm-check-multiline .lm-check-box { margin-top: 1px; }
-    #register-modal #modal-register-view .lm-recaptcha { display: flex; justify-content: center; }
+    #register-modal #modal-register-view .lm-captcha { display: block; margin: 4px auto; }
 
     /* Divider + footer */
     :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-divider {
@@ -1228,8 +1228,8 @@ F0ckActions.define({
           </label>
         </div>
 
-        {% if recaptcha_enabled %}
-        <div id="modal-register-recaptcha" class="lm-recaptcha"></div>
+        {% if captcha_enabled %}
+        <cap-widget class="cap-dark lm-captcha" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
         {% endif %}
 
         <button type="submit" class="lm-btn lm-btn-primary">{{ t("auth.create_account") }}</button>
@@ -1279,43 +1279,10 @@ F0ckActions.define({
 
 {% endif %}
 
-{% if (recaptcha_enabled and (not session or session.is_anon)) %}
-<script>
-(function() {
-  var _rcModalWidgetId = null;
-  var _rcLoaded = false;
-
-  function renderModalRecaptcha() {
-    var el = document.getElementById('modal-register-recaptcha');
-    if (!el || !window.grecaptcha) return;
-    if (_rcModalWidgetId !== null) {
-      try { grecaptcha.reset(_rcModalWidgetId); } catch(e) {}
-    } else {
-      _rcModalWidgetId = grecaptcha.render(el, { sitekey: {{ recaptcha_site_key|string|tojson }}, theme: 'dark' });
-    }
-  }
-
-  window.onRecaptchaModalReady = function() {
-    _rcLoaded = true;
-    renderModalRecaptcha();
-    if (typeof window.renderReportRecaptcha === 'function') window.renderReportRecaptcha();
-  };
-
-  document.addEventListener('DOMContentLoaded', function() {
-    var modal = document.getElementById('register-modal');
-    if (!modal) return;
-    var obs = new MutationObserver(function(mutations) {
-      mutations.forEach(function(m) {
-        if (m.attributeName === 'style') {
-          if (modal.style.display !== 'none' && _rcLoaded) renderModalRecaptcha();
-        }
-      });
-    });
-    obs.observe(modal, { attributes: true });
-  });
-})();
-</script>
-<script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaModalReady&render=explicit" async defer></script>
+{% if (captcha_enabled and (not session or session.is_anon)) %}
+{# Cap captcha for the register modal (and the guest report modal in footer.html) #}
+<script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
+<script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
 {% endif %}
 
 {% if (session and ((session.admin or session._is_impersonating) or session._preview_role)) %}

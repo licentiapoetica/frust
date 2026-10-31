@@ -1,4 +1,4 @@
-//! Shared authentication helpers: session creation/destruction, session cookies, reCAPTCHA.
+//! Shared authentication helpers: session creation/destruction, session cookies.
 //!
 //! Session cookies hold 32 random bytes (hex); `user_sessions.session` stores only their SHA-256,
 //! and every session gets its own random CSRF token.
@@ -78,44 +78,6 @@ pub async fn destroy_user_sessions(st: &AppState, user_id: i64) -> anyhow::Resul
 /// `x-requested-with: XMLHttpRequest` or an `Accept` that includes JSON (the old `isAJAX`).
 pub fn is_ajax(req: &Req) -> bool {
     req.is_xhr() || req.accepts_json()
-}
-
-/// reCAPTCHA is required for this request (configured, and not a .onion request).
-pub fn recaptcha_required(cfg: &Config, req: &Req) -> bool {
-    !req.is_onion() && cfg.truthy("recaptcha.enabled") && cfg.truthy("recaptcha.site_key") && cfg.truthy("recaptcha.secret_key")
-}
-
-pub enum Captcha {
-    Ok,
-    Missing,
-    Failed,
-    Error,
-}
-
-/// Verify a reCAPTCHA v2 response token with Google.
-pub async fn verify_recaptcha(st: &AppState, token: Option<&str>, ip: &str) -> Captcha {
-    let Some(token) = token.filter(|t| !t.is_empty()) else { return Captcha::Missing };
-    let cfg = st.cfg();
-    let secret = cfg.str_or("recaptcha.secret_key", "").to_string();
-    let res = st
-        .http
-        .post("https://www.google.com/recaptcha/api/siteverify")
-        .timeout(std::time::Duration::from_secs(10))
-        .form(&[("secret", secret.as_str()), ("response", token), ("remoteip", ip)])
-        .send()
-        .await;
-    let body: Result<serde_json::Value, String> = match res {
-        Ok(r) => r.json().await.map_err(|e| e.to_string()),
-        Err(e) => Err(e.to_string()),
-    };
-    match body {
-        Ok(v) if v["success"].as_bool() == Some(true) => Captcha::Ok,
-        Ok(_) => Captcha::Failed,
-        Err(e) => {
-            tracing::error!("[REGISTER] reCAPTCHA error: {e}");
-            Captcha::Error
-        }
-    }
 }
 
 /// The passkey the current session was opened with (None: password login or an older session).

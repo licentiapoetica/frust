@@ -856,5 +856,19 @@
     "unlisted": "Unlisted",
     "private": "Private",
     "change_visibility": "Change Visibility"
+  },
+  "captcha": {
+    "initial_state": "Verify you're human",
+    "verifying": "Verifying...",
+    "solved": "You're human",
+    "error": "Error",
+    "required": "Please verify you're human",
+    "troubleshooting": "Troubleshooting",
+    "wasm_disabled": "Enable WASM for significantly faster solving",
+    "verify_aria": "Click to verify you're a human",
+    "verifying_aria": "Verifying you're a human, please wait",
+    "verified_aria": "We have verified you're a human, you may now continue",
+    "error_aria": "An error occurred, please try again",
+    "group_aria": "Human verification"
   }
 }

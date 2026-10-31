@@ -730,6 +730,11 @@ const CSRF_EXEMPT: &[&str] = &[
     "/api/v2/admin/sticker-packs/import",
     "/admin/brand_image/upload",
     "/admin/brand_image/delete",
+    // No session state involved: captcha puzzles and browser CSP reports
+    "/api/cap/challenge",
+    "/api/cap/redeem",
+    crate::csp::REPORT_PATH,
+    "/flash-frame",
 ];
 
 /// Check the CSRF token of the session against header, body or query.

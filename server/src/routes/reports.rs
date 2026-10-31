@@ -1,6 +1,6 @@
 //! User reports (port of src/inc/routes/reports.mjs).
 
-use crate::auth::{Captcha, verify_recaptcha};
+use crate::cap::Captcha;
 use crate::db::RowExt;
 use crate::http::{Req, Res, Router, json_resp};
 use crate::social::helpers::{audit_log, js_number, js_str};
@@ -69,13 +69,12 @@ async fn submit(st: AppState, mut req: Req) -> Res {
 
     let cfg = st.cfg();
     let ip = req.real_ip();
-    if req.session().is_none() && !req.is_onion() && !req.is_localhost() && cfg.truthy("recaptcha.enabled") && cfg.truthy("recaptcha.secret_key") {
-        let token = js_str(body.get("g-recaptcha-response"));
-        match verify_recaptcha(&st, token.as_deref(), &ip).await {
+    if req.session().is_none() && crate::cap::required(&cfg, &req) {
+        let token = js_str(body.get("cap-token"));
+        match crate::cap::verify(token.as_deref()) {
             Captcha::Ok => {}
-            Captcha::Missing => return j(json!({ "success": false, "msg": "Please complete the CAPTCHA." }), 400),
-            Captcha::Failed => return j(json!({ "success": false, "msg": "CAPTCHA verification failed. Please try again." }), 400),
-            Captcha::Error => return j(json!({ "success": false, "msg": "CAPTCHA verification error. Please try again." }), 500),
+            Captcha::Missing => return j(json!({ "success": false, "msg": "Please complete the captcha." }), 400),
+            Captcha::Failed => return j(json!({ "success": false, "msg": "Captcha expired or invalid. Please try again." }), 400),
         }
     }
 

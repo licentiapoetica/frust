@@ -853,5 +853,19 @@
     "unlisted": "Niet vermeld",
     "private": "Privé",
     "change_visibility": "Zichtbaarheid wijzigen"
+  },
+  "captcha": {
+    "initial_state": "Bevestig dat je een mens bent",
+    "verifying": "Bezig met controleren...",
+    "solved": "Je bent een mens",
+    "error": "Fout",
+    "required": "Bevestig dat je een mens bent",
+    "troubleshooting": "Hulp",
+    "wasm_disabled": "Schakel WASM in voor een veel snellere controle",
+    "verify_aria": "Klik om te bevestigen dat je een mens bent",
+    "verifying_aria": "Bezig met controleren, even geduld",
+    "verified_aria": "Bevestigd, je kunt nu verder",
+    "error_aria": "Er is een fout opgetreden, probeer het opnieuw",
+    "group_aria": "Menselijke verificatie"
   }
 }

@@ -857,5 +857,19 @@
     "unlisted": "Nicht gelistet",
     "private": "Privat",
     "change_visibility": "Sichtbarkeit ändern"
+  },
+  "captcha": {
+    "initial_state": "Bestätige, dass du ein Mensch bist",
+    "verifying": "Wird geprüft...",
+    "solved": "Du bist ein Mensch",
+    "error": "Fehler",
+    "required": "Bitte bestätige, dass du ein Mensch bist",
+    "troubleshooting": "Hilfe",
+    "wasm_disabled": "Aktiviere WASM für eine deutlich schnellere Prüfung",
+    "verify_aria": "Klicken, um zu bestätigen, dass du ein Mensch bist",
+    "verifying_aria": "Wird geprüft, bitte warten",
+    "verified_aria": "Bestätigt, du kannst jetzt fortfahren",
+    "error_aria": "Ein Fehler ist aufgetreten, bitte versuche es erneut",
+    "group_aria": "Menschen-Prüfung"
   }
 }

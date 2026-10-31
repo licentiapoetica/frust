@@ -54,7 +54,7 @@ fn ray_id() -> String {
 pub fn build_gate_page(st: &AppState, req: &Req) -> String {
     let cfg = st.cfg();
     let host = display_host(st, req);
-    let recaptcha = cfg.truthy("recaptcha.enabled") && cfg.truthy("recaptcha.site_key") && !req.is_onion() && !req.is_localhost();
+    let captcha = crate::cap::required(&cfg, req);
     let ctx = json!({
         "host": host,
         "time": chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string(),
@@ -66,8 +66,8 @@ pub fn build_gate_page(st: &AppState, req: &Req) -> String {
               "location": cfg.str("websrv.private_society_gate_location").filter(|l| !l.is_empty()).unwrap_or("Frankfurt"), "name": "Cloudflare" },
             { "id": "host", "icon": "server", "status": "error", "location": host, "name": "Host" },
         ],
-        "recaptcha": recaptcha,
-        "recaptcha_site_key": cfg.str_or("recaptcha.site_key", ""),
+        "captcha": captcha,
+        "csp_nonce": req.csp_nonce,
     });
     st.tpl.render("gate/cloudflare", &ctx)
 }

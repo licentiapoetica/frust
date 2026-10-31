@@ -1,5 +1,9 @@
 {#- Hidden login/register modal of the private society gate (index.mjs getGateLoginInjection).
-    Static apart from reCAPTCHA (`recaptcha`, `recaptcha_site_key`). -#}
+    Static apart from the captcha switch (`captcha`) and `csp_nonce`. -#}
+<style>
+  #gate-login-btn:hover, #gate-register-btn:hover { background: #003681 !important; }
+  #gate-passkey-btn:hover { background: #eaeaea !important; }
+</style>
 <div id="hot-corner" style="position:fixed;bottom:0;left:0;width:20px;height:20px;z-index:9999;"></div>
 
 <div id="gate-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10000;align-items:center;justify-content:center;">
@@ -47,9 +51,8 @@
         <input type="text" name="token" placeholder="Invite token" autocomplete="off"
           style="background:white;color:black;border:1px solid #bbb;padding:7px 10px;width:100%;box-sizing:border-box;font-size:14px;font-family:inherit;" />
         <input type="text" name="email_confirm_field" style="display:none !important;" tabindex="-1" autocomplete="off" />
-        {% if recaptcha %}<div id="gate-recaptcha" style="margin:4px 0;transform-origin:left top;"></div>{% endif %}
-        <button type="submit" id="gate-register-btn" style="background:#0051c3;color:white;border:none;padding:9px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;"
-          onmouseover="this.style.background='#003681'" onmouseout="if(!this.disabled)this.style.background='#0051c3'">Create account</button>
+        {% if captcha %}<cap-widget data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %} style="display:block;margin:4px 0;"></cap-widget>{% endif %}
+        <button type="submit" id="gate-register-btn" style="background:#0051c3;color:white;border:none;padding:9px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Create account</button>
         <p style="text-align:center;font-size:0.85em;margin:6px 0 0;color:#555;">
           <a href="#" id="gate-to-login" style="color:#0051c3;text-decoration:underline;">Back to sign in</a>
         </p>
@@ -70,7 +73,6 @@
   function gateShowView(view) {
     document.getElementById('gate-login-view').style.display    = view === 'login'    ? '' : 'none';
     document.getElementById('gate-register-view').style.display = view === 'register' ? '' : 'none';
-    if (view === 'register') gateRenderRecaptcha();
   }
   function gateSetError(id, msg) {
     var el = document.getElementById(id);
@@ -86,23 +88,10 @@
     btn.style.cursor = loading ? 'default' : 'pointer';
   }
 
-  // reCAPTCHA
-  var _gateRcWidgetId = null;
-  var _gateRcLoaded   = false;
-  function gateRenderRecaptcha() {
-    var el = document.getElementById('gate-recaptcha');
-    if (!el || !window.grecaptcha) return;
-    if (_gateRcWidgetId !== null) {
-      try { grecaptcha.reset(_gateRcWidgetId); } catch(e) {}
-    } else {
-      _gateRcWidgetId = grecaptcha.render(el, { sitekey: {{ recaptcha_site_key|string|tojson }}, theme: 'light' });
-    }
+  // Cap captcha: tokens are single-use, so reset after every failed attempt
+  function gateResetCaptcha() {
+    if (window.f0ckCapReset) window.f0ckCapReset(document.getElementById('gate-register-form'));
   }
-  window.onRecaptchaGateReady = function() {
-    _gateRcLoaded = true;
-    var rv = document.getElementById('gate-register-view');
-    if (rv && rv.style.display !== 'none') gateRenderRecaptcha();
-  };
 
   document.addEventListener('DOMContentLoaded', function() {
     var modal = document.getElementById('gate-modal');
@@ -146,15 +135,12 @@
       gateSetError('gate-register-error', '');
       gateSetError('gate-register-ok', '');
       gateSetBtn('gate-register-btn', true);
+      // The widget's hidden cap-token input is part of the form
       var fd = new FormData(this);
-      if (_gateRcWidgetId !== null && window.grecaptcha) {
-        var token = grecaptcha.getResponse(_gateRcWidgetId);
-        if (!token) {
-          gateSetError('gate-register-error', 'Please complete the CAPTCHA.');
-          gateSetBtn('gate-register-btn', false);
-          return;
-        }
-        fd.append('g-recaptcha-response', token);
+      if (this.querySelector('cap-widget') && !fd.get('cap-token')) {
+        gateSetError('gate-register-error', 'Please complete the captcha.');
+        gateSetBtn('gate-register-btn', false);
+        return;
       }
       var body = new URLSearchParams(fd).toString();
       fetch('/register', {
@@ -167,7 +153,7 @@
         gateSetBtn('gate-register-btn', false);
         if (d.success === false) {
           gateSetError('gate-register-error', d.msg || 'Registration failed.');
-          if (_gateRcWidgetId !== null && window.grecaptcha) { try { grecaptcha.reset(_gateRcWidgetId); } catch(e) {} }
+          gateResetCaptcha();
         } else {
           document.getElementById('gate-register-ok').textContent = d.msg || 'Account created! You can now sign in.';
           document.getElementById('gate-register-ok').style.display = '';
@@ -178,7 +164,7 @@
       .catch(function() {
         gateSetBtn('gate-register-btn', false);
         gateSetError('gate-register-error', 'An error occurred. Please try again.');
-        if (_gateRcWidgetId !== null && window.grecaptcha) { try { grecaptcha.reset(_gateRcWidgetId); } catch(e) {} }
+        gateResetCaptcha();
       });
     };
     // Passkey sign-in button (works for both registered users and anonymous passkey holders)
@@ -270,4 +256,4 @@
     if (_sb.length > 12) _sb = _sb.slice(-12);
   });
 </script>
-{% if recaptcha %}<script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaGateReady&render=explicit" async defer></script>{% endif %}
+{% if captcha %}<script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script><script src="/s/cap/cap.min.js?v=0.1.58" defer></script>{% endif %}

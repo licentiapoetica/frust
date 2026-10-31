@@ -1,7 +1,8 @@
 //! Accounts: registration and activation (src/inc/routes/register.mjs) plus login, logout and the
 //! password-reset flow (the auth routes at the top of src/inc/routes/admin.mjs).
 
-use crate::auth::{Captcha, SessionSpec, is_ajax};
+use crate::auth::{SessionSpec, is_ajax};
+use crate::cap::Captcha;
 use crate::db::RowExt;
 use crate::http::{Req, Res, Router, html, html_code, json_raw, raw, redirect, reply};
 use crate::sql;
@@ -327,7 +328,7 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
     let password_confirm = req.post_str("password_confirm").await;
     let token = req.post_str("token").await.filter(|t| !t.is_empty());
     let honeypot = req.post_str("email_confirm_field").await.filter(|h| !h.is_empty());
-    let captcha = req.post_str("g-recaptcha-response").await;
+    let captcha = req.post_str("cap-token").await;
     let theme = req.cookie("theme").map(str::to_string).unwrap_or_else(|| cfg.str("websrv.theme").filter(|t| !t.is_empty()).unwrap_or("f0ck").to_string());
     let registration_open = st.settings.registration_open(&cfg);
 
@@ -368,12 +369,11 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
         render_error!("Passwords do not match.");
     }
 
-    if crate::auth::recaptcha_required(&cfg, &req) {
-        match crate::auth::verify_recaptcha(&st, captcha.as_deref(), &ip).await {
+    if crate::cap::required(&cfg, &req) {
+        match crate::cap::verify(captcha.as_deref()) {
             Captcha::Ok => {}
-            Captcha::Missing => render_error!("Please complete the reCAPTCHA."),
-            Captcha::Failed => render_error!("reCAPTCHA verification failed. Please try again."),
-            Captcha::Error => render_error!("reCAPTCHA check failed. Please try again."),
+            Captcha::Missing => render_error!("Please complete the captcha."),
+            Captcha::Failed => render_error!("Captcha expired or invalid. Please try again."),
         }
     }
 

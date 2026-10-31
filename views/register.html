@@ -7,13 +7,9 @@
     <title>register</title>
     <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
   <link href="/s/css/f0ckm.css" rel="stylesheet" />
-  {% if recaptcha_enabled %}
-  <script>
-    function onRecaptchaPageReady() {
-      grecaptcha.render('page-register-recaptcha', { sitekey: {{ recaptcha_site_key|string|tojson }}, theme: 'dark' });
-    }
-  </script>
-  <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaPageReady&render=explicit" async defer></script>
+  {% if captcha_enabled %}
+  <script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
+  <script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
   {% endif %}
 </head>
 <body type="login">
@@ -42,8 +38,8 @@
             <input type="checkbox" id="tos-page" name="tos" required />
             <label for="tos-page">{% if private_society %}{{ t("auth.tos_private_simple") }}{% else %}{{ t("auth.tos_public") }} <a href="/terms" target="_blank" style="color: var(--accent); text-decoration: underline;">{{ t("auth.tos_terms") }}</a>, <a href="/rules" target="_blank" style="color: var(--accent); text-decoration: underline;">{{ t("auth.tos_rules") }}</a> {{ t("auth.tos_age") }}{% endif %}</label>
         </p>
-        {% if recaptcha_enabled %}
-        <div id="page-register-recaptcha" style="margin: 10px 0;"></div>
+        {% if captcha_enabled %}
+        <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %} style="display:block;margin:10px 0;"></cap-widget>
         {% endif %}
         <input type="submit" value="{{ t("auth.register_title") }}" />
         {% endif %}

@@ -321,7 +321,10 @@ smtp:
   password: smtp_password
   from: admin@example.com
   mail_reset_password: false
-recaptcha:
+# Self-hosted proof-of-work captcha (Cap, https://trycap.dev) on registration and guest reports.
+# No third-party service: the browser solves small SHA-256 puzzles, the server checks them.
+cap:
   enabled: false
-  site_key: YOUR_RECAPTCHA_V2_SITE_KEY
-  secret_key: YOUR_RECAPTCHA_V2_SECRET_KEY
+  challenge_count: 50   # puzzles per captcha
+  difficulty: 4         # hex digits per puzzle (each +1 = 16x more work)
+  skip_onion: false     # true: no captcha for .onion visitors (e.g. Tor Browser "Safest" has no JS)

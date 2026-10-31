@@ -3038,6 +3038,7 @@ window.cancelAnimFrame = (function () {
               status.textContent = json.msg || 'Registration failed.';
               status.className = 'flash-error';
             }
+            window.f0ckCapReset?.(registerForm); // captcha tokens are single-use
           }
         } catch (err) {
           console.error('Registration error:', err);
@@ -14647,16 +14648,6 @@ window.cancelAnimFrame = (function () {
         const rufflePlayer = document.querySelector('#ruffle-container ruffle-player');
         if (rufflePlayer) {
 
-            const tryFindCanvas = (root) => {
-                if (!root) return null;
-                const c = root.querySelector('canvas');
-                if (c) return c;
-                for (const el of root.querySelectorAll('*')) {
-                    if (el.shadowRoot) { const found = tryFindCanvas(el.shadowRoot); if (found) return found; }
-                }
-                return null;
-            };
-
             // POST blob to thumbnail API and close modal
             const submitRethumb = (blob) => {
                 const fd = new FormData();
@@ -21950,7 +21941,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reportError.style.display = 'none';
         }
         if (reportReason) reportReason.classList.remove('field-error');
-        const rcEl = document.getElementById('modal-report-recaptcha');
+        const rcEl = reportCaptcha();
         if (rcEl) rcEl.classList.remove('field-error');
     };
 
@@ -21958,7 +21949,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reportReason.addEventListener('input', () => {
             if (reportReason.value.trim()) {
                 reportReason.classList.remove('field-error');
-                const rcEl = document.getElementById('modal-report-recaptcha');
+                const rcEl = reportCaptcha();
                 if (!rcEl || !rcEl.classList.contains('field-error')) {
                     clearReportError();
                 }
@@ -21973,31 +21964,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.renderReportRecaptcha = function() {
-        const rcEl = document.getElementById('modal-report-recaptcha');
-        if (!rcEl || !window.grecaptcha || typeof grecaptcha.render !== 'function') return;
-        if (_reportRcWidgetId !== null) {
-            try { grecaptcha.reset(_reportRcWidgetId); } catch(e) {}
-        } else {
-            const sitekey = rcEl.dataset.sitekey || (window.f0ckConfig && window.f0ckConfig.recaptcha_site_key);
-            if (sitekey) {
-                try {
-                    _reportRcWidgetId = grecaptcha.render(rcEl, {
-                        sitekey: sitekey,
-                        theme: 'dark',
-                        callback: function() {
-                            rcEl.classList.remove('field-error');
-                            if (!reportReason || !reportReason.classList.contains('field-error')) {
-                                clearReportError();
-                            }
-                        }
-                    });
-                } catch(e) {
-                    console.warn('[REPORT] Failed to render recaptcha:', e);
-                }
-            }
-        }
-    };
+    // A solved captcha clears its error
+    document.addEventListener('solve', (e) => {
+        const rcEl = reportCaptcha();
+        if (!rcEl || e.target !== rcEl) return;
+        rcEl.classList.remove('field-error');
+        if (!reportReason || !reportReason.classList.contains('field-error')) clearReportError();
+    });
 
     // Helper to reset all category checkboxes
     const resetReportCategories = () => {
@@ -22017,7 +21990,6 @@ document.addEventListener('DOMContentLoaded', () => {
             clearReportError();
             reportModal.style.display = 'flex';
             document.body.classList.add('modal-open');
-            if (window.renderReportRecaptcha) window.renderReportRecaptcha();
         }
 
         const commentBtn = e.target.closest('.report-comment-btn');
@@ -22031,7 +22003,6 @@ document.addEventListener('DOMContentLoaded', () => {
             clearReportError();
             reportModal.style.display = 'flex';
             document.body.classList.add('modal-open');
-            if (window.renderReportRecaptcha) window.renderReportRecaptcha();
         }
 
         const userBtn = e.target.closest('.report-user-btn'); // for future
@@ -22045,7 +22016,6 @@ document.addEventListener('DOMContentLoaded', () => {
             clearReportError();
             reportModal.style.display = 'flex';
             document.body.classList.add('modal-open');
-            if (window.renderReportRecaptcha) window.renderReportRecaptcha();
         }
 
         // Close logic
@@ -22054,9 +22024,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.remove('modal-open');
             resetReportCategories();
             clearReportError();
-            if (_reportRcWidgetId !== null && window.grecaptcha) {
-                try { grecaptcha.reset(_reportRcWidgetId); } catch(e) {}
-            }
+            resetReportCaptcha();
         }
 
         // Submit logic
@@ -22070,14 +22038,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const rcEl = document.getElementById('modal-report-recaptcha');
+            const rcEl = reportCaptcha();
             let rcToken = '';
             if (rcEl) {
-                if (_reportRcWidgetId === null || !window.grecaptcha) {
-                    showReportError((window.f0ckI18n && window.f0ckI18n.captcha_loading) || 'CAPTCHA is still loading. Please wait a moment.', rcEl);
-                    return;
-                }
-                rcToken = grecaptcha.getResponse(_reportRcWidgetId);
+                rcToken = window.f0ckCapToken?.(rcEl.parentNode) || '';
                 if (!rcToken) {
                     showReportError((window.f0ckI18n && window.f0ckI18n.captcha_required) || 'Please complete the CAPTCHA.', rcEl);
                     return;
@@ -22090,7 +22054,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (reportUserInput.value) payload.append('reported_user_id', reportUserInput.value);
             if (reason) payload.append('reason', reason);
             if (checkedCategories.length) payload.append('categories', checkedCategories.join(','));
-            if (rcToken) payload.append('g-recaptcha-response', rcToken);
+            if (rcToken) payload.append('cap-token', rcToken);
 
             const submitBtn = e.target;
             const originalBtnText = submitBtn.innerHTML;
@@ -22126,9 +22090,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .finally(() => {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnText;
-                if (_reportRcWidgetId !== null && window.grecaptcha) {
-                    try { grecaptcha.reset(_reportRcWidgetId); } catch(e) {}
-                }
+                resetReportCaptcha(); // tokens are single-use
             });
         }
     });
