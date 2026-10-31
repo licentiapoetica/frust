@@ -363,7 +363,13 @@ async fn thumbnail_inner(
             if !fetched {
                 tracing::error!("[QUEUE] YouTube thumbnail extraction failed for {itemid}: all quality levels failed or returned placeholder");
             }
-            // TODO(port): pre-warm the ambient timeline (routes/apiv2/ambient getOrExtractYoutubeAmbient) once ported.
+            if fetched {
+                // pre-warm the ambient timeline in the background
+                let (cfg2, vid) = (cfg.clone(), video_id.to_string());
+                tokio::spawn(async move {
+                    let _ = crate::routes::apiv2::ambient::get_or_extract_youtube_ambient(&cfg2, &vid).await;
+                });
+            }
         }
     } else if mime.starts_with("video/") || mime == "image/gif" {
         let ff_size = thumb_size.max(512).to_string();
