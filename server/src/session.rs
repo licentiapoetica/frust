@@ -105,8 +105,8 @@ pub struct Session {
     pub fingerprint: Option<String>,
     pub anon_login: Option<String>,
     pub can_chan: bool,
-    /// Pending items (admins only); a count string like postgres.js returns.
-    pub pending_count: Option<String>,
+    /// Pending items (admins only).
+    pub pending_count: Option<i64>,
     pub own_pending_count: Option<i64>,
     pub uploads_remaining: Option<i64>,
     pub min_tags: i64,

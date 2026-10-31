@@ -438,7 +438,7 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
 
             if session.admin {
                 let c = sql!(r#"select count(*) as c from "items" where active = false and is_deleted = false"#).fetch_scalar::<i64, _>(&st.db).await?;
-                session.pending_count = Some(c.unwrap_or(0).to_string());
+                session.pending_count = Some(c.unwrap_or(0));
             }
 
             if let Some(owner) = s::session_owner_name(Some(&session)) {
