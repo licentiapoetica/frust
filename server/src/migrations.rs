@@ -86,4 +86,17 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       expires_at timestamp with time zone NOT NULL
     )"#,
     r#"CREATE INDEX IF NOT EXISTS idx_chat_uploads_expires_at ON chat_uploads(expires_at)"#,
+    // migrations/rust_webauthn.sql
+    r#"CREATE TABLE IF NOT EXISTS webauthn_credentials (
+      id serial PRIMARY KEY,
+      user_id integer NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+      cred_id text NOT NULL UNIQUE,
+      user_handle uuid NOT NULL,
+      passkey jsonb NOT NULL,
+      name text,
+      aaguid text,
+      created_at timestamp with time zone DEFAULT now() NOT NULL,
+      last_used timestamp with time zone DEFAULT now()
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user_id ON webauthn_credentials(user_id)"#,
 ];

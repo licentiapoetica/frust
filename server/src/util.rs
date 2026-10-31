@@ -337,6 +337,7 @@ pub fn escape_like(s: &str) -> String {
 
 // ── Password hashing ────────────────────────────────────────────────────────
 
+/// scrypt parameters of the Node server's `$f0ck$` hashes (verification only).
 const SCRYPT_LOG_N: u8 = 14; // Node default N=16384, r=8, p=1
 
 fn scrypt_derive(password: &str, salt: &str) -> Option<Vec<u8>> {
@@ -346,37 +347,42 @@ fn scrypt_derive(password: &str, salt: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
-/// `$f0ck$<salt>:<scrypt hex>` — compatible with existing hashes.
+/// Argon2id (default parameters), PHC string format.
 pub async fn hash_password(password: String) -> String {
     tokio::task::spawn_blocking(move || {
-        let salt = random_hex(16);
-        let key = scrypt_derive(&password, &salt).unwrap_or_default();
-        format!("$f0ck${salt}:{}", hex::encode(key))
+        use argon2::password_hash::{PasswordHasher, SaltString};
+        let salt = SaltString::generate(&mut rand::rngs::OsRng);
+        argon2::Argon2::default().hash_password(password.as_bytes(), &salt).map(|h| h.to_string()).unwrap_or_default()
     })
     .await
     .unwrap_or_default()
 }
 
+/// Verify a password against an Argon2 PHC string, or a scrypt `$f0ck$<salt>:<hex>` hash of the
+/// Node server (kept for existing accounts; rehashed on login, see `password_needs_rehash`).
 pub async fn verify_password(password: String, hash: String) -> bool {
     tokio::task::spawn_blocking(move || {
+        if hash.starts_with("$argon2") {
+            use argon2::password_hash::{PasswordHash, PasswordVerifier};
+            let Ok(parsed) = PasswordHash::new(&hash) else { return false };
+            return argon2::Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok();
+        }
         if let Some(rest) = hash.strip_prefix("$f0ck$") {
             let Some((salt, key)) = rest.split_once(':') else { return false };
             let Ok(key) = hex::decode(key) else { return false };
             let Some(derived) = scrypt_derive(&password, salt) else { return false };
             use subtle::ConstantTimeEq;
-            return key.len() == derived.len() && bool::from(key.ct_eq(&derived));
-        }
-        // Legacy unsalted hashes
-        if hash.len() == 32 {
-            return ct_eq(&md5(&password), &hash);
-        }
-        if hash.len() == 64 {
-            return ct_eq(&sha256(&password), &hash);
+            return !key.is_empty() && key.len() == derived.len() && bool::from(key.ct_eq(&derived));
         }
         false
     })
     .await
     .unwrap_or(false)
+}
+
+/// Whether a stored hash should be replaced by a fresh `hash_password` result after a successful login.
+pub fn password_needs_rehash(hash: &str) -> bool {
+    !hash.starts_with("$argon2id$")
 }
 
 /// lib.getBadge
@@ -554,4 +560,29 @@ pub async fn get_tags(
         out.push(Value::Object(t));
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod password_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn argon2_and_legacy_scrypt() {
+        let h = hash_password("correct horse battery staple!".into()).await;
+        assert!(h.starts_with("$argon2id$"));
+        assert!(verify_password("correct horse battery staple!".into(), h.clone()).await);
+        assert!(!verify_password("wrong".into(), h.clone()).await);
+        assert!(!password_needs_rehash(&h));
+
+        let salt = "0123456789abcdef";
+        let legacy = format!("$f0ck${salt}:{}", hex::encode(scrypt_derive("pw", salt).unwrap()));
+        assert!(verify_password("pw".into(), legacy.clone()).await);
+        assert!(!verify_password("px".into(), legacy.clone()).await);
+        assert!(password_needs_rehash(&legacy));
+
+        // unsalted legacy hashes and disabled passwords never verify
+        assert!(!verify_password("pw".into(), sha256("pw")).await);
+        assert!(!verify_password("pw".into(), md5("pw")).await);
+        assert!(!verify_password("".into(), "!".into()).await);
+    }
 }

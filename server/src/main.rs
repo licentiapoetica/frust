@@ -1,7 +1,9 @@
 //! f0ckm server.
 #![allow(dead_code)] // many helpers are used by routes that are still being ported
 
+mod anon_auth;
 mod app;
+mod auth;
 mod bot;
 mod config;
 mod db;
@@ -15,11 +17,13 @@ mod private_items;
 mod proc;
 mod routes;
 mod security;
+mod smtp;
 mod session;
 mod settings;
 mod state;
 mod tpl;
 mod util;
+mod webauthn;
 
 use anyhow::{Context, Result};
 use arc_swap::ArcSwap;
@@ -129,6 +133,7 @@ async fn backfill_slugs(st: &state::AppState) {
 }
 
 fn spawn_background_tasks(st: &state::AppState) {
+    webauthn::spawn_cleanup();
     let cfg = st.cfg();
 
     // Stale sessions (unused for 30 days), every 6 hours
