@@ -39,11 +39,7 @@ pub struct Settings {
 
 impl Settings {
     pub fn new(cfg: &Config) -> Settings {
-        let brand = match cfg.get("websrv.custom_brand_image") {
-            Value::Array(a) => a.first().and_then(Value::as_str).unwrap_or("").to_string(),
-            Value::String(s) => s.clone(),
-            _ => String::new(),
-        };
+        let brand = config_brand_image(cfg);
         Settings {
             inner: RwLock::new(SiteSettings {
                 manual_approval: false,
@@ -388,12 +384,10 @@ pub async fn load_from_db(st: &crate::state::AppState) {
         // Static (config.yaml) settings
         s.enable_pdf = cfg.truthy("enable_pdf");
         s.enable_cleanup = cfg.truthy("websrv.enable_cleanup");
-        if cfg.get("websrv.bypass_duplicate_check") == &Value::Bool(true) {
-            s.bypass_duplicate_check = true;
-        }
-        if cfg.get("websrv.protect_files") == &Value::Bool(true) {
-            s.protect_files = true;
-        }
+        s.bypass_duplicate_check = cfg.get("websrv.bypass_duplicate_check") == &Value::Bool(true);
+        s.protect_files = cfg.get("websrv.protect_files") == &Value::Bool(true);
+        s.nsfp_ids = cfg.nsfp();
+        s.brand_image_url = config_brand_image(&cfg);
         s.private_messages = cfg.enabled("websrv.private_messages");
         s.dm_attachments = cfg.enabled("websrv.dm_attachments");
         s.dm_unencrypted = cfg.truthy("websrv.dm_unencrypted");
@@ -429,6 +423,15 @@ pub async fn load_from_db(st: &crate::state::AppState) {
             }
         }
     });
+}
+
+/// `websrv.custom_brand_image`: a string or a list (first entry wins).
+fn config_brand_image(cfg: &Config) -> String {
+    match cfg.get("websrv.custom_brand_image") {
+        Value::Array(a) => a.first().and_then(Value::as_str).unwrap_or("").to_string(),
+        Value::String(s) => s.clone(),
+        _ => String::new(),
+    }
 }
 
 /// Persist one site setting.

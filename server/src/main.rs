@@ -6,10 +6,12 @@ mod app;
 mod audit;
 mod auth;
 mod bot;
+mod cap;
 mod cli;
 mod chan_http;
 mod config;
 mod config_write;
+mod csp;
 mod db;
 mod f0cklib;
 mod gate;
@@ -242,6 +244,10 @@ fn watch_config(st: &state::AppState) -> Option<notify::RecommendedWatcher> {
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<()>();
     let mut w = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
         if let Ok(ev) = res {
+            // Reading the file ourselves raises access events: only react to changes
+            if ev.kind.is_access() {
+                return;
+            }
             if ev.paths.iter().any(|p| p.file_name().map(|n| n == "config.yaml").unwrap_or(false)) {
                 let _ = tx.send(());
             }
@@ -256,6 +262,8 @@ fn watch_config(st: &state::AppState) -> Option<notify::RecommendedWatcher> {
             match s.cfg().reload() {
                 Ok(c) => {
                     s.cfg.store(Arc::new(c));
+                    // Site settings derived from the config (DB values still win)
+                    settings::load_from_db(&s).await;
                     tracing::info!("[CONFIG] config.yaml reloaded");
                 }
                 Err(e) => tracing::error!("[CONFIG] config.yaml reload failed, keeping the running config: {e:#}"),

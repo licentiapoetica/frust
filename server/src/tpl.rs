@@ -327,7 +327,8 @@ impl Templates {
             use notify::Watcher;
             let d = dirty.clone();
             let w = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
-                if res.is_ok() {
+                // Loading templates raises access events: only changes count
+                if res.is_ok_and(|ev| !ev.kind.is_access()) {
                     d.store(true, Ordering::Relaxed);
                 }
             });
@@ -504,8 +505,7 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("enable_oc", json!(cfg.enabled("websrv.enable_oc")));
     put("abyss_enabled", json!(cfg.enabled("websrv.abyss_enabled")));
     put("smtp_enabled", json!(cfg.truthy("smtp") && cfg.truthy("smtp.enabled") && cfg.truthy("smtp.mail_reset_password")));
-    put("recaptcha_enabled", json!(cfg.truthy("recaptcha.enabled") && cfg.truthy("recaptcha.site_key")));
-    put("recaptcha_site_key", json!(cfg.str_or("recaptcha.site_key", "")));
+    put("captcha_enabled", json!(crate::cap::enabled(cfg)));
     put("show_background_cfg", json!(cfg.enabled("websrv.background")));
     put("allowed_mimes", json!(allowed_mimes));
     put("mimes_json", json!(json_script(&Value::Object(mimes))));
@@ -625,10 +625,9 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
         None => data.get("lang").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| cfg.str_or("websrv.language", "en").to_string()),
     };
 
-    let default_recaptcha = cfg.truthy("recaptcha.enabled") && cfg.truthy("recaptcha.site_key");
-    let recaptcha = match req {
-        Some(r) if r.is_onion() || r.is_localhost() => false,
-        _ => bool_or(data.get("recaptcha_enabled")).unwrap_or(default_recaptcha),
+    let captcha = match req {
+        Some(r) => crate::cap::required(&cfg, r),
+        None => bool_or(data.get("captcha_enabled")).unwrap_or_else(|| crate::cap::enabled(&cfg)),
     };
 
     let session = req.and_then(|r| r.session.as_ref());
@@ -690,7 +689,8 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
 
     ctx.insert("lang".into(), json!(lang));
     ctx.insert("__date_lang".into(), Value::Null);
-    ctx.insert("recaptcha_enabled".into(), json!(recaptcha));
+    ctx.insert("captcha_enabled".into(), json!(captcha));
+    ctx.insert("csp_nonce".into(), json!(req.map(|r| r.csp_nonce.as_str()).unwrap_or("")));
     ctx.insert("is_anonymized".into(), json!(is_anonymized));
     ctx.insert("anon_anonymize".into(), json!(crate::settings::anon_anonymize(&cfg)));
     ctx.insert("can_chan".into(), json!(can_chan));
