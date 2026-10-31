@@ -92,6 +92,8 @@ nsfp:
   - 4
 websrv:
   port: "1337"
+  # Extra origins allowed to call /api/ with cookies (CORS). The site URL and main.onion are always allowed.
+  # cors_origins: ["https://tools.example.com"]
   language: en
   allow_language_change: true
   cache: false

@@ -191,7 +191,7 @@ impl Sql {
         let rows = sqlx::query_with(&sql, self.args()?)
             .fetch_all(db)
             .await
-            .map_err(|e| anyhow::anyhow!("{e}\n  query: {}", compact(&sql)))?;
+            .map_err(|e| query_error(e, &sql))?;
         Ok(rows.iter().map(row_to_json).collect())
     }
 
@@ -200,7 +200,7 @@ impl Sql {
         let row = sqlx::query_with(&sql, self.args()?)
             .fetch_optional(db)
             .await
-            .map_err(|e| anyhow::anyhow!("{e}\n  query: {}", compact(&sql)))?;
+            .map_err(|e| query_error(e, &sql))?;
         Ok(row.as_ref().map(row_to_json))
     }
 
@@ -214,7 +214,7 @@ impl Sql {
         sqlx::query_as_with::<_, T, _>(&sql, self.args()?)
             .fetch_all(db)
             .await
-            .map_err(|e| anyhow::anyhow!("{e}\n  query: {}", compact(&sql)))
+            .map_err(|e| query_error(e, &sql))
     }
 
     pub async fn fetch_one_as<'e, T, E>(&self, db: E) -> Result<Option<T>>
@@ -226,7 +226,7 @@ impl Sql {
         sqlx::query_as_with::<_, T, _>(&sql, self.args()?)
             .fetch_optional(db)
             .await
-            .map_err(|e| anyhow::anyhow!("{e}\n  query: {}", compact(&sql)))
+            .map_err(|e| query_error(e, &sql))
     }
 
     /// Single scalar (first column of the first row).
@@ -239,7 +239,7 @@ impl Sql {
         let row = sqlx::query_with(&sql, self.args()?)
             .fetch_optional(db)
             .await
-            .map_err(|e| anyhow::anyhow!("{e}\n  query: {}", compact(&sql)))?;
+            .map_err(|e| query_error(e, &sql))?;
         match row {
             Some(r) => Ok(r.try_get::<Option<T>, _>(0)?),
             None => Ok(None),
@@ -256,7 +256,7 @@ impl Sql {
         let rows = sqlx::query_with(&sql, self.args()?)
             .fetch_all(db)
             .await
-            .map_err(|e| anyhow::anyhow!("{e}\n  query: {}", compact(&sql)))?;
+            .map_err(|e| query_error(e, &sql))?;
         rows.iter().map(|r| r.try_get::<T, _>(0).map_err(Into::into)).collect()
     }
 
@@ -266,7 +266,7 @@ impl Sql {
         let r = sqlx::query_with(&sql, self.args()?)
             .execute(db)
             .await
-            .map_err(|e| anyhow::anyhow!("{e}\n  query: {}", compact(&sql)))?;
+            .map_err(|e| query_error(e, &sql))?;
         Ok(r.rows_affected())
     }
 }
@@ -299,6 +299,20 @@ macro_rules! sql_parts {
         $q.bind($val);
         $( $crate::sql_parts!($q; $($rest)*); )?
     };
+}
+
+/// Keep the sqlx error as the source (so callers can read Postgres error codes) and add the query.
+fn query_error(e: sqlx::Error, sql: &str) -> anyhow::Error {
+    let msg = format!("{e}\n  query: {}", compact(sql));
+    anyhow::Error::new(e).context(msg)
+}
+
+/// Postgres error code (e.g. `23505` unique violation) of an error from this module.
+pub fn pg_code(e: &anyhow::Error) -> Option<String> {
+    e.chain()
+        .find_map(|c| c.downcast_ref::<sqlx::Error>())
+        .and_then(|e| e.as_database_error())
+        .and_then(|d| d.code().map(|c| c.into_owned()))
 }
 
 fn compact(sql: &str) -> String {

@@ -69,7 +69,7 @@ async fn pipeline(st: &AppState, mut req: Req) -> Res {
     if let Some(r) = comments_disabled(st, &req) {
         return Ok(r);
     }
-    if let Some(r) = cors(&req) {
+    if let Some(r) = cors(st, &req) {
         return Ok(r);
     }
     if let Some(r) = config_editor(st, &req).await {
@@ -144,18 +144,36 @@ fn comments_disabled(st: &AppState, req: &Req) -> Option<Response> {
     RE.is_match(&req.path).then(|| json_raw(&json!({ "success": false, "message": "Comments are disabled" }), 404))
 }
 
-fn cors(req: &Req) -> Option<Response> {
+/// Origin (`scheme://host[:port]`) of a configured URL.
+fn origin_of(url: &str) -> Option<String> {
+    let u = url::Url::parse(url.trim()).ok()?;
+    let o = u.origin();
+    o.is_tuple().then(|| o.ascii_serialization())
+}
+
+/// CORS for `/api/`: only the site's own origins (main.url.full, main.onion, websrv.cors_origins)
+/// are reflected with credentials. The old code reflected any Origin, letting other sites read
+/// authenticated API responses.
+fn cors(st: &AppState, req: &Req) -> Option<Response> {
     if !req.path.starts_with("/api/") {
         return None;
     }
-    let origin = req.header("origin").unwrap_or("*").to_string();
-    req.set_header("access-control-allow-origin", &origin);
-    req.set_header("access-control-allow-credentials", "true");
-    req.set_header("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS");
-    req.set_header(
-        "access-control-allow-headers",
-        "Content-Type, X-Requested-With, X-CSRF-Token, Authorization, X-API-Key, X-Filename, X-Upload-Expiry, X-Delete-Token",
-    );
+    let cfg = st.cfg();
+    let allowed = req.header("origin").filter(|origin| {
+        let mut list: Vec<String> = [cfg.str("main.url.full"), cfg.str("main.onion")].into_iter().flatten().filter_map(origin_of).collect();
+        list.extend(cfg.str_list("websrv.cors_origins").unwrap_or_default().iter().filter_map(|o| origin_of(o)));
+        list.iter().any(|o| o.eq_ignore_ascii_case(origin))
+    });
+    if let Some(origin) = allowed.map(str::to_string) {
+        req.set_header("access-control-allow-origin", &origin);
+        req.set_header("access-control-allow-credentials", "true");
+        req.set_header("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS");
+        req.set_header(
+            "access-control-allow-headers",
+            "Content-Type, X-Requested-With, X-CSRF-Token, Authorization, X-API-Key, X-Filename, X-Upload-Expiry, X-Delete-Token",
+        );
+        req.set_header("vary", "Origin");
+    }
     (req.method == Method::OPTIONS).then(|| raw(204, ""))
 }
 
