@@ -27,6 +27,7 @@ and `server/src/migrations.rs`.
 | `server/src/util.rs` | `src/inc/lib.mjs` (helpers) |
 | `server/src/private_items.rs`, `hidden_items.rs` | same names in `src/inc/` |
 | `server/src/proc.rs` | `queue.spawn` (external tools, no shell) |
+| `server/src/chan_http.rs` | `src/inc/chan_http.mjs` (4chan requests: host allow-list, curl-impersonate, media streaming) |
 | `server/src/routes/<name>.rs` | `src/inc/routes/<name>.mjs` (apiv2 → `routes/apiv2/<name>.rs`) |
 | `server/src/bot/` | `cuffeo` + `src/inc/events` + `src/inc/trigger` |
 

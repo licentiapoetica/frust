@@ -7,6 +7,7 @@ mod audit;
 mod auth;
 mod bot;
 mod cli;
+mod chan_http;
 mod config;
 mod config_write;
 mod db;

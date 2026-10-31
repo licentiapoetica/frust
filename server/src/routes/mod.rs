@@ -33,6 +33,8 @@ pub mod search;
 pub mod tag_image;
 pub mod toptags;
 pub mod user_tags;
+pub mod chan;
+pub mod external;
 
 pub fn build() -> Router {
     let mut r = Router::new();
@@ -73,6 +75,8 @@ pub fn build() -> Router {
     user_tags::register(&mut r);
     admin_media::register(&mut r);
     admin::register(&mut r);
+    chan::register(&mut r);
+    external::register(&mut r);
     r.finalize();
     r
 }
