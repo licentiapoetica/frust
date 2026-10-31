@@ -303,14 +303,12 @@ async fn process(st: &AppState, req: &Req, cfg: &Config, session: Session, form:
     }
 
     let allowed = mime::allowed_mimes(cfg);
-    let square_clicker = cfg.enabled("websrv.square_clicker_enabled");
     if let (Some(f), None) = (&file, &input_url) {
         let mut m = f.content_type.clone();
         if (m == "application/octet-stream" || m.is_empty() || m == "application/x-www-form-urlencoded") && f.filename.to_lowercase().ends_with(".swf") {
             m = "application/x-shockwave-flash".into();
         }
-        let beatmap = square_clicker && f.filename.to_lowercase().ends_with(".osz");
-        if !allowed.contains(&m) && !beatmap {
+        if !allowed.contains(&m) {
             return fail(400, &format!("Invalid file type: {m}"));
         }
     }
@@ -700,8 +698,6 @@ async fn file_upload(
 
     let mut actual = mime::detect(&tmp.path).await?;
     let allowed = mime::allowed_mimes(cfg);
-    // TODO(port): beatmap sets (.osz → audio item + Square Clicker maps, src/inc/beatmap.mjs) are
-    // not ported yet; zip uploads are handled like any other archive meanwhile.
     if !allowed.contains(&actual) {
         return fail(400, &format!("Invalid file type detected: {actual}"));
     }

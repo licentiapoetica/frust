@@ -483,7 +483,6 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("rules_text_b64", json!(b64(&s.rules_text)));
     put("terms_text_b64", json!(b64(&s.terms_text)));
     put("halls", st.halls());
-    put("square_clicker_active", json!(false));
     put("halls_enabled", json!(cfg.enabled("websrv.halls_enabled")));
     put("userhalls_enabled", json!(cfg.enabled("websrv.userhalls_enabled")));
     put("enable_userhall_image_upload", json!(cfg.enabled("websrv.enable_userhall_image_upload")));
@@ -698,7 +697,6 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
         ctx.insert("custom_brand_image".into(), json!(brand));
     }
 
-    let square_clicker = cfg.enabled("websrv.square_clicker_enabled");
     let onara_cfg = {
         let c = if cfg.get("onara").is_null() { cfg.get("websrv.onara") } else { cfg.get("onara") };
         c == &Value::Bool(true)
@@ -730,7 +728,6 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
                 .or_else(|| ctx.get("csrf_token").and_then(Value::as_str).map(str::to_string))
                 .unwrap_or_default();
             ctx.insert("csrf_token".into(), json!(csrf));
-            ctx.insert("square_clicker_active".into(), json!(square_clicker));
             let mult = if session.map(|s| s.admin).unwrap_or(false) { cfg.f64("main.adminmultiplier").unwrap_or(1.0) } else { 1.0 };
             let max = cfg.f64("main.maxfilesize").unwrap_or(0.0) * mult;
             ctx.insert("max_file_size".into(), json!(crate::util::format_size_f(max)));
@@ -746,9 +743,6 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
             ctx.insert("theme".into(), json!(theme));
             ctx.insert("user_strict_bool".into(), json!(false));
             ctx.insert("user_logged_in_bool".into(), json!(false));
-            if !ctx.contains_key("square_clicker_active") || !ctx["square_clicker_active"].is_boolean() {
-                ctx.insert("square_clicker_active".into(), json!(square_clicker));
-            }
             ctx.insert("onara".into(), json!(onara_cfg));
             ctx.insert("onara_cfg".into(), Value::Null);
         }

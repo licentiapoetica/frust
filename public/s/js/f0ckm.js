@@ -3723,7 +3723,7 @@ window.cancelAnimFrame = (function () {
 
       const newSrc = item.src || item.dest;
       const mime = (item.mime || '').toLowerCase();
-      // Current entry for other scripts (Square Clicker keys its maps by album entry)
+      // Current entry for other scripts (the current album entry)
       container.dataset.currentSubId = String(item.id || '');
       container.dataset.currentSubMime = mime;
       setTimeout(() => document.dispatchEvent(new CustomEvent('f0ck:albumChange', { detail: { container, id: item.id, mime } })), 0);
@@ -6928,9 +6928,6 @@ window.cancelAnimFrame = (function () {
           <button type="button" class="f0ck-tuner-subtab-btn" data-subtab="laser" title="Laser cursor: colour, trail, glow, click and drag effects">
             <i class="fa-solid fa-wand-magic-sparkles"></i> Laser
           </button>
-          <button type="button" class="f0ck-tuner-subtab-btn" data-subtab="sqc" title="Square Clicker: sounds, gameplay, auto maps" style="display: none;">
-            <i class="fa-solid fa-circle-dot"></i> Square Clicker
-          </button>
         </div>
         <button type="button" class="f0ck-tuner-close" id="f0ck-tuner-close" title="Close">✕</button>
       </div>
@@ -7086,23 +7083,6 @@ window.cancelAnimFrame = (function () {
         </div>
       </div>
 
-      <!-- Pane: Square Clicker (window.f0ckSqcSettings from square-clicker.js, loaded when the feature is on) -->
-      <div id="f0ck-tuner-pane-sqc" class="f0ck-tuner-subtab-pane" style="display: none;">
-        <div class="f0ck-tuner-body">
-          <div class="f0ck-tuner-presets-bar">
-            <div style="font-size: 11px; opacity: 0.85; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-              <i class="fa-solid fa-circle-dot"></i> Square Clicker
-            </div>
-            <div class="f0ck-tuner-presets-actions">
-              <button type="button" id="sqc-tuner-preview" class="f0ck-tuner-btn-factory-reset" title="Play the hit sound"><i class="fa-solid fa-volume-high"></i> Test sound</button>
-              <button type="button" id="sqc-tuner-reset" class="f0ck-tuner-btn-factory-reset" title="Reset all Square Clicker settings to their defaults"><i class="fa-solid fa-rotate-left"></i> Reset</button>
-            </div>
-          </div>
-          <div id="sqc-tuner-rows"></div>
-          <div id="sqc-tuner-info" style="padding: 4px 12px 12px; font-size: 11px; opacity: 0.6; line-height: 1.4;">Changes apply to the next map you play and are saved on this device.</div>
-        </div>
-      </div>
-
       <!-- Pane: Laser cursor (window.f0ckLaser from laser-cursor.js; rows built from its schema) -->
       <div id="f0ck-tuner-pane-laser" class="f0ck-tuner-subtab-pane" style="display: none;">
         <div class="f0ck-tuner-body">
@@ -7148,7 +7128,7 @@ window.cancelAnimFrame = (function () {
     });
 
     const savedSubtab = localStorage.getItem('f0ck_tuner_active_subtab');
-    if (savedSubtab && (savedSubtab === 'audio' || savedSubtab === 'danmaku' || savedSubtab === 'background' || savedSubtab === 'flashyank' || savedSubtab === 'laser' || (savedSubtab === 'sqc' && window.f0ckSqcSettings))) {
+    if (savedSubtab && (savedSubtab === 'audio' || savedSubtab === 'danmaku' || savedSubtab === 'background' || savedSubtab === 'flashyank' || savedSubtab === 'laser')) {
       switchSubtab(savedSubtab);
     }
 
@@ -7294,144 +7274,6 @@ window.cancelAnimFrame = (function () {
       window.addEventListener('f0ck:laser_changed', onChange);
       const tabBtn = panel.querySelector('.f0ck-tuner-subtab-btn[data-subtab="laser"]');
       if (tabBtn) tabBtn.addEventListener('click', () => render());
-      render();
-    })();
-
-    // ── Square Clicker pane (window.f0ckSqcSettings from square-clicker.js) ─────────────────────
-    // square-clicker.js is only loaded when the feature is on: the tab stays hidden until it
-    // announces itself, then the rows are built from its schema.
-    (() => {
-      const tabBtn = panel.querySelector('.f0ck-tuner-subtab-btn[data-subtab="sqc"]');
-      const rowsEl = panel.querySelector('#sqc-tuner-rows');
-      if (!tabBtn || !rowsEl) return;
-      const api = () => window.f0ckSqcSettings || null;
-      const esc = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-      const fmt = (row, v) => {
-        const n = Number(v);
-        const shown = (row.step && row.step < 1) ? n.toFixed(row.step < 0.1 ? 2 : 1) : String(Math.round(n));
-        return shown + (row.unit || '');
-      };
-      const selStyle = 'width: 100%; height: 30px; background: var(--bg, #111); color: var(--white, #fff); border: 1px solid var(--nav-border-color, rgba(255,255,255,0.2)); font-family: inherit; font-size: 12px;';
-
-      const build = () => {
-        const a = api();
-        if (!a || rowsEl.dataset.built) return;
-        const st = a.getState();
-        let html = '';
-        a.schema.forEach(row => {
-          if (row.section) { html += '<div class="f0ck-tuner-section-title">' + esc(row.section) + '</div>'; return; }
-          if (row.type === 'actions') {
-            html += '<div class="f0ck-tuner-row"><div style="display: flex; gap: 6px; flex-wrap: wrap;">' +
-              row.buttons.map(([name, label]) => '<button type="button" class="f0ck-tuner-mode-btn" data-sqc-action="' + esc(name) + '" style="flex: 1; padding: 6px 8px; font-size: 11px;">' + esc(label) + '</button>').join('') +
-              '</div></div>';
-            return;
-          }
-          const v = st[row.key];
-          html += '<div class="f0ck-tuner-row" data-sqc-key="' + row.key + '"' + (row.showIf ? ' data-sqc-show-if="' + esc(row.showIf) + '"' : '') + '>';
-          if (row.type === 'toggle') {
-            html += '<div class="f0ck-tuner-row-label"><span>' + esc(row.label) + '</span></div>' +
-              '<div style="display: flex; gap: 6px;">' +
-                '<button type="button" class="f0ck-tuner-mode-btn" data-sqc-toggle="0" style="flex: 1; padding: 4px 8px; font-size: 11px;">Off</button>' +
-                '<button type="button" class="f0ck-tuner-mode-btn" data-sqc-toggle="1" style="flex: 1; padding: 4px 8px; font-size: 11px;">On</button>' +
-              '</div>';
-          } else if (row.type === 'select') {
-            html += '<div class="f0ck-tuner-row-label"><span>' + esc(row.label) + '</span></div>' +
-              '<select style="' + selStyle + '">' + row.options.map(([k, l]) => '<option value="' + esc(k) + '">' + esc(l) + '</option>').join('') + '</select>';
-          } else if (row.type === 'color') {
-            html += '<div class="f0ck-tuner-row-label"><span>' + esc(row.label) + '</span><span data-sqc-value>' + esc(v) + '</span></div>' +
-              '<input type="color" value="' + esc(v) + '" style="width: 100%; height: 30px; padding: 2px 4px; border: 1px solid var(--nav-border-color, rgba(255,255,255,0.2)); background: var(--bg, #111); cursor: pointer;" />';
-          } else if (row.type === 'file') {
-            html += '<div class="f0ck-tuner-row-label"><span>' + esc(row.label) + '</span><span data-sqc-value></span></div>' +
-              '<div style="display: flex; gap: 6px;">' +
-                '<label class="f0ck-tuner-mode-btn" style="flex: 1; padding: 4px 8px; font-size: 11px; text-align: center; cursor: pointer;">Upload<input type="file" accept="' + esc(row.accept || '') + '" style="display: none;"></label>' +
-                '<button type="button" class="f0ck-tuner-mode-btn" data-sqc-clear style="flex: 1; padding: 4px 8px; font-size: 11px;">Remove</button>' +
-              '</div>';
-          } else {
-            html += '<div class="f0ck-tuner-row-label"><span>' + esc(row.label) + '</span><span data-sqc-value>' + fmt(row, v) + '</span></div>' +
-              '<input type="range" min="' + row.min + '" max="' + row.max + '" step="' + row.step + '" value="' + esc(v) + '" />';
-          }
-          html += '</div>';
-        });
-        rowsEl.innerHTML = html;
-        rowsEl.dataset.built = '1';
-
-        rowsEl.querySelectorAll('[data-sqc-action]').forEach(b => {
-          b.addEventListener('click', () => {
-            if (!api()) return;
-            const r = api().action(b.dataset.sqcAction) || {};
-            if (r.msg && window.flashMessage) window.flashMessage(r.msg, 2500, r.ok ? 'success' : 'error');
-          });
-        });
-
-        rowsEl.querySelectorAll('[data-sqc-key]').forEach(rowEl => {
-          const key = rowEl.dataset.sqcKey;
-          const row = a.schema.find(r => r.key === key);
-          const valEl = rowEl.querySelector('[data-sqc-value]');
-          if (row.type === 'file') {
-            const input = rowEl.querySelector('input[type="file"]');
-            input.addEventListener('change', async () => {
-              const f = input.files && input.files[0];
-              input.value = '';
-              if (!f || !api()) return;
-              const r = api().setFile ? await api().setFile(key, f) : await api().setCustomSound(f);
-              if (!r.ok && window.flashMessage) window.flashMessage(r.msg || 'Could not use that file', 3000, 'error');
-              else if (key === 'customSound' && api()) api().preview();
-            });
-            rowEl.querySelector('[data-sqc-clear]').addEventListener('click', () => {
-              if (!api()) return;
-              if (api().clearFile) api().clearFile(key); else api().clearCustomSound();
-            });
-            return;
-          }
-          const input = rowEl.querySelector('input, select');
-          if (input) {
-            input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', () => {
-              if (valEl && row.type === 'range') valEl.textContent = fmt(row, input.value);
-              if (valEl && row.type === 'color') valEl.textContent = input.value;
-              if (api()) api().set(key, input.value);
-              if (key === 'hitSound' || key === 'volume') { if (api()) api().preview(); }
-            });
-          }
-          rowEl.querySelectorAll('[data-sqc-toggle]').forEach(b => {
-            b.addEventListener('click', () => { if (api()) api().set(key, +b.dataset.sqcToggle); });
-          });
-        });
-      };
-
-      const render = (st) => {
-        const a = api();
-        if (!a) return;
-        tabBtn.style.display = '';
-        build();
-        st = st || a.getState();
-        rowsEl.querySelectorAll('[data-sqc-key]').forEach(rowEl => {
-          const key = rowEl.dataset.sqcKey;
-          const row = a.schema.find(r => r.key === key);
-          const valEl = rowEl.querySelector('[data-sqc-value]');
-          if (row.type === 'file') {
-            // file name, dimmed while the setting that uses it is not selected (activeWhen: [key, value])
-            if (valEl) valEl.textContent = st[key] || 'none';
-            const on = !row.activeWhen || st[row.activeWhen[0]] === row.activeWhen[1];
-            rowEl.style.opacity = on || !st[key] ? '' : '0.6';
-            return;
-          }
-          if (row.showIf) rowEl.style.display = +st[row.showIf] ? '' : 'none';
-          const input = rowEl.querySelector('input, select');
-          if (input && document.activeElement !== input) input.value = st[key];
-          if (valEl && row.type === 'range') valEl.textContent = fmt(row, st[key]);
-          if (valEl && row.type === 'color') valEl.textContent = st[key];
-          rowEl.querySelectorAll('[data-sqc-toggle]').forEach(b => b.classList.toggle('active', +b.dataset.sqcToggle === (+st[key] ? 1 : 0)));
-        });
-      };
-
-      panel.querySelector('#sqc-tuner-reset').addEventListener('click', () => { if (api()) api().reset(); });
-      panel.querySelector('#sqc-tuner-preview').addEventListener('click', () => { if (api()) api().preview(); });
-      const onChange = (e) => {
-        if (!panel.isConnected) { window.removeEventListener('f0ck:sqc_settings_changed', onChange); return; }
-        render(e.detail);
-      };
-      window.addEventListener('f0ck:sqc_settings_changed', onChange);
-      tabBtn.addEventListener('click', () => render());
       render();
     })();
 

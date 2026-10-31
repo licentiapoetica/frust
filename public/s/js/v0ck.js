@@ -82,11 +82,9 @@ const updateHoverStates = () => {
   const cwModal = document.getElementById('content-warning-modal');
   if ((cwModal && cwModal.style.display !== 'none') || isMobile) return;
 
-  // A Square Clicker game covers the page: the cursor over the player's area is playing, not hovering
-  const inGame = document.body.classList.contains('sqc-session');
   document.querySelectorAll('.v0ck').forEach(p => {
     const rect = p.getBoundingClientRect();
-    const isOver = !inGame && mouseX >= rect.left && mouseX <= rect.right &&
+    const isOver = mouseX >= rect.left && mouseX <= rect.right &&
       mouseY >= rect.top && mouseY <= rect.bottom;
     p.classList.toggle("v0ck_hover", isOver);
     const gal = p.closest('.album-gallery-container');

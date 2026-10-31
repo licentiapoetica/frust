@@ -40,30 +40,6 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     )"#,
     r#"CREATE INDEX IF NOT EXISTS idx_album_items_tags_assign_tag_id ON album_items_tags_assign(tag_id)"#,
     r#"CREATE INDEX IF NOT EXISTS idx_album_items_tags_assign_album_item_id ON album_items_tags_assign(album_item_id)"#,
-    r#"CREATE TABLE IF NOT EXISTS sqc_maps (
-      id SERIAL PRIMARY KEY,
-      item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-      user_id INTEGER REFERENCES "user"(id) ON DELETE SET NULL,
-      title TEXT NOT NULL DEFAULT 'Untitled',
-      notes JSONB NOT NULL DEFAULT '[]'::jsonb,
-      note_count INTEGER NOT NULL DEFAULT 0,
-      duration_ms INTEGER NOT NULL DEFAULT 0,
-      plays INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER NOT NULL DEFAULT 0
-    )"#,
-    r#"CREATE INDEX IF NOT EXISTS idx_sqc_maps_item ON sqc_maps(item_id, created_at DESC)"#,
-    r#"ALTER TABLE sqc_maps ADD COLUMN IF NOT EXISTS album_item_id INTEGER REFERENCES album_items(id) ON DELETE CASCADE"#,
-    r#"CREATE TABLE IF NOT EXISTS sqc_scores (
-      id SERIAL PRIMARY KEY,
-      map_id INTEGER NOT NULL REFERENCES sqc_maps(id) ON DELETE CASCADE,
-      user_id INTEGER REFERENCES "user"(id) ON DELETE CASCADE,
-      score INTEGER NOT NULL DEFAULT 0,
-      accuracy REAL NOT NULL DEFAULT 0,
-      max_combo INTEGER NOT NULL DEFAULT 0,
-      hits JSONB NOT NULL DEFAULT '{}'::jsonb,
-      created_at INTEGER NOT NULL DEFAULT 0
-    )"#,
-    r#"CREATE INDEX IF NOT EXISTS idx_sqc_scores_map ON sqc_scores(map_id, score DESC)"#,
     r#"CREATE TABLE IF NOT EXISTS upload_api_keys (
       id serial PRIMARY KEY,
       name text NOT NULL,

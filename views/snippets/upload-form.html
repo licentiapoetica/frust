@@ -1,4 +1,4 @@
-<form id="upload-form" class="upload-form {{ ("shitpost-mode-active" if shitpost_mode else "") }}" enctype="multipart/form-data" data-mimes='{{ mimes_json }}' data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ min_tags }}" data-comment-max-length="{{ comment_max_length }}" data-enable-swf="{{ ("1" if enable_swf else "0") }}" data-enable-archive="{{ ("1" if enable_archive else "0") }}" data-beatmaps="{{ ("1" if square_clicker_active else "0") }}">
+<form id="upload-form" class="upload-form {{ ("shitpost-mode-active" if shitpost_mode else "") }}" enctype="multipart/form-data" data-mimes='{{ mimes_json }}' data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ min_tags }}" data-comment-max-length="{{ comment_max_length }}" data-enable-swf="{{ ("1" if enable_swf else "0") }}" data-enable-archive="{{ ("1" if enable_archive else "0") }}">
     <div class="form-section">
         <div class="upload-mode-tabs">
             <button type="button" class="upload-mode-tab active" data-mode="file">
@@ -27,7 +27,7 @@
         <!-- File input area -->
         <div class="upload-mode-content" id="mode-file">
             <div class="drop-zone" id="upload-form-drop-zone">
-                <input type="file" class="file-input" name="file" accept="{{ allowed_mimes }}{% if square_clicker_active %},.osz{% endif %}" multiple>
+                <input type="file" class="file-input" name="file" accept="{{ allowed_mimes }}" multiple>
                 <div class="drop-zone-prompt">
                     <p class="drop-zone-title" style="font-size: 1.1rem; font-weight: 500;">{{ t("upload.drop_here") }} <span class="drop-zone-max" style="font-size: 0.8em; font-weight: 400; opacity: 0.6;">(max {{ max_file_size }})</span>{% if session.admin %} <span style="font-size: 0.8em; font-weight: 400; color: var(--accent);">{{ t("upload.admin_boost") }}</span>{% endif %}</p>
                 </div>

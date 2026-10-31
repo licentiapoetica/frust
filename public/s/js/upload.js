@@ -716,7 +716,7 @@ window.initUploadForm = (selector) => {
                     if (fileInput) {
                         try {
                             const mimesObj = JSON.parse(form.getAttribute('data-mimes') || '{}');
-                            fileInput.accept = Object.keys(mimesObj).join(',') + (form.getAttribute('data-beatmaps') === '1' ? ',.osz' : '');
+                            fileInput.accept = Object.keys(mimesObj).join(',');
                         } catch {}
                     }
                     if (selectedFiles.length > 0) {
@@ -726,7 +726,7 @@ window.initUploadForm = (selector) => {
                     if (fileInput) {
                         try {
                             const mimesObj = JSON.parse(form.getAttribute('data-mimes') || '{}');
-                            fileInput.accept = Object.keys(mimesObj).join(',') + (form.getAttribute('data-beatmaps') === '1' ? ',.osz' : '');
+                            fileInput.accept = Object.keys(mimesObj).join(',');
                         } catch {}
                     }
                     if (!isAlbumModeActive()) {
@@ -1530,9 +1530,7 @@ window.initUploadForm = (selector) => {
                 }
 
                 const mimeOk = !file.type || allowedMimes.includes(file.type);
-                // Beatmap sets (.osz): the server turns them into an audio post with Square Clicker maps
-                const extOk = (allowedExts.length > 0 && allowedExts.includes(fileExt)) ||
-                    (fileExt === 'osz' && form.getAttribute('data-beatmaps') === '1');
+                const extOk = allowedExts.length > 0 && allowedExts.includes(fileExt);
 
                 if (allowedMimes.length > 0 && !mimeOk && !extOk) {
                     const errorMsg = `File type ${file.type || '.' + fileExt} is not allowed.`;

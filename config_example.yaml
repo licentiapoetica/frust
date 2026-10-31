@@ -143,8 +143,6 @@ websrv:
   #   - audio
   halls_enabled: true
   userhalls_enabled: true
-  # Square Clicker: audio/video items become playable rhythm-game maps (hotkey o); false turns it off
-  square_clicker_enabled: true
   enable_userhall_image_upload: true
   enable_oc: true
   abyss_enabled: true
