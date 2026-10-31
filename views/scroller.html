@@ -1160,27 +1160,7 @@
       <button class="filter-reset-btn" id="filter-reset-btn">{{ t("scroller.reset_all") }}</button>
     </div>
     <div class="filter-scroll-area">
-    {# PORT_TODO @js block:
-
-      const _isScrollerMember = typeof session !== 'undefined' && session && session.user && !session.is_anon;
-      const _isScrollerAnon = typeof session !== 'undefined' && session && (session.is_anon || session.user === 'anonymous' || (typeof session.user === 'string' && session.user.startsWith('anon_')));
-      const _isScrollerGuest = !_isScrollerMember && !_isScrollerAnon;
-      const _isScrollerAnonUser = !_isScrollerMember;
-      const _scrollerAllowedModes = _isScrollerGuest ? ['sfw'] : ((typeof anon_permissions !== 'undefined' && anon_permissions && anon_permissions.allowed_modes) || ['sfw', 'nsfw', 'untagged', 'all', 'nsfl']);
-      const _scrollerShowSfw = true;
-      const _scrollerShowNsfw = _isScrollerGuest || (!_isScrollerAnonUser || _scrollerAllowedModes.includes('nsfw'));
-      const _scrollerShowNsfl = enable_nsfl && (_isScrollerGuest || (!_isScrollerAnonUser || _scrollerAllowedModes.includes('nsfl')));
-      const _scrollerShowAll = _isScrollerGuest || (!_isScrollerAnonUser || _scrollerAllowedModes.includes('all'));
-      const _scrollerShowUntagged = _isScrollerGuest || (typeof session !== 'undefined' && session && (session.admin || session.is_moderator)) || (_isScrollerAnonUser && _scrollerAllowedModes.includes('untagged'));
-      const _scrollerActiveModes = _isScrollerGuest ? ['sfw'] : [_scrollerShowSfw ? 'sfw' : null, _scrollerShowNsfw ? 'nsfw' : null, _scrollerShowNsfl ? 'nsfl' : null, _scrollerShowUntagged ? 'untagged' : null].filter(Boolean);
-      const _scrollerIsSingleMode = _isScrollerGuest || (_isScrollerAnonUser && _scrollerActiveModes.length === 1 && !_scrollerShowAll);
-      const _scrollerSingleMode = _isScrollerGuest ? 'sfw' : (_scrollerIsSingleMode ? _scrollerActiveModes[0] : null);
-
-      const _scrollerAllowedMimes = (typeof anon_permissions !== 'undefined' && anon_permissions && anon_permissions.allowed_mimes) || ['image', 'video', 'audio', 'flash', 'pdf'];
-      const _scrollerIsSingleMime = _isScrollerAnonUser && _scrollerAllowedMimes.length === 1;
-      const _scrollerSingleMime = _scrollerIsSingleMime ? _scrollerAllowedMimes[0] : null;
-    
-#}
+    {# _isScrollerGuest, _scrollerShow*, _scrollerSingleMode/Mime: computed in server/src/routes/scroller.rs #}
       <div class="filter-section">
         <div class="filter-section-label">{{ t("scroller.rating") }}</div>
         <div class="pill-group" id="mode-pills">
