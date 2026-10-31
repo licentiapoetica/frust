@@ -58,7 +58,7 @@ webpki-roots = "1"
 tokio-tungstenite = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
 zip = { version = "2", default-features = false, features = ["deflate"] }
 lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-rustls-tls", "hostname"] }
-p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+p256 = { version = "0.14", features = ["ecdsa", "pkcs8"] }
 ciborium = "0.2"
 httpdate = "1"
 webauthn-rs = { version = "0.5", features = ["conditional-ui", "danger-allow-state-serialisation"] }
