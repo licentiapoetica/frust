@@ -1,16 +1,16 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
     <div id="main">
         <div class="meme-layout-wrapper">
             <link rel="stylesheet" href="/s/css/meme-creator.css">
             <div class="meme-select-container">
-                <h1 class="meme-title">{{ t('meme.select_title') }}</h1>
-                <p class="meme-subtitle">{{ t('meme.select_subtitle') }}</p>
+                <h1 class="meme-title">{{ t("meme.select_title") }}</h1>
+                <p class="meme-subtitle">{{ t("meme.select_subtitle") }}</p>
 
                 <div class="category-filter-bar">
-                    @each(categories as cat)
-                    <button class="category-chip @if(cat == 'All') active @endif" data-category="{!! cat !!}">{!! cat !!}</button>
-                    @endeach
+                    {% for key, cat in categories|entries %}
+                    <button class="category-chip {% if cat == "All" %} active {% endif %}" data-category="{{ cat }}">{{ cat }}</button>
+                    {% endfor %}
                 </div>
 
                 <div class="template-grid">
@@ -19,21 +19,21 @@
                             <i class="fa fa-upload" style="font-size: 3.5rem; color: var(--accent, #9f0);"></i>
                         </div>
                         <div class="template-info">
-                            <span class="template-name">{{ t('meme.custom_template_title') }}</span>
-                            <span class="template-category-tag">{{ t('meme.custom_template_tag') }}</span>
+                            <span class="template-name">{{ t("meme.custom_template_title") }}</span>
+                            <span class="template-category-tag">{{ t("meme.custom_template_tag") }}</span>
                         </div>
                     </a>
-                    @each(templates as template)
-                    <a href="/meme/{{ template.id }}" class="template-item" data-category="{!! template.category || 'General' !!}">
+                    {% for key, template in templates|entries %}
+                    <a href="/meme/{{ template.id }}" class="template-item" data-category="{{ (template.category or "General") }}">
                         <div class="template-image-wrapper">
-                            <img src="{{ template.url }}" alt="{!! template.name !!}" loading="lazy">
+                            <img src="{{ template.url }}" alt="{{ template.name }}" loading="lazy">
                         </div>
                         <div class="template-info">
-                            <span class="template-name">{!! template.name !!}</span>
-                            <span class="template-category-tag">{!! template.category || 'General' !!}</span>
+                            <span class="template-name">{{ template.name }}</span>
+                            <span class="template-category-tag">{{ (template.category or "General") }}</span>
                         </div>
                     </a>
-                    @endeach
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -60,4 +60,4 @@
         </script>
     </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

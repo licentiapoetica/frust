@@ -1,24 +1,24 @@
-{{-- Server copy of the main comment input: must match comments.js renderInput() + setupEmojiPicker() (users) or renderGuestInput() (guests) exactly, so the client re-render swaps in an identical box without any layout shift --}}
-@if(session)
+{# Server copy of the main comment input: must match comments.js renderInput() + setupEmojiPicker() (users) or renderGuestInput() (guests) exactly, so the client re-render swaps in an identical box without any layout shift #}
+{% if session %}
 <div class="comment-input main-input">
-    <textarea placeholder="{{ t('comments.write_comment') }}"@if(comment_max_length !== null && comment_max_length !== undefined) maxlength="{{ comment_max_length }}"@endif required></textarea>
+    <textarea placeholder="{{ t("comments.write_comment") }}"{% if (comment_max_length != none and comment_max_length != none) %} maxlength="{{ comment_max_length }}"{% endif %} required></textarea>
     <div class="comment-file-preview"></div>
     <div class="input-actions">
-        @if(comment_max_length !== null && comment_max_length !== undefined)<span class="char-counter" data-max="{{ comment_max_length }}">0 / {{ comment_max_length }}</span>@endif
-        @if(allow_fileupload_comments && !session.is_anon || allow_fileupload_comments && anon_permissions.comment_attachments !== false)<button class="comment-attach-btn" title="{{ t('comments.attach_file') }}" type="button"><i class="fa-solid fa-paperclip"></i></button>@endif
-        @if(enable_comment_polls)<button class="comment-poll-btn" title="{{ t('comments.poll_btn_title') || 'Create poll' }}" type="button"><i class="fa-solid fa-chart-bar"></i></button>@endif
-        @if(is_mod_or_admin)<button id="lock-thread-btn" class="admin-lock-btn" title="{{ item.is_comments_locked ? 'Unlock Thread' : 'Lock Thread' }}">@if(item.is_comments_locked)<i class="fa-solid fa-lock"></i>@else<i class="fa-solid fa-lock-open"></i>@endif</button>@endif
+        {% if (comment_max_length != none and comment_max_length != none) %}<span class="char-counter" data-max="{{ comment_max_length }}">0 / {{ comment_max_length }}</span>{% endif %}
+        {% if ((allow_fileupload_comments and not session.is_anon) or (allow_fileupload_comments and anon_permissions.comment_attachments != false)) %}<button class="comment-attach-btn" title="{{ t("comments.attach_file") }}" type="button"><i class="fa-solid fa-paperclip"></i></button>{% endif %}
+        {% if enable_comment_polls %}<button class="comment-poll-btn" title="{{ (t("comments.poll_btn_title") or "Create poll") }}" type="button"><i class="fa-solid fa-chart-bar"></i></button>{% endif %}
+        {% if is_mod_or_admin %}<button id="lock-thread-btn" class="admin-lock-btn" title="{{ ("Unlock Thread" if item.is_comments_locked else "Lock Thread") }}">{% if item.is_comments_locked %}<i class="fa-solid fa-lock"></i>{% else %}<i class="fa-solid fa-lock-open"></i>{% endif %}</button>{% endif %}
         <button class="spoiler-trigger" title="Insert spoiler tag">[S]</button>
         <button class="emoji-trigger"><i class="fa-regular fa-face-smile"></i></button>
-        <button class="submit-comment"><span class="submit-label">{{ t('comments.post') }}</span><i class="fa-solid fa-spinner fa-spin submit-spinner"></i></button>
+        <button class="submit-comment"><span class="submit-label">{{ t("comments.post") }}</span><i class="fa-solid fa-spinner fa-spin submit-spinner"></i></button>
     </div>
 </div>
-@else
+{% else %}
 <div class="comment-input main-input is-guest" aria-disabled="true" title="Log in to comment" onclick="const b=document.getElementById('nav-login-btn'); if (b) b.click();">
     <textarea placeholder="Log in to comment" readonly tabindex="-1" aria-disabled="true"></textarea>
     <div class="comment-file-preview"></div>
     <div class="input-actions">
-        <button class="submit-comment" type="button" tabindex="-1" aria-disabled="true"><span class="submit-label">{{ t('comments.post') }}</span><i class="fa-solid fa-spinner fa-spin submit-spinner"></i></button>
+        <button class="submit-comment" type="button" tabindex="-1" aria-disabled="true"><span class="submit-label">{{ t("comments.post") }}</span><i class="fa-solid fa-spinner fa-spin submit-spinner"></i></button>
     </div>
 </div>
-@endif
+{% endif %}

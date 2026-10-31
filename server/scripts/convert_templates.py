@@ -597,7 +597,8 @@ def output_tag(expr_js, ctx, where):
     if any(name.endswith(s) for s in SAFE_SUFFIXES) or re.fullmatch(r'\w+_html|svg', name):
         return '{{ ' + e + '|safe }}'
     if ctx == 'script':
-        return '{{ ' + e + '|tojson }}'
+        # Unquoted in a script the old engine emitted raw code (`= {{ x ? 'true' : 'false' }};`)
+        return '{{ ' + e + '|safe }}'
     return '{{ ' + e + ' }}'
 
 
@@ -689,7 +690,7 @@ def convert(text, fname):
                     out.append('{# PORT_TODO @for(' + inner.replace('#}', '# }') + ') #}{% for PORT_TODO in [] %}')
                 i = p1
                 continue
-            m = re.match(r'@(endif|endeach|endfor|else|endjs|js)(?![A-Za-z0-9_])', text[i:])
+            m = re.match(r'@(endif|endeach|endfor|endjs|else|js(?![A-Za-z0-9_]))', text[i:])
             if m:
                 kw = m.group(1)
                 out.append({'endif': '{% endif %}', 'endeach': '{% endfor %}', 'endfor': '{% endfor %}', 'else': '{% else %}'}.get(kw, ''))

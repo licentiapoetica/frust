@@ -1,11 +1,11 @@
-@each(toptags as toptag)
-<a href="/tag/{{ toptag.safe_tag }}@if(typeof tagger !== 'undefined' && tagger)?tagger={!! encodeURIComponent(tagger) !!}@endif" class="tag-card">
+{% for key, toptag in toptags|entries %}
+<a href="/tag/{{ toptag.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}" class="tag-card">
     <div class="tag-card-image">
-        <img src="/tag_image/{{ toptag.encoded_tag }}?m={{ session.mode }}" loading="lazy" alt="{!! toptag.tag !!}">
+        <img src="/tag_image/{{ toptag.encoded_tag }}?m={{ session.mode }}" loading="lazy" alt="{{ toptag.tag }}">
     </div>
     <div class="tag-card-content">
-        <span class="tag-name">#{!! toptag.tag !!}</span>
-        <span class="tag-count">{{ t('toptags.posts', { count: toptag.total_items }) }}</span>
+        <span class="tag-name">#{{ toptag.tag }}</span>
+        <span class="tag-count">{{ t("toptags.posts", {"count": toptag.total_items}) }}</span>
     </div>
 </a>
-@endeach
+{% endfor %}

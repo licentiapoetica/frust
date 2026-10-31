@@ -1,13 +1,13 @@
-@if(session)
-  @if(session.use_new_layout)
-    @include(item-partial-modern)
-  @else
-    @include(item-partial-legacy)
-  @endif
-@else
-  @if(default_layout === 'legacy')
-    @include(item-partial-legacy)
-  @else
-    @include(item-partial-modern)
-  @endif
-@endif
+{% if session %}
+  {% if session.use_new_layout %}
+    {% include "item-partial-modern.html" %}
+  {% else %}
+    {% include "item-partial-legacy.html" %}
+  {% endif %}
+{% else %}
+  {% if default_layout == "legacy" %}
+    {% include "item-partial-legacy.html" %}
+  {% else %}
+    {% include "item-partial-modern.html" %}
+  {% endif %}
+{% endif %}

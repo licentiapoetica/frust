@@ -1,17 +1,17 @@
-@if(typeof pagination !== "undefined" && typeof link !== "undefined")
+{% if (pagination is defined and link is defined) %}
 <nav class="pagination">
-    <a href="{{ link.main }}{{ link.path }}{{ pagination.start }}{{ link.suffix }}" class="page-item-1 btn start@if(!pagination.prev) disabled@endif">&laquo;</a>
-    <a href="{{ link.main }}{{ link.path }}{{ pagination.prev }}{{ link.suffix }}" class="page-item-2 btn prev@if(!pagination.prev) disabled@endif">&lsaquo;</a>
-    @if(pagination.cheat)
-    @each(pagination.cheat as i)
-    @if(i == pagination.page)
+    <a href="{{ link.main }}{{ link.path }}{{ pagination.start }}{{ link.suffix }}" class="page-item-1 btn start{% if not pagination.prev %} disabled{% endif %}">&laquo;</a>
+    <a href="{{ link.main }}{{ link.path }}{{ pagination.prev }}{{ link.suffix }}" class="page-item-2 btn prev{% if not pagination.prev %} disabled{% endif %}">&lsaquo;</a>
+    {% if pagination.cheat %}
+    {% for key, i in pagination.cheat|entries %}
+    {% if i == pagination.page %}
     <span class="btn disabled">{{ i }}</span>
-    @else
+    {% else %}
     <a href="{{ link.main }}{{ link.path }}{{ i }}{{ link.suffix }}" class="pagination-int-item btn">{{ i }}</a>
-    @endif
-    @endeach
-    @endif
-    <a href="{{ link.main }}{{ link.path }}{{ pagination.next }}{{ link.suffix }}" class="page-item-3 btn next@if(!pagination.next) disabled@endif">&rsaquo;</a>
-    <a href="{{ link.main }}{{ link.path }}{{ pagination.end }}{{ link.suffix }}" class="page-item-4 btn start@if(!pagination.next) disabled@endif">&raquo;</a>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+    <a href="{{ link.main }}{{ link.path }}{{ pagination.next }}{{ link.suffix }}" class="page-item-3 btn next{% if not pagination.next %} disabled{% endif %}">&rsaquo;</a>
+    <a href="{{ link.main }}{{ link.path }}{{ pagination.end }}{{ link.suffix }}" class="page-item-4 btn start{% if not pagination.next %} disabled{% endif %}">&raquo;</a>
 </nav>
-@endif
+{% endif %}

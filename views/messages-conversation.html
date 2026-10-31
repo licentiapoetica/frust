@@ -1,4 +1,4 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main" class="messages-page messages-convo-page">
 
@@ -6,15 +6,15 @@
     <div class="messages-header">
         <a href="/messages" class="dm-back-btn" title="Back to inbox">←</a>
         <div class="dm-convo-header-info">
-            @if(other.avatar_file)
+            {% if other.avatar_file %}
             <img class="dm-header-avatar" src="/a/{{ other.avatar_file }}" alt="" onerror="this.src='/a/default.png'">
-            @elseif(other.avatar && other.avatar > 0)
+            {% elif (other.avatar and (other.avatar > 0)) %}
             <img class="dm-header-avatar" src="/t/{{ other.avatar }}.webp" alt="" onerror="this.src='/a/default.png'">
-            @else
+            {% else %}
             <img class="dm-header-avatar" src="/a/default.png" alt="">
-            @endif
+            {% endif %}
             <div class="dm-header-name-wrap">
-                <a href="/user/{{ other.user.toLowerCase() }}" class="dm-header-username" @if(other.username_color) style="color:{{ other.username_color }}" @endif>{!! other.display_name || other.user !!}</a>
+                <a href="/user/{{ other.user|lower }}" class="dm-header-username" {% if other.username_color %} style="color:{{ other.username_color }}" {% endif %}>{{ (other.display_name or other.user) }}</a>
                 <span id="dm-presence" class="dm-presence"></span>
             </div>
         </div>
@@ -29,22 +29,22 @@
          data-other-id="{{ other.id }}"
          data-other-name="{{ other.user }}"
          data-my-id="{{ session.id }}">
-        <div class="dm-loading">{{ t('messages.decrypting') }}</div>
+        <div class="dm-loading">{{ t("messages.decrypting") }}</div>
     </div>
 
     <!-- Send form -->
     <form id="dm-send-form" class="dm-send-form comment-input" autocomplete="off">
         <textarea id="dm-input"
                   class="dm-input"
-                  placeholder="{{ t('messages.input_placeholder') }}"
+                  placeholder="{{ t("messages.input_placeholder") }}"
                   rows="2"
                   maxlength="4000"
                   required></textarea>
         <div class="input-actions">
-            <button type="submit" id="dm-send-btn" class="submit-comment dm-send-btn">{{ t('messages.send') }}</button>
+            <button type="submit" id="dm-send-btn" class="submit-comment dm-send-btn">{{ t("messages.send") }}</button>
         </div>
     </form>
 
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

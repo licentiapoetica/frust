@@ -1,20 +1,20 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
   <div id="main" class="chan-page chan-catalogue-page">
     <div class="chan-header-bar">
       <div class="chan-brand-title">
         <span class="chan-clover-icon"><i class="fa-solid fa-clover"></i></span>
         <h1>/{{ board }}/ <span class="chan-subtitle">Catalogue</span></h1>
-        <span class="chan-thread-count-badge">{{ threads.length }} threads</span>
+        <span class="chan-thread-count-badge">{{ threads|length }} threads</span>
       </div>
 
       <!-- Quick board selector -->
       <div class="chan-board-nav">
-        @each(common_boards as b)
-        <a href="/4/{{ b.id }}/catalogue" class="chan-board-pill {{ b.id === board ? 'active' : '' }}" title="{{ b.name }}">
+        {% for key, b in common_boards|entries %}
+        <a href="/4/{{ b.id }}/catalogue" class="chan-board-pill {{ ("active" if b.id == board else "") }}" title="{{ b.name }}">
           /{{ b.id }}/
         </a>
-        @endeach
+        {% endfor %}
         <form class="chan-board-custom-form" onsubmit="event.preventDefault(); const b = document.getElementById('custom-board-input').value.trim().toLowerCase(); if(b) window.location.href='/4/' + b + '/catalogue';">
           <input type="text" id="custom-board-input" placeholder="board…" maxlength="12" class="chan-custom-board-input" />
           <button type="submit" class="chan-custom-board-btn" title="Go to board"><i class="fa-solid fa-arrow-right"></i></button>
@@ -44,25 +44,25 @@
 
     <!-- Catalogue Thread Grid -->
     <div class="chan-catalogue-grid" id="chan-catalogue-grid">
-      @each(threads as t)
-      <div class="chan-thread-card" data-no="{{ t.no }}" data-replies="{{ t.replies }}" data-images="{{ t.images }}" data-time="{{ t.time }}" data-sticky="{{ t.sticky ? 1 : 0 }}">
+      {% for key, t in threads|entries %}
+      <div class="chan-thread-card" data-no="{{ t.no }}" data-replies="{{ t.replies }}" data-images="{{ t.images }}" data-time="{{ t.time }}" data-sticky="{{ (1 if t.sticky else 0) }}">
         <a href="/4/{{ board }}/{{ t.no }}" class="chan-thread-thumb-link">
-          @if(t.thumb)
+          {% if t.thumb %}
           <img src="{{ t.thumb }}" alt="Thread #{{ t.no }}" loading="lazy" class="chan-thread-thumb" onerror="this.style.opacity='0.2';" />
-          @else
+          {% else %}
           <div class="chan-thread-thumb-empty"><i class="fa-solid fa-file"></i></div>
-          @endif
+          {% endif %}
           
           <div class="chan-card-badges">
-            @if(t.sticky)
+            {% if t.sticky %}
             <span class="chan-card-badge chan-badge-sticky" title="Sticky"><i class="fa-solid fa-thumbtack"></i></span>
-            @endif
-            @if(t.closed)
+            {% endif %}
+            {% if t.closed %}
             <span class="chan-card-badge chan-badge-closed" title="Closed"><i class="fa-solid fa-lock"></i></span>
-            @endif
-            @if(t.local_id)
-            <span class="chan-card-badge chan-badge-rehosted" title="OP rehosted on f0ckm as /{{ t.local_path || t.local_id }}" style="background: rgba(16, 185, 129, 0.9); color: #fff; font-weight: 700;"><i class="fa-solid fa-check"></i> /{{ t.local_path || t.local_id }}</span>
-            @endif
+            {% endif %}
+            {% if t.local_id %}
+            <span class="chan-card-badge chan-badge-rehosted" title="OP rehosted on f0ckm as /{{ (t.local_path or t.local_id) }}" style="background: rgba(16, 185, 129, 0.9); color: #fff; font-weight: 700;"><i class="fa-solid fa-check"></i> /{{ (t.local_path or t.local_id) }}</span>
+            {% endif %}
             <span class="chan-card-badge chan-badge-stats">
               <span title="Replies"><i class="fa-solid fa-comment"></i> {{ t.replies }}</span>
               <span title="Images"><i class="fa-solid fa-image"></i> {{ t.images }}</span>
@@ -72,18 +72,18 @@
 
         <div class="chan-thread-info">
           <a href="/4/{{ board }}/{{ t.no }}" class="chan-thread-title">
-            @if(t.sub)
+            {% if t.sub %}
             <strong class="chan-subject">{{ t.sub }}</strong>
-            @else
+            {% else %}
             <span class="chan-no-sub">No. {{ t.no }}</span>
-            @endif
+            {% endif %}
           </a>
-          @if(t.com)
+          {% if t.com %}
           <p class="chan-teaser">{{ t.com }}</p>
-          @endif
+          {% endif %}
         </div>
       </div>
-      @endeach
+      {% endfor %}
     </div>
 
     <div id="chan-no-results" class="chan-empty-state" style="display: none;">
@@ -477,4 +477,4 @@
 })();
 </script>
 
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

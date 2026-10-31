@@ -1,35 +1,35 @@
-<form id="upload-form" class="upload-form {{ shitpost_mode ? 'shitpost-mode-active' : '' }}" enctype="multipart/form-data" data-mimes='{!! mimes_json !!}' data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ min_tags }}" data-comment-max-length="{{ comment_max_length }}" data-enable-swf="{{ enable_swf ? '1' : '0' }}" data-enable-archive="{{ enable_archive ? '1' : '0' }}" data-beatmaps="{{ square_clicker_active ? '1' : '0' }}">
+<form id="upload-form" class="upload-form {{ ("shitpost-mode-active" if shitpost_mode else "") }}" enctype="multipart/form-data" data-mimes='{{ mimes_json }}' data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ min_tags }}" data-comment-max-length="{{ comment_max_length }}" data-enable-swf="{{ ("1" if enable_swf else "0") }}" data-enable-archive="{{ ("1" if enable_archive else "0") }}" data-beatmaps="{{ ("1" if square_clicker_active else "0") }}">
     <div class="form-section">
         <div class="upload-mode-tabs">
             <button type="button" class="upload-mode-tab active" data-mode="file">
                 <i class="fa-solid fa-upload"></i>
-                {{ t('upload.file_tab') }}
+                {{ t("upload.file_tab") }}
             </button>
             <button type="button" class="upload-mode-tab" data-mode="album">
                 <i class="fa-solid fa-images"></i>
-                {{ t('album.title') || 'Album' }}
+                {{ (t("album.title") or "Album") }}
             </button>
-            @if(web_url_upload)
+            {% if web_url_upload %}
             <button type="button" class="upload-mode-tab" data-mode="url">
                 <i class="fa-solid fa-link"></i>
-                @if(enable_youtube_upload){{ t('upload.url_tab_yt') }}@else {{ t('upload.url_tab') }} @endif
+                {% if enable_youtube_upload %}{{ t("upload.url_tab_yt") }}{% else %} {{ t("upload.url_tab") }} {% endif %}
             </button>
-            @endif
+            {% endif %}
         </div>
 
-        @if(enable_item_title)
-        <div class="form-section global-title-section" @if(shitpost_mode) style="display:none;" @endif>
-            <label>Title <span style="opacity: 0.5; font-weight: normal;">{{ t('upload.comment_optional') }}</span></label>
+        {% if enable_item_title %}
+        <div class="form-section global-title-section" {% if shitpost_mode %} style="display:none;" {% endif %}>
+            <label>Title <span style="opacity: 0.5; font-weight: normal;">{{ t("upload.comment_optional") }}</span></label>
             <input type="text" name="title" class="upload-title-input" placeholder="Add a title for this item…" maxlength="500" autocomplete="off">
         </div>
-        @endif
+        {% endif %}
 
         <!-- File input area -->
         <div class="upload-mode-content" id="mode-file">
             <div class="drop-zone" id="upload-form-drop-zone">
-                <input type="file" class="file-input" name="file" accept="{{ allowed_mimes }}@if(square_clicker_active),.osz@endif" multiple>
+                <input type="file" class="file-input" name="file" accept="{{ allowed_mimes }}{% if square_clicker_active %},.osz{% endif %}" multiple>
                 <div class="drop-zone-prompt">
-                    <p class="drop-zone-title" style="font-size: 1.1rem; font-weight: 500;">{{ t('upload.drop_here') }} <span class="drop-zone-max" style="font-size: 0.8em; font-weight: 400; opacity: 0.6;">(max {{ max_file_size }})</span>@if(session.admin) <span style="font-size: 0.8em; font-weight: 400; color: var(--accent);">{{ t('upload.admin_boost') }}</span>@endif</p>
+                    <p class="drop-zone-title" style="font-size: 1.1rem; font-weight: 500;">{{ t("upload.drop_here") }} <span class="drop-zone-max" style="font-size: 0.8em; font-weight: 400; opacity: 0.6;">(max {{ max_file_size }})</span>{% if session.admin %} <span style="font-size: 0.8em; font-weight: 400; color: var(--accent);">{{ t("upload.admin_boost") }}</span>{% endif %}</p>
                 </div>
                 <!-- Preview Container -->
                 <div class="file-preview" style="display: none;">
@@ -41,45 +41,45 @@
         <!-- Album / Batch Mode Switcher (displayed when multiple files are chosen) -->
         <div class="album-choice-container" id="album-choice-container" style="display: none;">
             <div class="album-choice-title">
-                <i class="fa-solid fa-layer-group"></i> {{ t('album.multiple_selected') || 'Multiple files selected' }}
+                <i class="fa-solid fa-layer-group"></i> {{ (t("album.multiple_selected") or "Multiple files selected") }}
             </div>
             <div class="album-choice-options">
                 <button type="button" class="album-choice-btn active" data-choice="album">
-                    <i class="fa-solid fa-layer-group"></i> <span>{{ t('album.mode_album') || 'Album (1 post)' }}</span>
+                    <i class="fa-solid fa-layer-group"></i> <span>{{ (t("album.mode_album") or "Album (1 post)") }}</span>
                 </button>
-                @if(shitpost_mode)
+                {% if shitpost_mode %}
                 <button type="button" class="album-choice-btn" data-choice="batch">
-                    <i class="fa-solid fa-cubes-stacked"></i> <span>{{ t('album.mode_batch') || 'Separate posts' }}</span>
+                    <i class="fa-solid fa-cubes-stacked"></i> <span>{{ (t("album.mode_batch") or "Separate posts") }}</span>
                 </button>
-                @endif
+                {% endif %}
             </div>
         </div>
 
-        @if(web_url_upload)
+        {% if web_url_upload %}
         <!-- URL input area -->
         <div class="upload-mode-content" id="mode-url" style="display: none;">
             <div class="url-input-container">
-                @if(shitpost_mode)
+                {% if shitpost_mode %}
                 <div class="url-shitpost-container" style="display: flex; flex-direction: column; gap: 6px;">
-                    <input type="url" id="url-upload-input" name="url" placeholder="{{ t('upload.url_placeholder_shitpost') }}" autocomplete="off" style="width: 100%;">
+                    <input type="url" id="url-upload-input" name="url" placeholder="{{ t("upload.url_placeholder_shitpost") }}" autocomplete="off" style="width: 100%;">
                     <button type="button" class="btn-add-urls">
-                        <i class="fa-solid fa-plus-circle"></i> {{ t('common.add') }}
+                        <i class="fa-solid fa-plus-circle"></i> {{ t("common.add") }}
                     </button>
                 </div>
-                @else
-                <input type="url" id="url-upload-input" name="url" placeholder="@if(enable_youtube_upload){{ t('upload.url_placeholder_yt') }}@else {{ t('upload.url_placeholder') }}@endif" autocomplete="off">
-                @endif
+                {% else %}
+                <input type="url" id="url-upload-input" name="url" placeholder="{% if enable_youtube_upload %}{{ t("upload.url_placeholder_yt") }}{% else %} {{ t("upload.url_placeholder") }}{% endif %}" autocomplete="off">
+                {% endif %}
             </div>
             <div class="url-type-badge" id="url-type-badge" style="display: none;"></div>
         </div>
-        @endif
+        {% endif %}
         
         <!-- Hidden thumbnail input — populated by the Ruffle snapshot button only -->
         <input type="file" name="thumbnail" id="upload-thumbnail-input" accept="image/jpeg,image/png,image/webp" style="display:none;">
     </div>
 
     <div class="form-section global-rating-section">
-        <label>{{ t('upload.rating') }} <span class="required">*</span></label>
+        <label>{{ t("upload.rating") }} <span class="required">*</span></label>
         <div class="rating-options">
             <label class="rating-option">
                 <input type="radio" name="rating" value="sfw" required>
@@ -89,36 +89,36 @@
                 <input type="radio" name="rating" value="nsfw">
                 <span class="rating-label nsfw">NSFW</span>
             </label>
-            @if(enable_nsfl)
+            {% if enable_nsfl %}
             <label class="rating-option">
                 <input type="radio" name="rating" value="nsfl">
                 <span class="rating-label nsfl">NSFL</span>
             </label>
-            @endif
+            {% endif %}
         </div>
     </div>
 
-    @if(enable_private_uploads !== false && allow_user_upload_visibility !== false)
+    {% if (enable_private_uploads != false and allow_user_upload_visibility != false) %}
     <div class="form-section global-visibility-section">
-        <label>{{ t('visibility.label') }}</label>
+        <label>{{ t("visibility.label") }}</label>
         <div class="visibility-options rating-options">
             <label class="rating-option">
-                <input type="radio" name="visibility" value="0" {{ ((session.default_upload_visibility !== undefined && session.default_upload_visibility !== null ? session.default_upload_visibility : default_upload_visibility) === 0) ? 'checked' : '' }}>
-                <span class="rating-label sfw" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-globe"></i> {{ t('visibility.public') }}</span>
+                <input type="radio" name="visibility" value="0" {{ ("checked" if (session.default_upload_visibility if (session.default_upload_visibility != none and session.default_upload_visibility != none) else default_upload_visibility) == 0 else "") }}>
+                <span class="rating-label sfw" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-globe"></i> {{ t("visibility.public") }}</span>
             </label>
             <label class="rating-option">
-                <input type="radio" name="visibility" value="1" {{ ((session.default_upload_visibility !== undefined && session.default_upload_visibility !== null ? session.default_upload_visibility : default_upload_visibility) === 1) ? 'checked' : '' }}>
-                <span class="rating-label nsfw" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-link"></i> {{ t('visibility.unlisted') }}</span>
+                <input type="radio" name="visibility" value="1" {{ ("checked" if (session.default_upload_visibility if (session.default_upload_visibility != none and session.default_upload_visibility != none) else default_upload_visibility) == 1 else "") }}>
+                <span class="rating-label nsfw" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-link"></i> {{ t("visibility.unlisted") }}</span>
             </label>
             <label class="rating-option">
-                <input type="radio" name="visibility" value="2" {{ ((session.default_upload_visibility !== undefined && session.default_upload_visibility !== null ? session.default_upload_visibility : default_upload_visibility) === 2) ? 'checked' : '' }}>
-                <span class="rating-label nsfl" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-lock"></i> {{ t('visibility.private') }}</span>
+                <input type="radio" name="visibility" value="2" {{ ("checked" if (session.default_upload_visibility if (session.default_upload_visibility != none and session.default_upload_visibility != none) else default_upload_visibility) == 2 else "") }}>
+                <span class="rating-label nsfl" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-lock"></i> {{ t("visibility.private") }}</span>
             </label>
         </div>
     </div>
-    @endif
+    {% endif %}
 
-    @if(enable_expiring_uploads !== false)
+    {% if enable_expiring_uploads != false %}
     <div class="form-section global-expiry-section">
         <label><i class="fa-solid fa-clock"></i> Expiration / Self-Destruct</label>
         <select name="expiry" class="expiry-select" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--nav-border-color, rgba(255,255,255,0.1)); border-radius: 6px; cursor: pointer; font-size: 0.95em;">
@@ -130,41 +130,41 @@
             <option value="1month">1 Month</option>
         </select>
     </div>
-    @endif
+    {% endif %}
 
 
 
     <div class="form-section global-tag-section">
         <label>
-            {{ t('upload.tags') }} 
-            @if(min_tags > 0)
-                <span class="required">*</span> <span class="tag-count">(0/{{ min_tags }} {{ t('upload.tags_minimum') }})</span>
-            @else
-                <span style="opacity: 0.5; font-weight: normal;">{{ t('upload.comment_optional') }}</span>
-            @endif
+            {{ t("upload.tags") }} 
+            {% if (min_tags > 0) %}
+                <span class="required">*</span> <span class="tag-count">(0/{{ min_tags }} {{ t("upload.tags_minimum") }})</span>
+            {% else %}
+                <span style="opacity: 0.5; font-weight: normal;">{{ t("upload.comment_optional") }}</span>
+            {% endif %}
         </label>
         <div class="tag-input-container">
             <div class="sync-spinner">
                 <span class="spinner-icon"></span>
-                <span>{{ t('upload.extracting_title') }}</span>
+                <span>{{ t("upload.extracting_title") }}</span>
             </div>
             <div class="tags-list"></div>
-            <input type="text" class="tag-input" placeholder="{{ t('upload.tag_placeholder') }}" autocomplete="off" enterkeyhint="enter">
+            <input type="text" class="tag-input" placeholder="{{ t("upload.tag_placeholder") }}" autocomplete="off" enterkeyhint="enter">
             <div class="tag-suggestions"></div>
         </div>
         <input type="hidden" name="tags" class="tags-hidden">
         <div class="meta-suggestions-container" style="display: none;">
             <div class="suggestions-header">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> {{ t('upload.suggestions_header') }}
+                <i class="fa-solid fa-wand-magic-sparkles"></i> {{ t("upload.suggestions_header") }}
             </div>
             <div class="meta-suggestions-list"></div>
         </div>
     </div>
 
     <div class="form-section global-comment-section">
-        <label>{{ t('upload.comment') }} <span style="opacity: 0.5; font-weight: normal;">{{ t('upload.comment_optional') }}</span></label>
+        <label>{{ t("upload.comment") }} <span style="opacity: 0.5; font-weight: normal;">{{ t("upload.comment_optional") }}</span></label>
         <div class="upload-comment-input comment-input">
-            <textarea class="upload-comment" placeholder="{{ t('upload.comment_placeholder') }}"@if(comment_max_length) maxlength="{{ comment_max_length }}"@endif></textarea>
+            <textarea class="upload-comment" placeholder="{{ t("upload.comment_placeholder") }}"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
             <div class="input-actions"></div>
         </div>
     </div>
@@ -172,7 +172,7 @@
     <div class="form-section global-redirect-section">
         <label class="checkbox-container upload-checkbox-label" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9em; user-select: none; margin: 0;">
             <input type="checkbox" id="upload-redirect-checkbox" name="redirect_to_item" class="upload-redirect-checkbox" checked>
-            <span><i class="fa-solid fa-arrow-up-right-from-square" style="opacity: 0.8; margin-right: 2px;"></i> {{ t('upload.redirect_to_item') }}</span>
+            <span><i class="fa-solid fa-arrow-up-right-from-square" style="opacity: 0.8; margin-right: 2px;"></i> {{ t("upload.redirect_to_item") }}</span>
         </label>
     </div>
 
@@ -181,8 +181,8 @@
     <div class="upload-footer">
     <div class="form-actions">
         <button type="submit" class="btn-upload" disabled>
-            <span class="btn-text">{{ t('upload.select_file') }}</span>
-            <span class="btn-loading" style="display: none;">{{ t('upload.uploading') }}</span>
+            <span class="btn-text">{{ t("upload.select_file") }}</span>
+            <span class="btn-loading" style="display: none;">{{ t("upload.uploading") }}</span>
         </button>
     </div>
 

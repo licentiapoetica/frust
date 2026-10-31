@@ -1,7 +1,7 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
   <div class="container">
     <h1>ADMINBEREICH</h1>
     <h5>Global Chat Management</h5>
@@ -162,7 +162,7 @@
           headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRF-Token': '{{ csrf_token }}'
+            'X-CSRF-Token': {{ csrf_token|string|tojson }}
           },
           body: new URLSearchParams({ url, opts }).toString()
         });
@@ -201,7 +201,7 @@
           headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRF-Token': '{{ csrf_token }}'
+            'X-CSRF-Token': {{ csrf_token|string|tojson }}
           },
           body: new URLSearchParams({}).toString()
         });
@@ -221,4 +221,4 @@
   </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

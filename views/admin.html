@@ -1,4 +1,4 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
   <div class="container adm">
@@ -15,22 +15,22 @@
     <!-- Overview -->
     <section class="adm-section">
       <h2 class="adm-section-title"><i class="fa-solid fa-chart-simple"></i> Overview</h2>
-      @if(typeof totals !== "undefined")
+      {% if totals is defined %}
       <div class="adm-stats">
         <div class="adm-stat"><span class="adm-stat-num">{{ totals.total }}</span><span class="adm-stat-label">Posts</span></div>
         <div class="adm-stat"><span class="adm-stat-num">{{ totals.sfw }}</span><span class="adm-stat-label">SFW</span></div>
         <div class="adm-stat"><span class="adm-stat-num">{{ totals.nsfw }}</span><span class="adm-stat-label">NSFW</span></div>
-        @if(enable_nsfl)
+        {% if enable_nsfl %}
         <div class="adm-stat"><span class="adm-stat-num">{{ totals.nsfl }}</span><span class="adm-stat-label">NSFL</span></div>
-        @endif
+        {% endif %}
         <div class="adm-stat"><span class="adm-stat-num">{{ totals.untagged }}</span><span class="adm-stat-label">Untagged</span></div>
-        <a href="/admin/approve" class="adm-stat adm-stat-link @if(totals.pending > 0) is-hot @endif"><span class="adm-stat-num">{{ totals.pending }}</span><span class="adm-stat-label">Pending approval</span></a>
+        <a href="/admin/approve" class="adm-stat adm-stat-link {% if (totals.pending > 0) %} is-hot {% endif %}"><span class="adm-stat-num">{{ totals.pending }}</span><span class="adm-stat-label">Pending approval</span></a>
         <a href="/mod/trash" class="adm-stat adm-stat-link"><span class="adm-stat-num">{{ dash.trash }}</span><span class="adm-stat-label">Soft deleted</span></a>
-        <a href="/mod/reports" class="adm-stat adm-stat-link @if(dash.open_reports > 0) is-hot @endif"><span class="adm-stat-num">{{ dash.open_reports }}</span><span class="adm-stat-label">Open reports</span></a>
-        <a href="/admin/tokens#invite-requests" class="adm-stat adm-stat-link @if(dash.invite_requests > 0) is-hot @endif"><span class="adm-stat-num">{{ dash.invite_requests }}</span><span class="adm-stat-label">Token requests</span></a>
+        <a href="/mod/reports" class="adm-stat adm-stat-link {% if (dash.open_reports > 0) %} is-hot {% endif %}"><span class="adm-stat-num">{{ dash.open_reports }}</span><span class="adm-stat-label">Open reports</span></a>
+        <a href="/admin/tokens#invite-requests" class="adm-stat adm-stat-link {% if (dash.invite_requests > 0) %} is-hot {% endif %}"><span class="adm-stat-num">{{ dash.invite_requests }}</span><span class="adm-stat-label">Token requests</span></a>
         <a href="/admin/users" class="adm-stat adm-stat-link"><span class="adm-stat-num">{{ dash.users }}</span><span class="adm-stat-label">Users <small>+{{ dash.anon_users }} anon</small></span></a>
       </div>
-      @endif
+      {% endif %}
     </section>
 
     <!-- Tools -->
@@ -41,15 +41,15 @@
       <div class="adm-tools">
         <a href="/admin/approve" class="adm-tool">
           <i class="fa-solid fa-clock"></i>
-          <span class="adm-tool-text"><strong>Approval Queue @if(totals.pending > 0)<span class="adm-count">{{ totals.pending }}</span>@endif</strong><span>Review uploads waiting for approval</span></span>
+          <span class="adm-tool-text"><strong>Approval Queue {% if (totals.pending > 0) %}<span class="adm-count">{{ totals.pending }}</span>{% endif %}</strong><span>Review uploads waiting for approval</span></span>
         </a>
         <a href="/mod/trash" class="adm-tool">
           <i class="fa-solid fa-trash-can"></i>
-          <span class="adm-tool-text"><strong>Soft Deleted @if(dash.trash > 0)<span class="adm-count">{{ dash.trash }}</span>@endif</strong><span>Restore or permanently purge removed items</span></span>
+          <span class="adm-tool-text"><strong>Soft Deleted {% if (dash.trash > 0) %}<span class="adm-count">{{ dash.trash }}</span>{% endif %}</strong><span>Restore or permanently purge removed items</span></span>
         </a>
         <a href="/mod/reports" class="adm-tool">
           <i class="fa-solid fa-flag"></i>
-          <span class="adm-tool-text"><strong>User Reports @if(dash.open_reports > 0)<span class="adm-count">{{ dash.open_reports }}</span>@endif</strong><span>Reported posts, comments and users</span></span>
+          <span class="adm-tool-text"><strong>User Reports {% if (dash.open_reports > 0) %}<span class="adm-count">{{ dash.open_reports }}</span>{% endif %}</strong><span>Reported posts, comments and users</span></span>
         </a>
         <a href="/mod/audit" class="adm-tool">
           <i class="fa-solid fa-scroll"></i>
@@ -73,7 +73,7 @@
         </a>
         <a href="/admin/tokens" class="adm-tool">
           <i class="fa-solid fa-ticket"></i>
-          <span class="adm-tool-text"><strong>Invite Tokens @if(dash.invite_requests > 0)<span class="adm-count">{{ dash.invite_requests }}</span>@endif</strong><span>Create and revoke invites, review token requests</span></span>
+          <span class="adm-tool-text"><strong>Invite Tokens {% if (dash.invite_requests > 0) %}<span class="adm-count">{{ dash.invite_requests }}</span>{% endif %}</strong><span>Create and revoke invites, review token requests</span></span>
         </a>
       </div>
 
@@ -103,12 +103,12 @@
           <i class="fa-solid fa-filter"></i>
           <span class="adm-tool-text"><strong>Wordfilter</strong><span>Replace words in comments</span></span>
         </a>
-        @if(enable_cleanup)
+        {% if enable_cleanup %}
         <a href="/admin/cleanup" class="adm-tool">
           <i class="fa-solid fa-broom"></i>
           <span class="adm-tool-text"><strong>Cleanup</strong><span>Remove old unengaged uploads</span></span>
         </a>
-        @endif
+        {% endif %}
       </div>
 
       <h3 class="adm-group-title">Site</h3>
@@ -129,12 +129,12 @@
           <i class="fa-solid fa-file-contract"></i>
           <span class="adm-tool-text"><strong>ToS Page</strong><span>Edit /terms</span></span>
         </a>
-        @if(enable_global_chat)
+        {% if enable_global_chat %}
         <a href="/admin/chat" class="adm-tool">
           <i class="fa-solid fa-comments"></i>
           <span class="adm-tool-text"><strong>Global Chat</strong><span>Moderate the site chat</span></span>
         </a>
-        @endif
+        {% endif %}
       </div>
     </section>
 
@@ -153,7 +153,7 @@
             <p>If enabled, mods must approve every upload.</p>
           </div>
           <label class="adm-switch">
-            <input type="checkbox" id="manual_approval_toggle" {{ manual_approval ? 'checked' : '' }} onchange="saveAdminSettings()">
+            <input type="checkbox" id="manual_approval_toggle" {{ ("checked" if manual_approval else "") }} onchange="saveAdminSettings()">
             <span class="adm-slider"></span>
           </label>
         </div>
@@ -173,7 +173,7 @@
         </div>
       </div>
 
-      @if(registration_web_toggle_enabled)
+      {% if registration_web_toggle_enabled %}
       <h3 class="adm-group-title">Registration</h3>
       <div class="adm-panel">
         <div class="adm-row">
@@ -182,12 +182,12 @@
             <p>Allow registration without invite tokens. Requires email activation.</p>
           </div>
           <label class="adm-switch">
-            <input type="checkbox" id="registration_open_toggle" {{ registration_open ? 'checked' : '' }} onchange="saveAdminSettings()">
+            <input type="checkbox" id="registration_open_toggle" {{ ("checked" if registration_open else "") }} onchange="saveAdminSettings()">
             <span class="adm-slider"></span>
           </label>
         </div>
       </div>
-      @endif
+      {% endif %}
 
       <h3 class="adm-group-title">Branding</h3>
       <div class="adm-panel" id="brand-image-section">
@@ -198,15 +198,15 @@
           </div>
           <div class="adm-brand">
             <div id="brand-preview-wrap" class="adm-brand-preview">
-              @if(current_brand_image)
+              {% if current_brand_image %}
               <img id="brand-preview" src="{{ current_brand_image }}" alt="current brand">
-              @else
+              {% else %}
               <span id="brand-preview" class="adm-muted">No image set</span>
-              @endif
+              {% endif %}
             </div>
             <label for="brand-file-input" class="adm-btn adm-btn-primary">Choose image</label>
             <input type="file" id="brand-file-input" accept="image/gif,image/jpeg,image/png,image/webp,image/svg+xml" hidden onchange="uploadBrandImage(this)">
-            <button type="button" id="brand-remove-btn" class="adm-btn adm-btn-danger" onclick="removeBrandImage()" @if(!current_brand_image) disabled @endif>Remove</button>
+            <button type="button" id="brand-remove-btn" class="adm-btn adm-btn-danger" onclick="removeBrandImage()" {% if not current_brand_image %} disabled {% endif %}>Remove</button>
           </div>
         </div>
         <span id="brand-status" class="adm-status adm-status-row"></span>
@@ -225,7 +225,7 @@
     </section>
   </div>
 
-  @include(snippets/adm-dashboard-style)
+  {% include "snippets/adm-dashboard-style.html" %}
 
   <script>
 
@@ -240,7 +240,7 @@
       status.style.color = 'var(--accent)';
 
       try {
-        const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || '{{ csrf_token }}';
+        const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || {{ csrf_token|string|tojson }};
         if (!csrfToken || csrfToken.startsWith('{')) {
           status.textContent = 'CSRF token missing. Please refresh the page.';
           status.style.color = '#d9534f';
@@ -331,7 +331,7 @@
       status.textContent = 'Uploading…';
       status.style.color = 'var(--accent)';
 
-      const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || '{{ csrf_token }}';
+      const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || {{ csrf_token|string|tojson }};
       const fd = new FormData();
       fd.append('file', file);
 
@@ -385,7 +385,7 @@
       status.textContent = 'Removing…';
       status.style.color = 'var(--accent)';
 
-      const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || '{{ csrf_token }}';
+      const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || {{ csrf_token|string|tojson }};
 
       try {
         const res = await fetch('/admin/brand_image/delete', {
@@ -420,4 +420,4 @@
   </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

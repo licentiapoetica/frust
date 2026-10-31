@@ -1,7 +1,7 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main" class="admin-container">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container">
         <h2>Meme Manager</h2>
 
@@ -142,7 +142,7 @@
                     const headers = { 
                         'X-Requested-With': 'XMLHttpRequest'
                     };
-                    const csrf = '{{ csrf_token }}';
+                    const csrf = {{ csrf_token|string|tojson }};
                     if (csrf) headers['X-CSRF-Token'] = csrf;
 
                     const res = await fetch('/api/v2/admin/memes', {
@@ -176,7 +176,7 @@
                 try {
                     const res = await fetch('/api/v2/admin/memes/' + id + '/delete', { 
                         method: 'POST',
-                        headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+                        headers: { 'X-CSRF-Token': {{ csrf_token|string|tojson }} }
                     });
                     const data = await res.json();
                     if (data.success) {
@@ -242,7 +242,7 @@
                     const headers = {
                         'X-Requested-With': 'XMLHttpRequest'
                     };
-                    const csrf = '{{ csrf_token }}';
+                    const csrf = {{ csrf_token|string|tojson }};
                     if (csrf) headers['X-CSRF-Token'] = csrf;
 
                     const res = await fetch('/api/v2/admin/memes/' + id + '/edit', {
@@ -283,4 +283,4 @@
     </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

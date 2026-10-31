@@ -1,30 +1,30 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main" class="notifications-page">
     <div class="notif-history-container">
         <div class="notif-page-header">
-            <h2>{{ t('notifications.page_title') }}</h2>
-            <button id="mark-all-read-page" class="btn-small">{{ t('notifications.mark_all_read') }}</button>
+            <h2>{{ t("notifications.page_title") }}</h2>
+            <button id="mark-all-read-page" class="btn-small">{{ t("notifications.mark_all_read") }}</button>
         </div>
         <div class="notif-page-tabs">
-            @if(enable_comments)
-            <button class="notif-page-tab @if(activeTab === 'user') active @endif" data-tab="user">{{ t('nav.notif_tab_user') }}</button>
-            <button class="notif-page-tab @if(activeTab === 'system') active @endif" data-tab="system">{{ t('nav.notif_tab_system') }}</button>
-            @else
-            <button class="notif-page-tab active" data-tab="system">{{ t('nav.notif_tab_system') }}</button>
-            @endif
-            @if(session && session.admin)
-            <button class="notif-page-tab @if(activeTab === 'admin') active @endif" data-tab="admin">Admin</button>
-            @endif
+            {% if enable_comments %}
+            <button class="notif-page-tab {% if activeTab == "user" %} active {% endif %}" data-tab="user">{{ t("nav.notif_tab_user") }}</button>
+            <button class="notif-page-tab {% if activeTab == "system" %} active {% endif %}" data-tab="system">{{ t("nav.notif_tab_system") }}</button>
+            {% else %}
+            <button class="notif-page-tab active" data-tab="system">{{ t("nav.notif_tab_system") }}</button>
+            {% endif %}
+            {% if (session and session.admin) %}
+            <button class="notif-page-tab {% if activeTab == "admin" %} active {% endif %}" data-tab="admin">Admin</button>
+            {% endif %}
         </div>
         <div id="notifications-container" class="posts notifications-list-full" data-page="{{ pagination.page }}" data-tab="{{ activeTab }}">
-            @include(snippets/notifications-list)
+            {% include "snippets/notifications-list.html" %}
         </div>
-        @if(pagination.next)
+        {% if pagination.next %}
         <div id="footbar" data-end-msg="You reached the end" style="text-align: center; padding: 20px;">
-            <span class="loading-spinner" style="color: #888;">{{ t('notifications.scroll_for_more') }}</span>
+            <span class="loading-spinner" style="color: #888;">{{ t("notifications.scroll_for_more") }}</span>
         </div>
-        @endif
+        {% endif %}
         <script>
             // Tab switching for notification history page
             (function () {
@@ -79,4 +79,4 @@
     </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

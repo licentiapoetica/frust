@@ -1,8 +1,8 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 
 <div class="pagewrapper">
 <div id="main" class="admin-container">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <style>
         .admin-users-table {
             width: 100%;
@@ -335,7 +335,7 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; gap: 20px; flex-wrap: wrap;">
             <div>
                 <h2 style="margin: 0; font-weight: 800; letter-spacing: -0.5px;">User Management</h2>
-                <p style="color: #888; margin: 5px 0 0 0;">Administration hub for <span id="total-count">{!! total !!}</span> <span id="total-label">{{ totalLabel }}</span>.</p>
+                <p style="color: #888; margin: 5px 0 0 0;">Administration hub for <span id="total-count">{{ total }}</span> <span id="total-label">{{ totalLabel }}</span>.</p>
             </div>
             <div>
                 <button class="btn-modern btn-create" onclick="openCreateUserModal()" style="padding: 11px 18px; font-size: 0.85rem; white-space: nowrap; height: 42px;" title="Create new user">
@@ -358,30 +358,30 @@
             </div>
 
             <!-- Status Filter -->
-            <select id="status-filter" class="admin-select-filter {{ status ? 'active' : '' }}" {{ onlyLegacy ? 'disabled' : '' }} title="Filter by account status">
+            <select id="status-filter" class="admin-select-filter {{ ("active" if status else "") }}" {{ ("disabled" if onlyLegacy else "") }} title="Filter by account status">
                 <option value="">All Statuses</option>
-                <option value="banned" {{ status === 'banned' ? 'selected' : '' }}>⛔ Banned</option>
-                <option value="active" {{ status === 'active' ? 'selected' : '' }}>🟢 Active</option>
-                <option value="pending" {{ status === 'pending' ? 'selected' : '' }}>⏳ Pending</option>
+                <option value="banned" {{ ("selected" if status == "banned" else "") }}>⛔ Banned</option>
+                <option value="active" {{ ("selected" if status == "active" else "") }}>🟢 Active</option>
+                <option value="pending" {{ ("selected" if status == "pending" else "") }}>⏳ Pending</option>
             </select>
 
             <!-- Role Filter -->
-            <select id="role-filter" class="admin-select-filter {{ role ? 'active' : '' }}" {{ onlyLegacy ? 'disabled' : '' }} title="Filter by user role">
+            <select id="role-filter" class="admin-select-filter {{ ("active" if role else "") }}" {{ ("disabled" if onlyLegacy else "") }} title="Filter by user role">
                 <option value="">All Roles</option>
-                <option value="staff" {{ role === 'staff' ? 'selected' : '' }}>Staff (All)</option>
-                <option value="admin" {{ role === 'admin' ? 'selected' : '' }}>Admins</option>
-                <option value="mod" {{ role === 'mod' ? 'selected' : '' }}>Moderators</option>
-                <option value="user" {{ role === 'user' ? 'selected' : '' }}>Regular Users</option>
+                <option value="staff" {{ ("selected" if role == "staff" else "") }}>Staff (All)</option>
+                <option value="admin" {{ ("selected" if role == "admin" else "") }}>Admins</option>
+                <option value="mod" {{ ("selected" if role == "mod" else "") }}>Moderators</option>
+                <option value="user" {{ ("selected" if role == "user" else "") }}>Regular Users</option>
             </select>
 
             <!-- Legacy Only Toggle -->
-            <label id="legacy-filter-label" class="legacy-filter-btn {{ onlyLegacy ? 'active' : '' }}" title="Toggle to only show legacy ghost users">
-                <input type="checkbox" id="legacy-filter" {{ onlyLegacy ? 'checked' : '' }}>
+            <label id="legacy-filter-label" class="legacy-filter-btn {{ ("active" if onlyLegacy else "") }}" title="Toggle to only show legacy ghost users">
+                <input type="checkbox" id="legacy-filter" {{ ("checked" if onlyLegacy else "") }}>
                 <span><i class="fa fa-ghost" style="opacity: 0.8; margin-right: 4px;"></i>Only legacy</span>
             </label>
 
             <!-- Reset Filters Button -->
-            <button id="reset-filters-btn" class="btn-filter-reset" style="display: {{ (q || status || role || onlyLegacy) ? 'inline-flex' : 'none' }};" title="Reset all filters and search">
+            <button id="reset-filters-btn" class="btn-filter-reset" style="display: {{ ("inline-flex" if (((q or status) or role) or onlyLegacy) else "none") }};" title="Reset all filters and search">
                 <i class="fa fa-rotate-left"></i> Reset
             </button>
         </div>
@@ -399,11 +399,11 @@
                     </tr>
                 </thead>
                 <tbody id="user-table-body">
-                    @include(admin/users_list)
+                    {% include "admin/users_list.html" %}
                 </tbody>
             </table>
             <div id="loading-trigger" style="height: 20px; margin-top: 10px;"></div>
-            <div id="no-users-msg" style="display: {{ users.length === 0 ? 'block' : 'none' }}; padding: 40px; text-align: center; color: #666;">
+            <div id="no-users-msg" style="display: {{ ("block" if users|length == 0 else "none") }}; padding: 40px; text-align: center; color: #666;">
                 {{ emptyMsg }}
             </div>
         </div>
@@ -626,13 +626,13 @@
             }
         }
 
-        var currentPage = {!! page !!};
-        var hasMore = {!! hasMore ? 'true' : 'false' !!};
+        var currentPage = {{ page }};
+        var hasMore = {{ ("true" if hasMore else "false") }};
         var isLoading = false;
-        var searchQuery = '{{ q }}';
-        var onlyLegacy = {!! onlyLegacy ? 'true' : 'false' !!};
-        var currentStatus = '{{ status }}';
-        var currentRole = '{{ role }}';
+        var searchQuery = {{ q|string|tojson }};
+        var onlyLegacy = {{ ("true" if onlyLegacy else "false") }};
+        var currentStatus = {{ status|string|tojson }};
+        var currentRole = {{ role|string|tojson }};
 
         var searchInput = document.getElementById('user-search');
         var statusFilter = document.getElementById('status-filter');
@@ -967,4 +967,4 @@
 </div>
 </div>
 
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

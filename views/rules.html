@@ -1,10 +1,10 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
   <div class="rules">
-    @if(rules_text)
+    {% if rules_text %}
     <div class="dynamic-page-content" id="rules-dynamic-content"></div>
-    <script id="rules-raw-data" type="application/json">{{ rules_text_b64 }}</script>
+    <script id="rules-raw-data" type="application/json">{{ rules_text_b64|safe }}</script>
     <script>
       (function() {
         var raw = document.getElementById('rules-raw-data');
@@ -49,8 +49,8 @@
         }
       })();
     </script>
-    @endif
+    {% endif %}
   </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

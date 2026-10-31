@@ -1,102 +1,102 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 
 <div class="pagewrapper">
 <div id="main">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container mq mq-review">
         <header class="mq-header">
             <div>
                 <h1 class="mq-title">Approval Queue</h1>
-                <div class="mq-subtitle">{{ total }} upload@if(total !== 1)s@endif waiting for approval.</div>
+                <div class="mq-subtitle">{{ total }} upload{% if total != 1 %}s{% endif %} waiting for approval.</div>
             </div>
         </header>
 
 
-        @if(pending.length > 0)
+        {% if (pending|length > 0) %}
         <div class="mq-grid">
-            @each(pending as post)
-            <article class="mq-card" data-id="{!! post.id !!}" data-media="{!! post.media_json !!}">
+            {% for key, post in pending|entries %}
+            <article class="mq-card" data-id="{{ post.id }}" data-media="{{ post.media_json }}">
                 <div class="mq-media">
                     <div class="mq-viewer">
-                        @if(post.kind === 'youtube')
-                        <iframe src="https://www.youtube.com/embed/{!! post.dest.replace('yt:', '') !!}" frameborder="0" allowfullscreen loading="lazy"></iframe>
-                        @elseif(post.kind === 'video')
-                        <video controls loop muted preload="none" poster="/mod/pending/t/{!! post.id !!}.webp"><source src="/mod/pending/b/{!! post.dest !!}" type="{!! post.mime !!}"></video>
-                        @elseif(post.kind === 'pdf')
-                        <iframe src="/mod/pending/b/{!! post.dest !!}#toolbar=0" loading="lazy"></iframe>
-                        @elseif(post.kind === 'audio')
-                        <div class="mq-audio"><img src="/mod/pending/t/{!! post.id !!}.webp" alt="" loading="lazy"><audio controls preload="none" src="/mod/pending/b/{!! post.dest !!}"></audio></div>
-                        @else
-                        <img src="/mod/pending/t/{!! post.id !!}.webp" data-full="/mod/pending/b/{!! post.dest !!}" alt="Preview" loading="lazy">
-                        @endif
+                        {% if post.kind == "youtube" %}
+                        <iframe src="https://www.youtube.com/embed/{{ post.dest.replace("yt:", "", 1) }}" frameborder="0" allowfullscreen loading="lazy"></iframe>
+                        {% elif post.kind == "video" %}
+                        <video controls loop muted preload="none" poster="/mod/pending/t/{{ post.id }}.webp"><source src="/mod/pending/b/{{ post.dest }}" type="{{ post.mime }}"></video>
+                        {% elif post.kind == "pdf" %}
+                        <iframe src="/mod/pending/b/{{ post.dest }}#toolbar=0" loading="lazy"></iframe>
+                        {% elif post.kind == "audio" %}
+                        <div class="mq-audio"><img src="/mod/pending/t/{{ post.id }}.webp" alt="" loading="lazy"><audio controls preload="none" src="/mod/pending/b/{{ post.dest }}"></audio></div>
+                        {% else %}
+                        <img src="/mod/pending/t/{{ post.id }}.webp" data-full="/mod/pending/b/{{ post.dest }}" alt="Preview" loading="lazy">
+                        {% endif %}
                     </div>
-                    <span class="mq-badge mq-badge-rating is-{!! post.rating !!}">{!! post.rating === 'untagged' ? '?' : post.rating.toUpperCase() !!}</span>
-                    <span class="mq-badge mq-badge-kind">@if(post.is_album_view)<i class="fa-solid fa-images"></i> Album · <span class="mq-current">1</span> / {!! post.media.length !!}@else{!! post.kind !!}@endif</span>
+                    <span class="mq-badge mq-badge-rating is-{{ post.rating }}">{{ ("?" if post.rating == "untagged" else post.rating|upper) }}</span>
+                    <span class="mq-badge mq-badge-kind">{% if post.is_album_view %}<i class="fa-solid fa-images"></i> Album · <span class="mq-current">1</span> / {{ post.media|length }}{% else %}{{ post.kind }}{% endif %}</span>
                 </div>
 
-                @if(post.is_album_view)
+                {% if post.is_album_view %}
                 <div class="mq-strip" data-no-swipe>
-                    @each(post.media as m)
-                    <div class="mq-strip-item@if(m.index === 1) is-active@endif" data-index="{!! m.index !!}">
-                        <button type="button" class="mq-strip-select" title="Show item {!! m.index !!}">
-                            <img src="{!! m.thumb !!}" alt="" loading="lazy">
-                            @if(m.kind === 'video')<i class="fa-solid fa-play"></i>@endif
+                    {% for key, m in post.media|entries %}
+                    <div class="mq-strip-item{% if m.index == 1 %} is-active{% endif %}" data-index="{{ m.index }}">
+                        <button type="button" class="mq-strip-select" title="Show item {{ m.index }}">
+                            <img src="{{ m.thumb }}" alt="" loading="lazy">
+                            {% if m.kind == "video" %}<i class="fa-solid fa-play"></i>{% endif %}
                         </button>
-                        @if(m.aid)
-                        <button type="button" class="mq-strip-deny" data-item-id="{!! post.id !!}" data-aid="{!! m.aid !!}" title="Deny only this item"><i class="fa-solid fa-xmark"></i></button>
-                        @endif
+                        {% if m.aid %}
+                        <button type="button" class="mq-strip-deny" data-item-id="{{ post.id }}" data-aid="{{ m.aid }}" title="Deny only this item"><i class="fa-solid fa-xmark"></i></button>
+                        {% endif %}
                     </div>
-                    @endeach
+                    {% endfor %}
                 </div>
-                @endif
+                {% endif %}
 
                 <div class="mq-body">
-                    @if(post.title)
-                    <div class="mq-item-title">{!! post.title !!}</div>
-                    @endif
+                    {% if post.title %}
+                    <div class="mq-item-title">{{ post.title }}</div>
+                    {% endif %}
                     <div class="mq-meta">
-                        <span><strong>#{!! post.id !!}</strong></span>
-                        <span><i class="fa-solid fa-user"></i> <strong>{!! post.username !!}</strong></span>
-                        @if(post.time_ago)<span tooltip="{!! post.time_full !!}"><i class="fa-regular fa-clock"></i> {!! post.time_ago !!}</span>@endif
+                        <span><strong>#{{ post.id }}</strong></span>
+                        <span><i class="fa-solid fa-user"></i> <strong>{{ post.username }}</strong></span>
+                        {% if post.time_ago %}<span tooltip="{{ post.time_full }}"><i class="fa-regular fa-clock"></i> {{ post.time_ago }}</span>{% endif %}
                     </div>
                     <div class="mq-meta mq-meta-file">
-                        <span>{!! post.mime !!}</span>
-                        @if(post.size_fmt)<span>{!! post.size_fmt !!}</span>@endif
-                        @if(post.dims)<span>{!! post.dims !!}</span>@endif
-                        @if(post.original_filename)<span class="mq-filename" title="{!! post.original_filename !!}">{!! post.original_filename !!}</span>@endif
+                        <span>{{ post.mime }}</span>
+                        {% if post.size_fmt %}<span>{{ post.size_fmt }}</span>{% endif %}
+                        {% if post.dims %}<span>{{ post.dims }}</span>{% endif %}
+                        {% if post.original_filename %}<span class="mq-filename" title="{{ post.original_filename }}">{{ post.original_filename }}</span>{% endif %}
                     </div>
                     <div class="mq-tags">
-                        @each(post.tags as tag)
-                        <span class="badge {!! tag.badge !!}">{!! tag.tag !!}</span>
-                        @endeach
+                        {% for key, tag in post.tags|entries %}
+                        <span class="badge {{ tag.badge }}">{{ tag.tag }}</span>
+                        {% endfor %}
                     </div>
                     <div class="mq-actions">
-                        <button type="button" data-id="{!! post.id !!}" class="mq-btn mq-btn-primary btn-approve-async"><i class="fa-solid fa-check"></i> Approve</button>
-                        <button type="button" data-id="{!! post.id !!}" class="mq-btn mq-btn-danger btn-deny-async"><i class="fa-solid fa-xmark"></i> Deny</button>
-                        <button type="button" data-id="{!! post.id !!}" class="mq-btn mq-btn-ghost mq-btn-rating btn-rating-toggle-async"><i class="fa-solid fa-shield-halved"></i> Toggle rating</button>
+                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-primary btn-approve-async"><i class="fa-solid fa-check"></i> Approve</button>
+                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-danger btn-deny-async"><i class="fa-solid fa-xmark"></i> Deny</button>
+                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-ghost mq-btn-rating btn-rating-toggle-async"><i class="fa-solid fa-shield-halved"></i> Toggle rating</button>
                     </div>
                 </div>
             </article>
-            @endeach
+            {% endfor %}
         </div>
-        @else
+        {% else %}
         <div class="mq-empty"><strong>No pending uploads.</strong>Go touch grass?</div>
-        @endif
+        {% endif %}
 
-        @if(pages > 1)
+        {% if (pages > 1) %}
         <div class="mq-pager">
-            @if(page > 1)
-            <a href="/mod/approve?page={!! page - 1 !!}" class="mq-btn mq-btn-ghost">&laquo; Prev</a>
-            @endif
-            <span>Page {!! page !!} of {!! pages !!}</span>
-            @if(page < pages)
-            <a href="/mod/approve?page={!! page + 1 !!}" class="mq-btn mq-btn-ghost">Next &raquo;</a>
-            @endif
+            {% if (page > 1) %}
+            <a href="/mod/approve?page={{ (page - 1) }}" class="mq-btn mq-btn-ghost">&laquo; Prev</a>
+            {% endif %}
+            <span>Page {{ page }} of {{ pages }}</span>
+            {% if (page < pages) %}
+            <a href="/mod/approve?page={{ (page + 1) }}" class="mq-btn mq-btn-ghost">Next &raquo;</a>
+            {% endif %}
         </div>
-        @endif
+        {% endif %}
     </div>
-    {{-- Inside #main so AJAX navigation (which only swaps #main) brings the styles, modal and scripts along --}}
-    @include(snippets/mod-cards)
+    {# Inside #main so AJAX navigation (which only swaps #main) brings the styles, modal and scripts along #}
+    {% include "snippets/mod-cards.html" %}
     <style>
       /* Review cards (approval queue) */
       .mq-review .mq-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
@@ -236,10 +236,10 @@
             btn.disabled = true;
             try {
               await mq.post('/mod/approve', { id: btn.dataset.id });
-              mq.flash('{!! t('toast.approve_success') !!}', 'success');
+              mq.flash('{{ t("toast.approve_success") }}', 'success');
               mq.removeCard(btn.closest('.mq-card'));
             } catch (err) {
-              mq.flash(err.message || '{!! t('toast.approve_error') !!}', 'error');
+              mq.flash(err.message || '{{ t("toast.approve_error") }}', 'error');
               btn.disabled = false;
             }
           });
@@ -265,4 +265,4 @@
     </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

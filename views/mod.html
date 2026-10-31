@@ -1,4 +1,4 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
   <div class="container adm">
@@ -7,22 +7,22 @@
     <header class="adm-header">
       <div>
         <h1 class="adm-title">Moderator</h1>
-        <div class="adm-subtitle">Signed in as <strong>{!! session.user !!}</strong></div>
+        <div class="adm-subtitle">Signed in as <strong>{{ session.user }}</strong></div>
       </div>
-      @if(session.admin)
+      {% if session.admin %}
       <a href="/admin" class="adm-btn adm-btn-ghost"><i class="fa-solid fa-shield-halved"></i> Admin dashboard</a>
-      @endif
+      {% endif %}
     </header>
 
     <!-- Overview -->
     <section class="adm-section">
       <h2 class="adm-section-title"><i class="fa-solid fa-chart-simple"></i> Overview</h2>
       <div class="adm-stats">
-        @if(manualApproval)
-        <a href="/mod/approve" class="adm-stat adm-stat-link @if(pendingCount > 0) is-hot @endif"><span class="adm-stat-num">{!! pendingCount !!}</span><span class="adm-stat-label">Pending approval</span></a>
-        @endif
-        <a href="/mod/trash" class="adm-stat adm-stat-link"><span class="adm-stat-num">{!! trashCount !!}</span><span class="adm-stat-label">Soft deleted</span></a>
-        <a href="/mod/reports" class="adm-stat adm-stat-link @if(reportsCount > 0) is-hot @endif"><span class="adm-stat-num">{!! reportsCount !!}</span><span class="adm-stat-label">Open reports</span></a>
+        {% if manualApproval %}
+        <a href="/mod/approve" class="adm-stat adm-stat-link {% if (pendingCount > 0) %} is-hot {% endif %}"><span class="adm-stat-num">{{ pendingCount }}</span><span class="adm-stat-label">Pending approval</span></a>
+        {% endif %}
+        <a href="/mod/trash" class="adm-stat adm-stat-link"><span class="adm-stat-num">{{ trashCount }}</span><span class="adm-stat-label">Soft deleted</span></a>
+        <a href="/mod/reports" class="adm-stat adm-stat-link {% if (reportsCount > 0) %} is-hot {% endif %}"><span class="adm-stat-num">{{ reportsCount }}</span><span class="adm-stat-label">Open reports</span></a>
       </div>
     </section>
 
@@ -32,19 +32,19 @@
 
       <h3 class="adm-group-title">Moderation</h3>
       <div class="adm-tools">
-        @if(manualApproval)
+        {% if manualApproval %}
         <a href="/mod/approve" class="adm-tool">
           <i class="fa-solid fa-clock"></i>
-          <span class="adm-tool-text"><strong>Approval Queue @if(pendingCount > 0)<span class="adm-count">{!! pendingCount !!}</span>@endif</strong><span>Review uploads waiting for approval</span></span>
+          <span class="adm-tool-text"><strong>Approval Queue {% if (pendingCount > 0) %}<span class="adm-count">{{ pendingCount }}</span>{% endif %}</strong><span>Review uploads waiting for approval</span></span>
         </a>
-        @endif
+        {% endif %}
         <a href="/mod/trash" class="adm-tool">
           <i class="fa-solid fa-trash-can"></i>
-          <span class="adm-tool-text"><strong>Soft Deleted @if(trashCount > 0)<span class="adm-count">{!! trashCount !!}</span>@endif</strong><span>Restore removed items@if(session.admin) or purge them for good@endif</span></span>
+          <span class="adm-tool-text"><strong>Soft Deleted {% if (trashCount > 0) %}<span class="adm-count">{{ trashCount }}</span>{% endif %}</strong><span>Restore removed items{% if session.admin %} or purge them for good{% endif %}</span></span>
         </a>
         <a href="/mod/reports" class="adm-tool">
           <i class="fa-solid fa-flag"></i>
-          <span class="adm-tool-text"><strong>User Reports @if(reportsCount > 0)<span class="adm-count">{!! reportsCount !!}</span>@endif</strong><span>Reported posts, comments and users</span></span>
+          <span class="adm-tool-text"><strong>User Reports {% if (reportsCount > 0) %}<span class="adm-count">{{ reportsCount }}</span>{% endif %}</strong><span>Reported posts, comments and users</span></span>
         </a>
         <a href="/mod/audit" class="adm-tool">
           <i class="fa-solid fa-scroll"></i>
@@ -66,7 +66,7 @@
     </section>
   </div>
 
-  @include(snippets/adm-dashboard-style)
+  {% include "snippets/adm-dashboard-style.html" %}
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

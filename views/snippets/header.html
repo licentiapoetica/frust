@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="{{ lang || 'en' }}" theme="@if(typeof theme !== 'undefined' && theme){{ theme }}@elseif(typeof req !== 'undefined' && req.theme){{ req.theme }}@else{{ default_theme || 'f0ck' }}@endif" res="@if(typeof fullscreen !== 'undefined'){{ fullscreen == 1 ? 'fullscreen' : '' }}@endif" data-thumb-size="{{ default_thumb_size || 'm' }}">
+<html lang="{{ (lang or "en") }}" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}" res="{% if fullscreen is defined %}{{ ("fullscreen" if fullscreen == 1 else "") }}{% endif %}" data-thumb-size="{{ (default_thumb_size or "m") }}">
 
 <head>
-  @if(typeof page_meta !== 'undefined' && page_meta.title)<title>{{ domain }} - {{ page_meta.title }}</title>@elseif(typeof item !== 'undefined')<title>{{ domain }} - {{ (enable_item_slugs && item.slug) ? item.slug : item.id }}</title>@else<title>{{ domain }}</title>@endif
+  {% if (page_meta is defined and page_meta.title) %}<title>{{ domain }} - {{ page_meta.title }}</title>{% elif item is defined %}<title>{{ domain }} - {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</title>{% else %}<title>{{ domain }}</title>{% endif %}
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0096ff">
   <meta name="mobile-web-app-capable" content="yes">
@@ -12,28 +12,28 @@
   <script>(function(){var h=document.documentElement;if(localStorage.getItem('hideItemRatings')==='true')h.classList.add('hide-item-ratings-active');if(localStorage.getItem('blurNsfw')==='true')h.classList.add('blur-nsfw-active');if(localStorage.getItem('blurNsfl')==='true')h.classList.add('blur-nsfl-active');if(localStorage.getItem('blurSfw')==='true')h.classList.add('blur-sfw-active');if(localStorage.getItem('blurUntagged')==='true')h.classList.add('blur-untagged-active');if(localStorage.getItem('blurDetail')!=='false')h.classList.add('blur-detail-active');if(localStorage.getItem('imageExpandOnClick')!=='false')h.classList.add('image-expand-active');var ts=localStorage.getItem('scroller_thumb_size');if(ts&&['s','m','l','xl'].includes(ts))h.dataset.thumbSize=ts;})();</script>
   <style>
     html { background-color: #000; color: #fff; }
-    @if(session && session.font)
-    {{ "@" }}font-face {
+    {% if (session and session.font) %}
+    @font-face {
       font-family: 'CustomUserFont';
       src: url('/s/fonts/{{ session.font }}');
     }
-    @elseif(typeof default_font !== 'undefined' && default_font && default_font.length > 0)
-    {{ "@" }}font-face {
+    {% elif ((default_font is defined and default_font) and (default_font|length > 0)) %}
+    @font-face {
       font-family: 'SiteDefaultFont';
       src: url('/s/fonts/{{ default_font }}');
     }
-    @endif
+    {% endif %}
     :root {
-      --comment-banner-display: @if(comment_banner_enabled) block @else none @endif;
-      --comment-banner-max-height: @if(typeof comment_banner_max_height !== 'undefined'){{ comment_banner_max_height }}px@else 300px @endif;
-      --favicon-url: url('@if(custom_favicon && custom_favicon.length > 0){{ custom_favicon }}@else/s/img/favicon.gif@endif');
-      @if(session && session.font)
+      --comment-banner-display: {% if comment_banner_enabled %} block {% else %} none {% endif %};
+      --comment-banner-max-height: {% if comment_banner_max_height is defined %}{{ comment_banner_max_height }}px{% else %} 300px {% endif %};
+      --favicon-url: url('{% if (custom_favicon and (custom_favicon|length > 0)) %}{{ custom_favicon }}{% else %}/s/img/favicon.gif{% endif %}');
+      {% if (session and session.font) %}
       --font: 'CustomUserFont', monospace !important;
-      @elseif(typeof default_font !== 'undefined' && default_font && default_font.length > 0)
+      {% elif ((default_font is defined and default_font) and (default_font|length > 0)) %}
       --font: 'SiteDefaultFont', monospace !important;
-      @endif
+      {% endif %}
     }
-    @if(session && session.font)
+    {% if (session and session.font) %}
     *:not(canvas):not(.meme-title):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
       font-family: 'CustomUserFont', monospace !important;
     }
@@ -42,7 +42,7 @@
     .fas::before, .far::before, .fab::before, .fa::before {
       font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
     }
-    @elseif(typeof default_font !== 'undefined' && default_font && default_font.length > 0)
+    {% elif ((default_font is defined and default_font) and (default_font|length > 0)) %}
     *:not(canvas):not(.meme-title):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
       font-family: 'SiteDefaultFont', monospace !important;
     }
@@ -51,66 +51,66 @@
     .fas::before, .far::before, .fab::before, .fa::before {
       font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
     }
-    @endif
+    {% endif %}
   </style>
   <link rel="preload" href="/s/vcr.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="/s/fa/all.min.css">
-  <link rel="icon" @if(custom_favicon && custom_favicon.length > 0)href="{{ custom_favicon }}"@else type="image/gif" href="/s/img/favicon.gif"@endif />
-  @if(!private_society || session)
-    @if(development || (private_society && !session))
+  <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
+  {% if (not private_society or session) %}
+    {% if (development or (private_society and not session)) %}
     <link rel="stylesheet" href="/s/css/f0ckm.css?v={{ ts }}">
-    @endif
-    @if(development)
+    {% endif %}
+    {% if development %}
     <link rel="stylesheet" href="/s/css/v0ck.css?v={{ ts }}">
-    @else
+    {% else %}
     <link rel="stylesheet" href="/s/css/bundle.css?v={{ ts }}">
-    @endif
+    {% endif %}
     <link rel="stylesheet" href="/s/css/upload.css?v={{ ts }}">
-  @endif
-  <script>window.f0ckThemes = {{ themes_json }}; window.f0ckDefaultTheme = "{{ default_theme }}"; window.f0ckDefaultLayout = "{{ default_layout }}"; window.f0ckDomain = "{{ domain }}"; window.f0ckGitHash = "{{ git_hash }}"; window.f0ckAllowedImages = {{ allowed_comment_images_json }}; window.f0ckEmbedYoutubeInComments = {{ embed_youtube_in_comments ? 'true' : 'false' }}; window.f0ckEnableYoutubeUpload = {{ enable_youtube_upload ? 'true' : 'false' }}; window.f0ckBrandImages = {{ custom_brand_images_json }}; window.f0ckCustomBrandText = "{{ custom_navbar_brand_text || '' }}"; window.f0ckMediaBase = "{{ paths_images }}"; window.f0ckShitpostMode = {{ shitpost_mode ? 'true' : 'false' }}; window.f0ckShitpostRequireRating = {{ shitpost_require_rating ? 'true' : 'false' }}; window.f0ckShitpostMinTags = {{ shitpost_min_tags || 0 }}; window.f0ckEnableItemTitle = {{ enable_item_title ? 'true' : 'false' }}; window.f0ckCommentBannerEnabled = @if(comment_banner_enabled) true @else false @endif; window.f0ckServerAudioTuner = {{ audio_tuner_json || 'null' }}; window.f0ckEnableComments = {{ enable_comments ? 'true' : 'false' }}; window.f0ckHwFingerprint = {{ hw_fingerprint_enabled ? 'true' : 'false' }};</script>
-  @if(!private_society || session)
-  @if(enable_comments)
+  {% endif %}
+  <script>window.f0ckThemes = {{ themes_json|safe }}; window.f0ckDefaultTheme = {{ default_theme|string|tojson }}; window.f0ckDefaultLayout = {{ default_layout|string|tojson }}; window.f0ckDomain = {{ domain|string|tojson }}; window.f0ckGitHash = {{ git_hash|string|tojson }}; window.f0ckAllowedImages = {{ allowed_comment_images_json|safe }}; window.f0ckEmbedYoutubeInComments = {{ ("true" if embed_youtube_in_comments else "false")|safe }}; window.f0ckEnableYoutubeUpload = {{ ("true" if enable_youtube_upload else "false")|safe }}; window.f0ckBrandImages = {{ custom_brand_images_json|safe }}; window.f0ckCustomBrandText = {{ (custom_navbar_brand_text or "")|string|tojson }}; window.f0ckMediaBase = {{ paths_images|string|tojson }}; window.f0ckShitpostMode = {{ ("true" if shitpost_mode else "false")|safe }}; window.f0ckShitpostRequireRating = {{ ("true" if shitpost_require_rating else "false")|safe }}; window.f0ckShitpostMinTags = {{ (shitpost_min_tags or 0)|safe }}; window.f0ckEnableItemTitle = {{ ("true" if enable_item_title else "false")|safe }}; window.f0ckCommentBannerEnabled = {% if comment_banner_enabled %} true {% else %} false {% endif %}; window.f0ckServerAudioTuner = {{ (audio_tuner_json or "null")|safe }}; window.f0ckEnableComments = {{ ("true" if enable_comments else "false")|safe }}; window.f0ckHwFingerprint = {{ ("true" if hw_fingerprint_enabled else "false")|safe }};</script>
+  {% if (not private_society or session) %}
+  {% if enable_comments %}
   <script src="/s/js/marked.min.js" defer></script>
-  <script src="/s/js/comments.js?v={{ ts }}" defer></script>
-  @endif
-  @endif
+  <script src="/s/js/comments.js?v={{ ts|safe }}" defer></script>
+  {% endif %}
+  {% endif %}
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-  @if(typeof item !== 'undefined')
-  <link rel="canonical" href="https://{{ domain }}/{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}" />
+  {% if item is defined %}
+  <link rel="canonical" href="https://{{ domain }}/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" />
   <meta property="og:site_name" content="{{ domain }}" />
-  <meta property="og:title" content="{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}" />
-  <meta property="og:url" content="https://{{ domain }}/{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}" />
+  <meta property="og:title" content="{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" />
+  <meta property="og:url" content="https://{{ domain }}/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" />
   <meta property="og:image" content="https://{{ domain }}{{ item.og_thumbnail }}" />
   <meta name="description" content="{{ site_description }}" />
   <meta property="og:description" content="{{ site_description }}" />
   <meta property="og:type" content="website" />
   <meta property="twitter:card" content="summary" />
-  <meta property="twitter:title" content="{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}" />
+  <meta property="twitter:title" content="{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" />
   <meta property="twitter:image" content="https://{{ domain }}{{ item.og_thumbnail }}" />
-  <meta property="twitter:url" content="https://{{ domain }}/{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}" />
-  @else
+  <meta property="twitter:url" content="https://{{ domain }}/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" />
+  {% else %}
   <meta property="og:site_name" content="{{ domain }}" />
-  <meta property="og:title" content="@if(typeof page_meta !== 'undefined' && page_meta.title){{ page_meta.title }} - {{ domain }}@else{{ domain }}@endif" />
-  <meta property="og:url" content="@if(typeof page_meta !== 'undefined' && page_meta.url){{ page_meta.url }}@elsehttps://{{ domain }}@endif" />
-  <meta property="og:image" content="@if(typeof page_meta !== 'undefined' && page_meta.image){{ page_meta.image }}@else@if(custom_favicon && custom_favicon.length > 0){{ custom_favicon }}@elsehttps://{{ domain }}/s/img/favicon.gif@endif@endif" />
-  <meta name="description" content="@if(typeof page_meta !== 'undefined' && page_meta.description){{ page_meta.description }}@else{{ site_description }}@endif" />
-  <meta property="og:description" content="@if(typeof page_meta !== 'undefined' && page_meta.description){{ page_meta.description }}@else{{ site_description }}@endif" />
+  <meta property="og:title" content="{% if (page_meta is defined and page_meta.title) %}{{ page_meta.title }} - {{ domain }}{% else %}{{ domain }}{% endif %}" />
+  <meta property="og:url" content="{% if (page_meta is defined and page_meta.url) %}{{ page_meta.url }}{% else %}https://{{ domain }}{% endif %}" />
+  <meta property="og:image" content="{% if (page_meta is defined and page_meta.image) %}{{ page_meta.image }}{% else %}{% if (custom_favicon and (custom_favicon|length > 0)) %}{{ custom_favicon }}{% else %}https://{{ domain }}/s/img/favicon.gif{% endif %}{% endif %}" />
+  <meta name="description" content="{% if (page_meta is defined and page_meta.description) %}{{ page_meta.description }}{% else %}{{ site_description }}{% endif %}" />
+  <meta property="og:description" content="{% if (page_meta is defined and page_meta.description) %}{{ page_meta.description }}{% else %}{{ site_description }}{% endif %}" />
   <meta property="og:type" content="website" />
-  @endif
+  {% endif %}
 </head>
 
-<body class="@if(session)@if(session.use_new_layout)layout-modern@else layout-legacy @endif@else @if(default_layout === 'legacy')layout-legacy@else layout-modern@endif @endif @if(private_society && !session)private-gate-active@endif @if(is_onara_item) onara-modal-open @endif">
-  <script>var sRH = localStorage.getItem('sidebarRightHidden'); if(sRH==='true' || (sRH===null && @if(hide_sidebar_default) true @else false @endif)) document.body.classList.add('sidebar-right-hidden'); if(localStorage.getItem('comments_hidden')==='true')document.body.classList.add('sidebar-left-hidden', 'comments-hidden');(function(){var d=window.devicePixelRatio||1;console.log('[DPR] devicePixelRatio='+d);var t='dpr-1x';if(d>=1.55)t='dpr-high';else if(d>=1.39)t='dpr-150';else if(d>=1.26)t='dpr-130';else if(d>=1.20)t='dpr-120';else if(d>=1.05)t='dpr-110';document.documentElement.setAttribute('data-dpr',t);})();</script>
-  @if(!private_society || session)
+<body class="{% if session %}{% if session.use_new_layout %}layout-modern{% else %} layout-legacy {% endif %}{% else %} {% if default_layout == "legacy" %}layout-legacy{% else %} layout-modern{% endif %} {% endif %} {% if (private_society and not session) %}private-gate-active{% endif %} {% if is_onara_item %} onara-modal-open {% endif %}">
+  <script>var sRH = localStorage.getItem('sidebarRightHidden'); if(sRH==='true' || (sRH===null && {% if hide_sidebar_default %} true {% else %} false {% endif %})) document.body.classList.add('sidebar-right-hidden'); if(localStorage.getItem('comments_hidden')==='true')document.body.classList.add('sidebar-left-hidden', 'comments-hidden');(function(){var d=window.devicePixelRatio||1;console.log('[DPR] devicePixelRatio='+d);var t='dpr-1x';if(d>=1.55)t='dpr-high';else if(d>=1.39)t='dpr-150';else if(d>=1.26)t='dpr-130';else if(d>=1.20)t='dpr-120';else if(d>=1.05)t='dpr-110';document.documentElement.setAttribute('data-dpr',t);})();</script>
+  {% if (not private_society or session) %}
   <canvas class="hidden-xs" id="bg"></canvas>
-  @endif
-  @include(snippets/navbar)
-  @if(session || (enable_anonymous_access && anon_permissions.filter))
-  @include(snippets/excluded-tags-modal)
-  @endif
+  {% endif %}
+  {% include "snippets/navbar.html" %}
+  {% if (session or (enable_anonymous_access and anon_permissions.filter)) %}
+  {% include "snippets/excluded-tags-modal.html" %}
+  {% endif %}
 
-  @if(session && session.force_password_change)
+  {% if (session and session.force_password_change) %}
   <style>
       #main, footer, .global-sidebar-right, .navbar, #bg {
           display: none !important;
@@ -122,29 +122,29 @@
   </style>
   <div id="force-password-modal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100100; background: #000;">
       <div class="modal-content" style="background: #1a1a1a; padding: 40px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(0, 150, 255, 0.3);">
-          <h2 style="margin-top: 0; color: #fff; font-weight: 800; letter-spacing: -0.5px;">{{ t('auth.password_change_required') }}</h2>
-          <p style="color: #ccc; line-height: 1.6;">{{ t('auth.password_change_desc') }}</p>
+          <h2 style="margin-top: 0; color: #fff; font-weight: 800; letter-spacing: -0.5px;">{{ t("auth.password_change_required") }}</h2>
+          <p style="color: #ccc; line-height: 1.6;">{{ t("auth.password_change_desc") }}</p>
           
           <form id="force-password-form" style="margin-top: 30px;">
               <div class="form-group" style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-size: 0.8rem; color: #888; text-transform: uppercase;">{{ t('auth.new_password_label') }}</label>
-                  <input type="password" id="force_new_password" required minlength="20" placeholder="{{ t('auth.min_chars_placeholder') }}" 
+                  <label style="display: block; margin-bottom: 8px; font-size: 0.8rem; color: #888; text-transform: uppercase;">{{ t("auth.new_password_label") }}</label>
+                  <input type="password" id="force_new_password" required minlength="20" placeholder="{{ t("auth.min_chars_placeholder") }}" 
                          style="width: 100%; padding: 12px 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; outline: none; transition: border-color 0.2s;">
               </div>
               <div class="form-group" style="margin-bottom: 25px;">
-                  <label style="display: block; margin-bottom: 8px; font-size: 0.8rem; color: #888; text-transform: uppercase;">{{ t('auth.confirm_password_label') }}</label>
-                  <input type="password" id="force_new_password_confirm" required minlength="20" placeholder="{{ t('auth.confirm_placeholder') }}"
+                  <label style="display: block; margin-bottom: 8px; font-size: 0.8rem; color: #888; text-transform: uppercase;">{{ t("auth.confirm_password_label") }}</label>
+                  <input type="password" id="force_new_password_confirm" required minlength="20" placeholder="{{ t("auth.confirm_placeholder") }}"
                          style="width: 100%; padding: 12px 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; outline: none; transition: border-color 0.2s;">
               </div>
               
               <div id="force-password-status" style="margin-bottom: 15px; font-size: 0.85rem; display: none; padding: 10px; border-radius: 4px;"></div>
               
-              <button type="submit" style="width: 100%; padding: 15px; background: var(--accent, #0096ff); color: #000; border: 0; border-radius: 6px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;">{{ t('auth.update_password_btn') }}</button>
+              <button type="submit" style="width: 100%; padding: 15px; background: var(--accent, #0096ff); color: #000; border: 0; border-radius: 6px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;">{{ t("auth.update_password_btn") }}</button>
           </form>
           
           <div style="margin-top: 20px; text-align: center;">
-              <a href="/logout" style="color: #666; font-size: 0.8rem; text-decoration: none;">{{ t('auth.or_logout') }}</a>
+              <a href="/logout" style="color: #666; font-size: 0.8rem; text-decoration: none;">{{ t("auth.or_logout") }}</a>
           </div>
       </div>
   </div>
-  @endif
+  {% endif %}

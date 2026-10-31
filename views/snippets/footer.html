@@ -1,18 +1,18 @@
-@if(session)
+{% if session %}
 <div id="mod-action-modal" class="modal-overlay" style="display:none;">
   <div class="modal-content ma-modal-content">
     <div class="ma-header">
       <button type="button" class="modal-x" aria-label="Close" title="Close" onclick="document.getElementById('mod-action-cancel').click()">&times;</button>
-      <h3 id="mod-action-title">{{ t('mod.confirm_action') }}</h3>
+      <h3 id="mod-action-title">{{ t("mod.confirm_action") }}</h3>
     </div>
     <div class="ma-body">
       <div id="mod-action-content"></div>
-      <textarea id="mod-reason" class="mod-reason" placeholder="{{ t('mod.reason_placeholder') }}"></textarea>
+      <textarea id="mod-reason" class="mod-reason" placeholder="{{ t("mod.reason_placeholder") }}"></textarea>
       <div id="mod-action-error" class="error-msg"></div>
     </div>
     <div class="modal-actions ma-footer">
-      <button type="button" id="mod-action-cancel" class="btn-secondary">{{ t('common.cancel') }}</button>
-      <button type="button" id="mod-action-confirm" class="btn-danger">{{ t('mod.confirm') }}</button>
+      <button type="button" id="mod-action-cancel" class="btn-secondary">{{ t("common.cancel") }}</button>
+      <button type="button" id="mod-action-confirm" class="btn-danger">{{ t("mod.confirm") }}</button>
     </div>
   </div>
 </div>
@@ -85,67 +85,67 @@
   #mod-action-modal .ma-footer button { flex: 1; }
 }
 </style>
-@endif
+{% endif %}
 
-@if(session)
+{% if session %}
 <div id="halls-modal" class="modal-overlay" style="display:none;">
   <div class="modal-content">
-    <h3>{{ t('hall.modal_title') }}</h3>
-    @if(session.admin || session.is_moderator)
+    <h3>{{ t("hall.modal_title") }}</h3>
+    {% if (session.admin or session.is_moderator) %}
     <div class="form-group" style="margin-bottom: 8px;">
-      <label for="hall-select" style="display: block; margin-bottom: 5px; font-size:0.83em; color:#888;">{{ t('hall.site_hall_label') }}</label>
+      <label for="hall-select" style="display: block; margin-bottom: 5px; font-size:0.83em; color:#888;">{{ t("hall.site_hall_label") }}</label>
       <select id="hall-select" class="form-control" style="width: 100%; background: #333; color: #fff; border: 1px solid #444; padding: 5px;">
-        <option value="">{{ t('hall.choose_hall') }}</option>
+        <option value="">{{ t("hall.choose_hall") }}</option>
       </select>
     </div>
     <div id="halls-modal-error" class="error-msg" style="display:none; color: #ff5555; margin-bottom: 8px;"></div>
     <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; margin-bottom:14px;">
-      <button id="halls-modal-confirm" class="btn-primary" style="padding: 6px 14px;">{{ t('hall.add_btn') }}</button>
-      <button id="halls-modal-remove" class="btn-danger" style="padding: 6px 14px; display:none;">{{ t('hall.remove_btn') }}</button>
+      <button id="halls-modal-confirm" class="btn-primary" style="padding: 6px 14px;">{{ t("hall.add_btn") }}</button>
+      <button id="halls-modal-remove" class="btn-danger" style="padding: 6px 14px; display:none;">{{ t("hall.remove_btn") }}</button>
     </div>
     <hr style="border-color:rgba(255,255,255,0.1);margin:0 0 12px 0;">
-    @endif
+    {% endif %}
     <div id="my-halls-section">
-      <label style="display: block; margin-bottom: 5px; font-size:0.83em; color:#888;">{{ t('hall.my_hall_label') }}</label>
+      <label style="display: block; margin-bottom: 5px; font-size:0.83em; color:#888;">{{ t("hall.my_hall_label") }}</label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <select id="my-hall-select" class="form-control" style="flex:1;min-width:120px;background: #333; color: #fff; border: 1px solid #444; padding: 5px;">
-          <option value="">{{ t('hall.my_hall_placeholder') }}</option>
+          <option value="">{{ t("hall.my_hall_placeholder") }}</option>
         </select>
-        <button id="my-halls-modal-confirm" class="btn-primary" style="padding: 6px 14px; white-space:nowrap;">{{ t('common.add') }}</button>
-        <button id="my-halls-modal-remove" class="btn-secondary" style="padding: 6px 14px; white-space:nowrap; display:none;">{{ t('common.remove') }}</button>
+        <button id="my-halls-modal-confirm" class="btn-primary" style="padding: 6px 14px; white-space:nowrap;">{{ t("common.add") }}</button>
+        <button id="my-halls-modal-remove" class="btn-secondary" style="padding: 6px 14px; white-space:nowrap; display:none;">{{ t("common.remove") }}</button>
       </div>
       <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
-        <span style="font-size:0.78em;color:#888;">{{ t('hall.create_new') }}</span>
-        <input type="text" id="my-hall-new-name" placeholder="{{ t('hall.new_name_placeholder') }}" style="flex:1;background:#2a2a2a;border:1px solid rgba(255,255,255,0.12);color:#fff;padding:3px 8px;border-radius:3px;font-family:var(--font);font-size:0.85em;height:26px;box-sizing:border-box;">
+        <span style="font-size:0.78em;color:#888;">{{ t("hall.create_new") }}</span>
+        <input type="text" id="my-hall-new-name" placeholder="{{ t("hall.new_name_placeholder") }}" style="flex:1;background:#2a2a2a;border:1px solid rgba(255,255,255,0.12);color:#fff;padding:3px 8px;border-radius:3px;font-family:var(--font);font-size:0.85em;height:26px;box-sizing:border-box;">
       </div>
       <div id="my-halls-modal-error" class="error-msg" style="display:none; color: #ff5555; margin-top: 6px; font-size:0.83em;"></div>
     </div>
 
     <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; margin-top:14px;">
-      <button id="halls-modal-cancel" class="btn-secondary" style="padding: 6px 14px;">{{ t('common.cancel') }}</button>
+      <button id="halls-modal-cancel" class="btn-secondary" style="padding: 6px 14px;">{{ t("common.cancel") }}</button>
     </div>
   </div>
 </div>
-@endif
+{% endif %}
 
-@if(show_content_warning)
+{% if show_content_warning %}
 <div id="content-warning-modal" class="modal-overlay" style="display:none;">
   <div class="modal-content content-warning-content">
-    <h3>{{ t('content_warning.title') }}</h3>
-    <p>{{ t('content_warning.text') }}</p>
+    <h3>{{ t("content_warning.title") }}</h3>
+    <p>{{ t("content_warning.text") }}</p>
     <div class="modal-actions">
-      <button id="cw-accept" class="btn-danger">{{ t('content_warning.proceed') }}</button>
-      <button id="cw-decline" class="btn-secondary">{{ t('content_warning.decline') }}</button>
+      <button id="cw-accept" class="btn-danger">{{ t("content_warning.proceed") }}</button>
+      <button id="cw-decline" class="btn-secondary">{{ t("content_warning.decline") }}</button>
     </div>
   </div>
 </div>
-@endif
-@if(!private_society || session)
+{% endif %}
+{% if (not private_society or session) %}
 <div id="report-modal" class="modal-overlay" style="display:none;">
   <div class="modal-content report-modal-content">
     <div class="rm-header">
       <button type="button" class="modal-x" aria-label="Close" title="Close" onclick="document.getElementById('report-cancel').click()">&times;</button>
-      <h3>{{ t('report.title') }}</h3>
+      <h3>{{ t("report.title") }}</h3>
       <p>Select one or more reasons and optionally add details below.</p>
     </div>
     <div class="rm-body">
@@ -184,15 +184,15 @@
         <span class="rm-text"><strong>Other</strong><span>Something else not listed above.</span></span>
       </label>
     </div>
-    <textarea id="report-reason" class="mod-reason" placeholder="{{ t('report.placeholder') }}"></textarea>
-    @if(recaptcha_enabled && !session)
+    <textarea id="report-reason" class="mod-reason" placeholder="{{ t("report.placeholder") }}"></textarea>
+    {% if (recaptcha_enabled and not session) %}
     <div id="modal-report-recaptcha" data-sitekey="{{ recaptcha_site_key }}" style="margin: 10px 0; display: flex; justify-content: center;"></div>
-    @endif
+    {% endif %}
     <div id="report-error" class="error-msg"></div>
     </div>
     <div class="modal-actions">
-      <button id="report-cancel" class="btn-secondary">{{ t('common.cancel') }}</button>
-      <button id="report-submit" class="">{{ t('report.submit') }}</button>
+      <button id="report-cancel" class="btn-secondary">{{ t("common.cancel") }}</button>
+      <button id="report-submit" class="">{{ t("report.submit") }}</button>
     </div>
   </div>
 </div>
@@ -294,12 +294,12 @@
 
 <div id="warning-modal" class="modal-overlay" style="display:none; z-index: 100100;">
   <div class="modal-content content-warning-content">
-    <h3 style="color: var(--danger);">{{ t('account_warning.title') }}</h3>
-    <p>{{ t('account_warning.text') }}</p>
+    <h3 style="color: var(--danger);">{{ t("account_warning.title") }}</h3>
+    <p>{{ t("account_warning.text") }}</p>
     <blockquote id="warning-reason" style="border-left: 4px solid var(--danger); padding-left: 10px; margin: 10px 0;"></blockquote>
     <input type="hidden" id="warning-id">
     <div class="modal-actions">
-      <button id="warning-acknowledge" class="btn-danger">{{ t('account_warning.acknowledge') }}</button>
+      <button id="warning-acknowledge" class="btn-danger">{{ t("account_warning.acknowledge") }}</button>
     </div>
   </div>
 </div>
@@ -308,32 +308,32 @@
     <img id="image-modal-img" src="" alt="Expanded View">
   </div>
 </div>
-@endif
-@if(onara || is_onara_item)
-<div id="onara-modal" class="onara-modal-wrapper" @if(is_onara_item)style="display:flex;" aria-hidden="false"@else style="display:none;" aria-hidden="true"@endif>
+{% endif %}
+{% if (onara or is_onara_item) %}
+<div id="onara-modal" class="onara-modal-wrapper" {% if is_onara_item %}style="display:flex;" aria-hidden="false"{% else %} style="display:none;" aria-hidden="true"{% endif %}>
   <div class="onara-backdrop" id="onara-backdrop"></div>
   <div class="onara-modal-content" id="onara-modal-content">
     <div id="onara-item-mount" class="item-view">
-      @if(is_onara_item)
-        {{ onara_item_html }}
-      @endif
+      {% if is_onara_item %}
+        {{ onara_item_html|safe }}
+      {% endif %}
     </div>
   </div>
 </div>
-@endif
-@if(session)
-@include(snippets/metadata-modal)
-@endif
-@if(!private_society || session)
+{% endif %}
+{% if session %}
+{% include "snippets/metadata-modal.html" %}
+{% endif %}
+{% if (not private_society or session) %}
 <div class="global-sidebar-right">
   <div class="sidebar-activity">
     <div class="sidebar-tabs">
-      @if(enable_comments)
-      <button type="button" class="sidebar-tab active" data-tab="comments" title="{{ t('sidebar.recent_comments') }}" aria-label="{{ t('sidebar.recent_comments') }}">
+      {% if enable_comments %}
+      <button type="button" class="sidebar-tab active" data-tab="comments" title="{{ t("sidebar.recent_comments") }}" aria-label="{{ t("sidebar.recent_comments") }}">
         <i class="fa-solid fa-comments"></i>
       </button>
-      @endif
-      <button type="button" class="sidebar-tab" data-tab="recommendations" title="{{ t('sidebar.recommendations') }}" aria-label="{{ t('sidebar.recommendations') }}">
+      {% endif %}
+      <button type="button" class="sidebar-tab" data-tab="recommendations" title="{{ t("sidebar.recommendations") }}" aria-label="{{ t("sidebar.recommendations") }}">
         <i class="fa-solid fa-compass"></i>
       </button>
       <button type="button" class="sidebar-tab" id="sidebar-tab-tag" data-tab="tag" title="Tag Feed" aria-label="Tag Feed" style="display: none;">
@@ -349,18 +349,18 @@
         <i class="fa-solid fa-sliders"></i>
       </button>
     </div>
-    @if(enable_comments)
+    {% if enable_comments %}
     <div id="sidebar-activity-container" class="sidebar-comments-list sidebar-tab-content active" data-tab-content="comments">
       <div class="sidebar-loading-state">
         <i class="fa-solid fa-circle-notch fa-spin"></i>
-        <span>{{ t('sidebar.loading_activity') }}</span>
+        <span>{{ t("sidebar.loading_activity") }}</span>
       </div>
     </div>
-    @endif
+    {% endif %}
     <div id="sidebar-recommendations-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="recommendations" style="display: none;">
       <div class="sidebar-loading-state">
         <i class="fa-solid fa-circle-notch fa-spin"></i>
-        <span>{{ t('sidebar.loading_recommendations') }}</span>
+        <span>{{ t("sidebar.loading_recommendations") }}</span>
       </div>
     </div>
     <div id="sidebar-tag-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="tag" style="display: none;">
@@ -418,31 +418,31 @@
     </div>
   </div>
   <div class="global-sidebar-right-footer">
-    @if(session)
-    <a href="/ranking" data-page-modal title="{{ t('footer.ranking') }}" aria-label="{{ t('footer.ranking') }}"><i class="fa-solid fa-users-between-lines"></i></a>
-    @endif
-    <a href="/rules" data-page-modal title="{{ t('footer.rules') }}" aria-label="{{ t('footer.rules') }}"><i class="fa-solid fa-scale-balanced"></i></a>
-    <a href="/about" data-page-modal title="{{ t('footer.about') }}" aria-label="{{ t('footer.about') }}"><i class="fa-solid fa-info"></i></a>
+    {% if session %}
+    <a href="/ranking" data-page-modal title="{{ t("footer.ranking") }}" aria-label="{{ t("footer.ranking") }}"><i class="fa-solid fa-users-between-lines"></i></a>
+    {% endif %}
+    <a href="/rules" data-page-modal title="{{ t("footer.rules") }}" aria-label="{{ t("footer.rules") }}"><i class="fa-solid fa-scale-balanced"></i></a>
+    <a href="/about" data-page-modal title="{{ t("footer.about") }}" aria-label="{{ t("footer.about") }}"><i class="fa-solid fa-info"></i></a>
     <a href="/privacy" data-page-modal title="Privacy" aria-label="Privacy"><i class="fa-solid fa-shield-halved"></i></a>
     <div id="help-button" style="color: var(--accent); font-weight: bold; opacity: 0.7;" title="Keyboard Shortcuts" aria-label="Keyboard Shortcuts"><i class="fa-solid fa-keyboard"></i></div>
-    @if(!/^\/\d$/.test(url.pathname))
-    {{-- id kept: f0ckm.js / sidebar-activity.js hook the AJAX random transition on #nav-random --}}
-    <a href="/random" id="nav-random" title="{{ t('nav.random') }}" aria-label="{{ t('nav.random') }}"><i class="fa-solid fa-shuffle"></i></a>
-    @endif
+    {% if PORT_TODO %}{# PORT_TODO: !/^\/\d$/.test(url.pathname) #}
+    {# id kept: f0ckm.js / sidebar-activity.js hook the AJAX random transition on #nav-random #}
+    <a href="/random" id="nav-random" title="{{ t("nav.random") }}" aria-label="{{ t("nav.random") }}"><i class="fa-solid fa-shuffle"></i></a>
+    {% endif %}
   </div>
 </div>
-@endif
-@include(snippets/page-modal)
+{% endif %}
+{% include "snippets/page-modal.html" %}
 
-@if(!private_society || session)
-<script src="/s/js/sanitizer.js?v={{ ts }}"></script>
-<script async src="/s/js/theme.js?v={{ ts }}"></script>
-@endif
-@if(private_society && !session)
+{% if (not private_society or session) %}
+<script src="/s/js/sanitizer.js?v={{ ts|safe }}"></script>
+<script async src="/s/js/theme.js?v={{ ts|safe }}"></script>
+{% endif %}
+{% if (private_society and not session) %}
 <script>
-  window.f0ckSession = { logged_in: false, is_anon: false, excluded_tags: [], onara: @if(onara) true @else false @endif, onara_cfg: @if(onara_cfg !== undefined && onara_cfg !== null) @if(onara_cfg) true @else false @endif @else null @endif, enable_item_slugs: @if(enable_item_slugs) true @else false @endif, enable_anonymous_access: @if(enable_anonymous_access) true @else false @endif, anon_permissions: {{ anon_permissions_json || '{}' }}, hide_comments_from_public: @if(hide_comments_from_public) true @else false @endif, guest_anonymize: @if(guest_anonymize) true @else false @endif, anon_anonymize: @if(anon_anonymize) true @else false @endif, is_anonymized: @if(is_anonymized) true @else false @endif, enable_xd_score: @if(enable_xd_score) true @else false @endif, default_theme: "{{ default_theme }}", show_content_warning: @if(show_content_warning) true @else false @endif, use_new_layout: @if(default_layout === 'legacy')false @else true @endif, comment_display_mode: {{ comment_display_mode }}, comment_max_length: {{ comment_max_length !== null && comment_max_length !== undefined ? comment_max_length : 'null' }}, development: @if(development) true @else false @endif, allow_comment_deletion: @if(allow_comment_deletion) true @else false @endif, hide_sidebar_default: @if(hide_sidebar_default) true @else false @endif, public_untagged: @if(public_untagged) true @else false @endif, public_nsfw: @if(public_nsfw) true @else false @endif };
+  window.f0ckSession = { logged_in: false, is_anon: false, excluded_tags: [], onara: {% if onara %} true {% else %} false {% endif %}, onara_cfg: {% if (onara_cfg != none and onara_cfg != none) %} {% if onara_cfg %} true {% else %} false {% endif %} {% else %} null {% endif %}, enable_item_slugs: {% if enable_item_slugs %} true {% else %} false {% endif %}, enable_anonymous_access: {% if enable_anonymous_access %} true {% else %} false {% endif %}, anon_permissions: {{ (anon_permissions_json or "{}")|safe }}, hide_comments_from_public: {% if hide_comments_from_public %} true {% else %} false {% endif %}, guest_anonymize: {% if guest_anonymize %} true {% else %} false {% endif %}, anon_anonymize: {% if anon_anonymize %} true {% else %} false {% endif %}, is_anonymized: {% if is_anonymized %} true {% else %} false {% endif %}, enable_xd_score: {% if enable_xd_score %} true {% else %} false {% endif %}, default_theme: {{ default_theme|string|tojson }}, show_content_warning: {% if show_content_warning %} true {% else %} false {% endif %}, use_new_layout: {% if default_layout == "legacy" %}false {% else %} true {% endif %}, comment_display_mode: {{ comment_display_mode|safe }}, comment_max_length: {{ (comment_max_length if (comment_max_length != none and comment_max_length != none) else "null")|safe }}, development: {% if development %} true {% else %} false {% endif %}, allow_comment_deletion: {% if allow_comment_deletion %} true {% else %} false {% endif %}, hide_sidebar_default: {% if hide_sidebar_default %} true {% else %} false {% endif %}, public_untagged: {% if public_untagged %} true {% else %} false {% endif %}, public_nsfw: {% if public_nsfw %} true {% else %} false {% endif %} };
   window.f0ckDebug = window.f0ckSession.development ? console.log.bind(console) : () => {};
-  window.f0ckDefaultThumbSize = "{{ default_thumb_size }}";
+  window.f0ckDefaultThumbSize = {{ default_thumb_size|string|tojson }};
   (() => {
     const loginModal = document.getElementById('login-modal');
     const registerModal = document.getElementById('register-modal');
@@ -669,328 +669,328 @@
     }
   })();
 </script>
-@else
-<script src="/s/js/v0ck.js?v={{ ts }}"></script>
-<script src="/s/js/danmaku.js?v={{ ts }}"></script>
-@if(enable_swf && typeof item !== "undefined" && item.mime === 'application/x-shockwave-flash')
-{{-- Ruffle: self-hosted. Place ruffle.js + wasm bundle in public/s/ruffle/ --}}
+{% else %}
+<script src="/s/js/v0ck.js?v={{ ts|safe }}"></script>
+<script src="/s/js/danmaku.js?v={{ ts|safe }}"></script>
+{% if ((enable_swf and item is defined) and item.mime == "application/x-shockwave-flash") %}
+{# Ruffle: self-hosted. Place ruffle.js + wasm bundle in public/s/ruffle/ #}
 <script src="/s/ruffle/ruffle.js"></script>
-@elseif(enable_swf && typeof item !== "undefined" && item.mime === 'application/vnd.adobe.flash.movie')
+{% elif ((enable_swf and item is defined) and item.mime == "application/vnd.adobe.flash.movie") %}
 <script src="/s/ruffle/ruffle.js"></script>
-@endif
+{% endif %}
 <script>
   window.f0ckSession = {
-    onara: @if(onara) true @else false @endif,
-    onara_cfg: @if(onara_cfg !== undefined && onara_cfg !== null) @if(onara_cfg) true @else false @endif @else null @endif,
-    public_untagged: @if(public_untagged) true @else false @endif,
-    public_nsfw: @if(public_nsfw) true @else false @endif,
-    enable_item_slugs: @if(enable_item_slugs) true @else false @endif,
-    enable_anonymous_access: @if(enable_anonymous_access) true @else false @endif,
-    anon_permissions: {{ anon_permissions_json || '{}' }},
-    strict_mode: @if(session && session.strict_mode) true @else false @endif,
-    logged_in: @if(session) true @else false @endif,
-    excluded_tags: @if(session && session.excluded_tags) {{ JSON.stringify(session.excluded_tags) }} @else [] @endif,
-    hide_comments_from_public: @if(hide_comments_from_public) true @else false @endif,
-    guest_anonymize: @if(guest_anonymize) true @else false @endif,
-    anon_anonymize: @if(anon_anonymize) true @else false @endif,
-    is_anonymized: @if(is_anonymized) true @else false @endif,
-    use_new_layout: @if(session)@if(session.use_new_layout) true @else false @endif@else @if(default_layout === 'legacy')false @else true @endif@endif,
-    csrf_token: "{{ csrf_token || (session && session.csrf_token) || '' }}",
-    default_theme: "{{ default_theme }}",
-    private_society: @if(private_society) true @else false @endif,
-    show_content_warning: @if(show_content_warning) true @else false @endif,
-    disable_autoplay: @if(session && session.disable_autoplay) true @else false @endif,
-    disable_swiping: @if(session && session.disable_swiping) true @else false @endif,
-    show_background: @if(session)@if(session.show_background !== false) true @else false @endif@else @if(show_background_cfg) true @else false @endif@endif,
-    nsfl_tag_id: {{ nsfl_tag_id }},
-    enable_nsfl: @if(enable_nsfl) true @else false @endif,
-    user: @if(session) "{{ session.user }}" @else null @endif,
-    login: @if(session) "{{ session.login }}" @else null @endif,
-    anon_login: @if(session && session.anon_login) "{{ session.anon_login }}" @else null @endif,
-    is_anon: @if(session && session.is_anon) true @else false @endif,
-    display_name: @if(session && session.display_name) "{!! session.display_name !!}" @else null @endif,
-    username_color: @if(session && session.username_color) "{!! session.username_color !!}" @else null @endif,
-    id: @if(session && session.id) {{ session.id }} @else null @endif,
-    user_id: @if(session && session.id) {{ session.id }} @else null @endif,
-    is_admin: @if(session && session.admin) true @else false @endif,
-    is_moderator: @if(session && session.is_moderator) true @else false @endif,
-    enable_swf: @if(enable_swf) true @else false @endif,
-    enable_danmaku: @if(enable_danmaku) true @else false @endif,
-    enable_global_chat: @if(enable_global_chat) true @else false @endif,
-    enable_xd_score: @if(enable_xd_score) true @else false @endif,
-    ruffle_volume: @if(session && session.ruffle_volume !== undefined && session.ruffle_volume !== null) {{ session.ruffle_volume }} @else 0.5 @endif,
-    ruffle_background: @if(session && session.ruffle_background !== false) true @else false @endif,
-    quote_emojis: @if(session && session.quote_emojis !== false) true @else false @endif,
-    embed_youtube_in_comments: @if(session && session.embed_youtube_in_comments !== false) true @else false @endif,
-    avatar: @if(session && session.avatar) {{ session.avatar }} @else null @endif,
-    avatar_file: @if(session && session.avatar_file) "{{ session.avatar_file }}" @else null @endif,
-    banner_file: @if(session && session.banner_file) "{{ session.banner_file }}" @else null @endif,
-    banner_position: @if(session && session.banner_position) "{{ session.banner_position }}" @else null @endif,
-    banner_size: @if(session && session.banner_size) "{{ session.banner_size }}" @else null @endif,
-    banner_repeat: @if(session && session.banner_repeat) "{{ session.banner_repeat }}" @else null @endif,
-    receive_system_notifications: @if(session)@if(session.receive_system_notifications !== false) true @else false @endif@else true @endif,
-    receive_user_notifications: @if(session)@if(session.receive_user_notifications !== false) true @else false @endif@else true @endif,
-    do_not_disturb: @if(session && session.do_not_disturb) true @else false @endif,
-    comment_banner_enabled: @if(comment_banner_enabled) true @else false @endif,
-    comment_display_mode: {{ comment_display_mode }},
-    comment_max_length: {{ comment_max_length !== null && comment_max_length !== undefined ? comment_max_length : 'null' }},
-    development: @if(development) true @else false @endif,
-    allow_fileupload_comments: @if(allow_fileupload_comments) true @else false @endif,
-    fileupload_comments_multifile: @if(fileupload_comments_multifile) true @else false @endif,
-    fileupload_comments_size: {{ fileupload_comments_size }},
-    fileupload_comments_max: {{ fileupload_comments_max }},
-    fileupload_comments_mode: "{{ fileupload_comments_mode }}",
-    dm_attachments: @if(dm_attachments) true @else false @endif,
-    dm_unencrypted: @if(dm_unencrypted) true @else false @endif,
-    allow_comment_deletion: @if(allow_comment_deletion) true @else false @endif,
-    enable_comment_polls: @if(enable_comment_polls) true @else false @endif,
-    hide_sidebar_default: @if(hide_sidebar_default) true @else false @endif,
-    mode: {{ typeof mode !== 'undefined' ? mode : 0 }}
+    onara: {% if onara %} true {% else %} false {% endif %},
+    onara_cfg: {% if (onara_cfg != none and onara_cfg != none) %} {% if onara_cfg %} true {% else %} false {% endif %} {% else %} null {% endif %},
+    public_untagged: {% if public_untagged %} true {% else %} false {% endif %},
+    public_nsfw: {% if public_nsfw %} true {% else %} false {% endif %},
+    enable_item_slugs: {% if enable_item_slugs %} true {% else %} false {% endif %},
+    enable_anonymous_access: {% if enable_anonymous_access %} true {% else %} false {% endif %},
+    anon_permissions: {{ (anon_permissions_json or "{}")|safe }},
+    strict_mode: {% if (session and session.strict_mode) %} true {% else %} false {% endif %},
+    logged_in: {% if session %} true {% else %} false {% endif %},
+    excluded_tags: {% if (session and session.excluded_tags) %} {{ session.excluded_tags|tojson|safe }} {% else %} [] {% endif %},
+    hide_comments_from_public: {% if hide_comments_from_public %} true {% else %} false {% endif %},
+    guest_anonymize: {% if guest_anonymize %} true {% else %} false {% endif %},
+    anon_anonymize: {% if anon_anonymize %} true {% else %} false {% endif %},
+    is_anonymized: {% if is_anonymized %} true {% else %} false {% endif %},
+    use_new_layout: {% if session %}{% if session.use_new_layout %} true {% else %} false {% endif %}{% else %} {% if default_layout == "legacy" %}false {% else %} true {% endif %}{% endif %},
+    csrf_token: {{ ((csrf_token or (session and session.csrf_token)) or "")|string|tojson }},
+    default_theme: {{ default_theme|string|tojson }},
+    private_society: {% if private_society %} true {% else %} false {% endif %},
+    show_content_warning: {% if show_content_warning %} true {% else %} false {% endif %},
+    disable_autoplay: {% if (session and session.disable_autoplay) %} true {% else %} false {% endif %},
+    disable_swiping: {% if (session and session.disable_swiping) %} true {% else %} false {% endif %},
+    show_background: {% if session %}{% if session.show_background != false %} true {% else %} false {% endif %}{% else %} {% if show_background_cfg %} true {% else %} false {% endif %}{% endif %},
+    nsfl_tag_id: {{ nsfl_tag_id|safe }},
+    enable_nsfl: {% if enable_nsfl %} true {% else %} false {% endif %},
+    user: {% if session %} {{ session.user|string|tojson }} {% else %} null {% endif %},
+    login: {% if session %} {{ session.login|string|tojson }} {% else %} null {% endif %},
+    anon_login: {% if (session and session.anon_login) %} {{ session.anon_login|string|tojson }} {% else %} null {% endif %},
+    is_anon: {% if (session and session.is_anon) %} true {% else %} false {% endif %},
+    display_name: {% if (session and session.display_name) %} "{{ session.display_name }}" {% else %} null {% endif %},
+    username_color: {% if (session and session.username_color) %} "{{ session.username_color }}" {% else %} null {% endif %},
+    id: {% if (session and session.id) %} {{ session.id|safe }} {% else %} null {% endif %},
+    user_id: {% if (session and session.id) %} {{ session.id|safe }} {% else %} null {% endif %},
+    is_admin: {% if (session and session.admin) %} true {% else %} false {% endif %},
+    is_moderator: {% if (session and session.is_moderator) %} true {% else %} false {% endif %},
+    enable_swf: {% if enable_swf %} true {% else %} false {% endif %},
+    enable_danmaku: {% if enable_danmaku %} true {% else %} false {% endif %},
+    enable_global_chat: {% if enable_global_chat %} true {% else %} false {% endif %},
+    enable_xd_score: {% if enable_xd_score %} true {% else %} false {% endif %},
+    ruffle_volume: {% if ((session and session.ruffle_volume != none) and session.ruffle_volume != none) %} {{ session.ruffle_volume|safe }} {% else %} 0.5 {% endif %},
+    ruffle_background: {% if (session and session.ruffle_background != false) %} true {% else %} false {% endif %},
+    quote_emojis: {% if (session and session.quote_emojis != false) %} true {% else %} false {% endif %},
+    embed_youtube_in_comments: {% if (session and session.embed_youtube_in_comments != false) %} true {% else %} false {% endif %},
+    avatar: {% if (session and session.avatar) %} {{ session.avatar|safe }} {% else %} null {% endif %},
+    avatar_file: {% if (session and session.avatar_file) %} {{ session.avatar_file|string|tojson }} {% else %} null {% endif %},
+    banner_file: {% if (session and session.banner_file) %} {{ session.banner_file|string|tojson }} {% else %} null {% endif %},
+    banner_position: {% if (session and session.banner_position) %} {{ session.banner_position|string|tojson }} {% else %} null {% endif %},
+    banner_size: {% if (session and session.banner_size) %} {{ session.banner_size|string|tojson }} {% else %} null {% endif %},
+    banner_repeat: {% if (session and session.banner_repeat) %} {{ session.banner_repeat|string|tojson }} {% else %} null {% endif %},
+    receive_system_notifications: {% if session %}{% if session.receive_system_notifications != false %} true {% else %} false {% endif %}{% else %} true {% endif %},
+    receive_user_notifications: {% if session %}{% if session.receive_user_notifications != false %} true {% else %} false {% endif %}{% else %} true {% endif %},
+    do_not_disturb: {% if (session and session.do_not_disturb) %} true {% else %} false {% endif %},
+    comment_banner_enabled: {% if comment_banner_enabled %} true {% else %} false {% endif %},
+    comment_display_mode: {{ comment_display_mode|safe }},
+    comment_max_length: {{ (comment_max_length if (comment_max_length != none and comment_max_length != none) else "null")|safe }},
+    development: {% if development %} true {% else %} false {% endif %},
+    allow_fileupload_comments: {% if allow_fileupload_comments %} true {% else %} false {% endif %},
+    fileupload_comments_multifile: {% if fileupload_comments_multifile %} true {% else %} false {% endif %},
+    fileupload_comments_size: {{ fileupload_comments_size|safe }},
+    fileupload_comments_max: {{ fileupload_comments_max|safe }},
+    fileupload_comments_mode: {{ fileupload_comments_mode|string|tojson }},
+    dm_attachments: {% if dm_attachments %} true {% else %} false {% endif %},
+    dm_unencrypted: {% if dm_unencrypted %} true {% else %} false {% endif %},
+    allow_comment_deletion: {% if allow_comment_deletion %} true {% else %} false {% endif %},
+    enable_comment_polls: {% if enable_comment_polls %} true {% else %} false {% endif %},
+    hide_sidebar_default: {% if hide_sidebar_default %} true {% else %} false {% endif %},
+    mode: {{ (mode if mode is defined else 0)|safe }}
   };
   window.f0ckDebug = window.f0ckSession.development ? console.log.bind(console) : () => {};
-  window.f0ckDefaultThumbSize = "{{ default_thumb_size }}";
+  window.f0ckDefaultThumbSize = {{ default_thumb_size|string|tojson }};
   window.f0ckI18n = {
-    write_comment: "{{ t('comments.write_comment') }}",
-    post: "{{ t('comments.post') }}",
-    cancel: "{{ t('comments.cancel') }}",
-    sidebar_view: "{{ t('sidebar.view') }}",
-    sidebar_read_more: "{{ t('sidebar.read_more') }}",
-    sidebar_see_less: "{{ t('sidebar.see_less') }}",
-    sidebar_show_full_comment: "{{ t('sidebar.show_full_comment') }}",
-    sidebar_loading_activity: "{{ t('sidebar.loading_activity') }}",
-    sidebar_no_activity: "{{ t('sidebar.no_activity') }}",
-    sidebar_failed_to_load: "{{ t('sidebar.failed_to_load') }}",
-    sidebar_loading_more: "{{ t('sidebar.loading_more') }}",
-    sidebar_end_of_activity: "{{ t('sidebar.end_of_activity') }}",
-    sidebar_recommendations: "{{ t('sidebar.recommendations') }}",
-    sidebar_loading_recommendations: "{{ t('sidebar.loading_recommendations') }}",
-    sidebar_no_recommendations: "{{ t('sidebar.no_recommendations') }}",
-    sidebar_refresh_recommendations: "{{ t('sidebar.refresh_recommendations') }}",
-    select_file: "{{ t('upload_btn.select_file') }}",
-    enter_url: "{{ t('upload_btn.enter_url') }}",
-    tags_required: "{{ t('upload_btn.tags_required') }}",
-    select_rating: "{{ t('upload_btn.select_rating') }}",
-    embed_youtube: "{{ t('upload_btn.embed_youtube') }}",
-    upload_from_url: "{{ t('upload_btn.upload_from_url') }}",
-    upload: "{{ t('upload_btn.upload') }}",
-    uploading: "{{ t('upload.uploading') }}",
-    processing: "{{ t('toast.processing') }}",
-    upload_pending_approval_patient: "{{ t('upload.pending_approval_patient') }}",
-    upload_shitpost_success: "{{ t('upload.shitpost_success') || 'Successfully shitposted {n} items!' }}",
-    upload_shitposting_status: "{{ t('upload.shitposting_status') || 'Shitposting' }}",
-    upload_comment_placeholder: "{{ t('upload.item_comment_placeholder') || 'Comment (optional)...' }}",
-    upload_tags_placeholder: "{{ t('upload.item_tags_placeholder') || 'Tags...' }}",
-    upload_add_more: "{{ t('upload.add_more') || 'Add more' }}",
-    settings_no_banner_set: "{{ t('settings.no_banner_set') || 'No banner set' }}",
+    write_comment: {{ t("comments.write_comment")|string|tojson }},
+    post: {{ t("comments.post")|string|tojson }},
+    cancel: {{ t("comments.cancel")|string|tojson }},
+    sidebar_view: {{ t("sidebar.view")|string|tojson }},
+    sidebar_read_more: {{ t("sidebar.read_more")|string|tojson }},
+    sidebar_see_less: {{ t("sidebar.see_less")|string|tojson }},
+    sidebar_show_full_comment: {{ t("sidebar.show_full_comment")|string|tojson }},
+    sidebar_loading_activity: {{ t("sidebar.loading_activity")|string|tojson }},
+    sidebar_no_activity: {{ t("sidebar.no_activity")|string|tojson }},
+    sidebar_failed_to_load: {{ t("sidebar.failed_to_load")|string|tojson }},
+    sidebar_loading_more: {{ t("sidebar.loading_more")|string|tojson }},
+    sidebar_end_of_activity: {{ t("sidebar.end_of_activity")|string|tojson }},
+    sidebar_recommendations: {{ t("sidebar.recommendations")|string|tojson }},
+    sidebar_loading_recommendations: {{ t("sidebar.loading_recommendations")|string|tojson }},
+    sidebar_no_recommendations: {{ t("sidebar.no_recommendations")|string|tojson }},
+    sidebar_refresh_recommendations: {{ t("sidebar.refresh_recommendations")|string|tojson }},
+    select_file: {{ t("upload_btn.select_file")|string|tojson }},
+    enter_url: {{ t("upload_btn.enter_url")|string|tojson }},
+    tags_required: {{ t("upload_btn.tags_required")|string|tojson }},
+    select_rating: {{ t("upload_btn.select_rating")|string|tojson }},
+    embed_youtube: {{ t("upload_btn.embed_youtube")|string|tojson }},
+    upload_from_url: {{ t("upload_btn.upload_from_url")|string|tojson }},
+    upload: {{ t("upload_btn.upload")|string|tojson }},
+    uploading: {{ t("upload.uploading")|string|tojson }},
+    processing: {{ t("toast.processing")|string|tojson }},
+    upload_pending_approval_patient: {{ t("upload.pending_approval_patient")|string|tojson }},
+    upload_shitpost_success: {{ (t("upload.shitpost_success") or "Successfully shitposted {n} items!")|string|tojson }},
+    upload_shitposting_status: {{ (t("upload.shitposting_status") or "Shitposting")|string|tojson }},
+    upload_comment_placeholder: {{ (t("upload.item_comment_placeholder") or "Comment (optional)...")|string|tojson }},
+    upload_tags_placeholder: {{ (t("upload.item_tags_placeholder") or "Tags...")|string|tojson }},
+    upload_add_more: {{ (t("upload.add_more") or "Add more")|string|tojson }},
+    settings_no_banner_set: {{ (t("settings.no_banner_set") or "No banner set")|string|tojson }},
     // timeago
-    timeago_just_now: "{{ t('timeago.just_now') }}",
-    timeago_year: "{{ t('timeago.year') }}",
-    timeago_years: "{{ t('timeago.years') }}",
-    timeago_month: "{{ t('timeago.month') }}",
-    timeago_months: "{{ t('timeago.months') }}",
-    timeago_week: "{{ t('timeago.week') }}",
-    timeago_weeks: "{{ t('timeago.weeks') }}",
-    timeago_day: "{{ t('timeago.day') }}",
-    timeago_days: "{{ t('timeago.days') }}",
-    timeago_hour: "{{ t('timeago.hour') }}",
-    timeago_hours: "{{ t('timeago.hours') }}",
-    timeago_minute: "{{ t('timeago.minute') }}",
-    timeago_minutes: "{{ t('timeago.minutes') }}",
-    timeago_second: "{{ t('timeago.second') }}",
-    timeago_seconds: "{{ t('timeago.seconds') }}",
-    timeago_ago: "{{ t('timeago.ago') }}",
-    lang: "{{ lang }}",
+    timeago_just_now: {{ t("timeago.just_now")|string|tojson }},
+    timeago_year: {{ t("timeago.year")|string|tojson }},
+    timeago_years: {{ t("timeago.years")|string|tojson }},
+    timeago_month: {{ t("timeago.month")|string|tojson }},
+    timeago_months: {{ t("timeago.months")|string|tojson }},
+    timeago_week: {{ t("timeago.week")|string|tojson }},
+    timeago_weeks: {{ t("timeago.weeks")|string|tojson }},
+    timeago_day: {{ t("timeago.day")|string|tojson }},
+    timeago_days: {{ t("timeago.days")|string|tojson }},
+    timeago_hour: {{ t("timeago.hour")|string|tojson }},
+    timeago_hours: {{ t("timeago.hours")|string|tojson }},
+    timeago_minute: {{ t("timeago.minute")|string|tojson }},
+    timeago_minutes: {{ t("timeago.minutes")|string|tojson }},
+    timeago_second: {{ t("timeago.second")|string|tojson }},
+    timeago_seconds: {{ t("timeago.seconds")|string|tojson }},
+    timeago_ago: {{ t("timeago.ago")|string|tojson }},
+    lang: {{ lang|string|tojson }},
     // search overlay
-    search_placeholder: "{{ t('search_overlay.placeholder') }}",
-    search_strict_mode: "{{ t('search_overlay.strict_mode') }}",
+    search_placeholder: {{ t("search_overlay.placeholder")|string|tojson }},
+    search_strict_mode: {{ t("search_overlay.strict_mode")|string|tojson }},
     // toasts
-    report_success: "{{ t('toast.report_success') }}",
-    report_error: "{{ t('toast.report_error') }}",
-    network_error: "{{ t('toast.network_error') }}",
-    network_error_short: "{{ t('toast.network_error_short') }}",
-    reason_required: "{{ t('toast.reason_required') }}",
-    reason_optional: "{{ t('toast.reason_optional') }}",
-    reason_required_label: "{{ t('toast.reason_required_label') }}",
-    captcha_required: "{{ t('toast.captcha_required') }}",
-    captcha_loading: "{{ t('toast.captcha_loading') }}",
-    confirm_yes: "{{ t('toast.yes') }}",
-    confirm_no: "{{ t('toast.no') }}",
-    confirm_btn: "{{ t('toast.confirm') }}",
-    cancel_btn: "{{ t('toast.cancel') }}",
-    add_tag: "{{ t('toast.add_tag') }}",
-    item_pinned: "{{ t('toast.item_pinned') }}",
-    item_unpinned: "{{ t('toast.item_unpinned') }}",
-    error_adding_tag: "{{ t('toast.error_adding_tag') }}",
-    error_saving: "{{ t('toast.error_saving') }}",
-    zomg_on: "{{ t('toast.zomg_on') }}",
-    zomg_off: "{{ t('toast.zomg_off') }}",
-    copied: "{{ t('toast.copied') }}",
-    exclude_tag: "{{ t('filter.exclude_tag') || 'Exclude tag' }}",
-    unexclude_tag: "{{ t('filter.unexclude_tag') || 'Excluded (click to unexclude)' }}",
-    no_tags_excluded: "{{ t('filter.no_tags_excluded') || 'No tags excluded yet' }}",
-    tag_excluded_msg: "{{ t('filter.tag_excluded_msg') || 'Tag {tag} added to excluded tags' }}",
-    tag_unexcluded_msg: "{{ t('filter.tag_unexcluded_msg') || 'Tag {tag} removed from excluded tags' }}",
+    report_success: {{ t("toast.report_success")|string|tojson }},
+    report_error: {{ t("toast.report_error")|string|tojson }},
+    network_error: {{ t("toast.network_error")|string|tojson }},
+    network_error_short: {{ t("toast.network_error_short")|string|tojson }},
+    reason_required: {{ t("toast.reason_required")|string|tojson }},
+    reason_optional: {{ t("toast.reason_optional")|string|tojson }},
+    reason_required_label: {{ t("toast.reason_required_label")|string|tojson }},
+    captcha_required: {{ t("toast.captcha_required")|string|tojson }},
+    captcha_loading: {{ t("toast.captcha_loading")|string|tojson }},
+    confirm_yes: {{ t("toast.yes")|string|tojson }},
+    confirm_no: {{ t("toast.no")|string|tojson }},
+    confirm_btn: {{ t("toast.confirm")|string|tojson }},
+    cancel_btn: {{ t("toast.cancel")|string|tojson }},
+    add_tag: {{ t("toast.add_tag")|string|tojson }},
+    item_pinned: {{ t("toast.item_pinned")|string|tojson }},
+    item_unpinned: {{ t("toast.item_unpinned")|string|tojson }},
+    error_adding_tag: {{ t("toast.error_adding_tag")|string|tojson }},
+    error_saving: {{ t("toast.error_saving")|string|tojson }},
+    zomg_on: {{ t("toast.zomg_on")|string|tojson }},
+    zomg_off: {{ t("toast.zomg_off")|string|tojson }},
+    copied: {{ t("toast.copied")|string|tojson }},
+    exclude_tag: {{ (t("filter.exclude_tag") or "Exclude tag")|string|tojson }},
+    unexclude_tag: {{ (t("filter.unexclude_tag") or "Excluded (click to unexclude)")|string|tojson }},
+    no_tags_excluded: {{ (t("filter.no_tags_excluded") or "No tags excluded yet")|string|tojson }},
+    tag_excluded_msg: {{ (t("filter.tag_excluded_msg") or "Tag {tag} added to excluded tags")|string|tojson }},
+    tag_unexcluded_msg: {{ (t("filter.tag_unexcluded_msg") or "Tag {tag} removed from excluded tags")|string|tojson }},
     // actions
-    fav_added: "{{ t('toast.fav_added') }}",
-    fav_removed: "{{ t('toast.fav_removed') }}",
-    subscribed_thread: "{{ t('toast.subscribed_thread') }}",
-    unsubscribed_thread: "{{ t('toast.unsubscribed_thread') }}",
-    oc_marked: "{{ t('toast.oc_marked') }}",
-    oc_removed: "{{ t('toast.oc_removed') }}",
-    no_tags_excluded: "{{ t('toast.no_tags_excluded') }}",
-    tag_delete_title: "{{ t('toast.tag_delete_title') }}",
-    tag_delete_confirm: "{{ t('toast.tag_delete_confirm') }}",
-    tag_deleted_success: "{{ t('toast.tag_deleted_success') }}",
-    item_deleted_success: "{{ t('toast.item_deleted_success') }}",
-    item_delete_title: "{{ t('toast.item_delete_title') }}",
-    item_delete_confirm: "{{ t('toast.item_delete_confirm') }}",
+    fav_added: {{ t("toast.fav_added")|string|tojson }},
+    fav_removed: {{ t("toast.fav_removed")|string|tojson }},
+    subscribed_thread: {{ t("toast.subscribed_thread")|string|tojson }},
+    unsubscribed_thread: {{ t("toast.unsubscribed_thread")|string|tojson }},
+    oc_marked: {{ t("toast.oc_marked")|string|tojson }},
+    oc_removed: {{ t("toast.oc_removed")|string|tojson }},
+    no_tags_excluded: {{ t("toast.no_tags_excluded")|string|tojson }},
+    tag_delete_title: {{ t("toast.tag_delete_title")|string|tojson }},
+    tag_delete_confirm: {{ t("toast.tag_delete_confirm")|string|tojson }},
+    tag_deleted_success: {{ t("toast.tag_deleted_success")|string|tojson }},
+    item_deleted_success: {{ t("toast.item_deleted_success")|string|tojson }},
+    item_delete_title: {{ t("toast.item_delete_title")|string|tojson }},
+    item_delete_confirm: {{ t("toast.item_delete_confirm")|string|tojson }},
     // halls
-    hall_added: "{{ t('toast.hall_added') }}",
-    hall_removed: "{{ t('toast.hall_removed') }}",
-    hall_my_placeholder: "{{ t('hall.my_hall_placeholder') }}",
-    hall_no_halls: "{{ t('hall.no_halls') }}",
-    hall_select_a_hall: "{{ t('hall.select_a_hall') }}",
-    hall_choose_or_create: "{{ t('hall.choose_or_create') }}",
-    hall_creating: "{{ t('hall.creating') }}",
-    hall_adding: "{{ t('hall.adding') }}",
-    hall_removing: "{{ t('hall.removing') }}",
-    hall_saving: "{{ t('hall.saving') }}",
-    hall_deleting: "{{ t('hall.deleting') }}",
-    hall_saved: "{{ t('hall.saved') }}",
-    hall_created: "{{ t('hall.created') }}",
-    hall_add_btn: "{{ t('hall.add_btn') }}",
-    hall_remove_btn: "{{ t('hall.remove_btn') }}",
-    hall_name_empty: "{{ t('hall.enter_name_error') }}",
-    hall_enter_name_error: "{{ t('hall.enter_name_error') }}",
-    hall_slug_empty_error: "{{ t('hall.slug_empty_error') }}",
-    hall_delete_confirm: "{{ t('hall.delete_confirm') }}",
-    hall_image_uploaded: "{{ t('hall.image_uploaded') }}",
-    hall_image_removed: "{{ t('hall.image_removed') }}",
-    hall_click_upload_hint: "{{ t('hall.click_upload_hint') }}",
-    common_save: "{{ t('common.save') }}",
-    common_delete: "{{ t('common.delete') }}",
-    common_view: "{{ t('common.view') }}",
-    common_name: "{{ t('common.name') }}",
-    common_description: "{{ t('common.description') }}",
-    common_private: "{{ t('common.private') }}",
+    hall_added: {{ t("toast.hall_added")|string|tojson }},
+    hall_removed: {{ t("toast.hall_removed")|string|tojson }},
+    hall_my_placeholder: {{ t("hall.my_hall_placeholder")|string|tojson }},
+    hall_no_halls: {{ t("hall.no_halls")|string|tojson }},
+    hall_select_a_hall: {{ t("hall.select_a_hall")|string|tojson }},
+    hall_choose_or_create: {{ t("hall.choose_or_create")|string|tojson }},
+    hall_creating: {{ t("hall.creating")|string|tojson }},
+    hall_adding: {{ t("hall.adding")|string|tojson }},
+    hall_removing: {{ t("hall.removing")|string|tojson }},
+    hall_saving: {{ t("hall.saving")|string|tojson }},
+    hall_deleting: {{ t("hall.deleting")|string|tojson }},
+    hall_saved: {{ t("hall.saved")|string|tojson }},
+    hall_created: {{ t("hall.created")|string|tojson }},
+    hall_add_btn: {{ t("hall.add_btn")|string|tojson }},
+    hall_remove_btn: {{ t("hall.remove_btn")|string|tojson }},
+    hall_name_empty: {{ t("hall.enter_name_error")|string|tojson }},
+    hall_enter_name_error: {{ t("hall.enter_name_error")|string|tojson }},
+    hall_slug_empty_error: {{ t("hall.slug_empty_error")|string|tojson }},
+    hall_delete_confirm: {{ t("hall.delete_confirm")|string|tojson }},
+    hall_image_uploaded: {{ t("hall.image_uploaded")|string|tojson }},
+    hall_image_removed: {{ t("hall.image_removed")|string|tojson }},
+    hall_click_upload_hint: {{ t("hall.click_upload_hint")|string|tojson }},
+    common_save: {{ t("common.save")|string|tojson }},
+    common_delete: {{ t("common.delete")|string|tojson }},
+    common_view: {{ t("common.view")|string|tojson }},
+    common_name: {{ t("common.name")|string|tojson }},
+    common_description: {{ t("common.description")|string|tojson }},
+    common_private: {{ t("common.private")|string|tojson }},
     // notifications
-    notif_upload_approved: "{{ t('notifications.upload_approved_short') }}",
-    notif_upload_pending: "{{ t('notifications.upload_pending_short') }}",
-    notif_new_report: "{{ t('notifications.new_report_short') }}",
-    notif_upload_denied: "{{ t('notifications.upload_denied_short') }}",
-    notif_upload_deleted: "{{ t('notifications.upload_deleted_short') }}",
-    notif_click_reason: "{{ t('notifications.click_reason') }}",
-    notif_no_reason: "{{ t('notifications.no_reason') }}",
-    notif_reason_label: "{{ t('notifications.reason_label') }}",
-    notif_replied: "{{ t('notifications.replied_short') }}",
-    notif_subscribed: "{{ t('notifications.subscribed_short') }}",
-    notif_mentioned: "{{ t('notifications.mentioned_short') }}",
-    notif_commented: "{{ t('notifications.commented') }}",
-    notif_system: "{{ t('notifications.system') }}",
-    notif_admin: "{{ t('notifications.admin') }}",
-    notif_moderation: "{{ t('notifications.moderation') }}",
-    notif_tab_user: "{{ t('nav.notif_tab_user') }}",
-    notif_tab_system: "{{ t('nav.notif_tab_system') }}",
-    no_notifications: "{{ t('nav.no_notifications') }}",
+    notif_upload_approved: {{ t("notifications.upload_approved_short")|string|tojson }},
+    notif_upload_pending: {{ t("notifications.upload_pending_short")|string|tojson }},
+    notif_new_report: {{ t("notifications.new_report_short")|string|tojson }},
+    notif_upload_denied: {{ t("notifications.upload_denied_short")|string|tojson }},
+    notif_upload_deleted: {{ t("notifications.upload_deleted_short")|string|tojson }},
+    notif_click_reason: {{ t("notifications.click_reason")|string|tojson }},
+    notif_no_reason: {{ t("notifications.no_reason")|string|tojson }},
+    notif_reason_label: {{ t("notifications.reason_label")|string|tojson }},
+    notif_replied: {{ t("notifications.replied_short")|string|tojson }},
+    notif_subscribed: {{ t("notifications.subscribed_short")|string|tojson }},
+    notif_mentioned: {{ t("notifications.mentioned_short")|string|tojson }},
+    notif_commented: {{ t("notifications.commented")|string|tojson }},
+    notif_system: {{ t("notifications.system")|string|tojson }},
+    notif_admin: {{ t("notifications.admin")|string|tojson }},
+    notif_moderation: {{ t("notifications.moderation")|string|tojson }},
+    notif_tab_user: {{ t("nav.notif_tab_user")|string|tojson }},
+    notif_tab_system: {{ t("nav.notif_tab_system")|string|tojson }},
+    no_notifications: {{ t("nav.no_notifications")|string|tojson }},
     // meme creator
     meme: {
-      text_layer: "{{ t('meme.text_layer') }}",
-      enter_text: "{{ t('meme.enter_text') }}",
-      size_label: "{{ t('meme.size_label') }}",
-      upload_btn: "{{ t('meme.upload_btn') }}",
-      choose_image_first: "{{ t('meme.choose_image_first') }}",
-      create_meme: "{{ t('meme.create_meme') }}"
+      text_layer: {{ t("meme.text_layer")|string|tojson }},
+      enter_text: {{ t("meme.enter_text")|string|tojson }},
+      size_label: {{ t("meme.size_label")|string|tojson }},
+      upload_btn: {{ t("meme.upload_btn")|string|tojson }},
+      choose_image_first: {{ t("meme.choose_image_first")|string|tojson }},
+      create_meme: {{ t("meme.create_meme")|string|tojson }}
     },
     // global chat
-    chat_title: "{{ t('chat.title') }}",
-    chat_placeholder: "{{ t('chat.placeholder') }}",
-    chat_minimize: "{{ t('chat.minimize') }}",
-    chat_expand: "{{ t('chat.expand') }}",
-    chat_slow_down: "{{ t('chat.slow_down') }}",
-    chat_error_send: "{{ t('chat.error_send') }}",
-    chat_network_error: "{{ t('chat.network_error') }}",
+    chat_title: {{ t("chat.title")|string|tojson }},
+    chat_placeholder: {{ t("chat.placeholder")|string|tojson }},
+    chat_minimize: {{ t("chat.minimize")|string|tojson }},
+    chat_expand: {{ t("chat.expand")|string|tojson }},
+    chat_slow_down: {{ t("chat.slow_down")|string|tojson }},
+    chat_error_send: {{ t("chat.error_send")|string|tojson }},
+    chat_network_error: {{ t("chat.network_error")|string|tojson }},
     // comment file upload
-    attach_file: "{{ t('comments.attach_file') }}",
-    uploading_file: "{{ t('comments.uploading_file') }}",
-    remove_file: "{{ t('comments.remove_file') }}",
-    file_too_large: "{{ t('comments.file_too_large') }}",
+    attach_file: {{ t("comments.attach_file")|string|tojson }},
+    uploading_file: {{ t("comments.uploading_file")|string|tojson }},
+    remove_file: {{ t("comments.remove_file")|string|tojson }},
+    file_too_large: {{ t("comments.file_too_large")|string|tojson }},
     // polls
-    poll_btn_title: "{{ t('comments.poll_btn_title') || 'Create poll' }}",
-    poll_question_placeholder: "{{ t('comments.poll_question_placeholder') || 'Poll question...' }}",
-    poll_option_placeholder: "{{ t('comments.poll_option_placeholder') || 'Option...' }}",
-    poll_add_option: "{{ t('comments.poll_add_option') || 'Add option' }}",
-    poll_remove: "{{ t('comments.poll_remove') || 'Remove poll' }}",
-    poll_vote: "{{ t('comments.poll_vote') || 'Vote' }}",
-    poll_voted: "{{ t('comments.poll_voted') || 'You voted' }}",
-    poll_votes: "{{ t('comments.poll_votes') || 'votes' }}",
-    poll_vote_single: "{{ t('comments.poll_vote_single') || 'vote' }}",
-    poll_delete: "{{ t('comments.poll_delete') || 'Delete poll' }}",
-    poll_expired: "{{ t('comments.poll_expired') || 'Poll closed' }}",
-    poll_anonymous: "{{ t('comments.poll_anonymous') || 'Anonymous' }}",
-    poll_public: "{{ t('comments.poll_public') || 'Public votes' }}",
+    poll_btn_title: {{ (t("comments.poll_btn_title") or "Create poll")|string|tojson }},
+    poll_question_placeholder: {{ (t("comments.poll_question_placeholder") or "Poll question...")|string|tojson }},
+    poll_option_placeholder: {{ (t("comments.poll_option_placeholder") or "Option...")|string|tojson }},
+    poll_add_option: {{ (t("comments.poll_add_option") or "Add option")|string|tojson }},
+    poll_remove: {{ (t("comments.poll_remove") or "Remove poll")|string|tojson }},
+    poll_vote: {{ (t("comments.poll_vote") or "Vote")|string|tojson }},
+    poll_voted: {{ (t("comments.poll_voted") or "You voted")|string|tojson }},
+    poll_votes: {{ (t("comments.poll_votes") or "votes")|string|tojson }},
+    poll_vote_single: {{ (t("comments.poll_vote_single") or "vote")|string|tojson }},
+    poll_delete: {{ (t("comments.poll_delete") or "Delete poll")|string|tojson }},
+    poll_expired: {{ (t("comments.poll_expired") or "Poll closed")|string|tojson }},
+    poll_anonymous: {{ (t("comments.poll_anonymous") or "Anonymous")|string|tojson }},
+    poll_public: {{ (t("comments.poll_public") or "Public votes")|string|tojson }},
     // url upload tracker
-    url_tracker_title: "{{ t('upload.url_tracker_title') || 'URL Uploads' }}",
-    url_tracker_queued: "{{ t('upload.url_tracker_queued') || 'Queued' }}",
-    url_tracker_downloading: "{{ t('upload.url_tracker_downloading') || 'Downloading' }}",
-    url_tracker_analyzing: "{{ t('upload.url_tracker_analyzing') || 'Analyzing' }}",
-    url_tracker_saving: "{{ t('upload.url_tracker_saving') || 'Saving' }}",
-    url_tracker_processing: "{{ t('upload.url_tracker_processing') || 'Processing' }}",
-    url_tracker_extracting: "{{ t('upload.url_tracker_extracting') || 'Extracting' }}",
-    url_tracker_complete: "{{ t('upload.url_tracker_complete') || 'Complete!' }}",
-    url_tracker_failed: "{{ t('upload.url_tracker_failed') || 'Upload failed' }}",
-    url_tracker_view: "{{ t('upload.url_tracker_view') || 'View →' }}",
+    url_tracker_title: {{ (t("upload.url_tracker_title") or "URL Uploads")|string|tojson }},
+    url_tracker_queued: {{ (t("upload.url_tracker_queued") or "Queued")|string|tojson }},
+    url_tracker_downloading: {{ (t("upload.url_tracker_downloading") or "Downloading")|string|tojson }},
+    url_tracker_analyzing: {{ (t("upload.url_tracker_analyzing") or "Analyzing")|string|tojson }},
+    url_tracker_saving: {{ (t("upload.url_tracker_saving") or "Saving")|string|tojson }},
+    url_tracker_processing: {{ (t("upload.url_tracker_processing") or "Processing")|string|tojson }},
+    url_tracker_extracting: {{ (t("upload.url_tracker_extracting") or "Extracting")|string|tojson }},
+    url_tracker_complete: {{ (t("upload.url_tracker_complete") or "Complete!")|string|tojson }},
+    url_tracker_failed: {{ (t("upload.url_tracker_failed") or "Upload failed")|string|tojson }},
+    url_tracker_view: {{ (t("upload.url_tracker_view") or "View →")|string|tojson }},
     // albums
-    upload_album: "{{ t('album.mode_album') || 'Upload Album (%s)' }}",
-    uploading_album: "{{ t('album.uploading_album') || 'Uploading album...' }}",
-    album_counter: "{{ t('album.counter') || '%s of %s' }}",
-    album_cover: "{{ t('album.cover') || 'Cover' }}",
-    album_remove: "{{ t('album.remove_picture') || 'Remove picture' }}",
-    album_move_left: "{{ t('album.move_left') || 'Move left' }}",
-    album_move_right: "{{ t('album.move_right') || 'Move right' }}",
-    album_add_more: "{{ t('album.add_more') || 'Add more pictures' }}",
-    album_select_pictures: "{{ t('album.select_pictures') || 'Select pictures for album' }}",
-    album_min_pictures: "{{ t('album.min_pictures') || 'Add at least 2 pictures for an album' }}",
-    album_subf0ck_tags_placeholder: "{{ t('album.subf0ck_tags_placeholder') || 'Tags for this subf0ck (optional)' }}",
+    upload_album: {{ (t("album.mode_album") or "Upload Album (%s)")|string|tojson }},
+    uploading_album: {{ (t("album.uploading_album") or "Uploading album...")|string|tojson }},
+    album_counter: {{ (t("album.counter") or "%s of %s")|string|tojson }},
+    album_cover: {{ (t("album.cover") or "Cover")|string|tojson }},
+    album_remove: {{ (t("album.remove_picture") or "Remove picture")|string|tojson }},
+    album_move_left: {{ (t("album.move_left") or "Move left")|string|tojson }},
+    album_move_right: {{ (t("album.move_right") or "Move right")|string|tojson }},
+    album_add_more: {{ (t("album.add_more") or "Add more pictures")|string|tojson }},
+    album_select_pictures: {{ (t("album.select_pictures") or "Select pictures for album")|string|tojson }},
+    album_min_pictures: {{ (t("album.min_pictures") or "Add at least 2 pictures for an album")|string|tojson }},
+    album_subf0ck_tags_placeholder: {{ (t("album.subf0ck_tags_placeholder") or "Tags for this subf0ck (optional)")|string|tojson }},
     // favorites
-    no_favs: "{{ t('profile.no_favs') || 'no favorites' }}",
-    favs_label: "{{ t('profile.favs_label') || 'Favorites' }}",
-    guest_favs_saved: "{{ t('profile.guest_favs_saved') || 'You have {count} guest favorites saved on this device.' }}",
-    sync_guest_favs: "{{ t('profile.sync_guest_favs') || 'Import to Account' }}",
-    guest_favs_imported: "{{ t('profile.guest_favs_imported') || 'Imported favorites to your account!' }}",
-    dismiss: "{{ t('common.dismiss') || 'Dismiss' }}"
+    no_favs: {{ (t("profile.no_favs") or "no favorites")|string|tojson }},
+    favs_label: {{ (t("profile.favs_label") or "Favorites")|string|tojson }},
+    guest_favs_saved: {{ (t("profile.guest_favs_saved") or "You have {count} guest favorites saved on this device.")|string|tojson }},
+    sync_guest_favs: {{ (t("profile.sync_guest_favs") or "Import to Account")|string|tojson }},
+    guest_favs_imported: {{ (t("profile.guest_favs_imported") or "Imported favorites to your account!")|string|tojson }},
+    dismiss: {{ (t("common.dismiss") or "Dismiss")|string|tojson }}
   };
 </script>
-<script src="/s/js/passkey.js?v={{ ts }}"></script>
-<script src="/s/js/f0ckm.js?v={{ ts }}"></script>
-<script src="/s/js/sidebar-activity.js?v={{ ts }}"></script>
-<script src="/s/js/flash_yank.js?v={{ ts }}"></script>
-<script src="/s/js/laser-cursor.js?v={{ ts }}"></script>
-@if(square_clicker_active)
-<script src="/s/js/square-clicker.js?v={{ ts }}"></script>
-@endif
-@if(show_koepfe && !(session && session.hide_koepfe))
-<script>window.f0ckKoepfe = {{ koepfe_json }};</script>
-<script src="/s/js/koepfe.js?v={{ ts }}"></script>
-@endif
+<script src="/s/js/passkey.js?v={{ ts|safe }}"></script>
+<script src="/s/js/f0ckm.js?v={{ ts|safe }}"></script>
+<script src="/s/js/sidebar-activity.js?v={{ ts|safe }}"></script>
+<script src="/s/js/flash_yank.js?v={{ ts|safe }}"></script>
+<script src="/s/js/laser-cursor.js?v={{ ts|safe }}"></script>
+{% if square_clicker_active %}
+<script src="/s/js/square-clicker.js?v={{ ts|safe }}"></script>
+{% endif %}
+{% if (show_koepfe and not (session and session.hide_koepfe)) %}
+<script>window.f0ckKoepfe = {{ koepfe_json|safe }};</script>
+<script src="/s/js/koepfe.js?v={{ ts|safe }}"></script>
+{% endif %}
 
-@if(session)
-<script src="/s/js/upload.js?v={{ ts }}"></script>
-<script src="/s/js/f0ck_upload_init.js?v={{ ts }}"></script>
-<script src="/s/js/tag_autocomplete.js?v={{ ts }}"></script>
-<script src="/s/js/mention_autocomplete.js?v={{ ts }}"></script>
-<script src="/s/js/user.js?v={{ ts }}"></script>
-@endif
-@if(enable_global_chat && session)
-<script src="/s/js/globalchat.js?v={{ ts }}"></script>
-@endif
-@if(session && private_messages)
-<script src="/s/js/wordlist.js?v={{ ts }}"></script>
-<script src="/s/js/messages.js?v={{ ts }}"></script>
-@endif
-@if(session && (session.admin || session.is_moderator))
-<script src="/s/js/admin.js?v={{ ts }}"></script>
-@endif
-@endif
+{% if session %}
+<script src="/s/js/upload.js?v={{ ts|safe }}"></script>
+<script src="/s/js/f0ck_upload_init.js?v={{ ts|safe }}"></script>
+<script src="/s/js/tag_autocomplete.js?v={{ ts|safe }}"></script>
+<script src="/s/js/mention_autocomplete.js?v={{ ts|safe }}"></script>
+<script src="/s/js/user.js?v={{ ts|safe }}"></script>
+{% endif %}
+{% if (enable_global_chat and session) %}
+<script src="/s/js/globalchat.js?v={{ ts|safe }}"></script>
+{% endif %}
+{% if (session and private_messages) %}
+<script src="/s/js/wordlist.js?v={{ ts|safe }}"></script>
+<script src="/s/js/messages.js?v={{ ts|safe }}"></script>
+{% endif %}
+{% if (session and (session.admin or session.is_moderator)) %}
+<script src="/s/js/admin.js?v={{ ts|safe }}"></script>
+{% endif %}
+{% endif %}
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

@@ -1,14 +1,14 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 
 <div class="pagewrapper">
 <div id="main" class="admin-container">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container">
         <div style="margin-bottom: 30px;">
             <a href="/admin/users" style="color: #888; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 15px;">
                 <i class="fa fa-arrow-left"></i> Back to User Manager
             </a>
-            <h2 style="margin: 0; font-weight: 800; letter-spacing: -0.5px;">IP History: {!! targetUser.user !!}</h2>
+            <h2 style="margin: 0; font-weight: 800; letter-spacing: -0.5px;">IP History: {{ targetUser.user }}</h2>
             <p style="color: #888; margin: 5px 0 0 0;">Historical IP addresses associated with this account.</p>
         </div>
 
@@ -22,31 +22,31 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if(ips && ips.length > 0)
-                        @each(ips as row)
+                    {% if (ips and (ips|length > 0)) %}
+                        {% for key, row in ips|entries %}
                         <tr>
                             <td data-label="IP Address"><span class="ip-badge">{{ row.ip }}</span></td>
                             <td data-label="First Seen">
                                 <div class="date-cell">
                                     <span class="date-label">Initial</span>
-                                    {{ new Date(row.first_seen).toLocaleString() }}
+                                    {{ row.first_seen|locale_string }}
                                 </div>
                             </td>
                             <td data-label="Last Seen">
                                 <div class="date-cell">
                                     <span class="date-label">Most Recent</span>
-                                    {{ new Date(row.last_seen).toLocaleString() }}
+                                    {{ row.last_seen|locale_string }}
                                 </div>
                             </td>
                         </tr>
-                        @endeach
-                    @else
+                        {% endfor %}
+                    {% else %}
                         <tr>
                             <td colspan="3" style="text-align: center; padding: 40px; color: #666;">
                                 No IP history records found for this user.
                             </td>
                         </tr>
-                    @endif
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -54,4 +54,4 @@
 </div>
 </div>
 
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

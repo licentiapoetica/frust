@@ -1,17 +1,17 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container">
         <h2>Moderator Message of the Day (MOTD)</h2>
-        <p style="color: #ccc; margin-bottom: 20px;">This message is displayed site-wide. It will automatically be tagged with your name (<code>t. {!! session.display_name || session.user !!}</code>).</p>
+        <p style="color: #ccc; margin-bottom: 20px;">This message is displayed site-wide. It will automatically be tagged with your name (<code>t. {{ (session.display_name or session.user) }}</code>).</p>
 
         <div class="admin-motd-form">
             <form id="motd-form" action="/mod/motd" method="POST" onsubmit="event.preventDefault(); saveMotd(this);">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div style="margin-bottom: 20px;">
                     <label for="motd-text" style="display: block; margin-bottom: 8px; color: var(--accent);">MOTD Content (Markdown supported)</label>
-                    <textarea id="motd-text" name="motd" style="width: 100%; min-height: 200px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 15px; border-radius: 4px; font-family: inherit; font-size: 1.1em; resize: vertical;">{!! motd !!}</textarea>
+                    <textarea id="motd-text" name="motd" style="width: 100%; min-height: 200px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 15px; border-radius: 4px; font-family: inherit; font-size: 1.1em; resize: vertical;">{{ motd }}</textarea>
                 </div>
 
                 <div style="display: flex; gap: 10px; align-items: center;">
@@ -79,4 +79,4 @@
     </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

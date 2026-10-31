@@ -1,7 +1,7 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main" class="admin-container">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container">
         <h2>Cleanup Manager</h2>
         <p style="color: #ccc; margin-bottom: 20px;">Delete old posts that have no engagement (no comments, no favorites, and no subscriptions) to regain disk space.</p>
@@ -29,7 +29,7 @@
 
                 <div class="settings-item" style="margin-bottom: 20px;">
                     <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #ff6b6b; font-weight: bold;">
-                        <input type="checkbox" id="cleanup_include_engaged" name="cleanup_include_engaged" value="true" @if(cleanup_include_engaged) checked @endif style="width: 18px; height: 18px; cursor: pointer;">
+                        <input type="checkbox" id="cleanup_include_engaged" name="cleanup_include_engaged" value="true" {% if cleanup_include_engaged %} checked {% endif %} style="width: 18px; height: 18px; cursor: pointer;">
                         <span>Include items with engagement</span>
                     </label>
                     <span style="color: #888; display: block; margin-top: 5px; margin-left: 28px;">If checked, cleanup will purge ALL posts in the selected date range, even if they have comments or favorites.</span>
@@ -85,7 +85,7 @@
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRF-Token': window.f0ckSession?.csrf_token || '{{ csrf_token }}'
+                        'X-CSRF-Token': window.f0ckSession?.csrf_token || {{ csrf_token|string|tojson }}
                     },
                     body: new URLSearchParams(formData)
                 });
@@ -132,7 +132,7 @@
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRF-Token': window.f0ckSession?.csrf_token || '{{ csrf_token }}'
+                        'X-CSRF-Token': window.f0ckSession?.csrf_token || {{ csrf_token|string|tojson }}
                     },
                     body: formData
                 });
@@ -156,4 +156,4 @@
     </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

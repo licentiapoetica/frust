@@ -1,86 +1,86 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 
 <div class="pagewrapper">
 <div id="main">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container mq mq-trash">
         <header class="mq-header">
             <div>
                 <h1 class="mq-title">Soft Deleted</h1>
-                <div class="mq-subtitle">{{ total }} removed item@if(total !== 1)s@endif still on disk. Restore makes an item public again@if(session.admin); purge deletes it and its files for good@endif.</div>
+                <div class="mq-subtitle">{{ total }} removed item{% if total != 1 %}s{% endif %} still on disk. Restore makes an item public again{% if session.admin %}; purge deletes it and its files for good{% endif %}.</div>
             </div>
-        @if(trash.length > 0 && session.admin)
+        {% if ((trash|length > 0) and session.admin) %}
         <button type="button" id="btn-purge-trash" class="mq-btn mq-btn-danger"><i class="fa-solid fa-trash"></i> Purge all</button>
-        @endif
+        {% endif %}
         </header>
 
 
-        @if(trash.length > 0)
+        {% if (trash|length > 0) %}
         <div class="mq-grid">
-            @each(trash as post)
+            {% for key, post in trash|entries %}
             <div class="mq-card">
                 <div class="mq-media">
-                    @if(post.mime === 'video/youtube')
+                    {% if post.mime == "video/youtube" %}
                     <div class="embed-responsive embed-responsive-16by9">
-                        <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/{!! post.dest.replace('yt:', '') !!}" frameborder="0" allowfullscreen></iframe>
+                        <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/{{ post.dest.replace("yt:", "", 1) }}" frameborder="0" allowfullscreen></iframe>
                     </div>
-                    @elseif(post.mime.startsWith('video'))
-                    <video controls loop muted preload="none" poster="/mod/deleted/t/{!! post.id !!}.webp">
-                        <source src="/mod/deleted/b/{!! post.dest !!}" type="{!! post.mime !!}">
+                    {% elif post.mime.startswith("video") %}
+                    <video controls loop muted preload="none" poster="/mod/deleted/t/{{ post.id }}.webp">
+                        <source src="/mod/deleted/b/{{ post.dest }}" type="{{ post.mime }}">
                     </video>
-                    @elseif(post.mime === 'application/pdf')
+                    {% elif post.mime == "application/pdf" %}
                     <div class="embed-responsive embed-responsive-16by9">
-                        <iframe class="embed-responsive-item" src="/mod/deleted/b/{!! post.dest !!}#toolbar=0" loading="lazy" style="border: none;"></iframe>
+                        <iframe class="embed-responsive-item" src="/mod/deleted/b/{{ post.dest }}#toolbar=0" loading="lazy" style="border: none;"></iframe>
                     </div>
-                    @else
-                    <img src="/mod/deleted/t/{!! post.id !!}.webp" alt="Preview" loading="lazy">
-                    @endif
+                    {% else %}
+                    <img src="/mod/deleted/t/{{ post.id }}.webp" alt="Preview" loading="lazy">
+                    {% endif %}
                 </div>
                 <div class="mq-body">
                     <div class="mq-meta">
-                        <span><strong>#{!! post.id !!}</strong></span>
-                        <span>by <strong>{!! post.username !!}</strong></span>
-                        <span>{!! post.mime !!}</span>
+                        <span><strong>#{{ post.id }}</strong></span>
+                        <span>by <strong>{{ post.username }}</strong></span>
+                        <span>{{ post.mime }}</span>
                     </div>
-                    @if(post.delete_reason)
-                    <div class="mq-reason"><strong>Reason:</strong> {!! post.delete_reason !!}</div>
-                    @endif
+                    {% if post.delete_reason %}
+                    <div class="mq-reason"><strong>Reason:</strong> {{ post.delete_reason }}</div>
+                    {% endif %}
                     <div class="mq-tags">
-                        @each(post.tags as tag)
-                        <span class="badge {!! tag.badge !!}">{!! tag.tag !!}</span>
-                        @endeach
+                        {% for key, tag in post.tags|entries %}
+                        <span class="badge {{ tag.badge }}">{{ tag.tag }}</span>
+                        {% endfor %}
                     </div>
                     <div class="mq-actions">
-                        <button type="button" data-id="{!! post.id !!}" class="mq-btn mq-btn-primary btn-approve-async">Restore</button>
-                        @if(session.admin)
-                        <button type="button" data-id="{!! post.id !!}" class="mq-btn mq-btn-danger btn-deny-async">Purge</button>
-                        @else
+                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-primary btn-approve-async">Restore</button>
+                        {% if session.admin %}
+                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-danger btn-deny-async">Purge</button>
+                        {% else %}
                         <span></span>
-                        @endif
-                        <button type="button" data-id="{!! post.id !!}" class="mq-btn mq-btn-ghost mq-btn-rating btn-rating-toggle-async"><i class="fa-solid fa-shield-halved"></i> Toggle rating</button>
+                        {% endif %}
+                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-ghost mq-btn-rating btn-rating-toggle-async"><i class="fa-solid fa-shield-halved"></i> Toggle rating</button>
                     </div>
                 </div>
             </div>
-            @endeach
+            {% endfor %}
         </div>
-        @else
+        {% else %}
         <div class="mq-empty"><strong>Nothing soft deleted.</strong>Removed items show up here until they are restored or purged.</div>
-        @endif
+        {% endif %}
 
-        @if(pages > 1)
+        {% if (pages > 1) %}
         <div class="mq-pager">
-            @if(page > 1)
-            <a href="/mod/trash?page={!! page - 1 !!}" class="mq-btn mq-btn-ghost">&laquo; Prev</a>
-            @endif
-            <span>Page {!! page !!} of {!! pages !!}</span>
-            @if(page < pages)
-            <a href="/mod/trash?page={!! page + 1 !!}" class="mq-btn mq-btn-ghost">Next &raquo;</a>
-            @endif
+            {% if (page > 1) %}
+            <a href="/mod/trash?page={{ (page - 1) }}" class="mq-btn mq-btn-ghost">&laquo; Prev</a>
+            {% endif %}
+            <span>Page {{ page }} of {{ pages }}</span>
+            {% if (page < pages) %}
+            <a href="/mod/trash?page={{ (page + 1) }}" class="mq-btn mq-btn-ghost">Next &raquo;</a>
+            {% endif %}
         </div>
-        @endif
+        {% endif %}
     </div>
-    {{-- Inside #main so AJAX navigation (which only swaps #main) brings the styles, modal and scripts along --}}
-    @include(snippets/mod-cards)
+    {# Inside #main so AJAX navigation (which only swaps #main) brings the styles, modal and scripts along #}
+    {% include "snippets/mod-cards.html" %}
     <script>
       (() => {
         // Restore → public again (no "approved" notification)
@@ -109,7 +109,7 @@
               withReason: true,
               action: async (reason) => {
                 await mq.post('/mod/trash/purge', { id: btn.dataset.id, reason });
-                mq.flash('{!! t('toast.item_deleted_success') !!}', 'success');
+                mq.flash('{{ t("toast.item_deleted_success") }}', 'success');
                 mq.removeCard(btn.closest('.mq-card'));
               }
             });
@@ -135,4 +135,4 @@
     </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

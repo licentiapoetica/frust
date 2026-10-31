@@ -1,30 +1,30 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
     <link rel="stylesheet" href="/s/css/upload.css">
-    <div class="upload-container" style="opacity: 0;" data-mimes='{!! mimes_json !!}'>
+    <div class="upload-container" style="opacity: 0;" data-mimes='{{ mimes_json }}'>
         <div class="upload-title">
-        <span class="upload-title-text">{{ t('upload.title') }}</span>
+        <span class="upload-title-text">{{ t("upload.title") }}</span>
         <div class="upload-limit-info">
-            @if(uploads_remaining === null)
-            <span class="limit-unlimited"><i class="fa-solid fa-infinity"></i> {{ t('upload_page.limit_unlimited') }}</span>
-            @elseif(uploads_remaining === 0)
-            <span class="limit-exhausted"><i class="fa-solid fa-triangle-exclamation"></i> {{ t('upload_page.limit_reached').replace('{limit}', upload_limit) }}</span>
-            @else
-            <span class="limit-remaining"><i class="fa-solid fa-upload"></i> {{ t('upload_page.limit_remaining').replace('{remaining}', uploads_remaining).replace('{limit}', upload_limit) }}</span>
-            @endif
+            {% if uploads_remaining == none %}
+            <span class="limit-unlimited"><i class="fa-solid fa-infinity"></i> {{ t("upload_page.limit_unlimited") }}</span>
+            {% elif uploads_remaining == 0 %}
+            <span class="limit-exhausted"><i class="fa-solid fa-triangle-exclamation"></i> {{ (t("upload_page.limit_reached")).replace("{limit}", upload_limit, 1) }}</span>
+            {% else %}
+            <span class="limit-remaining"><i class="fa-solid fa-upload"></i> {{ ((t("upload_page.limit_remaining")).replace("{remaining}", uploads_remaining, 1)).replace("{limit}", upload_limit, 1) }}</span>
+            {% endif %}
         </div>
         </div>
 
-        @if(session)
-        @include(snippets/upload-form)
-        @else
+        {% if session %}
+        {% include "snippets/upload-form.html" %}
+        {% else %}
         <div class="login-required">
-            <h3>{{ t('upload_page.auth_required_title') }}</h3>
-            <p>{{ t('upload_page.auth_required_text') }}</p>
-            <a href="/login" class="btn-login login-trigger-btn">{{ t('upload_page.login_btn') }}</a>
+            <h3>{{ t("upload_page.auth_required_title") }}</h3>
+            <p>{{ t("upload_page.auth_required_text") }}</p>
+            <a href="/login" class="btn-login login-trigger-btn">{{ t("upload_page.login_btn") }}</a>
         </div>
-        @endif
+        {% endif %}
     </div>
 
     <script>
@@ -33,4 +33,4 @@
 </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

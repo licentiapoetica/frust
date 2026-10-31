@@ -1,4 +1,4 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
     <div id="main">
         <div class="meme-layout-wrapper">
@@ -25,7 +25,7 @@
             </style>
             <div class="meme-creator-container">
                 <div class="meme-header">
-                    <h1 class="meme-title">{{ t('meme.create_meme') }} {!! template.name !!}</h1>            </div>
+                    <h1 class="meme-title">{{ t("meme.create_meme") }} {{ template.name }}</h1>            </div>
                 <div class="meme-editor-layout">
                     <div class="canvas-wrapper">
                         <canvas id="memeCanvas"></canvas>
@@ -33,10 +33,10 @@
 
                     <div class="meme-controls">
                         <div id="customTemplateSelector" class="form-group" style="margin-bottom: 20px; display: none;">
-                            <label for="customTemplateFile">{{ t('meme.select_image') }}</label>
+                            <label for="customTemplateFile">{{ t("meme.select_image") }}</label>
                             <input type="file" id="customTemplateFile" accept="image/*" style="display: none;">
                             <button id="selectCustomFileBtn" type="button" class="btn btn-secondary btn-block">
-                                <i class="fa fa-image"></i> {{ t('meme.choose_file_btn') }}
+                                <i class="fa fa-image"></i> {{ t("meme.choose_file_btn") }}
                             </button>
                         </div>
 
@@ -45,17 +45,17 @@
                         </div>
 
                         <button id="addText" class="btn btn-secondary btn-block" style="margin-bottom: 20px;">
-                            <i class="fa fa-plus"></i> {{ t('meme.add_text_layer') }}
+                            <i class="fa fa-plus"></i> {{ t("meme.add_text_layer") }}
                         </button>
                             <div class="form-group" style="display: none;">
-                                <label for="tags">{{ t('meme.tags_label') }}</label>
-                                <input type="text" id="tags" value="meme, {!! template.category || 'General' !!}" placeholder="meme, funny, ...">
+                                <label for="tags">{{ t("meme.tags_label") }}</label>
+                                <input type="text" id="tags" value="meme, {{ (template.category or "General") }}" placeholder="meme, funny, ...">
                             </div>
 
                         <button id="uploadMeme" class="btn btn-primary btn-block">
-                            <i class="fa fa-upload"></i> {{ t('meme.upload_btn') }}
+                            <i class="fa fa-upload"></i> {{ t("meme.upload_btn") }}
                         </button>
-                        <a href="/meme" class="btn btn-secondary btn-block">{{ t('meme.back_btn') }}</a>
+                        <a href="/meme" class="btn btn-secondary btn-block">{{ t("meme.back_btn") }}</a>
                     </div>
                 </div>
             </div>
@@ -63,15 +63,15 @@
 
         <script>
             window.memeTemplate = {
-                id: "{!! template.id !!}",
-                url: "{!! template.url !!}",
-                name: "{!! template.name !!}",
-                category: "{!! template.category || 'General' !!}",
-                sub_category: "{!! template.sub_category || '' !!}"
+                id: "{{ template.id }}",
+                url: "{{ template.url }}",
+                name: "{{ template.name }}",
+                category: "{{ (template.category or "General") }}",
+                sub_category: "{{ (template.sub_category or "") }}"
             };
-            window.csrf_token = "{{ csrf_token }}";
+            window.csrf_token = {{ csrf_token|string|tojson }};
         </script>
-        <script src="/s/js/meme-creator.js?v={{ ts }}"></script>
+        <script src="/s/js/meme-creator.js?v={{ ts|safe }}"></script>
     </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

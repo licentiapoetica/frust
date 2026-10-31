@@ -1,20 +1,20 @@
-{{-- Back-to-dashboard bar for admin/mod subpages: /mod… pages (and non-admins) go to /mod, /admin… pages to /admin. Include right after #main opens (AJAX nav only swaps #main). --}}
+{# Back-to-dashboard bar for admin/mod subpages: /mod… pages (and non-admins) go to /mod, /admin… pages to /admin. Include right after #main opens (AJAX nav only swaps #main). #}
 <nav class="adm-back" aria-label="Breadcrumb">
-  @if(session && session.admin && !is_mod_area)
+  {% if ((session and session.admin) and not is_mod_area) %}
   <a href="/admin" class="adm-back-link">
     <span class="adm-back-arrow"><i class="fa-solid fa-arrow-left"></i></span>
     <span class="adm-back-text"><small>Back to</small>Admin dashboard</span>
   </a>
-  @else
+  {% else %}
   <a href="/mod" class="adm-back-link">
     <span class="adm-back-arrow"><i class="fa-solid fa-arrow-left"></i></span>
     <span class="adm-back-text"><small>Back to</small>Moderator dashboard</span>
   </a>
-  @endif
+  {% endif %}
   <span class="adm-back-crumb" aria-current="page"></span>
 </nav>
 
-@include(snippets/admin-skin)
+{% include "snippets/admin-skin.html" %}
 
 <style>
   .adm-back {

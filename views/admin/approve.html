@@ -1,10 +1,10 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div id="main">
     <div class="container">
         <h1>APPROVAL QUEUE</h1>
         <p>Items here are pending approval.</p>
 
-        @if(pending.length > 0)
+        {% if (pending|length > 0) %}
         <h2>Pending Uploads</h2>
         <table class="table" style="width: 100%; margin-bottom: 30px;">
             <thead>
@@ -18,7 +18,7 @@
                 </tr>
             </thead>
             <tbody>
-                @each(pending as post)
+                {% for key, post in pending|entries %}
                 <tr>
                     <td>
                         <video controls loop muted preload="none" style="max-height: 200px; max-width: 300px;">
@@ -26,32 +26,32 @@
                         </video>
                     </td>
                     <td>{{ post.id }}</td>
-                    <td>{!! post.username !!}</td>
+                    <td>{{ post.username }}</td>
                     <td>{{ post.mime }}</td>
                     <td>
-                        @each(post.tags as tag)
-                        <span class="badge badge-secondary" style="margin-right: 5px;">{!! tag !!}</span>
-                        @endeach
+                        {% for key, tag in post.tags|entries %}
+                        <span class="badge badge-secondary" style="margin-right: 5px;">{{ tag }}</span>
+                        {% endfor %}
                     </td>
                     <td>
                         <a href="/admin/approve/?id={{ post.id }}" class="badge badge-success btn-approve-async">Approve</a>
                         <a href="/admin/deny/?id={{ post.id }}" class="badge badge-danger btn-deny-async">Deny / Delete</a>
                     </td>
                 </tr>
-                @endeach
+                {% endfor %}
             </tbody>
         </table>
-        @endif
+        {% endif %}
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
             <h2 style="color: #ff6b6b; margin: 0;">Soft Deleted</h2>
-            @if(trash.length > 0)
+            {% if (trash|length > 0) %}
             <button id="btn-purge-trash" class="badge badge-danger" style="border: none; padding: 10px 15px; cursor: pointer; font-size: 14px;">Purge All Soft-Deleted</button>
-            @endif
+            {% endif %}
         </div>
         <p class="text-muted">These items are in the deleted folder but not purged from DB. Approving them will restore them.</p>
 
-        @if(trash.length > 0)
+        {% if (trash|length > 0) %}
         <table class="table" style="width: 100%; opacity: 0.8;">
             <thead>
                 <tr>
@@ -64,54 +64,54 @@
                 </tr>
             </thead>
             <tbody>
-                @each(trash as post)
+                {% for key, post in trash|entries %}
                 <tr>
                     <td>
-                        @if(post.thumbnail)
+                        {% if post.thumbnail %}
                         <img src="data:image/webp;base64,{{ post.thumbnail }}" style="max-height: 150px; opacity: 0.6;">
-                        @else
+                        {% else %}
                         <span style="color:red;">[File Missing]</span>
-                        @endif
+                        {% endif %}
                     </td>
                     <td>{{ post.id }}</td>
-                    <td>{!! post.username !!}</td>
+                    <td>{{ post.username }}</td>
                     <td>{{ post.mime }}</td>
                     <td>
-                        @each(post.tags as tag)
-                        <span class="badge badge-secondary" style="margin-right: 5px;">{!! tag !!}</span>
-                        @endeach
+                        {% for key, tag in post.tags|entries %}
+                        <span class="badge badge-secondary" style="margin-right: 5px;">{{ tag }}</span>
+                        {% endfor %}
                     </td>
                     <td>
                         <a href="/admin/approve/?id={{ post.id }}" class="badge badge-warning btn-approve-async">Restore</a>
                         <a href="/admin/deny/?id={{ post.id }}" class="badge badge-danger btn-deny-async">Purge</a>
                     </td>
                 </tr>
-                @endeach
+                {% endfor %}
             </tbody>
         </table>
-        @else
+        {% else %}
         <p style="padding: 20px; border: 1px dashed #444; color: #888;">Trash is empty.</p>
-        @endif
+        {% endif %}
 
-        @if(pending.length === 0 && trash.length === 0)
+        {% if (pending|length == 0 and trash|length == 0) %}
         <div style="text-align: center; padding: 50px;">
             <h3>No pending items.</h3>
             <p>Go touch grass?</p>
         </div>
-        @endif
+        {% endif %}
 
         <br>
-        @if(typeof pages !== 'undefined' && pages > 1)
+        {% if (pages is defined and (pages > 1)) %}
         <div class="pagination" style="display: flex; gap: 10px; align-items: center; justify-content: center;">
-            @if(page > 1)
-            <a href="/admin/approve?page={{ page - 1 }}" class="badge badge-secondary">&laquo; Prev</a>
-            @endif
+            {% if (page > 1) %}
+            <a href="/admin/approve?page={{ (page - 1) }}" class="badge badge-secondary">&laquo; Prev</a>
+            {% endif %}
             <span>Page {{ page }} of {{ pages }}</span>
-            @if(page < pages) <a href="/admin/approve?page={{ page + 1 }}" class="badge badge-secondary">Next &raquo;</a>
-            @endif
+            {% if (page < pages) %} <a href="/admin/approve?page={{ (page + 1) }}" class="badge badge-secondary">Next &raquo;</a>
+            {% endif %}
         </div>
         <br>
-        @endif
+        {% endif %}
 
 
 
@@ -182,11 +182,11 @@
                             });
                             const data = await res.json();
                             if (res.ok && data.success) {
-                                if (window.flashMessage) window.flashMessage('{!! t('toast.item_deleted_success') !!}', 2000, 'success');
+                                if (window.flashMessage) window.flashMessage('{{ t("toast.item_deleted_success") }}', 2000, 'success');
                                 row.style.opacity = '0';
                                 setTimeout(() => row.remove(), 300);
                             } else {
-                                if (window.flashMessage) window.flashMessage(data.msg || '{!! t('toast.report_error') !!}', 3000, 'error');
+                                if (window.flashMessage) window.flashMessage(data.msg || '{{ t("toast.report_error") }}', 3000, 'error');
                                 throw new Error(data.msg || 'Request failed');
                             }
                         });
@@ -209,15 +209,15 @@
                             });
                             const data = await res.json();
                             if (data.success) {
-                                if (window.flashMessage) window.flashMessage('{!! t('toast.approve_success') !!}', 2000, 'success');
+                                if (window.flashMessage) window.flashMessage('{{ t("toast.approve_success") }}', 2000, 'success');
                                 row.style.opacity = '0';
                                 setTimeout(() => row.remove(), 300);
                             } else {
-                                if (window.flashMessage) window.flashMessage(data.msg || '{!! t('toast.approve_error') !!}', 3000, 'error');
+                                if (window.flashMessage) window.flashMessage(data.msg || '{{ t("toast.approve_error") }}', 3000, 'error');
                             }
                         } catch (err) {
                             console.error(err);
-                            if (window.flashMessage) window.flashMessage('{!! t('toast.network_error') !!}', 3000, 'error');
+                            if (window.flashMessage) window.flashMessage('{{ t("toast.network_error") }}', 3000, 'error');
                         }
                     });
                 });
@@ -241,4 +241,4 @@
         </script>
     </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

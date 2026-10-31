@@ -1,22 +1,22 @@
-@if(tmp.user)
-<h2>user: {{ tmp.user }} @if(tmp.mime)({{ tmp.mime }}s)@else(all)@endif @if(tmp.view_mode === 'favs')favs @endif @if(tmp.view_mode === 'uploads')uploads @endif @if(total !== undefined)- {{ total }} items@endif</h2>
-@endif
-@if(tmp.tag)
-<h2>tag: {{ tmp.tag }} @if(tmp.mime)({{ tmp.mime }}s)@else(all)@endif @if(total !== undefined)- {{ total }} items@endif</h2>
-@endif
-@if(tmp.hall)
-    @if(typeof tmp.hall === 'object')
-    <h2>hall: {!! tmp.hall.name !!} @if(tmp.mime)({{ tmp.mime }}s)@else(all)@endif @if(total !== undefined)- {{ total }} items@endif</h2>
-    @if(tmp.hall.description)<p class="page-description" style="color: #aaa; margin-top: 5px; font-size: 0.9em;">{!! tmp.hall.description !!}</p>@endif
-    @else
-    <h2>hall: {{ tmp.hall }} @if(tmp.mime)({{ tmp.mime }}s)@else(all)@endif @if(total !== undefined)- {{ total }} items@endif</h2>
-    @endif
-@endif
-@if(tmp.userHall)
-    @if(typeof tmp.userHall === 'object')
-    <h2>hall: {!! tmp.userHall.name !!} @if(tmp.mime)({{ tmp.mime }}s)@else(all)@endif @if(total !== undefined)- {{ total }} items@endif</h2>
-    @if(tmp.userHall.description)<p class="page-description" style="color: #aaa; margin-top: 5px; font-size: 0.9em;">{!! tmp.userHall.description !!}</p>@endif
-    @else
-    <h2>hall: {{ tmp.userHall }} @if(tmp.mime)({{ tmp.mime }}s)@else(all)@endif @if(total !== undefined)- {{ total }} items@endif</h2>
-    @endif
-@endif
+{% if tmp.user %}
+<h2>user: {{ tmp.user }} {% if tmp.mime %}({{ tmp.mime }}s){% else %}(all){% endif %} {% if tmp.view_mode == "favs" %}favs {% endif %} {% if tmp.view_mode == "uploads" %}uploads {% endif %} {% if total != none %}- {{ total }} items{% endif %}</h2>
+{% endif %}
+{% if tmp.tag %}
+<h2>tag: {{ tmp.tag }} {% if tmp.mime %}({{ tmp.mime }}s){% else %}(all){% endif %} {% if total != none %}- {{ total }} items{% endif %}</h2>
+{% endif %}
+{% if tmp.hall %}
+    {% if tmp.hall is mapping %}
+    <h2>hall: {{ tmp.hall.name }} {% if tmp.mime %}({{ tmp.mime }}s){% else %}(all){% endif %} {% if total != none %}- {{ total }} items{% endif %}</h2>
+    {% if tmp.hall.description %}<p class="page-description" style="color: #aaa; margin-top: 5px; font-size: 0.9em;">{{ tmp.hall.description }}</p>{% endif %}
+    {% else %}
+    <h2>hall: {{ tmp.hall }} {% if tmp.mime %}({{ tmp.mime }}s){% else %}(all){% endif %} {% if total != none %}- {{ total }} items{% endif %}</h2>
+    {% endif %}
+{% endif %}
+{% if tmp.userHall %}
+    {% if tmp.userHall is mapping %}
+    <h2>hall: {{ tmp.userHall.name }} {% if tmp.mime %}({{ tmp.mime }}s){% else %}(all){% endif %} {% if total != none %}- {{ total }} items{% endif %}</h2>
+    {% if tmp.userHall.description %}<p class="page-description" style="color: #aaa; margin-top: 5px; font-size: 0.9em;">{{ tmp.userHall.description }}</p>{% endif %}
+    {% else %}
+    <h2>hall: {{ tmp.userHall }} {% if tmp.mime %}({{ tmp.mime }}s){% else %}(all){% endif %} {% if total != none %}- {{ total }} items{% endif %}</h2>
+    {% endif %}
+{% endif %}

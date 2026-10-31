@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="{{ lang || 'en' }}" theme="@if(typeof theme !== 'undefined' && theme){{ theme }}@elseif(typeof req !== 'undefined' && req.theme){{ req.theme }}@else{{ default_theme || 'f0ck' }}@endif">
+<html lang="{{ (lang or "en") }}" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}">
 <head>
   <title>{{ domain }} — doomscroll</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#000" />
   <link rel="manifest" href="/manifest.json">
-  <link rel="icon" @if(custom_favicon && custom_favicon.length > 0)href="{{ custom_favicon }}"@else type="image/gif" href="/s/img/favicon.gif"@endif />
+  <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
   <link rel="stylesheet" href="/s/fa/all.min.css">
   <link rel="preload" href="/s/vcr.ttf" as="font" type="font/ttf" crossorigin>
-  @if(typeof page_meta !== 'undefined')
+  {% if page_meta is defined %}
   <meta property="og:site_name" content="{{ domain }}" />
   <meta property="og:title" content="{{ page_meta.title }}" />
   <meta property="og:url" content="{{ page_meta.url }}" />
@@ -20,7 +20,7 @@
   <meta property="twitter:title" content="{{ page_meta.title }}" />
   <meta property="twitter:image" content="{{ page_meta.image }}" />
   <meta property="twitter:url" content="{{ page_meta.url }}" />
-  @endif
+  {% endif %}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     /* Kill all mobile tap highlights globally */
@@ -956,122 +956,122 @@
 <body class="scroller-active">
   <div id="main">
   <script>
-    window.f0ckThemes = {{ themes_json }};
-    window.f0ckDomain = "{{ domain }}";
-    window.scrollerMode = @if(typeof session !== 'undefined' && session){{ session.mode || 0 }}@else 0@endif;
-    window.scrollerLoggedIn = @if(typeof session !== 'undefined' && session)true@else false@endif;
-    window.scrollerIsMod = @if(typeof session !== 'undefined' && session && (session.admin || session.is_moderator))true@else false@endif;
-    window.scrollerCsrf = "@if(typeof session !== 'undefined' && session){{ session.csrf_token || '' }}@else@endif";
+    window.f0ckThemes = {{ themes_json|safe }};
+    window.f0ckDomain = {{ domain|string|tojson }};
+    window.scrollerMode = {% if (session is defined and session) %}{{ (session.mode or 0)|safe }}{% else %} 0{% endif %};
+    window.scrollerLoggedIn = {% if (session is defined and session) %}true{% else %} false{% endif %};
+    window.scrollerIsMod = {% if ((session is defined and session) and (session.admin or session.is_moderator)) %}true{% else %} false{% endif %};
+    window.scrollerCsrf = "{% if (session is defined and session) %}{{ (session.csrf_token or "")|safe }}{% else %}{% endif %}";
     window.f0ckSession = {
       logged_in: window.scrollerLoggedIn,
-      user: @if(typeof session !== 'undefined' && session && session.user)"{{ session.user }}"@else null@endif,
-      is_anon: @if(typeof session !== 'undefined' && session && session.is_anon)true@else false@endif,
-      anon_permissions: {{ anon_permissions_json || '{}' }},
+      user: {% if ((session is defined and session) and session.user) %}{{ session.user|string|tojson }}{% else %} null{% endif %},
+      is_anon: {% if ((session is defined and session) and session.is_anon) %}true{% else %} false{% endif %},
+      anon_permissions: {{ (anon_permissions_json or "{}")|safe }},
       csrf_token: window.scrollerCsrf,
-      guest_anonymize: @if(guest_anonymize) true @else false @endif,
-      anon_anonymize: @if(anon_anonymize) true @else false @endif,
-      is_anonymized: @if(is_anonymized) true @else false @endif,
-      excluded_tags: @if(typeof session !== 'undefined' && session && session.excluded_tags) {{ JSON.stringify(session.excluded_tags) }} @else [] @endif,
-      development: @if(development) true @else false @endif
+      guest_anonymize: {% if guest_anonymize %} true {% else %} false {% endif %},
+      anon_anonymize: {% if anon_anonymize %} true {% else %} false {% endif %},
+      is_anonymized: {% if is_anonymized %} true {% else %} false {% endif %},
+      excluded_tags: {% if ((session is defined and session) and session.excluded_tags) %} {{ session.excluded_tags|tojson|safe }} {% else %} [] {% endif %},
+      development: {% if development %} true {% else %} false {% endif %}
     };
     window.f0ckDebug = window.f0ckSession.development ? console.log.bind(console) : () => {};
-    window.scrollerEnableNsfl = {{ enable_nsfl ? 'true' : 'false' }};
-    window.scrollerEnableSwf  = {{ enable_swf ? 'true' : 'false' }};
-    window.scrollerRuffleVolume = @if(typeof session !== 'undefined' && session && session.ruffle_volume !== undefined && session.ruffle_volume !== null){{ session.ruffle_volume }}@else 0.5@endif;
-    window.f0ckAllowedImages = {{ allowed_comment_images_json }};
-    window.scrollerPublic = {{ private_society ? 'false' : 'true' }};
-    window.scrollerMimeCats = {{ JSON.stringify(scroller_mime_cats) }};
+    window.scrollerEnableNsfl = {{ ("true" if enable_nsfl else "false")|safe }};
+    window.scrollerEnableSwf  = {{ ("true" if enable_swf else "false")|safe }};
+    window.scrollerRuffleVolume = {% if (((session is defined and session) and session.ruffle_volume != none) and session.ruffle_volume != none) %}{{ session.ruffle_volume|safe }}{% else %} 0.5{% endif %};
+    window.f0ckAllowedImages = {{ allowed_comment_images_json|safe }};
+    window.scrollerPublic = {{ ("false" if private_society else "true")|safe }};
+    window.scrollerMimeCats = {{ scroller_mime_cats|tojson|safe }};
     window.f0ckI18n = {
-      lang: "{{ lang }}",
+      lang: {{ lang|string|tojson }},
       // timeago
-      ta_just_now: "{{ t('timeago.just_now') }}",
-      ta_second: "{{ t('timeago.second') }}",
-      ta_seconds: "{{ t('timeago.seconds') }}",
-      ta_minute: "{{ t('timeago.minute') }}",
-      ta_minutes: "{{ t('timeago.minutes') }}",
-      ta_hour: "{{ t('timeago.hour') }}",
-      ta_hours: "{{ t('timeago.hours') }}",
-      ta_day: "{{ t('timeago.day') }}",
-      ta_days: "{{ t('timeago.days') }}",
-      ta_week: "{{ t('timeago.week') }}",
-      ta_weeks: "{{ t('timeago.weeks') }}",
-      ta_month: "{{ t('timeago.month') }}",
-      ta_months: "{{ t('timeago.months') }}",
-      ta_year: "{{ t('timeago.year') }}",
-      ta_years: "{{ t('timeago.years') }}",
-      ta_ago: "{{ t('timeago.ago') }}",
+      ta_just_now: {{ t("timeago.just_now")|string|tojson }},
+      ta_second: {{ t("timeago.second")|string|tojson }},
+      ta_seconds: {{ t("timeago.seconds")|string|tojson }},
+      ta_minute: {{ t("timeago.minute")|string|tojson }},
+      ta_minutes: {{ t("timeago.minutes")|string|tojson }},
+      ta_hour: {{ t("timeago.hour")|string|tojson }},
+      ta_hours: {{ t("timeago.hours")|string|tojson }},
+      ta_day: {{ t("timeago.day")|string|tojson }},
+      ta_days: {{ t("timeago.days")|string|tojson }},
+      ta_week: {{ t("timeago.week")|string|tojson }},
+      ta_weeks: {{ t("timeago.weeks")|string|tojson }},
+      ta_month: {{ t("timeago.month")|string|tojson }},
+      ta_months: {{ t("timeago.months")|string|tojson }},
+      ta_year: {{ t("timeago.year")|string|tojson }},
+      ta_years: {{ t("timeago.years")|string|tojson }},
+      ta_ago: {{ t("timeago.ago")|string|tojson }},
       // actions
-      favourite: "{{ t('scroller.favourite') }}",
-      comments_label: "{{ t('scroller.comments') }}",
-      add_tag: "{{ t('scroller.add_tag') }}",
-      share_label: "{{ t('scroller.share') }}",
-      open_label: "{{ t('scroller.open') }}",
-      add_label: "{{ t('scroller.add') }}",
-      view_label: "{{ t('scroller.view') }}",
-      open_post: "{{ t('scroller.open_post') }}",
-      already_added: "{{ t('scroller.already_added') }}",
-      add_to_site: "{{ t('scroller.add_to_site') }}",
-      add_to_site_first: "{{ t('scroller.add_to_site_first') }}",
+      favourite: {{ t("scroller.favourite")|string|tojson }},
+      comments_label: {{ t("scroller.comments")|string|tojson }},
+      add_tag: {{ t("scroller.add_tag")|string|tojson }},
+      share_label: {{ t("scroller.share")|string|tojson }},
+      open_label: {{ t("scroller.open")|string|tojson }},
+      add_label: {{ t("scroller.add")|string|tojson }},
+      view_label: {{ t("scroller.view")|string|tojson }},
+      open_post: {{ t("scroller.open_post")|string|tojson }},
+      already_added: {{ t("scroller.already_added")|string|tojson }},
+      add_to_site: {{ t("scroller.add_to_site")|string|tojson }},
+      add_to_site_first: {{ t("scroller.add_to_site_first")|string|tojson }},
       // reply
-      replying_to: "{{ t('scroller.replying_to') }}",
-      reply: "{{ t('scroller.reply') }}",
+      replying_to: {{ t("scroller.replying_to")|string|tojson }},
+      reply: {{ t("scroller.reply")|string|tojson }},
       // scroller labels
-      just_now: "{{ t('scroller.just_now') }}",
-      failed_load_comments: "{{ t('scroller.failed_load_comments') }}",
-      no_comments: "{{ t('scroller.no_comments') }}",
-      write_comment: "{{ t('scroller.write_comment') }}",
-      login_required: "{{ t('scroller.login_required') }}",
-      login_to_comment: "{{ t('scroller.login_to_comment') }}",
-      clear_filter: "{{ t('scroller.clear_filter') || 'Clear filter' }}"
+      just_now: {{ t("scroller.just_now")|string|tojson }},
+      failed_load_comments: {{ t("scroller.failed_load_comments")|string|tojson }},
+      no_comments: {{ t("scroller.no_comments")|string|tojson }},
+      write_comment: {{ t("scroller.write_comment")|string|tojson }},
+      login_required: {{ t("scroller.login_required")|string|tojson }},
+      login_to_comment: {{ t("scroller.login_to_comment")|string|tojson }},
+      clear_filter: {{ (t("scroller.clear_filter") or "Clear filter")|string|tojson }}
     };
-    @if(typeof session !== 'undefined' && session)
-    window.scrollerUsername = "{{ session.user || '' }}";
-    window.scrollerDisplayName = "{{ session.display_name || session.user || '' }}";
-    window.scrollerUserAvatar = "{{ session.avatar_file ? '/a/' + session.avatar_file : (session.avatar ? '/t/' + session.avatar + '.webp' : '/a/default.png') }}";
+    {% if (session is defined and session) %}
+    window.scrollerUsername = {{ (session.user or "")|string|tojson }};
+    window.scrollerDisplayName = {{ ((session.display_name or session.user) or "")|string|tojson }};
+    window.scrollerUserAvatar = {{ ("/a/" ~ session.avatar_file if session.avatar_file else (("/t/" ~ session.avatar) ~ ".webp" if session.avatar else "/a/default.png"))|string|tojson }};
     Object.assign(window.f0ckI18n, {
       // notifications
-      notif_upload_approved: "{{ t('notifications.upload_approved_short') }}",
-      notif_upload_pending: "{{ t('notifications.upload_pending_short') }}",
-      notif_new_report: "{{ t('notifications.new_report_short') }}",
-      notif_upload_denied: "{{ t('notifications.upload_denied_short') }}",
-      notif_upload_deleted: "{{ t('notifications.upload_deleted_short') }}",
-      notif_upload_success: "{{ t('notifications.upload_success') }}",
-      notif_upload_error: "{{ t('notifications.upload_error') }}",
-      notif_replied: "{{ t('notifications.replied_short') }}",
-      notif_subscribed: "{{ t('notifications.subscribed_short') }}",
-      notif_mentioned: "{{ t('notifications.mentioned_short') }}",
-      notif_commented: "{{ t('notifications.commented') }}",
-      notif_system: "{{ t('notifications.system') }}",
-      notif_admin: "{{ t('notifications.admin') }}",
-      notif_moderation: "{{ t('notifications.moderation') }}",
-      notif_tab_user: "{{ t('nav.notif_tab_user') }}",
-      notif_tab_system: "{{ t('nav.notif_tab_system') }}",
-      no_notifications: "{{ t('nav.no_notifications') }}",
+      notif_upload_approved: {{ t("notifications.upload_approved_short")|string|tojson }},
+      notif_upload_pending: {{ t("notifications.upload_pending_short")|string|tojson }},
+      notif_new_report: {{ t("notifications.new_report_short")|string|tojson }},
+      notif_upload_denied: {{ t("notifications.upload_denied_short")|string|tojson }},
+      notif_upload_deleted: {{ t("notifications.upload_deleted_short")|string|tojson }},
+      notif_upload_success: {{ t("notifications.upload_success")|string|tojson }},
+      notif_upload_error: {{ t("notifications.upload_error")|string|tojson }},
+      notif_replied: {{ t("notifications.replied_short")|string|tojson }},
+      notif_subscribed: {{ t("notifications.subscribed_short")|string|tojson }},
+      notif_mentioned: {{ t("notifications.mentioned_short")|string|tojson }},
+      notif_commented: {{ t("notifications.commented")|string|tojson }},
+      notif_system: {{ t("notifications.system")|string|tojson }},
+      notif_admin: {{ t("notifications.admin")|string|tojson }},
+      notif_moderation: {{ t("notifications.moderation")|string|tojson }},
+      notif_tab_user: {{ t("nav.notif_tab_user")|string|tojson }},
+      notif_tab_system: {{ t("nav.notif_tab_system")|string|tojson }},
+      no_notifications: {{ t("nav.no_notifications")|string|tojson }},
       // scroller
-      add: "{{ t('scroller.add') }}",
-      update_preset: "{{ t('scroller.update_preset') }}",
-      update_preset_sub: "{{ t('scroller.update_preset_sub') }}",
-      no_presets: "{{ t('scroller.no_presets') }}",
-      copy_clipboard: "{{ t('scroller.copy_clipboard') }}",
-      copied: "{{ t('scroller.copied') }}",
-      recent: "{{ t('scroller.recent') }}",
-      nothing_found: "{{ t('scroller.nothing_found') }}",
-      adjust_filters: "{{ t('scroller.adjust_filters') }}",
-      no_custom_emojis: "{{ t('scroller.no_custom_emojis') }}",
-      rehost_failed: "{{ t('scroller.rehost_failed') }}",
-      chan_load_failed: "{{ t('scroller.chan_load_failed') }}",
-      fetch_failed: "{{ t('scroller.fetch_failed') }}",
-      invalid_chan_url: "{{ t('scroller.invalid_chan_url') }}",
-      chan_catalog_failed: "{{ t('scroller.chan_catalog_failed') }}",
-      anonymous: "{{ t('scroller.anonymous') }}"
+      add: {{ t("scroller.add")|string|tojson }},
+      update_preset: {{ t("scroller.update_preset")|string|tojson }},
+      update_preset_sub: {{ t("scroller.update_preset_sub")|string|tojson }},
+      no_presets: {{ t("scroller.no_presets")|string|tojson }},
+      copy_clipboard: {{ t("scroller.copy_clipboard")|string|tojson }},
+      copied: {{ t("scroller.copied")|string|tojson }},
+      recent: {{ t("scroller.recent")|string|tojson }},
+      nothing_found: {{ t("scroller.nothing_found")|string|tojson }},
+      adjust_filters: {{ t("scroller.adjust_filters")|string|tojson }},
+      no_custom_emojis: {{ t("scroller.no_custom_emojis")|string|tojson }},
+      rehost_failed: {{ t("scroller.rehost_failed")|string|tojson }},
+      chan_load_failed: {{ t("scroller.chan_load_failed")|string|tojson }},
+      fetch_failed: {{ t("scroller.fetch_failed")|string|tojson }},
+      invalid_chan_url: {{ t("scroller.invalid_chan_url")|string|tojson }},
+      chan_catalog_failed: {{ t("scroller.chan_catalog_failed")|string|tojson }},
+      anonymous: {{ t("scroller.anonymous")|string|tojson }}
     });
-    @endif
+    {% endif %}
   </script>
 
   <!-- Loader -->
   <div id="scroller-loader">
     <div class="loader-logo">{{ domain }}</div>
-    <div class="loader-sub">{{ t('scroller.doomscroll') }}</div>
+    <div class="loader-sub">{{ t("scroller.doomscroll") }}</div>
     <div class="loader-spinner"></div>
   </div>
   <div id="speed-indicator" class="speed-indicator"><i class="fa-solid fa-forward"></i> 2x speed</div>
@@ -1079,20 +1079,20 @@
   <!-- Top bar -->
   <div id="scroller-topbar">
     <div class="topbar-left">
-      <a id="scroller-back" class="topbar-icon-btn" href="/" title="{{ t('scroller.back') }}"><i class="fa-solid fa-arrow-left"></i></a>
+      <a id="scroller-back" class="topbar-icon-btn" href="/" title="{{ t("scroller.back") }}"><i class="fa-solid fa-arrow-left"></i></a>
       <div id="filter-active-summary">
         <span id="filter-active-summary-text"></span>
-        <button id="filter-active-clear" type="button" title="{{ t('scroller.clear_filter') || 'Clear filter' }}" aria-label="{{ t('scroller.clear_filter') || 'Clear filter' }}"><i class="fa-solid fa-xmark"></i></button>
+        <button id="filter-active-clear" type="button" title="{{ (t("scroller.clear_filter") or "Clear filter") }}" aria-label="{{ (t("scroller.clear_filter") or "Clear filter") }}"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </div>
     <div class="topbar-right">
-      <button id="chan-open-btn" class="topbar-icon-btn" title="{{ t('scroller.chan_threads') }}" style="display:none"><i class="fa-solid fa-clover"></i></button>
-      <button id="chan-gallery-btn" class="topbar-icon-btn" title="{{ t('scroller.thread_gallery') }} (G)" style="display:none"><i class="fa-solid fa-grip"></i></button>
-      <button id="settings-open-btn" class="topbar-icon-btn" title="{{ t('scroller.settings') }}"><i class="fa-solid fa-gear"></i></button>
-      @if(typeof session !== 'undefined' && session && !session.is_anon || typeof session !== 'undefined' && session && enable_anonymous_access && anon_permissions.filter)
-      <button id="filter-open-btn" class="topbar-icon-btn" title="{{ t('scroller.filters') }} (F)"><i class="fa-solid fa-sliders"></i></button>
-      @endif
-      @if(typeof session !== 'undefined' && session)
+      <button id="chan-open-btn" class="topbar-icon-btn" title="{{ t("scroller.chan_threads") }}" style="display:none"><i class="fa-solid fa-clover"></i></button>
+      <button id="chan-gallery-btn" class="topbar-icon-btn" title="{{ t("scroller.thread_gallery") }} (G)" style="display:none"><i class="fa-solid fa-grip"></i></button>
+      <button id="settings-open-btn" class="topbar-icon-btn" title="{{ t("scroller.settings") }}"><i class="fa-solid fa-gear"></i></button>
+      {% if (((session is defined and session) and not session.is_anon) or (((session is defined and session) and enable_anonymous_access) and anon_permissions.filter)) %}
+      <button id="filter-open-btn" class="topbar-icon-btn" title="{{ t("scroller.filters") }} (F)"><i class="fa-solid fa-sliders"></i></button>
+      {% endif %}
+      {% if (session is defined and session) %}
       <div id="scroller-notif-wrap" style="position:relative;">
         <button id="scroller-notif-btn" class="topbar-icon-btn" title="Notifications">
           <i class="fa-solid fa-bell"></i>
@@ -1101,32 +1101,32 @@
         <div id="scroller-notif-dropdown" class="notif-dropdown" style="position:fixed; z-index:99999; display:none;">
           <div class="notif-header">
             <div class="notif-tabs">
-              @if(enable_comments)
-              <button class="notif-tab active" data-tab="user">{{ t('nav.notif_tab_user') }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-user" style="display:none">0</span></button>
-              <button class="notif-tab" data-tab="system">{{ t('nav.notif_tab_system') }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-system" style="display:none">0</span></button>
-              @else
-              <button class="notif-tab active" data-tab="system">{{ t('nav.notif_tab_system') }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-system" style="display:none">0</span></button>
-              @endif
-              @if(typeof session !== 'undefined' && session && session.admin)
+              {% if enable_comments %}
+              <button class="notif-tab active" data-tab="user">{{ t("nav.notif_tab_user") }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-user" style="display:none">0</span></button>
+              <button class="notif-tab" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-system" style="display:none">0</span></button>
+              {% else %}
+              <button class="notif-tab active" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-system" style="display:none">0</span></button>
+              {% endif %}
+              {% if ((session is defined and session) and session.admin) %}
               <button class="notif-tab" data-tab="admin"><i class="fa-solid fa-shield-halved" style="font-size: 0.85em;"></i> Admin <span class="notif-tab-badge" id="scroller-notif-tab-badge-admin" style="display:none">0</span></button>
-              @endif
+              {% endif %}
             </div>
-            <button id="scroller-mark-all-read" title="{{ t('nav.mark_all_read') }}"><i class="fa-solid fa-check-double"></i></button>
+            <button id="scroller-mark-all-read" title="{{ t("nav.mark_all_read") }}"><i class="fa-solid fa-check-double"></i></button>
           </div>
-          @if(enable_comments)
+          {% if enable_comments %}
           <div class="notif-list" id="scroller-notif-list" data-active-tab="user">
-          @else
+          {% else %}
           <div class="notif-list" id="scroller-notif-list" data-active-tab="system">
-          @endif
-            <div class="notif-empty">{{ t('nav.no_notifications') }}</div>
+          {% endif %}
+            <div class="notif-empty">{{ t("nav.no_notifications") }}</div>
           </div>
           <div class="notif-footer">
-            <a href="/notifications" target="_blank" class="view-all-notifs">{{ t('nav.view_all_notifications') }}</a>
+            <a href="/notifications" target="_blank" class="view-all-notifs">{{ t("nav.view_all_notifications") }}</a>
           </div>
         </div>
       </div>
-      @endif
-      <button id="scroller-mute-btn" class="topbar-icon-btn" title="{{ t('scroller.volume') }} (M)"><i class="fa-solid fa-volume-xmark"></i></button>
+      {% endif %}
+      <button id="scroller-mute-btn" class="topbar-icon-btn" title="{{ t("scroller.volume") }} (M)"><i class="fa-solid fa-volume-xmark"></i></button>
     </div>
   </div>
 
@@ -1146,8 +1146,8 @@
     <div id="scroller-sentinel"></div>
     <div id="scroller-empty">
       <i class="fa-solid fa-binoculars"></i>
-      <p>{{ t('scroller.nothing_found') }}</p>
-      <button onclick="document.getElementById('filter-open-btn').click()" style="margin-top:8px;padding:8px 20px;border-radius:50px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:.8rem;">{{ t('scroller.adjust_filters') }}</button>
+      <p>{{ t("scroller.nothing_found") }}</p>
+      <button onclick="document.getElementById('filter-open-btn').click()" style="margin-top:8px;padding:8px 20px;border-radius:50px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:.8rem;">{{ t("scroller.adjust_filters") }}</button>
     </div>
   </div>
 
@@ -1156,11 +1156,12 @@
   <div id="filter-panel" class="scroller-panel" role="dialog" aria-label="Feed filters">
     <div class="panel-handle"><div class="panel-handle-bar"></div></div>
     <div class="panel-header">
-      <span class="panel-title">{{ t('scroller.filters') }}</span>
-      <button class="filter-reset-btn" id="filter-reset-btn">{{ t('scroller.reset_all') }}</button>
+      <span class="panel-title">{{ t("scroller.filters") }}</span>
+      <button class="filter-reset-btn" id="filter-reset-btn">{{ t("scroller.reset_all") }}</button>
     </div>
     <div class="filter-scroll-area">
-    @js
+    {# PORT_TODO @js block:
+
       const _isScrollerMember = typeof session !== 'undefined' && session && session.user && !session.is_anon;
       const _isScrollerAnon = typeof session !== 'undefined' && session && (session.is_anon || session.user === 'anonymous' || (typeof session.user === 'string' && session.user.startsWith('anon_')));
       const _isScrollerGuest = !_isScrollerMember && !_isScrollerAnon;
@@ -1178,72 +1179,73 @@
       const _scrollerAllowedMimes = (typeof anon_permissions !== 'undefined' && anon_permissions && anon_permissions.allowed_mimes) || ['image', 'video', 'audio', 'flash', 'pdf'];
       const _scrollerIsSingleMime = _isScrollerAnonUser && _scrollerAllowedMimes.length === 1;
       const _scrollerSingleMime = _scrollerIsSingleMime ? _scrollerAllowedMimes[0] : null;
-    @endjs
+    
+#}
       <div class="filter-section">
-        <div class="filter-section-label">{{ t('scroller.rating') }}</div>
+        <div class="filter-section-label">{{ t("scroller.rating") }}</div>
         <div class="pill-group" id="mode-pills">
-          @if(_isScrollerGuest)
+          {% if _isScrollerGuest %}
           <button class="filter-pill active locked" data-mode="0" style="cursor: default;" title="SFW"><i class="fa-solid fa-shield-halved"></i>SFW<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
           <button class="filter-pill locked" data-mode="1" style="cursor: not-allowed; opacity: 0.45;" title="Only available for members" disabled><i class="fa-solid fa-fire"></i>NSFW<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
-          @if(enable_nsfl)
+          {% if enable_nsfl %}
           <button class="filter-pill locked" data-mode="4" style="cursor: not-allowed; opacity: 0.45;" title="Only available for members" disabled><i class="fa-solid fa-skull"></i>NSFL<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
-          @endif
+          {% endif %}
           <button class="filter-pill locked" data-mode="3" style="cursor: not-allowed; opacity: 0.45;" title="Only available for members" disabled>ALL<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
-          <button class="filter-pill locked" data-mode="2" style="cursor: not-allowed; opacity: 0.45;" title="Only available for members" disabled>{{ t('scroller.untagged') }}<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
-          @elseif(_scrollerIsSingleMode)
-          <button class="filter-pill active locked" data-mode="{{ _scrollerSingleMode === 'sfw' ? 0 : (_scrollerSingleMode === 'nsfw' ? 1 : (_scrollerSingleMode === 'nsfl' ? 4 : 2)) }}" style="cursor: not-allowed; pointer-events: none;" title="Locked by site permissions"><i class="fa-solid fa-lock" style="margin-right: 4px;"></i>{{ _scrollerSingleMode.toUpperCase() }}</button>
-          @else
-          @if(_scrollerShowSfw)
+          <button class="filter-pill locked" data-mode="2" style="cursor: not-allowed; opacity: 0.45;" title="Only available for members" disabled>{{ t("scroller.untagged") }}<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
+          {% elif _scrollerIsSingleMode %}
+          <button class="filter-pill active locked" data-mode="{{ (0 if _scrollerSingleMode == "sfw" else (1 if _scrollerSingleMode == "nsfw" else (4 if _scrollerSingleMode == "nsfl" else 2))) }}" style="cursor: not-allowed; pointer-events: none;" title="Locked by site permissions"><i class="fa-solid fa-lock" style="margin-right: 4px;"></i>{{ _scrollerSingleMode|upper }}</button>
+          {% else %}
+          {% if _scrollerShowSfw %}
           <button class="filter-pill active" data-mode="0"><i class="fa-solid fa-shield-halved"></i>SFW</button>
-          @endif
-          @if(_scrollerShowNsfw)
+          {% endif %}
+          {% if _scrollerShowNsfw %}
           <button class="filter-pill" data-mode="1"><i class="fa-solid fa-fire"></i>NSFW</button>
-          @endif
-          @if(_scrollerShowNsfl)
+          {% endif %}
+          {% if _scrollerShowNsfl %}
           <button class="filter-pill" data-mode="4"><i class="fa-solid fa-skull"></i>NSFL</button>
-          @endif
-          @if(_scrollerShowAll)
-          <button class="filter-pill" data-mode="3">{{ t('scroller.all') }}</button>
-          @endif
-          @if(_scrollerShowUntagged)
-          <button class="filter-pill" data-mode="2">{{ t('scroller.untagged') }}</button>
-          @endif
-          @endif
+          {% endif %}
+          {% if _scrollerShowAll %}
+          <button class="filter-pill" data-mode="3">{{ t("scroller.all") }}</button>
+          {% endif %}
+          {% if _scrollerShowUntagged %}
+          <button class="filter-pill" data-mode="2">{{ t("scroller.untagged") }}</button>
+          {% endif %}
+          {% endif %}
         </div>
       </div>
       <div class="filter-section">
-        <div class="filter-section-label">{{ t('scroller.media_type') }}</div>
+        <div class="filter-section-label">{{ t("scroller.media_type") }}</div>
         <div class="pill-group" id="mime-pills">
-          @if(_scrollerIsSingleMime)
-          <button class="filter-pill active locked" data-mime="{{ _scrollerSingleMime }}" style="cursor: not-allowed; pointer-events: none;" title="Locked by site permissions"><i class="fa-solid fa-lock" style="margin-right: 4px;"></i>{{ t('scroller.' + _scrollerSingleMime) || _scrollerSingleMime }}</button>
-          @else
-          <button class="filter-pill active" data-mime=""><i class="fa-solid fa-layer-group"></i>{{ t('scroller.all') }}</button>
-          @if(scroller_mime_cats.includes('video'))
-          <button class="filter-pill" data-mime="video"><i class="fa-solid fa-film"></i>{{ t('scroller.video') }}</button>
-          @endif
-          @if(scroller_mime_cats.includes('image'))
-          <button class="filter-pill" data-mime="image"><i class="fa-solid fa-image"></i>{{ t('scroller.image') }}</button>
-          @endif
-          @if(scroller_mime_cats.includes('audio'))
-          <button class="filter-pill" data-mime="audio"><i class="fa-solid fa-music"></i>{{ t('scroller.audio') }}</button>
-          @endif
-          @endif
+          {% if _scrollerIsSingleMime %}
+          <button class="filter-pill active locked" data-mime="{{ _scrollerSingleMime }}" style="cursor: not-allowed; pointer-events: none;" title="Locked by site permissions"><i class="fa-solid fa-lock" style="margin-right: 4px;"></i>{{ (t("scroller." ~ _scrollerSingleMime) or _scrollerSingleMime) }}</button>
+          {% else %}
+          <button class="filter-pill active" data-mime=""><i class="fa-solid fa-layer-group"></i>{{ t("scroller.all") }}</button>
+          {% if ("video" in scroller_mime_cats) %}
+          <button class="filter-pill" data-mime="video"><i class="fa-solid fa-film"></i>{{ t("scroller.video") }}</button>
+          {% endif %}
+          {% if ("image" in scroller_mime_cats) %}
+          <button class="filter-pill" data-mime="image"><i class="fa-solid fa-image"></i>{{ t("scroller.image") }}</button>
+          {% endif %}
+          {% if ("audio" in scroller_mime_cats) %}
+          <button class="filter-pill" data-mime="audio"><i class="fa-solid fa-music"></i>{{ t("scroller.audio") }}</button>
+          {% endif %}
+          {% endif %}
         </div>
       </div>
       <div class="filter-section">
-        <div class="filter-section-label">{{ t('scroller.order') }}</div>
+        <div class="filter-section-label">{{ t("scroller.order") }}</div>
         <div class="pill-group" id="order-pills">
-          <button class="filter-pill active" data-order="random"><i class="fa-solid fa-shuffle"></i>{{ t('scroller.random') }}</button>
-          <button class="filter-pill" data-order="newest"><i class="fa-solid fa-clock-rotate-left"></i>{{ t('scroller.newest') }}</button>
-          <button class="filter-pill" data-order="oldest"><i class="fa-solid fa-hourglass-start"></i>{{ t('scroller.oldest') }}</button>
+          <button class="filter-pill active" data-order="random"><i class="fa-solid fa-shuffle"></i>{{ t("scroller.random") }}</button>
+          <button class="filter-pill" data-order="newest"><i class="fa-solid fa-clock-rotate-left"></i>{{ t("scroller.newest") }}</button>
+          <button class="filter-pill" data-order="oldest"><i class="fa-solid fa-hourglass-start"></i>{{ t("scroller.oldest") }}</button>
         </div>
       </div>
 
 
       <div class="filter-section">
-        <div class="filter-section-label">{{ t('scroller.tags') }}</div>
+        <div class="filter-section-label">{{ t("scroller.tags") }}</div>
         <div class="tag-search-wrap">
-          <input type="text" id="filter-tag-input" placeholder="{{ t('scroller.search_tags') }}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          <input type="text" id="filter-tag-input" placeholder="{{ t("scroller.search_tags") }}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
           <span class="tag-search-icon"><i class="fa-solid fa-tag"></i></span>
           <button id="filter-tag-clear"><i class="fa-solid fa-xmark"></i></button>
         </div>
@@ -1251,12 +1253,12 @@
         <div id="filter-active-tags"></div>
       </div>
       <div class="filter-section" style="margin-top:8px">
-        <div class="filter-section-label">{{ t('scroller.saved_presets') }}</div>
-        <button class="settings-save-preset-btn" id="settings-save-preset-btn"><i class="fa-solid fa-floppy-disk"></i> {{ t('scroller.save_preset') }}</button>
+        <div class="filter-section-label">{{ t("scroller.saved_presets") }}</div>
+        <button class="settings-save-preset-btn" id="settings-save-preset-btn"><i class="fa-solid fa-floppy-disk"></i> {{ t("scroller.save_preset") }}</button>
         <div id="settings-presets-list"></div>
       </div>
     </div>
-    <button class="filter-apply-btn" id="filter-apply-btn"><i class="fa-solid fa-check" style="margin-right:8px"></i>{{ t('scroller.apply_reload') }}</button>
+    <button class="filter-apply-btn" id="filter-apply-btn"><i class="fa-solid fa-check" style="margin-right:8px"></i>{{ t("scroller.apply_reload") }}</button>
   </div>
 
   <!-- 4CHAN PANEL -->
@@ -1264,18 +1266,18 @@
   <div id="chan-panel" class="scroller-panel" role="dialog" aria-label="4chan threads">
     <div class="panel-handle"><div class="panel-handle-bar"></div></div>
     <div class="panel-header">
-      <span class="panel-title"><i class="fa-solid fa-clover" style="margin-right:6px;color:var(--accent)"></i>{{ t('scroller.chan_threads') }}</span>
+      <span class="panel-title"><i class="fa-solid fa-clover" style="margin-right:6px;color:var(--accent)"></i>{{ t("scroller.chan_threads") }}</span>
     </div>
     <div class="filter-scroll-area">
       <div class="filter-section">
-        <div class="filter-section-label">{{ t('scroller.load_by_url') }}</div>
+        <div class="filter-section-label">{{ t("scroller.load_by_url") }}</div>
         <div style="display:flex;gap:8px">
           <input type="text" id="chan-url-input" style="flex:1;padding:10px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:.86rem;outline:none;" placeholder="https://boards.4chan.org/wsg/thread/..." autocomplete="off">
-          <button id="chan-url-load-btn" style="padding:10px 18px;background:var(--accent);color:#000;border:none;border-radius:10px;font-weight:700;font-size:.84rem;cursor:pointer;white-space:nowrap;">{{ t('scroller.load') }}</button>
+          <button id="chan-url-load-btn" style="padding:10px 18px;background:var(--accent);color:#000;border:none;border-radius:10px;font-weight:700;font-size:.84rem;cursor:pointer;white-space:nowrap;">{{ t("scroller.load") }}</button>
         </div>
       </div>
       <div class="filter-section">
-        <div class="filter-section-label">{{ t('scroller.browse_boards') }}</div>
+        <div class="filter-section-label">{{ t("scroller.browse_boards") }}</div>
         <div class="pill-group" id="chan-board-pills">
           <button class="filter-pill" data-board="gif"><i class="fa-solid fa-fire"></i>/gif/</button>
           <button class="filter-pill active" data-board="wsg"><i class="fa-solid fa-shield-halved"></i>/wsg/</button>
@@ -1283,14 +1285,14 @@
             <span style="color:rgba(255,255,255,.4);font-size:.8rem">/</span>
             <input type="text" id="chan-custom-board" style="width:48px;padding:6px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:.82rem;outline:none;text-align:center;" placeholder="v" maxlength="6" autocomplete="off">
             <span style="color:rgba(255,255,255,.4);font-size:.8rem">/</span>
-            <button id="chan-custom-board-btn" class="filter-pill" style="padding:6px 10px;font-size:.78rem;">{{ t('scroller.go') }}</button>
+            <button id="chan-custom-board-btn" class="filter-pill" style="padding:6px 10px;font-size:.78rem;">{{ t("scroller.go") }}</button>
           </div>
         </div>
       </div>
       <div class="filter-section" style="padding-top:8px">
-        <input type="text" id="chan-catalog-search" style="width:100%;padding:10px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:.86rem;outline:none;margin-bottom:12px;box-sizing:border-box;" placeholder="{{ t('scroller.search_threads') }}" autocomplete="off">
+        <input type="text" id="chan-catalog-search" style="width:100%;padding:10px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:.86rem;outline:none;margin-bottom:12px;box-sizing:border-box;" placeholder="{{ t("scroller.search_threads") }}" autocomplete="off">
         <div id="chan-catalog-grid" class="chan-grid"></div>
-        <div id="chan-catalog-loading" style="text-align:center;padding:30px;color:rgba(255,255,255,.35);display:none"><div class="loader-spinner" style="margin:0 auto 10px"></div>{{ t('scroller.loading_catalog') }}</div>
+        <div id="chan-catalog-loading" style="text-align:center;padding:30px;color:rgba(255,255,255,.35);display:none"><div class="loader-spinner" style="margin:0 auto 10px"></div>{{ t("scroller.loading_catalog") }}</div>
       </div>
     </div>
   </div>
@@ -1300,53 +1302,53 @@
   <div id="settings-panel" class="scroller-panel" role="dialog" aria-label="Scroller settings">
     <div class="panel-handle"><div class="panel-handle-bar"></div></div>
     <div class="panel-header">
-      <span class="panel-title">{{ t('scroller.settings') }}</span>
+      <span class="panel-title">{{ t("scroller.settings") }}</span>
     </div>
     <div class="filter-scroll-area">
       <div class="filter-section">
-        <div class="filter-section-label">{{ t('scroller.appearance') }}</div>
+        <div class="filter-section-label">{{ t("scroller.appearance") }}</div>
         <div class="settings-toggle-row">
           <div class="settings-toggle-info">
-            <span class="settings-toggle-name">{{ t('scroller.hide_ui') }}</span>
-            <span class="settings-toggle-desc">{{ t('scroller.hide_ui_desc') }}</span>
+            <span class="settings-toggle-name">{{ t("scroller.hide_ui") }}</span>
+            <span class="settings-toggle-desc">{{ t("scroller.hide_ui_desc") }}</span>
           </div>
           <div class="settings-toggle-switch" id="st-hide-ui"><div class="settings-toggle-knob"></div></div>
         </div>
         <div class="settings-toggle-row">
           <div class="settings-toggle-info">
-            <span class="settings-toggle-name">{{ t('scroller.start_sound') }}</span>
-            <span class="settings-toggle-desc">{{ t('scroller.start_sound_desc') }}</span>
+            <span class="settings-toggle-name">{{ t("scroller.start_sound") }}</span>
+            <span class="settings-toggle-desc">{{ t("scroller.start_sound_desc") }}</span>
           </div>
           <div class="settings-toggle-switch" id="st-start-unmuted"><div class="settings-toggle-knob"></div></div>
         </div>
         <div class="settings-toggle-row">
           <div class="settings-toggle-info">
-            <span class="settings-toggle-name">{{ t('scroller.animated_bg') }}</span>
-            <span class="settings-toggle-desc">{{ t('scroller.animated_bg_desc') }}</span>
+            <span class="settings-toggle-name">{{ t("scroller.animated_bg") }}</span>
+            <span class="settings-toggle-desc">{{ t("scroller.animated_bg_desc") }}</span>
           </div>
           <div class="settings-toggle-switch" id="st-canvas-bg"><div class="settings-toggle-knob"></div></div>
         </div>
         <div class="settings-toggle-row">
           <div class="settings-toggle-info">
-            <span class="settings-toggle-name">{{ t('scroller.left_hand') }}</span>
-            <span class="settings-toggle-desc">{{ t('scroller.left_hand_desc') }}</span>
+            <span class="settings-toggle-name">{{ t("scroller.left_hand") }}</span>
+            <span class="settings-toggle-desc">{{ t("scroller.left_hand_desc") }}</span>
           </div>
           <div class="settings-toggle-switch" id="st-left-hand"><div class="settings-toggle-knob"></div></div>
         </div>
       </div>
       <div class="filter-section">
-        <div class="filter-section-label">{{ t('scroller.playback') }}</div>
+        <div class="filter-section-label">{{ t("scroller.playback") }}</div>
         <div class="settings-toggle-row">
           <div class="settings-toggle-info">
-            <span class="settings-toggle-name">{{ t('scroller.auto_next') }}</span>
-            <span class="settings-toggle-desc">{{ t('scroller.auto_next_desc') }}</span>
+            <span class="settings-toggle-name">{{ t("scroller.auto_next") }}</span>
+            <span class="settings-toggle-desc">{{ t("scroller.auto_next_desc") }}</span>
           </div>
           <div class="settings-toggle-switch" id="st-auto-next"><div class="settings-toggle-knob"></div></div>
         </div>
         <div class="settings-toggle-row" style="margin-top:2px;">
           <div class="settings-toggle-info">
-            <span class="settings-toggle-name">{{ t('scroller.loops_before_next') }}</span>
-            <span class="settings-toggle-desc">{{ t('scroller.loops_before_next_desc') }}</span>
+            <span class="settings-toggle-name">{{ t("scroller.loops_before_next") }}</span>
+            <span class="settings-toggle-desc">{{ t("scroller.loops_before_next_desc") }}</span>
           </div>
           <input type="number" id="st-auto-next-loops" min="0" max="99" value="1"
             style="width:56px;padding:5px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:.88rem;text-align:center;outline:none;" />
@@ -1361,16 +1363,16 @@
   <div id="comments-panel" class="scroller-panel" role="dialog" aria-label="Comments">
     <div class="panel-handle"><div class="panel-handle-bar"></div></div>
     <div class="panel-header">
-      <span class="panel-title">{{ t('scroller.comments') }} <span id="comments-count" style="color:rgba(255,255,255,.45);font-weight:400;font-size:.85rem"></span></span>
+      <span class="panel-title">{{ t("scroller.comments") }} <span id="comments-count" style="color:rgba(255,255,255,.45);font-weight:400;font-size:.85rem"></span></span>
       <a id="comments-open-link" href="#" target="_blank" style="color:var(--accent);font-size:.78rem;font-weight:700;text-decoration:none;padding:4px 8px;">
-        <i class="fa-solid fa-up-right-from-square" style="margin-right:4px;font-size:.72rem"></i>{{ t('scroller.open') }}
+        <i class="fa-solid fa-up-right-from-square" style="margin-right:4px;font-size:.72rem"></i>{{ t("scroller.open") }}
       </a>
     </div>
     <div id="comments-list">
-      <div id="comments-loading"><div class="loader-spinner"></div>{{ t('scroller.loading') }}</div>
-      <div id="comments-empty" style="display:none"><i class="fa-regular fa-comment" style="font-size:2rem;display:block;margin-bottom:10px"></i>{{ t('scroller.no_comments') }}</div>
+      <div id="comments-loading"><div class="loader-spinner"></div>{{ t("scroller.loading") }}</div>
+      <div id="comments-empty" style="display:none"><i class="fa-regular fa-comment" style="font-size:2rem;display:block;margin-bottom:10px"></i>{{ t("scroller.no_comments") }}</div>
     </div>
-    @if(typeof session !== 'undefined' && session)
+    {% if (session is defined and session) %}
     <div id="comments-input-area">
       <div id="mention-dropdown"></div>
       <div id="reply-indicator" style="display:none">
@@ -1380,61 +1382,61 @@
       </div>
       <div class="comment-input-row">
         <button id="comment-emoji-trigger" class="emoji-trigger" title="Emoji" type="button">☺</button>
-        <textarea id="comment-input" rows="1" placeholder="{{ t('scroller.write_comment') }}"@if(comment_max_length) maxlength="{{ comment_max_length }}"@endif></textarea>
+        <textarea id="comment-input" rows="1" placeholder="{{ t("scroller.write_comment") }}"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
         <button id="comment-send-btn" disabled><i class="fa-solid fa-paper-plane"></i></button>
       </div>
     </div>
-    @else
-    <div class="comments-login-note"><a href="/login">{{ t('scroller.login_to_comment') }}</a></div>
-    @endif
+    {% else %}
+    <div class="comments-login-note"><a href="/login">{{ t("scroller.login_to_comment") }}</a></div>
+    {% endif %}
   </div>
 
   <!-- TAG BAR — slide-up input, opened by the Tag action button -->
-  @if(typeof session !== 'undefined' && session)
+  {% if (session is defined and session) %}
   <div id="tag-bar">
     <div id="tag-bar-inner">
       <div style="position:relative;flex:1;min-width:0">
-        <input id="scroll-tag-input" type="text" placeholder="{{ t('scroller.add_tag_placeholder') }}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="70">
+        <input id="scroll-tag-input" type="text" placeholder="{{ t("scroller.add_tag_placeholder") }}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="70">
         <div id="scroll-tag-suggestions"></div>
       </div>
-      <button id="scroll-tag-send-btn" title="{{ t('scroller.add_tag') }}"><i class="fa-solid fa-plus"></i></button>
-      <button id="tag-bar-close-btn" title="{{ t('scroller.close') }}"><i class="fa-solid fa-xmark"></i></button>
+      <button id="scroll-tag-send-btn" title="{{ t("scroller.add_tag") }}"><i class="fa-solid fa-plus"></i></button>
+      <button id="tag-bar-close-btn" title="{{ t("scroller.close") }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
   </div>
-  @endif
+  {% endif %}
 
   <!-- SHARE PANEL — slide-up bottom sheet, opened by Share action button -->
   <div id="share-backdrop"></div>
   <div id="share-panel">
     <div id="share-panel-handle"></div>
-    <div id="share-panel-title">{{ t('scroller.share') }}</div>
+    <div id="share-panel-title">{{ t("scroller.share") }}</div>
     <div class="share-row" id="share-copy-row">
       <div class="share-row-icon copy-icon"><i class="fa-solid fa-link"></i></div>
       <div class="share-row-text">
-        <div class="share-row-title">{{ t('scroller.copy_link') }}</div>
-        <div class="share-row-sub" id="share-copy-sub">{{ t('scroller.copy_clipboard') }}</div>
+        <div class="share-row-title">{{ t("scroller.copy_link") }}</div>
+        <div class="share-row-sub" id="share-copy-sub">{{ t("scroller.copy_clipboard") }}</div>
       </div>
     </div>
-    @if(typeof session !== 'undefined' && session && private_messages)
+    {% if ((session is defined and session) and private_messages) %}
     <div class="share-row" id="share-dm-row">
       <div class="share-row-icon dm-icon"><i class="fa-solid fa-paper-plane"></i></div>
       <div class="share-row-text">
-        <div class="share-row-title">{{ t('scroller.send_dm') }}</div>
-        <div class="share-row-sub">{{ t('scroller.share_inbox') }}</div>
+        <div class="share-row-title">{{ t("scroller.send_dm") }}</div>
+        <div class="share-row-sub">{{ t("scroller.share_inbox") }}</div>
       </div>
     </div>
     <div id="share-dm-search">
-      <input id="share-user-input" type="text" placeholder="{{ t('scroller.search_user') }}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <input id="share-user-input" type="text" placeholder="{{ t("scroller.search_user") }}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <div id="share-user-results"></div>
     </div>
-    @endif
+    {% endif %}
   </div>
 
-  @if(enable_swf)
+  {% if enable_swf %}
   <script src="/s/ruffle/ruffle.js"></script>
-  @endif
-  <script src="/s/js/theme.js?v={{ ts }}"></script>
-  <script src="/s/js/scroller.js?v={{ ts }}"></script>
+  {% endif %}
+  <script src="/s/js/theme.js?v={{ ts|safe }}"></script>
+  <script src="/s/js/scroller.js?v={{ ts|safe }}"></script>
   </div><!-- /#main -->
 </body>
 </html>

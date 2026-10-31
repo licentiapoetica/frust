@@ -1,7 +1,8 @@
 <div id="excluded-tags-overlay" style="display: none;">
   <div id="excluded-tags-close">&times;</div>
   <div class="search-container">
-    @js
+    {# PORT_TODO @js block:
+
       const _isMember = typeof session !== 'undefined' && session && session.user && !session.is_anon;
       const _isAnon = typeof session !== 'undefined' && session && (session.is_anon || session.user === 'anonymous' || (typeof session.user === 'string' && session.user.startsWith('anon_')));
       const _isGuest = !_isMember && !_isAnon;
@@ -26,73 +27,74 @@
       const _showAudio = _hasMimeCats && scroller_mime_cats.includes('audio') && (!_isAnonUser || _allowedMimes.includes('audio'));
       const _showImage = _hasMimeCats && scroller_mime_cats.includes('image') && (!_isAnonUser || _allowedMimes.includes('image'));
       const _showFlash = enable_swf && (!_isAnonUser || _allowedMimes.includes('flash'));
-    @endjs
-    @if(_canExcludeTags)
+    
+#}
+    {% if _canExcludeTags %}
     <div class="excluded-tags-section-header">
-      <span class="excluded-tags-section-title"><i class="fa-solid fa-ban"></i> {{ t('filter.excluded_tags') || 'Excluded Tags' }}</span>
+      <span class="excluded-tags-section-title"><i class="fa-solid fa-ban"></i> {{ (t("filter.excluded_tags") or "Excluded Tags") }}</span>
       <span id="nav_excluded_tags_count" class="badge badge-danger excluded-tags-count-badge" style="display: none;">0</span>
     </div>
     <div id="nav_excluded_tags_list"></div>
     <div class="nav-exclude">
-      <input type="text" id="nav_exclude_tag_input" class="input" placeholder="{{ t('filter.tag_placeholder') }}" autocomplete="off" enterkeyhint="enter">
+      <input type="text" id="nav_exclude_tag_input" class="input" placeholder="{{ t("filter.tag_placeholder") }}" autocomplete="off" enterkeyhint="enter">
       <div id="nav_exclude_suggestions" class="tag-suggestions"></div>
     </div>
-    @endif
+    {% endif %}
     <!-- modes -->
     <div class="mode-filter">
-      <button id="nav-shuffle-btn" class="shuffle-btn" title="Random Mode — shuffle all items"><span class="shuffle-icon">( - _ - )</span> {{ t('filter.random_mode') }}</button>
-      <div class="rating-selector @if(_isGuest || _isSingleRating) locked @endif" id="rating-selector" @if(_isGuest) data-guest-locked="true" data-locked-rating="sfw" @elseif(_isSingleRating) data-locked-rating="{{ _singleRating }}" @endif>
-        @if(_showSfw)
-        <button class="rating-toggle-btn @if(_isGuest || (_isSingleRating && _singleRating === 'sfw')) active locked @endif" data-rating="sfw" id="rating-btn-sfw" title="SFW"@if(_isGuest || (_isSingleRating && _singleRating === 'sfw')) disabled style="cursor: default; opacity: 1;"@endif>SFW@if(_isGuest || (_isSingleRating && _singleRating === 'sfw'))<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>@endif</button>
-        @endif
-        @if(_showNsfw)
-        <button class="rating-toggle-btn @if(_isSingleRating && _singleRating === 'nsfw') active locked @elseif(_isGuest) locked @endif" data-rating="nsfw" id="rating-btn-nsfw" title="@if(_isGuest)Only available for members@else NSFW @endif"@if(_isGuest) disabled style="cursor: not-allowed; opacity: 0.5;"@elseif(_isSingleRating) disabled style="cursor: not-allowed; opacity: 0.85;"@endif>NSFW@if(_isGuest || (_isSingleRating && _singleRating === 'nsfw'))<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>@endif</button>
-        @endif
-        @if(_showNsfl)
-        <button class="rating-toggle-btn @if(_isSingleRating && _singleRating === 'nsfl') active locked @elseif(_isGuest) locked @endif" data-rating="nsfl" id="rating-btn-nsfl" title="@if(_isGuest)Only available for members@else NSFL @endif"@if(_isGuest) disabled style="cursor: not-allowed; opacity: 0.5;"@elseif(_isSingleRating) disabled style="cursor: not-allowed; opacity: 0.85;"@endif>NSFL@if(_isGuest || (_isSingleRating && _singleRating === 'nsfl'))<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>@endif</button>
-        @endif
-        @if(_showUntagged)
-        <button class="rating-toggle-btn @if(_isSingleRating && _singleRating === 'untagged') active locked @elseif(_isGuest) locked @endif" data-rating="untagged" id="rating-btn-untagged" title="@if(_isGuest)Only available for members@else Untagged @endif"@if(_isGuest) disabled style="cursor: not-allowed; opacity: 0.5;"@elseif(_isSingleRating) disabled style="cursor: not-allowed; opacity: 0.85;"@endif>UNT@if(_isGuest || (_isSingleRating && _singleRating === 'untagged'))<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>@endif</button>
-        @endif
-        @if(_showAll && (!_isSingleRating || _isGuest))
-        <button class="rating-toggle-btn rating-toggle-all @if(_isGuest) locked @endif" id="rating-btn-all" title="@if(_isGuest)Only available for members@else Show All Ratings @endif"@if(_isGuest) disabled style="cursor: not-allowed; opacity: 0.5;"@endif>ALL@if(_isGuest)<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>@endif</button>
-        @endif
+      <button id="nav-shuffle-btn" class="shuffle-btn" title="Random Mode — shuffle all items"><span class="shuffle-icon">( - _ - )</span> {{ t("filter.random_mode") }}</button>
+      <div class="rating-selector {% if (_isGuest or _isSingleRating) %} locked {% endif %}" id="rating-selector" {% if _isGuest %} data-guest-locked="true" data-locked-rating="sfw" {% elif _isSingleRating %} data-locked-rating="{{ _singleRating }}" {% endif %}>
+        {% if _showSfw %}
+        <button class="rating-toggle-btn {% if (_isGuest or (_isSingleRating and _singleRating == "sfw")) %} active locked {% endif %}" data-rating="sfw" id="rating-btn-sfw" title="SFW"{% if (_isGuest or (_isSingleRating and _singleRating == "sfw")) %} disabled style="cursor: default; opacity: 1;"{% endif %}>SFW{% if (_isGuest or (_isSingleRating and _singleRating == "sfw")) %}<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>{% endif %}</button>
+        {% endif %}
+        {% if _showNsfw %}
+        <button class="rating-toggle-btn {% if (_isSingleRating and _singleRating == "nsfw") %} active locked {% elif _isGuest %} locked {% endif %}" data-rating="nsfw" id="rating-btn-nsfw" title="{% if _isGuest %}Only available for members{% else %} NSFW {% endif %}"{% if _isGuest %} disabled style="cursor: not-allowed; opacity: 0.5;"{% elif _isSingleRating %} disabled style="cursor: not-allowed; opacity: 0.85;"{% endif %}>NSFW{% if (_isGuest or (_isSingleRating and _singleRating == "nsfw")) %}<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>{% endif %}</button>
+        {% endif %}
+        {% if _showNsfl %}
+        <button class="rating-toggle-btn {% if (_isSingleRating and _singleRating == "nsfl") %} active locked {% elif _isGuest %} locked {% endif %}" data-rating="nsfl" id="rating-btn-nsfl" title="{% if _isGuest %}Only available for members{% else %} NSFL {% endif %}"{% if _isGuest %} disabled style="cursor: not-allowed; opacity: 0.5;"{% elif _isSingleRating %} disabled style="cursor: not-allowed; opacity: 0.85;"{% endif %}>NSFL{% if (_isGuest or (_isSingleRating and _singleRating == "nsfl")) %}<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>{% endif %}</button>
+        {% endif %}
+        {% if _showUntagged %}
+        <button class="rating-toggle-btn {% if (_isSingleRating and _singleRating == "untagged") %} active locked {% elif _isGuest %} locked {% endif %}" data-rating="untagged" id="rating-btn-untagged" title="{% if _isGuest %}Only available for members{% else %} Untagged {% endif %}"{% if _isGuest %} disabled style="cursor: not-allowed; opacity: 0.5;"{% elif _isSingleRating %} disabled style="cursor: not-allowed; opacity: 0.85;"{% endif %}>UNT{% if (_isGuest or (_isSingleRating and _singleRating == "untagged")) %}<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>{% endif %}</button>
+        {% endif %}
+        {% if (_showAll and (not _isSingleRating or _isGuest)) %}
+        <button class="rating-toggle-btn rating-toggle-all {% if _isGuest %} locked {% endif %}" id="rating-btn-all" title="{% if _isGuest %}Only available for members{% else %} Show All Ratings {% endif %}"{% if _isGuest %} disabled style="cursor: not-allowed; opacity: 0.5;"{% endif %}>ALL{% if _isGuest %}<i class="fa-solid fa-lock" style="margin-left: 5px; font-size: 0.75em; opacity: 0.7;"></i>{% endif %}</button>
+        {% endif %}
       </div>
     </div>
     <!-- mimes -->
-    @if(show_mime_picker)
-      <div class="nav-mime-filter nav-mime-menu" id="nav-mime-menu" @if(_isSingleMime) data-locked-mime="{{ _singleMime }}" @endif>
-        @if(_showVideo)
-        <label class="nav-mime-item @if(_isSingleMime) locked @endif" @if(_isSingleMime) style="cursor: not-allowed; opacity: 0.85;" title="Locked by site permissions" @endif><input type="checkbox" value="video" id="mime-video" @if(_isSingleMime) checked disabled @endif>{{ t('filter.video') }}@if(_isSingleMime)<i class="fa-solid fa-lock" style="margin-left: 6px; font-size: 0.8em; opacity: 0.7;"></i>@endif</label>
-        @endif
-        @if(_showAudio)
-        <label class="nav-mime-item @if(_isSingleMime) locked @endif" @if(_isSingleMime) style="cursor: not-allowed; opacity: 0.85;" title="Locked by site permissions" @endif><input type="checkbox" value="audio" id="mime-audio" @if(_isSingleMime) checked disabled @endif>{{ t('filter.audio') }}@if(_isSingleMime)<i class="fa-solid fa-lock" style="margin-left: 6px; font-size: 0.8em; opacity: 0.7;"></i>@endif</label>
-        @endif
-        @if(_showImage)
-        <label class="nav-mime-item @if(_isSingleMime) locked @endif" @if(_isSingleMime) style="cursor: not-allowed; opacity: 0.85;" title="Locked by site permissions" @endif><input type="checkbox" value="image" id="mime-image" @if(_isSingleMime) checked disabled @endif>{{ t('filter.image') }}@if(_isSingleMime)<i class="fa-solid fa-lock" style="margin-left: 6px; font-size: 0.8em; opacity: 0.7;"></i>@endif</label>
-        @endif
-        @if(_showFlash)
-        <label class="nav-mime-item @if(_isSingleMime) locked @endif" @if(_isSingleMime) style="cursor: not-allowed; opacity: 0.85;" title="Locked by site permissions" @endif><input type="checkbox" value="flash" id="mime-flash" @if(_isSingleMime) checked disabled @endif>{{ t('filter.flash') }}@if(_isSingleMime)<i class="fa-solid fa-lock" style="margin-left: 6px; font-size: 0.8em; opacity: 0.7;"></i>@endif</label>
-        @endif
+    {% if show_mime_picker %}
+      <div class="nav-mime-filter nav-mime-menu" id="nav-mime-menu" {% if _isSingleMime %} data-locked-mime="{{ _singleMime }}" {% endif %}>
+        {% if _showVideo %}
+        <label class="nav-mime-item {% if _isSingleMime %} locked {% endif %}" {% if _isSingleMime %} style="cursor: not-allowed; opacity: 0.85;" title="Locked by site permissions" {% endif %}><input type="checkbox" value="video" id="mime-video" {% if _isSingleMime %} checked disabled {% endif %}>{{ t("filter.video") }}{% if _isSingleMime %}<i class="fa-solid fa-lock" style="margin-left: 6px; font-size: 0.8em; opacity: 0.7;"></i>{% endif %}</label>
+        {% endif %}
+        {% if _showAudio %}
+        <label class="nav-mime-item {% if _isSingleMime %} locked {% endif %}" {% if _isSingleMime %} style="cursor: not-allowed; opacity: 0.85;" title="Locked by site permissions" {% endif %}><input type="checkbox" value="audio" id="mime-audio" {% if _isSingleMime %} checked disabled {% endif %}>{{ t("filter.audio") }}{% if _isSingleMime %}<i class="fa-solid fa-lock" style="margin-left: 6px; font-size: 0.8em; opacity: 0.7;"></i>{% endif %}</label>
+        {% endif %}
+        {% if _showImage %}
+        <label class="nav-mime-item {% if _isSingleMime %} locked {% endif %}" {% if _isSingleMime %} style="cursor: not-allowed; opacity: 0.85;" title="Locked by site permissions" {% endif %}><input type="checkbox" value="image" id="mime-image" {% if _isSingleMime %} checked disabled {% endif %}>{{ t("filter.image") }}{% if _isSingleMime %}<i class="fa-solid fa-lock" style="margin-left: 6px; font-size: 0.8em; opacity: 0.7;"></i>{% endif %}</label>
+        {% endif %}
+        {% if _showFlash %}
+        <label class="nav-mime-item {% if _isSingleMime %} locked {% endif %}" {% if _isSingleMime %} style="cursor: not-allowed; opacity: 0.85;" title="Locked by site permissions" {% endif %}><input type="checkbox" value="flash" id="mime-flash" {% if _isSingleMime %} checked disabled {% endif %}>{{ t("filter.flash") }}{% if _isSingleMime %}<i class="fa-solid fa-lock" style="margin-left: 6px; font-size: 0.8em; opacity: 0.7;"></i>{% endif %}</label>
+        {% endif %}
       </div>
-    @endif
-    @if(session && enable_xd_score)
+    {% endif %}
+    {% if (session and enable_xd_score) %}
     <!-- xD score filter -->
     <div class="nav-xd-filter">
-      <label class="nav-xd-label">{{ t('filter.min_xd_score') }}</label>
+      <label class="nav-xd-label">{{ t("filter.min_xd_score") }}</label>
       <div class="nav-xd-controls">
-        <input type="range" id="nav_min_xd_score" min="0" max="100" step="1" value="{{ session.min_xd_score || 0 }}" class="xd-slider" style="display:none;" aria-hidden="true">
+        <input type="range" id="nav_min_xd_score" min="0" max="100" step="1" value="{{ (session.min_xd_score or 0) }}" class="xd-slider" style="display:none;" aria-hidden="true">
         <div id="nav_xd_slider_container" class="nav-xd-custom-slider"></div>
-        <span id="nav_xd_val" class="xd-slider-val">{{ session.min_xd_score || 0 }}</span>
+        <span id="nav_xd_val" class="xd-slider-val">{{ (session.min_xd_score or 0) }}</span>
         <span id="nav_xd_tier_label" class="xd-score-badge" style="display:none; font-size: 0.75em;"></span>
       </div>
-      <button id="nav_xd_save_btn" class="mode-btn" style="margin-top: 6px; width: 100%;">{{ t('filter.apply_filter') }}</button>
+      <button id="nav_xd_save_btn" class="mode-btn" style="margin-top: 6px; width: 100%;">{{ t("filter.apply_filter") }}</button>
       <div id="nav_xd_status" style="font-size: 0.8em; color: #9f0; min-height: 1em; margin-top: 3px;"></div>
     </div>
-    @endif
+    {% endif %}
     <!-- grid mode / thumbnail size -->
     <div class="nav-grid-mode">
-      <label class="nav-grid-mode-label"><i class="fa-solid fa-grip" style="margin-right:5px"></i>{{ t('filter.grid_mode') || 'Grid Mode' }}</label>
+      <label class="nav-grid-mode-label"><i class="fa-solid fa-grip" style="margin-right:5px"></i>{{ (t("filter.grid_mode") or "Grid Mode") }}</label>
       <div class="nav-grid-size-btns">
         <button class="nav-grid-size-btn" data-thumb-size="s" title="Small thumbnails">S</button>
         <button class="nav-grid-size-btn" data-thumb-size="m" title="Medium thumbnails (default)">M</button>

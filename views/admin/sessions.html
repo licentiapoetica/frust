@@ -1,54 +1,54 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
 <div class="container session-grid">
   <h2 class="session-page-title">
     Sessions
     <span class="session-stats">
-      @if(activeUsers > 0)
-      ({{ activeUsers }} active: {{ activeUserList.join(', ') }})
-      @else
+      {% if (activeUsers > 0) %}
+      ({{ activeUsers }} active: {{ activeUserList|join(", ") }})
+      {% else %}
       (0 active)
-      @endif
+      {% endif %}
     </span>
   </h2>
-  @each(sessions as s)
-  <div class="session-card {{ s.id === session.sess_id ? 'current' : '' }}">
+  {% for key, s in sessions|entries %}
+  <div class="session-card {{ ("current" if s.id == session.sess_id else "") }}">
     <div class="session-header">
-      <span class="session-user">{!! s.user !!}</span>
+      <span class="session-user">{{ s.user }}</span>
       <div class="session-badges">
-        @if(s.id === session.sess_id)
+        {% if s.id == session.sess_id %}
         <span class="badge badge-current">Current</span>
-        @endif
-        @if(s.kmsi)
+        {% endif %}
+        {% if s.kmsi %}
         <span class="badge badge-kmsi" title="Keep Me Signed In">KMSI</span>
-        @endif
+        {% endif %}
         <span class="session-id">#{{ s.id }}</span>
-        @if(s.id !== session.sess_id)
+        {% if s.id != session.sess_id %}
         <a href="javascript:void(0)" onclick="deleteSession({{ s.id }}, this)" class="session-delete"
           title="Delete Session">&#10006;</a>
-        @endif
+        {% endif %}
       </div>
     </div>
     <div class="session-body">
-      @if(log_user_ips)
+      {% if log_user_ips %}
       <div class="session-info">
         <span class="label">IP:</span>
-        <span class="value">{{ s.ip || 'unknown' }}</span>
+        <span class="value">{{ (s.ip or "unknown") }}</span>
       </div>
-      @endif
+      {% endif %}
       <div class="session-info">
         <span class="label">Browser:</span>
         <span class="value browser-info" title="{{ s.browser }}">{{ s.browser }}</span>
       </div>
       <div class="session-info">
         <span class="label">Created:</span>
-        <span class="value">{{ new Date(s.created_at * 1e3).toLocaleString(lang) }}</span>
+        <span class="value">{{ (s.created_at * 1000.0)|locale_string(lang) }}</span>
       </div>
       <div class="session-info">
         <span class="label">Last Used:</span>
-        <span class="value">{{ new Date(s.last_used * 1e3).toLocaleString(lang) }}</span>
+        <span class="value">{{ (s.last_used * 1000.0)|locale_string(lang) }}</span>
       </div>
       <div class="session-info">
         <span class="label">Last Action:</span>
@@ -56,7 +56,7 @@
       </div>
     </div>
   </div>
-  @endeach
+  {% endfor %}
   <script>
     async function deleteSession(id, el) {
       if (!confirm('Are you sure you want to delete this session?')) return;
@@ -86,4 +86,4 @@
 </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

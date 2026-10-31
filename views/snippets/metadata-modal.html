@@ -1,26 +1,26 @@
 <div id="metadata-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
-            <h3><i class="fa-solid fa-magic"></i> {{ t('metadata_modal.title') }}</h3>
+            <h3><i class="fa-solid fa-magic"></i> {{ t("metadata_modal.title") }}</h3>
         </div>
         <div class="modal-body" style="padding: 20px 0;">
             <div id="metadata-loading" style="text-align: center; padding: 20px;">
                 <i class="fa fa-spinner fa-spin fa-2x"></i>
-                <p>{{ t('metadata_modal.loading') }}</p>
+                <p>{{ t("metadata_modal.loading") }}</p>
             </div>
             <div id="metadata-results" style="display: none;">
-                <p style="font-size: 0.9em; color: var(--accent); margin-bottom: 12px; font-weight: 600; text-transform: uppercase;">{{ t('metadata_modal.found') }}</p>
+                <p style="font-size: 0.9em; color: var(--accent); margin-bottom: 12px; font-weight: 600; text-transform: uppercase;">{{ t("metadata_modal.found") }}</p>
                 <div class="meta-suggestions-list" id="metadata-suggestion-list">
                     <!-- Pills injected here -->
                 </div>
                 <div id="metadata-no-results" style="display: none; text-align: center; color: #888; padding: 10px;">
-                    {{ t('metadata_modal.no_results') }}
+                    {{ t("metadata_modal.no_results") }}
                 </div>
             </div>
             <div id="metadata-error" style="display: none; color: #e74c3c; padding: 10px; text-align: center;"></div>
         </div>
         <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
-            <button class="btn-secondary" id="metadata-modal-cancel">{{ t('common.close') }}</button>
+            <button class="btn-secondary" id="metadata-modal-cancel">{{ t("common.close") }}</button>
         </div>
     </div>
 </div>

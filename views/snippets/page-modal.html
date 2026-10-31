@@ -1,4 +1,4 @@
-{{-- Fullscreen modal for info pages opened from the sidebar footer (see /s/js/page-modal.js) --}}
+{# Fullscreen modal for info pages opened from the sidebar footer (see /s/js/page-modal.js) #}
 <div id="page-modal" style="display: none;" role="dialog" aria-modal="true">
   <div class="pgm-header">
     <h3 class="pgm-title"></h3>
@@ -59,4 +59,4 @@
   #page-modal .pgm-loading { padding: 60px 20px; text-align: center; color: var(--text-muted, #aaa); }
   #page-modal .pgm-loading a { color: var(--accent); }
 </style>
-<script src="/s/js/page-modal.js?v={{ ts }}"></script>
+<script src="/s/js/page-modal.js?v={{ ts|safe }}"></script>

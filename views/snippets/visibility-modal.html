@@ -1,4 +1,4 @@
-{{-- Item visibility modal (shared by item-partial-modern / item-partial-legacy). JS hooks: #visibility-modal, #visibility-item-id, input[name=visibility], #visibility-modal-cancel/-save --}}
+{# Item visibility modal (shared by item-partial-modern / item-partial-legacy). JS hooks: #visibility-modal, #visibility-item-id, input[name=visibility], #visibility-modal-cancel/-save #}
 <div id="visibility-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content vis-modal-content">
         <div class="vis-header">
@@ -34,7 +34,7 @@
                             <span>Only visible to you and site moderators.</span>
                         </span>
                     </label>
-                    @if(is_mod_or_admin)
+                    {% if is_mod_or_admin %}
                     <label class="visibility-option vis-danger">
                         <input type="radio" name="visibility" value="3" />
                         <span class="vis-radio"></span>
@@ -43,7 +43,7 @@
                             <span>Only visible to administrators. Serves HTTP 451 on direct media for all other users.</span>
                         </span>
                     </label>
-                    @endif
+                    {% endif %}
                 </div>
             </form>
         </div>

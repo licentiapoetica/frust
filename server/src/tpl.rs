@@ -255,12 +255,57 @@ fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static> {
         use base64::Engine;
         base64::engine::general_purpose::STANDARD.encode(js_to_string(&v))
     });
+    // `@each(x as v)` -> `{% for key, v in x|entries %}`: (index, value) for lists, (key, value) for maps.
+    env.add_filter("entries", |v: JValue| -> Vec<JValue> {
+        use minijinja::value::ValueKind;
+        match v.kind() {
+            ValueKind::Map => v
+                .try_iter()
+                .map(|it| it.map(|k| JValue::from(vec![k.clone(), v.get_item(&k).unwrap_or_default()])).collect())
+                .unwrap_or_default(),
+            ValueKind::Seq | ValueKind::Iterable => v
+                .try_iter()
+                .map(|it| it.enumerate().map(|(i, x)| JValue::from(vec![JValue::from(i), x])).collect())
+                .unwrap_or_default(),
+            _ => vec![],
+        }
+    });
+    env.add_filter("values_of", |v: JValue| -> Vec<JValue> {
+        v.try_iter().map(|it| it.map(|k| v.get_item(&k).unwrap_or_default()).collect()).unwrap_or_default()
+    });
+    env.add_filter("year", |v: JValue| to_datetime(&v).map(|d| chrono::Datelike::year(&d) as i64).unwrap_or(0));
     // Variadic helper kept for templates that join several values.
     env.add_function("concat", |args: Rest<JValue>| args.iter().map(js_to_string).collect::<String>());
     env
 }
 
 impl Templates {
+    /// Compile every template; returns (file, error) for each failure.
+    pub fn check_all(&self, views: &std::path::Path) -> Vec<(String, String)> {
+        let env = self.env.read();
+        let mut errors = Vec::new();
+        let mut stack = vec![views.to_path_buf()];
+        while let Some(dir) = stack.pop() {
+            for e in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    stack.push(p);
+                } else if p.extension().map(|x| x == "html").unwrap_or(false) {
+                    let rel = p.strip_prefix(views).unwrap_or(&p).to_string_lossy().replace('\\', "/");
+                    if let Err(err) = env.get_template(&rel) {
+                        let mut msg = format!("{err}");
+                        if let Some(d) = err.display_debug_info().to_string().lines().find(|l| l.contains(">")) {
+                            msg.push_str(&format!(" | {}", d.trim()));
+                        }
+                        errors.push((rel, msg));
+                    }
+                }
+            }
+        }
+        errors.sort();
+        errors
+    }
+
     pub fn new(views: PathBuf, i18n: Arc<I18n>) -> Templates {
         let dirty = Arc::new(AtomicBool::new(false));
         let watcher = {

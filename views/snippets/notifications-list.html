@@ -1,137 +1,137 @@
-@each(notifications as n)
-@if(n.type === 'approve')
-<a href="/{{ n.item_slug || n.item_id }}" class="notif-item {{ n.is_read ? '' : 'unread' }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
-    <div class="notif-thumb" data-mode="{{ n.item_mode || '' }}">
-        <img src="/t/{{ n.item_id }}{{ ((active_mode===0&&(n.item_mode==='nsfw'||n.item_mode==='nsfl'))||(active_mode===1&&n.item_mode==='nsfl')||(active_mode===4&&(n.item_mode==='sfw'||n.item_mode==='nsfw'))) ? '_blur' : '' }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/{{ n.item_id }}.webp';this.onerror=function(){this.onerror=null;this.src='/mod/deleted/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none';};};"/>
+{% for key, n in notifications|entries %}
+{% if n.type == "approve" %}
+<a href="/{{ (n.item_slug or n.item_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
+    <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/{{ n.item_id }}.webp';this.onerror=function(){this.onerror=null;this.src='/mod/deleted/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none';};};"/>
     </div>
     <div class="notif-content">
-        <div class="notif-user"><strong>{{ t('notifications.system') }}</strong></div>
-        <div class="notif-msg">{{ t('notifications.upload_approved').replace('{id}', n.item_slug || n.item_id) }}</div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
+        <div class="notif-msg">{{ (t("notifications.upload_approved")).replace("{id}", (n.item_slug or n.item_id), 1) }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </a>
-@elseif(n.type === 'admin_pending')
-<a href="/mod/approve" class="notif-item {{ n.is_read ? '' : 'unread' }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
-    <div class="notif-thumb" data-mode="{{ n.item_mode || '' }}">
-        <img src="/t/{{ n.item_id }}{{ ((active_mode===0&&(n.item_mode==='nsfw'||n.item_mode==='nsfl'))||(active_mode===1&&n.item_mode==='nsfl')||(active_mode===4&&(n.item_mode==='sfw'||n.item_mode==='nsfw'))) ? '_blur' : '' }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none';};"/>
+{% elif n.type == "admin_pending" %}
+<a href="/mod/approve" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
+    <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none';};"/>
     </div>
     <div class="notif-content">
-        <div class="notif-user"><strong>{{ t('notifications.admin') }}</strong></div>
-        <div class="notif-msg">{{ t('notifications.upload_pending').replace('{id}', n.item_slug || n.item_id) }}</div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-user"><strong>{{ t("notifications.admin") }}</strong></div>
+        <div class="notif-msg">{{ (t("notifications.upload_pending")).replace("{id}", (n.item_slug or n.item_id), 1) }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </a>
-@elseif(n.type === 'report')
-<a href="/mod/reports" class="notif-item {{ n.is_read ? '' : 'unread' }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
-    <div class="notif-thumb" data-mode="{{ n.item_mode || '' }}">
-        <img src="/t/{{ n.item_id }}{{ ((active_mode===0&&(n.item_mode==='nsfw'||n.item_mode==='nsfl'))||(active_mode===1&&n.item_mode==='nsfl')||(active_mode===4&&(n.item_mode==='sfw'||n.item_mode==='nsfw'))) ? '_blur' : '' }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/{{ n.item_id }}.webp';this.onerror=function(){this.onerror=null;this.src='/mod/deleted/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none';};};"/>
+{% elif n.type == "report" %}
+<a href="/mod/reports" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
+    <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/{{ n.item_id }}.webp';this.onerror=function(){this.onerror=null;this.src='/mod/deleted/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none';};};"/>
     </div>
     <div class="notif-content">
-        <div class="notif-user"><strong>{{ t('notifications.moderation') }}</strong></div>
-        <div class="notif-msg">{{ t('notifications.new_report').replace('{id}', n.reference_id) }}</div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-user"><strong>{{ t("notifications.moderation") }}</strong></div>
+        <div class="notif-msg">{{ (t("notifications.new_report")).replace("{id}", n.reference_id, 1) }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </a>
-@elseif(n.type === 'deny')
-<a href="/{{ n.item_slug || n.item_id }}" class="notif-item {{ n.is_read ? '' : 'unread' }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
-    <div class="notif-thumb" data-mode="{{ n.item_mode || '' }}">
-        <img src="/t/{{ n.item_id }}{{ ((active_mode===0&&(n.item_mode==='nsfw'||n.item_mode==='nsfl'))||(active_mode===1&&n.item_mode==='nsfl')||(active_mode===4&&(n.item_mode==='sfw'||n.item_mode==='nsfw'))) ? '_blur' : '' }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none'};" />
+{% elif n.type == "deny" %}
+<a href="/{{ (n.item_slug or n.item_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
+    <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none'};" />
     </div>
     <div class="notif-content">
-        <div class="notif-user"><strong>{{ t('notifications.system') }}</strong></div>
+        <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
         <div class="notif-msg">
-            <strong>{{ t('notifications.upload_denied').replace('{id}', n.item_slug || n.item_id) }}</strong>
+            <strong>{{ (t("notifications.upload_denied")).replace("{id}", (n.item_slug or n.item_id), 1) }}</strong>
             <div style="font-size: 0.85em; color: #ffb8b8; margin-top: 4px;">Reason: {{ n.reason }}</div>
         </div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </a>
-@elseif(n.type === 'item_deleted')
-<a href="/{{ n.item_slug || n.item_id }}" class="notif-item {{ n.is_read ? '' : 'unread' }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
-    <div class="notif-thumb" data-mode="{{ n.item_mode || '' }}">
-        <img src="/t/{{ n.item_id }}{{ ((active_mode===0&&(n.item_mode==='nsfw'||n.item_mode==='nsfl'))||(active_mode===1&&n.item_mode==='nsfl')||(active_mode===4&&(n.item_mode==='sfw'||n.item_mode==='nsfw'))) ? '_blur' : '' }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none'};" />
+{% elif n.type == "item_deleted" %}
+<a href="/{{ (n.item_slug or n.item_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
+    <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none'};" />
     </div>
     <div class="notif-content">
-        <div class="notif-user"><strong>{{ t('notifications.moderation') }}</strong></div>
+        <div class="notif-user"><strong>{{ t("notifications.moderation") }}</strong></div>
         <div class="notif-msg">
-            <strong>{{ t('notifications.upload_deleted').replace('{id}', n.item_slug || n.item_id) }}</strong>
+            <strong>{{ (t("notifications.upload_deleted")).replace("{id}", (n.item_slug or n.item_id), 1) }}</strong>
             <div style="font-size: 0.85em; color: #ffb8b8; margin-top: 4px;">Reason: {{ n.reason }}</div>
         </div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </a>
-@elseif(n.type === 'upload_comment')
-<a href="/{{ n.item_slug || n.item_id }}#c{{ n.reference_id }}" class="notif-item {{ n.is_read ? '' : 'unread' }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
-    <div class="notif-thumb" data-mode="{{ n.item_mode || '' }}">
-        <img src="/t/{{ n.item_id }}{{ ((active_mode===0&&(n.item_mode==='nsfw'||n.item_mode==='nsfl'))||(active_mode===1&&n.item_mode==='nsfl')||(active_mode===4&&(n.item_mode==='sfw'||n.item_mode==='nsfw'))) ? '_blur' : '' }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumbnail" onerror="this.style.display='none'">
+{% elif n.type == "upload_comment" %}
+<a href="/{{ (n.item_slug or n.item_id) }}#c{{ n.reference_id }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
+    <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumbnail" onerror="this.style.display='none'">
     </div>
     <div class="notif-content">
-        <div class="notif-info"><strong>{{ t('notifications.new_comments') }}</strong></div>
-        <div class="notif-msg">{{ t('notifications.on_your_upload').replace('{id}', n.item_slug || n.item_id) }}</div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-info"><strong>{{ t("notifications.new_comments") }}</strong></div>
+        <div class="notif-msg">{{ (t("notifications.on_your_upload")).replace("{id}", (n.item_slug or n.item_id), 1) }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </a>
-@elseif(n.type === 'upload_success')
-<a href="/{{ n.item_slug || n.item_id }}" class="notif-item {{ n.is_read ? '' : 'unread' }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
-    <div class="notif-thumb" data-mode="{{ n.item_mode || '' }}">
-        <img src="/t/{{ n.item_id }}{{ ((active_mode===0&&(n.item_mode==='nsfw'||n.item_mode==='nsfl'))||(active_mode===1&&n.item_mode==='nsfl')||(active_mode===4&&(n.item_mode==='sfw'||n.item_mode==='nsfw'))) ? '_blur' : '' }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.style.display='none'" />
+{% elif n.type == "upload_success" %}
+<a href="/{{ (n.item_slug or n.item_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
+    <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.style.display='none'" />
     </div>
     <div class="notif-content">
-        <div class="notif-user"><strong>{{ t('notifications.system') }}</strong></div>
-        <div class="notif-msg">{{ t('notifications.upload_success') }}</div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
+        <div class="notif-msg">{{ t("notifications.upload_success") }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </a>
-@elseif(n.type === 'upload_error')
-<a href="{{ n.item_id ? '/' + (n.item_slug || n.item_id) : '#' }}" class="notif-item {{ n.is_read ? '' : 'unread' }} {{ n.item_id ? 'notif-with-thumb' : '' }}" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
-    @if(n.item_id)
-    <div class="notif-thumb" data-mode="{{ n.item_mode || '' }}">
-        <img src="/t/{{ n.item_id }}{{ ((active_mode===0&&(n.item_mode==='nsfw'||n.item_mode==='nsfl'))||(active_mode===1&&n.item_mode==='nsfl')||(active_mode===4&&(n.item_mode==='sfw'||n.item_mode==='nsfw'))) ? '_blur' : '' }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none'};" />
+{% elif n.type == "upload_error" %}
+<a href="{{ ("/" ~ (n.item_slug or n.item_id) if n.item_id else "#") }}" class="notif-item {{ ("" if n.is_read else "unread") }} {{ ("notif-with-thumb" if n.item_id else "") }}" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
+    {% if n.item_id %}
+    <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.onerror=null;this.src='/pending/t/{{ n.item_id }}.webp';this.onerror=function(){this.style.display='none'};" />
     </div>
-    @endif
+    {% endif %}
     <div class="notif-content">
-        <div class="notif-user"><strong>{{ t('notifications.system') }}</strong></div>
+        <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
         <div class="notif-msg">
-            <strong>{{ t('notifications.upload_error') }}</strong>
-            @if(n.data && n.data.msg)
+            <strong>{{ t("notifications.upload_error") }}</strong>
+            {% if (n.data and n.data.msg) %}
             <div style="font-size: 0.85em; color: #ffb8b8; margin-top: 4px;">Reason: {{ n.data.msg }}</div>
-            @endif
-            @if(n.data && n.data.url)
+            {% endif %}
+            {% if (n.data and n.data.url) %}
             <div style="font-size: 0.75em; opacity: 0.6; margin-top: 2px; word-break: break-all;">URL: {{ n.data.url }}</div>
-            @endif
+            {% endif %}
         </div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </a>
-@elseif(n.type === 'warning')
-<div class="notif-item {{ n.is_read ? '' : 'unread' }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
+{% elif n.type == "warning" %}
+<div class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
     <div class="notif-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg-lighter);color:var(--danger);font-size:1.5em;"><i class="fa-solid fa-triangle-exclamation"></i></div>
     <div class="notif-content">
-        <div class="notif-user"><strong>{{ t('notifications.system') }}</strong></div>
+        <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
         <div class="notif-msg">
             <strong>Account Warning</strong>
             <div style="font-size: 0.85em; color: #ffb8b8; margin-top: 4px;">Reason: {{ n.reason }}</div>
         </div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </div>
-@else
-<a href="/{{ n.item_slug || n.item_id }}#c{{ n.comment_id || n.reference_id }}" class="notif-item {{ n.is_read ? '' : 'unread' }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ n.item_id || '' }}" data-item-slug="{{ n.item_slug || '' }}">
-    @if(n.item_id)
-    <div class="notif-thumb" data-mode="{{ n.item_mode || '' }}">
-        <img src="/t/{{ n.item_id }}{{ ((active_mode===0&&(n.item_mode==='nsfw'||n.item_mode==='nsfl'))||(active_mode===1&&n.item_mode==='nsfl')||(active_mode===4&&(n.item_mode==='sfw'||n.item_mode==='nsfw'))) ? '_blur' : '' }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.style.display='none'" />
+{% else %}
+<a href="/{{ (n.item_slug or n.item_id) }}#c{{ (n.comment_id or n.reference_id) }}" class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
+    {% if n.item_id %}
+    <div class="notif-thumb" data-mode="{{ (n.item_mode or "") }}">
+        <img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" data-orig-src="/t/{{ n.item_id }}.webp" alt="thumb" onerror="this.style.display='none'" />
     </div>
-    @endif
+    {% endif %}
     <div class="notif-content">
-        <div class="notif-user"><strong @if(n.username_color) style="color: {{ n.username_color }}" @endif>{!! n.from_user !!}</strong></div>
+        <div class="notif-user"><strong {% if n.username_color %} style="color: {{ n.username_color }}" {% endif %}>{{ n.from_user }}</strong></div>
         <div class="notif-msg">
-            @if(n.type === 'comment_reply') {{ t('notifications.replied').replace('{id}', n.item_slug || n.item_id) }}
-            @elseif(n.type === 'subscription') {{ t('notifications.subscribed').replace('{id}', n.item_slug || n.item_id) }}
-            @elseif(n.type === 'mention') {{ t('notifications.mentioned').replace('{id}', n.item_slug || n.item_id) }}
-            @endif
+            {% if n.type == "comment_reply" %} {{ (t("notifications.replied")).replace("{id}", (n.item_slug or n.item_id), 1) }}
+            {% elif n.type == "subscription" %} {{ (t("notifications.subscribed")).replace("{id}", (n.item_slug or n.item_id), 1) }}
+            {% elif n.type == "mention" %} {{ (t("notifications.mentioned")).replace("{id}", (n.item_slug or n.item_id), 1) }}
+            {% endif %}
         </div>
-        <div class="notif-time">{{ new Date(n.created_at).toLocaleString() }}</div>
+        <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
 </a>
-@endif
-@endeach
+{% endif %}
+{% endfor %}

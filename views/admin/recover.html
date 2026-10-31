@@ -1,4 +1,4 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div id="main">
   <table class="table" style="width: 100%">
   <thead>
@@ -11,16 +11,16 @@
   </tr>
   </thead>
   <tbody>
-  @each(posts as post)
+  {% for key, post in posts|entries %}
   <tr>
     <td><img src="data:image/webp;base64,{{ post.thumbnail }}" /></td>
     <td>{{ post.id }}</td>
-    <td>{!! post.username !!}</td>
+    <td>{{ post.username }}</td>
     <td>{{ post.mime }}</td>
     <td><a href="/admin/recover/?id={{ post.id }}">recover</a></td>
   </tr>
-  @endeach
+  {% endfor %}
   </tbody>
   </table>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

@@ -1,27 +1,27 @@
 <!doctype f0ck>
-<html theme="@if(typeof theme !== 'undefined'){{ theme }}@endif">
+<html theme="{% if theme is defined %}{{ theme }}{% endif %}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>login</title>
-  <link rel="icon" @if(custom_favicon && custom_favicon.length > 0)href="{{ custom_favicon }}"@else type="image/gif" href="/s/img/favicon.gif"@endif />
+  <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
   <link href="/s/css/f0ckm.css" rel="stylesheet" />
 </head>
 <body class="login-page">
   <form class="login-form" method="post" action="/login" novalidate>
-    <h2>{{ t('auth.login_title') }}</h2>
-    @if(error)
+    <h2>{{ t("auth.login_title") }}</h2>
+    {% if error %}
     <div class="flash-error" style="margin-bottom: 15px;">{{ error }}</div>
-    @endif
-    <input type="text" name="username" placeholder="{{ t('auth.username_placeholder') }}" autocomplete="off" required />
-    <input type="password" name="password" placeholder="{{ t('auth.password_placeholder') }}" autocomplete="off" required />
-    <p><input type="checkbox" id="kmsi" name="kmsi" /> <label for="kmsi">{{ t('auth.stay_signed_in_label') }}</label></p>
-    <button type="submit">{{ t('auth.login_title') }}</button>
-    @if(smtp_enabled)
+    {% endif %}
+    <input type="text" name="username" placeholder="{{ t("auth.username_placeholder") }}" autocomplete="off" required />
+    <input type="password" name="password" placeholder="{{ t("auth.password_placeholder") }}" autocomplete="off" required />
+    <p><input type="checkbox" id="kmsi" name="kmsi" /> <label for="kmsi">{{ t("auth.stay_signed_in_label") }}</label></p>
+    <button type="submit">{{ t("auth.login_title") }}</button>
+    {% if smtp_enabled %}
     <div style="margin-top: 15px; text-align: center;">
-      <a href="/forgot-password" style="font-size: 0.9em; color: var(--text-muted); text-decoration: none;">{{ t('auth.forgot_password') }}</a>
+      <a href="/forgot-password" style="font-size: 0.9em; color: var(--text-muted); text-decoration: none;">{{ t("auth.forgot_password") }}</a>
     </div>
-    @endif
+    {% endif %}
   </form>
 </body>
 </html>

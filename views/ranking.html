@@ -1,4 +1,4 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main" class="ranking-page">
   <style>
@@ -95,120 +95,120 @@
   
   <div class="ranking-wrapper">
     <div class="section-big">
-      @if(list.length >= 3)
+      {% if (list|length >= 3) %}
       <div class="ranking-podium">
-        @for(let i = 0; i < 3; i++)
-        <div class="podium-item rank-{{ i + 1 }}">
-          @if(i === 0)<div class="podium-crown">👑</div>@endif
+        {# PORT_TODO @for(let i = 0; i < 3; i++) #}{% for PORT_TODO in [] %}
+        <div class="podium-item rank-{{ (i + 1) }}">
+          {% if i == 0 %}<div class="podium-crown">👑</div>{% endif %}
           <div class="podium-avatar-wrapper">
-            @if(list[i].avatar_file)
-              <a href="/user/{{ list[i].user }}"><img class="podium-avatar" src="/a/{{ list[i].avatar_file }}" alt="{{ list[i].user }}"></a>
-            @elseif(list[i].avatar)
-              <a href="/user/{{ list[i].user }}"><img class="podium-avatar" src="/t/{{ list[i].avatar }}.webp" alt="{{ list[i].user }}"></a>
-            @else
-              <a href="/user/{{ list[i].user }}"><img class="podium-avatar" src="/a/default.png" alt="{{ list[i].user }}"></a>
-            @endif
-            <div class="podium-rank-label">#{{ i + 1 }}</div>
+            {% if (list[i]).avatar_file %}
+              <a href="/user/{{ (list[i]).user }}"><img class="podium-avatar" src="/a/{{ (list[i]).avatar_file }}" alt="{{ (list[i]).user }}"></a>
+            {% elif (list[i]).avatar %}
+              <a href="/user/{{ (list[i]).user }}"><img class="podium-avatar" src="/t/{{ (list[i]).avatar }}.webp" alt="{{ (list[i]).user }}"></a>
+            {% else %}
+              <a href="/user/{{ (list[i]).user }}"><img class="podium-avatar" src="/a/default.png" alt="{{ (list[i]).user }}"></a>
+            {% endif %}
+            <div class="podium-rank-label">#{{ (i + 1) }}</div>
           </div>
           <div class="podium-info">
-            <a href="/user/{{ list[i].user }}" class="podium-name">{!! list[i].display_name || list[i].user !!}</a>
-            <span class="podium-count">{{ list[i].count }} Tags</span>
+            <a href="/user/{{ (list[i]).user }}" class="podium-name">{{ ((list[i]).display_name or (list[i]).user) }}</a>
+            <span class="podium-count">{{ (list[i]).count }} Tags</span>
           </div>
         </div>
-        @endfor
+        {% endfor %}
       </div>
-      @endif
+      {% endif %}
 
       <table class="ranking-table clean-table" id="ranking-list">
         <thead>
           <tr>
-            <th class="rank-col">{{ t('ranking.col_rank') }}</th>
-            <th class="avatar-col">{{ t('ranking.col_avatar') }}</th>
-            <th class="user-col">{{ t('ranking.col_username') }}</th>
-            <th class="count-col">{{ t('ranking.col_tagged') }}</th>
+            <th class="rank-col">{{ t("ranking.col_rank") }}</th>
+            <th class="avatar-col">{{ t("ranking.col_avatar") }}</th>
+            <th class="user-col">{{ t("ranking.col_username") }}</th>
+            <th class="count-col">{{ t("ranking.col_tagged") }}</th>
           </tr>
         </thead>
         <tbody>
-          @for(let i = (list.length >= 3 ? 3 : 0); i < list.length; i++)
+          {# PORT_TODO @for(let i = (list.length >= 3 ? 3 : 0); i < list.length; i++) #}{% for PORT_TODO in [] %}
           <tr>
-            <td class="rank-cell">#{{ i + 1 }}</td>
+            <td class="rank-cell">#{{ (i + 1) }}</td>
             <td class="avatar-cell">
-              @if(list[i].avatar_file)
-                <a href="/user/{{ list[i].user }}"><img class="rank-avatar" src="/a/{{ list[i].avatar_file }}" alt="{{ list[i].user }}"></a>
-              @elseif(list[i].avatar)
-                <a href="/user/{{ list[i].user }}"><img class="rank-avatar" src="/t/{{ list[i].avatar }}.webp" alt="{{ list[i].user }}"></a>
-              @else
-                <a href="/user/{{ list[i].user }}"><img class="rank-avatar" src="/a/default.png" alt="{{ list[i].user }}"></a>
-              @endif
+              {% if (list[i]).avatar_file %}
+                <a href="/user/{{ (list[i]).user }}"><img class="rank-avatar" src="/a/{{ (list[i]).avatar_file }}" alt="{{ (list[i]).user }}"></a>
+              {% elif (list[i]).avatar %}
+                <a href="/user/{{ (list[i]).user }}"><img class="rank-avatar" src="/t/{{ (list[i]).avatar }}.webp" alt="{{ (list[i]).user }}"></a>
+              {% else %}
+                <a href="/user/{{ (list[i]).user }}"><img class="rank-avatar" src="/a/default.png" alt="{{ (list[i]).user }}"></a>
+              {% endif %}
             </td>
             <td class="user-cell">
-              <a href="/user/{{ list[i].user }}">{!! list[i].display_name || list[i].user !!}</a>
+              <a href="/user/{{ (list[i]).user }}">{{ ((list[i]).display_name or (list[i]).user) }}</a>
             </td>
-            <td class="count-cell">{{ list[i].count }}</td>
+            <td class="count-cell">{{ (list[i]).count }}</td>
           </tr>
-          @endfor
+          {% endfor %}
         </tbody>
       </table>
     </div>
 
     <div class="section-small">
       <div class="stats-box-simple" id="tag-statistics">
-        <h3>{{ t('ranking.tag_stats') }}</h3>
+        <h3>{{ t("ranking.tag_stats") }}</h3>
         <table class="stats-table clean-table">
           <tbody>
-            <tr><td>{{ t('ranking.stat_total') }}</td><td>{{ stats.total }}</td></tr>
-            <tr><td>{{ t('ranking.stat_comments') }}</td><td>{{ totalComments }}</td></tr>
-            <tr><td>{{ t('ranking.stat_users') }}</td><td>{{ totalUsers }}</td></tr>
-            <tr><td>{{ t('ranking.stat_anon_users') }}</td><td>{{ totalAnonUsers }}</td></tr>
-            <tr><td>{{ t('ranking.stat_favs') }}</td><td>{{ totalFavs }}</td></tr>
-            <tr><td>{{ t('ranking.stat_tagged') }}</td><td>{{ stats.tagged }}</td></tr>
-            <tr><td>{{ t('ranking.stat_untagged') }}</td><td>{{ stats.untagged }}</td></tr>
-            <tr><td>{{ t('ranking.stat_sfw') }}</td><td>{{ stats.sfw }}</td></tr>
-            <tr><td>{{ t('ranking.stat_nsfw') }}</td><td>{{ stats.nsfw }}</td></tr>
-            @if(enable_nsfl)
-              <tr><td>{{ t('ranking.stat_nsfl') }}</td><td>{{ stats.nsfl }}</td></tr>
-            @endif
-            <tr><td>{{ t('ranking.stat_deleted') }}</td><td>{{ stats.deleted }}</td></tr>
-            <tr><td>{{ t('ranking.stat_disk_usage') }}</td><td>{{ diskSize }}</td></tr>
+            <tr><td>{{ t("ranking.stat_total") }}</td><td>{{ stats.total }}</td></tr>
+            <tr><td>{{ t("ranking.stat_comments") }}</td><td>{{ totalComments }}</td></tr>
+            <tr><td>{{ t("ranking.stat_users") }}</td><td>{{ totalUsers }}</td></tr>
+            <tr><td>{{ t("ranking.stat_anon_users") }}</td><td>{{ totalAnonUsers }}</td></tr>
+            <tr><td>{{ t("ranking.stat_favs") }}</td><td>{{ totalFavs }}</td></tr>
+            <tr><td>{{ t("ranking.stat_tagged") }}</td><td>{{ stats.tagged }}</td></tr>
+            <tr><td>{{ t("ranking.stat_untagged") }}</td><td>{{ stats.untagged }}</td></tr>
+            <tr><td>{{ t("ranking.stat_sfw") }}</td><td>{{ stats.sfw }}</td></tr>
+            <tr><td>{{ t("ranking.stat_nsfw") }}</td><td>{{ stats.nsfw }}</td></tr>
+            {% if enable_nsfl %}
+              <tr><td>{{ t("ranking.stat_nsfl") }}</td><td>{{ stats.nsfl }}</td></tr>
+            {% endif %}
+            <tr><td>{{ t("ranking.stat_deleted") }}</td><td>{{ stats.deleted }}</td></tr>
+            <tr><td>{{ t("ranking.stat_disk_usage") }}</td><td>{{ diskSize }}</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="stats-box-simple" id="top-f0cks">
-        <h3>{{ t('ranking.most_favorited') }}</h3>
+        <h3>{{ t("ranking.most_favorited") }}</h3>
         <table class="f0cks-table clean-table">
           <tbody>
-            @each(favotop as favo)
+            {% for key, favo in favotop|entries %}
             <tr>
-              <td><a href="/{{ (enable_item_slugs && favo.slug) ? favo.slug : favo.id }}">#{{ (enable_item_slugs && favo.slug) ? favo.slug : favo.id }}</a></td>
-              <td>{{ favo.favs }} <span style="opacity: 0.5; font-size: 0.8em;">{{ t('ranking.favs') }}</span></td>
+              <td><a href="/{{ (favo.slug if (enable_item_slugs and favo.slug) else favo.id) }}">#{{ (favo.slug if (enable_item_slugs and favo.slug) else favo.id) }}</a></td>
+              <td>{{ favo.favs }} <span style="opacity: 0.5; font-size: 0.8em;">{{ t("ranking.favs") }}</span></td>
             </tr>
-            @endeach
+            {% endfor %}
           </tbody>
         </table>
       </div>
 
-      @if(enable_xd_score && xdtop.length > 0)
+      {% if (enable_xd_score and (xdtop|length > 0)) %}
       <div class="stats-box-simple" id="top-xd-scores">
-        <h3>{{ t('ranking.top_xd') }}</h3>
+        <h3>{{ t("ranking.top_xd") }}</h3>
         <table class="xd-scores-table clean-table">
           <tbody>
-            @each(xdtop as item)
+            {% for key, item in xdtop|entries %}
             <tr>
-              <td><a href="/{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}">#{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}</a></td>
+              <td><a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}">#{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</a></td>
               <td>
                 <span class="xd-score-badge xd-tier-{{ item.xd_tier }}" tooltip="xD Score: {{ item.xd_score }} pts" flow="up">
                   {{ item.xd_label }} <span class="xd-score-num">{{ item.xd_score }}</span>
                 </span>
               </td>
             </tr>
-            @endeach
+            {% endfor %}
           </tbody>
         </table>
       </div>
-      @endif
+      {% endif %}
     </div>
   </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

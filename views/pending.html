@@ -1,4 +1,4 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
   <style>
@@ -11,67 +11,67 @@
     <header class="adm-header">
       <div>
         <h1 class="adm-title">My uploads</h1>
-        <div class="adm-subtitle">Status of your last {{ items.length }} upload@if(items.length !== 1)s@endif.</div>
+        <div class="adm-subtitle">Status of your last {{ items|length }} upload{% if items|length != 1 %}s{% endif %}.</div>
       </div>
       <a href="/upload" class="adm-btn adm-btn-ghost"><i class="fa-solid fa-angle-up"></i> Upload</a>
     </header>
 
-    @if(manual_approval_on)
+    {% if manual_approval_on %}
     <div class="up-notice"><i class="fa-solid fa-hourglass-half"></i> Manual approval is on: new uploads appear on the site once a moderator approves them.</div>
-    @endif
+    {% endif %}
 
     <section class="adm-section">
       <div class="adm-stats">
-        <div class="adm-stat @if(counts.pending > 0) is-hot @endif"><span class="adm-stat-num" id="up-pending-count">{{ counts.pending }}</span><span class="adm-stat-label">Pending</span></div>
+        <div class="adm-stat {% if (counts.pending > 0) %} is-hot {% endif %}"><span class="adm-stat-num" id="up-pending-count">{{ counts.pending }}</span><span class="adm-stat-label">Pending</span></div>
         <div class="adm-stat"><span class="adm-stat-num">{{ counts.live }}</span><span class="adm-stat-label">Live</span></div>
-        <div class="adm-stat"><span class="adm-stat-num">{{ counts.denied + counts.removed }}</span><span class="adm-stat-label">Denied / removed</span></div>
+        <div class="adm-stat"><span class="adm-stat-num">{{ (counts.denied + counts.removed) }}</span><span class="adm-stat-label">Denied / removed</span></div>
       </div>
     </section>
 
     <section class="adm-section">
       <h2 class="adm-section-title"><i class="fa-solid fa-list"></i> Recent uploads</h2>
-      @if(items.length > 0)
+      {% if (items|length > 0) %}
       <div class="up-list">
-        @each(items as it)
-        <div class="up-row is-{!! it.status !!}" id="i{!! it.id !!}">
+        {% for key, it in items|entries %}
+        <div class="up-row is-{{ it.status }}" id="i{{ it.id }}">
           <div class="up-thumb">
-            @if(it.thumb)
-            <img src="{!! it.thumb !!}" alt="" loading="lazy">
-            @else
+            {% if it.thumb %}
+            <img src="{{ it.thumb }}" alt="" loading="lazy">
+            {% else %}
             <i class="fa-solid fa-ban"></i>
-            @endif
+            {% endif %}
           </div>
           <div class="up-info">
             <div class="up-name">
-              @if(it.status === 'live')<a href="/{!! it.path !!}">{!! it.title || ('#' + it.id) !!}</a>@else{!! it.title || ('#' + it.id) !!}@endif
-              @if(it.is_album)<span class="up-album"><i class="fa-solid fa-images"></i> {!! it.album_count !!}</span>@endif
+              {% if it.status == "live" %}<a href="/{{ it.path }}">{{ (it.title or "#" ~ it.id) }}</a>{% else %}{{ (it.title or "#" ~ it.id) }}{% endif %}
+              {% if it.is_album %}<span class="up-album"><i class="fa-solid fa-images"></i> {{ it.album_count }}</span>{% endif %}
             </div>
             <div class="up-meta">
-              <span>#{!! it.id !!}</span>
-              <span>{!! it.mime !!}</span>
-              @if(it.size_fmt)<span>{!! it.size_fmt !!}</span>@endif
-              @if(it.time_ago)<span tooltip="{!! it.time_full !!}">{!! it.time_ago !!}</span>@endif
+              <span>#{{ it.id }}</span>
+              <span>{{ it.mime }}</span>
+              {% if it.size_fmt %}<span>{{ it.size_fmt }}</span>{% endif %}
+              {% if it.time_ago %}<span tooltip="{{ it.time_full }}">{{ it.time_ago }}</span>{% endif %}
             </div>
-            @if(it.reason)
-            <div class="up-reason"><strong>Reason:</strong> {!! it.reason !!}</div>
-            @endif
+            {% if it.reason %}
+            <div class="up-reason"><strong>Reason:</strong> {{ it.reason }}</div>
+            {% endif %}
           </div>
           <div class="up-status">
-            @if(it.status === 'pending')<span class="up-badge"><i class="fa-solid fa-hourglass-half"></i> Pending</span><button type="button" class="up-del" data-id="{!! it.id !!}" title="Delete this upload"><i class="fa-solid fa-trash"></i> <span>Delete</span></button>@endif
-            @if(it.status === 'live')<a href="/{!! it.path !!}" class="up-badge"><i class="fa-solid fa-check"></i> Live</a>@endif
-            @if(it.status === 'denied')<span class="up-badge"><i class="fa-solid fa-xmark"></i> Denied</span>@endif
-            @if(it.status === 'removed')<span class="up-badge"><i class="fa-solid fa-trash"></i> Removed</span>@endif
+            {% if it.status == "pending" %}<span class="up-badge"><i class="fa-solid fa-hourglass-half"></i> Pending</span><button type="button" class="up-del" data-id="{{ it.id }}" title="Delete this upload"><i class="fa-solid fa-trash"></i> <span>Delete</span></button>{% endif %}
+            {% if it.status == "live" %}<a href="/{{ it.path }}" class="up-badge"><i class="fa-solid fa-check"></i> Live</a>{% endif %}
+            {% if it.status == "denied" %}<span class="up-badge"><i class="fa-solid fa-xmark"></i> Denied</span>{% endif %}
+            {% if it.status == "removed" %}<span class="up-badge"><i class="fa-solid fa-trash"></i> Removed</span>{% endif %}
           </div>
         </div>
-        @endeach
+        {% endfor %}
       </div>
-      @else
+      {% else %}
       <div class="up-empty">You haven't uploaded anything yet.</div>
-      @endif
+      {% endif %}
     </section>
   </div>
 
-  @include(snippets/adm-dashboard-style)
+  {% include "snippets/adm-dashboard-style.html" %}
   <style>
     .up-notice {
       display: flex; align-items: center; gap: 10px; margin: -8px 0 22px; padding: 10px 14px;
@@ -170,4 +170,4 @@
   </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

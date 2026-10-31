@@ -8,20 +8,20 @@
         <img src="/s/img/404.gif" alt="ZOMG">
       </a>
       <div class="_error_message">
-        <span>{{ t('error.label') }}</span>
+        <span>{{ t("error.label") }}</span>
         <code>{{ message }}</code>
       </div>
-      @if(typeof error_filter_hint !== 'undefined' && error_filter_hint)
+      {% if (error_filter_hint is defined and error_filter_hint) %}
       <div class="_error_filter_hint">
         <div class="_error_filter_hint_text">{{ error_filter_hint }}</div>
         <a href="#" data-action="open-filter-modal" class="_error_filter_hint_link">{{ error_filter_hint_link }}</a>
         <div class="_error_filter_actions">
-          <button type="button" class="btn _error_see_anyways_btn" data-action="see-anyways" data-item-id="{{ item_id || '' }}" data-item-slug="{{ item_slug || '' }}">
+          <button type="button" class="btn _error_see_anyways_btn" data-action="see-anyways" data-item-id="{{ (item_id or "") }}" data-item-slug="{{ (item_slug or "") }}">
             <i class="fa fa-eye"></i> {{ error_see_anyways }}
           </button>
         </div>
       </div>
-      @endif
+      {% endif %}
     </div>
   </div>
 </div>

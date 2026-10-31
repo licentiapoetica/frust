@@ -1,7 +1,7 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main" class="admin-container">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container">
         <h2>Rules Page Content</h2>
         <p style="color: #ccc; margin-bottom: 20px;">This text is displayed on the <strong>/rules</strong> page. Supports Markdown. Leave empty to show the default static rules template.</p>
@@ -12,7 +12,7 @@
                 <div style="margin-bottom: 20px;">
                     <label for="rules-text" style="display: block; margin-bottom: 8px; color: var(--accent);">Rules Page Content (Markdown supported)</label>
                     <textarea id="rules-text" name="rules_text" style="width: 100%; min-height: 300px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 15px; border-radius: 4px; font-family: inherit; font-size: 1.1em; resize: vertical;"></textarea>
-                    <script>document.getElementById('rules-text').value = new TextDecoder('utf-8').decode(Uint8Array.from(atob('{{ rules_text_b64 }}'), function(c) { return c.charCodeAt(0); }));</script>
+                    <script>document.getElementById('rules-text').value = new TextDecoder('utf-8').decode(Uint8Array.from(atob({{ rules_text_b64|string|tojson }}), function(c) { return c.charCodeAt(0); }));</script>
                 </div>
 
                 <div style="display: flex; gap: 10px; align-items: center;">
@@ -67,4 +67,4 @@
     </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

@@ -1,10 +1,10 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
   <div id="main" style="padding: 40px 15px; box-sizing: border-box;">
     <div style="min-height: 70vh; display: flex; align-items: center; justify-content: center;">
       
       <!-- BANNED VIEW -->
-      <div id="banned-view" class="banned-container" style="display: {{ isBanned ? 'block' : 'none' }}; background: rgba(18, 18, 20, 0.95); padding: 40px 30px; margin: 0 auto; text-align: center; max-width: 520px; width: 100%; box-sizing: border-box;">
+      <div id="banned-view" class="banned-container" style="display: {{ ("block" if isBanned else "none") }}; background: rgba(18, 18, 20, 0.95); padding: 40px 30px; margin: 0 auto; text-align: center; max-width: 520px; width: 100%; box-sizing: border-box;">
           <h1 style="color: #ff4757; margin-bottom: 20px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">YOU ARE BANNED!</h1>
           <img src="/s/img/banned_angry.png" alt="Banned" style="width: 170px; height: auto; margin: 0 auto 25px auto; display: block;" />
           <div style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 14px 18px; margin-bottom: 25px; text-align: left;">
@@ -23,7 +23,7 @@
       </div>
 
       <!-- UNBANNED / GOOD STANDING VIEW -->
-      <div id="unbanned-view" class="unbanned-container" style="display: {{ isBanned ? 'none' : 'block' }}; background: rgba(18, 18, 20, 0.95); padding: 40px 30px; margin: 0 auto; border: 2px solid #2ecc71; text-align: center; border-radius: 12px; max-width: 520px; width: 100%; box-shadow: 0 10px 50px rgba(46, 204, 113, 0.25); box-sizing: border-box;">
+      <div id="unbanned-view" class="unbanned-container" style="display: {{ ("none" if isBanned else "block") }}; background: rgba(18, 18, 20, 0.95); padding: 40px 30px; margin: 0 auto; border: 2px solid #2ecc71; text-align: center; border-radius: 12px; max-width: 520px; width: 100%; box-shadow: 0 10px 50px rgba(46, 204, 113, 0.25); box-sizing: border-box;">
           <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(46, 204, 113, 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 2px solid rgba(46, 204, 113, 0.4);">
               <i class="fa-solid fa-shield-halved" style="font-size: 38px; color: #2ecc71;"></i>
           </div>
@@ -38,7 +38,7 @@
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center;">
                   <span style="color: #888; font-size: 0.88em; text-transform: uppercase;">IP Address</span>
-                  <code style="color: #ddd; font-family: monospace; font-size: 0.9em;">{{ clientIp || '127.0.0.1' }}</code>
+                  <code style="color: #ddd; font-family: monospace; font-size: 0.9em;">{{ (clientIp or "127.0.0.1") }}</code>
               </div>
           </div>
           <div>
@@ -67,4 +67,4 @@
         } catch (e) {}
     })();
 </script>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

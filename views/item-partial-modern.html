@@ -1,62 +1,62 @@
-{{-- MODERN LAYOUT — 3-column grid --}}
-{{-- Used by: guests (no session) + members with use_new_layout = true --}}
-<div class="item-layout-container" data-item-id="{{ item.local_id || item.id }}" data-requested-subf0ck="{{ item.requested_subf0ck_slug || '' }}">
+{# MODERN LAYOUT — 3-column grid #}
+{# Used by: guests (no session) + members with use_new_layout = true #}
+<div class="item-layout-container" data-item-id="{{ (item.local_id or item.id) }}" data-requested-subf0ck="{{ (item.requested_subf0ck_slug or "") }}">
 
-    {{-- LEFT SIDEBAR: comments + tags --}}
+    {# LEFT SIDEBAR: comments + tags #}
     <div class="item-sidebar-left">
 
-        @if(enable_xd_score && item.xd_score > 0)
+        {% if (enable_xd_score and (item.xd_score > 0)) %}
         <div class="xd-score-wrapper">
         <span class="xd-score-badge xd-tier-{{ item.xd_tier }}" tooltip="xD Score: {{ item.xd_score }} pts" flow="up">
             {{ item.xd_label }} <span class="xd-score-num">{{ item.xd_score }}</span>
         </span>
         </div>
-        @endif
+        {% endif %}
 
-        @if(enable_comments && (session || !hide_comments_from_public))
+        {% if (enable_comments and (session or not hide_comments_from_public)) %}
         <div id="comments-container"
-             data-item-id="{{ item.local_id || item.id }}"
-             @if(session) data-user="{{ session.user }}" @endif
-             @if(session && is_mod_or_admin) data-is-admin="true" @endif
-             @if(item.is_comments_locked) data-is-locked="true" @endif>
-            @if(item.is_comments_locked && !is_mod_or_admin)
+             data-item-id="{{ (item.local_id or item.id) }}"
+             {% if session %} data-user="{{ session.user }}" {% endif %}
+             {% if (session and is_mod_or_admin) %} data-is-admin="true" {% endif %}
+             {% if item.is_comments_locked %} data-is-locked="true" {% endif %}>
+            {% if (item.is_comments_locked and not is_mod_or_admin) %}
             <div class="lock-notice">🔒 Comments are disabled on this thread.</div>
-            @elseif(session && session.is_anon && !anon_permissions.comment)
+            {% elif ((session and session.is_anon) and not anon_permissions.comment) %}
             <div class="lock-notice">🔒 Anonymous comments are disabled.</div>
-            @else
-            @include(snippets/comment-input)
-            @endif
+            {% else %}
+            {% include "snippets/comment-input.html" %}
+            {% endif %}
         </div>
-        @endif
+        {% endif %}
 
-        @if(session)
+        {% if session %}
         <div class="tag-controls">
             <a href="#" id="a_addtag" class="tag-btn" flow="up-left">
                 <i class="fa-solid fa-plus"></i>
             </a>
         </div>
-        @endif
+        {% endif %}
 
         <div class="sidebar-tags-container">
-            <span class="badge badge-dark" id="tags" data-item-id="{{ item.local_id || item.id }}" data-can-manage="{{ can_manage_item ? 'true' : 'false' }}" data-can-rate="{{ can_rate_item ? 'true' : 'false' }}" style="display: flex; flex-wrap: wrap; gap: 5px; background: transparent; padding: 0; text-align: left; white-space: normal;">
-                @if(!item.is_sfw && !item.is_nsfw && !item.is_nsfl)
-                <span class="badge badge-untagged rating-tag is-untagged @if(can_rate_item) can-cycle @endif" data-item-id="{{ item.local_id || item.id }}" data-rating="untagged">
+            <span class="badge badge-dark" id="tags" data-item-id="{{ (item.local_id or item.id) }}" data-can-manage="{{ ("true" if can_manage_item else "false") }}" data-can-rate="{{ ("true" if can_rate_item else "false") }}" style="display: flex; flex-wrap: wrap; gap: 5px; background: transparent; padding: 0; text-align: left; white-space: normal;">
+                {% if ((not item.is_sfw and not item.is_nsfw) and not item.is_nsfl) %}
+                <span class="badge badge-untagged rating-tag is-untagged {% if can_rate_item %} can-cycle {% endif %}" data-item-id="{{ (item.local_id or item.id) }}" data-rating="untagged">
                     <span class="rating-label">?</span>
                 </span>
-                @endif
-                @if(typeof item.tags !== "undefined")
-                @each(item.tags as tag)
-                @if(tag.normalized === 'sfw' || tag.normalized === 'nsfw' || tag.normalized === 'nsfl')
-                <span class="badge {{ tag.badge }} rating-tag is-{{ tag.normalized }} @if(can_rate_item) can-cycle @endif" data-item-id="{{ item.local_id || item.id }}" data-rating="{{ tag.normalized }}">
-                    <span class="rating-label">{!! tag.tag !!}</span>
+                {% endif %}
+                {% if item.tags is defined %}
+                {% for key, tag in item.tags|entries %}
+                {% if ((tag.normalized == "sfw" or tag.normalized == "nsfw") or tag.normalized == "nsfl") %}
+                <span class="badge {{ tag.badge }} rating-tag is-{{ tag.normalized }} {% if can_rate_item %} can-cycle {% endif %}" data-item-id="{{ (item.local_id or item.id) }}" data-rating="{{ tag.normalized }}">
+                    <span class="rating-label">{{ tag.tag }}</span>
                 </span>
-                @else
-                <span @if(!is_anonymized && session && !session.is_anon && (tag.display_name || tag.user)) tooltip="{!! tag.display_name || tag.user !!}" @endif class="badge {{ tag.badge }} tag-badge @if(tag.is_excluded) tag-is-excluded @endif" data-tag-id="{{ tag.id }}" data-tag="{{ tag.tag }}" data-tag-normalized="{{ tag.normalized }}">
-                    <a href="/tag/{{ tag.normalized }}" class="tag-name">{!! tag.tag !!}</a>@if(tag.can_exclude)<button type="button" class="tag-exclude-btn" title="@if(tag.is_excluded){{ t('filter.unexclude_tag') || 'Excluded (click to unexclude)' }}@else{{ t('filter.exclude_tag') || 'Exclude tag' }}@endif" aria-label="Exclude tag"><i class="fa-solid @if(tag.is_excluded) fa-circle-check @else fa-ban @endif"></i></button>@endif@if(is_mod_or_admin)&nbsp;<a class="removetag" href="#"><i class="fa-solid fa-xmark"></i></a>@endif
+                {% else %}
+                <span {% if (((not is_anonymized and session) and not session.is_anon) and (tag.display_name or tag.user)) %} tooltip="{{ (tag.display_name or tag.user) }}" {% endif %} class="badge {{ tag.badge }} tag-badge {% if tag.is_excluded %} tag-is-excluded {% endif %}" data-tag-id="{{ tag.id }}" data-tag="{{ tag.tag }}" data-tag-normalized="{{ tag.normalized }}">
+                    <a href="/tag/{{ tag.normalized }}" class="tag-name">{{ tag.tag }}</a>{% if tag.can_exclude %}<button type="button" class="tag-exclude-btn" title="{% if tag.is_excluded %}{{ (t("filter.unexclude_tag") or "Excluded (click to unexclude)") }}{% else %}{{ (t("filter.exclude_tag") or "Exclude tag") }}{% endif %}" aria-label="Exclude tag"><i class="fa-solid {% if tag.is_excluded %} fa-circle-check {% else %} fa-ban {% endif %}"></i></button>{% endif %}{% if is_mod_or_admin %}&nbsp;<a class="removetag" href="#"><i class="fa-solid fa-xmark"></i></a>{% endif %}
                 </span>
-                @endif
-                @endeach
-                @endif
+                {% endif %}
+                {% endfor %}
+                {% endif %}
             </span>
         </div>
 
@@ -64,171 +64,171 @@
 
     </div>
 
-    {{-- MAIN CONTENT: media + navigation + metadata --}}
+    {# MAIN CONTENT: media + navigation + metadata #}
     <div class="item-main-content">
 
         <div class="_204863">
-            <div class="location">@if(item.is_chan)<a href="/4/{{ item.external_board }}/catalogue" class="location-link" title="Board /{{ item.external_board }}/ catalogue">/4</a><a href="/4/{{ item.external_board }}/catalogue" class="location-link" title="Board /{{ item.external_board }}/ catalogue">/{{ item.external_board }}</a><a href="/4/{{ item.external_board }}/{{ item.external_tid }}" class="location-link" title="Thread #{{ item.external_tid }} overview">/{{ item.external_tid }}</a><a href="/4/{{ item.external_board }}/{{ item.external_tid }}/{{ item.external_id }}" class="location-link" data-inherit-context="false" title="Post #{{ item.external_id }}">/{{ item.external_id }}</a>@if(item.local_id)<span class="location-sep" style="opacity: 0.6; margin: 0 4px;">→</span><a href="/{{ item.local_path || item.local_id }}" class="location-link is-rehosted" title="View rehosted post /{{ item.local_path || item.local_id }} on f0ckm" style="color: #4ade80; font-weight: 700;"><i class="fa-solid fa-check"></i> /{{ item.local_path || item.local_id }}</a>@endif@elseif(tmp && tmp.tag)<a href="/tags" class="location-link" title="All tags">/tag</a><a href="/tag/{{ encodeURIComponent(tmp.tag) }}{{ link.suffix || '' }}" class="location-link" title="Tag: {{ tmp.tag }}">/{{ tmp.tag }}</a><a href="/tag/{{ encodeURIComponent(tmp.tag) }}/{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}{{ link.suffix || '' }}{{ item.requested_subf0ck_slug ? ('#' + item.requested_subf0ck_slug) : '' }}" class="location-link" title="Post #{{ item.id }}">/{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}{{ item.requested_subf0ck_slug ? ('#' + item.requested_subf0ck_slug) : '' }}</a>@else{{ link.mainDisplay || link.main }}{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}{{ link.suffix }}{{ item.requested_subf0ck_slug ? ('#' + item.requested_subf0ck_slug) : '' }}@endif</div>
+            <div class="location">{% if item.is_chan %}<a href="/4/{{ item.external_board }}/catalogue" class="location-link" title="Board /{{ item.external_board }}/ catalogue">/4</a><a href="/4/{{ item.external_board }}/catalogue" class="location-link" title="Board /{{ item.external_board }}/ catalogue">/{{ item.external_board }}</a><a href="/4/{{ item.external_board }}/{{ item.external_tid }}" class="location-link" title="Thread #{{ item.external_tid }} overview">/{{ item.external_tid }}</a><a href="/4/{{ item.external_board }}/{{ item.external_tid }}/{{ item.external_id }}" class="location-link" data-inherit-context="false" title="Post #{{ item.external_id }}">/{{ item.external_id }}</a>{% if item.local_id %}<span class="location-sep" style="opacity: 0.6; margin: 0 4px;">→</span><a href="/{{ (item.local_path or item.local_id) }}" class="location-link is-rehosted" title="View rehosted post /{{ (item.local_path or item.local_id) }} on f0ckm" style="color: #4ade80; font-weight: 700;"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>{% endif %}{% elif (tmp and tmp.tag) %}<a href="/tags" class="location-link" title="All tags">/tag</a><a href="/tag/{{ tmp.tag|encode_uri_component }}{{ (link.suffix or "") }}" class="location-link" title="Tag: {{ tmp.tag }}">/{{ tmp.tag }}</a><a href="/tag/{{ tmp.tag|encode_uri_component }}/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ (link.suffix or "") }}{{ ("#" ~ item.requested_subf0ck_slug if item.requested_subf0ck_slug else "") }}" class="location-link" title="Post #{{ item.id }}">/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ ("#" ~ item.requested_subf0ck_slug if item.requested_subf0ck_slug else "") }}</a>{% else %}{{ (link.mainDisplay or link.main) }}{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ link.suffix }}{{ ("#" ~ item.requested_subf0ck_slug if item.requested_subf0ck_slug else "") }}{% endif %}</div>
             <div class="gapLeft"></div>
         </div>
-        @if(enable_item_title)
+        {% if enable_item_title %}
         <div class="item_title item-title">
-            <span class="item_title_text@if(!item.title) no-title@endif"@if(can_manage_item) title="Click to edit"@endif>@if(item.title){!! item.title !!}@elseif(can_manage_item)<em>Add a title</em>@endif</span>
-            @if(can_manage_item)
+            <span class="item_title_text{% if not item.title %} no-title{% endif %}"{% if can_manage_item %} title="Click to edit"{% endif %}>{% if item.title %}{{ item.title }}{% elif can_manage_item %}<em>Add a title</em>{% endif %}</span>
+            {% if can_manage_item %}
             <div class="info-title-edit-wrap" style="display:none;">
-                <input type="text" id="info-title-input" class="info-title-input" value="{!! item.title || '' !!}" placeholder="Add a title…" maxlength="500" data-item-id="{{ item.local_id || item.id }}" />
+                <input type="text" id="info-title-input" class="info-title-input" value="{{ (item.title or "") }}" placeholder="Add a title…" maxlength="500" data-item-id="{{ (item.local_id or item.id) }}" />
                 <button type="button" id="info-title-save" class="info-title-save-btn" title="Save Title"><i class="fa-solid fa-check"></i></button>
             </div>
             <span id="info-title-status" class="info-title-status" style="display:none"></span>
-            @endif
+            {% endif %}
         </div>
-        @endif
+        {% endif %}
 
         <div class="content">
             <div class="previous-post">
-                @if(pagination.next)
+                {% if pagination.next %}
                 <div class="arrow-prev">
                     <a id="prev" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}"></a>
                 </div>
-                @else
+                {% else %}
                 <div class="arrow-prev">
                     <a id="prev" href="#" style="color: #ccc !important;"></a>
                 </div>
-                @endif
+                {% endif %}
             </div>
-            <div class="media-object" data-mode="@if(item.is_nsfl)nsfl@elseif(item.is_nsfw)nsfw@elseif(item.is_sfw)sfw@elseuntagged@endif">
-                @include(snippets/item-media)
+            <div class="media-object" data-mode="{% if item.is_nsfl %}nsfl{% elif item.is_nsfw %}nsfw{% elif item.is_sfw %}sfw{% else %}untagged{% endif %}">
+                {% include "snippets/item-media.html" %}
             </div>
             <div class="next-post">
-                @if(pagination.prev)
+                {% if pagination.prev %}
                 <div class="arrow-next">
                     <a id="next" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}"></a>
                 </div>
-                @else
+                {% else %}
                 <div class="arrow-next">
                     <a id="next" href="#" style="color: #ccc !important;"></a>
                 </div>
-                @endif
+                {% endif %}
             </div>
         </div>
 
         <div class="metadata">
             <div class="kontrollelement">
                 <div class="einheit">
-                    @if(typeof pagination !== "undefined")
+                    {% if pagination is defined %}
                     <nav class="steuerung">
-                        @if(pagination.next)
-                        <a class="nav-prev" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}">← {{ t('nav.prev') }}</a>
-                        @else
-                        <a class="nav-prev" href="#" style="visibility: hidden">← {{ t('nav.prev') }}</a>
-                        @endif
+                        {% if pagination.next %}
+                        <a class="nav-prev" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}">← {{ t("nav.prev") }}</a>
+                        {% else %}
+                        <a class="nav-prev" href="#" style="visibility: hidden">← {{ t("nav.prev") }}</a>
+                        {% endif %}
                         <span>|</span>
                         <a id="random" class="" href="/random">
-                            <span>{{ t('nav.random_nav') }}</span>
+                            <span>{{ t("nav.random_nav") }}</span>
                         </a>
                         <span>|</span>
-                        @if(pagination.prev)
-                        <a class="nav-next" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}">{{ t('nav.next') }} →</a>
-                        @else
-                        <a class="nav-next" href="#" style="visibility: hidden">{{ t('nav.next') }} →</a>
-                        @endif
+                        {% if pagination.prev %}
+                        <a class="nav-next" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}">{{ t("nav.next") }} →</a>
+                        {% else %}
+                        <a class="nav-next" href="#" style="visibility: hidden">{{ t("nav.next") }} →</a>
+                        {% endif %}
                     </nav>
-                    @endif
+                    {% endif %}
                 </div>
             </div>
             <div class="blahlol">
                 <div class="blahlol-meta">
                     <span class="badge badge-dark">
-                        <a href="/{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}" class="id-link" data-item-id="{{ item.id }}">{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}</a> — [@if(!is_anonymized)<a id="a_username" data-username="{{ item.username || '' }}" @if(session && !session.is_anon) data-author-id="{{ item.author_id || '' }}" @endif href="/user/{{ item_username_lower }}" @if(session && !session.is_anon && item.author_id) tooltip="ID: {{ item.author_id }}" @endif @if(item.author_color) style="color: {{ item.author_color }}" @endif>{!! item.author_display_name || item.username || 'unknown' !!}</a>@else<span>anonymous</span>@endif] <span id="oc-badge-container">@if(item.is_oc) — <span class="oc-badge" tooltip="Original Content">OC</span>@endif</span>
+                        <a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" class="id-link" data-item-id="{{ item.id }}">{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</a> — [{% if not is_anonymized %}<a id="a_username" data-username="{{ (item.username or "") }}" {% if (session and not session.is_anon) %} data-author-id="{{ (item.author_id or "") }}" {% endif %} href="/user/{{ item_username_lower }}" {% if ((session and not session.is_anon) and item.author_id) %} tooltip="ID: {{ item.author_id }}" {% endif %} {% if item.author_color %} style="color: {{ item.author_color }}" {% endif %}>{{ ((item.author_display_name or item.username) or "unknown") }}</a>{% else %}<span>anonymous</span>{% endif %}] <span id="oc-badge-container">{% if item.is_oc %} — <span class="oc-badge" tooltip="Original Content">OC</span>{% endif %}</span>
                     </span>
-                    <span id="hall-badge-container">@if(halls_enabled && item.primaryHall)<span class="badge hall-badge-wrap">
-                        <a href="/h/{{ item.primaryHall.slug }}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> {{ item.primaryHall.name }}</a>@if(item.otherHalls && item.otherHalls.length)<span class="hall-overflow-pill">+{{ item.otherHalls.length }}<span class="hall-overflow-tooltip">@each(item.otherHalls as oh)<a href="/h/{{ oh.slug }}">{{ oh.name }}</a>@endeach</span></span>@endif
-                    </span>@endif</span>
-                    <span class="badge badge-dark"><a href="/{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{item.timestamp.timeago }}</time></a></span>
-                    @if(item.expires_at)
+                    <span id="hall-badge-container">{% if (halls_enabled and item.primaryHall) %}<span class="badge hall-badge-wrap">
+                        <a href="/h/{{ item.primaryHall.slug }}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> {{ item.primaryHall.name }}</a>{% if (item.otherHalls and item.otherHalls|length) %}<span class="hall-overflow-pill">+{{ item.otherHalls|length }}<span class="hall-overflow-tooltip">{% for key, oh in item.otherHalls|entries %}<a href="/h/{{ oh.slug }}">{{ oh.name }}</a>{% endfor %}</span></span>{% endif %}
+                    </span>{% endif %}</span>
+                    <span class="badge badge-dark"><a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>
+                    {% if item.expires_at %}
                     — <span class="badge badge-warning" style="background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.4);" tooltip="Self-destructs {{ item.expires_in }}" flow="up"><i class="fa-solid fa-clock"></i> Expiring ({{ item.expires_in }})</span>
-                    @endif
-                    @if(item.is_chan)
+                    {% endif %}
+                    {% if item.is_chan %}
                     <span class="badge badge-dark" style="background: rgba(74, 222, 128, 0.15); border: 1px solid rgba(74, 222, 128, 0.3);">
                         <a href="/4/{{ item.external_board }}/{{ item.external_tid }}" style="color: #4ade80; text-decoration: none; font-weight: 600;" title="View thread overview"><i class="fa-solid fa-clover"></i> /{{ item.external_board }}/{{ item.external_tid }}</a>
                     </span>
-                    @endif
+                    {% endif %}
                 </div>
 
                 <div class="gapRight">
-                @if(item.is_chan)
-                @if(item.local_id)
+                {% if item.is_chan %}
+                {% if item.local_id %}
                 <span class="chan-rehosted-wrap" style="display:inline-flex;gap:4px;align-items:center;">
-                  <a href="/{{ item.local_path || item.local_id }}" class="chan-rehost-action-btn rehosted" title="Already rehosted on f0ckm (/{{ item.local_path || item.local_id }})" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:4px 12px;border-radius:6px;font-size:0.8rem;background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);text-decoration:none;font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fa-solid fa-check"></i> /{{ item.local_path || item.local_id }}</a>
+                  <a href="/{{ (item.local_path or item.local_id) }}" class="chan-rehost-action-btn rehosted" title="Already rehosted on f0ckm (/{{ (item.local_path or item.local_id) }})" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:4px 12px;border-radius:6px;font-size:0.8rem;background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);text-decoration:none;font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>
                   <button type="button" class="chan-rehost-edit-btn" data-item-id="{{ item.local_id }}" title="Edit rating" style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:6px;font-size:0.8rem;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
                 </span>
-                @else
-                <button type="button" class="chan-rehost-action-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ item.original_filename || '' }}" data-width="{{ item.width || '' }}" data-height="{{ item.height || '' }}" title="Rehost to f0ckm" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:4px 16px;min-width:100px;box-sizing:border-box;white-space:nowrap;flex-shrink:0;border-radius:6px;font-size:0.8rem;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);cursor:pointer;font-weight:600;"><i class="fa-solid fa-cloud-arrow-up"></i> Rehost</button>
-                @endif
-                @endif
-                @if(session)
-                @if(user_has_favorited)
-                <i class="iconset fa-solid fa-heart" id="a_favo" data-item-id="{{ item.local_id || item.id }}" @if(item.is_chan) data-is-chan="true" data-local-id="{{ item.local_id || '' }}" data-chan-url="{{ item.external_media_url }}" data-chan-board="{{ item.external_board }}" data-chan-tid="{{ item.external_tid }}" data-chan-post="{{ item.external_id }}" data-filename="{{ item.original_filename || '' }}" data-width="{{ item.width || '' }}" data-height="{{ item.height || '' }}" @endif title="Favorite"></i>
-                @else
-                <i class="iconset fa-regular fa-heart" id="a_favo" data-item-id="{{ item.local_id || item.id }}" @if(item.is_chan) data-is-chan="true" data-local-id="{{ item.local_id || '' }}" data-chan-url="{{ item.external_media_url }}" data-chan-board="{{ item.external_board }}" data-chan-tid="{{ item.external_tid }}" data-chan-post="{{ item.external_id }}" data-filename="{{ item.original_filename || '' }}" data-width="{{ item.width || '' }}" data-height="{{ item.height || '' }}" @endif title="Favorite"></i>
-                @endif
-                @endif
-                @if(session)
-                <i class="iconset fa-solid fa-circle-info" id="a_info" data-item-id="{{ item.id }}" title="{{ t('info_modal.button_title') || 'Post & File Info' }}"></i>
-                @if(enable_comments)
-                <i class="iconset {{ isSubscribed ? 'fa-solid active' : 'fa-regular' }} fa-bell" id="subscribe-btn" data-item-id="{{ item.id }}" title="{{ isSubscribed ? 'Subscribed' : 'Subscribe' }}"></i>
-                @endif
+                {% else %}
+                <button type="button" class="chan-rehost-action-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" title="Rehost to f0ckm" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:4px 16px;min-width:100px;box-sizing:border-box;white-space:nowrap;flex-shrink:0;border-radius:6px;font-size:0.8rem;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);cursor:pointer;font-weight:600;"><i class="fa-solid fa-cloud-arrow-up"></i> Rehost</button>
+                {% endif %}
+                {% endif %}
+                {% if session %}
+                {% if user_has_favorited %}
+                <i class="iconset fa-solid fa-heart" id="a_favo" data-item-id="{{ (item.local_id or item.id) }}" {% if item.is_chan %} data-is-chan="true" data-local-id="{{ (item.local_id or "") }}" data-chan-url="{{ item.external_media_url }}" data-chan-board="{{ item.external_board }}" data-chan-tid="{{ item.external_tid }}" data-chan-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" {% endif %} title="Favorite"></i>
+                {% else %}
+                <i class="iconset fa-regular fa-heart" id="a_favo" data-item-id="{{ (item.local_id or item.id) }}" {% if item.is_chan %} data-is-chan="true" data-local-id="{{ (item.local_id or "") }}" data-chan-url="{{ item.external_media_url }}" data-chan-board="{{ item.external_board }}" data-chan-tid="{{ item.external_tid }}" data-chan-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" {% endif %} title="Favorite"></i>
+                {% endif %}
+                {% endif %}
+                {% if session %}
+                <i class="iconset fa-solid fa-circle-info" id="a_info" data-item-id="{{ item.id }}" title="{{ (t("info_modal.button_title") or "Post & File Info") }}"></i>
+                {% if enable_comments %}
+                <i class="iconset {{ ("fa-solid active" if isSubscribed else "fa-regular") }} fa-bell" id="subscribe-btn" data-item-id="{{ item.id }}" title="{{ ("Subscribed" if isSubscribed else "Subscribe") }}"></i>
+                {% endif %}
                 <i class="iconset fa-solid fa-triangle-exclamation report-item-btn" data-item-id="{{ item.id }}" title="Report this post"></i>
-                @if(can_manage_item)
-                @if(enable_oc)
-                <i class="iconset {{ item.is_oc ? 'fa-solid' : 'fa-regular' }} fa-star" id="a_oc" data-item-id="{{ item.id }}" data-is-oc="{{ item.is_oc }}" title="{{ item.is_oc ? 'Remove OC status' : 'Mark as OC' }}"></i>
-                @endif
-                @if(typeof can_extract_meta !== 'undefined' && can_extract_meta)
-                <i class="iconset fa-solid fa-magic" id="a_metadata" data-item-id="{{ item.id }}" @if(item.mime === 'video/youtube') data-src="https://www.youtube.com/watch?v={{ item.dest.replace('yt:', '') }}" @endif title="Extract Metadata"></i>
-                @endif
-                @if(is_flash_item)
+                {% if can_manage_item %}
+                {% if enable_oc %}
+                <i class="iconset {{ ("fa-solid" if item.is_oc else "fa-regular") }} fa-star" id="a_oc" data-item-id="{{ item.id }}" data-is-oc="{{ item.is_oc }}" title="{{ ("Remove OC status" if item.is_oc else "Mark as OC") }}"></i>
+                {% endif %}
+                {% if (can_extract_meta is defined and can_extract_meta) %}
+                <i class="iconset fa-solid fa-magic" id="a_metadata" data-item-id="{{ item.id }}" {% if item.mime == "video/youtube" %} data-src="https://www.youtube.com/watch?v={{ item.dest.replace("yt:", "", 1) }}" {% endif %} title="Extract Metadata"></i>
+                {% endif %}
+                {% if is_flash_item %}
                 <i class="iconset fa-solid fa-image" id="a_rethumb" data-item-id="{{ item.id }}" title="Re-upload Thumbnail"></i>
-                @endif
-                @endif
-                @if(halls_enabled)
+                {% endif %}
+                {% endif %}
+                {% if halls_enabled %}
                 <i class="iconset fa-solid fa-layer-group" id="a_hall" data-item-id="{{ item.id }}" data-halls="{{ halls_slugs }}" data-user-halls="{{ user_halls_slugs }}" data-current-hall="{{ current_hall_slug }}" data-current-user-hall="{{ current_user_hall_slug }}" data-current-user-hall-owner="{{ current_user_hall_owner }}" title="Add to Hall"></i>
-                @endif
-                @if(is_mod_or_admin)
-                <i class="iconset fa-solid fa-thumbtack{{ item.is_pinned ? ' active' : '' }}" id="a_pin" data-pinned="{{ item.is_pinned }}" title="{{ item.is_pinned ? 'Unpin from main' : 'Pin to main' }}"></i>
-                <i class="iconset fa-solid fa-ban{{ item.visibility === 3 ? ' active' : '' }}" id="a_unavailable" data-item-id="{{ item.id }}" data-visibility="{{ item.visibility || 0 }}" title="{{ item.visibility === 3 ? 'Make Available (Public)' : 'Make Unavailable (451)' }}" @if(item.visibility === 3) style="color: var(--danger, #ff4444);" @endif></i>
+                {% endif %}
+                {% if is_mod_or_admin %}
+                <i class="iconset fa-solid fa-thumbtack{{ (" active" if item.is_pinned else "") }}" id="a_pin" data-pinned="{{ item.is_pinned }}" title="{{ ("Unpin from main" if item.is_pinned else "Pin to main") }}"></i>
+                <i class="iconset fa-solid fa-ban{{ (" active" if item.visibility == 3 else "") }}" id="a_unavailable" data-item-id="{{ item.id }}" data-visibility="{{ (item.visibility or 0) }}" title="{{ ("Make Available (Public)" if item.visibility == 3 else "Make Unavailable (451)") }}" {% if item.visibility == 3 %} style="color: var(--danger, #ff4444);" {% endif %}></i>
                 <i class="iconset fa-solid fa-xmark" id="a_delete" title="Delete"></i>
-                @endif
-                @else
-                <i class="iconset fa-solid fa-circle-info" id="a_info" data-item-id="{{ item.id }}" title="{{ t('info_modal.button_title') || 'Post & File Info' }}"></i>
+                {% endif %}
+                {% else %}
+                <i class="iconset fa-solid fa-circle-info" id="a_info" data-item-id="{{ item.id }}" title="{{ (t("info_modal.button_title") or "Post & File Info") }}"></i>
                 <i class="iconset fa-solid fa-triangle-exclamation report-item-btn" data-item-id="{{ item.id }}" title="Report this post"></i>
-                @endif
+                {% endif %}
             </div>
-                <span id="favs" @if(!item.favorites.length) hidden@endif style="margin-top: 5px;">
-                    @each(item.favorites as fav)
-                    @if(fav.hide_fav_badge && (!session || session.user !== fav.user))
+                <span id="favs" {% if not (item.favorites|length) %} hidden{% endif %} style="margin-top: 5px;">
+                    {% for key, fav in item.favorites|entries %}
+                    {% if (fav.hide_fav_badge and (not session or session.user != fav.user)) %}
                     <a class="ghost-fav" tooltip="?" flow="up" style="cursor: default;"><img src="/s/img/ghost_fav.svg" style="height: 32px; width: 32px;" loading="lazy" /></a>
-                    @elseif(is_anonymized || fav.is_anon)
+                    {% elif (is_anonymized or fav.is_anon) %}
                     <a class="ghost-fav" tooltip="anonymous" flow="up" style="cursor: default;"><img src="/a/default.png" style="height: 32px; width: 32px;" loading="lazy" /></a>
-                    @else
-                    <a href="/user/{{ fav.user.toLowerCase() }}" tooltip="{!! fav.display_name || fav.user !!}" flow="up"><img src="@if(fav.avatar_file)/a/{{ fav.avatar_file }}@elseif(fav.avatar)/t/{{ fav.avatar }}.webp@else/a/default.png@endif" style="height: 32px; width: 32px@if(fav.username_color); border-color: {{ fav.username_color }}@endif" loading="lazy" /></a>
-                    @endif
-                    @endeach
+                    {% else %}
+                    <a href="/user/{{ fav.user|lower }}" tooltip="{{ (fav.display_name or fav.user) }}" flow="up"><img src="{% if fav.avatar_file %}/a/{{ fav.avatar_file }}{% elif fav.avatar %}/t/{{ fav.avatar }}.webp{% else %}/a/default.png{% endif %}" style="height: 32px; width: 32px{% if fav.username_color %}; border-color: {{ fav.username_color }}{% endif %}" loading="lazy" /></a>
+                    {% endif %}
+                    {% endfor %}
                 </span>
 
             </div>
         </div>
 
-        @if(enable_comments)
-        <script id="initial-subscription" type="application/json">{{ isSubscribed }}</script>
-        @endif
+        {% if enable_comments %}
+        <script id="initial-subscription" type="application/json">{{ isSubscribed|safe }}</script>
+        {% endif %}
     </div>
 
-    {{-- RIGHT SIDEBAR: recent activity --}}
+    {# RIGHT SIDEBAR: recent activity #}
 
 
 </div>
 
-@include(snippets/info-modal)
+{% include "snippets/info-modal.html" %}
 
 
-@include(snippets/visibility-modal)
+{% include "snippets/visibility-modal.html" %}

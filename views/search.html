@@ -1,52 +1,50 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
   <div class="f0ckgle">
     <div class="search-title">
-      <span>{{ t('search.title') }}</span>
+      <span>{{ t("search.title") }}</span>
     </div>
     <form action="/search" method="GET" class="admin-search">
-      <input type="text" name="tag" value="{{ searchstring || '' }}" placeholder="tag1, tag2..." />
+      <input type="text" name="tag" value="{{ (searchstring or "") }}" placeholder="tag1, tag2..." />
       <button type="submit">🔍</button>
       <div class="search-options">
         <label>
-          <input type="checkbox" name="mode" value="strict" {{ mode==='strict' ? 'checked' : '' }}> {{ t('search.strict_mode') }}
+          <input type="checkbox" name="mode" value="strict" {{ ("checked" if mode == "strict" else "") }}> {{ t("search.strict_mode") }}
         </label>
       </div>
     </form>
     <div class="results">
-      @if(result)
-      <h2>{{ t('search.results_found').replace('{count}', count).replace('{page}', pagination.page).replace('{total}', pagination.end) }}</h2>
+      {% if result %}
+      <h2>{{ (((t("search.results_found")).replace("{count}", count, 1)).replace("{page}", pagination.page, 1)).replace("{total}", pagination.end, 1) }}</h2>
       <table style="width: 100%" class="table">
         <thead>
           <tr>
-            <th>{{ t('search.col_thumbnail') }}</th>
-            <th>{{ t('search.col_id') }}</th>
-            <th>{{ t('search.col_tag') }}</th>
-            <th>{{ t('search.col_mime') }}</th>
-            <th>{{ t('search.col_username') }}</th>
-            <th>{{ t('search.col_score') }}</th>
+            <th>{{ t("search.col_thumbnail") }}</th>
+            <th>{{ t("search.col_id") }}</th>
+            <th>{{ t("search.col_tag") }}</th>
+            <th>{{ t("search.col_mime") }}</th>
+            <th>{{ t("search.col_username") }}</th>
+            <th>{{ t("search.col_score") }}</th>
           </tr>
         </thead>
         <tbody>
-          @each(result as line)
+          {% for key, line in result|entries %}
           <tr>
             <td style="width: 128px;"><a href="/tag/{{ line.tag }}/{{ line.id }}" target="_blank"><img
                   src="/t/{{ line.id }}.webp" loading="lazy" /></a></td>
-            <td><span class="mview_desc">ID:</span><a href="/tag/{{ line.tag }}/{{ line.id }}" target="_blank">{{
-                line.id }}</a></td>
+            <td><span class="mview_desc">ID:</span><a href="/tag/{{ line.tag }}/{{ line.id }}" target="_blank">{{ line.id }}</a></td>
             <td><span class="mview_desc">Tag:</span><a href="/tag/{{ line.tag }}">{{ line.tag }}</a></td>
             <td><span class="mview_desc">Mime:</span>{{ line.mime }}</td>
-            <td><span class="mview_desc">User:</span><a href="/user/{!! line.username !!}/uploads/{{ line.id }}">{{
-                line.username }}</a></td>
-            <td><span class="mview_desc">Score:</span>{{ line.score?.toFixed(2) }}</td>
+            <td><span class="mview_desc">User:</span><a href="/user/{{ line.username }}/uploads/{{ line.id }}">{{ line.username }}</a></td>
+            <td><span class="mview_desc">Score:</span>{{ line.score|fixed(2) }}</td>
           </tr>
-          @endeach
+          {% endfor %}
         </tbody>
       </table>
-      @endif
+      {% endif %}
     </div>
   </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

@@ -1,23 +1,23 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 
 <div class="pagewrapper">
 <div id="main">
     <div style="padding: 20px; max-width: 1200px; margin: 0 auto;">
-        <h2 style="margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">{{ t('subscriptions.title') }}</h2>
-        @if(items.length === 0)
+        <h2 style="margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">{{ t("subscriptions.title") }}</h2>
+        {% if items|length == 0 %}
         <div style="padding: 20px; background: rgba(0,0,0,0.2); border-radius: 4px; text-align: center;">
-            {{ t('subscriptions.empty') }}
+            {{ t("subscriptions.empty") }}
         </div>
-        @else
+        {% else %}
         <div class="subs-container">
             <div class="subs-grid">
-                @include(snippets/subscriptions-grid)
+                {% include "snippets/subscriptions-grid.html" %}
             </div>
             <div id="footbar" data-end-msg="You reached the end">
                 &#9660;
             </div>
         </div>
-        @endif
+        {% endif %}
     </div>
     <script>
         // Use a self-invoking function to avoid global scope pollution if possible
@@ -65,4 +65,4 @@
 </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

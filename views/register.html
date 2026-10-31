@@ -4,51 +4,51 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>register</title>
-    <link rel="icon" @if(custom_favicon && custom_favicon.length > 0)href="{{ custom_favicon }}"@else type="image/gif" href="/s/img/favicon.gif"@endif />
+    <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
   <link href="/s/css/f0ckm.css" rel="stylesheet" />
-  @if(recaptcha_enabled)
+  {% if recaptcha_enabled %}
   <script>
     function onRecaptchaPageReady() {
-      grecaptcha.render('page-register-recaptcha', { sitekey: '{{ recaptcha_site_key }}', theme: 'dark' });
+      grecaptcha.render('page-register-recaptcha', { sitekey: {{ recaptcha_site_key|string|tojson }}, theme: 'dark' });
     }
   </script>
   <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaPageReady&render=explicit" async defer></script>
-  @endif
+  {% endif %}
 </head>
 <body type="login">
     <form class="login-form" method="post" action="/register" novalidate>
-        @if(!success && typeof error === 'undefined')
-        <h2 style="text-align: center; margin-bottom: 20px;">{{ t('auth.register_title') }}</h2>
-        @endif
-        @if(typeof error !== 'undefined')
+        {% if (not success and error is undefined) %}
+        <h2 style="text-align: center; margin-bottom: 20px;">{{ t("auth.register_title") }}</h2>
+        {% endif %}
+        {% if error is defined %}
         <div class="flash-error">{{ error }}</div>
-        @endif
-        @if(success)
+        {% endif %}
+        {% if success %}
         <div class="flash-success">{{ success }}</div>
-        @endif
+        {% endif %}
         
-        @if(!success && typeof error === 'undefined')
-        <input type="text" name="username" placeholder="{{ t('auth.username_placeholder') }}" autocomplete="off" required />
-        <input type="password" name="password" placeholder="{{ t('auth.password_placeholder') }}" autocomplete="off" required minlength="20" title="{{ t('auth.password_min_hint') }}" />
-        <input type="password" name="password_confirm" placeholder="{{ t('auth.confirm_password') }}" autocomplete="off" required minlength="20" /><br>
-        @if(!registration_open)
-        <input type="text" name="token" placeholder="{{ t('auth.invite_token') }}" autocomplete="off" value="{{ typeof token !== 'undefined' ? token : '' }}" required />
-        @elseif(registration_require_mail_andor_token)
-        <input type="email" name="email" placeholder="{{ t('auth.email_placeholder') }}" autocomplete="off" required />
-        @endif
+        {% if (not success and error is undefined) %}
+        <input type="text" name="username" placeholder="{{ t("auth.username_placeholder") }}" autocomplete="off" required />
+        <input type="password" name="password" placeholder="{{ t("auth.password_placeholder") }}" autocomplete="off" required minlength="20" title="{{ t("auth.password_min_hint") }}" />
+        <input type="password" name="password_confirm" placeholder="{{ t("auth.confirm_password") }}" autocomplete="off" required minlength="20" /><br>
+        {% if not registration_open %}
+        <input type="text" name="token" placeholder="{{ t("auth.invite_token") }}" autocomplete="off" value="{{ (token if token is defined else "") }}" required />
+        {% elif registration_require_mail_andor_token %}
+        <input type="email" name="email" placeholder="{{ t("auth.email_placeholder") }}" autocomplete="off" required />
+        {% endif %}
         <input type="text" name="email_confirm_field" style="display: none !important;" tabindex="-1" autocomplete="off" />
         <p style="text-align: left; font-size: 0.9em; margin: 10px 0; color: #fff;">
             <input type="checkbox" id="tos-page" name="tos" required />
-            <label for="tos-page">@if(private_society){{ t('auth.tos_private_simple') }}@else{{ t('auth.tos_public') }} <a href="/terms" target="_blank" style="color: var(--accent); text-decoration: underline;">{{ t('auth.tos_terms') }}</a>, <a href="/rules" target="_blank" style="color: var(--accent); text-decoration: underline;">{{ t('auth.tos_rules') }}</a> {{ t('auth.tos_age') }}@endif</label>
+            <label for="tos-page">{% if private_society %}{{ t("auth.tos_private_simple") }}{% else %}{{ t("auth.tos_public") }} <a href="/terms" target="_blank" style="color: var(--accent); text-decoration: underline;">{{ t("auth.tos_terms") }}</a>, <a href="/rules" target="_blank" style="color: var(--accent); text-decoration: underline;">{{ t("auth.tos_rules") }}</a> {{ t("auth.tos_age") }}{% endif %}</label>
         </p>
-        @if(recaptcha_enabled)
+        {% if recaptcha_enabled %}
         <div id="page-register-recaptcha" style="margin: 10px 0;"></div>
-        @endif
-        <input type="submit" value="{{ t('auth.register_title') }}" />
-        @endif
+        {% endif %}
+        <input type="submit" value="{{ t("auth.register_title") }}" />
+        {% endif %}
 
         <div style="margin-top: 15px; text-align: center;">
-            <a href="/login" class="login-trigger-btn" style="color: var(--accent); text-decoration: none;">{{ t('auth.back_to_login') }}</a>
+            <a href="/login" class="login-trigger-btn" style="color: var(--accent); text-decoration: none;">{{ t("auth.back_to_login") }}</a>
         </div>
     </form>
 </body>

@@ -1,15 +1,15 @@
-@for(let u of users)
-<tr id="user-row-{{ u.id || 'ghost-' + u.login }}">
+{# PORT_TODO @for(let u of users) #}{% for PORT_TODO in [] %}
+<tr id="user-row-{{ (u.id or "ghost-" ~ u.login) }}">
     <td data-label="User & Contact">
         <div class="user-info-cell" style="display: flex; align-items: center; gap: 15px;">
-            @if(u.avatar_file)
+            {% if u.avatar_file %}
                 <img src="/a/{{ u.avatar_file }}" class="user-avatar" alt="Avatar" style="width: 45px; height: 45px; border-radius: 10px; object-fit: cover; border: 2px solid rgba(255,255,255,0.1);">
-            @else
-                <div class="avatar-placeholder" style="width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--accent); font-weight: bold; border: 2px solid rgba(255,255,255,0.1); font-size: 1.2rem; {{ !u.id ? 'background: #333; color: #666;' : '' }}">{{ !u.id ? '?' : u.user.charAt(0).toUpperCase() }}</div>
-            @endif
+            {% else %}
+                <div class="avatar-placeholder" style="width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--accent); font-weight: bold; border: 2px solid rgba(255,255,255,0.1); font-size: 1.2rem; {{ ("background: #333; color: #666;" if not u.id else "") }}">{{ ("?" if not u.id else (u.user[0])|upper) }}</div>
+            {% endif %}
             <div>
-                <a href="/user/{{ u.login }}" target="_blank" style="color: #fff; font-weight: 800; font-size: 1.1rem; text-decoration: none; display: block; margin-bottom: 2px;">@if(u.display_name)<span style="color: var(--accent);">{!! u.display_name !!}</span> <span style="font-size: 0.75em; color: #666;">({!! u.user !!})</span>@else{!! u.user !!}@endif</a>
-                <div style="font-size: 0.8rem; color: #888; letter-spacing: 0.2px;">{{ !u.id ? 'Ghost User / Legacy' : (u.email || 'no email') }}</div>
+                <a href="/user/{{ u.login }}" target="_blank" style="color: #fff; font-weight: 800; font-size: 1.1rem; text-decoration: none; display: block; margin-bottom: 2px;">{% if u.display_name %}<span style="color: var(--accent);">{{ u.display_name }}</span> <span style="font-size: 0.75em; color: #666;">({{ u.user }})</span>{% else %}{{ u.user }}{% endif %}</a>
+                <div style="font-size: 0.8rem; color: #888; letter-spacing: 0.2px;">{{ ("Ghost User / Legacy" if not u.id else (u.email or "no email")) }}</div>
             </div>
         </div>
     </td>
@@ -26,78 +26,78 @@
         </div>
     </td>
     <td data-label="Registration">
-        <div style="font-size: 0.85rem; color: #eee; font-weight: 600; cursor: help;" tooltip="Method: {{ u.reg_method === 'Legacy' ? 'Legacy Account' : (u.reg_method ? 'Invite Token: ' + u.reg_method.slice(0, 8) + '…' : (u.activated ? 'Open Registration' : 'Email Verification')) }}">{{ new Date(u.created_at).toLocaleDateString() }}</div>
+        <div style="font-size: 0.85rem; color: #eee; font-weight: 600; cursor: help;" tooltip="Method: {{ ("Legacy Account" if u.reg_method == "Legacy" else (("Invite Token: " ~ (u.reg_method[0:8])) ~ "…" if u.reg_method else ("Open Registration" if u.activated else "Email Verification"))) }}">{{ u.created_at|locale_date }}</div>
     </td>
     <td data-label="Account Age">
-        <div style="font-size: 0.85rem; font-weight: 600; color: #aaa;">{{ Math.floor(u.age_days) }} Days</div>
+        <div style="font-size: 0.85rem; font-weight: 600; color: #aaa;">{{ floor(u.age_days) }} Days</div>
     </td>
-    <td data-label="Status" id="status-cell-{{ u.id || 'ghost-' + u.login }}">
-        @if(!u.id)
+    <td data-label="Status" id="status-cell-{{ (u.id or "ghost-" ~ u.login) }}">
+        {% if not u.id %}
             <span class="status-badge" style="background: rgba(255,255,255,0.05); color: #888; border: 1px dashed rgba(255,255,255,0.1);">Legacy</span>
-        @elseif(u.login === 'deleted_user')
-            {{-- System ghost that deleted users' content is reassigned to; it is banned only so it can't log in --}}
+        {% elif u.login == "deleted_user" %}
+            {# System ghost that deleted users' content is reassigned to; it is banned only so it can't log in #}
             <span class="status-badge status-system" title="System account: holds content of deleted users">System</span>
-        @else
-            @if(u.banned)
+        {% else %}
+            {% if u.banned %}
                 <span class="status-badge status-banned">Banned</span>
-            @else
-                @if(u.activated)
+            {% else %}
+                {% if u.activated %}
                     <span class="status-badge status-active">Active</span>
-                @else
+                {% else %}
                     <span class="status-badge status-pending">Pending</span>
-                @endif
-            @endif
+                {% endif %}
+            {% endif %}
             
-            @if(u.failed_attempts > 0)
-                @if(u.failed_attempts >= 5)
+            {% if (u.failed_attempts > 0) %}
+                {% if (u.failed_attempts >= 5) %}
                     <span class="status-badge" style="background: rgba(255, 0, 0, 0.1); color: #ff4d4d; border: 1px solid rgba(255, 0, 0, 0.2); font-weight: 700;">IP LOCKED</span>
-                @else
+                {% else %}
                     <span class="status-badge" style="background: rgba(255, 255, 0, 0.1); color: #ffcc00; border: 1px solid rgba(255, 255, 0, 0.2);">{{ u.failed_attempts }} Tries</span>
-                @endif
-            @endif
-        @endif
+                {% endif %}
+            {% endif %}
+        {% endif %}
     </td>
     <td data-label="Actions">
-        <div id="actions-{{ u.id || 'ghost-' + u.login }}" class="user-actions-row" style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
-            @if(u.id && u.login !== 'deleted_user')
-                @if(!u.activated && !u.banned)
-                    <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="activateUser(this)" class="btn-modern btn-verify">Verify</button>
-                @endif
-                @if(u.banned)
-                    <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="unbanUser(this)" class="btn-modern btn-unban">Unban</button>
-                @else
-                    <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="banUser(this)" class="btn-modern btn-ban">Ban</button>
-                @endif
-            @endif
+        <div id="actions-{{ (u.id or "ghost-" ~ u.login) }}" class="user-actions-row" style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+            {% if (u.id and u.login != "deleted_user") %}
+                {% if (not u.activated and not u.banned) %}
+                    <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="activateUser(this)" class="btn-modern btn-verify">Verify</button>
+                {% endif %}
+                {% if u.banned %}
+                    <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="unbanUser(this)" class="btn-modern btn-unban">Unban</button>
+                {% else %}
+                    <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="banUser(this)" class="btn-modern btn-ban">Ban</button>
+                {% endif %}
+            {% endif %}
 
-            @if(u.id)
-                @if(log_user_ips)
+            {% if u.id %}
+                {% if log_user_ips %}
                 <a href="/admin/user/{{ u.id }}/ips" class="btn-modern" style="background: rgba(150, 150, 150, 0.1); color: #aaa; border: 1px solid rgba(150, 150, 150, 0.2); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 10px;" title="View IP History">IP Hist</a>
-                @endif
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="deleteUploads(this)" class="btn-modern btn-files">Del Files</button>
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="deleteComments(this)" class="btn-modern btn-comms">Del Comms</button>
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="adminBulkDeleteHalls(this)" class="btn-modern btn-comms" title="Delete all user halls" style="background: rgba(255, 0, 255, 0.1); color: #ff00ff; border: 1px solid rgba(255, 0, 255, 0.2);"><i class="fa fa-folder-open"></i> Del Halls</button>
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="adminReassignUploads(this)" class="btn-modern" title="Reassign uploads to another user" style="background: rgba(0, 200, 180, 0.1); color: #00c8b4; border: 1px solid rgba(0, 200, 180, 0.2);"><i class="fa fa-right-left"></i> Reassign</button>
-                @if(u.failed_attempts > 0)
+                {% endif %}
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="deleteUploads(this)" class="btn-modern btn-files">Del Files</button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="deleteComments(this)" class="btn-modern btn-comms">Del Comms</button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="adminBulkDeleteHalls(this)" class="btn-modern btn-comms" title="Delete all user halls" style="background: rgba(255, 0, 255, 0.1); color: #ff00ff; border: 1px solid rgba(255, 0, 255, 0.2);"><i class="fa fa-folder-open"></i> Del Halls</button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="adminReassignUploads(this)" class="btn-modern" title="Reassign uploads to another user" style="background: rgba(0, 200, 180, 0.1); color: #00c8b4; border: 1px solid rgba(0, 200, 180, 0.2);"><i class="fa fa-right-left"></i> Reassign</button>
+                {% if (u.failed_attempts > 0) %}
                     <button data-username="{{ u.login }}" onclick="adminResetLoginAttempts(this)" class="btn-modern btn-pw" title="Reset Login Attempts" style="background: rgba(255, 204, 0, 0.1); color: #ffcc00; border: 1px solid rgba(255, 204, 0, 0.2);"><i class="fa fa-unlock"></i> Reset IP</button>
-                @endif
-            @else
+                {% endif %}
+            {% else %}
                 <button data-id="" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="deleteUploads(this)" class="btn-modern btn-files">Del Legacy Files</button>
                 <button data-id="" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="adminReassignUploads(this)" class="btn-modern" title="Reassign uploads to another user" style="background: rgba(0, 200, 180, 0.1); color: #00c8b4; border: 1px solid rgba(0, 200, 180, 0.2);"><i class="fa fa-right-left"></i> Reassign</button>
-            @endif
+            {% endif %}
 
-            @if(u.id && u.login !== 'deleted_user')
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" data-display="{!! u.display_name || '' !!}" onclick="adminSetDisplayName(this)" class="btn-modern btn-nick" style="background: rgba(100, 200, 100, 0.1); color: #64c864; border: 1px solid rgba(100, 200, 100, 0.2);" title="Set stylized display name">✏ Nick</button>
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="adminRenameUser(this)" class="btn-modern" style="background: rgba(255, 165, 0, 0.1); color: #ffa500; border: 1px solid rgba(255, 165, 0, 0.2);" title="Rename username (updates all uploads)"><i class="fa fa-at"></i> Rename</button>
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="adminSetPassword(this)" class="btn-modern btn-pw" style="background: rgba(var(--accent-rgb, 0, 150, 255), 0.1); color: var(--accent, #0096ff); border: 1px solid rgba(var(--accent-rgb, 0, 150, 255), 0.2);">Set PW</button>
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" data-locked="{{ u.force_comment_display_mode }}" data-mode="{{ u.comment_display_mode }}" onclick="adminLockLayout(this)" class="btn-modern" style="background: rgba(255, 100, 0, 0.1); color: #ff6400; border: 1px solid rgba(255, 100, 0, 0.2);" title="{{ u.force_comment_display_mode ? 'Unlock Layout' : 'Lock Layout' }}"><i class="fa fa-{{ u.force_comment_display_mode ? 'lock-open' : 'lock' }}"></i> {{ u.force_comment_display_mode ? 'Unlock' : 'Lock' }}</button>
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" data-role="{{ u.admin ? 'admin' : (u.is_moderator ? 'mod' : 'user') }}" onclick="adminSetRole(this)" class="btn-modern btn-role" id="role-btn-{{ u.id }}" title="Change user role"><i class="fa fa-shield-halved"></i> <span class="role-label-{{ u.id }}">{{ u.admin ? 'Admin' : (u.is_moderator ? 'Mod' : 'User') }}</span></button>
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" data-groups="{{ (u.groups || []).join(',') }}" onclick="adminSetGroups(this)" class="btn-modern btn-groups" id="groups-btn-{{ u.id }}" style="background: rgba(74, 222, 128, 0.1); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.2);" title="Manage user groups"><i class="fa-solid fa-clover"></i> <span class="groups-label-{{ u.id }}">{{ (u.groups && u.groups.includes('4chan')) ? '4chan' : 'Groups' }}</span></button>
-                <button data-id="{{ u.id }}" data-name="{!! u.user !!}" data-username="{{ u.login }}" onclick="adminDeleteUser(this)" class="btn-modern btn-delete" style="background: rgba(217, 83, 79, 0.1); color: #d9534f; border: 1px solid rgba(217, 83, 79, 0.2);">Delete</button>
-            @elseif(u.login === 'deleted_user')
+            {% if (u.id and u.login != "deleted_user") %}
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-display="{{ (u.display_name or "") }}" onclick="adminSetDisplayName(this)" class="btn-modern btn-nick" style="background: rgba(100, 200, 100, 0.1); color: #64c864; border: 1px solid rgba(100, 200, 100, 0.2);" title="Set stylized display name">✏ Nick</button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="adminRenameUser(this)" class="btn-modern" style="background: rgba(255, 165, 0, 0.1); color: #ffa500; border: 1px solid rgba(255, 165, 0, 0.2);" title="Rename username (updates all uploads)"><i class="fa fa-at"></i> Rename</button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="adminSetPassword(this)" class="btn-modern btn-pw" style="background: rgba(var(--accent-rgb, 0, 150, 255), 0.1); color: var(--accent, #0096ff); border: 1px solid rgba(var(--accent-rgb, 0, 150, 255), 0.2);">Set PW</button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-locked="{{ u.force_comment_display_mode }}" data-mode="{{ u.comment_display_mode }}" onclick="adminLockLayout(this)" class="btn-modern" style="background: rgba(255, 100, 0, 0.1); color: #ff6400; border: 1px solid rgba(255, 100, 0, 0.2);" title="{{ ("Unlock Layout" if u.force_comment_display_mode else "Lock Layout") }}"><i class="fa fa-{{ ("lock-open" if u.force_comment_display_mode else "lock") }}"></i> {{ ("Unlock" if u.force_comment_display_mode else "Lock") }}</button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-role="{{ ("admin" if u.admin else ("mod" if u.is_moderator else "user")) }}" onclick="adminSetRole(this)" class="btn-modern btn-role" id="role-btn-{{ u.id }}" title="Change user role"><i class="fa fa-shield-halved"></i> <span class="role-label-{{ u.id }}">{{ ("Admin" if u.admin else ("Mod" if u.is_moderator else "User")) }}</span></button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-groups="{{ (u.groups or [])|join(",") }}" onclick="adminSetGroups(this)" class="btn-modern btn-groups" id="groups-btn-{{ u.id }}" style="background: rgba(74, 222, 128, 0.1); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.2);" title="Manage user groups"><i class="fa-solid fa-clover"></i> <span class="groups-label-{{ u.id }}">{{ ("4chan" if (u.groups and ("4chan" in u.groups)) else "Groups") }}</span></button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" onclick="adminDeleteUser(this)" class="btn-modern btn-delete" style="background: rgba(217, 83, 79, 0.1); color: #d9534f; border: 1px solid rgba(217, 83, 79, 0.2);">Delete</button>
+            {% elif u.login == "deleted_user" %}
                 <span style="font-size: 0.8rem; color: #666; font-style: italic; padding: 5px 10px;">Protected System Account</span>
-            @endif
+            {% endif %}
         </div>
     </td>
 </tr>
-@endfor
+{% endfor %}

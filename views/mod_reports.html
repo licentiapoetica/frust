@@ -1,8 +1,8 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 
 <div class="pagewrapper">
 <div id="main">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <style>
         .rp-page { max-width: 900px; margin: 0 auto; padding: 30px 15px 60px; }
         .rp-header { margin-bottom: 28px; }
@@ -264,4 +264,4 @@
 </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

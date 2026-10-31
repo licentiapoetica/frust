@@ -1,7 +1,7 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main" class="admin-container">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container">
         <h2>Custom Emojis &amp; Sticker Packs</h2>
 
@@ -114,7 +114,7 @@
     <script>
         (() => {
             var i18n = window.f0ckI18n || {};
-            var csrf = '{{ csrf_token }}';
+            var csrf = {{ csrf_token|string|tojson }};
 
             function esc(s) {
                 return (s || '').toString()
@@ -535,4 +535,4 @@
     </script>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

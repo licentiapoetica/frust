@@ -1,4 +1,4 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <style>
 @media (min-width: 1200px) {
   .container:not(:has(.item-layout-container)) {
@@ -8,7 +8,7 @@
 </style>
 <div class="pagewrapper">
 <div id="main" class="admin-container">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container">
         <div class="admin-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <h2>Wordfilter Manager</h2>
@@ -155,4 +155,4 @@
     </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

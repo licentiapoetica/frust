@@ -1,10 +1,10 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main" class="messages-page">
     <div class="messages-header">
-        <h2>{{ t('messages.page_title') }}</h2>
+        <h2>{{ t("messages.page_title") }}</h2>
         <div class="messages-header-actions">
-            <button class="dm-manage-keys-btn btn-small" title="Manage your encryption key for multi-device use">{{ t('messages.manage_keys') }}</button>
+            <button class="dm-manage-keys-btn btn-small" title="Manage your encryption key for multi-device use">{{ t("messages.manage_keys") }}</button>
         </div>
     </div>
 
@@ -12,8 +12,8 @@
     <div id="dm-key-notice" class="dm-key-notice" style="display:none;"></div>
 
     <div id="dm-inbox-list" class="dm-inbox-list">
-        <div class="dm-loading">{{ t('messages.loading') }}</div>
+        <div class="dm-loading">{{ t("messages.loading") }}</div>
     </div>
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

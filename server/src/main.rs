@@ -272,6 +272,15 @@ async fn main() -> Result<()> {
     let pool = db::connect(&cfg).await?;
     let i18n = Arc::new(i18n::I18n::new(base.join("src/inc/locales")));
     let tpl = tpl::Templates::new(base.join("views"), i18n.clone());
+
+    if std::env::args().nth(1).as_deref() == Some("check-templates") {
+        let errors = tpl.check_all(&base.join("views"));
+        for (f, e) in &errors {
+            println!("{f}: {e}");
+        }
+        println!("{} template(s) with errors", errors.len());
+        std::process::exit(if errors.is_empty() { 0 } else { 1 });
+    }
     let port = std::env::var("F0CKM_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(cfg.port());
     let st = state::AppState(Arc::new(state::Inner {
         settings: settings::Settings::new(&cfg),

@@ -1,22 +1,22 @@
-@each(hallsList as hall)
+{% for key, hall in hallsList|entries %}
 <a href="/h/{{ hall.slug }}" class="tag-card">
     <div class="tag-card-image">
-        <img src="/hall_image/{{ hall.slug }}?m={{ session.mode }}" loading="lazy" alt="{!! hall.name !!}">
-        <span class="tag-card-image-title">{!! hall.name !!}</span>
-        @if(hall.rating === 'nsfw')
+        <img src="/hall_image/{{ hall.slug }}?m={{ session.mode }}" loading="lazy" alt="{{ hall.name }}">
+        <span class="tag-card-image-title">{{ hall.name }}</span>
+        {% if hall.rating == "nsfw" %}
         <span class="hall-rating-badge hall-rating-nsfw">NSFW</span>
-        @elseif(hall.rating === 'nsfl')
+        {% elif hall.rating == "nsfl" %}
         <span class="hall-rating-badge hall-rating-nsfl">NSFL</span>
-        @else
+        {% else %}
         <span class="hall-rating-badge hall-rating-sfw">SFW</span>
-        @endif
+        {% endif %}
     </div>
     <div class="tag-card-content">
-        <span class="tag-name">{!! hall.name !!}</span>
-        @if(hall.description)
-        <span class="tag-description">{!! hall.description !!}</span>
-        @endif
-        <span class="tag-count">{{ t('hall.posts', { count: hall.total_items }) }}</span>
+        <span class="tag-name">{{ hall.name }}</span>
+        {% if hall.description %}
+        <span class="tag-description">{{ hall.description }}</span>
+        {% endif %}
+        <span class="tag-count">{{ t("hall.posts", {"count": hall.total_items}) }}</span>
     </div>
 </a>
-@endeach
+{% endfor %}

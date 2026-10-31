@@ -1,5 +1,5 @@
 <!doctype html>
-<html theme="@if(typeof theme !== 'undefined'){{ theme }}@else{{ default_theme || 'amoled' }}@endif">
+<html theme="{% if theme is defined %}{{ theme }}{% else %}{{ (default_theme or "amoled") }}{% endif %}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,15 +7,15 @@
   <link rel="icon" type="image/gif" href="/s/img/favicon.gif" />
   <link rel="stylesheet" id="injected-gate-styles" href="/s/css/f0ckm.css?v={{ ts }}">
 </head>
-<body class="{{ default_layout === 'legacy' ? 'layout-legacy' : 'layout-modern' }}">
+<body class="{{ ("layout-legacy" if default_layout == "legacy" else "layout-modern") }}">
        
   <div class="wrapper" style="text-align: center;">
       <h2>Example Gate</h2>
       <button type="button" onclick="openLoginGate();">Login</button>
       
       <div id="gate-container" style="display:none;">
-          @include(snippets/navbar)
-          @include(snippets/footer)
+          {% include "snippets/navbar.html" %}
+          {% include "snippets/footer.html" %}
       </div>
   </div>
 

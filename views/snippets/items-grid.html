@@ -1,25 +1,25 @@
-@each(items as item)
-<a href="{{ link.main }}{{ (enable_item_slugs && item.slug) ? item.slug : item.id }}{{ item.target_subf0ck_slug ? ('#' + item.target_subf0ck_slug) : '' }}" class="{{ item.is_pinned ? 'anim-boxshadow ' : '' }}thumb lazy-thumb {{ item.has_notification ? 'has-notif' : '' }} {{ item.is_pinned ? 'is-pinned' : '' }}" data-item-id="{{ item.id }}" data-file="{{ item.matching_sub_dest || item.dest }}" data-mime="{{ item.matching_sub_mime || item.mime }}" data-user="@if(!is_anonymized){!! item.display_name || item.username !!}@else anonymous@endif" data-ext="{{ (item.matching_sub_mime || item.mime).split('/')[1].replace('youtube', 'yt').replace('x-shockwave-flash', 'flash').replace('vnd.adobe.flash.movie', 'flash').replace('x-zip-compressed', 'zip').replace('x-rar-compressed', 'rar').replace('vnd.rar', 'rar').replace('x-7z-compressed', '7z').replace('x-tar', 'tar').replace('x-bzip2', 'bz2').replace('x-xz', 'xz').toUpperCase() }}" data-mode="{{ item.tag_id == nsfl_tag_id ? 'nsfl' : (item.tag_id == 2 ? 'nsfw' : (item.tag_id == 1 ? 'sfw' : 'null')) }}" data-bg="{{ item.thumb || ('/t/' + item.id + '.webp') }}" data-target-subf0ck="{{ item.target_subf0ck_slug || '' }}" data-size="{{ enable_dynamic_thumbs ? (item.thumb_size || 1) : 1 }}">
-    @if(item.is_audio && !item.has_coverart && !item.thumb)
+{% for key, item in items|entries %}
+<a href="{{ link.main }}{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ ("#" ~ item.target_subf0ck_slug if item.target_subf0ck_slug else "") }}" class="{{ ("anim-boxshadow " if item.is_pinned else "") }}thumb lazy-thumb {{ ("has-notif" if item.has_notification else "") }} {{ ("is-pinned" if item.is_pinned else "") }}" data-item-id="{{ item.id }}" data-file="{{ (item.matching_sub_dest or item.dest) }}" data-mime="{{ (item.matching_sub_mime or item.mime) }}" data-user="{% if not is_anonymized %}{{ (item.display_name or item.username) }}{% else %} anonymous{% endif %}" data-ext="{{ (((((((((((((item.matching_sub_mime or item.mime).split("/"))[1]).replace("youtube", "yt", 1)).replace("x-shockwave-flash", "flash", 1)).replace("vnd.adobe.flash.movie", "flash", 1)).replace("x-zip-compressed", "zip", 1)).replace("x-rar-compressed", "rar", 1)).replace("vnd.rar", "rar", 1)).replace("x-7z-compressed", "7z", 1)).replace("x-tar", "tar", 1)).replace("x-bzip2", "bz2", 1)).replace("x-xz", "xz", 1))|upper }}" data-mode="{{ ("nsfl" if item.tag_id == nsfl_tag_id else ("nsfw" if item.tag_id == 2 else ("sfw" if item.tag_id == 1 else "null"))) }}" data-bg="{{ (item.thumb or ("/t/" ~ item.id) ~ ".webp") }}" data-target-subf0ck="{{ (item.target_subf0ck_slug or "") }}" data-size="{{ ((item.thumb_size or 1) if enable_dynamic_thumbs else 1) }}">
+    {% if ((item.is_audio and not item.has_coverart) and not item.thumb) %}
     <div class="sidebar-media-placeholder audio">
         <i class="fa-solid fa-music"></i>
     </div>
-    @endif
+    {% endif %}
     <div class="thumb-indicators">
-        @if(item.is_pinned)
+        {% if item.is_pinned %}
         <i class="fa-solid fa-thumbtack pin-indicator anim"></i>
-        @endif
-        @if(item.is_oc)
+        {% endif %}
+        {% if item.is_oc %}
         <span class="oc-indicator anim">OC</span>
-        @endif
-        @if(enable_xd_score && item.xd_tier > 0)
+        {% endif %}
+        {% if (enable_xd_score and (item.xd_tier > 0)) %}
         <span class="thumb-xd-indicator xd-tier-{{ item.xd_tier }}" title="xD Score: {{ item.xd_score }}">xD</span>
-        @endif
-        @if(item.is_album && item.album_count > 1)
+        {% endif %}
+        {% if (item.is_album and (item.album_count > 1)) %}
         <span class="album-indicator" title="Album: {{ item.album_count }} images"><i class="fa-solid fa-images"></i> {{ item.album_count }}</span>
-        @endif
+        {% endif %}
     </div>
     <div class="thumb-select-check"><i class="fa-solid fa-check"></i></div>
     <p></p>
 </a>
-@endeach
+{% endfor %}

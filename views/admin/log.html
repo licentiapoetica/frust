@@ -1,12 +1,12 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
-  @if(log)
-  <h1>last {{ log.length }} entries:</h1>
+  {% if log %}
+  <h1>last {{ log|length }} entries:</h1>
   <div class="logwrap">
-  @each(log as line)
+  {% for key, line in log|entries %}
     <p>{{ line }}</p>
-  @endeach
+  {% endfor %}
   </div>
   <script>
     (() => {
@@ -14,7 +14,7 @@
       d.scrollTop = d.scrollHeight;
     })();
   </script>
-  @endif
+  {% endif %}
 </div>
 </div>
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

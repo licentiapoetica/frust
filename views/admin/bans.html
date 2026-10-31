@@ -1,8 +1,8 @@
-@include(snippets/header)
+{% include "snippets/header.html" %}
 
 <div class="pagewrapper">
 <div id="main" class="admin-container">
-    @include(snippets/admin-back)
+    {% include "snippets/admin-back.html" %}
     <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px 15px;">
         <div style="margin-bottom: 25px;">
             <a href="/admin" style="color: var(--accent); text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px;">
@@ -35,42 +35,42 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
             <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Banned Fingerprints</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #ff6b6b; margin-top: 4px;">{{ bannedFingerprints ? bannedFingerprints.length : 0 }}</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: #ff6b6b; margin-top: 4px;">{{ (bannedFingerprints|length if bannedFingerprints else 0) }}</div>
             </div>
             <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Banned Hardware IDs</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #cc5de8; margin-top: 4px;">{{ bannedHardware ? bannedHardware.length : 0 }}</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: #cc5de8; margin-top: 4px;">{{ (bannedHardware|length if bannedHardware else 0) }}</div>
             </div>
             <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Banned IP Addresses</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #ffa94d; margin-top: 4px;">{{ bannedIps ? bannedIps.length : 0 }}</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: #ffa94d; margin-top: 4px;">{{ (bannedIps|length if bannedIps else 0) }}</div>
             </div>
             <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Known Anonymous Keys</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #69db7c; margin-top: 4px;">{{ anonIdentities ? anonIdentities.length : 0 }}</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: #69db7c; margin-top: 4px;">{{ (anonIdentities|length if anonIdentities else 0) }}</div>
             </div>
             <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Recent Logged Actions</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #74c0fc; margin-top: 4px;">{{ recentActivity ? recentActivity.length : 0 }}</div>
+                <div style="font-size: 1.8rem; font-weight: 800; color: #74c0fc; margin-top: 4px;">{{ (recentActivity|length if recentActivity else 0) }}</div>
             </div>
         </div>
 
         <!-- Navigation Tabs -->
         <div style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 20px; overflow-x: auto;">
             <button onclick="switchTab('fingerprints')" id="tab-btn-fingerprints" class="admin-tab-btn active-tab">
-                <i class="fa-solid fa-key"></i> Banned Fingerprints ({{ bannedFingerprints ? bannedFingerprints.length : 0 }})
+                <i class="fa-solid fa-key"></i> Banned Fingerprints ({{ (bannedFingerprints|length if bannedFingerprints else 0) }})
             </button>
             <button onclick="switchTab('hardware')" id="tab-btn-hardware" class="admin-tab-btn">
-                <i class="fa-solid fa-microchip"></i> Banned Hardware ({{ bannedHardware ? bannedHardware.length : 0 }})
+                <i class="fa-solid fa-microchip"></i> Banned Hardware ({{ (bannedHardware|length if bannedHardware else 0) }})
             </button>
             <button onclick="switchTab('ips')" id="tab-btn-ips" class="admin-tab-btn">
-                <i class="fa-solid fa-network-wired"></i> Banned IPs ({{ bannedIps ? bannedIps.length : 0 }})
+                <i class="fa-solid fa-network-wired"></i> Banned IPs ({{ (bannedIps|length if bannedIps else 0) }})
             </button>
             <button onclick="switchTab('identities')" id="tab-btn-identities" class="admin-tab-btn">
-                <i class="fa-solid fa-user-secret"></i> Anonymous Identities ({{ anonIdentities ? anonIdentities.length : 0 }})
+                <i class="fa-solid fa-user-secret"></i> Anonymous Identities ({{ (anonIdentities|length if anonIdentities else 0) }})
             </button>
             <button onclick="switchTab('activity')" id="tab-btn-activity" class="admin-tab-btn">
-                <i class="fa-solid fa-list-check"></i> Activity Audit ({{ recentActivity ? recentActivity.length : 0 }})
+                <i class="fa-solid fa-list-check"></i> Activity Audit ({{ (recentActivity|length if recentActivity else 0) }})
             </button>
         </div>
 
@@ -90,8 +90,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if(bannedFingerprints && bannedFingerprints.length > 0)
-                            @each(bannedFingerprints as fp)
+                        {% if (bannedFingerprints and (bannedFingerprints|length > 0)) %}
+                            {% for key, fp in bannedFingerprints|entries %}
                             <tr>
                                 <td data-label="Fingerprint">
                                     <div style="display: flex; align-items: center; gap: 6px;">
@@ -104,29 +104,29 @@
                                     </div>
                                 </td>
                                 <td data-label="Linked Account">
-                                    @if(fp.anon_login)
+                                    {% if fp.anon_login %}
                                         <a href="/user/{{ fp.anon_login }}" target="_blank" style="color: var(--accent); font-weight: bold; text-decoration: none;">
-                                            <i class="fa-solid fa-user-secret"></i> {!! fp.anon_user || fp.anon_login !!}
+                                            <i class="fa-solid fa-user-secret"></i> {{ (fp.anon_user or fp.anon_login) }}
                                         </a>
-                                    @else
+                                    {% else %}
                                         <span style="color: #888;">—</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Reason">
-                                    <span style="color: #ff8787; font-weight: 500;">{{ fp.reason || 'No reason specified' }}</span>
+                                    <span style="color: #ff8787; font-weight: 500;">{{ (fp.reason or "No reason specified") }}</span>
                                 </td>
                                 <td data-label="Banned By">
-                                    {{ fp.banned_by_user || 'System / Admin' }}
+                                    {{ (fp.banned_by_user or "System / Admin") }}
                                 </td>
                                 <td data-label="Date">
-                                    {{ fp.created_at ? new Date(fp.created_at).toLocaleString() : '—' }}
+                                    {{ (fp.created_at|locale_string if fp.created_at else "—") }}
                                 </td>
                                 <td data-label="Expires">
-                                    @if(fp.expires_at)
-                                        <span style="color: #fcc419;">{{ new Date(fp.expires_at).toLocaleString() }}</span>
-                                    @else
+                                    {% if fp.expires_at %}
+                                        <span style="color: #fcc419;">{{ fp.expires_at|locale_string }}</span>
+                                    {% else %}
                                         <span style="color: #ff6b6b; font-weight: bold;">Permanent</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Action">
                                     <button onclick="unbanFingerprint('{{ fp.fingerprint }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
@@ -134,14 +134,14 @@
                                     </button>
                                 </td>
                             </tr>
-                            @endeach
-                        @else
+                            {% endfor %}
+                        {% else %}
                             <tr>
                                 <td colspan="7" style="text-align: center; padding: 30px; color: #888;">
                                     <i class="fa-solid fa-circle-check" style="color: #51cf66; margin-right: 6px;"></i> No banned fingerprints.
                                 </td>
                             </tr>
-                        @endif
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -162,13 +162,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if(bannedHardware && bannedHardware.length > 0)
-                            @each(bannedHardware as hw)
+                        {% if (bannedHardware and (bannedHardware|length > 0)) %}
+                            {% for key, hw in bannedHardware|entries %}
                             <tr>
                                 <td data-label="Hardware ID">
                                     <div style="display: flex; align-items: center; gap: 6px;">
                                         <code class="clickable-code" onclick="copyText('{{ hw.hw_fingerprint }}')" title="Click to copy hardware ID">
-                                            {{ hw.hw_fingerprint.substring(0, 24) }}...
+                                            {{ hw.hw_fingerprint[0:24] }}...
                                         </code>
                                         <button onclick="copyText('{{ hw.hw_fingerprint }}')" class="btn-icon" title="Copy Hardware ID">
                                             <i class="fa-regular fa-copy"></i>
@@ -176,24 +176,24 @@
                                     </div>
                                 </td>
                                 <td data-label="Reason">
-                                    <span style="color: #ff8787;">{{ hw.reason || 'Banned' }}</span>
+                                    <span style="color: #ff8787;">{{ (hw.reason or "Banned") }}</span>
                                 </td>
                                 <td data-label="Banned By">
-                                    @if(hw.banned_by_user)
+                                    {% if hw.banned_by_user %}
                                         <span style="color: #aaa;">{{ hw.banned_by_user }}</span>
-                                    @else
+                                    {% else %}
                                         <span style="color: #777;">System</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Date">
-                                    {{ hw.created_at ? new Date(hw.created_at).toLocaleDateString() : '—' }}
+                                    {{ (hw.created_at|locale_date if hw.created_at else "—") }}
                                 </td>
                                 <td data-label="Expires">
-                                    @if(hw.expires_at)
-                                        <span style="color: #fcc419;">{{ new Date(hw.expires_at).toLocaleString() }}</span>
-                                    @else
+                                    {% if hw.expires_at %}
+                                        <span style="color: #fcc419;">{{ hw.expires_at|locale_string }}</span>
+                                    {% else %}
                                         <span style="color: #ff6b6b; font-weight: bold;">Permanent</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Action">
                                     <button onclick="unbanHardware('{{ hw.hw_fingerprint }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
@@ -201,14 +201,14 @@
                                     </button>
                                 </td>
                             </tr>
-                            @endeach
-                        @else
+                            {% endfor %}
+                        {% else %}
                             <tr>
                                 <td colspan="6" style="text-align: center; padding: 30px; color: #888;">
                                     <i class="fa-solid fa-circle-check" style="color: #51cf66; margin-right: 6px;"></i> No banned hardware fingerprints.
                                 </td>
                             </tr>
-                        @endif
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -229,8 +229,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if(bannedIps && bannedIps.length > 0)
-                            @each(bannedIps as item)
+                        {% if (bannedIps and (bannedIps|length > 0)) %}
+                            {% for key, item in bannedIps|entries %}
                             <tr>
                                 <td data-label="IP / Hash">
                                     <div style="display: flex; align-items: center; gap: 6px;">
@@ -241,27 +241,27 @@
                                             <i class="fa-regular fa-copy"></i>
                                         </button>
                                     </div>
-                                    @if(item.ip_hash && item.ip_hash !== item.ip)
+                                    {% if (item.ip_hash and item.ip_hash != item.ip) %}
                                         <div style="font-size: 0.75rem; color: #777; margin-top: 3px;">
-                                            Hash: {{ item.ip_hash.substring(0, 16) }}...
+                                            Hash: {{ item.ip_hash[0:16] }}...
                                         </div>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Reason">
-                                    <span style="color: #ff8787; font-weight: 500;">{{ item.reason || 'No reason specified' }}</span>
+                                    <span style="color: #ff8787; font-weight: 500;">{{ (item.reason or "No reason specified") }}</span>
                                 </td>
                                 <td data-label="Banned By">
-                                    {{ item.banned_by_user || 'System / Admin' }}
+                                    {{ (item.banned_by_user or "System / Admin") }}
                                 </td>
                                 <td data-label="Date">
-                                    {{ item.created_at ? new Date(item.created_at).toLocaleString() : '—' }}
+                                    {{ (item.created_at|locale_string if item.created_at else "—") }}
                                 </td>
                                 <td data-label="Expires">
-                                    @if(item.expires_at)
-                                        <span style="color: #fcc419;">{{ new Date(item.expires_at).toLocaleString() }}</span>
-                                    @else
+                                    {% if item.expires_at %}
+                                        <span style="color: #fcc419;">{{ item.expires_at|locale_string }}</span>
+                                    {% else %}
                                         <span style="color: #ff6b6b; font-weight: bold;">Permanent</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Action">
                                     <button onclick="unbanIp('{{ item.ip }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
@@ -269,14 +269,14 @@
                                     </button>
                                 </td>
                             </tr>
-                            @endeach
-                        @else
+                            {% endfor %}
+                        {% else %}
                             <tr>
                                 <td colspan="6" style="text-align: center; padding: 30px; color: #888;">
                                     <i class="fa-solid fa-circle-check" style="color: #51cf66; margin-right: 6px;"></i> No banned IP addresses.
                                 </td>
                             </tr>
-                        @endif
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -298,23 +298,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if(anonIdentities && anonIdentities.length > 0)
-                            @each(anonIdentities as idn)
+                        {% if (anonIdentities and (anonIdentities|length > 0)) %}
+                            {% for key, idn in anonIdentities|entries %}
                             <tr>
                                 <td data-label="Account">
-                                    @if(idn.login)
+                                    {% if idn.login %}
                                         <a href="/user/{{ idn.login }}" target="_blank" style="color: var(--accent); font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
-                                            <i class="fa-solid fa-user-secret"></i> {!! idn.user || idn.login !!}
+                                            <i class="fa-solid fa-user-secret"></i> {{ (idn.user or idn.login) }}
                                         </a>
                                         <div style="font-size: 0.75rem; color: #888;">UID: {{ idn.user_id }}</div>
-                                    @else
+                                    {% else %}
                                         <span style="color: #888;">UID: {{ idn.user_id }} (Deleted)</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Fingerprint">
                                     <div style="display: flex; align-items: center; gap: 6px;">
                                         <code class="clickable-code" onclick="copyText('{{ idn.fingerprint }}')" title="Click to copy full fingerprint">
-                                            {{ idn.fingerprint.substring(0, 22) }}...
+                                            {{ idn.fingerprint[0:22] }}...
                                         </code>
                                         <button onclick="copyText('{{ idn.fingerprint }}')" class="btn-icon" title="Copy fingerprint">
                                             <i class="fa-regular fa-copy"></i>
@@ -322,65 +322,65 @@
                                     </div>
                                 </td>
                                 <td data-label="Hardware ID">
-                                    @if(idn.hw_fingerprint)
+                                    {% if idn.hw_fingerprint %}
                                         <div style="display: flex; align-items: center; gap: 6px;">
                                             <code class="clickable-code" onclick="copyText('{{ idn.hw_fingerprint }}')" title="Click to copy full hardware ID">
-                                                {{ idn.hw_fingerprint.substring(0, 18) }}...
+                                                {{ idn.hw_fingerprint[0:18] }}...
                                             </code>
                                             <button onclick="copyText('{{ idn.hw_fingerprint }}')" class="btn-icon" title="Copy hardware ID">
                                                 <i class="fa-regular fa-copy"></i>
                                             </button>
-                                            @if(idn.is_hw_banned)
+                                            {% if idn.is_hw_banned %}
                                                 <span class="badge" style="background: #e74c3c; color: #fff; padding: 2px 5px; border-radius: 3px; font-size: 0.65rem;">HW BANNED</span>
-                                            @else
+                                            {% else %}
                                                 <button onclick="openBanModal('hardware', '{{ idn.hw_fingerprint }}', {{ idn.user_id }})" class="btn-icon" title="Ban Hardware ID" style="color: #e74c3c; margin-left: 2px;">
                                                     <i class="fa-solid fa-ban"></i>
                                                 </button>
-                                            @endif
+                                            {% endif %}
                                         </div>
-                                    @else
+                                    {% else %}
                                         <span style="color: #666; font-size: 0.8rem;">—</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Created / IP">
-                                    <div>{{ idn.created_at ? new Date(idn.created_at).toLocaleDateString() : '—' }}</div>
-                                    @if(idn.created_ip)
-                                        <div style="font-size: 0.75rem; color: #888; font-family: monospace;">{{ idn.created_ip.substring(0, 16) }}...</div>
-                                    @endif
+                                    <div>{{ (idn.created_at|locale_date if idn.created_at else "—") }}</div>
+                                    {% if idn.created_ip %}
+                                        <div style="font-size: 0.75rem; color: #888; font-family: monospace;">{{ idn.created_ip[0:16] }}...</div>
+                                    {% endif %}
                                 </td>
                                 <td data-label="Last Seen / IP">
-                                    <div>{{ idn.last_seen ? new Date(idn.last_seen).toLocaleDateString() : '—' }}</div>
-                                    @if(idn.last_ip)
-                                        <div style="font-size: 0.75rem; color: #888; font-family: monospace;">{{ idn.last_ip.substring(0, 16) }}...</div>
-                                    @endif
+                                    <div>{{ (idn.last_seen|locale_date if idn.last_seen else "—") }}</div>
+                                    {% if idn.last_ip %}
+                                        <div style="font-size: 0.75rem; color: #888; font-family: monospace;">{{ idn.last_ip[0:16] }}...</div>
+                                    {% endif %}
                                 </td>
                                 <td data-label="Status">
-                                    @if(idn.is_banned || idn.is_fp_banned || idn.is_hw_banned)
+                                    {% if ((idn.is_banned or idn.is_fp_banned) or idn.is_hw_banned) %}
                                         <span class="badge" style="background: #e74c3c; color: #fff; padding: 3px 8px; border-radius: 3px; font-size: 0.75rem;">BANNED</span>
-                                    @else
+                                    {% else %}
                                         <span class="badge" style="background: #27ae60; color: #fff; padding: 3px 8px; border-radius: 3px; font-size: 0.75rem;">ACTIVE</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Actions">
-                                    @if(idn.is_banned || idn.is_fp_banned)
+                                    {% if (idn.is_banned or idn.is_fp_banned) %}
                                         <button onclick="unbanFingerprint('{{ idn.fingerprint }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
                                             <i class="fa-solid fa-unlock"></i> Unban Key
                                         </button>
-                                    @else
+                                    {% else %}
                                         <button onclick="promptBanIdentity({{ idn.user_id }}, '{{ idn.fingerprint }}')" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #e74c3c; border-color: #c0392b; color: #fff; cursor: pointer; border-radius: 4px;">
                                             <i class="fa-solid fa-ban"></i> Ban Key
                                         </button>
-                                    @endif
+                                    {% endif %}
                                 </td>
                             </tr>
-                            @endeach
-                        @else
+                            {% endfor %}
+                        {% else %}
                             <tr>
                                 <td colspan="7" style="text-align: center; padding: 30px; color: #888;">
                                     No anonymous identities found in database.
                                 </td>
                             </tr>
-                        @endif
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -402,20 +402,20 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if(recentActivity && recentActivity.length > 0)
-                            @each(recentActivity as act)
+                        {% if (recentActivity and (recentActivity|length > 0)) %}
+                            {% for key, act in recentActivity|entries %}
                             <tr>
                                 <td data-label="Time" style="white-space: nowrap; font-size: 0.85rem;">
-                                    {{ act.created_at ? new Date(act.created_at).toLocaleString() : '—' }}
+                                    {{ (act.created_at|locale_string if act.created_at else "—") }}
                                 </td>
                                 <td data-label="User">
-                                    @if(act.login)
+                                    {% if act.login %}
                                         <a href="/user/{{ act.login }}" target="_blank" style="color: var(--accent); text-decoration: none;">
-                                            {!! act.user || act.login !!}
+                                            {{ (act.user or act.login) }}
                                         </a>
-                                    @else
+                                    {% else %}
                                         <span style="color: #888;">UID: {{ act.user_id }}</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Action">
                                     <span class="action-badge action-{{ act.action }}">
@@ -423,51 +423,51 @@
                                     </span>
                                 </td>
                                 <td data-label="Target ID">
-                                    @if(act.target_id)
-                                        @if(act.action === 'comment' || act.action === 'upload')
+                                    {% if act.target_id %}
+                                        {% if (act.action == "comment" or act.action == "upload") %}
                                             <a href="/{{ act.target_id }}" target="_blank" style="color: var(--accent); text-decoration: underline;">
                                                 #{{ act.target_id }}
                                             </a>
-                                        @else
+                                        {% else %}
                                             #{{ act.target_id }}
-                                        @endif
-                                    @else
+                                        {% endif %}
+                                    {% else %}
                                         <span style="color: #777;">—</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="Details" style="font-size: 0.8rem; font-family: monospace; max-width: 300px; word-break: break-all;">
-                                    @if(act.details)
-                                        {{ JSON.stringify(act.details) }}
-                                    @else
+                                    {% if act.details %}
+                                        {{ act.details|tojson }}
+                                    {% else %}
                                         <span style="color: #777;">—</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                                 <td data-label="IP" style="font-family: monospace; font-size: 0.8rem;">
                                     {{ act.ip }}
                                 </td>
                                 <td data-label="Hardware ID" style="font-family: monospace; font-size: 0.8rem;">
-                                    @if(act.hw_fingerprint)
+                                    {% if act.hw_fingerprint %}
                                         <div style="display: flex; align-items: center; gap: 6px;">
                                             <code class="clickable-code" onclick="copyText('{{ act.hw_fingerprint }}')" title="Click to copy Hardware ID">
-                                                {{ act.hw_fingerprint.substring(0, 16) }}...
+                                                {{ act.hw_fingerprint[0:16] }}...
                                             </code>
                                             <button onclick="copyText('{{ act.hw_fingerprint }}')" class="btn-icon" title="Copy Hardware ID">
                                                 <i class="fa-regular fa-copy"></i>
                                             </button>
                                         </div>
-                                    @else
+                                    {% else %}
                                         <span style="color: #777;">—</span>
-                                    @endif
+                                    {% endif %}
                                 </td>
                             </tr>
-                            @endeach
-                        @else
+                            {% endfor %}
+                        {% else %}
                             <tr>
                                 <td colspan="7" style="text-align: center; padding: 30px; color: #888;">
                                     No anonymous activity recorded yet.
                                 </td>
                             </tr>
-                        @endif
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -656,8 +656,8 @@ function promptBanIdentity(userId, fingerprint) {
 function getCsrfToken() {
     return (window.f0ckSession && window.f0ckSession.csrf_token) ||
            document.querySelector('meta[name="csrf-token"]')?.content ||
-           '{{ csrf_token }}' ||
-           '{{ session ? session.csrf_token : "" }}' ||
+           {{ csrf_token|string|tojson }} ||
+           {{ (session.csrf_token if session else "")|string|tojson }} ||
            '';
 }
 
@@ -787,4 +787,4 @@ async function unbanIp(ip) {
 </div>
 </div>
 
-@include(snippets/footer)
+{% include "snippets/footer.html" %}

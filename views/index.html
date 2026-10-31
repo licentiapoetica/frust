@@ -1,4 +1,4 @@
-@if(private_society && !session)
+{% if (private_society and not session) %}
 <html>
 <head><title>502 Bad Gateway</title></head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
@@ -31,8 +31,8 @@
 </style>
 
 <div id="gate-container" style="display:none;">
-  @include(snippets/navbar)
-  @include(snippets/footer)
+  {% include "snippets/navbar.html" %}
+  {% include "snippets/footer.html" %}
 </div>
 <script>
   function openLoginGate() {
@@ -42,7 +42,7 @@
       const link = document.createElement('link');
       link.id = 'injected-gate-styles';
       link.rel = 'stylesheet';
-      link.href = '/s/css/f0ckm.css?v={{ ts }}';
+      link.href = '/s/css/f0ckm.css?v={{ ts|safe }}';
       document.head.appendChild(link);
     }
     const modal = document.getElementById('login-modal');
@@ -66,12 +66,12 @@
 </script>
 </body>
 </html>
-@else
-@include(snippets/header)
+{% else %}
+{% include "snippets/header.html" %}
 <div class="pagewrapper">
   <div id="main">
-    @include(index-partial)
+    {% include "index-partial.html" %}
   </div>
 </div>
-@include(snippets/footer)
-@endif
+{% include "snippets/footer.html" %}
+{% endif %}

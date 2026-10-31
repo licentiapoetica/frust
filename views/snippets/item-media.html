@@ -1,6 +1,6 @@
-@if(item.is_album && item.album && item.album.length > 1)
-<div class="embed-responsive embed-responsive-16by9 album-gallery-container" data-album-id="{{ item.id }}" data-requested-subf0ck="{{ item.requested_subf0ck_slug || '' }}">
-    <script type="application/json" class="album-data-json">{{ item.album_json }}</script>
+{% if ((item.is_album and item.album) and (item.album|length > 1)) %}
+<div class="embed-responsive embed-responsive-16by9 album-gallery-container" data-album-id="{{ item.id }}" data-requested-subf0ck="{{ (item.requested_subf0ck_slug or "") }}">
+    <script type="application/json" class="album-data-json">{{ item.album_json|safe }}</script>
     <div class="embed-responsive-image album-media-stage" id="image-scroll">
         <a href="{{ item.dest }}" id="elfe" target="_blank" class="album-stage-link">
             <img id="f0ck-image" class="img-fluid album-active-image" src="{{ item.dest }}" loading="lazy" decoding="async" />
@@ -25,45 +25,45 @@
     </div>
     <!-- Album Gallery Controls Inside View -->
     <div class="album-controls-overlay">
-        <button type="button" class="album-btn album-btn-prev" title="{{ t('album.prev') || 'Previous' }}" aria-label="Previous">
+        <button type="button" class="album-btn album-btn-prev" title="{{ (t("album.prev") or "Previous") }}" aria-label="Previous">
             <i class="fa-solid fa-chevron-left"></i>
         </button>
-        <button type="button" class="album-btn album-btn-next" title="{{ t('album.next') || 'Next' }}" aria-label="Next">
+        <button type="button" class="album-btn album-btn-next" title="{{ (t("album.next") or "Next") }}" aria-label="Next">
             <i class="fa-solid fa-chevron-right"></i>
         </button>
     </div>
     <!-- Album Thumbnail Strip (reveals on hover) -->
     <div class="album-thumbnails-strip">
-        @each(item.album as img)
-        <button type="button" class="album-thumb-item {{ img.is_first ? 'active' : '' }}" data-index="{{ img.order_index }}" data-subf0ck-id="{{ img.slug || img.id }}" data-subf0ck-slug="{{ img.slug || img.id }}" data-src="{{ img.src }}" data-mime="{{ img.mime }}" title="Subf0ck {{ img.slug || img.id }} ({{ img.display_index }}/{{ item.album.length }})">
-            @if(img.is_audio && !img.has_coverart)
+        {% for key, img in item.album|entries %}
+        <button type="button" class="album-thumb-item {{ ("active" if img.is_first else "") }}" data-index="{{ img.order_index }}" data-subf0ck-id="{{ (img.slug or img.id) }}" data-subf0ck-slug="{{ (img.slug or img.id) }}" data-src="{{ img.src }}" data-mime="{{ img.mime }}" title="Subf0ck {{ (img.slug or img.id) }} ({{ img.display_index }}/{{ item.album|length }})">
+            {% if (img.is_audio and not img.has_coverart) %}
             <div class="sidebar-media-placeholder audio">
                 <i class="fa-solid fa-music"></i>
             </div>
-            @else
-            <img src="{{ img.thumb || img.src }}" loading="lazy" draggable="false" alt="Subf0ck {{ img.slug || img.id }}" />
-            @endif
-            @if(img.is_video)
+            {% else %}
+            <img src="{{ (img.thumb or img.src) }}" loading="lazy" draggable="false" alt="Subf0ck {{ (img.slug or img.id) }}" />
+            {% endif %}
+            {% if img.is_video %}
             <span class="album-thumb-mime-badge"><i class="fa-solid fa-play"></i></span>
-            @elseif(img.is_audio)
+            {% elif img.is_audio %}
             <span class="album-thumb-mime-badge"><i class="fa-solid fa-music"></i></span>
-            @endif
+            {% endif %}
         </button>
-        @endeach
+        {% endfor %}
     </div>
     <button class="image-modal-btn" title="Open in modal"><i class="fa-solid fa-plus"></i></button>
 </div>
-@elseif(item.mime === 'video/youtube')
+{% elif item.mime == "video/youtube" %}
 <div class="embed-responsive embed-responsive-16by9">
-    <iframe id="yt-embed" class="embed-responsive-item" width="640" height="360" data-yt-id="{!! item.dest.replace('yt:', '') !!}" src="https://www.youtube.com/embed/{!! item.dest.replace('yt:', '') !!}?enablejsapi=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    <iframe id="yt-embed" class="embed-responsive-item" width="640" height="360" data-yt-id="{{ item.dest.replace("yt:", "", 1) }}" src="https://www.youtube.com/embed/{{ item.dest.replace("yt:", "", 1) }}?enablejsapi=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </div>
-@elseif(item.mime.startsWith("video"))
+{% elif item.mime.startswith("video") %}
 <div class="embed-responsive embed-responsive-16by9">
-    <video id="my-video" class="embed-responsive-item" width="{{ item.width || 640 }}" height="{{ item.height || 360 }}" src="{{ item.dest }}" preload="auto" data-size="{{ item.size }}" loop playsinline @if(!session || session.disable_autoplay !== true) autoplay @endif></video>
+    <video id="my-video" class="embed-responsive-item" width="{{ (item.width or 640) }}" height="{{ (item.height or 360) }}" src="{{ item.dest }}" preload="auto" data-size="{{ item.size }}" loop playsinline {% if (not session or session.disable_autoplay != true) %} autoplay {% endif %}></video>
 </div>
-@elseif(item.mime.startsWith("audio"))
+{% elif item.mime.startswith("audio") %}
 <div class="embed-responsive embed-responsive-16by9" style="background: #000;">
-    <div class="sidebar-media-placeholder audio @if(item.coverart)has-cover@endif">
+    <div class="sidebar-media-placeholder audio {% if item.coverart %}has-cover{% endif %}">
         <div class="audio-reactive-bg"></div>
         <div class="audio-track-info-badge">
             <div class="audio-track-info-details">
@@ -71,43 +71,43 @@
                 <span class="audio-track-title"></span>
             </div>
         </div>
-        <div class="audio-cover-circle" @if(item.coverart)style="background-image: url('{{ item.coverart }}');"@endif>
+        <div class="audio-cover-circle" {% if item.coverart %}style="background-image: url('{{ item.coverart }}');"{% endif %}>
             <i class="fa-solid fa-music"></i>
         </div>
     </div>
-    <audio id="my-video" class="embed-responsive-item" preload="auto" loop crossorigin="anonymous" src="{{ item.dest }}" data-setup="{}" data-size="{{ item.size }}" @if(item.coverart)poster="{{ item.coverart }}"@endif type="{{ item.mime }}" @if(!session || session.disable_autoplay !== true) autoplay @endif></audio>
-    <img id="f0ck-audio-cover" @if(item.coverart)src="{{ item.coverart }}"@endif style="display: none;">
+    <audio id="my-video" class="embed-responsive-item" preload="auto" loop crossorigin="anonymous" src="{{ item.dest }}" data-setup="{}" data-size="{{ item.size }}" {% if item.coverart %}poster="{{ item.coverart }}"{% endif %} type="{{ item.mime }}" {% if (not session or session.disable_autoplay != true) %} autoplay {% endif %}></audio>
+    <img id="f0ck-audio-cover" {% if item.coverart %}src="{{ item.coverart }}"{% endif %} style="display: none;">
 </div>
-@elseif(item.mime.startsWith("image"))
+{% elif item.mime.startswith("image") %}
 <div class="embed-responsive embed-responsive-16by9">
     <div class="embed-responsive-image" id="image-scroll">
-        <a href="{{ item.dest }}" id="elfe" target="_blank"><img id="f0ck-image" class="img-fluid" src="{{ item.dest }}" loading="lazy" decoding="async" @if(item.width)width="{{ item.width }}"@endif @if(item.height)height="{{ item.height }}"@endif /></a>
+        <a href="{{ item.dest }}" id="elfe" target="_blank"><img id="f0ck-image" class="img-fluid" src="{{ item.dest }}" loading="lazy" decoding="async" {% if item.width %}width="{{ item.width }}"{% endif %} {% if item.height %}height="{{ item.height }}"{% endif %} /></a>
     </div>
     <button class="image-modal-btn" title="Open in modal"><i class="fa-solid fa-plus"></i></button>
 </div>
-@elseif(item.mime === 'application/x-shockwave-flash' && enable_swf)
+{% elif (item.mime == "application/x-shockwave-flash" and enable_swf) %}
 <div class="embed-responsive embed-responsive-16by9">
     <div id="ruffle-container" class="embed-responsive-item" data-swf="{{ item.dest }}"></div>
 </div>
-@elseif(item.mime === 'application/vnd.adobe.flash.movie' && enable_swf)
+{% elif (item.mime == "application/vnd.adobe.flash.movie" and enable_swf) %}
 <div class="embed-responsive embed-responsive-16by9">
     <div id="ruffle-container" class="embed-responsive-item" data-swf="{{ item.dest }}"></div>
 </div>
-@elseif(item.mime === 'application/pdf' && enable_pdf)
+{% elif (item.mime == "application/pdf" and enable_pdf) %}
 <div class="embed-responsive embed-responsive-16by9" style="background: #fff;border: 1px solid #444; overflow: hidden;">
     <iframe class="embed-responsive-item" src="{{ item.dest }}#toolbar=0" sandbox="allow-scripts allow-same-origin" loading="lazy" style="border: none; overscroll-behavior: contain !important;"></iframe>
 </div>
-@elseif(is_archive_item)
+{% elif is_archive_item %}
 <div class="embed-responsive embed-responsive-16by9 archive-download-view">
     <div class="archive-download-inner">
         <i class="fa-solid fa-file-zipper archive-download-icon"></i>
-        <div class="archive-download-filename">{{ item.original_filename || item.dest.split('/').pop() }}</div>
+        <div class="archive-download-filename">{{ (item.original_filename or (item.dest.split("/")).pop()) }}</div>
         <div class="archive-download-size">{{ item.size }}</div>
         <a class="archive-download-btn" href="{{ item.dest }}" download>
             <i class="fa-solid fa-download"></i> Download
         </a>
     </div>
 </div>
-@else
+{% else %}
 <h1>404 - Not f0cked</h1>
-@endif
+{% endif %}

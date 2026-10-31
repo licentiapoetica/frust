@@ -4,13 +4,13 @@
         <div class="infobox-modal-header">
             <div class="infobox-header-title">
                 <div class="infobox-header-text">
-                    <h3 id="info-modal-title">{{ t('info_modal.title') || 'Post & File Details' }}</h3>
-                    <span class="infobox-sub-heading" id="info-modal-subheading" data-item-id="{{ item.id }}" data-item-slug="{{ item.slug || '' }}">
-                        ID: <code>{{ item.id }}</code>@if(item.slug) &bull; Slug: <code>{{ item.slug }}</code>@endif
+                    <h3 id="info-modal-title">{{ (t("info_modal.title") or "Post & File Details") }}</h3>
+                    <span class="infobox-sub-heading" id="info-modal-subheading" data-item-id="{{ item.id }}" data-item-slug="{{ (item.slug or "") }}">
+                        ID: <code>{{ item.id }}</code>{% if item.slug %} &bull; Slug: <code>{{ item.slug }}</code>{% endif %}
                     </span>
                 </div>
             </div>
-            <button type="button" class="infobox-close-icon-btn" id="info-modal-close-icon" title="{{ t('common.close') || 'Close' }}">
+            <button type="button" class="infobox-close-icon-btn" id="info-modal-close-icon" title="{{ (t("common.close") or "Close") }}">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -30,40 +30,40 @@
                     <div class="infobox-card">
                         <label class="infobox-card-label"><i class="fa-solid fa-eye"></i> Visibility</label>
                         <div class="infobox-card-value-row">
-                            <span id="info-visibility-label" class="visibility-badge vis-{{ item.visibility || 0 }}">
-                                @if(item.visibility === 3)
+                            <span id="info-visibility-label" class="visibility-badge vis-{{ (item.visibility or 0) }}">
+                                {% if item.visibility == 3 %}
                                 <i class="fa-solid fa-ban" style="color: var(--color-danger, #ff4444);"></i> Unavailable (451)
-                                @elseif(item.visibility === 2)
+                                {% elif item.visibility == 2 %}
                                 <i class="fa-solid fa-lock" style="color: var(--color-danger, #ff4444);"></i> Private
-                                @elseif(item.visibility === 1)
+                                {% elif item.visibility == 1 %}
                                 <i class="fa-solid fa-link" style="color: var(--color-warning, #ffbb33);"></i> Unlisted
-                                @else
+                                {% else %}
                                 <i class="fa-solid fa-globe" style="color: var(--color-success, #00C851);"></i> Public
-                                @endif
+                                {% endif %}
                             </span>
-                            @if(can_manage_item)
-                            <button type="button" id="info-visibility-edit-btn" class="infobox-action-btn" data-item-id="{{ item.id }}" data-visibility="{{ item.visibility || 0 }}">
+                            {% if can_manage_item %}
+                            <button type="button" id="info-visibility-edit-btn" class="infobox-action-btn" data-item-id="{{ item.id }}" data-visibility="{{ (item.visibility or 0) }}">
                                 <i class="fa-solid fa-pen"></i> Edit
                             </button>
-                            @endif
+                            {% endif %}
                         </div>
                     </div>
 
-                    @if(enable_expiring_uploads !== false)
+                    {% if enable_expiring_uploads != false %}
                     <div class="infobox-card">
                         <label class="infobox-card-label"><i class="fa-solid fa-hourglass-half"></i> Expiration</label>
                         <div class="infobox-expiry-content">
-                            <span id="info-expiry-label" class="expiry-status-label" title="{{ item.expires_at ? new Date(item.expires_at * 1000).toLocaleString() : '' }}">
-                                @if(item.expires_at)
-                                <i class="fa-solid fa-clock" style="color: #ffaa00;"></i> {{ item.expires_in || ('in ' + new Date(item.expires_at * 1000).toLocaleString()) }}
-                                @else
+                            <span id="info-expiry-label" class="expiry-status-label" title="{{ ((item.expires_at * 1000)|locale_string if item.expires_at else "") }}">
+                                {% if item.expires_at %}
+                                <i class="fa-solid fa-clock" style="color: #ffaa00;"></i> {{ (item.expires_in or "in " ~ ((item.expires_at * 1000)|locale_string)) }}
+                                {% else %}
                                 <i class="fa-solid fa-clock-slash" style="color: var(--text-muted, #888);"></i> Permanent
-                                @endif
+                                {% endif %}
                             </span>
-                            @if(can_manage_item)
+                            {% if can_manage_item %}
                             <div class="info-expiry-edit-controls">
                                 <select id="info-expiry-select" class="infobox-select" data-item-id="{{ item.id }}">
-                                    <option value="permanent" {{ !item.expires_at ? 'selected' : '' }}>Permanent</option>
+                                    <option value="permanent" {{ ("selected" if not item.expires_at else "") }}>Permanent</option>
                                     <option value="30minutes">30 Minutes</option>
                                     <option value="1hour">1 Hour</option>
                                     <option value="24hours">24 Hours</option>
@@ -74,10 +74,10 @@
                                     <i class="fa-solid fa-check"></i>
                                 </button>
                             </div>
-                            @endif
+                            {% endif %}
                         </div>
                     </div>
-                    @endif
+                    {% endif %}
                 </div>
             </div>
 
@@ -94,9 +94,9 @@
                         <div class="infobox-card-value font-mono" id="info-file-size">{{ item.size }}</div>
                     </div>
 
-                    <div class="infobox-card" id="info-card-dimensions" @if(!item.width || !item.height)style="display: none;"@endif>
+                    <div class="infobox-card" id="info-card-dimensions" {% if (not item.width or not item.height) %}style="display: none;"{% endif %}>
                         <label class="infobox-card-label"><i class="fa-solid fa-ruler-combined"></i> Dimensions</label>
-                        <div class="infobox-card-value font-mono" id="info-file-dimensions">@if(item.width && item.height){{ item.width }} × {{ item.height }} px@endif</div>
+                        <div class="infobox-card-value font-mono" id="info-file-dimensions">{% if (item.width and item.height) %}{{ item.width }} × {{ item.height }} px{% endif %}</div>
                     </div>
 
                     <div class="infobox-card" id="info-card-mime">
@@ -107,19 +107,19 @@
                     <div class="infobox-card" id="info-card-directlink">
                         <label class="infobox-card-label"><i class="fa-solid fa-arrow-up-right-from-square"></i> Direct Link</label>
                         <div class="infobox-card-value">
-                            @if(item.external_thread_url)
+                            {% if item.external_thread_url %}
                             <a href="{{ item.external_thread_url }}" target="_blank" rel="noopener noreferrer" class="infobox-link-pill" id="info-file-direct-link" title="{{ item.external_thread_url }}">
-                                <i class="fa-solid fa-up-right-from-square"></i> {{ t('info_modal.view_file') || 'Open File' }}
+                                <i class="fa-solid fa-up-right-from-square"></i> {{ (t("info_modal.view_file") or "Open File") }}
                             </a>
-                            @else
-                            <a href="{{ item.mime === 'video/youtube' ? 'https://www.youtube.com/watch?v=' + item.dest.replace('yt:', '') : item.dest }}" target="_blank" class="infobox-link-pill" id="info-file-direct-link">
-                                <i class="fa-solid fa-up-right-from-square"></i> {{ t('info_modal.view_file') || 'Open File' }}
+                            {% else %}
+                            <a href="{{ ("https://www.youtube.com/watch?v=" ~ (item.dest.replace("yt:", "", 1)) if item.mime == "video/youtube" else item.dest) }}" target="_blank" class="infobox-link-pill" id="info-file-direct-link">
+                                <i class="fa-solid fa-up-right-from-square"></i> {{ (t("info_modal.view_file") or "Open File") }}
                             </a>
-                            @endif
+                            {% endif %}
                         </div>
                     </div>
 
-                    @if(item.src && item.src.short)
+                    {% if (item.src and item.src.short) %}
                     <div class="infobox-card full-width" id="info-card-source">
                         <label class="infobox-card-label"><i class="fa-solid fa-link"></i> Source URL</label>
                         <div class="infobox-card-value">
@@ -128,48 +128,48 @@
                             </a>
                         </div>
                     </div>
-                    @endif
+                    {% endif %}
 
-                    <div class="infobox-card full-width" id="info-card-hash" @if(!item.checksum)style="display: none;"@endif>
+                    <div class="infobox-card full-width" id="info-card-hash" {% if not item.checksum %}style="display: none;"{% endif %}>
                         <div class="infobox-card-label-row">
                             <label class="infobox-card-label"><i class="fa-solid fa-fingerprint"></i> SHA-256 Hash</label>
-                            <button type="button" class="copy-hash-btn" id="info-copy-hash-btn" data-hash="@if(item.checksum){{ item.checksum.split('_bypass_')[0] }}@endif" title="Copy SHA-256 Hash">
+                            <button type="button" class="copy-hash-btn" id="info-copy-hash-btn" data-hash="{% if item.checksum %}{{ (item.checksum.split("_bypass_"))[0] }}{% endif %}" title="Copy SHA-256 Hash">
                                 <i class="fa-solid fa-copy"></i> Copy
                             </button>
                         </div>
-                        <div class="info-hash-codeblock font-mono"><code id="info-file-hash">@if(item.checksum){{ item.checksum.split('_bypass_')[0] }}@endif</code></div>
+                        <div class="info-hash-codeblock font-mono"><code id="info-file-hash">{% if item.checksum %}{{ (item.checksum.split("_bypass_"))[0] }}{% endif %}</code></div>
                     </div>
                 </div>
             </div>
 
             <!-- Section 3: Reposts & Duplicates (if present) -->
-            @if(item.show_repost_row)
+            {% if item.show_repost_row %}
             <div class="infobox-section" id="info-section-reposts">
                 <div class="infobox-section-header">
                     <i class="fa-solid fa-copy"></i>
                     <span>Similar & Duplicate Uploads</span>
                 </div>
                 <div class="infobox-reposts-list">
-                    @each(item.reposts as rp)
-                    <a href="/{{ rp.slug || rp.id }}" class="repost-pill {{ rp.match_type === 'phash' ? 'phash' : 'exact' }}" tooltip="{{ rp.match_type === 'phash' ? 'Visually similar (perceptual hash)' : 'Exact duplicate (checksum)' }}" flow="up">
-                        <i class="fa-solid {{ rp.match_type === 'phash' ? 'fa-clone' : 'fa-copy' }}"></i>
-                        <span>{{ rp.match_type === 'phash' ? '~#' : '#' }}{{ rp.slug || rp.id }}</span>
+                    {% for key, rp in item.reposts|entries %}
+                    <a href="/{{ (rp.slug or rp.id) }}" class="repost-pill {{ ("phash" if rp.match_type == "phash" else "exact") }}" tooltip="{{ ("Visually similar (perceptual hash)" if rp.match_type == "phash" else "Exact duplicate (checksum)") }}" flow="up">
+                        <i class="fa-solid {{ ("fa-clone" if rp.match_type == "phash" else "fa-copy") }}"></i>
+                        <span>{{ ("~#" if rp.match_type == "phash" else "#") }}{{ (rp.slug or rp.id) }}</span>
                     </a>
-                    @endeach
+                    {% endfor %}
                 </div>
             </div>
-            @endif
+            {% endif %}
 
         </div>
 
         <!-- Footer -->
         <div class="infobox-modal-footer">
-            @if(can_manage_item)
+            {% if can_manage_item %}
             <button type="button" class="btn-infobox-action" id="info-rethumb-btn" data-item-id="{{ item.id }}">
                 <i class="fa-solid fa-arrows-rotate"></i> Regenerate Thumbnail
             </button>
-            @endif
-            <button type="button" class="btn-infobox-close" id="info-modal-close">{{ t('common.close') || 'Close' }}</button>
+            {% endif %}
+            <button type="button" class="btn-infobox-close" id="info-modal-close">{{ (t("common.close") or "Close") }}</button>
         </div>
     </div>
 </div>
