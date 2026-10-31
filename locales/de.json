@@ -870,6 +870,9 @@
     "verifying_aria": "Wird geprüft, bitte warten",
     "verified_aria": "Bestätigt, du kannst jetzt fortfahren",
     "error_aria": "Ein Fehler ist aufgetreten, bitte versuche es erneut",
-    "group_aria": "Menschen-Prüfung"
+    "group_aria": "Menschen-Prüfung",
+    "gate_title": "Kurze Prüfung",
+    "gate_text": "Bitte bestätige, dass du ein Mensch bist, um fortzufahren.",
+    "gate_cancel": "Abbrechen"
   }
 }

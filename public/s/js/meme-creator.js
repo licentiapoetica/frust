@@ -531,6 +531,11 @@
                 uCtx.restore();
             }
 
+            // Captcha first when the site requires one for uploads (cap.uploads)
+            if (window.f0ckCaptchaGate) {
+                try { await window.f0ckCaptchaGate('upload'); } catch { return; }
+            }
+
             uploadBtn.disabled = true;
             uploadBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> ' + (window.f0ckI18n?.uploading || 'Uploading...');
 

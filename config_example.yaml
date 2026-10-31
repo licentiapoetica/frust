@@ -328,3 +328,12 @@ cap:
   challenge_count: 50   # puzzles per captcha
   difficulty: 4         # hex digits per puzzle (each +1 = 16x more work)
   skip_onion: false     # true: no captcha for .onion visitors (e.g. Tor Browser "Safest" has no JS)
+  # Also before uploading / commenting: off, anon (anonymous accounts only) or all.
+  # Admins, mods and API-key uploads are never asked. One solved captcha covers that action
+  # for pass_minutes (so multi-file uploads or a few comments in a row need only one).
+  # pass_minutes: 0 asks every time: one captcha per upload (per file) and per comment.
+  # pass_minutes_anon applies to anonymous accounts instead (left out: same as pass_minutes).
+  uploads: "off"
+  comments: "off"
+  pass_minutes: 10
+  # pass_minutes_anon: 0

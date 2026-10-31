@@ -3423,6 +3423,15 @@ class CommentSystem {
             return;
         }
 
+        // Captcha first when the site requires one for comments (cap.comments). Covers the attachment
+        // uploads below too. The button stays disabled meanwhile so the form can't be sent twice.
+        if (window.f0ckCaptchaGate) {
+            submitBtn.disabled = true;
+            try { await window.f0ckCaptchaGate('comment'); }
+            catch { submitBtn.disabled = false; return; } // cancelled
+            submitBtn.disabled = false;
+        }
+
         // ── Upload all staged files now (at submit time) ───────────────────────
         const fileIds = [];
         const files = [];

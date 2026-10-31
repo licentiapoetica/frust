@@ -102,6 +102,9 @@ pub async fn handle_upload(st: AppState, mut req: Req) -> Res {
     if !session.api_key_auth && !csrf_header_ok(&req, &session) {
         return fail(403, "Invalid CSRF token");
     }
+    if !crate::cap::take(&cfg, &req, &session, crate::cap::Scope::Upload) {
+        return send(json!({ "success": false, "msg": "Please complete the captcha.", "captcha_required": "upload" }), 403);
+    }
 
     let mut max = cfg.f64("main.maxfilesize").filter(|m| *m > 0.0).unwrap_or(150.0 * 1024.0 * 1024.0);
     if session.admin {

@@ -2766,6 +2766,15 @@ window.initUploadForm = (selector) => {
             }
         }
 
+        // Captcha first when the site requires one for uploads (cap.uploads)
+        if (window.f0ckCaptchaGate) {
+            if (performUpload.captchaOpen) return;
+            performUpload.captchaOpen = true;
+            try { await window.f0ckCaptchaGate('upload'); }
+            catch { return; } // cancelled
+            finally { performUpload.captchaOpen = false; }
+        }
+
         const dragModal = form.closest('#upload-drag-modal');
         const comment = form.querySelector('.upload-comment')?.value.trim() || '';
         const isOc = form.querySelector('#upload-oc-checkbox')?.checked || false;
@@ -3111,6 +3120,12 @@ window.initUploadForm = (selector) => {
 
             for (let i = 0; i < selectedFiles.length; i++) {
                 const item = selectedFiles[i];
+                // With cap.pass_minutes: 0 every file needs its own captcha (the first was solved
+                // above). Otherwise the pass is still valid and this returns right away.
+                if (i > 0 && window.f0ckCaptchaGate) {
+                    try { await window.f0ckCaptchaGate('upload'); }
+                    catch { break; } // cancelled: keep what's uploaded, skip the rest
+                }
                 const globalVisEl = form.querySelector('input[name="visibility"]:checked');
                 const globalExpiryEl = form.querySelector('select[name="expiry"], input[name="expiry"]');
                 const isUrlItem = isShitpost && item.type === 'url';

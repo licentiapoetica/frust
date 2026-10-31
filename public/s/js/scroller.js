@@ -2843,6 +2843,8 @@
       if (!content || !commentsItemId || commentsPosting) return;
       commentsPosting = true; commentSendBtn.disabled = true;
       try {
+        // Captcha first when the site requires one for comments (cap.comments); cancelling throws
+        if (window.f0ckCaptchaGate) await window.f0ckCaptchaGate('comment');
         const csrfToken = window.f0ckSession?.csrf_token || window.scrollerCsrf || '';
         let postBody = `item_id=${commentsItemId}&content=${encodeURIComponent(content)}`;
         if (replyToCommentId) postBody += `&parent_id=${replyToCommentId}`;
@@ -2885,7 +2887,10 @@
             if (btn) btn.textContent = cur + 1;
           }
         }
-      } catch {} finally { commentsPosting = false; }
+      } catch {
+        // Failed or captcha cancelled: let the user send again
+        commentSendBtn.disabled = !(commentInput && commentInput.value.trim());
+      } finally { commentsPosting = false; }
     });
   }
 

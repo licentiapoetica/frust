@@ -108,6 +108,9 @@ async fn upload(st: AppState, mut req: Req) -> Res {
     if !crate::routes::uploads::csrf_header_ok(&req, &session) {
         return fail(403, "Invalid CSRF token");
     }
+    if !crate::cap::allowed(&st.cfg(), &req, &session, crate::cap::Scope::Comment) {
+        return send(json!({ "success": false, "msg": "Please complete the captcha.", "captcha_required": "comment" }), 403);
+    }
     let cfg = st.cfg();
     if crate::settings::is_anon_session(Some(&session))
         && (!crate::settings::can_anon_do(&cfg, "comment") || !crate::settings::can_anon_do(&cfg, "comment_attachments"))

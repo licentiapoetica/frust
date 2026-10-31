@@ -4,6 +4,7 @@
  * surrounding form as `cap-token`.
  */
 (() => {
+  if (window.f0ckCapReset) return; // already loaded (e.g. by cap-gate.js)
   // Self-hosted solver (the widget would otherwise fetch it from cdn.jsdelivr.net)
   window.CAP_CUSTOM_WASM_URL = '/s/cap/cap_wasm_bg.wasm';
   // No tracking parameters on the credits link (in case it ever shows)
@@ -22,6 +23,8 @@
   window.customElements.whenDefined('cap-widget').then(() => {
     document.querySelectorAll('cap-widget').forEach(watchWidget);
   });
+  // For widgets added later (the upload/comment captcha popup)
+  window.f0ckCapWatch = (w) => window.customElements.whenDefined('cap-widget').then(() => watchWidget(w));
 
   // Reset every widget inside `root`: tokens are single-use, so a failed submit needs a new one.
   window.f0ckCapReset = (root) => {

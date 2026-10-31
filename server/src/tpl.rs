@@ -690,6 +690,8 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     ctx.insert("lang".into(), json!(lang));
     ctx.insert("__date_lang".into(), Value::Null);
     ctx.insert("captcha_enabled".into(), json!(captcha));
+    // Actions this visitor must solve a captcha for (cap.uploads / cap.comments): loads the popup
+    ctx.insert("captcha_scopes".into(), json!(req.map(|r| crate::cap::scopes_needed(&cfg, r)).unwrap_or_default()));
     ctx.insert("csp_nonce".into(), json!(req.map(|r| r.csp_nonce.as_str()).unwrap_or("")));
     ctx.insert("is_anonymized".into(), json!(is_anonymized));
     ctx.insert("anon_anonymize".into(), json!(crate::settings::anon_anonymize(&cfg)));

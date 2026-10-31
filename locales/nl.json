@@ -866,6 +866,9 @@
     "verifying_aria": "Bezig met controleren, even geduld",
     "verified_aria": "Bevestigd, je kunt nu verder",
     "error_aria": "Er is een fout opgetreden, probeer het opnieuw",
-    "group_aria": "Menselijke verificatie"
+    "group_aria": "Menselijke verificatie",
+    "gate_title": "Even controleren",
+    "gate_text": "Bevestig dat je een mens bent om verder te gaan.",
+    "gate_cancel": "Annuleren"
   }
 }

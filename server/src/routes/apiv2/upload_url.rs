@@ -282,6 +282,9 @@ async fn upload_url_inner(st: &AppState, cfg: &Config, req: &mut Req) -> anyhow:
     }
     let post = req.post_value().await;
     let session: Session = req.session().cloned().unwrap_or_default();
+    if !crate::cap::take(cfg, req, &session, crate::cap::Scope::Upload) {
+        return Ok(j(json!({ "success": false, "msg": "Please complete the captcha.", "captcha_required": "upload" }), 403));
+    }
     let field = |k: &str| js_str(post.get(k));
     let title = post.get("title").and_then(Value::as_str).map(str::trim).filter(|t| !t.is_empty()).map(|t| crate::util::utf16_prefix(t, 500));
     let comment = field("comment").unwrap_or_default();

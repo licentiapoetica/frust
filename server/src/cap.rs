@@ -8,7 +8,9 @@
 //! expire (challenges after 10 minutes, tokens after 20).
 //!
 //! Config (`cap:`): `enabled` (falls back to the old `recaptcha.enabled`), `challenge_count` (50),
-//! `difficulty` (4 hex digits = 16 bits per puzzle), `skip_onion` (false).
+//! `difficulty` (4 hex digits = 16 bits per puzzle), `skip_onion` (false), and for uploads and
+//! comments `uploads` / `comments` ("off", "anon", "all") with `pass_minutes` (10; 0 = every time)
+//! and `pass_minutes_anon` (anonymous accounts; defaults to `pass_minutes`).
 
 use crate::config::Config;
 use crate::http::{Req, Res, Router, json_resp};
@@ -77,6 +79,145 @@ pub fn verify(token: Option<&str>) -> Captcha {
 pub fn register(r: &mut Router) {
     r.post(r"^\/api\/cap\/challenge\/?$", challenge);
     r.post(r"^\/api\/cap\/redeem\/?$", redeem);
+    r.get(r"^\/api\/cap\/pass\/?$", pass_status);
+    r.post(r"^\/api\/cap\/pass\/?$", pass_grant);
+}
+
+// ── Captcha for uploads and comments ────────────────────────────────────────
+//
+// `cap.uploads` / `cap.comments`: "off" (default), "anon" (anonymous accounts only) or "all".
+// Admins, moderators and API-key uploads never need it. Solving one captcha gives the account a
+// pass for that action for `cap.pass_minutes` (default 10), so a multi-file upload or a few
+// comments in a row don't each need a new one. `pass_minutes: 0` makes every upload and every
+// comment need its own captcha: the pass is used up by the request that performs the action
+// ([`take`]) and expires after [`SINGLE_PASS_MS`] when unused.
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Scope {
+    Upload,
+    Comment,
+}
+
+impl Scope {
+    pub const ALL: [Scope; 2] = [Scope::Upload, Scope::Comment];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Scope::Upload => "upload",
+            Scope::Comment => "comment",
+        }
+    }
+
+    fn parse(s: &str) -> Option<Scope> {
+        Scope::ALL.into_iter().find(|sc| sc.name() == s)
+    }
+
+    fn config_key(self) -> &'static str {
+        match self {
+            Scope::Upload => "cap.uploads",
+            Scope::Comment => "cap.comments",
+        }
+    }
+}
+
+/// user id + scope -> pass expiry
+static PASSES: Lazy<DashMap<(i64, Scope), i64>> = Lazy::new(DashMap::new);
+
+/// This account has to solve a captcha for `scope` (ignoring any pass it already has).
+pub fn needed(cfg: &Config, session: &crate::session::Session, scope: Scope) -> bool {
+    if !enabled(cfg) || session.admin || session.is_moderator || session.api_key_auth {
+        return false;
+    }
+    // Also accepts true/false (YAML 1.1 parsers read a bare `off` as false)
+    match cfg.get(scope.config_key()) {
+        Value::Bool(true) => true,
+        Value::String(s) if s == "all" => true,
+        Value::String(s) if s == "anon" => crate::settings::is_anon_session(Some(session)),
+        _ => false,
+    }
+}
+
+/// Scopes the current visitor needs a captcha for (for the page, to load the captcha popup).
+pub fn scopes_needed(cfg: &Config, req: &Req) -> Vec<&'static str> {
+    let Some(session) = req.session() else { return Vec::new() };
+    if !required(cfg, req) {
+        return Vec::new();
+    }
+    Scope::ALL.into_iter().filter(|sc| needed(cfg, session, *sc)).map(Scope::name).collect()
+}
+
+fn has_pass(session: &crate::session::Session, scope: Scope) -> bool {
+    PASSES.get(&(session.id, scope)).map(|e| *e > crate::util::now_ms()).unwrap_or(false)
+}
+
+/// The request may go ahead: no captcha needed, or the account holds a valid pass. Doesn't use the
+/// pass up, so it's for steps that come before the action itself (comment attachments).
+pub fn allowed(cfg: &Config, req: &Req, session: &crate::session::Session, scope: Scope) -> bool {
+    !required(cfg, req) || !needed(cfg, session, scope) || has_pass(session, scope)
+}
+
+/// Like [`allowed`], for the request that performs the action (an upload, posting a comment). With
+/// `pass_minutes: 0` this uses up the pass, so the next action needs a new captcha.
+pub fn take(cfg: &Config, req: &Req, session: &crate::session::Session, scope: Scope) -> bool {
+    if !required(cfg, req) || !needed(cfg, session, scope) {
+        return true;
+    }
+    let minutes = pass_minutes(cfg, session);
+    if minutes > 0 {
+        return has_pass(session, scope);
+    }
+    let now = crate::util::now_ms();
+    // Atomic, so two parallel requests can't share one pass
+    PASSES.remove_if(&(session.id, scope), |_, exp| *exp > now).is_some()
+}
+
+/// How long a pass from `pass_minutes: 0` stays usable when nothing uses it.
+const SINGLE_PASS_MS: i64 = 5 * 60 * 1000;
+
+/// Pass length for this account: `cap.pass_minutes_anon` for anonymous accounts (falls back to
+/// `cap.pass_minutes`), `cap.pass_minutes` for everyone else. 0 = one captcha per upload / comment.
+fn pass_minutes(cfg: &Config, session: &crate::session::Session) -> i64 {
+    let all = cfg.int_or("cap.pass_minutes", 10);
+    let minutes = if crate::settings::is_anon_session(Some(session)) { cfg.int_or("cap.pass_minutes_anon", all) } else { all };
+    minutes.clamp(0, 24 * 60)
+}
+
+fn pass_ms(cfg: &Config, session: &crate::session::Session) -> i64 {
+    match pass_minutes(cfg, session) {
+        0 => SINGLE_PASS_MS,
+        m => m * 60_000,
+    }
+}
+
+/// GET /api/cap/pass?scope=upload → { required }: whether the client must show the captcha first.
+async fn pass_status(st: AppState, req: Req) -> Res {
+    let cfg = st.cfg();
+    let Some(scope) = req.query("scope").and_then(Scope::parse) else { return reply(json!({ "success": false, "error": "Unknown scope" })) };
+    let required = match req.session() {
+        Some(s) => !allowed(&cfg, &req, s, scope),
+        None => false,
+    };
+    reply(json!({ "success": true, "required": required }))
+}
+
+/// POST /api/cap/pass { "cap-token", scope } → grants the pass for this account.
+async fn pass_grant(st: AppState, mut req: Req) -> Res {
+    let cfg = st.cfg();
+    let body = req.post_value().await;
+    let Some(session) = req.session().cloned() else { return reply(json!({ "success": false, "error": "Not logged in" })) };
+    let Some(scope) = body.get("scope").and_then(Value::as_str).and_then(Scope::parse) else {
+        return reply(json!({ "success": false, "error": "Unknown scope" }));
+    };
+    match verify(body.get("cap-token").and_then(Value::as_str)) {
+        Captcha::Ok => {}
+        Captcha::Missing => return reply(json!({ "success": false, "error": "Please complete the captcha." })),
+        Captcha::Failed => return reply(json!({ "success": false, "error": "Captcha expired or invalid. Please try again." })),
+    }
+    let now = crate::util::now_ms();
+    sweep(now);
+    let expires = now + pass_ms(&cfg, &session);
+    PASSES.insert((session.id, scope), expires);
+    reply(json!({ "success": true, "expires": expires }))
 }
 
 fn reply(v: Value) -> Res {
@@ -99,6 +240,7 @@ fn sweep(now: i64) {
     }
     CHALLENGES.retain(|_, p| p.expires > now);
     TOKENS.retain(|_, exp| *exp > now);
+    PASSES.retain(|_, exp| *exp > now);
     IP_HITS.retain(|_, (start, _)| now - *start < 60_000);
 }
 

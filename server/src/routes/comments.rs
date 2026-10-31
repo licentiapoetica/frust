@@ -364,6 +364,9 @@ async fn post_comment(st: AppState, mut req: Req) -> Res {
     if is_anon_session(Some(&session)) && !can_anon_do(&cfg, "comment") {
         return j(json!({ "success": false, "message": "Anonymous commenting is disabled" }), 403);
     }
+    if !crate::cap::take(&cfg, &req, &session, crate::cap::Scope::Comment) {
+        return j(json!({ "success": false, "message": "Please complete the captcha.", "captcha_required": "comment" }), 403);
+    }
     if !is_admin_or_mod(&session) && is_comment_rate_limited(session.id) {
         return j(json!({ "success": false, "message": "You're posting too fast. Please slow down." }), 429);
     }

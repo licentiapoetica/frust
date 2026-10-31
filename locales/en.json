@@ -869,6 +869,9 @@
     "verifying_aria": "Verifying you're a human, please wait",
     "verified_aria": "We have verified you're a human, you may now continue",
     "error_aria": "An error occurred, please try again",
-    "group_aria": "Human verification"
+    "group_aria": "Human verification",
+    "gate_title": "Quick check",
+    "gate_text": "Please confirm you're human to continue.",
+    "gate_cancel": "Cancel"
   }
 }
