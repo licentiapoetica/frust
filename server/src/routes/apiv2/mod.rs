@@ -2,3 +2,4 @@
 
 pub mod anon;
 pub mod passkeys;
+pub mod tags;
