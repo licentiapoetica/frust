@@ -509,9 +509,9 @@ async fn text_save(st: AppState, mut req: Req, page: PageText) -> Res {
 
 // ── Config editor API ───────────────────────────────────────────────────────
 //
-// The old handlers reflected any `Origin` in `Access-Control-Allow-Origin` together with
-// `Access-Control-Allow-Credentials: true`, letting any website read (and write) the whole
-// config.yaml — including secrets — with an admin's cookies. That CORS reflection is dropped.
+// The old handlers also set `Access-Control-Allow-Origin: <request Origin>` with
+// `Access-Control-Allow-Credentials: true` themselves; that per-route reflection is dropped here.
+// NOTE: the global `/api/` CORS middleware (`app::cors`, from index.mjs) still reflects any origin.
 
 fn config_unauthorized(req: &Req) -> Option<Response> {
     (!req.session().map(|s| s.admin).unwrap_or(false)).then(|| json_raw(&json!({ "success": false, "msg": "Unauthorized" }), 401))

@@ -19,17 +19,21 @@ use serde_json::{Map, Value};
 use std::path::Path;
 
 /// Save a full config object to `<base>/config.yaml`, keeping the file's comments and layout.
-/// The file is replaced atomically (temp file + rename) and keeps its permissions.
+/// The file is replaced atomically (temp file + rename next to the real file, so a symlinked
+/// config.yaml stays a symlink) and keeps its permissions. Where a rename isn't possible (a
+/// bind-mounted single file in Docker) it is written in place, like the old `writeFileSync`.
 pub fn write_config_file(base: &Path, new_config: &Value) -> Result<()> {
     let Value::Object(_) = new_config else { bail!("Invalid configuration payload") };
-    let path = base.join("config.yaml");
+    let link = base.join("config.yaml");
+    let path = std::fs::canonicalize(&link).unwrap_or(link);
     let text = std::fs::read_to_string(&path).with_context(|| format!("Cannot read {}", path.display()))?;
     let out = sync_yaml(&text, new_config)?;
     if out == text {
         return Ok(());
     }
-    let tmp = base.join(format!(".config.yaml.{}.tmp", crate::util::random_hex(6)));
-    let res = (|| -> Result<()> {
+    let dir = path.parent().unwrap_or(base);
+    let tmp = dir.join(format!(".config.yaml.{}.tmp", crate::util::random_hex(6)));
+    let atomic = (|| -> Result<()> {
         std::fs::write(&tmp, &out)?;
         if let Ok(meta) = std::fs::metadata(&path) {
             std::fs::set_permissions(&tmp, meta.permissions())?;
@@ -37,10 +41,11 @@ pub fn write_config_file(base: &Path, new_config: &Value) -> Result<()> {
         std::fs::rename(&tmp, &path)?;
         Ok(())
     })();
-    if res.is_err() {
-        let _ = std::fs::remove_file(&tmp);
+    if atomic.is_ok() {
+        return Ok(());
     }
-    res.with_context(|| format!("Cannot write {}", path.display()))
+    let _ = std::fs::remove_file(&tmp);
+    std::fs::write(&path, &out).with_context(|| format!("Cannot write {}", path.display()))
 }
 
 /// Parse YAML text into the JSON tree the server works with.

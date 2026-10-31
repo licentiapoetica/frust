@@ -50,7 +50,8 @@ async fn upload_page(st: AppState, mut req: Req) -> Res {
         "max_file_size": crate::util::format_size_f(max),
         "min_tags": st.settings.min_tags(),
         "uploads_remaining": uploads_remaining,
-        "allowed_mimes": mimes.keys().cloned().collect::<Vec<_>>().join(","),
+        // `allowed_mimes` comes from the template globals (MIME types plus `.ext`): in the old
+        // renderer the global won over the route's extension-less list.
         "mimes_json": serde_json::to_string(&mimes).unwrap_or_default(),
         "web_url_upload": cfg.truthy("websrv.web_url_upload"),
         "page_meta": {

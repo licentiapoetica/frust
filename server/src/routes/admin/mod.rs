@@ -90,7 +90,7 @@ pub(crate) async fn totals(st: &AppState) -> Value {
            count(*) FILTER (WHERE i.active AND NOT i.is_deleted AND NOT EXISTS (SELECT 1 FROM tags_assign ta WHERE ta.item_id = i.id AND ta.tag_id IN (1, 2, ", nsfl_id, "))) AS untagged,
            count(*) FILTER (WHERE i.active AND NOT i.is_deleted AND EXISTS (SELECT 1 FROM tags_assign ta WHERE ta.item_id = i.id AND ta.tag_id = 1)) AS sfw,
            count(*) FILTER (WHERE i.active AND NOT i.is_deleted AND EXISTS (SELECT 1 FROM tags_assign ta WHERE ta.item_id = i.id AND ta.tag_id = 2)) AS nsfw,
-           count(*) FILTER (WHERE i.active AND NOT i.is_deleted AND EXISTS (SELECT 1 FROM tags_assign ta WHERE ta.item_id = i.id AND ta.tag_id = ", nsfl_id, "))) AS nsfl,
+           count(*) FILTER (WHERE i.active AND NOT i.is_deleted AND EXISTS (SELECT 1 FROM tags_assign ta WHERE ta.item_id = i.id AND ta.tag_id = ", nsfl_id, ")) AS nsfl,
            count(*) FILTER (WHERE NOT i.active AND i.is_deleted) AS deleted,
            count(*) FILTER (WHERE NOT i.active AND NOT i.is_deleted) AS pending,
            max(i.id) AS last
