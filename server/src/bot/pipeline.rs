@@ -1,9 +1,7 @@
 //! Upload-pipeline functions the bot triggers need (`queue.mjs`, `lib_delete.mjs`, `transcode.mjs`,
 //! parts of `lib.mjs`).
 //!
-//! The simple ones are implemented here. `generate_phash` and `gen_thumbnail` are `TODO(port)`
-//! stubs: they belong to the upload pipeline (`port/uploads`), and once that lands these should
-//! become thin wrappers around the shared implementation (same signatures).
+//! The simple ones are implemented here; thumbnails and perceptual hashes come from `crate::media::queue`.
 
 use crate::db::RowExt;
 use crate::sql;
@@ -29,10 +27,9 @@ pub async fn check_repost_sum(st: &AppState, checksum: &str) -> Result<Option<i6
 }
 
 /// `queue.generatePHash(source)` — temporal dHash (`h1_h2_h3`).
-/// TODO(port): provided by the upload pipeline (`port/uploads`). Until then no perceptual hash is
-/// stored and only exact checksum reposts are detected.
-pub async fn generate_phash(_st: &AppState, _source: &Path) -> Option<String> {
-    None
+/// Perceptual hash (shared upload pipeline).
+pub async fn generate_phash(_st: &AppState, source: &Path) -> Option<String> {
+    crate::media::queue::generate_phash(source).await
 }
 
 /// `queue.checkrepostphash(hash)` — visual duplicate (≥ 2 of 3 frame hashes within distance 15).
@@ -71,10 +68,11 @@ fn media_dirs(st: &AppState, pending: bool) -> (PathBuf, PathBuf) {
 }
 
 /// `queue.genThumbnail(filename, mime, itemid, link, pending)`.
-/// TODO(port): provided by the upload pipeline (`port/uploads`). Returning `Err` makes the caller
-/// fall back to the placeholder thumbnail (`mugge.png`), exactly like a failed thumbnail before.
-pub async fn gen_thumbnail(_st: &AppState, _filename: &str, _mime: &str, _item_id: i64, _link: &str, _pending: bool) -> Result<()> {
-    bail!("thumbnail generation not ported yet")
+/// Thumbnail via the shared upload pipeline; `Err` when only a placeholder could be written.
+pub async fn gen_thumbnail(st: &AppState, filename: &str, mime: &str, item_id: i64, link: &str, pending: bool) -> Result<()> {
+    let cfg = st.cfg();
+    let r = crate::media::queue::gen_thumbnail(&cfg, filename, mime, item_id, link, pending, 512).await;
+    if r.ok { Ok(()) } else { bail!("thumbnail generation failed") }
 }
 
 /// Placeholder thumbnail used when thumbnail generation fails.

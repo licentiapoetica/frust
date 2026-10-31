@@ -151,7 +151,7 @@ async fn hall_grid(st: AppState, req: Req) -> Res {
     };
     let mut opts = feed_opts(&req, &slug, &owner_name);
     opts.insert("page".into(), req.param("page").map(|p| json!(p)).unwrap_or(Value::Null));
-    let mut data = match feed_bridge::get_f0cks(&st, Value::Object(opts)).await {
+    let mut data = match feed_bridge::get_f0cks(&st, req.session(), Value::Object(opts)).await {
         Value::Object(m) => m,
         _ => serde_json::Map::new(),
     };
@@ -223,7 +223,7 @@ async fn hall_item(st: AppState, req: Req) -> Res {
     }
     let mut opts = feed_opts(&req, &slug, &owner_name);
     opts.insert("itemid".into(), json!(item_id));
-    let mut data = match feed_bridge::get_f0ck(&st, Value::Object(opts)).await {
+    let mut data = match feed_bridge::get_f0ck(&st, req.session(), Value::Object(opts)).await {
         Value::Object(m) => m,
         _ => serde_json::Map::new(),
     };

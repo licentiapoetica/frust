@@ -655,7 +655,7 @@ fn sync_user_options(st: &AppState, row: &Row, session: &Session, theme: &str) {
         session.disable_autoplay.unwrap_or(cfg.is_false("websrv.enable_autoplay")), ", ",
         session.disable_swiping.unwrap_or(cfg.is_false("websrv.enable_swiping")), ", ",
         session.show_background.unwrap_or(cfg.enabled("websrv.background")), ", ",
-        match ruffle_volume { Some(v) => crate::db::Bind::F64(v), None => crate::db::Bind::Null }, "::numeric, ",
+        match ruffle_volume { Some(v) => crate::db::Bind::F64(v), None => crate::db::Bind::NullText }, "::numeric, ",
         session.ruffle_background.unwrap_or(true), ", ",
         session.quote_emojis.unwrap_or(true), ", ",
         session.embed_youtube_in_comments.unwrap_or(cfg.enabled("websrv.embed_youtube_in_comments")), ", ",
