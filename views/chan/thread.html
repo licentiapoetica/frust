@@ -155,7 +155,7 @@
           <!-- Post Comment -->
           {% if p.com_raw %}
           <div class="chan-post-comment">
-            {{ p.com_formatted }}
+            {# sanitized in routes/chan.rs (sanitize_comment_html) #}{{ p.com_formatted|safe }}
           </div>
           {% endif %}
         </div>
