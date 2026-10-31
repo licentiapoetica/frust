@@ -2,6 +2,7 @@
 
 use crate::http::Router;
 
+pub mod admin_media;
 pub mod apiv2;
 pub mod banned;
 pub mod index;
@@ -30,6 +31,7 @@ pub fn build() -> Router {
     halls::register(&mut r);
     user_halls::register(&mut r);
     subscriptions::register(&mut r);
+    admin_media::register(&mut r);
     r.finalize();
     r
 }
