@@ -153,6 +153,10 @@ fn spawn_background_tasks(st: &state::AppState) {
         }
     });
 
+    // Tag preview cache (rebuilt on tag changes) and the ranking page's disk usage figure
+    routes::tag_image::spawn_listener(st);
+    routes::ranking::spawn_disk_size_task(st);
+
     // Expired uploads, 10 s after boot then every 30 s
     media::delete::spawn_expiry_purger(st);
 

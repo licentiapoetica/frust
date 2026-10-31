@@ -14,6 +14,14 @@ pub mod subscriptions;
 pub mod theme;
 pub mod uploads;
 pub mod user_halls;
+pub mod ajax;
+pub mod picdump;
+pub mod ranking;
+pub mod scroller;
+pub mod search;
+pub mod tag_image;
+pub mod toptags;
+pub mod user_tags;
 
 pub fn build() -> Router {
     let mut r = Router::new();
@@ -23,6 +31,7 @@ pub fn build() -> Router {
     register::register(&mut r);
     apiv2::anon::register(&mut r);
     apiv2::passkeys::register(&mut r);
+    apiv2::tags::register(&mut r);
     static_files::register(&mut r);
     theme::register(&mut r);
     uploads::register(&mut r);
@@ -30,6 +39,14 @@ pub fn build() -> Router {
     halls::register(&mut r);
     user_halls::register(&mut r);
     subscriptions::register(&mut r);
+    ajax::register(&mut r);
+    picdump::register(&mut r);
+    ranking::register(&mut r);
+    scroller::register(&mut r);
+    search::register(&mut r);
+    tag_image::register(&mut r);
+    toptags::register(&mut r);
+    user_tags::register(&mut r);
     r.finalize();
     r
 }
