@@ -9,7 +9,7 @@
 
 mod meta;
 mod rethumb;
-mod upload;
+pub(crate) mod upload;
 
 use crate::db::RowExt;
 use crate::http::{Req, Res, Router, json_raw};

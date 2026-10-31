@@ -99,4 +99,10 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       last_used timestamp with time zone DEFAULT now()
     )"#,
     r#"CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user_id ON webauthn_credentials(user_id)"#,
+    // URL metadata cache (routes/apiv2/index.mjs)
+    r#"CREATE TABLE IF NOT EXISTS meta_cache (
+      url TEXT PRIMARY KEY,
+      data JSONB,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )"#,
 ];
