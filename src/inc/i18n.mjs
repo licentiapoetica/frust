@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
-const localesDir = join(resolve(), 'src/inc/locales');
+const localesDir = join(resolve(), 'locales');
 
 function loadLocale(lang) {
   try {

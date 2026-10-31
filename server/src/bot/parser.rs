@@ -140,8 +140,8 @@ pub fn parse_w_args(message: &str, trigger: &str, min_tags: usize) -> WArgs {
 }
 
 fn yt_dlp_base(cfg: &Config) -> Vec<String> {
-    let runtime = cfg.str_or("main.ytdlp_js_runtime", "node");
-    ["--js-runtimes", runtime, "--geo-bypass", "--extractor-args", "youtube:player-client=ios,web"].iter().map(|s| s.to_string()).collect()
+    let runtime = crate::media::ytdlp_js_runtime(cfg);
+    ["--js-runtimes", runtime.as_str(), "--geo-bypass", "--extractor-args", "youtube:player-client=ios,web"].iter().map(|s| s.to_string()).collect()
 }
 
 fn socks(cfg: &Config) -> Option<String> {

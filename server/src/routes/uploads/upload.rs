@@ -591,7 +591,8 @@ async fn download(cfg: &Config, url: &str, uuid: &str, max: f64) -> Download {
     if let Some(p) = &socks {
         base.extend(["--proxy", p.as_str()]);
     }
-    base.extend(["--js-runtimes", "node", "--geo-bypass", "--extractor-args", "youtube:player-client=ios,web", "--newline", "--no-colors"]);
+    let js_runtime = media::ytdlp_js_runtime(cfg);
+    base.extend(["--js-runtimes", js_runtime.as_str(), "--geo-bypass", "--extractor-args", "youtube:player-client=ios,web", "--newline", "--no-colors"]);
     let quiet = || crate::proc::Opts { quiet: true, ..Default::default() };
 
     let mut a1 = base.clone();

@@ -6,6 +6,7 @@ mod app;
 mod audit;
 mod auth;
 mod bot;
+mod cli;
 mod config;
 mod config_write;
 mod db;
@@ -258,15 +259,61 @@ fn watch_config(st: &state::AppState) -> Option<notify::RecommendedWatcher> {
     Some(w)
 }
 
+/// Translations: `locales/` (falls back to the old `src/inc/locales` of the Node server).
+pub fn locales_dir(base: &std::path::Path) -> std::path::PathBuf {
+    let dir = base.join("locales");
+    if dir.is_dir() { dir } else { base.join("src/inc/locales") }
+}
+
+/// Shared state for the server and the CLI commands.
+pub fn new_state(cfg: config::Config, db: sqlx::PgPool, i18n: Arc<i18n::I18n>, tpl: tpl::Templates) -> Result<state::AppState> {
+    Ok(state::AppState(Arc::new(state::Inner {
+        settings: settings::Settings::new(&cfg),
+        cfg: ArcSwap::from_pointee(cfg),
+        db,
+        tpl,
+        i18n,
+        caches: state::Caches::new(),
+        git_hash: git_hash(),
+        process_secret: util::random_hex(32),
+        http: reqwest::Client::builder().timeout(Duration::from_secs(60)).build()?,
+        bot: bot::BotHandle::new(),
+        router: std::sync::OnceLock::new(),
+    })))
+}
+
+/// Wait for postgres, create the schema on an empty database and apply the startup migrations.
+pub async fn prepare_db(st: &state::AppState) {
+    wait_for_db(st).await;
+    for m in migrations::STARTUP_MIGRATIONS {
+        if let Err(e) = sqlx::raw_sql(m).execute(&st.db).await {
+            let first = m.lines().next().unwrap_or("").trim();
+            tracing::warn!("[BOOT] startup migration failed ({first}): {e}");
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    // `f0ckm <command> ...` runs a CLI command (see `f0ckm help`); no argument or `serve` starts the server.
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let command = args.first().filter(|a| a.as_str() != "serve").cloned();
+    // CLI commands log warnings to stderr (their output goes to stdout); the server logs info to stdout.
+    let (default_filter, writer) = match command {
+        Some(_) => ("warn", tracing_subscriber::fmt::writer::BoxMakeWriter::new(std::io::stderr)),
+        None => ("info,sqlx=warn,tower_http=warn", tracing_subscriber::fmt::writer::BoxMakeWriter::new(std::io::stdout)),
+    };
     tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,sqlx=warn,tower_http=warn".into()))
+        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| default_filter.into()))
         .with_target(false)
+        .with_writer(writer)
         .init();
     let _ = rustls::crypto::ring::default_provider().install_default();
 
     let base = std::env::var("F0CKM_BASE").map(std::path::PathBuf::from).unwrap_or(std::env::current_dir()?);
+    if command.is_some() {
+        std::process::exit(cli::run(&base, &args).await);
+    }
     let cfg = config::Config::load(&base)?;
 
     for dir in [
@@ -292,40 +339,15 @@ async fn main() -> Result<()> {
     }
 
     let pool = db::connect(&cfg).await?;
-    let i18n = Arc::new(i18n::I18n::new(base.join("src/inc/locales")));
+    let i18n = Arc::new(i18n::I18n::new(locales_dir(&base)));
     let tpl = tpl::Templates::new(base.join("views"), i18n.clone());
+    cli::build_css::ensure_bundle(&base);
 
-    if std::env::args().nth(1).as_deref() == Some("check-templates") {
-        let errors = tpl.check_all(&base.join("views"));
-        for (f, e) in &errors {
-            println!("{f}: {e}");
-        }
-        println!("{} template(s) with errors", errors.len());
-        std::process::exit(if errors.is_empty() { 0 } else { 1 });
-    }
     let port = std::env::var("F0CKM_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(cfg.port());
-    let st = state::AppState(Arc::new(state::Inner {
-        settings: settings::Settings::new(&cfg),
-        cfg: ArcSwap::from_pointee(cfg),
-        db: pool,
-        tpl,
-        i18n,
-        caches: state::Caches::new(),
-        git_hash: git_hash(),
-        process_secret: util::random_hex(32),
-        http: reqwest::Client::builder().timeout(Duration::from_secs(60)).build()?,
-        bot: bot::BotHandle::new(),
-        router: std::sync::OnceLock::new(),
-    }));
+    let st = new_state(cfg, pool, i18n, tpl)?;
     tracing::info!("Git hash: {}", st.git_hash);
 
-    wait_for_db(&st).await;
-    for m in migrations::STARTUP_MIGRATIONS {
-        if let Err(e) = sqlx::raw_sql(m).execute(&st.db).await {
-            let first = m.lines().next().unwrap_or("").trim();
-            tracing::warn!("[BOOT] startup migration failed ({first}): {e}");
-        }
-    }
+    prepare_db(&st).await;
     ensure_nsfl_tag(&st).await;
     settings::load_from_db(&st).await;
     private_items::init(&st).await;

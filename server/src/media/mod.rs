@@ -228,3 +228,9 @@ mod tests {
         assert_eq!(proxy_url(&cfg("main: { socks: 'undefined' }")), None);
     }
 }
+
+/// JavaScript runtime yt-dlp uses for YouTube (`--js-runtimes`): `main.ytdlp_js_runtime`, default
+/// `deno` (installed in the Docker image; set `node`, `bun` or `quickjs` for hosts without deno).
+pub fn ytdlp_js_runtime(cfg: &Config) -> String {
+    cfg.str_or("main.ytdlp_js_runtime", "deno").to_string()
+}

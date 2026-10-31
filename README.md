@@ -12,6 +12,11 @@ The software comes without any warranties or entitlements of any kind! The devel
 
 - Docker (https://docs.docker.com/engine/install/debian/)
 
+For development without Docker (except for the database): a Rust toolchain (1.90 or newer,
+https://rustup.rs) and the media tools the server calls: `ffmpeg`, `ffmpegthumbnailer`, ImageMagick 7
+(`magick`), `ghostscript`, `exiftool`, `file`, `yt-dlp` with `deno` (YouTube), `curl`.
+Node.js is no longer needed.
+
 ## prod
 
 first things
@@ -40,11 +45,11 @@ sql:
 
 `docker compose up -d`
 
-`docker exec -i f0ckm-db psql -U f0ckm -d f0ckm < migrations/f0ckm_schema.sql`
+The server creates the database schema on first start (from `migrations/f0ckm_schema.sql`). Then:
 
-`docker exec -t f0ckm node scripts/seed.mjs`
+`docker exec -t f0ckm f0ckm seed`
 
-`docker exec -t f0ckm node scripts/create-admin.mjs admin 'YOUR_PASSWORD_HERE'`
+`docker exec -it f0ckm f0ckm create-admin admin`  (asks for the password; at least 20 characters)
 
 For regular building after making changes to the source code
 
@@ -54,45 +59,71 @@ now vist http://localhost:1337 in your browser
 
 ## dev
 
-NOTE: when developing locally it might be necessary to run commands with `DB_HOST=localhost DB_PORT=5454`
-
 `docker compose up -d f0ckm-db`
 
 on dev machine:
 
-`cp config_example.yaml config.yaml`
-`npm i`
-`npm run dev`
+```bash
+cp config_example.yaml config.yaml          # main.development: true uses localhost:5454 for the database
+cargo build --release --manifest-path server/Cargo.toml
+scripts/fetch-ruffle.sh                     # Flash player (Ruffle) into public/s/ruffle, once
+./server/target/release/f0ckm seed
+./server/target/release/f0ckm create-admin admin
+STORAGE_DIR=f0ckm-data ./server/target/release/f0ckm
+```
 
-Fill Database
+now visit http://localhost:1337 in your browser. Templates (`views/`), translations (`locales/`),
+`public/` and `config.yaml` are read from disk and picked up without a restart; Rust changes need
+`cargo build` and a restart (`cargo run --manifest-path server/Cargo.toml` does both).
+`public/s/css/bundle.css` (the production stylesheet) is rebuilt automatically at start when
+`f0ckm.css` or `v0ck.css` changed, or by hand with `f0ckm build-css`.
 
-`docker exec -i f0ckm-db psql -U f0ckm -d f0ckm < migrations/f0ckm_schema.sql`
+### Environment
 
-`DB_HOST=localhost DB_PORT=5454 node scripts/seed.mjs`
+| Variable | Meaning |
+|---|---|
+| `STORAGE_DIR` | Directory with the media and runtime data (`b/`, `t/`, `ca/`, `pending/`, `deleted/`, `tmp/`, `logs/`, `import/`, …). Without it they live under `public/` and the project root. |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME` | Override the `sql:` section of `config.yaml` (also `POSTGRES_*`/`PG*`). |
+| `F0CKM_PORT` | Port to listen on (default: `websrv.port`). |
+| `F0CKM_BASE` | Project root with `config.yaml`, `views/`, `public/`, `locales/`, `migrations/` (default: current directory). |
+| `IP_HASH_SECRET` | Secret for hashing user IPs (see `.env.example`). |
+| `GIT_HASH` | Version shown in the footer (set by `build.bash`). |
+| `RUST_LOG` | Log filter, e.g. `info` or `debug,sqlx=warn`. |
 
-Create admin user in dev env
+### Command line
 
-`DB_HOST=localhost DB_PORT=5454 node scripts/create-admin.mjs admin 'YOUR_PASSWORD_HERE'`
+The `f0ckm` binary also runs the maintenance tools (`f0ckm help` lists them; in Docker:
+`docker exec -it f0ckm f0ckm <command>`). They read `config.yaml` and the variables above like the
+server does.
 
-now visit http://localhost:1337 in your browser, you can develop without needing to rebuild the docker image for every change
- 
+| Command | |
+|---|---|
+| `f0ckm seed` | Default site settings and the rating tags |
+| `f0ckm create-admin <user> [<password>]` | Create the admin (or reset an existing one) |
+| `f0ckm users list` / `create <user> [--admin] [--mod]` / `passwd <user>` | Accounts |
+| `f0ckm hash-password` | Print an Argon2id hash |
+| `f0ckm chat-upload-key create <name> [max_mb]` / `list` / `revoke <id>` | Keys for `POST /api/chat/upload` |
+| `f0ckm import [--user u] [--rating r] [--tags a,b] [--dir d] [--keep] …` | Bulk import from `f0ckm-data/import` (`import --help`) |
+| `f0ckm regen <ids> \| --all \| --audio \| --pdf \| --youtube [--blur] [--missing] [--from id] [--resume]` | Regenerate thumbnails, cover art, blurred thumbnails |
+| `f0ckm rehash [--phash] [--dry-run]` | Recompute checksums/sizes, or fill in missing perceptual hashes |
+| `f0ckm find-duplicates` | Visual duplicates by perceptual hash |
+| `f0ckm autotag <from_id> [<to_id>] [--dry-run]` | Rate untagged images with the configured NSFW APIs |
+| `f0ckm clean [--dry-run] [--yes]` | Report missing media, delete unreferenced files |
+| `f0ckm build-css [--check]` | Build `public/s/css/bundle.css` |
+| `f0ckm check-templates` | Compile all templates |
+
+Passwords left out on the command line are read from stdin.
+
+### Vendored browser libraries
+
+`public/s/js/jszip.min.js` (JSZip 3.10.1, MIT/GPLv3) and `public/s/js/marked.min.js` are committed.
+Ruffle is too large for the repository: `scripts/fetch-ruffle.sh` downloads the pinned release and
+checks its SHA-256 (the Docker build does the same). To update Ruffle, change `RUFFLE_VERSION` and
+`RUFFLE_SHA256` in both `scripts/fetch-ruffle.sh` and the `Dockerfile`.
+
 ## Configuration
 
 All configuration lives in one file, `config.yaml` (start from `config_example.yaml`). Edits are picked up while the app is running; settings that are only read at startup need a restart. Every option is documented in the [wiki](https://github.com/licentiapoetica/f0ckm/wiki/Configuration).
-
-### Upgrading from config.json
-
-Older versions used `config.json`. Convert it once, then delete it:
-
-`npm run config:migrate`
-
-With Docker and no Node.js on the host, convert before deploying. Otherwise Docker creates an empty `config.yaml` directory when it starts the new version:
-
-```bash
-docker build -t f0ckm .
-docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/host" --entrypoint node f0ckm scripts/config-migrate.mjs /host/config.json /host/config.yaml
-bash build.bash master
-```
 
 ## NGINX
 

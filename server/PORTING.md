@@ -175,3 +175,14 @@ Templates in `views/` are MiniJinja now (converted automatically from flummpress
   and remove them afterwards. Never delete or alter existing data, never run destructive SQL.
 * Unported dependencies: if you need a function another agent is porting, write a minimal local
   version or a clearly marked `TODO(port): ...` stub and mention it in the report.
+
+## Tooling and removing Node
+
+The Node scripts are replaced by subcommands of the binary (`server/src/cli/`, `f0ckm help`); the
+Docker image has no Node. What still has to go in the final cleanup step (nothing in the Rust server
+reads these):
+
+* `src/` (the Node server), `scripts/*.mjs`, `debug/`, `package.json`, `package-lock.json`,
+  `node_modules/`, `.eslintrc.json`
+* the fallbacks to them: `locales_dir()` in `main.rs` (`src/inc/locales`) and the
+  `node_modules/@ruffle-rs/ruffle` fallback in `routes/static_files.rs`

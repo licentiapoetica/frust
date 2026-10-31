@@ -5,8 +5,8 @@ main:
     regex: example\.com
   onion: http://your-onion-address.onion
   socks: socks5://127.0.0.1:9050
-  # JavaScript runtime yt-dlp uses for YouTube (chat link uploads): node, deno, bun or quickjs
-  # ytdlp_js_runtime: node
+  # JavaScript runtime yt-dlp uses for YouTube (link uploads): deno (default, in the Docker image), node, bun or quickjs
+  # ytdlp_js_runtime: deno
   mail: admin@example.com
   maxfilesize: 104857600
   adminmultiplier: 3.5
