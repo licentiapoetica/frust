@@ -1,34 +1,29 @@
 <div id="excluded-tags-overlay" style="display: none;">
   <div id="excluded-tags-close">&times;</div>
   <div class="search-container">
-    {# PORT_TODO @js block:
-
-      const _isMember = typeof session !== 'undefined' && session && session.user && !session.is_anon;
-      const _isAnon = typeof session !== 'undefined' && session && (session.is_anon || session.user === 'anonymous' || (typeof session.user === 'string' && session.user.startsWith('anon_')));
-      const _isGuest = !_isMember && !_isAnon;
-      const _isAnonUser = !_isMember;
-      const _canExcludeTags = !_isGuest && (!_isAnonUser || (typeof anon_permissions !== 'undefined' && anon_permissions && anon_permissions.exclude_tags !== false && anon_permissions.filter !== false));
-      const _allowedModes = _isGuest ? ['sfw'] : ((typeof anon_permissions !== 'undefined' && anon_permissions && anon_permissions.allowed_modes) || ['sfw', 'nsfw', 'untagged', 'all', 'nsfl']);
-      const _showSfw = true;
-      const _showNsfw = _isGuest || (!_isAnonUser || _allowedModes.includes('nsfw'));
-      const _showNsfl = enable_nsfl && (_isGuest || (!_isAnonUser || _allowedModes.includes('nsfl')));
-      const _showUntagged = _isGuest || (typeof session !== 'undefined' && session && (session.admin || session.is_moderator)) || (_isAnonUser && _allowedModes.includes('untagged'));
-      const _showAll = _isGuest || (!_isAnonUser || _allowedModes.includes('all'));
-
-      const _activeRatingList = _isGuest ? ['sfw'] : [_showSfw ? 'sfw' : null, _showNsfw ? 'nsfw' : null, _showNsfl ? 'nsfl' : null, _showUntagged ? 'untagged' : null].filter(Boolean);
-      const _isSingleRating = _isGuest || (_isAnonUser && _activeRatingList.length === 1 && !_showAll);
-      const _singleRating = _isGuest ? 'sfw' : (_isSingleRating ? _activeRatingList[0] : null);
-
-      const _allowedMimes = (typeof anon_permissions !== 'undefined' && anon_permissions && anon_permissions.allowed_mimes) || ['image', 'video', 'audio', 'flash', 'pdf'];
-      const _isSingleMime = _isAnonUser && _allowedMimes.length === 1;
-      const _singleMime = _isSingleMime ? _allowedMimes[0] : null;
-      const _hasMimeCats = typeof scroller_mime_cats !== 'undefined' && Array.isArray(scroller_mime_cats);
-      const _showVideo = _hasMimeCats && scroller_mime_cats.includes('video') && (!_isAnonUser || _allowedMimes.includes('video'));
-      const _showAudio = _hasMimeCats && scroller_mime_cats.includes('audio') && (!_isAnonUser || _allowedMimes.includes('audio'));
-      const _showImage = _hasMimeCats && scroller_mime_cats.includes('image') && (!_isAnonUser || _allowedMimes.includes('image'));
-      const _showFlash = enable_swf && (!_isAnonUser || _allowedMimes.includes('flash'));
-    
-#}
+    {% set _isMember = (session and session.user and not session.is_anon) %}
+    {% set _isAnon = (session and (session.is_anon or session.user == "anonymous" or (session.user is string and session.user.startswith("anon_")))) %}
+    {% set _isGuest = (not _isMember and not _isAnon) %}
+    {% set _isAnonUser = not _isMember %}
+    {% set _ap = anon_permissions if anon_permissions else none %}
+    {% set _canExcludeTags = (not _isGuest and (not _isAnonUser or (_ap and _ap.exclude_tags != false and _ap.filter != false))) %}
+    {% set _allowedModes = ["sfw"] if _isGuest else (_ap.allowed_modes if (_ap and _ap.allowed_modes) else ["sfw", "nsfw", "untagged", "all", "nsfl"]) %}
+    {% set _showSfw = true %}
+    {% set _showNsfw = (_isGuest or (not _isAnonUser or "nsfw" in _allowedModes)) %}
+    {% set _showNsfl = (enable_nsfl and (_isGuest or (not _isAnonUser or "nsfl" in _allowedModes))) %}
+    {% set _showUntagged = (_isGuest or (session and (session.admin or session.is_moderator)) or (_isAnonUser and "untagged" in _allowedModes)) %}
+    {% set _showAll = (_isGuest or (not _isAnonUser or "all" in _allowedModes)) %}
+    {% set _activeRatingList = ["sfw"] if _isGuest else (["sfw"] + (["nsfw"] if _showNsfw else []) + (["nsfl"] if _showNsfl else []) + (["untagged"] if _showUntagged else [])) %}
+    {% set _isSingleRating = (_isGuest or (_isAnonUser and _activeRatingList|length == 1 and not _showAll)) %}
+    {% set _singleRating = "sfw" if _isGuest else (_activeRatingList[0] if _isSingleRating else none) %}
+    {% set _allowedMimes = _ap.allowed_mimes if (_ap and _ap.allowed_mimes) else ["image", "video", "audio", "flash", "pdf"] %}
+    {% set _isSingleMime = (_isAnonUser and _allowedMimes|length == 1) %}
+    {% set _singleMime = _allowedMimes[0] if _isSingleMime else none %}
+    {% set _hasMimeCats = (scroller_mime_cats is defined and scroller_mime_cats is sequence and scroller_mime_cats is not string) %}
+    {% set _showVideo = (_hasMimeCats and "video" in scroller_mime_cats and (not _isAnonUser or "video" in _allowedMimes)) %}
+    {% set _showAudio = (_hasMimeCats and "audio" in scroller_mime_cats and (not _isAnonUser or "audio" in _allowedMimes)) %}
+    {% set _showImage = (_hasMimeCats and "image" in scroller_mime_cats and (not _isAnonUser or "image" in _allowedMimes)) %}
+    {% set _showFlash = (enable_swf and (not _isAnonUser or "flash" in _allowedMimes)) %}
     {% if _canExcludeTags %}
     <div class="excluded-tags-section-header">
       <span class="excluded-tags-section-title"><i class="fa-solid fa-ban"></i> {{ (t("filter.excluded_tags") or "Excluded Tags") }}</span>
