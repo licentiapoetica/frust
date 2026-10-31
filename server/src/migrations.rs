@@ -81,6 +81,7 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       word VARCHAR(255) NOT NULL UNIQUE,
       replacement VARCHAR(255) NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW()
+    )"#,
     // URL metadata cache (routes/apiv2/index.mjs)
     r#"CREATE TABLE IF NOT EXISTS meta_cache (
       url TEXT PRIMARY KEY,
@@ -88,3 +89,14 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
 ];
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn one_statement_each() {
+        for m in super::STARTUP_MIGRATIONS {
+            assert!(!m.contains("r#\"") && !m.contains("\"#"), "merged statements: {m}");
+            assert!(m.matches("CREATE TABLE").count() <= 1, "more than one CREATE TABLE: {m}");
+        }
+    }
+}

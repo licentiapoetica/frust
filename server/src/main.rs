@@ -319,7 +319,10 @@ async fn main() -> Result<()> {
 
     wait_for_db(&st).await;
     for m in migrations::STARTUP_MIGRATIONS {
-        let _ = sqlx::raw_sql(m).execute(&st.db).await;
+        if let Err(e) = sqlx::raw_sql(m).execute(&st.db).await {
+            let first = m.lines().next().unwrap_or("").trim();
+            tracing::warn!("[BOOT] startup migration failed ({first}): {e}");
+        }
     }
     ensure_nsfl_tag(&st).await;
     settings::load_from_db(&st).await;
