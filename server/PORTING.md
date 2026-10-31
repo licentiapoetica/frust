@@ -40,6 +40,7 @@ Already ported modules you should reuse (don't duplicate them):
 | `auth.rs`, `anon_auth.rs`, `webauthn.rs` | session create/destroy, reCAPTCHA, anonymous identities, passkeys (table `webauthn_credentials`; the old `passkey_credentials` is unused) |
 | `smtp.rs`, `gate.rs`, `bot/` | mail, private-society gate, chat bots (`st.bot`) |
 | `wordfilter.rs` | `apply_word_filter` (comment word filter; `social::helpers` re-exports it) |
+| `retention.rs` | personal-data retention job (started from `main.rs`) |
 
 Reference ports: `routes/banned.rs`, `routes/theme.rs`, `routes/comments.rs`, `routes/index.rs`.
 Login/logout/forgot/reset password (from `admin.mjs`) are already in `routes/register.rs`.
