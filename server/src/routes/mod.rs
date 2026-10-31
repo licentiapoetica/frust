@@ -7,9 +7,13 @@ pub mod banned;
 pub mod index;
 pub mod random;
 pub mod register;
+pub mod comments;
+pub mod halls;
 pub mod static_files;
+pub mod subscriptions;
 pub mod theme;
 pub mod uploads;
+pub mod user_halls;
 
 pub fn build() -> Router {
     let mut r = Router::new();
@@ -22,6 +26,10 @@ pub fn build() -> Router {
     static_files::register(&mut r);
     theme::register(&mut r);
     uploads::register(&mut r);
+    comments::register(&mut r);
+    halls::register(&mut r);
+    user_halls::register(&mut r);
+    subscriptions::register(&mut r);
     r.finalize();
     r
 }
