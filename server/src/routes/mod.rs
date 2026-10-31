@@ -14,6 +14,7 @@ pub mod subscriptions;
 pub mod theme;
 pub mod uploads;
 pub mod user_halls;
+pub mod profile_media;
 pub mod settings;
 pub mod wordfilter;
 
@@ -26,6 +27,7 @@ pub fn build() -> Router {
     apiv2::anon::register(&mut r);
     apiv2::passkeys::register(&mut r);
     apiv2::settings::register(&mut r);
+    profile_media::register(&mut r);
     settings::register(&mut r);
     wordfilter::register(&mut r);
     static_files::register(&mut r);
