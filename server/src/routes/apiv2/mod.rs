@@ -3,3 +3,4 @@
 pub mod anon;
 pub mod passkeys;
 pub mod settings;
+pub mod tags;

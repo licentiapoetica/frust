@@ -23,6 +23,14 @@ pub mod nsfp;
 pub mod pending;
 pub mod reports;
 pub mod warnings;
+pub mod ajax;
+pub mod picdump;
+pub mod ranking;
+pub mod scroller;
+pub mod search;
+pub mod tag_image;
+pub mod toptags;
+pub mod user_tags;
 
 pub fn build() -> Router {
     let mut r = Router::new();
@@ -36,6 +44,7 @@ pub fn build() -> Router {
     profile_media::register(&mut r);
     settings::register(&mut r);
     wordfilter::register(&mut r);
+    apiv2::tags::register(&mut r);
     static_files::register(&mut r);
     theme::register(&mut r);
     uploads::register(&mut r);
@@ -49,6 +58,14 @@ pub fn build() -> Router {
     pending::register(&mut r);
     nsfp::register(&mut r);
     notifications::register(&mut r);
+    ajax::register(&mut r);
+    picdump::register(&mut r);
+    ranking::register(&mut r);
+    scroller::register(&mut r);
+    search::register(&mut r);
+    tag_image::register(&mut r);
+    toptags::register(&mut r);
+    user_tags::register(&mut r);
     r.finalize();
     r
 }

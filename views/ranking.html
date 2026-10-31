@@ -97,7 +97,7 @@
     <div class="section-big">
       {% if (list|length >= 3) %}
       <div class="ranking-podium">
-        {# PORT_TODO @for(let i = 0; i < 3; i++) #}{% for PORT_TODO in [] %}
+        {% for i in range(3) %}
         <div class="podium-item rank-{{ (i + 1) }}">
           {% if i == 0 %}<div class="podium-crown">👑</div>{% endif %}
           <div class="podium-avatar-wrapper">
@@ -129,7 +129,7 @@
           </tr>
         </thead>
         <tbody>
-          {# PORT_TODO @for(let i = (list.length >= 3 ? 3 : 0); i < list.length; i++) #}{% for PORT_TODO in [] %}
+          {% for i in range(3 if list|length >= 3 else 0, list|length) %}
           <tr>
             <td class="rank-cell">#{{ (i + 1) }}</td>
             <td class="avatar-cell">

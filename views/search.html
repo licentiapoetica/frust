@@ -10,13 +10,13 @@
       <button type="submit">🔍</button>
       <div class="search-options">
         <label>
-          <input type="checkbox" name="mode" value="strict" {{ ("checked" if mode == "strict" else "") }}> {{ t("search.strict_mode") }}
+          <input type="checkbox" name="mode" value="strict" {{ ("checked" if search_mode == "strict" else "") }}> {{ t("search.strict_mode") }}
         </label>
       </div>
     </form>
     <div class="results">
-      {% if result %}
-      <h2>{{ (((t("search.results_found")).replace("{count}", count, 1)).replace("{page}", pagination.page, 1)).replace("{total}", pagination.end, 1) }}</h2>
+      {% if result is defined and result is not none and result is not false %}
+      <h2>{{ (((t("search.results_found")).replace("{count}", count|string, 1)).replace("{page}", pagination.page|string, 1)).replace("{total}", pagination.end|string, 1) }}</h2>
       <table style="width: 100%" class="table">
         <thead>
           <tr>
@@ -37,7 +37,7 @@
             <td><span class="mview_desc">Tag:</span><a href="/tag/{{ line.tag }}">{{ line.tag }}</a></td>
             <td><span class="mview_desc">Mime:</span>{{ line.mime }}</td>
             <td><span class="mview_desc">User:</span><a href="/user/{{ line.username }}/uploads/{{ line.id }}">{{ line.username }}</a></td>
-            <td><span class="mview_desc">Score:</span>{{ line.score|fixed(2) }}</td>
+            <td><span class="mview_desc">Score:</span>{% if line.score is defined and line.score is not none %}{{ line.score|fixed(2) }}{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>

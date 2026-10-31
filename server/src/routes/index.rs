@@ -599,7 +599,7 @@ fn req_with_session(req: &Req, session: Option<Session>) -> Req {
 }
 
 /// Booleans the item templates use (precomputed in the old route).
-fn item_template_flags(cfg: &crate::config::Config, data: &mut Value, session: Option<&Session>, real_session: Option<&Session>) {
+pub(crate) fn item_template_flags(cfg: &crate::config::Config, data: &mut Value, session: Option<&Session>, real_session: Option<&Session>) {
     let is_anon = session.map(|s| s.is_anon || s.user == "anonymous" || s.user.starts_with("anon_")).unwrap_or(false);
     let item_user = data["item"]["username"].as_str().unwrap_or("").to_string();
     let is_mod_or_admin = session.map(|s| s.admin || s.is_moderator).unwrap_or(false);
@@ -810,7 +810,7 @@ async fn subscription_status(st: &AppState, user_id: i64, item_id: i64) -> bool 
 
 /// `f0cklib.updateUserTagAffinity({ user_id, tag, scoreDelta: 2.0 })`, fire and forget.
 /// TODO(port): replace with the recommendations port of updateUserTagAffinity once it exists.
-fn update_user_tag_affinity(st: &AppState, user_id: i64, tag: &str) {
+pub(crate) fn update_user_tag_affinity(st: &AppState, user_id: i64, tag: &str) {
     let tags: Vec<String> = tag
         .split(',')
         .map(|t| t.trim().to_lowercase())
