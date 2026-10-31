@@ -52,51 +52,9 @@ pub async fn audit_log(st: &AppState, user_id: i64, action: &str, target_type: &
     }
 }
 
-/// `applyWordFilter(content)` — case-preserving replacements from the `wordfilter` table.
-pub async fn apply_word_filter(st: &AppState, content: &str) -> String {
-    if content.is_empty() {
-        return String::new();
-    }
-    let filters = match sql!("SELECT word, replacement FROM wordfilter").fetch_all(&st.db).await {
-        Ok(f) => f,
-        Err(e) => {
-            tracing::error!("[WORDFILTER] Error applying filter: {e}");
-            return content.to_string();
-        }
-    };
-    let mut filtered = content.to_string();
-    for f in filters {
-        let word = f.string("word");
-        let replacement = f.string("replacement");
-        if word.is_empty() {
-            continue;
-        }
-        let Ok(re) = regex::RegexBuilder::new(&regex::escape(&word)).case_insensitive(true).build() else { continue };
-        filtered = re
-            .replace_all(&filtered, |caps: &regex::Captures| {
-                let m = &caps[0];
-                let upper = m.to_uppercase();
-                let lower = m.to_lowercase();
-                if m == upper && m != lower {
-                    return replacement.to_uppercase();
-                }
-                let first: String = m.chars().take(1).collect();
-                if first == first.to_uppercase() && first != first.to_lowercase() {
-                    let mut chars = replacement.chars();
-                    return match chars.next() {
-                        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
-                        None => String::new(),
-                    };
-                }
-                if m == lower {
-                    return replacement.to_lowercase();
-                }
-                replacement.clone()
-            })
-            .into_owned();
-    }
-    filtered
-}
+/// `applyWordFilter(content)` — shared implementation in `crate::wordfilter`.
+#[allow(unused_imports)]
+pub use crate::wordfilter::apply_word_filter;
 
 /// `resolveAuditIP(req)`
 pub fn resolve_audit_ip(cfg: &Config, req: &Req) -> Option<String> {

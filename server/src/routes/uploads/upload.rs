@@ -1,6 +1,6 @@
 //! `POST /api/v2/upload` (`src/upload_handler.mjs`): file, URL, YouTube and album uploads.
 
-use super::{api_key_session, apply_word_filter, assign_tag, csrf_header_ok, declared_len, ensure_tag, fail, log_anon_activity, send};
+use super::{api_key_session, assign_tag, csrf_header_ok, declared_len, ensure_tag, fail, log_anon_activity, send};
 use crate::config::Config;
 use crate::db::RowExt;
 use crate::http::{Req, Res};
@@ -406,7 +406,7 @@ async fn insert_comment(st: &AppState, ctx: &Ctx, item_id: i64) {
     if ctx.comment.is_empty() {
         return;
     }
-    let content = apply_word_filter(st, &ctx.comment).await;
+    let content = crate::wordfilter::apply_word_filter(st, &ctx.comment).await;
     if let Err(e) = sql!("INSERT INTO comments (item_id, user_id, content) VALUES (", item_id as i32, ", ", ctx.user_id(), ", ", content, ")").execute(&st.db).await {
         tracing::error!("[UPLOAD HANDLER] Failed to insert comment: {e}");
     }

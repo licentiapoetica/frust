@@ -80,52 +80,6 @@ pub(crate) async fn assign_tag(st: &AppState, item_id: i64, tag_id: i64, user_id
     Ok(())
 }
 
-/// Case-preserving word filter (`src/inc/wordfilter.mjs`).
-/// TODO(port): replace with the shared wordfilter module once the comments port provides one.
-pub(crate) async fn apply_word_filter(st: &AppState, content: &str) -> String {
-    let rows = match sql!("SELECT word, replacement FROM wordfilter").fetch_all(&st.db).await {
-        Ok(r) => r,
-        Err(e) => {
-            tracing::error!("[WORDFILTER] Error applying filter: {e}");
-            return content.to_string();
-        }
-    };
-    let pairs: Vec<(String, String)> = rows.iter().map(|r| (r.string("word"), r.string("replacement"))).collect();
-    word_filter(content, &pairs)
-}
-
-pub(crate) fn word_filter(content: &str, filters: &[(String, String)]) -> String {
-    let mut out = content.to_string();
-    for (word, repl) in filters {
-        if word.is_empty() {
-            continue;
-        }
-        let Ok(re) = regex::Regex::new(&format!("(?i){}", regex::escape(word))) else { continue };
-        out = re
-            .replace_all(&out, |c: &regex::Captures| {
-                let m = &c[0];
-                let (up, low) = (m.to_uppercase(), m.to_lowercase());
-                if m == up && m != low {
-                    return repl.to_uppercase();
-                }
-                let first: String = m.chars().take(1).collect();
-                if first == first.to_uppercase() && first != first.to_lowercase() {
-                    let mut ch = repl.chars();
-                    return match ch.next() {
-                        Some(f) => f.to_uppercase().collect::<String>() + ch.as_str(),
-                        None => String::new(),
-                    };
-                }
-                if m == low {
-                    return repl.to_lowercase();
-                }
-                repl.clone()
-            })
-            .into_owned();
-    }
-    out
-}
-
 /// `logAnonActivity` (anon_auth.mjs) for anonymous sessions.
 pub(crate) async fn log_anon_activity(st: &AppState, req: &Req, action: &str, target_id: Option<i64>, details: Value) {
     let Some(s) = req.session() else { return };
@@ -147,20 +101,4 @@ pub(crate) async fn log_anon_activity(st: &AppState, req: &Req, action: &str, ta
         return;
     }
     crate::security::log_user_ip(st, s.id, &raw_ip).await;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn word_filter_cases() {
-        let f = vec![("darn".to_string(), "heck".to_string())];
-        assert_eq!(word_filter("darn it", &f), "heck it");
-        assert_eq!(word_filter("Darn it", &f), "Heck it");
-        assert_eq!(word_filter("DARN it", &f), "HECK it");
-        assert_eq!(word_filter("dArN", &f), "heck");
-        let f = vec![("a.b".to_string(), "x".to_string())];
-        assert_eq!(word_filter("a.b acb", &f), "x acb", "word is literal, not a regex");
-    }
 }

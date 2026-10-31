@@ -26,6 +26,8 @@ mod state;
 mod tpl;
 mod util;
 mod webauthn;
+mod retention;
+mod wordfilter;
 
 use anyhow::{Context, Result};
 use arc_swap::ArcSwap;
@@ -337,6 +339,7 @@ async fn main() -> Result<()> {
     let _ = st.router.set(Arc::new(router));
 
     spawn_background_tasks(&st);
+    retention::start(&st);
     bot::start(&st);
     let _config_watcher = watch_config(&st);
 
