@@ -35,6 +35,11 @@ pub mod toptags;
 pub mod user_tags;
 pub mod chan;
 pub mod external;
+pub mod messages;
+pub mod chat;
+pub mod chat_upload;
+pub mod chat_preview;
+pub mod comment_upload;
 
 pub fn build() -> Router {
     let mut r = Router::new();
@@ -77,6 +82,11 @@ pub fn build() -> Router {
     admin::register(&mut r);
     chan::register(&mut r);
     external::register(&mut r);
+    messages::register(&mut r);
+    chat::register(&mut r);
+    chat_upload::register(&mut r);
+    chat_preview::register(&mut r);
+    comment_upload::register(&mut r);
     r.finalize();
     r
 }

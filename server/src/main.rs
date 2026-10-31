@@ -169,6 +169,10 @@ fn spawn_background_tasks(st: &state::AppState) {
     // Postgres LISTEN → live event stream (/api/notifications/stream)
     routes::notifications::spawn_listener(st);
 
+    // Expired DM attachments (every 6 hours) and chat uploads (hourly)
+    routes::messages::spawn_cleanup(st);
+    routes::chat_upload::spawn_cleanup(st);
+
     // Private/unavailable item index, every 30 s
     let s = st.clone();
     tokio::spawn(async move {
