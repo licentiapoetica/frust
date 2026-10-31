@@ -133,9 +133,16 @@ pub fn socks(cfg: &Config) -> Option<String> {
     cfg.str("main.socks").map(str::trim).filter(|s| !s.is_empty() && *s != "undefined").map(str::to_string)
 }
 
-/// Proxy URL for curl/yt-dlp `--proxy`: as configured when it has a scheme, else `socks5h://host`.
-pub fn proxy_url(cfg: &Config) -> Option<String> {
+/// Configured upstream proxy (`main.socks`): as configured when it has a scheme, else `socks5h://host`.
+pub fn configured_proxy(cfg: &Config) -> Option<String> {
     socks(cfg).map(|s| if s.contains("://") { s } else { format!("socks5h://{s}") })
+}
+
+/// Proxy for curl/yt-dlp `--proxy` when fetching user-supplied URLs: the configured SOCKS proxy
+/// (e.g. Tor, which refuses internal addresses itself), otherwise the SSRF guard
+/// (`crate::net_guard`). Always `Some` once the guard runs, so tools never fetch unguarded.
+pub fn proxy_url(cfg: &Config) -> Option<String> {
+    configured_proxy(cfg).or_else(crate::net_guard::proxy_url)
 }
 
 /// `calculateExpiresAt` (routes/apiv2/upload.mjs): expiry value → unix timestamp or `None`.
@@ -223,9 +230,9 @@ mod tests {
 
     #[test]
     fn proxies() {
-        assert_eq!(proxy_url(&cfg("main: { socks: '127.0.0.1:9050' }")).as_deref(), Some("socks5h://127.0.0.1:9050"));
-        assert_eq!(proxy_url(&cfg("main: { socks: 'socks5://h:1' }")).as_deref(), Some("socks5://h:1"));
-        assert_eq!(proxy_url(&cfg("main: { socks: 'undefined' }")), None);
+        assert_eq!(configured_proxy(&cfg("main: { socks: '127.0.0.1:9050' }")).as_deref(), Some("socks5h://127.0.0.1:9050"));
+        assert_eq!(configured_proxy(&cfg("main: { socks: 'socks5://h:1' }")).as_deref(), Some("socks5://h:1"));
+        assert_eq!(configured_proxy(&cfg("main: { socks: 'undefined' }")), None);
     }
 }
 

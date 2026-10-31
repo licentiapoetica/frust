@@ -144,8 +144,15 @@ fn yt_dlp_base(cfg: &Config) -> Vec<String> {
     ["--js-runtimes", runtime.as_str(), "--geo-bypass", "--extractor-args", "youtube:player-client=ios,web"].iter().map(|s| s.to_string()).collect()
 }
 
-fn socks(cfg: &Config) -> Option<String> {
-    cfg.str("main.socks").filter(|s| !s.is_empty() && *s != "undefined").map(str::to_string)
+/// `--proxy` for sites that went through `main.socks`: the SOCKS proxy if configured, else the
+/// SSRF guard.
+fn socks_or_guard(cfg: &Config) -> Vec<String> {
+    crate::media::proxy_url(cfg).map(|p| vec!["--proxy".into(), p]).unwrap_or_default()
+}
+
+/// `--proxy` for the other sites: always the SSRF guard (they never used the SOCKS proxy).
+fn guard() -> Vec<String> {
+    crate::net_guard::ytdlp_args()
 }
 
 fn strings(v: &[&str]) -> Vec<String> {
@@ -154,14 +161,14 @@ fn strings(v: &[&str]) -> Vec<String> {
 
 /// yt-dlp arguments for the metadata probe (`--dump-json`).
 pub fn meta_args(cfg: &Config, s: Site, link: &str) -> Vec<String> {
-    let proxy: Vec<String> = socks(cfg).map(|p| vec!["--proxy".into(), p]).unwrap_or_default();
+    let proxy = socks_or_guard(cfg);
     let base = yt_dlp_base(cfg);
     let mut a: Vec<String> = match s {
-        Site::Pornhub => [base, strings(&["--referer", "https://www.pornhub.com", "--no-progress", "--no-warnings", "--user-agent", PC_UA])].concat(),
+        Site::Pornhub => [guard(), base, strings(&["--referer", "https://www.pornhub.com", "--no-progress", "--no-warnings", "--user-agent", PC_UA])].concat(),
         Site::Instagram | Site::FourChan => [proxy, base, strings(&["-f", FMT])].concat(),
         Site::Imgur => [proxy, base].concat(),
         Site::YouTube => [proxy, base, strings(&["-f", FMT, "-I", "1"])].concat(),
-        Site::Generic | Site::Mxc => [base, strings(&["-f", FMT])].concat(),
+        Site::Generic | Site::Mxc => [guard(), base, strings(&["-f", FMT])].concat(),
     };
     a.extend(strings(&["--skip-download", "--dump-json", "--", link]));
     a
@@ -169,14 +176,14 @@ pub fn meta_args(cfg: &Config, s: Site, link: &str) -> Vec<String> {
 
 /// yt-dlp arguments for the download.
 pub fn download_args(cfg: &Config, s: Site, link: &str, max_bytes: f64, out_template: &str) -> Vec<String> {
-    let proxy: Vec<String> = socks(cfg).map(|p| vec!["--proxy".into(), p]).unwrap_or_default();
+    let proxy = socks_or_guard(cfg);
     let base = yt_dlp_base(cfg);
     let mut a: Vec<String> = match s {
-        Site::Pornhub => [proxy, strings(&["--no-playlist", "--referer", "https://www.pornhub.com", "--user-agent", PC_UA, "-f", FMT])].concat(),
+        Site::Pornhub => [guard(), strings(&["--no-playlist", "--referer", "https://www.pornhub.com", "--user-agent", PC_UA, "-f", FMT])].concat(),
         Site::Instagram | Site::FourChan => [proxy, base, strings(&["-f", FMT])].concat(),
         Site::Imgur => [proxy, base, strings(&["-f", FMT_IMGUR])].concat(),
         Site::YouTube => [proxy, base, strings(&["-f", FMT, "-I", "1"])].concat(),
-        Site::Generic | Site::Mxc => [base, strings(&["-f", FMT])].concat(),
+        Site::Generic | Site::Mxc => [guard(), base, strings(&["-f", FMT])].concat(),
     };
     a.extend([
         "--max-filesize".to_string(),
@@ -219,19 +226,15 @@ fn referer_for(link: &str, force_host: Option<&str>) -> String {
     }
 }
 
-fn socks_host(cfg: &Config) -> Option<String> {
-    socks(cfg).map(|s| s.split_once("://").map(|(_, h)| h.to_string()).unwrap_or(s))
-}
-
 /// `getMimeViaCurl(link)`: extension from the `Content-Type` of a HEAD request.
 async fn ext_via_curl(cfg: &Config, link: &str) -> Option<String> {
     let referer = referer_for(link, None);
     let mut args = vec!["-I", "-s", "-f", "-L", "--max-time", "60", "--user-agent", PC_UA, "--referer", &referer];
-    let proxy = socks_host(cfg);
+    let proxy = crate::media::proxy_url(cfg);
     if let Some(p) = &proxy {
-        args.extend(["--socks5-hostname", p.as_str()]);
+        args.extend(["--proxy", p.as_str()]);
     }
-    args.push(link);
+    args.extend(["--", link]);
     let out = crate::proc::spawn("curl", &args).await.ok()?.stdout_str();
     let ct = out.lines().find_map(|l| {
         let (k, v) = l.split_once(':')?;
@@ -552,11 +555,11 @@ impl Upload {
             "-s", "-f", "-L", "-o", &out, "--max-filesize", &max, "--connect-timeout", "30", "--max-time", "300", "--user-agent", PC_UA, "--referer", &referer,
             "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8", "-H", "Accept-Language: en-US,en;q=0.9",
         ];
-        let proxy = socks_host(cfg);
+        let proxy = crate::media::proxy_url(cfg);
         if let Some(p) = &proxy {
-            args.extend(["--socks5-hostname", p.as_str()]);
+            args.extend(["--proxy", p.as_str()]);
         }
-        args.push(link);
+        args.extend(["--", link]);
         if crate::proc::spawn("curl", &args).await.is_err() {
             let _ = tokio::fs::remove_file(&tmpfile).await;
             return None;
@@ -770,11 +773,11 @@ mod tests {
         assert_eq!(&a[a.len() - 2..], &["--", "https://youtu.be/x"]);
         assert!(a.windows(2).any(|w| w == ["-I", "1"]));
         let a = download_args(&cfg, Site::Generic, "https://e.org/v", 104857600.0 * 3.5, "/tmp/u.%(ext)s");
-        assert!(!a.contains(&"--proxy".to_string()));
+        // Sites that never used main.socks still go through the SSRF guard, not the SOCKS proxy
+        assert!(!a.iter().any(|x| x.contains("9050")));
         assert!(a.windows(2).any(|w| w == ["--max-filesize", "358400k"]));
         assert_eq!(a.last().unwrap(), "https://e.org/v");
         assert_eq!(referer_for("https://i.imgur.com/a.mp4", None), "https://imgur.com/");
-        assert_eq!(socks_host(&cfg).as_deref(), Some("127.0.0.1:9050"));
     }
 
     #[test]

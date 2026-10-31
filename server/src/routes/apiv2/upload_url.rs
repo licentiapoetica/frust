@@ -218,9 +218,9 @@ async fn extract_url(st: AppState, mut req: Req) -> Res {
     }
     // Title/description via yt-dlp, only for public http(s) URLs (the old code passed anything on)
     if validate_remote_url(&url).is_some() {
-        let socks = media::socks(&st.cfg());
+        let proxy = media::proxy_url(&st.cfg());
         let mut a: Vec<&str> = vec![];
-        if let Some(p) = &socks {
+        if let Some(p) = &proxy {
             a.extend(["--proxy", p.as_str()]);
         }
         a.extend(["--get-title", "--get-description", "--no-playlist", "--skip-download", "--", &url]);
@@ -650,12 +650,14 @@ async fn download(cfg: &Config, job: &UrlJob, job_id: &str, uuid: &str, max: f64
     let tmp = cfg.paths.tmp.clone();
     let out_tpl = tmp.join(format!("{uuid}.%(ext)s")).to_string_lossy().into_owned();
     let max_k = format!("{}k", crate::util::js_num(max / 1024.0));
-    let socks = media::socks(cfg);
+    // Configured SOCKS proxy, or the SSRF guard (crate::net_guard)
+    let proxy = media::proxy_url(cfg);
     let mut base: Vec<&str> = vec![];
-    if let Some(p) = &socks {
+    if let Some(p) = &proxy {
         base.extend(["--proxy", p.as_str()]);
     }
-    base.extend(["--js-runtimes", "node", "--geo-bypass", "--extractor-args", "youtube:player-client=ios,web", "--newline", "--no-colors"]);
+    let js_runtime = media::ytdlp_js_runtime(cfg);
+    base.extend(["--js-runtimes", js_runtime.as_str(), "--geo-bypass", "--extractor-args", "youtube:player-client=ios,web", "--newline", "--no-colors"]);
     let url = job.url.as_str();
     let last = |s: String| s.trim().split('\n').map(str::trim).filter(|l| !l.is_empty()).last().map(str::to_string);
 
@@ -682,7 +684,7 @@ async fn download(cfg: &Config, job: &UrlJob, job_id: &str, uuid: &str, max: f64
                     tracing::warn!("[UPLOAD-URL-ASYNC] Stage 2 failed: {}", e2.msg);
                     tracing::info!("[UPLOAD-URL-ASYNC] Starting Stage 3 (curl) fallback for {url}");
                     set_progress(job_id, json!({ "stage": "downloading", "percent": 0, "speed": null, "eta": null }));
-                    return curl_fallback(cfg, url, uuid, max, socks.as_deref()).await;
+                    return curl_fallback(cfg, url, uuid, max, proxy.as_deref()).await;
                 }
             }
         }
@@ -693,7 +695,7 @@ async fn download(cfg: &Config, job: &UrlJob, job_id: &str, uuid: &str, max: f64
     own_tmp_file(&tmp, uuid, &p).await.ok_or_else(|| CmdErr::plain("File too large or download failed"))
 }
 
-async fn curl_fallback(cfg: &Config, url: &str, uuid: &str, max: f64, socks: Option<&str>) -> Result<PathBuf, CmdErr> {
+async fn curl_fallback(cfg: &Config, url: &str, uuid: &str, max: f64, proxy: Option<&str>) -> Result<PathBuf, CmdErr> {
     let tmp = cfg.paths.tmp.join(format!("{uuid}.tmp"));
     let t = tmp.to_string_lossy().into_owned();
     let referer = url::Url::parse(url)
@@ -713,9 +715,8 @@ async fn curl_fallback(cfg: &Config, url: &str, uuid: &str, max: f64, socks: Opt
         "--referer", &referer, "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8", "-H",
         "Accept-Language: en-US,en;q=0.9",
     ];
-    let host = socks.map(|p| p.split_once("://").map(|(_, h)| h).unwrap_or(p).to_string());
-    if let Some(h) = &host {
-        a.extend(["--socks5-hostname", h.as_str()]);
+    if let Some(p) = proxy {
+        a.extend(["--proxy", p]);
     }
     a.extend(["--", url]);
     if let Err(e) = run("curl", &a, Duration::from_secs(330)).await {

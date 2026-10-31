@@ -40,12 +40,14 @@ fn opts(timeout_secs: u64, ignore_exit: bool) -> Opts {
     Opts { timeout: Duration::from_secs(timeout_secs), ignore_exit_code: ignore_exit, quiet: true, ..Default::default() }
 }
 
-/// `cfg.main.socks` as `socks5h://` (DNS through the proxy).
+/// `cfg.main.socks` as `socks5h://` (DNS through the proxy), else the SSRF guard proxy.
 fn socks_h(st: &AppState) -> Option<String> {
-    crate::media::socks(&st.cfg()).map(|s| match s.strip_prefix("socks5://") {
-        Some(rest) => format!("socks5h://{rest}"),
-        None => s,
-    })
+    crate::media::socks(&st.cfg())
+        .map(|s| match s.strip_prefix("socks5://") {
+            Some(rest) => format!("socks5h://{rest}"),
+            None => s,
+        })
+        .or_else(crate::net_guard::proxy_url)
 }
 
 // ── GET /meta/extract/item/:id ──────────────────────────────────────────────
@@ -459,8 +461,9 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
     }
     let is_large = LARGE_SITE_RE.is_match(&url);
     let is_yt = YT_HOST_RE.is_match(&url);
-    let socks = crate::media::socks(&cfg);
+    let socks = crate::media::proxy_url(&cfg);
     let socks_h = socks_h(&st);
+    let js_runtime = crate::media::ytdlp_js_runtime(&cfg);
     let proxy: Vec<&str> = match &socks {
         Some(p) => vec!["--proxy", p.as_str()],
         None => vec![],
@@ -491,7 +494,7 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
         }
         for attempt in 1..=2 {
             let mut a = proxy.clone();
-            a.extend(["--quiet", "--no-warnings", "--js-runtimes", "node", "--print", "%(title)s", "--print", "%(uploader)s", "--skip-download", "--", &url]);
+            a.extend(["--quiet", "--no-warnings", "--js-runtimes", js_runtime.as_str(), "--print", "%(title)s", "--print", "%(uploader)s", "--skip-download", "--", &url]);
             match spawn_with("yt-dlp", &a, opts(120, false)).await {
                 Ok(o) => {
                     let l = lines(&o.stdout_str());
@@ -519,7 +522,7 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
     for attempt in 1..=3 {
         let mut a = proxy.clone();
         a.extend([
-            "--quiet", "--no-warnings", "--js-runtimes", "node", "--geo-bypass", "--print", "%(title)s", "--print", "%(uploader)s", "--print",
+            "--quiet", "--no-warnings", "--js-runtimes", js_runtime.as_str(), "--geo-bypass", "--print", "%(title)s", "--print", "%(uploader)s", "--print",
             "%(webpage_url_domain)s", "--skip-download", "--", &url,
         ]);
         let r = match spawn_with("yt-dlp", &a, opts(120, false)).await {

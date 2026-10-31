@@ -30,26 +30,10 @@ fn auto_tags_from_url(url: &str) -> Vec<String> {
     if yt(&domain) || yt(&host) { vec!["youtube".into()] } else { vec![] }
 }
 
-/// URL uploads must be http(s) and must not point at this machine or a private network
-/// (the old code handed any string to yt-dlp/curl, including option-like strings and
-/// `file://`/`localhost` targets).
+/// URL uploads must be http(s) and must not point at this machine or a private network.
+/// The download itself goes through `crate::net_guard`'s proxy, which re-checks every address.
 pub fn validate_remote_url(raw: &str) -> Option<url::Url> {
-    let u = url::Url::parse(raw).ok()?;
-    if u.scheme() != "http" && u.scheme() != "https" {
-        return None;
-    }
-    let host = u.host()?;
-    let blocked = match host {
-        url::Host::Domain(d) => {
-            let d = d.trim_end_matches('.').to_ascii_lowercase();
-            d == "localhost" || d.ends_with(".localhost") || d.ends_with(".local") || d.ends_with(".internal")
-        }
-        url::Host::Ipv4(ip) => ip.is_loopback() || ip.is_private() || ip.is_link_local() || ip.is_unspecified() || ip.is_broadcast() || ip.octets()[0] == 100 && (ip.octets()[1] & 0xc0) == 64,
-        url::Host::Ipv6(ip) => {
-            ip.is_loopback() || ip.is_unspecified() || (ip.segments()[0] & 0xfe00) == 0xfc00 || (ip.segments()[0] & 0xffc0) == 0xfe80 || ip.to_ipv4_mapped().is_some_and(|v4| v4.is_loopback() || v4.is_private())
-        }
-    };
-    (!blocked).then_some(u)
+    crate::net_guard::validate_remote_url(raw)
 }
 
 fn rating_tag_id(cfg: &Config, rating: Option<&str>) -> i64 {
@@ -586,9 +570,10 @@ async fn download(cfg: &Config, url: &str, uuid: &str, max: f64) -> Download {
     let tmp = &cfg.paths.tmp;
     let out_tpl = tmp.join(format!("{uuid}.%(ext)s")).to_string_lossy().into_owned();
     let max_k = format!("{}k", crate::util::js_num(max / 1024.0));
-    let socks = media::socks(cfg);
+    // Configured SOCKS proxy, or the SSRF guard (crate::net_guard)
+    let proxy = media::proxy_url(cfg);
     let mut base: Vec<&str> = Vec::new();
-    if let Some(p) = &socks {
+    if let Some(p) = &proxy {
         base.extend(["--proxy", p.as_str()]);
     }
     let js_runtime = media::ytdlp_js_runtime(cfg);
@@ -635,9 +620,8 @@ async fn download(cfg: &Config, url: &str, uuid: &str, max: f64) -> Download {
                         "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
                         "-H", "Accept-Language: en-US,en;q=0.9",
                     ];
-                    let proxy_host = socks.as_deref().map(|p| p.split_once("://").map(|(_, h)| h).unwrap_or(p).to_string());
-                    if let Some(h) = &proxy_host {
-                        c.extend(["--socks5-hostname", h.as_str()]);
+                    if let Some(p) = &proxy {
+                        c.extend(["--proxy", p.as_str()]);
                     }
                     if crate::proc::spawn("curl", &c).await.is_err() {
                         return Download::Failed("Failed to download file from URL");

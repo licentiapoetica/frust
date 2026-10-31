@@ -18,6 +18,7 @@ mod http;
 mod i18n;
 mod media;
 mod migrations;
+mod net_guard;
 mod private_items;
 mod proc;
 mod routes;
@@ -317,6 +318,9 @@ async fn main() -> Result<()> {
 
     let base = std::env::var("F0CKM_BASE").map(std::path::PathBuf::from).unwrap_or(std::env::current_dir()?);
     if command.is_some() {
+        if let Err(e) = net_guard::start().await {
+            eprintln!("outgoing request guard failed to start: {e}");
+        }
         std::process::exit(cli::run(&base, &args).await);
     }
     let cfg = config::Config::load(&base)?;
@@ -352,6 +356,7 @@ async fn main() -> Result<()> {
     let st = new_state(cfg, pool, i18n, tpl)?;
     tracing::info!("Git hash: {}", st.git_hash);
 
+    net_guard::start().await.context("outgoing request guard")?;
     prepare_db(&st).await;
     ensure_nsfl_tag(&st).await;
     settings::load_from_db(&st).await;
