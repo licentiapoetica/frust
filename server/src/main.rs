@@ -156,6 +156,9 @@ fn spawn_background_tasks(st: &state::AppState) {
     // Expired uploads, 10 s after boot then every 30 s
     media::delete::spawn_expiry_purger(st);
 
+    // Postgres LISTEN → live event stream (/api/notifications/stream)
+    routes::notifications::spawn_listener(st);
+
     // Private/unavailable item index, every 30 s
     let s = st.clone();
     tokio::spawn(async move {
