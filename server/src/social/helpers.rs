@@ -1,7 +1,7 @@
 //! Small helpers the social routes need from modules other agents are porting.
 //!
 //! TODO(port): `compute_base_mode`, `resolve_mime_sql` and `resolve_numeric_item_id` duplicate
-//! f0cklib.mjs helpers (feed port), `audit_log` is `audit.mjs`, `apply_word_filter` is
+//! f0cklib.mjs helpers (feed port), `apply_word_filter` is
 //! `wordfilter.mjs`, `log_anon_activity`/`resolve_audit_ip` are from `anon_auth.mjs`.
 //! Once those modules exist, replace these with calls to them.
 
@@ -30,26 +30,10 @@ pub async fn resolve_numeric_item_id(st: &AppState, id_or_slug: &str) -> Option<
     row.and_then(|r| r.i64("item_id")).filter(|n| *n != 0)
 }
 
-/// `audit.log(userId, action, targetType, targetId, details)` — errors are only logged.
+#[allow(dead_code)]
+/// `audit.log(...)` — kept as a thin wrapper for callers on other branches; use [`crate::audit::log`].
 pub async fn audit_log(st: &AppState, user_id: i64, action: &str, target_type: &str, target_id: &str, details: Option<Value>) {
-    let details = details.unwrap_or_else(|| Value::Object(Default::default()));
-    let q = sql!(
-        "INSERT INTO audit_log (user_id, action, target_type, target_id, details) VALUES (",
-        user_id as i32,
-        ", ",
-        action,
-        ", ",
-        target_type,
-        ", ",
-        target_id,
-        ", ",
-        details,
-        ")"
-    );
-    match q.execute(&st.db).await {
-        Ok(_) => tracing::info!("[AUDIT] User {user_id} performed {action} on {target_type}:{target_id}"),
-        Err(e) => tracing::error!("[AUDIT] Failed to write log: {e}"),
-    }
+    crate::audit::log(st, user_id, action, target_type, target_id.to_string(), details.unwrap_or(Value::Null)).await
 }
 
 /// `applyWordFilter(content)` — case-preserving replacements from the `wordfilter` table.

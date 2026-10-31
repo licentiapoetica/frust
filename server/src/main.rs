@@ -3,6 +3,7 @@
 
 mod anon_auth;
 mod app;
+mod audit;
 mod auth;
 mod bot;
 mod config;
