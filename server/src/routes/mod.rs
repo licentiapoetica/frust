@@ -23,6 +23,9 @@ pub fn build() -> Router {
     register::register(&mut r);
     apiv2::anon::register(&mut r);
     apiv2::passkeys::register(&mut r);
+    apiv2::index::register(&mut r);
+    apiv2::ambient::register(&mut r);
+    apiv2::upload_url::register(&mut r);
     static_files::register(&mut r);
     theme::register(&mut r);
     uploads::register(&mut r);
