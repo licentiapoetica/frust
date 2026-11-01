@@ -12984,6 +12984,12 @@ html[theme="f0ck95d"] .badge-dark {
   transition: opacity 0.15s ease;
 }
 
+/* The "|" separators: aligned like the links, or they sit on the baseline next to middle-aligned links */
+.steuerung > span {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .steuerung a:hover,
 .steuerung button:hover {
   opacity: 0.8;
