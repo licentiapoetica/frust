@@ -8,7 +8,6 @@
         {% if ((allow_fileupload_comments and not session.is_anon) or (allow_fileupload_comments and anon_permissions.comment_attachments != false)) %}<button class="comment-attach-btn" title="{{ t("comments.attach_file") }}" type="button"><i class="fa-solid fa-paperclip"></i></button>{% endif %}
         {% if enable_comment_polls %}<button class="comment-poll-btn" title="{{ (t("comments.poll_btn_title") or "Create poll") }}" type="button"><i class="fa-solid fa-chart-bar"></i></button>{% endif %}
         {% if is_mod_or_admin %}<button id="lock-thread-btn" class="admin-lock-btn" title="{{ ("Unlock Thread" if item.is_comments_locked else "Lock Thread") }}">{% if item.is_comments_locked %}<i class="fa-solid fa-lock"></i>{% else %}<i class="fa-solid fa-lock-open"></i>{% endif %}</button>{% endif %}
-        <button class="spoiler-trigger" title="Insert spoiler tag">[S]</button>
         <button class="emoji-trigger"><i class="fa-regular fa-face-smile"></i></button>
         <button class="submit-comment"><span class="submit-label">{{ t("comments.post") }}</span><i class="fa-solid fa-spinner fa-spin submit-spinner"></i></button>
     </div>

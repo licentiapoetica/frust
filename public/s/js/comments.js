@@ -4487,38 +4487,11 @@ class CommentSystem {
 
         const actions = container.querySelector('.input-actions');
         if (actions) {
-            // Add spoiler button
-            const spoilerBtn = document.createElement('button');
-            spoilerBtn.innerText = '[S]';
-            spoilerBtn.className = 'spoiler-trigger';
-            spoilerBtn.title = 'Insert spoiler tag';
-            spoilerBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const start = textarea.selectionStart;
-                const end = textarea.selectionEnd;
-                const val = textarea.value;
-                const selected = val.substring(start, end);
-
-                if (selected) {
-                    const tagStart = '[spoiler]';
-                    const tagEnd = '[/spoiler]';
-                    textarea.value = val.substring(0, start) + tagStart + selected + tagEnd + val.substring(end);
-                    const newPos = start + tagStart.length + selected.length + tagEnd.length;
-                    textarea.setSelectionRange(newPos, newPos);
-                } else {
-                    const tagStart = '[spoiler]';
-                    textarea.value = val.substring(0, start) + '[spoiler][/spoiler]' + val.substring(start);
-                    const newPos = start + tagStart.length;
-                    textarea.setSelectionRange(newPos, newPos);
-                }
-                textarea.focus();
-            });
             const referenceNode = actions.querySelector('.cancel-reply') ||
                 actions.querySelector('.cancel-edit-btn') ||
                 actions.querySelector('.submit-comment') ||
                 actions.querySelector('.save-edit-btn');
             actions.insertBefore(trigger, referenceNode);
-            actions.insertBefore(spoilerBtn, trigger);
 
             // Prevent trigger from blurring the textarea, keeping the keyboard open
             trigger.addEventListener('mousedown', (e) => {
@@ -4534,7 +4507,7 @@ class CommentSystem {
                 lockBtn.title = this.isLocked ? 'Unlock Thread' : 'Lock Thread';
                 lockBtn.innerHTML = this.isLocked ? this.icons.lock : this.icons.unlock;
                 lockBtn.className = 'admin-lock-btn';
-                actions.insertBefore(lockBtn, spoilerBtn);
+                actions.insertBefore(lockBtn, trigger);
             }
 
             // Create picker once and cache it
