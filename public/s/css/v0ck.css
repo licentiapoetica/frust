@@ -355,22 +355,23 @@
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 2px;
+  width: 3px;
   transform: translateX(-50%);
-  background: #fff;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  /* Yellow with a dark outline: stays visible on the played part of the bar (white in amoled),
+     the unplayed track and the video behind it */
+  background: #ffd844;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.85);
   transition: width 0.12s, background 0.12s;
 }
 
 /* No own timestamp: placed at a random time on load */
 .danmaku-marker.is-random::before {
-  background: rgba(255, 255, 255, 0.45);
-  box-shadow: none;
+  background: rgba(255, 216, 68, 0.55);
 }
 
 .danmaku-marker:hover::before {
-  width: 4px;
-  background: #ffd844;
+  width: 5px;
+  background: #fff;
 }
 
 /* Hover preview of a marker's comment (plain text), above the progress bar */
