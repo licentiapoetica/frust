@@ -88,6 +88,11 @@
     font-weight: 500;
 }
 
+/* Section headings (Title, Rating, Visibility, …) left-aligned; the form itself centres its text */
+.upload-form .form-section > label {
+    text-align: left;
+}
+
 .required {
     color: #ff6b6b;
 }
@@ -726,6 +731,87 @@
   opacity: 1;
 }
 
+/* Rating and visibility: segmented bars in the style of the mode tabs above. The selected option
+   gets an underline, in the rating's colour (SFW/NSFW/NSFL) or the accent for visibility. */
+.upload-form :is(.global-rating-section, .global-visibility-section) .rating-options {
+    flex-wrap: nowrap;
+    gap: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+}
+
+.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option + .rating-option {
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option .rating-label {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 0.65rem 1rem;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    opacity: 1;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    transition: color 0.15s, background 0.15s;
+}
+
+.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option .rating-label:hover {
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option input:checked + .rating-label {
+    color: var(--white, #fff);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: none;
+}
+
+.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option input:checked + .rating-label::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--upload-opt-color, var(--accent));
+}
+
+.upload-form .global-rating-section .rating-label.sfw { --upload-opt-color: #51cf66; }
+.upload-form .global-rating-section .rating-label.nsfw { --upload-opt-color: #ff00e3; }
+.upload-form .global-rating-section .rating-label.nsfl { --upload-opt-color: #cc0000; }
+
+/* Shown once a file (or URL) has been added (upload.js). :not(#_) only adds weight: shitpost album
+   mode forces these sections visible with !important. */
+.upload-form .form-section.upload-await-file:not(#_) {
+    display: none !important;
+}
+
+.upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section) {
+    animation: upload-options-in 0.2s ease-out;
+}
+
+@keyframes upload-options-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section) { animation: none; }
+}
+
 /* Tags */
 .tag-input-container {
     background: rgba(255, 255, 255, 0.05);
@@ -1217,9 +1303,9 @@
 .meta-suggestions-container {
     margin-top: 1rem;
     padding: 0.75rem;
-    background: rgba(88, 101, 242, 0.05);
-    border: 1px dashed rgba(88, 101, 242, 0.2);
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0;
 }
 
 .suggestions-header {

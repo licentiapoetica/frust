@@ -18,7 +18,7 @@
         </div>
 
         {% if enable_item_title %}
-        <div class="form-section global-title-section" {% if shitpost_mode %} style="display:none;" {% endif %}>
+        <div class="form-section global-title-section upload-await-file" {% if shitpost_mode %} style="display:none;" {% endif %}>
             <label>Title <span style="opacity: 0.5; font-weight: normal;">{{ t("upload.comment_optional") }}</span></label>
             <input type="text" name="title" class="upload-title-input" placeholder="Add a title for this item…" maxlength="500" autocomplete="off">
         </div>
@@ -78,7 +78,7 @@
         <input type="file" name="thumbnail" id="upload-thumbnail-input" accept="image/jpeg,image/png,image/webp" style="display:none;">
     </div>
 
-    <div class="form-section global-rating-section">
+    <div class="form-section global-rating-section upload-await-file">
         <label>{{ t("upload.rating") }} <span class="required">*</span></label>
         <div class="rating-options">
             <label class="rating-option">
@@ -99,7 +99,7 @@
     </div>
 
     {% if (enable_private_uploads != false and allow_user_upload_visibility != false) %}
-    <div class="form-section global-visibility-section">
+    <div class="form-section global-visibility-section upload-await-file">
         <label>{{ t("visibility.label") }}</label>
         <div class="visibility-options rating-options">
             <label class="rating-option">
@@ -119,8 +119,8 @@
     {% endif %}
 
     {% if enable_expiring_uploads != false %}
-    <div class="form-section global-expiry-section">
-        <label><i class="fa-solid fa-clock"></i> Expiration / Self-Destruct</label>
+    <div class="form-section global-expiry-section upload-await-file">
+        <label>Expiration / Self-Destruct</label>
         <select name="expiry" class="expiry-select" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--nav-border-color, rgba(255,255,255,0.1)); border-radius: 6px; cursor: pointer; font-size: 0.95em;">
             <option value="permanent" selected>Permanent (Never expires)</option>
             <option value="30minutes">30 Minutes</option>
@@ -134,7 +134,7 @@
 
 
 
-    <div class="form-section global-tag-section">
+    <div class="form-section global-tag-section upload-await-file">
         <label>
             {{ t("upload.tags") }} 
             {% if (min_tags > 0) %}
@@ -154,14 +154,12 @@
         </div>
         <input type="hidden" name="tags" class="tags-hidden">
         <div class="meta-suggestions-container" style="display: none;">
-            <div class="suggestions-header">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> {{ t("upload.suggestions_header") }}
-            </div>
+            <div class="suggestions-header">{{ t("upload.suggestions_header") }}</div>
             <div class="meta-suggestions-list"></div>
         </div>
     </div>
 
-    <div class="form-section global-comment-section">
+    <div class="form-section global-comment-section upload-await-file">
         <label>{{ t("upload.comment") }} <span style="opacity: 0.5; font-weight: normal;">{{ t("upload.comment_optional") }}</span></label>
         <div class="upload-comment-input comment-input">
             <textarea class="upload-comment" placeholder="{{ t("upload.comment_placeholder") }}"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
