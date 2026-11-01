@@ -4600,12 +4600,17 @@ class CommentSystem {
             const buildPickerContent = () => {
                 if (!picker) return;
                 picker.innerHTML = '';
+                picker.classList.remove('emoji-picker-empty');
 
                 const packs = CommentSystem.emojiPacks || [];
                 const hasPacks = packs.length > 0;
 
                 if (!this.customEmojis || Object.keys(this.customEmojis).length === 0) {
-                    picker.innerHTML = '<div style="padding:8px 10px;color:rgba(255,255,255,0.5);font-size:0.8em;">No emojis found</div>';
+                    // Nothing to pick: a one-line notice instead of the full-height grid
+                    picker.classList.add('emoji-picker-empty');
+                    picker.innerHTML = '<div class="emoji-picker-notice">No custom emojis yet.'
+                        + (this.isAdmin ? ' <a href="/admin/emojis">Add some in the admin panel</a>' : '')
+                        + '</div>';
                     return;
                 }
 
@@ -5100,7 +5105,8 @@ class CommentSystem {
                     buildPickerContent();
                 } else {
                     // Show a loading indicator while fetch is in-flight
-                    picker.innerHTML = '<div style="padding:5px;color:white;font-size:0.8em;">Loading...</div>';
+                    picker.classList.add('emoji-picker-empty');
+                    picker.innerHTML = '<div class="emoji-picker-notice">Loading emojis…</div>';
                     // Rebuild once the fetch completes (loadEmojis was already triggered above)
                     const onReady = () => {
                         window.removeEventListener('f0ck:emojis_ready', onReady);
