@@ -12,14 +12,14 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --locked \
     && cp target/release/f0ckm /usr/local/bin/f0ckm
 
-# ── 2. Ruffle (Flash emulator, served at /s/ruffle/) ─────────────────────────────
-# Pinned npm release tarball, SHA-256 checked before it is unpacked (see scripts/fetch-ruffle.sh).
-FROM alpine:3.23 AS ruffle
-RUN apk add --no-cache curl
-ARG RUFFLE_VERSION=0.2.0-nightly.2026.4.21
-ARG RUFFLE_SHA256=44a803178047324e35b7a85a7ddf37da8a66a93a840e9f57f83ce74f8e83c6df
-COPY scripts/fetch-ruffle.sh /usr/local/bin/fetch-ruffle
-RUN RUFFLE_VERSION="$RUFFLE_VERSION" RUFFLE_SHA256="$RUFFLE_SHA256" sh /usr/local/bin/fetch-ruffle /ruffle
+# ── 2. Browser libraries (jszip, marked, Cap captcha, Ruffle) ───────────────────
+# Versions and checksums come from package-lock.json; scripts/vendor.mjs copies the served files.
+FROM node:24-alpine AS vendor
+WORKDIR /vendor
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY scripts/vendor.mjs ./scripts/
+RUN node scripts/vendor.mjs /out
 
 # ── 3. Runtime ───────────────────────────────────────────────────────────────────
 FROM alpine:3.23
@@ -72,7 +72,7 @@ COPY migrations ./migrations
 COPY locales ./locales
 COPY views ./views
 COPY public ./public
-COPY --from=ruffle /ruffle ./public/s/ruffle
+COPY --from=vendor /out/ ./public/
 RUN f0ckm build-css
 
 # Project root (config.yaml, views/, public/, …). CLI commands run in the same place:

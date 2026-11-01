@@ -1,8 +1,11 @@
 {
   "name": "f0ckm-browser-vendor",
   "private": true,
-  "description": "necessities",
+  "description": "Browser libraries. Installed with `npm ci`, copied to public/ by `npm run vendor` (scripts/vendor.mjs)",
   "license": "UNLICENSED",
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs"
+  },
   "dependencies": {
     "@cap.js/wasm": "0.0.8",
     "@cap.js/widget": "0.1.58",

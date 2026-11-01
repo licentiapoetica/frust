@@ -10,8 +10,13 @@ node_modules
 server/target
 **/target
 
-# Built in the image
+# Built in the image (npm stage, scripts/vendor.mjs)
 public/s/ruffle
+public/s/js/jszip.min.js
+public/s/js/marked.min.js
+public/s/cap/cap.min.js
+public/s/cap/cap_wasm_bg.wasm
+public/s/cap/LICENSE
 public/s/css/bundle.css
 
 # Docker files
