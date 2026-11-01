@@ -19,7 +19,8 @@ const out = resolve(process.argv[2] || join(root, 'public'));
 // [file in node_modules, path below the output directory]
 const FILES = [
   ['jszip/dist/jszip.min.js', 's/js/jszip.min.js'],
-  ['marked/marked.min.js', 's/js/marked.min.js'],
+  // marked ≥ 16 ships its browser build (minified UMD) only as lib/marked.umd.js
+  ['marked/lib/marked.umd.js', 's/js/marked.min.js'],
   ['@cap.js/widget/cap.min.js', 's/cap/cap.min.js'],
   ['@cap.js/widget/LICENSE', 's/cap/LICENSE'],
   ['@cap.js/wasm/browser/cap_wasm_bg.wasm', 's/cap/cap_wasm_bg.wasm'],
