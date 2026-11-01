@@ -56,6 +56,25 @@ pub enum Bind {
     NullI64,
 }
 
+impl Bind {
+    /// Postgres type the parameter is sent as.
+    fn pg_type(&self) -> &'static str {
+        match self {
+            Bind::Null | Bind::Bool(_) => "bool",
+            Bind::I16(_) => "int2",
+            Bind::I32(_) | Bind::NullI32 => "int4",
+            Bind::I64(_) | Bind::NullI64 => "int8",
+            Bind::F64(_) => "float8",
+            Bind::Text(_) | Bind::NullText => "text",
+            Bind::Json(_) => "jsonb",
+            Bind::Timestamptz(_) => "timestamptz",
+            Bind::I32Array(_) => "int4[]",
+            Bind::I64Array(_) => "int8[]",
+            Bind::TextArray(_) => "text[]",
+        }
+    }
+}
+
 macro_rules! bind_from {
     ($t:ty, $v:ident => $e:expr) => {
         impl From<$t> for Bind {
@@ -145,8 +164,13 @@ impl Sql {
     }
 
     /// Final SQL text with `$n` placeholders.
+    ///
+    /// Ends with a comment naming the parameter types: sqlx caches prepared statements per connection
+    /// by SQL text alone, so the same text bound once with an i64 and later with an i32 reused the
+    /// int8 statement and Postgres rejected the 4-byte value ("insufficient data left in message").
+    /// The comment gives each type combination its own statement.
     pub fn sql(&self) -> String {
-        let mut out = String::with_capacity(self.text.len() + self.binds.len() * 3);
+        let mut out = String::with_capacity(self.text.len() + self.binds.len() * 9 + 8);
         let mut n = 0;
         for c in self.text.chars() {
             if c == PLACEHOLDER {
@@ -156,6 +180,17 @@ impl Sql {
             } else {
                 out.push(c);
             }
+        }
+        if !self.binds.is_empty() {
+            // New line first: a trailing `--` comment in the query must not swallow it
+            out.push_str("\n/* ");
+            for (i, b) in self.binds.iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                out.push_str(b.pg_type());
+            }
+            out.push_str(" */");
         }
         out
     }
@@ -458,6 +493,17 @@ mod tests {
         assert_eq!(decode_numeric(&enc(2, 1, 0x4000, 0, &[12, 3456])).unwrap(), "-123456");
         assert_eq!(decode_numeric(&enc(0, 0, 0, 0, &[])).unwrap(), "0");
         assert_eq!(decode_numeric(&enc(1, -2, 0, 8, &[12])).unwrap(), "0.00000012");
+    }
+
+    #[test]
+    fn sql_text_differs_per_parameter_type() {
+        // Same query, different integer widths: must not share a cached prepared statement
+        let (narrow, wide) = (1i32, 2i64);
+        let a = crate::sql!("SELECT 1 FROM t WHERE a = ", narrow, " AND b = ", wide).sql();
+        let b = crate::sql!("SELECT 1 FROM t WHERE a = ", wide, " AND b = ", wide).sql();
+        assert_eq!(a, "SELECT 1 FROM t WHERE a = $1 AND b = $2\n/* int4,int8 */");
+        assert_ne!(a, b);
+        assert_eq!(crate::sql!("SELECT 1").sql(), "SELECT 1");
     }
 }
 
