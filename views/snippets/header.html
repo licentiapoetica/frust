@@ -4,7 +4,7 @@
 <head>
   {% if (page_meta is defined and page_meta.title) %}<title>{{ domain }} - {{ page_meta.title }}</title>{% elif item is defined %}<title>{{ domain }} - {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</title>{% else %}<title>{{ domain }}</title>{% endif %}
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0096ff">
+  <meta name="theme-color" content="{{ theme_color or "#0096ff" }}">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="{{ domain }}">

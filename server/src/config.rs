@@ -307,7 +307,7 @@ fn canonical_or(target: PathBuf) -> PathBuf {
     target
 }
 
-fn resolve_paths(base: &Path) -> Paths {
+pub(crate) fn resolve_paths(base: &Path) -> Paths {
     let storage = std::env::var("STORAGE_DIR").ok().filter(|s| !s.is_empty()).map(|s| {
         let p = PathBuf::from(s);
         if p.is_absolute() { p } else { std::env::current_dir().unwrap_or_default().join(p) }

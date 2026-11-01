@@ -473,6 +473,7 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("default_theme", json!(cfg.str_or("websrv.theme", "f0ck")));
     put("modes", cfg.get("allowedModes").clone());
     put("api", w("api"));
+    put("theme_color", json!(crate::pwa::theme_color(cfg)));
     put("site", cfg.get("main.url.full").clone());
     put("domain", cfg.get("main.url.domain").clone());
     put("hide_comments_from_public", cfg.get("main.hide_comments_from_public").clone());

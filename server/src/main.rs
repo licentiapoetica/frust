@@ -24,6 +24,7 @@ mod net_guard;
 mod private_items;
 mod proc;
 mod routes;
+mod pwa;
 mod security;
 mod smtp;
 mod session;

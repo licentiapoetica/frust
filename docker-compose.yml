@@ -34,7 +34,6 @@ services:
       - ./f0ckm-data/hall_custom/:/opt/f0ckm/public/hall_custom/:Z
       - ./f0ckm-data/koepfe/:/opt/f0ckm/public/s/koepfe/:Z
       - ./f0ckm-data/import/:/opt/f0ckm/f0ckm-data/import/:Z
-      - ./f0ckm-data/manifest.json:/opt/f0ckm/public/manifest.json:Z
       - ./f0ckm-data/s/img/navbar/:/opt/f0ckm/public/s/img/navbar/:Z
 
     environment:
