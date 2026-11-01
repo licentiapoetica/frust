@@ -16509,7 +16509,7 @@ nav.navbar a.desktop-only[data-page-modal].is-active {
 .dm-modal {
   background: var(--bg, #111);
   border: 1px solid var(--accent);
-  border-radius: 10px;
+  border-radius: 0;
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
@@ -16536,6 +16536,13 @@ nav.navbar a.desktop-only[data-page-modal].is-active {
   top: 14px;
   right: 16px;
   background: none;
+/* Square corners throughout the key dialogs (status box, inputs, buttons, word chips) */
+.dm-modal *,
+.dm-modal *::before,
+.dm-modal *::after {
+  border-radius: 0 !important;
+}
+
   border: none;
   color: #888;
   font-size: 1.4em;

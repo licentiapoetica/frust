@@ -2337,7 +2337,7 @@ if (window.__dmLoaded) {
                     // Don't silently resolve — show a fallback error notice
                     const notice = document.createElement('div');
                     notice.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#d94f4f;color:#fff;padding:12px 20px;border-radius:8px;z-index:20001;font-size:0.9em';
-                    notice.textContent = '⚠️ Recovery phrase wordlist failed to load. Please refresh the page.';
+                    notice.textContent = 'Recovery phrase wordlist failed to load. Please refresh the page.';
                     document.body.appendChild(notice);
                     return; // leave Promise pending so page is blocked
                 }
@@ -2355,10 +2355,10 @@ if (window.__dmLoaded) {
             modal.className = 'dm-modal-overlay dm-modal-blocking';
             modal.innerHTML = `
                 <div class="dm-modal">
-                    <h2>🔑 Secure your messages</h2>
+                    <h2>Secure your messages</h2>
                     <p class="dm-modal-sub">Your messages are end-to-end encrypted. Write down the following 12 words — they are your only way to regain access on a new device.</p>
                     <div class="dm-seed-grid" id="dm-seed-words"></div>
-                    <button class="dm-key-btn dm-copy-seed" id="dm-copy-seed-btn">📋 Copy words</button>
+                    <button class="dm-key-btn dm-copy-seed" id="dm-copy-seed-btn">Copy words</button>
                     <div class="dm-seed-confirm">
                         <label>
                             <input type="checkbox" id="dm-seed-ack">
@@ -2369,7 +2369,7 @@ if (window.__dmLoaded) {
                     <button class="dm-key-btn dm-key-btn-primary" id="dm-seed-continue" disabled>Continue →</button>
                     <hr style="border-color:rgba(255,255,255,0.1);margin:16px 0">
                     <p style="font-size:0.82em;color:#888">Already have a recovery phrase from a previous session?</p>
-                    <button class="dm-key-btn" id="dm-seed-switch-recover" style="background:rgba(255,255,255,0.07);border:1px solid #444;color:var(--fg,#ddd);width:100%">🔓 Enter existing recovery phrase</button>
+                    <button class="dm-key-btn" id="dm-seed-switch-recover" style="background:rgba(255,255,255,0.07);border:1px solid #444;color:var(--fg,#ddd);width:100%">Enter existing recovery phrase</button>
                 </div>
             `;
 
@@ -2388,7 +2388,7 @@ if (window.__dmLoaded) {
 
             modal.querySelector('#dm-copy-seed-btn').onclick = () => {
                 navigator.clipboard.writeText(words.join(' ')).then(() => {
-                    setMsg(modal.querySelector('#dm-seed-msg'), '✅ Words copied to clipboard.', 'ok');
+                    setMsg(modal.querySelector('#dm-seed-msg'), 'Words copied to clipboard.', 'ok');
                 });
             };
 
@@ -2409,7 +2409,7 @@ if (window.__dmLoaded) {
                     modal.remove();
                     resolve();
                 } catch (err) {
-                    setMsg(modal.querySelector('#dm-seed-msg'), '❌ ' + err.message, 'err');
+                    setMsg(modal.querySelector('#dm-seed-msg'), err.message, 'err');
                     btn.disabled = false;
                     btn.textContent = 'Continue →';
                 }
@@ -2503,8 +2503,8 @@ if (window.__dmLoaded) {
                     modal.remove();
                     resolve();
                 } catch {
-                    setMsg(msg, '❌ Wrong words or corrupted vault. Please try again.', 'err');
-                    btn.disabled = false; btn.textContent = '🔓 Restore key';
+                    setMsg(msg, 'Wrong words or corrupted vault. Please try again.', 'err');
+                    btn.disabled = false; btn.textContent = 'Restore key';
                 }
             };
 
@@ -2597,7 +2597,7 @@ if (window.__dmLoaded) {
                 <h2>Encryption Key</h2>
                 <p class="dm-modal-sub">Your private key is secured with your recovery phrase and stored encrypted on the server.</p>
 
-                <div class="dm-key-status" id="dm-key-status">${hasKey() ? '✅ Key loaded and backed up.' : '❌ No key found.'}</div>
+                <div class="dm-key-status" id="dm-key-status">${hasKey() ? 'Key loaded and backed up.' : 'No key found.'}</div>
 
                 <div class="dm-key-section">
                     <h3>Recover from phrase</h3>
@@ -2624,7 +2624,7 @@ if (window.__dmLoaded) {
 
             // Refresh status label on re-open
             const statusEl = modal.querySelector('#dm-key-status');
-            if (statusEl) statusEl.textContent = hasKey() ? '✅ Key loaded and backed up.' : '❌ No key found.';
+            if (statusEl) statusEl.textContent = hasKey() ? 'Key loaded and backed up.' : 'No key found.';
         };
 
 
