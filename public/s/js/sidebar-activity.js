@@ -59,6 +59,10 @@
         return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     };
 
+    // Name without capitals, digits or tall letters ("x", "anonymous"): CSS trims it to the
+    // x-height so its top lines up with the avatar. Same rule as the `short_letters` template filter.
+    const isShortName = (name) => /[a-z]/.test(name || '') && /^[acegmnopqrsuvwxyz _.,-]+$/.test(name);
+
     const playSidebarEmojiVideos = (container) => {
         if (!container) return;
         container.querySelectorAll('video.emoji').forEach(v => {
@@ -595,8 +599,8 @@
             ? `<span class="sidebar-avatar-link"><img src="/a/default.png" class="sidebar-avatar" loading="eager" /></span>`
             : `<a href="/user/${c.username.toLowerCase()}" class="sidebar-avatar-link"><img src="${avatarSrc}" class="sidebar-avatar" loading="eager" data-on="load:sidebar-img-loaded error:sidebar-img-loaded,img-fallback" data-fallback="/a/default.png" /></a>`;
         const authorNameHtml = isAnonGuest
-            ? `<span class="comment-author">anonymous</span>`
-            : `<a href="/user/${c.username.toLowerCase()}" class="comment-author" ${c.username_color ? `style="color: ${c.username_color}"` : ''}>${escapeHtml(c.display_name || c.username)}</a>`;
+            ? `<span class="comment-author name-short">anonymous</span>`
+            : `<a href="/user/${c.username.toLowerCase()}" class="comment-author${isShortName(c.display_name || c.username) ? ' name-short' : ''}" ${c.username_color ? `style="color: ${c.username_color}"` : ''}>${escapeHtml(c.display_name || c.username)}</a>`;
 
         return `
             <div class="comment" id="sc${c.id}" ${effectiveBannerStyle}>

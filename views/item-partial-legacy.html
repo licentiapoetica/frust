@@ -116,9 +116,9 @@
                         <div class="user-infobox-header">
                             <div class="user-infobox-username-container">
                                 {% if not is_anonymized %}
-                                <a id="a_username" data-username="{{ (item.username or "") }}" {% if (session and not session.is_anon) %} data-author-id="{{ (item.author_id or "") }}" {% endif %} href="/user/{{ (item.username or "")|lower }}" {% if (session and not session.is_anon) %} tooltip="ID: {{ item.author_id }}" {% endif %} class="user-infobox-username">{{ (item.author_display_name or item.username) }}</a>
+                                <a id="a_username" data-username="{{ (item.username or "") }}" {% if (session and not session.is_anon) %} data-author-id="{{ (item.author_id or "") }}" {% endif %} href="/user/{{ (item.username or "")|lower }}" {% if (session and not session.is_anon) %} tooltip="ID: {{ item.author_id }}" {% endif %} class="user-infobox-username{% if (item.author_display_name or item.username)|short_letters %} name-short{% endif %}">{{ (item.author_display_name or item.username) }}</a>
                                 {% else %}
-                                <span class="user-infobox-username">anonymous</span>
+                                <span class="user-infobox-username name-short">anonymous</span>
                                 {% endif %}
                             </div>
                             <span class="user-infobox-timestamp"><a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>

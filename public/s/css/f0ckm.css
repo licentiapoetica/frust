@@ -5586,10 +5586,32 @@ body.layout-legacy .scroll-to-bottom svg {
 .comment-header-left {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: 2px 6px;
   min-width: 0;
   flex-shrink: 1;
+}
+
+/* Comment headers (item comments, profile comments, sidebar activity): the name and the >>backlinks
+   start exactly at the avatar top. Only the space above the letters is trimmed (descenders keep
+   their room); the clip margin keeps letter tops that rise a hair above the trim line from being
+   cut by the name's ellipsis overflow. .name-short (no capitals or tall letters, e.g. "x") trims to
+   the x-height instead. */
+.comment-header-left .comment-author,
+.comment-header-left .comment-backlinks a {
+  display: block;
+  align-self: flex-start;
+  line-height: 1;
+  text-box: trim-start cap alphabetic;
+}
+
+.comment-header-left .comment-author {
+  overflow: clip;
+  overflow-clip-margin: 0.25em;
+}
+
+.comment-header-left .comment-author.name-short {
+  text-box-edge: ex alphabetic;
 }
 
 .pinned-badge {
@@ -18336,6 +18358,27 @@ body.layout-modern .user-infobox-block .gapRight > #a_favo.fa-regular::before {
   font-weight: 700;
   color: var(--author-accent, inherit) !important;
   text-decoration: none;
+}
+
+/* Pin the name to the top edge of the header (level with the avatar top):
+   trim the font's built-in space above the capitals. #a_username is in the
+   selector so it beats the global `#a_username { display: inline }`. */
+.user-infobox-header .user-infobox-username-container {
+  align-self: start;
+}
+
+.user-infobox-header #a_username.user-infobox-username,
+.user-infobox-header span.user-infobox-username {
+  display: block;
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
+}
+
+/* Names with no capitals or tall letters ("x"): trim to the x-height instead, so the ink
+   itself touches the avatar top. The .name-short class comes from the `short_letters` filter. */
+.user-infobox-header #a_username.user-infobox-username.name-short,
+.user-infobox-header span.user-infobox-username.name-short {
+  text-box-edge: ex alphabetic;
 }
 
 

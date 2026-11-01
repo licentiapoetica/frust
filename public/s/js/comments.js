@@ -2292,10 +2292,14 @@ class CommentSystem {
             : `<div class="comment-avatar">${comment.username ? `<a href="/user/${comment.username}">` : ''}<img src="${comment.avatar_file ? `/a/${comment.avatar_file}` : (comment.avatar ? `/t/${comment.avatar}.webp` : '/a/default.png')}">${comment.username ? `</a>` : ''}</div>`;
 
         const isAnon = isAnonGuest || comment.is_anon || comment.anon_fingerprint || comment.username === 'anonymous' || (comment.username && comment.username.startsWith('anon_'));
+        // Name without capitals, digits or tall letters ("x"): CSS trims it to the x-height so its top
+        // lines up with the avatar. Same rule as the `short_letters` template filter.
+        const authorName = comment.display_name || comment.username || '';
+        const shortCls = /[a-z]/.test(authorName) && /^[acegmnopqrsuvwxyz _.,-]+$/.test(authorName) ? ' name-short' : '';
         const authorHtml = isAnon
-            ? `<span class="comment-author">anonymous</span>`
+            ? `<span class="comment-author name-short">anonymous</span>`
             : (comment.username
-                ? `<a href="/user/${comment.username}" class="comment-author" tooltip="ID: ${authorUserId ?? ''}" ${authorUsernameColor ? `style="color: ${authorUsernameColor}"` : ''}>${this.escapeHtml(comment.display_name || comment.username)}</a>`
+                ? `<a href="/user/${comment.username}" class="comment-author${shortCls}" tooltip="ID: ${authorUserId ?? ''}" ${authorUsernameColor ? `style="color: ${authorUsernameColor}"` : ''}>${this.escapeHtml(comment.display_name || comment.username)}</a>`
                 : '<span class="comment-author">System</span>');
 
         const anonDataAttrs = isAnon ? '' : `data-username="${comment.username}" data-display="${this.escapeHtml(comment.display_name || '')}"`;

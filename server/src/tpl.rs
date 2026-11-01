@@ -294,6 +294,13 @@ fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static> {
         v.try_iter().map(|it| it.map(|k| v.get_item(&k).unwrap_or_default()).collect()).unwrap_or_default()
     });
     env.add_filter("year", |v: JValue| to_datetime(&v).map(|d| chrono::Datelike::year(&d) as i64).unwrap_or(0));
+    // True when a name has no capitals, digits or tall letters (e.g. "x", "anonymous"), so CSS can
+    // trim it to the x-height instead of the cap height and its top lines up with the avatar.
+    // Keep in sync with isShortName() in public/s/js/sidebar-activity.js.
+    env.add_filter("short_letters", |v: JValue| {
+        let s = js_to_string(&v);
+        s.chars().any(|c| c.is_ascii_lowercase()) && s.chars().all(|c| "acegmnopqrsuvwxyz _.,-".contains(c))
+    });
     // Variadic helper kept for templates that join several values.
     env.add_function("concat", |args: Rest<JValue>| args.iter().map(js_to_string).collect::<String>());
     env
