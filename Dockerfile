@@ -22,7 +22,7 @@ COPY scripts/vendor.mjs ./scripts/
 RUN node scripts/vendor.mjs /out
 
 # ── 3. Runtime ───────────────────────────────────────────────────────────────────
-FROM alpine:3.23
+FROM alpine:3.24
 ARG GIT_HASH=unknown
 ENV GIT_HASH=$GIT_HASH
 
