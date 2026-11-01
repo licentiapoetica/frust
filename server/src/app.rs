@@ -22,7 +22,9 @@ use std::time::Instant;
 pub async fn handle(State(st): State<AppState>, ConnectInfo(addr): ConnectInfo<SocketAddr>, request: Request) -> Response {
     let start = Instant::now();
     let (parts, body) = request.into_parts();
-    let req = Req::new(parts.method, &parts.uri, parts.headers, body, Some(addr));
+    let mut req = Req::new(parts.method, &parts.uri, parts.headers, body, Some(addr));
+    req.version = parts.version;
+    req.extensions = parts.extensions;
     let out = req.out.clone();
     let method = req.method.clone();
     let path = req.path.clone();
@@ -152,6 +154,24 @@ fn origin_of(url: &str) -> Option<String> {
     o.is_tuple().then(|| o.ascii_serialization())
 }
 
+/// One of the site's own origins: main.url.full, main.onion or websrv.cors_origins.
+fn is_site_origin(st: &AppState, origin: &str) -> bool {
+    let cfg = st.cfg();
+    let mut list: Vec<String> = [cfg.str("main.url.full"), cfg.str("main.onion")].into_iter().flatten().filter_map(origin_of).collect();
+    list.extend(cfg.str_list("websrv.cors_origins").unwrap_or_default().iter().filter_map(|o| origin_of(o)));
+    list.iter().any(|o| o.eq_ignore_ascii_case(origin))
+}
+
+/// Whether a request may come from a browser page of this site. Browsers send cookies with
+/// WebSocket handshakes from any page and apply no CORS to them, so a socket carrying private
+/// data must check `Origin` itself. Passes when the Origin host is the requested host or one of
+/// the site's origins; requests without `Origin` (non-browser clients) pass too.
+pub fn origin_allowed(st: &AppState, req: &Req) -> bool {
+    let Some(origin) = req.header("origin") else { return true };
+    let host = url::Url::parse(origin).ok().and_then(|u| u.host_str().map(str::to_lowercase));
+    host.is_some_and(|h| h == req.host_without_port()) || is_site_origin(st, origin)
+}
+
 /// CORS for `/api/`: only the site's own origins (main.url.full, main.onion, websrv.cors_origins)
 /// are reflected with credentials. The old code reflected any Origin, letting other sites read
 /// authenticated API responses.
@@ -159,12 +179,7 @@ fn cors(st: &AppState, req: &Req) -> Option<Response> {
     if !req.path.starts_with("/api/") {
         return None;
     }
-    let cfg = st.cfg();
-    let allowed = req.header("origin").filter(|origin| {
-        let mut list: Vec<String> = [cfg.str("main.url.full"), cfg.str("main.onion")].into_iter().flatten().filter_map(origin_of).collect();
-        list.extend(cfg.str_list("websrv.cors_origins").unwrap_or_default().iter().filter_map(|o| origin_of(o)));
-        list.iter().any(|o| o.eq_ignore_ascii_case(origin))
-    });
+    let allowed = req.header("origin").filter(|origin| is_site_origin(st, origin));
     if let Some(origin) = allowed.map(str::to_string) {
         req.set_header("access-control-allow-origin", &origin);
         req.set_header("access-control-allow-credentials", "true");

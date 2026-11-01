@@ -1,7 +1,8 @@
 //! Notifications and the live event stream (port of src/inc/routes/notifications.mjs).
 //!
-//! `GET /api/notifications/stream` is a Server-Sent-Events stream. Live events come from Postgres
-//! `NOTIFY` (triggers and `pg_notify` calls across the app) via one `PgListener` task
+//! `GET /api/notifications/ws` is a WebSocket carrying the live events as JSON text frames
+//! (`{"type": ..., "data": ...}`); the server only sends, apart from ping/pong. Live events come
+//! from Postgres `NOTIFY` (triggers and `pg_notify` calls across the app) via one `PgListener` task
 //! ([`spawn_listener`]) and are fanned out to the connected clients held in [`HUB`].
 //!
 //! The old JSON handlers answered through `res.reply({ headers, body })`, which ignores `headers`,
@@ -13,10 +14,12 @@ use crate::session::Session;
 use crate::settings::{enable_item_slugs, hw_fingerprint_enabled, is_anonymize_session};
 use crate::sql;
 use crate::state::AppState;
-use axum::body::Body;
-use axum::http::{HeaderValue, Method, header};
-use axum::response::Response;
+use axum::extract::FromRequestParts;
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::http::Method;
+use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
+use futures::{SinkExt, StreamExt};
 use once_cell::sync::Lazy;
 use parking_lot::{Mutex, RwLock};
 use serde_json::{Map, Value, json};
@@ -31,7 +34,7 @@ pub fn register(r: &mut Router) {
     r.exact(Method::POST, "/api/notifications/read", None, read_all);
     r.post(r"\/api\/notifications\/(?<id>\d+)\/read", read_one);
     r.post(r"\/api\/notifications\/item\/(?<itemId>[a-zA-Z0-9_-]{11}|\d+)\/read", read_item);
-    r.exact(Method::GET, "/api/notifications/stream", None, stream);
+    r.exact(Method::GET, "/api/notifications/ws", None, socket);
     r.exact(Method::GET, "/api/notifications/active", None, active);
     r.exact(Method::GET, "/notifications", None, page);
     r.exact(Method::GET, "/ajax/notifications", None, ajax_history);
@@ -248,6 +251,11 @@ async fn active(_st: AppState, _req: Req) -> Res {
 const MAX_TABS_PER_SESSION: usize = 10;
 /// Queued events per client; a client that falls this far behind loses events.
 const CLIENT_QUEUE: usize = 512;
+/// Ping interval; a client that answers nothing (no pong, no frame) for `IDLE_LIMIT` is dropped.
+const PING_EVERY: Duration = Duration::from_secs(30);
+const IDLE_LIMIT: Duration = Duration::from_secs(75);
+/// A client whose socket doesn't take a frame within this time is dropped.
+const SEND_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Debug, Clone, Copy)]
 struct Prefs {
@@ -276,14 +284,14 @@ pub struct Client {
     tab_id: String,
     ip: String,
     ip_hash: String,
-    tx: mpsc::Sender<Bytes>,
+    /// Serialized events waiting for the socket.
+    tx: mpsc::Sender<String>,
     close: Notify,
 }
 
 impl Client {
     fn send(&self, v: &Value) {
-        let line = format!("data: {}\n\n", crate::util::json_string(v));
-        let _ = self.tx.try_send(Bytes::from(line));
+        let _ = self.tx.try_send(crate::util::json_string(v));
     }
 
     fn close(&self) {
@@ -409,14 +417,14 @@ pub fn broadcast_ban(data: &Value) {
             || (!c.ip.is_empty() && ips.contains(&c.ip))
             || (!c.ip_hash.is_empty() && (ip_hashes.contains(&c.ip_hash) || ips.contains(&c.ip_hash)));
         if hit {
-            tracing::info!("[SSE] Delivering instant ban to client (userId: {:?}, ip: {}, tab: {})", c.user_id, c.ip, c.tab_id);
+            tracing::info!("[WS] Delivering instant ban to client (userId: {:?}, ip: {}, tab: {})", c.user_id, c.ip, c.tab_id);
             c.send(&ev);
             c.close_later();
         }
     }
 }
 
-/// Removes the client from the hub when its response body is dropped (disconnect or close).
+/// Removes the client from the hub when its socket task ends (disconnect or close).
 struct ClientGuard(u64);
 
 impl Drop for ClientGuard {
@@ -426,7 +434,25 @@ impl Drop for ClientGuard {
     }
 }
 
-async fn stream(st: AppState, req: Req) -> Res {
+/// Turn the request into axum's WebSocket extractor (the router hands handlers a `Req`, not parts).
+async fn ws_upgrade(req: &mut Req) -> Result<WebSocketUpgrade, Response> {
+    let (mut parts, ()) = axum::http::Request::new(()).into_parts();
+    parts.method = req.method.clone();
+    parts.version = req.version;
+    parts.headers = req.headers.clone();
+    parts.extensions = std::mem::take(&mut req.extensions);
+    WebSocketUpgrade::from_request_parts(&mut parts, &()).await.map_err(IntoResponse::into_response)
+}
+
+async fn socket(st: AppState, mut req: Req) -> Res {
+    if !crate::app::origin_allowed(&st, &req) {
+        tracing::warn!("[WS] Rejected handshake from foreign origin {:?}", req.header("origin"));
+        return Ok(crate::http::reply(403, "text/plain", "Forbidden"));
+    }
+    let ws = match ws_upgrade(&mut req).await {
+        Ok(ws) => ws,
+        Err(r) => return Ok(r),
+    };
     let cfg = st.cfg();
     let tab_id = req.query("tabId").filter(|t| !t.is_empty()).unwrap_or("unknown").chars().take(100).collect::<String>();
     let cookie = req.cookie("session").filter(|c| !c.is_empty());
@@ -453,7 +479,7 @@ async fn stream(st: AppState, req: Req) -> Res {
         .or_else(|| req.query("fp").filter(|f| !f.is_empty()).map(str::to_string));
     let hw_fingerprint = if hw_fingerprint_enabled(&cfg) { req.query("hw").filter(|h| !h.is_empty()).map(str::to_string) } else { None };
     let s = session.as_ref();
-    let (tx, rx) = mpsc::channel::<Bytes>(CLIENT_QUEUE);
+    let (tx, rx) = mpsc::channel::<String>(CLIENT_QUEUE);
     let client = Arc::new(Client {
         id: HUB.next_id.fetch_add(1, Ordering::Relaxed),
         user_id: s.map(|s| s.id),
@@ -481,6 +507,12 @@ async fn stream(st: AppState, req: Req) -> Res {
         close: Notify::new(),
     });
 
+    // Clients only send pongs and close frames
+    Ok(ws.max_message_size(4 * 1024).on_upgrade(move |socket| run_socket(st, socket, client, rx)))
+}
+
+/// Registers the client in the hub, sends it its queued events and keeps the connection alive.
+async fn run_socket(st: AppState, socket: WebSocket, client: Arc<Client>, mut rx: mpsc::Receiver<String>) {
     // Already banned? Push the redirect right away.
     {
         let (st, c) = (st.clone(), client.clone());
@@ -513,7 +545,7 @@ async fn stream(st: AppState, req: Req) -> Res {
                 }
             }
             if let Some((reason, expires)) = ban {
-                tracing::info!("[SSE] Connecting client is already banned, pushing instant redirect to /banned");
+                tracing::info!("[WS] Connecting client is already banned, pushing instant redirect to /banned");
                 let reason = if crate::config::truthy(&reason) { reason } else { json!("Violation of community rules") };
                 c.send(&json!({ "type": "banned", "data": { "reason": reason, "expires": fmt_expires(Some(&expires)), "redirect": "/banned" } }));
                 c.close_later();
@@ -531,39 +563,46 @@ async fn stream(st: AppState, req: Req) -> Res {
                         c.send(&json!({ "type": "warning", "data": { "warning_id": w.val("id"), "reason": w.val("reason") } }));
                     }
                 }
-                Err(e) => tracing::error!("[SSE] Failed to fetch initial warnings: {e}"),
+                Err(e) => tracing::error!("[WS] Failed to fetch initial warnings: {e}"),
             }
         });
     }
 
     HUB.clients.write().insert(client.id, client.clone());
-    let guard = ClientGuard(client.id);
+    let _guard = ClientGuard(client.id);
     HUB.broadcast_presence();
 
-    struct State {
-        client: Arc<Client>,
-        ping: tokio::time::Interval,
-        _guard: ClientGuard,
-    }
-    let ping = tokio::time::interval_at(tokio::time::Instant::now() + Duration::from_secs(30), Duration::from_secs(30));
-    let state = State { client, ping, _guard: guard };
-    let events = futures::stream::unfold((state, rx), |(mut s, mut rx)| async move {
-        let chunk = tokio::select! {
-            _ = s.client.close.notified() => return None,
-            m = rx.recv() => m?,
-            _ = s.ping.tick() => Bytes::from_static(b": ping\n\n"),
+    let (mut sink, mut incoming) = socket.split();
+    let mut ping = tokio::time::interval_at(tokio::time::Instant::now() + PING_EVERY, PING_EVERY);
+    let mut last_seen = tokio::time::Instant::now();
+    loop {
+        let out = tokio::select! {
+            _ = client.close.notified() => {
+                let _ = tokio::time::timeout(SEND_TIMEOUT, sink.send(Message::Close(None))).await;
+                break;
+            }
+            m = rx.recv() => match m {
+                Some(text) => Message::Text(text.into()),
+                None => break,
+            },
+            _ = ping.tick() => {
+                if last_seen.elapsed() > IDLE_LIMIT {
+                    break;
+                }
+                Message::Ping(Bytes::new())
+            }
+            m = incoming.next() => match m {
+                Some(Ok(Message::Close(_))) | Some(Err(_)) | None => break,
+                Some(Ok(_)) => {
+                    last_seen = tokio::time::Instant::now();
+                    continue;
+                }
+            },
         };
-        Some((Ok::<Bytes, std::convert::Infallible>(chunk), (s, rx)))
-    });
-    let warmup = futures::stream::once(async { Ok::<Bytes, std::convert::Infallible>(Bytes::from_static(b": ok\n\n")) });
-    let body = Body::from_stream(futures::StreamExt::chain(warmup, events));
-
-    let mut r = Response::new(body);
-    let h = r.headers_mut();
-    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("text/event-stream"));
-    h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache, no-transform"));
-    h.insert("x-accel-buffering", HeaderValue::from_static("no"));
-    Ok(r)
+        if !matches!(tokio::time::timeout(SEND_TIMEOUT, sink.send(out)).await, Ok(Ok(()))) {
+            break;
+        }
+    }
 }
 
 // ── Postgres LISTEN ─────────────────────────────────────────────────────────
@@ -613,14 +652,14 @@ pub fn spawn_listener(st: &AppState) {
             let mut listener = match sqlx::postgres::PgListener::connect_with(&st.db).await {
                 Ok(l) => l,
                 Err(e) => {
-                    tracing::error!("[SSE] DB listen connect failed: {e}");
+                    tracing::error!("[WS] DB listen connect failed: {e}");
                     tokio::time::sleep(backoff).await;
                     backoff = (backoff * 2).min(Duration::from_secs(30));
                     continue;
                 }
             };
             if let Err(e) = listener.listen_all(CHANNELS).await {
-                tracing::error!("[SSE] DB LISTEN failed: {e}");
+                tracing::error!("[WS] DB LISTEN failed: {e}");
                 tokio::time::sleep(backoff).await;
                 backoff = (backoff * 2).min(Duration::from_secs(30));
                 continue;
@@ -630,7 +669,7 @@ pub fn spawn_listener(st: &AppState) {
                 match listener.recv().await {
                     Ok(n) => dispatch(&st, n.channel(), n.payload()).await,
                     Err(e) => {
-                        tracing::error!("[SSE] DB listen error: {e}");
+                        tracing::error!("[WS] DB listen error: {e}");
                         break;
                     }
                 }
@@ -663,11 +702,11 @@ async fn dispatch(st: &AppState, channel: &str, payload: &str) {
         "global_chat_clear" => HUB.broadcast(&json!({ "type": "global_chat_clear" })),
         _ => {
             let Some(data) = parse(payload) else {
-                tracing::error!("[SSE] {channel}: invalid payload");
+                tracing::error!("[WS] {channel}: invalid payload");
                 return;
             };
             if !data.is_object() {
-                tracing::error!("[SSE] {channel}: payload is not an object");
+                tracing::error!("[WS] {channel}: payload is not an object");
                 return;
             }
             dispatch_json(st, channel, data).await;

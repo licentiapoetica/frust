@@ -172,7 +172,7 @@ fn spawn_background_tasks(st: &state::AppState) {
     // Expired uploads, 10 s after boot then every 30 s
     media::delete::spawn_expiry_purger(st);
 
-    // Postgres LISTEN → live event stream (/api/notifications/stream)
+    // Postgres LISTEN → live event socket (/api/notifications/ws)
     routes::notifications::spawn_listener(st);
 
     // Expired DM attachments (every 6 hours) and chat uploads (hourly)

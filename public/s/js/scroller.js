@@ -3621,24 +3621,32 @@
       } catch {}
     };
 
-    // ── Lightweight SSE for instant badge updates ──────────────────
+    // ── Lightweight live socket for instant badge updates ──────────
     const tabId = Math.random().toString(36).slice(2);
-    let sseEs = null;
-    let sseRetryCount = 0;
-    const SSE_MAX_RETRIES = 8;
+    let liveWs = null;
+    let liveRetryCount = 0;
+    let liveRetryTimer = null;
+    const LIVE_MAX_RETRIES = 8;
 
-    const initScrollerSSE = () => {
-      if (sseEs) sseEs.close();
-      let sseUrl = `/api/notifications/stream?tabId=${tabId}`;
+    const closeScrollerSocket = () => {
+      clearTimeout(liveRetryTimer);
+      if (liveWs) { liveWs.onclose = null; liveWs.close(); liveWs = null; }
+    };
+
+    const initScrollerSocket = () => {
+      closeScrollerSocket();
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      let wsUrl = `${proto}//${location.host}/api/notifications/ws?tabId=${tabId}`;
       try {
         const fp = localStorage.getItem('f0ck_anon_ssh_fp');
-        if (fp) sseUrl += `&fp=${encodeURIComponent(fp)}`;
+        if (fp) wsUrl += `&fp=${encodeURIComponent(fp)}`;
         const hw = localStorage.getItem('f0ck_anon_hw_fp');
-        if (hw) sseUrl += `&hw=${encodeURIComponent(hw)}`;
+        if (hw) wsUrl += `&hw=${encodeURIComponent(hw)}`;
       } catch (e) {}
-      sseEs = new EventSource(sseUrl);
-      sseEs.onopen = () => { sseRetryCount = 0; };
-      sseEs.onmessage = (e) => {
+      const ws = new WebSocket(wsUrl);
+      liveWs = ws;
+      ws.onopen = () => { liveRetryCount = 0; };
+      ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
           if (data.type === 'banned') {
@@ -3650,23 +3658,24 @@
             return;
           }
           if (data.type === 'notify') {
-            pollNotifCount(); // instant re-fetch on SSE push
+            pollNotifCount(); // instant re-fetch on live push
             if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
           }
         } catch {}
       };
-      sseEs.onerror = () => {
-        sseEs?.close(); sseEs = null;
-        if (document.hidden || sseRetryCount >= SSE_MAX_RETRIES) return;
-        setTimeout(initScrollerSSE, Math.min(Math.pow(2, sseRetryCount++) * 1000, 30000));
+      ws.onclose = () => {
+        if (liveWs !== ws) return;
+        liveWs = null;
+        if (document.hidden || liveRetryCount >= LIVE_MAX_RETRIES) return;
+        liveRetryTimer = setTimeout(initScrollerSocket, Math.min(Math.pow(2, liveRetryCount++) * 1000, 30000));
       };
     };
 
-    // Signal server we're active (keeps SSE routing correct)
+    // Signal server we're active
     fetch(`/api/notifications/active?tabId=${tabId}`).catch(() => {});
-    initScrollerSSE();
+    initScrollerSocket();
 
-    // Fallback poll every 60s in case SSE drops
+    // Fallback poll every 60s in case the socket drops
     const notifPollTimer = setInterval(pollNotifCount, 60000);
     pollNotifCount(); // initial count on load
 
@@ -3892,7 +3901,7 @@
     // Cleanup on PJAX navigation away
     document.addEventListener('pjax:send', () => {
       clearInterval(notifPollTimer);
-      sseEs?.close(); sseEs = null;
+      closeScrollerSocket();
     }, { once: true });
   }
 

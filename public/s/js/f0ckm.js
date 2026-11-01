@@ -18330,16 +18330,16 @@ class NotificationSystem {
       this.poll();
       this.pollDebounced = this.debounce(() => this.poll(), 500);
     }
-    this.initSSE();
+    this.initSocket();
 
     // Signal server that this tab is active
     const signalActive = () => {
         if (document.hidden) return;
         fetch(`/api/notifications/active?tabId=${this.tabId}`).catch(() => {});
-        // If SSE is closed, reconnect
-        if (!this.es || this.es.readyState === 2) {
-            window.f0ckDebug("[NotificationSystem] SSE was closed, reconnecting as active tab...");
-            this.initSSE();
+        // If the socket is closed, reconnect
+        if (!this.ws || this.ws.readyState >= WebSocket.CLOSING) {
+            window.f0ckDebug("[NotificationSystem] Socket was closed, reconnecting as active tab...");
+            this.initSocket();
         }
     };
 
@@ -18391,11 +18391,11 @@ class NotificationSystem {
       }
 
       window.f0ckDebug("[NotificationSystem] Tab visible, signaling active...");
-      // If SSE died while hidden, restart it now
-      if (!this.es) {
-        window.f0ckDebug("[NotificationSystem] SSE was dead, restarting on tab visible.");
+      // If the socket died while hidden, restart it now
+      if (!this.ws) {
+        window.f0ckDebug("[NotificationSystem] Socket was dead, restarting on tab visible.");
         this.retryCount = 0;
-        this.initSSE();
+        this.initSocket();
       }
       if (this.pollDebounced) this.pollDebounced();
       if (this.checkForNewItems) this.checkForNewItems();
@@ -18438,30 +18438,35 @@ class NotificationSystem {
     });
   }
 
-  initSSE() {
-    if (this.es) {
-      this.es.close();
+  initSocket() {
+    if (this.ws) {
+      // Detach first: unlike EventSource, close() fires onclose, which would schedule a retry
+      this.ws.onclose = null;
+      this.ws.close();
     }
+    clearTimeout(this._wsRetryTimer);
 
-    let sseUrl = `/api/notifications/stream?tabId=${this.tabId}`;
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    let wsUrl = `${proto}//${location.host}/api/notifications/ws?tabId=${this.tabId}`;
     try {
       const fp = localStorage.getItem('f0ck_anon_ssh_fp');
-      if (fp) sseUrl += `&fp=${encodeURIComponent(fp)}`;
+      if (fp) wsUrl += `&fp=${encodeURIComponent(fp)}`;
       const hw = localStorage.getItem('f0ck_anon_hw_fp') || window.f0ckAnonSSH?.hwFingerprint;
-      if (hw) sseUrl += `&hw=${encodeURIComponent(hw)}`;
+      if (hw) wsUrl += `&hw=${encodeURIComponent(hw)}`;
     } catch (e) {}
 
-    window.f0ckDebug(`[NotificationSystem] Initializing SSE connection (tabId: ${this.tabId})...`);
-    this.es = new EventSource(sseUrl);
+    window.f0ckDebug(`[NotificationSystem] Opening live socket (tabId: ${this.tabId})...`);
+    const ws = new WebSocket(wsUrl);
+    this.ws = ws;
 
-    this.es.onopen = () => {
-      window.f0ckDebug("[NotificationSystem] SSE connection established");
+    ws.onopen = () => {
+      window.f0ckDebug("[NotificationSystem] Live socket connected");
       this.retryCount = 0;
       document.documentElement.dataset.sseReady = '1';
       document.dispatchEvent(new CustomEvent('f0ck:sse_ready'));
     };
 
-    this.es.onmessage = (e) => {
+    ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
         window.f0ckDebug(`[SSE] Received message:`, data.type);
@@ -19048,30 +19053,29 @@ class NotificationSystem {
       } catch (e) { /* silent — best-effort background sync */ }
     };
 
-    this.es.onerror = (err) => {
-      console.warn('Notification SSE connection lost', err);
-      if (this.es) {
-          this.es.close();
-          this.es = null;
-      }
+    // onerror is always followed by onclose, so reconnecting is handled there only
+    ws.onclose = (ev) => {
+      if (this.ws !== ws) return; // replaced by a newer socket
+      console.warn('Notification socket closed', ev.code, ev.reason);
+      this.ws = null;
 
-      // If tab is hidden, don't retry now — visibilitychange will restart SSE when visible again
+      // If tab is hidden, don't retry now — visibilitychange will reconnect when visible again
       if (document.hidden) {
-          window.f0ckDebug("[NotificationSystem] Tab hidden, deferring SSE retry until visible.");
+          window.f0ckDebug("[NotificationSystem] Tab hidden, deferring socket retry until visible.");
           return;
       }
 
       // Exponential backoff, capped at 30s
       const delay = Math.min(Math.pow(2, this.retryCount) * 1000, 30000);
       if (this.retryCount < this.maxRetries) {
-        window.f0ckDebug(`[NotificationSystem] Retrying SSE in ${delay}ms... (attempt ${this.retryCount + 1}/${this.maxRetries})`);
-        setTimeout(() => this.initSSE(), delay);
+        window.f0ckDebug(`[NotificationSystem] Reconnecting socket in ${delay}ms... (attempt ${this.retryCount + 1}/${this.maxRetries})`);
+        this._wsRetryTimer = setTimeout(() => this.initSocket(), delay);
         this.retryCount++;
       } else {
         // Past max retries — keep trying every 30s indefinitely, reset counter so backoff starts fresh
-        console.warn("[NotificationSystem] Max SSE retries reached, falling back to 30s polling.");
+        console.warn("[NotificationSystem] Max socket retries reached, retrying every 30s.");
         this.retryCount = 0;
-        setTimeout(() => this.initSSE(), 30000);
+        this._wsRetryTimer = setTimeout(() => this.initSocket(), 30000);
       }
     };
   }

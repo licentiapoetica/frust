@@ -73,6 +73,10 @@ pub struct Req {
     pub out: Arc<Mutex<OutExtras>>,
     /// Nonce for inline scripts in this response's Content-Security-Policy (`csp_nonce` in templates).
     pub csp_nonce: String,
+    /// HTTP version and hyper extensions of the incoming request; the WebSocket handshake needs the
+    /// connection's upgrade handle stored there.
+    pub version: axum::http::Version,
+    pub extensions: axum::http::Extensions,
 }
 
 /// JavaScript `decodeURI`: like decodeURIComponent but keeps reserved characters encoded.
@@ -185,6 +189,8 @@ impl Req {
             post_cache: None,
             out: Arc::new(Mutex::new(OutExtras::default())),
             csp_nonce: crate::csp::new_nonce(),
+            version: axum::http::Version::HTTP_11,
+            extensions: axum::http::Extensions::new(),
         }
     }
 
