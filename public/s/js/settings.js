@@ -1964,11 +1964,21 @@
             if (style) style.remove();
             return;
         }
-        // Preload the font via FontFace API so it's available immediately
+        // Every weight of the family (data-faces on the option, see crate::fonts), else just the file
+        let faces = [{ file: fontFile, weight: 400 }];
         try {
-            const face = new FontFace('CustomUserFont', `url(/s/fonts/${fontFile})`);
-            await face.load();
-            document.fonts.add(face);
+            const opt = fontSelect && Array.from(fontSelect.options).find(o => o.value === fontFile);
+            const parsed = opt && JSON.parse(opt.dataset.faces || '[]');
+            if (Array.isArray(parsed) && parsed.length) faces = parsed;
+        } catch (e) {}
+        const safe = (f) => encodeURIComponent(f);
+        // Preload via the FontFace API so it's available immediately
+        try {
+            await Promise.all(faces.map(async (f) => {
+                const face = new FontFace('CustomUserFont', `url(/s/fonts/${safe(f.file)})`, { weight: String(f.weight) });
+                await face.load();
+                document.fonts.add(face);
+            }));
         } catch (e) {
             console.warn('[font] FontFace preload failed, continuing anyway:', e);
         }
@@ -1978,11 +1988,9 @@
             style.id = 'live-font-style';
             document.head.appendChild(style);
         }
-        style.textContent = `
-          @font-face {
-            font-family: 'CustomUserFont';
-            src: url('/s/fonts/${fontFile}');
-          }
+        style.textContent = faces.map(f =>
+            `@font-face { font-family: 'CustomUserFont'; src: url('/s/fonts/${safe(f.file)}'); font-weight: ${Number(f.weight) || 400}; }`
+        ).join('\n') + `
           :root { --font: 'CustomUserFont', monospace !important; }
           *:not(canvas):not(.meme-title):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
             font-family: 'CustomUserFont', monospace !important;

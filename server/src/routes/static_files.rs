@@ -11,7 +11,12 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/c\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.c, "/c/").await) });
     r.get(r"^\/s\/emojis\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.emojis, "/s/emojis/").await) });
     r.get(r"^\/s\/koepfe\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.koepfe, "/s/koepfe/").await) });
-    r.get(r"^\/s\/fonts\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.fonts, "/s/fonts/").await) });
+    // Uploaded fonts, falling back to the built-in ones (public/s/fonts-builtin)
+    r.get(r"^\/s\/fonts\/", |st: AppState, req: Req| async move {
+        let cfg = st.cfg();
+        let root = crate::fonts::serve_root(&cfg, req.path.strip_prefix("/s/fonts/").unwrap_or(""));
+        Ok(serve_dir(&req, &root, "/s/fonts/").await)
+    });
     // /s/ruffle/ is served from public/s/ruffle by the /s/ route (npm run vendor installs it)
     r.get(r"^\/s\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.s, "/s/").await) });
     r.get(r"^\/t\/(?<file>.+)$", thumb);

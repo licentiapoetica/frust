@@ -454,10 +454,8 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
             _ => json!([brand]),
         }
     };
-    let fonts: Vec<Value> = list_dir(&cfg.paths.fonts, r"(?i)\.(ttf|otf|woff2?)$")
-        .into_iter()
-        .map(|f| json!({ "name": f.split('.').next().unwrap_or(""), "file": f }))
-        .collect();
+    // Built-in and uploaded fonts, weights of one family grouped (crate::fonts)
+    let fonts = crate::fonts::families_json(cfg);
     let thumb = cfg.str_or("websrv.default_thumb_size", "").to_lowercase();
     let allowed_comment_images = match w("allowed_comment_images") {
         Value::Array(a) => Value::Array(a),
@@ -473,9 +471,9 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("default_theme", json!(cfg.str_or("websrv.theme", "f0ck")));
     put("modes", cfg.get("allowedModes").clone());
     put("api", w("api"));
-    put("theme_color", json!(crate::pwa::theme_color(cfg)));
     put("site", cfg.get("main.url.full").clone());
     put("domain", cfg.get("main.url.domain").clone());
+    put("theme_color", json!(crate::pwa::theme_color(cfg)));
     put("hide_comments_from_public", cfg.get("main.hide_comments_from_public").clone());
     put("guest_anonymize", json!(cfg.truthy("main.guest_anonymize")));
     put("anon_anonymize", json!(false));
@@ -593,7 +591,7 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
         _ => json!(["image", "video", "audio"]),
     });
     put("enable_comment_polls", if crate::config::truthy(&w("enable_comment_polls")) { w("enable_comment_polls") } else { json!(false) });
-    put("fonts", Value::Array(fonts));
+    put("fonts", fonts);
     g
 }
 
@@ -694,6 +692,9 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     // Actions this visitor must solve a captcha for (cap.uploads / cap.comments): loads the popup
     ctx.insert("captcha_scopes".into(), json!(req.map(|r| crate::cap::scopes_needed(&cfg, r)).unwrap_or_default()));
     ctx.insert("csp_nonce".into(), json!(req.map(|r| r.csp_nonce.as_str()).unwrap_or("")));
+    // @font-face rules (one per weight) for the visitor's font, else the site's default font
+    let chosen_font = session.and_then(|s| s.font.clone()).filter(|f| !f.is_empty()).or_else(|| cfg.str("websrv.default_font").map(str::to_string));
+    ctx.insert("font_faces".into(), crate::fonts::faces_json(&cfg, chosen_font.as_deref()));
     ctx.insert("is_anonymized".into(), json!(is_anonymized));
     ctx.insert("anon_anonymize".into(), json!(crate::settings::anon_anonymize(&cfg)));
     ctx.insert("can_chan".into(), json!(can_chan));

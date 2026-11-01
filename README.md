@@ -125,6 +125,13 @@ build does both steps itself.
 Updates: merge the Dependabot PR (it changes both files), then run `npm ci && npm run vendor` locally
 or rebuild the image. Major versions can change APIs, so try those before merging.
 
+### Fonts
+
+The built-in website fonts (Manrope, SIL OFL 1.1; Hack, MIT + Bitstream Vera License) are in
+`public/s/fonts-builtin/` together with their license texts and credits (`README.md` there).
+Font Awesome Free 6.7.2 (`public/s/fa/`) carries its license in the stylesheet header. The VCR OSD Mono
+font (`public/s/vcr.ttf`) is by Riciery Leal (MrManet), free per https://www.dafont.com/vcr-osd-mono.font.
+
 ### Browser security
 
 - **Content-Security-Policy** (`server/src/csp.rs`): scripts run only from this site or with the

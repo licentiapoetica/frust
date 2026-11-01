@@ -540,7 +540,7 @@
               <select id="website_font_select" class="input" style="flex: 1; max-width: 300px;">
                 <option value="">{{ t("settings.font_default") }}</option>
                 {% for key, font in fonts|entries %}
-                <option value="{{ font.file }}" {% if session.font == font.file %} selected {% endif %}>{{ font.name }}</option>
+                <option value="{{ font.file }}" data-faces='{{ font.faces|tojson }}' {% if session.font in font.files %} selected {% endif %}>{{ font.name }}</option>
                 {% endfor %}
               </select>
             </div>

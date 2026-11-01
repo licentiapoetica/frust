@@ -115,7 +115,7 @@ websrv:
   themes:
     - amoled
   theme: amoled
-  default_font: ""
+  default_font: Manrope-Regular.woff2   # font file (built-in: public/s/fonts-builtin; add your own to the fonts dir)
   default_layout: legacy
   custom_favicon: /s/img/favicon.gif
   custom_brand_image: []

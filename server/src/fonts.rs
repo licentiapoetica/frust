@@ -1,0 +1,167 @@
+//! Website fonts: built-in ones shipped in `public/s/fonts-builtin` plus uploaded ones in the fonts
+//! directory (`public/s/fonts`, or `<STORAGE_DIR>/fonts`). Both are served under `/s/fonts/<file>`;
+//! an uploaded file with the same name wins.
+//!
+//! Files named `<Family>-<Weight>.<ext>` (Manrope-Bold.woff2, Manrope-Regular.woff2, …) form one
+//! family with a `@font-face` per weight. A user's choice is stored as one file name (the family's
+//! regular weight); any file of a family selects the whole family.
+
+use crate::config::Config;
+use serde_json::{Value, json};
+use std::path::{Path, PathBuf};
+
+/// Directory of the fonts that ship with the site.
+pub fn builtin_dir(cfg: &Config) -> PathBuf {
+    cfg.paths.s.join("fonts-builtin")
+}
+
+fn is_font_file(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    [".ttf", ".otf", ".woff", ".woff2"].iter().any(|e| lower.ends_with(e))
+}
+
+fn list(dir: &Path) -> Vec<String> {
+    std::fs::read_dir(dir)
+        .map(|rd| rd.filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().into_owned()).filter(|f| is_font_file(f)).collect())
+        .unwrap_or_default()
+}
+
+/// CSS weight of a style suffix (`Bold` → 700); None when the suffix is no weight name.
+fn weight_of(suffix: &str) -> Option<u16> {
+    Some(match suffix.to_ascii_lowercase().as_str() {
+        "thin" | "hairline" => 100,
+        "extralight" | "ultralight" => 200,
+        "light" => 300,
+        "regular" | "normal" | "book" => 400,
+        "medium" => 500,
+        "semibold" | "demibold" => 600,
+        "bold" => 700,
+        "extrabold" | "ultrabold" => 800,
+        "black" | "heavy" => 900,
+        _ => return None,
+    })
+}
+
+/// (family name, weight) of a font file.
+fn split_name(file: &str) -> (String, u16) {
+    let stem = file.rsplit_once('.').map(|(s, _)| s).unwrap_or(file);
+    match stem.rsplit_once('-') {
+        Some((family, suffix)) if !family.is_empty() => match weight_of(suffix) {
+            Some(w) => (family.to_string(), w),
+            None => (stem.to_string(), 400),
+        },
+        _ => (stem.to_string(), 400),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Family {
+    pub name: String,
+    /// (file, weight), lightest first
+    pub faces: Vec<(String, u16)>,
+}
+
+impl Family {
+    /// File stored as the user's choice: the regular weight, else the one closest to it.
+    pub fn primary(&self) -> &str {
+        self.faces.iter().min_by_key(|(_, w)| (*w as i32 - 400).abs()).map(|(f, _)| f.as_str()).unwrap_or("")
+    }
+
+    fn to_json(&self) -> Value {
+        json!({
+            "name": self.name,
+            "file": self.primary(),
+            "files": self.faces.iter().map(|(f, _)| f).collect::<Vec<_>>(),
+            "faces": self.faces.iter().map(|(f, w)| json!({ "file": f, "weight": w })).collect::<Vec<_>>(),
+        })
+    }
+}
+
+fn group(files: Vec<String>) -> Vec<Family> {
+    let mut families: Vec<Family> = Vec::new();
+    for f in files {
+        let (name, weight) = split_name(&f);
+        match families.iter_mut().find(|fam| fam.name == name) {
+            Some(fam) => {
+                // Two files for one weight (e.g. .woff and .woff2): keep the first
+                if !fam.faces.iter().any(|(_, w)| *w == weight) {
+                    fam.faces.push((f, weight));
+                }
+            }
+            None => families.push(Family { name, faces: vec![(f, weight)] }),
+        }
+    }
+    for fam in &mut families {
+        fam.faces.sort_by_key(|(_, w)| *w);
+    }
+    families.sort_by_key(|f| f.name.to_lowercase());
+    families
+}
+
+/// All fonts, uploaded ones first in case of equal file names.
+fn all_files(cfg: &Config) -> Vec<String> {
+    let mut files = list(&cfg.paths.fonts);
+    for f in list(&builtin_dir(cfg)) {
+        if !files.contains(&f) {
+            files.push(f);
+        }
+    }
+    files.sort();
+    files
+}
+
+pub fn families(cfg: &Config) -> Vec<Family> {
+    group(all_files(cfg))
+}
+
+/// Font list for templates: `[{ name, file, files, faces: [{ file, weight }] }]`.
+pub fn families_json(cfg: &Config) -> Value {
+    Value::Array(families(cfg).iter().map(Family::to_json).collect())
+}
+
+/// Faces of the family a stored choice belongs to (`[{ file, weight }]`), empty when unknown.
+pub fn faces_json(cfg: &Config, file: Option<&str>) -> Value {
+    let Some(file) = file.filter(|f| !f.is_empty()) else { return json!([]) };
+    families(cfg)
+        .into_iter()
+        .find(|fam| fam.faces.iter().any(|(f, _)| f == file))
+        .map(|fam| fam.to_json()["faces"].clone())
+        .unwrap_or_else(|| json!([]))
+}
+
+/// Whether `file` is an available font (validates a user's choice).
+pub fn exists(cfg: &Config, file: &str) -> bool {
+    is_font_file(file) && all_files(cfg).iter().any(|f| f == file)
+}
+
+/// Directory to serve `/s/fonts/<rel>` from: the uploaded fonts when the file is there, else the built-in ones.
+pub fn serve_root(cfg: &Config, rel: &str) -> PathBuf {
+    match crate::http::files::safe_join(&cfg.paths.fonts, rel) {
+        Some(p) if p.is_file() => cfg.paths.fonts.clone(),
+        _ => builtin_dir(cfg),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn weights_group_into_one_family() {
+        let fams = group(
+            ["Manrope-Bold.woff2", "Manrope-Regular.woff2", "Manrope-Light.woff2", "Hack.woff", "Some-Thing.ttf"].map(String::from).to_vec(),
+        );
+        let names: Vec<_> = fams.iter().map(|f| f.name.as_str()).collect();
+        assert_eq!(names, ["Hack", "Manrope", "Some-Thing"]);
+        let manrope = &fams[1];
+        assert_eq!(manrope.faces.iter().map(|(_, w)| *w).collect::<Vec<_>>(), [300, 400, 700]);
+        assert_eq!(manrope.primary(), "Manrope-Regular.woff2");
+        assert_eq!(fams[0].primary(), "Hack.woff");
+    }
+
+    #[test]
+    fn primary_without_regular_is_closest_to_400() {
+        let fams = group(["X-Bold.woff2", "X-Light.woff2"].map(String::from).to_vec());
+        assert_eq!(fams[0].primary(), "X-Light.woff2");
+    }
+}

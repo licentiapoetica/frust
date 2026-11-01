@@ -563,18 +563,8 @@ async fn font(st: AppState, mut req: Req) -> Res {
     // F-023: the font is rendered into a CSS url() in header.html, so it must be a real file name
     let font = body.get("font").filter(|v| crate::config::truthy(v)).and_then(|v| js_str(Some(v)));
     if let Some(f) = &font {
-        let dir = st.cfg().paths.fonts.clone();
-        let mut available = Vec::new();
-        match tokio::fs::read_dir(&dir).await {
-            Ok(mut rd) => {
-                while let Ok(Some(e)) = rd.next_entry().await {
-                    available.push(e.file_name().to_string_lossy().into_owned());
-                }
-            }
-            Err(_) => return fail("Font directory unavailable", 500),
-        }
-        static EXT: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"(?i)\.(ttf|otf|woff2?)$").unwrap());
-        if !available.iter().any(|a| a == f && EXT.is_match(a)) {
+        // Built-in or uploaded font file (crate::fonts)
+        if !crate::fonts::exists(&st.cfg(), f) {
             return fail("Invalid font selection", 400);
         }
     }
