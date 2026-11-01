@@ -1,7 +1,7 @@
 //! General helpers (port of src/inc/lib.mjs, minus the route guards which live in http::guard).
 
 use crate::config::Config;
-use rand::RngCore;
+use rand::TryRng;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -22,7 +22,7 @@ pub fn escape_html(s: &str) -> String {
 
 pub fn random_bytes(n: usize) -> Vec<u8> {
     let mut b = vec![0u8; n];
-    rand::rngs::OsRng.fill_bytes(&mut b);
+    rand::rngs::SysRng.try_fill_bytes(&mut b).expect("OS random number generator failed");
     b
 }
 
@@ -352,7 +352,7 @@ fn scrypt_derive(password: &str, salt: &str) -> Option<Vec<u8>> {
 pub async fn hash_password(password: String) -> String {
     tokio::task::spawn_blocking(move || {
         use argon2::password_hash::{PasswordHasher, SaltString};
-        let salt = SaltString::generate(&mut rand::rngs::OsRng);
+        let salt = SaltString::encode_b64(&random_bytes(argon2::password_hash::Salt::RECOMMENDED_LENGTH)).expect("16 bytes is a valid salt");
         argon2::Argon2::default().hash_password(password.as_bytes(), &salt).map(|h| h.to_string()).unwrap_or_default()
     })
     .await

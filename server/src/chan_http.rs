@@ -16,8 +16,8 @@
 use crate::config::Config;
 use anyhow::{Result, anyhow, bail};
 use bytes::Bytes;
-use rand::Rng;
-use rand::seq::SliceRandom;
+use rand::RngExt;
+use rand::seq::IndexedRandom;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -160,9 +160,9 @@ fn major_since(base: i64, y: i32, m: u32, d: u32) -> i64 {
 }
 
 pub fn random_user_agent() -> String {
-    let mut rng = rand::thread_rng();
-    let chrome = major_since(100, 2022, 3, 29) - rng.gen_range(0..3);
-    let firefox = major_since(100, 2022, 5, 3) - rng.gen_range(0..3);
+    let mut rng = rand::rng();
+    let chrome = major_since(100, 2022, 3, 29) - rng.random_range(0..3);
+    let firefox = major_since(100, 2022, 5, 3) - rng.random_range(0..3);
     let templates = [
         format!("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome}.0.0.0 Safari/537.36"),
         format!("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome}.0.0.0 Safari/537.36"),
@@ -304,7 +304,7 @@ pub fn chan_curl(cfg: &Config, url: &ChanUrl, extra: &[String]) -> CurlCmd {
 }
 
 fn build_curl(url: &ChanUrl, extra: &[String], socks: Option<&str>, impersonate: &[PathBuf]) -> CurlCmd {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     // No -L: 4chan's API and CDN answer directly, and a redirect must not lead anywhere else.
     let mut args: Vec<String> = ["-s", "-f", "--proto", "=https", "--max-redirs", "0"].iter().map(|s| s.to_string()).collect();
     args.extend(extra.iter().cloned());

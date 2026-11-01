@@ -64,7 +64,7 @@ impl Runtime {
             Event::Message(m) => self.on_message(m).await,
             Event::CtcpVersion(e) => {
                 tracing::info!("{} -> {} -> {}: ctcp:version {}", e.network, e.channel, e.user.nick, e.message);
-                let v = VERSIONS[rand::random::<usize>() % VERSIONS.len()];
+                let v = VERSIONS[rand::random_range(0..VERSIONS.len())];
                 e.write(&format!("NOTICE {} :\u{1}VERSION {v}\u{1}", e.user.nick));
             }
             Event::CtcpPing(e) => {

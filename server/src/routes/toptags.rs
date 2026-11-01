@@ -203,8 +203,8 @@ async fn tags_page(st: AppState, req: Req) -> Res {
     let cfg = st.cfg();
     let phrase = match cfg.get("websrv.phrases").as_array().filter(|a| !a.is_empty()) {
         Some(a) => {
-            use rand::Rng;
-            a[rand::thread_rng().gen_range(0..a.len())].clone()
+            use rand::RngExt;
+            a[rand::rng().random_range(0..a.len())].clone()
         }
         None => Value::Null,
     };

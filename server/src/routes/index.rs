@@ -774,8 +774,8 @@ async fn onara_page(st: &AppState, req: &Req, tpl_req: &Req, opts: &FeedOpts<'_>
             g["thumb_size"] = first(&["thumb_size"]).unwrap_or(json!(1));
             g["is_onara_active"] = json!(true);
             if is_random && !items.is_empty() {
-                use rand::Rng;
-                let idx = rand::thread_rng().gen_range(0..=items.len());
+                use rand::RngExt;
+                let idx = rand::rng().random_range(0..=items.len());
                 items.insert(idx, g);
             } else {
                 items.insert(0, g);

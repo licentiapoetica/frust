@@ -9,7 +9,7 @@ use crate::session::Session;
 use crate::settings::is_anon_session;
 use crate::sql;
 use crate::state::AppState;
-use rand::Rng;
+use rand::RngExt;
 use serde_json::{Map, Value, json};
 
 /// Options of the recommendation / tag feed functions (`{ limit, mode, ratings, session, ... }`).
@@ -436,7 +436,7 @@ pub async fn get_personalized_recommendations(st: &AppState, o: &RecOpts<'_>) ->
         match o.prefer_personalized {
             Some(true) => 1,
             Some(false) => 0,
-            None => (rand::thread_rng().r#gen::<f64>() < 0.20) as i64,
+            None => (rand::rng().random::<f64>() < 0.20) as i64,
         }
     } else if is_first_batch {
         1 + ((max_limit - 3).max(0) as f64 * 0.20).round() as i64
@@ -528,12 +528,12 @@ pub async fn get_personalized_recommendations(st: &AppState, o: &RecOpts<'_>) ->
     let mut pers = std::collections::VecDeque::from(personalized);
     let mut rand_q = std::collections::VecDeque::from(random_items);
     let mut result: Vec<Map<String, Value>> = Vec::new();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut gap: i64;
     if is_first_batch {
         // exactly one recommendation among the first three
         let top = max.min(3);
-        let rec_slot = rng.gen_range(0..top);
+        let rec_slot = rng.random_range(0..top);
         let mut slots: Vec<Option<Map<String, Value>>> = vec![None; top];
         slots[rec_slot] = pers.pop_front();
         for (s, slot) in slots.iter_mut().enumerate() {
@@ -544,15 +544,15 @@ pub async fn get_personalized_recommendations(st: &AppState, o: &RecOpts<'_>) ->
         result.extend(slots.into_iter().flatten());
         gap = top as i64 - 1 - rec_slot as i64;
     } else {
-        gap = rng.gen_range(1..=2);
+        gap = rng.random_range(1..=2);
     }
     // later recommendations separated by 3–5 random items
-    let mut target_gap: i64 = rng.gen_range(3..=5);
+    let mut target_gap: i64 = rng.random_range(3..=5);
     while result.len() < max && (!pers.is_empty() || !rand_q.is_empty()) {
         if !pers.is_empty() && gap >= target_gap && !rand_q.is_empty() {
             result.extend(pers.pop_front());
             gap = 0;
-            target_gap = rng.gen_range(3..=5);
+            target_gap = rng.random_range(3..=5);
         } else if let Some(r) = rand_q.pop_front() {
             result.push(r);
             gap += 1;

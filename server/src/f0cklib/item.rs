@@ -660,8 +660,8 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     let phrase = if phrases.is_empty() {
         Value::Null
     } else {
-        use rand::Rng;
-        phrases[rand::thread_rng().gen_range(0..phrases.len())].clone()
+        use rand::RngExt;
+        phrases[rand::rng().random_range(0..phrases.len())].clone()
     };
     let src_short = url::Url::parse(&src).ok().and_then(|u| u.host_str().map(|h| h.trim_start_matches('[').trim_end_matches(']').to_string()));
     let page_id = if has_slug { slug_val.clone() } else { json!(itemid) };
