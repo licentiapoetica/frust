@@ -99,6 +99,10 @@
         // size and get cropped whenever the box is smaller than the stage.
         scale: 'showAll',
         forceScale: true,
+        // ...and centre it, or a SWF that sets StageAlign.TOP_LEFT puts all the spare
+        // space on one side, filled with the stage colour instead of a letterbox.
+        salign: '',
+        forceAlign: true,
         letterbox: 'on',
         warnOnUnsupportedContent: false,
         contextMenu: 'on',
