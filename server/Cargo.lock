@@ -852,7 +852,7 @@ dependencies = [
  "p256",
  "parking_lot",
  "percent-encoding",
- "rand 0.8.8",
+ "rand 0.10.3",
  "regex",
  "reqwest",
  "rustls",
