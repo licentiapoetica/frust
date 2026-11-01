@@ -57,9 +57,9 @@
                     {% if not user_alternative_steuerung %}
                     <nav class="steuerung">
                         {% if pagination.next %}
-                        <a class="nav-prev" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}">← {{ t("nav.prev") }}</a>
+                        <a class="nav-prev" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}"><span class="steuerung-arrow">←</span> {{ t("nav.prev") }}</a>
                         {% else %}
-                        <a class="nav-prev item-nav-hidden" href="#">← {{ t("nav.prev") }}</a>
+                        <a class="nav-prev item-nav-hidden" href="#"><span class="steuerung-arrow">←</span> {{ t("nav.prev") }}</a>
                         {% endif %}
                         <span>|</span>
                         <a id="random" class="" href="/random">
@@ -67,9 +67,9 @@
                         </a>
                         <span>|</span>
                         {% if pagination.prev %}
-                        <a class="nav-next" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}">{{ t("nav.next") }} →</a>
+                        <a class="nav-next" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}">{{ t("nav.next") }} <span class="steuerung-arrow">→</span></a>
                         {% else %}
-                        <a class="nav-next item-nav-hidden" href="#">{{ t("nav.next") }} →</a>
+                        <a class="nav-next item-nav-hidden" href="#">{{ t("nav.next") }} <span class="steuerung-arrow">→</span></a>
                         {% endif %}
                     </nav>
                     {% else %}

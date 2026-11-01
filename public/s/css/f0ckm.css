@@ -12984,6 +12984,21 @@ html[theme="f0ck95d"] .badge-dark {
   transition: opacity 0.15s ease;
 }
 
+/* "← prev" / "next →": the site font (Manrope) has no arrows, so the browser drew them in a system
+   fallback font, at a different height on every system (low, on Linux). NavArrows ships the arrows
+   with their ink centred on the middle of Manrope's x-height, so on the baseline they line up with
+   the lowercase text. See public/s/fonts-ui/README.md. */
+@font-face {
+  font-family: 'NavArrows';
+  src: url('/s/fonts-ui/NavArrows.woff2') format('woff2');
+  unicode-range: U+2190, U+2192;
+  font-display: block;
+}
+
+.steuerung-arrow {
+  font-family: 'NavArrows', monospace;
+}
+
 /* The "|" separators: aligned like the links (or they sit on the baseline next to
    middle-aligned links), dimmed and spaced so they don't read as a letter "I" */
 .steuerung > span {
@@ -30973,12 +30988,12 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
    header.html puts .header-font-user / .header-font-site on <html> when a font is chosen and declares the
    @font-face rules + --font there (values from session/config). :where() keeps the original specificity. */
 :where(html.header-font-user),
-:where(html.header-font-user) *:not(canvas):not(.meme-title):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
+:where(html.header-font-user) *:not(canvas):not(.meme-title):not(.steuerung-arrow):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
   font-family: 'CustomUserFont', monospace !important;
 }
 
 :where(html.header-font-site),
-:where(html.header-font-site) *:not(canvas):not(.meme-title):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
+:where(html.header-font-site) *:not(canvas):not(.meme-title):not(.steuerung-arrow):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
   font-family: 'SiteDefaultFont', monospace !important;
 }
 
