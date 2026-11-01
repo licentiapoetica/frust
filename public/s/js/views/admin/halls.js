@@ -1,0 +1,231 @@
+(function() {
+  var grid = document.getElementById('hall-manager-grid');
+  var i18n = window.f0ckI18n || {};
+
+  // ── Card wiring ─────────────────────────────────────────────────────────
+  function wireCard(card) {
+    var slug = card.dataset.slug;
+    var status = card.querySelector('.hall-status');
+    var nameInput = card.querySelector('.hall-name-input');
+    var slugInput = card.querySelector('.hall-slug-input');
+    var descInput = card.querySelector('.hall-desc-input');
+    var ratingInput = card.querySelector('.hall-rating-input');
+    var imgEl = card.querySelector('.hall-manager-image img');
+    var imgContainer = card.querySelector('.hall-manager-image');
+    var fileInput = card.querySelector('.hall-img-upload');
+    var viewLink = card.querySelector('.hall-view-link');
+
+    function setStatus(msg, color) {
+      status.textContent = msg;
+      status.style.color = color || '#aaa';
+    }
+
+    // Live name overlay
+    var nameOverlay = imgContainer.querySelector('span');
+    nameInput.addEventListener('input', function() {
+      if (nameOverlay) nameOverlay.textContent = nameInput.value;
+    });
+
+    // Auto-sanitize slug on blur
+    slugInput.addEventListener('blur', function() {
+      slugInput.value = slugInput.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    });
+
+    // Click image → open file picker
+    imgContainer.addEventListener('click', function(e) {
+      if (e.target.classList.contains('btn-del-img')) return;
+      fileInput.click();
+    });
+
+    // Save name + slug + description
+    card.querySelector('.btn-save-hall').addEventListener('click', async function() {
+      setStatus(i18n.hall_saving || 'Saving...');
+      var newSlug = slugInput.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      if (!newSlug) { setStatus("✗ " + (i18n.hall_slug_empty_error || 'Slug cannot be empty'), '#f55'); return; }
+      try {
+        var r = await fetch('/api/v2/admin/halls/' + encodeURIComponent(slug), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' },
+          body: JSON.stringify({ name: nameInput.value, slug: newSlug, description: descInput.value, rating: ratingInput.value })
+        });
+        var d = await r.json();
+        if (d.success) {
+          // If slug changed, update all references in the DOM
+          if (newSlug !== slug) {
+            slug = newSlug;                          // update closure variable — all future fetches use new slug
+            card.dataset.slug = newSlug;
+            card.id = 'hall-card-' + newSlug;
+            imgEl.src = '/hall_image/' + newSlug + '?v=' + Date.now();
+            if (viewLink) viewLink.href = '/h/' + newSlug;
+            slugInput.value = newSlug;
+          }
+          setStatus("✓ " + (i18n.hall_saved || 'Saved'), 'var(--accent)');
+        } else {
+          setStatus('✗ ' + d.msg, '#f55');
+        }
+      } catch (e) { setStatus("✗ " + (i18n.hall_error || 'Error'), '#f55'); }
+    });
+
+    // Upload image
+    fileInput.addEventListener('change', async function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      setStatus(i18n.uploading || 'Uploading...');
+      var fd = new FormData();
+      fd.append('file', file);
+      try {
+        var r = await fetch('/api/v2/admin/halls/' + encodeURIComponent(slug) + '/image', {
+          method: 'POST',
+          headers: { 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' },
+          body: fd
+        });
+        var d = await r.json();
+        if (d.success) {
+          imgEl.src = '/hall_image/' + slug + '?v=' + Date.now();
+          setStatus("✓ " + (i18n.hall_image_uploaded || 'Image uploaded'), 'var(--accent)');
+          if (!imgContainer.querySelector('.btn-del-img')) {
+            var xBtn = document.createElement('button');
+            xBtn.className = 'btn-del-img adm-halls-del-img-btn';
+            xBtn.title = i18n.hall_click_upload_hint || 'Click to upload';
+            xBtn.textContent = '✕';
+            imgContainer.appendChild(xBtn);
+            wireDelBtn(xBtn);
+          }
+        } else {
+          setStatus('✗ ' + d.msg, '#f55');
+        }
+      } catch (e) { setStatus("✗ " + (i18n.hall_error || 'Error'), '#f55'); }
+      e.target.value = '';
+    });
+
+    function wireDelBtn(btn) {
+      btn.addEventListener('click', async function(e) {
+        e.stopPropagation();
+        setStatus(i18n.hall_removing || 'Removing...');
+        try {
+          var r = await fetch('/api/v2/admin/halls/' + encodeURIComponent(slug) + '/image', {
+            method: 'DELETE',
+            headers: { 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' }
+          });
+          var d = await r.json();
+          if (d.success) {
+            imgEl.src = '/hall_image/' + slug + '?v=' + Date.now();
+            btn.remove();
+            setStatus("✓ " + (i18n.hall_image_removed || 'Image removed'), 'var(--accent)');
+          } else { setStatus('✗ ' + d.msg, '#f55'); }
+        } catch (e) { setStatus("✗ " + (i18n.hall_error || 'Error'), '#f55'); }
+      });
+    }
+
+    var existingDelBtn = imgContainer.querySelector('.btn-del-img');
+    if (existingDelBtn) wireDelBtn(existingDelBtn);
+
+    // Delete hall
+    card.querySelector('.btn-delete-hall').addEventListener('click', async function() {
+      var confirmMsg = (i18n.hall_delete_confirm || 'Really delete hall "{slug}"?').replace('{slug}', slug);
+      if (!confirm(confirmMsg)) return;
+      setStatus(i18n.hall_deleting || 'Deleting...');
+      try {
+        var r = await fetch('/api/v2/admin/halls/' + encodeURIComponent(slug), {
+          method: 'DELETE',
+          headers: { 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' }
+        });
+        var d = await r.json();
+        if (d.success) {
+          card.style.transition = 'opacity 0.3s';
+          card.style.opacity = '0';
+          setTimeout(function() { card.remove(); }, 300);
+        } else { setStatus('✗ ' + d.msg, '#f55'); }
+      } catch (e) { setStatus('✗ Error', '#f55'); }
+    });
+  }
+
+  // Wire all existing cards on load
+  document.querySelectorAll('.hall-manager-card').forEach(wireCard);
+
+  // ── Create Hall ──────────────────────────────────────────────────────────
+  var newHallName = document.getElementById('new-hall-name');
+  var newHallRating = document.getElementById('new-hall-rating');
+  var slugPreview = document.getElementById('new-hall-slug-preview');
+  var createBtn = document.getElementById('btn-create-hall');
+  var createStatus = document.getElementById('create-hall-status');
+
+  function toSlug(s) {
+    return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  newHallName.addEventListener('input', function() {
+    var slug = toSlug(newHallName.value);
+    slugPreview.textContent = slug ? '/' + slug : '';
+  });
+
+  function buildCard(name, slug, rating) {
+    var ratingOpts = ['sfw','nsfw','nsfl'].map(function(r) {
+      return '<option value="' + r + '"' + (r === rating ? ' selected' : '') + '>' + (r === 'sfw' ? '🟢 SFW' : r === 'nsfw' ? '🔴 NSFW' : '💀 NSFL') + '</option>';
+    }).join('');
+    var div = document.createElement('div');
+    div.className = 'hall-manager-card';
+    div.id = 'hall-card-' + slug;
+    div.dataset.slug = slug;
+    div.innerHTML =
+      '<div class="hall-manager-image adm-halls-card-image" title="Click to upload a custom image">' +
+        '<img src="/hall_image/' + slug + '" alt="' + name + '" class="adm-halls-card-img">' +
+        '<span class="adm-halls-card-name">' + name + '</span>' +
+        '<input type="file" class="hall-img-upload adm-halls-img-upload" accept="image/*">' +
+      '</div>' +
+      '<div class="adm-halls-card-body">' +
+        '<div class="adm-halls-field"><label class="adm-halls-field-label">' + (i18n.common_name || 'Name') + '</label>' +
+          '<input type="text" class="hall-name-input adm-halls-input" value="' + name + '"></div>' +
+        '<div class="adm-halls-field"><label class="adm-halls-field-label">' + (i18n.hall_slug || 'Slug') + '</label>' +
+          '<input type="text" class="hall-slug-input adm-halls-input adm-halls-slug-input" value="' + slug + '"></div>' +
+        '<div class="adm-halls-field"><label class="adm-halls-field-label">' + (i18n.common_description || 'Description') + '</label>' +
+          '<textarea class="hall-desc-input adm-halls-input adm-halls-desc-input"></textarea></div>' +
+        '<div class="adm-halls-field"><label class="adm-halls-field-label">' + (i18n.hall_rating || 'Rating') + '</label>' +
+          '<select class="hall-rating-input adm-halls-input">' + ratingOpts + '</select></div>' +
+        '<div class="adm-halls-card-actions">' +
+          '<button class="btn-save-hall hm-btn adm-halls-save-btn">' + (i18n.common_save || 'Save') + '</button>' +
+          '<a href="/h/' + slug + '" class="hall-view-link hm-btn adm-halls-view-btn">' + (i18n.common_view || 'View') + ' →</a>' +
+          '<span class="adm-halls-post-count">' + (i18n.hall_posts || '{count} posts').replace('{count}', '0') + '</span>' +
+          '<button class="btn-delete-hall hm-btn adm-halls-delete-btn">🗑 ' + (i18n.common_delete || 'Delete') + '</button>' +
+        '</div>' +
+        '<div class="hall-status adm-halls-status"></div>' +
+      '</div>';
+    return div;
+  }
+
+  async function createHall() {
+    var name = newHallName.value.trim();
+    if (!name) { createStatus.textContent = i18n.hall_enter_name_error || 'Enter a name'; return; }
+    var slug = toSlug(name);
+    var rating = newHallRating ? newHallRating.value : 'sfw';
+    createStatus.textContent = i18n.hall_creating || 'Creating...';
+    createStatus.style.color = '#888';
+    try {
+      var r = await fetch('/api/v2/admin/halls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' },
+        body: JSON.stringify({ name: name, slug: slug, rating: rating })
+      });
+      var d = await r.json();
+      if (d.success) {
+        createStatus.textContent = "✓ " + (i18n.hall_saved || 'Saved') + "!";
+        createStatus.style.color = 'var(--accent)';
+        var card = buildCard(name, slug, rating);
+        grid.appendChild(card);
+        wireCard(card);
+        // Scroll new card into view
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Reset form
+        newHallName.value = '';
+        slugPreview.textContent = '';
+        setTimeout(function() { createStatus.textContent = ''; }, 2000);
+      } else {
+        createStatus.textContent = '✗ ' + d.msg;
+        createStatus.style.color = '#f55';
+      }
+    } catch (e) { createStatus.textContent = "✗ " + (i18n.hall_error || 'Error'); createStatus.style.color = '#f55'; }
+  }
+
+  createBtn.addEventListener('click', createHall);
+  newHallName.addEventListener('keydown', function(e) { if (e.key === 'Enter') createHall(); });
+})();

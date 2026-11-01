@@ -12,40 +12,11 @@
 
 <div id="hot-corner"></div>
 
-<div id="gate-container">
+<div id="gate-container" data-css-href="/s/css/f0ckm.css?v={{ ts }}">
   {% include "snippets/navbar.html" %}
   {% include "snippets/footer.html" %}
 </div>
-<script nonce="{{ csp_nonce }}">
-  function openLoginGate() {
-    const container = document.getElementById('gate-container');
-    container.style.display = 'block';
-    if (!document.getElementById('injected-gate-styles')) {
-      const link = document.createElement('link');
-      link.id = 'injected-gate-styles';
-      link.rel = 'stylesheet';
-      link.href = '/s/css/f0ckm.css?v={{ ts|safe }}';
-      document.head.appendChild(link);
-    }
-    const modal = document.getElementById('login-modal');
-    if (modal) {
-      modal.style.display = 'flex';
-    } else {
-      const checkModal = setInterval(() => {
-        const m = document.getElementById('login-modal');
-        if (m) { m.style.display = 'flex'; clearInterval(checkModal); }
-      }, 50);
-    }
-  }
-  document.getElementById('secret-letter').onclick = openLoginGate;
-  document.getElementById('hot-corner').onclick = openLoginGate;
-  let secretBuffer = '';
-  document.addEventListener('keydown', (e) => {
-    secretBuffer += e.key.toLowerCase();
-    if (secretBuffer.endsWith('premiumhumor')) { openLoginGate(); secretBuffer = ''; }
-    if (secretBuffer.length > 10) secretBuffer = secretBuffer.substring(1);
-  });
-</script>
+<script src="/s/js/views/index.js?v={{ mtime("/public/s/js/views/index.js") }}"></script>
 </body>
 </html>
 {% else %}

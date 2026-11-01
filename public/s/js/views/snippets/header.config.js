@@ -1,0 +1,5 @@
+// Site config globals for the scripts that follow (values from the #header-data JSON block in header.html)
+(function () {
+  var D = JSON.parse(document.getElementById('header-data').textContent);
+  window.f0ckThemes = D.themes; window.f0ckDefaultTheme = D.default_theme; window.f0ckDefaultLayout = D.default_layout; window.f0ckDomain = D.domain; window.f0ckGitHash = D.git_hash; window.f0ckAllowedImages = D.allowed_images; window.f0ckEmbedYoutubeInComments = D.embed_youtube_in_comments; window.f0ckEnableYoutubeUpload = D.enable_youtube_upload; window.f0ckBrandImages = D.brand_images; window.f0ckCustomBrandText = D.custom_brand_text; window.f0ckMediaBase = D.media_base; window.f0ckShitpostMode = D.shitpost_mode; window.f0ckShitpostRequireRating = D.shitpost_require_rating; window.f0ckShitpostMinTags = D.shitpost_min_tags; window.f0ckEnableItemTitle = D.enable_item_title; window.f0ckCommentBannerEnabled = D.comment_banner_enabled; window.f0ckServerAudioTuner = D.server_audio_tuner; window.f0ckEnableComments = D.enable_comments; window.f0ckHwFingerprint = D.hw_fingerprint;
+})();

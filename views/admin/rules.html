@@ -11,8 +11,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="adm-editor-field">
                     <label for="rules-text" class="adm-editor-label">Rules Page Content (Markdown supported)</label>
-                    <textarea id="rules-text" name="rules_text" class="adm-editor-text"></textarea>
-                    <script nonce="{{ csp_nonce }}">document.getElementById('rules-text').value = new TextDecoder('utf-8').decode(Uint8Array.from(atob({{ rules_text_b64|string|tojson }}), function(c) { return c.charCodeAt(0); }));</script>
+                    <textarea id="rules-text" name="rules_text" class="adm-editor-text" data-b64="{{ rules_text_b64|string }}"></textarea>
                 </div>
 
                 <div class="adm-form-actions">
@@ -30,49 +29,7 @@
         </div>
     </div>
 
-    <script nonce="{{ csp_nonce }}">
-        F0ckActions.define({
-            savePage: (el, e, page) => savePage(el, page),
-            clearPage: (el, e, page) => {
-                document.getElementById(page + '-text').value = '';
-                savePage(document.getElementById(page + '-form'), page);
-            },
-        });
-
-        async function savePage(form, page) {
-            const statusId = page + '-status';
-            const status = document.getElementById(statusId);
-
-            status.textContent = 'Saving...';
-            status.style.color = 'var(--accent)';
-            status.style.display = 'inline';
-
-            try {
-                const res = await fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRF-Token': window.f0ckSession?.csrf_token
-                    },
-                    body: new URLSearchParams(new FormData(form))
-                });
-
-                const data = await res.json();
-                if (data.success) {
-                    status.textContent = 'Saved!';
-                    status.style.color = '#28a745';
-                    setTimeout(() => { status.style.display = 'none'; }, 2000);
-                } else {
-                    throw new Error(data.msg || 'Unknown error');
-                }
-            } catch (err) {
-                console.error('Save Error:', err);
-                status.textContent = 'Error: ' + err.message;
-                status.style.color = '#d9534f';
-            }
-        }
-    </script>
+    <script src="/s/js/views/admin/page-editor.js?v={{ mtime("/public/s/js/views/admin/page-editor.js") }}" data-page="rules"></script>
 </div>
 </div>
 {% include "snippets/footer.html" %}

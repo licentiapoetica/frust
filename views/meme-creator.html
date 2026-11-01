@@ -42,16 +42,8 @@
             </div>
         </div>
 
-        <script nonce="{{ csp_nonce }}">
-            window.memeTemplate = {
-                id: {{ template.id|string|tojson }},
-                url: {{ template.url|string|tojson }},
-                name: {{ template.name|string|tojson }},
-                category: {{ (template.category or "General")|string|tojson }},
-                sub_category: {{ (template.sub_category or "")|string|tojson }}
-            };
-            window.csrf_token = {{ csrf_token|string|tojson }};
-        </script>
+        <script type="application/json" id="meme-creator-data">{{ {"id": template.id|string, "url": template.url|string, "name": template.name|string, "category": (template.category or "General")|string, "sub_category": (template.sub_category or "")|string, "csrf_token": csrf_token|string}|tojson }}</script>
+        <script src="/s/js/views/meme-creator.js?v={{ mtime("/public/s/js/views/meme-creator.js") }}"></script>
         <script src="/s/js/meme-creator.js?v={{ ts|safe }}"></script>
     </div>
 </div>

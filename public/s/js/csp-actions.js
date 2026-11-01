@@ -177,6 +177,9 @@
     const s = document.createElement('script');
     for (const a of old.attributes) if (a.name !== 'nonce') s.setAttribute(a.name, a.value);
     if (exec && !old.hasAttribute('src')) s.nonce = getPageNonce();
+    // Inserted scripts with a src load async by default; keep them running in document order
+    // like in a normal page load (a page's own script may need one included before it).
+    if (old.hasAttribute('src') && !old.hasAttribute('async')) s.async = false;
     s.textContent = old.textContent;
     return s;
   };

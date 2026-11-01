@@ -21,18 +21,7 @@
       </div>
   </div>
 
-  <script nonce="{{ csp_nonce }}">
-    function openLoginGate() {
-      document.getElementById('gate-container').style.display = 'block';
-      const tryOpen = () => {
-        const m = document.getElementById('login-modal');
-        if (m) { m.style.display = 'flex'; }
-        else { setTimeout(tryOpen, 50); }
-      };
-      tryOpen();
-    }
-    F0ckActions.define({ openLoginGate: function() { openLoginGate(); } });
-  </script>
+  <script src="/s/js/views/_gate_template.js?v={{ mtime("/public/s/js/views/_gate_template.js") }}"></script>
 
 </body>
 </html>

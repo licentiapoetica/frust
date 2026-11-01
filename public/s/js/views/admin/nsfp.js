@@ -1,0 +1,226 @@
+(function () {
+    var csrf = JSON.parse(document.getElementById('admin-nsfp-data').textContent).csrf;
+    var currentIds = new Set();
+
+    var chipsEl = document.getElementById('nsfp-chips');
+    var chipStatus = document.getElementById('chip-status');
+    var addStatus = document.getElementById('add-status');
+
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function showStatus(el, msg, ok) {
+        el.textContent = msg;
+        el.style.color = ok ? '#28a745' : '#d9534f';
+        if (ok) setTimeout(function () { el.textContent = ''; }, 3000);
+    }
+
+    function refreshEmptyMsg() {
+        var existing = chipsEl.querySelector('.nsfp-tag-chip');
+        var emptyEl = chipsEl.querySelector('.nsfp-chips-empty');
+        if (!existing) {
+            if (!emptyEl) {
+                emptyEl = document.createElement('span');
+                emptyEl.className = 'nsfp-chips-empty';
+                emptyEl.textContent = 'No NSFP tags configured \u2014 all content is public.';
+                chipsEl.appendChild(emptyEl);
+            }
+        } else if (emptyEl) {
+            emptyEl.remove();
+        }
+    }
+
+    function createChip(tag) {
+        var chip = document.createElement('span');
+        chip.className = 'nsfp-tag-chip';
+        chip.dataset.id = tag.id;
+
+        var idSpan = document.createElement('span');
+        idSpan.className = 'chip-id';
+        idSpan.textContent = '#' + tag.id;
+
+        var nameSpan = document.createElement('span');
+        nameSpan.textContent = tag.tag;
+
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'chip-remove';
+        removeBtn.title = 'Remove from NSFP list';
+        removeBtn.textContent = '\u00d7';
+        removeBtn.addEventListener('click', function () { nsfpAdmin.remove(tag.id, removeBtn); });
+
+        chip.appendChild(idSpan);
+        chip.appendChild(nameSpan);
+        chip.appendChild(removeBtn);
+        return chip;
+    }
+
+    function addChip(tag) {
+        var emptyEl = chipsEl.querySelector('.nsfp-chips-empty');
+        if (emptyEl) emptyEl.remove();
+        chipsEl.appendChild(createChip(tag));
+        currentIds.add(tag.id);
+        rebuildDropdown(document.getElementById('nsfp-search').value);
+    }
+
+    function removeChip(tagId) {
+        var chip = chipsEl.querySelector('.nsfp-tag-chip[data-id="' + tagId + '"]');
+        if (chip) chip.remove();
+        currentIds.delete(tagId);
+        refreshEmptyMsg();
+        rebuildDropdown(document.getElementById('nsfp-search').value);
+    }
+
+    function loadNsfp() {
+        fetch('/api/v2/admin/nsfp')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                chipsEl.innerHTML = '';
+                currentIds.clear();
+                if (data.success && data.nsfp && data.nsfp.length > 0) {
+                    data.nsfp.forEach(function (tag) {
+                        chipsEl.appendChild(createChip(tag));
+                        currentIds.add(tag.id);
+                    });
+                } else {
+                    var emptyEl = document.createElement('span');
+                    emptyEl.className = 'nsfp-chips-empty';
+                    emptyEl.textContent = 'No NSFP tags configured \u2014 all content is public.';
+                    chipsEl.appendChild(emptyEl);
+                }
+                var statEl = document.getElementById('nsfp-blocked-stat');
+                if (statEl) {
+                    var n = data.blocked_count || 0;
+                    statEl.textContent = n.toLocaleString() + ' item' + (n !== 1 ? 's' : '') + ' hidden from guests';
+                    statEl.style.color = n > 0 ? 'var(--accent)' : '#888';
+                }
+            })
+            .catch(function (e) {
+                chipsEl.innerHTML = '<span class="nsfp-chips-empty adm-nsfp-chips-error">Failed to load: ' + escapeHtml(e.message) + '</span>';
+            });
+    }
+
+    var remove = function (tagId, btn) {
+        if (!confirm('Remove tag #' + tagId + ' from the NSFP list?')) return;
+        if (btn) btn.disabled = true;
+        fetch('/api/v2/admin/nsfp/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrf },
+            body: 'tag_id=' + encodeURIComponent(tagId)
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) {
+                removeChip(tagId);
+                showStatus(chipStatus, 'Tag #' + tagId + ' removed.', true);
+            } else {
+                showStatus(chipStatus, 'Error: ' + (data.msg || 'Remove failed'), false);
+                if (btn) btn.disabled = false;
+            }
+        })
+        .catch(function (e) {
+            showStatus(chipStatus, 'Network error: ' + e.message, false);
+            if (btn) btn.disabled = false;
+        });
+    };
+
+    var doAdd = function (tagId) {
+        tagId = parseInt(tagId, 10);
+        if (currentIds.has(tagId)) {
+            showStatus(addStatus, 'Tag #' + tagId + ' is already in the list.', false);
+            return;
+        }
+        fetch('/api/v2/admin/nsfp/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrf },
+            body: 'tag_id=' + encodeURIComponent(tagId)
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) {
+                addChip(data.added);
+                showStatus(addStatus, '"' + escapeHtml(data.added.tag) + '" (#' + data.added.id + ') added.', true);
+            } else {
+                showStatus(addStatus, 'Error: ' + (data.msg || 'Add failed'), false);
+            }
+        })
+        .catch(function (e) { showStatus(addStatus, 'Network error: ' + e.message, false); });
+    };
+
+    var lastResults = [];
+
+    function rebuildDropdown(query) {
+        var dropdown = document.getElementById('search-dropdown');
+        if (!lastResults.length || !query) { dropdown.style.display = 'none'; return; }
+        dropdown.innerHTML = '';
+        lastResults.forEach(function (tag) {
+            var already = currentIds.has(tag.id);
+            var item = document.createElement('div');
+            item.className = 'nsfp-search-result-item' + (already ? ' already-added' : '');
+            item.dataset.id = tag.id;
+
+            var idSpan = document.createElement('span');
+            idSpan.className = 'result-id';
+            idSpan.textContent = '#' + tag.id;
+
+            var nameSpan = document.createElement('span');
+            nameSpan.className = 'result-tag';
+            nameSpan.textContent = tag.tag;
+
+            item.appendChild(idSpan);
+            item.appendChild(nameSpan);
+
+            if (tag.normalized && tag.normalized !== tag.tag) {
+                var normSpan = document.createElement('span');
+                normSpan.className = 'result-norm';
+                normSpan.textContent = '(' + tag.normalized + ')';
+                item.appendChild(normSpan);
+            }
+
+            if (!already) {
+                item.addEventListener('click', function () { doAdd(tag.id); });
+            }
+            dropdown.appendChild(item);
+        });
+        dropdown.style.display = 'block';
+    }
+
+    var searchTimer = null;
+    var searchInput = document.getElementById('nsfp-search');
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        var q = this.value.trim();
+        if (!q) { lastResults = []; document.getElementById('search-dropdown').style.display = 'none'; return; }
+        var self = this;
+        searchTimer = setTimeout(function () {
+            fetch('/api/v2/admin/nsfp/search?q=' + encodeURIComponent(q))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) { lastResults = data.tags; rebuildDropdown(self.value.trim()); }
+                })
+                .catch(function () {});
+        }, 250);
+    });
+
+    searchInput.addEventListener('focus', function () {
+        var q = this.value.trim();
+        if (q && lastResults.length) {
+            rebuildDropdown(q);
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.nsfp-search-wrap')) {
+            document.getElementById('search-dropdown').style.display = 'none';
+        }
+    });
+
+    window.nsfpAdmin = { remove: remove, doAdd: doAdd };
+
+    // Defer so the DOM is fully settled whether loaded normally or via AJAX PJAX
+    setTimeout(loadNsfp, 0);
+})();

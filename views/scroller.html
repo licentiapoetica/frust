@@ -27,118 +27,108 @@
 </head>
 <body class="scroller-active">
   <div id="main">
-  <script nonce="{{ csp_nonce }}">
-    window.f0ckThemes = {{ themes_json|safe }};
-    window.f0ckDomain = {{ domain|string|tojson }};
-    window.scrollerMode = {% if (session is defined and session) %}{{ (session.mode or 0)|safe }}{% else %} 0{% endif %};
-    window.scrollerLoggedIn = {% if (session is defined and session) %}true{% else %} false{% endif %};
-    window.scrollerIsMod = {% if ((session is defined and session) and (session.admin or session.is_moderator)) %}true{% else %} false{% endif %};
-    window.scrollerCsrf = "{% if (session is defined and session) %}{{ (session.csrf_token or "")|safe }}{% else %}{% endif %}";
-    window.f0ckSession = {
-      logged_in: window.scrollerLoggedIn,
-      user: {% if ((session is defined and session) and session.user) %}{{ session.user|string|tojson }}{% else %} null{% endif %},
-      is_anon: {% if ((session is defined and session) and session.is_anon) %}true{% else %} false{% endif %},
-      anon_permissions: {{ (anon_permissions_json or "{}")|safe }},
-      csrf_token: window.scrollerCsrf,
-      guest_anonymize: {% if guest_anonymize %} true {% else %} false {% endif %},
-      anon_anonymize: {% if anon_anonymize %} true {% else %} false {% endif %},
-      is_anonymized: {% if is_anonymized %} true {% else %} false {% endif %},
-      excluded_tags: {% if ((session is defined and session) and session.excluded_tags) %} {{ session.excluded_tags|tojson|safe }} {% else %} [] {% endif %},
-      development: {% if development %} true {% else %} false {% endif %}
-    };
-    window.f0ckDebug = window.f0ckSession.development ? console.log.bind(console) : () => {};
-    window.scrollerEnableNsfl = {{ ("true" if enable_nsfl else "false")|safe }};
-    window.scrollerEnableSwf  = {{ ("true" if enable_swf else "false")|safe }};
-    window.scrollerRuffleVolume = {% if (((session is defined and session) and session.ruffle_volume != none) and session.ruffle_volume != none) %}{{ session.ruffle_volume|safe }}{% else %} 0.5{% endif %};
-    window.f0ckAllowedImages = {{ allowed_comment_images_json|safe }};
-    window.scrollerPublic = {{ ("false" if private_society else "true")|safe }};
-    window.scrollerMimeCats = {{ scroller_mime_cats|tojson|safe }};
-    window.f0ckI18n = {
-      lang: {{ lang|string|tojson }},
-      // timeago
-      ta_just_now: {{ t("timeago.just_now")|string|tojson }},
-      ta_second: {{ t("timeago.second")|string|tojson }},
-      ta_seconds: {{ t("timeago.seconds")|string|tojson }},
-      ta_minute: {{ t("timeago.minute")|string|tojson }},
-      ta_minutes: {{ t("timeago.minutes")|string|tojson }},
-      ta_hour: {{ t("timeago.hour")|string|tojson }},
-      ta_hours: {{ t("timeago.hours")|string|tojson }},
-      ta_day: {{ t("timeago.day")|string|tojson }},
-      ta_days: {{ t("timeago.days")|string|tojson }},
-      ta_week: {{ t("timeago.week")|string|tojson }},
-      ta_weeks: {{ t("timeago.weeks")|string|tojson }},
-      ta_month: {{ t("timeago.month")|string|tojson }},
-      ta_months: {{ t("timeago.months")|string|tojson }},
-      ta_year: {{ t("timeago.year")|string|tojson }},
-      ta_years: {{ t("timeago.years")|string|tojson }},
-      ta_ago: {{ t("timeago.ago")|string|tojson }},
-      // actions
-      favourite: {{ t("scroller.favourite")|string|tojson }},
-      comments_label: {{ t("scroller.comments")|string|tojson }},
-      add_tag: {{ t("scroller.add_tag")|string|tojson }},
-      share_label: {{ t("scroller.share")|string|tojson }},
-      open_label: {{ t("scroller.open")|string|tojson }},
-      add_label: {{ t("scroller.add")|string|tojson }},
-      view_label: {{ t("scroller.view")|string|tojson }},
-      open_post: {{ t("scroller.open_post")|string|tojson }},
-      already_added: {{ t("scroller.already_added")|string|tojson }},
-      add_to_site: {{ t("scroller.add_to_site")|string|tojson }},
-      add_to_site_first: {{ t("scroller.add_to_site_first")|string|tojson }},
-      // reply
-      replying_to: {{ t("scroller.replying_to")|string|tojson }},
-      reply: {{ t("scroller.reply")|string|tojson }},
-      // scroller labels
-      just_now: {{ t("scroller.just_now")|string|tojson }},
-      failed_load_comments: {{ t("scroller.failed_load_comments")|string|tojson }},
-      no_comments: {{ t("scroller.no_comments")|string|tojson }},
-      write_comment: {{ t("scroller.write_comment")|string|tojson }},
-      login_required: {{ t("scroller.login_required")|string|tojson }},
-      login_to_comment: {{ t("scroller.login_to_comment")|string|tojson }},
-      clear_filter: {{ (t("scroller.clear_filter") or "Clear filter")|string|tojson }}
-    };
-    {% if (session is defined and session) %}
-    window.scrollerUsername = {{ (session.user or "")|string|tojson }};
-    window.scrollerDisplayName = {{ ((session.display_name or session.user) or "")|string|tojson }};
-    window.scrollerUserAvatar = {{ ("/a/" ~ session.avatar_file if session.avatar_file else (("/t/" ~ session.avatar) ~ ".webp" if session.avatar else "/a/default.png"))|string|tojson }};
-    Object.assign(window.f0ckI18n, {
-      // notifications
-      notif_upload_approved: {{ t("notifications.upload_approved_short")|string|tojson }},
-      notif_upload_pending: {{ t("notifications.upload_pending_short")|string|tojson }},
-      notif_new_report: {{ t("notifications.new_report_short")|string|tojson }},
-      notif_upload_denied: {{ t("notifications.upload_denied_short")|string|tojson }},
-      notif_upload_deleted: {{ t("notifications.upload_deleted_short")|string|tojson }},
-      notif_upload_success: {{ t("notifications.upload_success")|string|tojson }},
-      notif_upload_error: {{ t("notifications.upload_error")|string|tojson }},
-      notif_replied: {{ t("notifications.replied_short")|string|tojson }},
-      notif_subscribed: {{ t("notifications.subscribed_short")|string|tojson }},
-      notif_mentioned: {{ t("notifications.mentioned_short")|string|tojson }},
-      notif_commented: {{ t("notifications.commented")|string|tojson }},
-      notif_system: {{ t("notifications.system")|string|tojson }},
-      notif_admin: {{ t("notifications.admin")|string|tojson }},
-      notif_moderation: {{ t("notifications.moderation")|string|tojson }},
-      notif_tab_user: {{ t("nav.notif_tab_user")|string|tojson }},
-      notif_tab_system: {{ t("nav.notif_tab_system")|string|tojson }},
-      no_notifications: {{ t("nav.no_notifications")|string|tojson }},
-      // scroller
-      add: {{ t("scroller.add")|string|tojson }},
-      update_preset: {{ t("scroller.update_preset")|string|tojson }},
-      update_preset_sub: {{ t("scroller.update_preset_sub")|string|tojson }},
-      no_presets: {{ t("scroller.no_presets")|string|tojson }},
-      copy_clipboard: {{ t("scroller.copy_clipboard")|string|tojson }},
-      copied: {{ t("scroller.copied")|string|tojson }},
-      recent: {{ t("scroller.recent")|string|tojson }},
-      nothing_found: {{ t("scroller.nothing_found")|string|tojson }},
-      adjust_filters: {{ t("scroller.adjust_filters")|string|tojson }},
-      no_custom_emojis: {{ t("scroller.no_custom_emojis")|string|tojson }},
-      rehost_failed: {{ t("scroller.rehost_failed")|string|tojson }},
-      chan_load_failed: {{ t("scroller.chan_load_failed")|string|tojson }},
-      fetch_failed: {{ t("scroller.fetch_failed")|string|tojson }},
-      invalid_chan_url: {{ t("scroller.invalid_chan_url")|string|tojson }},
-      chan_catalog_failed: {{ t("scroller.chan_catalog_failed")|string|tojson }},
-      anonymous: {{ t("scroller.anonymous")|string|tojson }}
-    });
-    {% endif %}
-  </script>
+  <script type="application/json" id="scroller-data">{
+    "themes": {{ themes_json|safe }},
+    "domain": {{ domain|string|tojson }},
+    "mode": {% if (session is defined and session) %}{{ (session.mode or 0)|tojson }}{% else %}0{% endif %},
+    "logged_in": {% if (session is defined and session) %}true{% else %}false{% endif %},
+    "is_mod": {% if ((session is defined and session) and (session.admin or session.is_moderator)) %}true{% else %}false{% endif %},
+    "csrf": {% if (session is defined and session) %}{{ (session.csrf_token or "")|string|tojson }}{% else %}""{% endif %},
+    "user": {% if ((session is defined and session) and session.user) %}{{ session.user|string|tojson }}{% else %}null{% endif %},
+    "is_anon": {% if ((session is defined and session) and session.is_anon) %}true{% else %}false{% endif %},
+    "anon_permissions": {{ (anon_permissions_json or "{}")|safe }},
+    "guest_anonymize": {% if guest_anonymize %}true{% else %}false{% endif %},
+    "anon_anonymize": {% if anon_anonymize %}true{% else %}false{% endif %},
+    "is_anonymized": {% if is_anonymized %}true{% else %}false{% endif %},
+    "excluded_tags": {% if ((session is defined and session) and session.excluded_tags) %}{{ session.excluded_tags|tojson }}{% else %}[]{% endif %},
+    "development": {% if development %}true{% else %}false{% endif %},
+    "enable_nsfl": {{ ("true" if enable_nsfl else "false")|safe }},
+    "enable_swf": {{ ("true" if enable_swf else "false")|safe }},
+    "ruffle_volume": {% if (((session is defined and session) and session.ruffle_volume != none) and session.ruffle_volume != none) %}{{ session.ruffle_volume|string|tojson }}{% else %}0.5{% endif %},
+    "allowed_images": {{ allowed_comment_images_json|safe }},
+    "public": {{ ("false" if private_society else "true")|safe }},
+    "mime_cats": {{ scroller_mime_cats|tojson }},
+    "i18n": {
+      "lang": {{ lang|string|tojson }},
+      "ta_just_now": {{ t("timeago.just_now")|string|tojson }},
+      "ta_second": {{ t("timeago.second")|string|tojson }},
+      "ta_seconds": {{ t("timeago.seconds")|string|tojson }},
+      "ta_minute": {{ t("timeago.minute")|string|tojson }},
+      "ta_minutes": {{ t("timeago.minutes")|string|tojson }},
+      "ta_hour": {{ t("timeago.hour")|string|tojson }},
+      "ta_hours": {{ t("timeago.hours")|string|tojson }},
+      "ta_day": {{ t("timeago.day")|string|tojson }},
+      "ta_days": {{ t("timeago.days")|string|tojson }},
+      "ta_week": {{ t("timeago.week")|string|tojson }},
+      "ta_weeks": {{ t("timeago.weeks")|string|tojson }},
+      "ta_month": {{ t("timeago.month")|string|tojson }},
+      "ta_months": {{ t("timeago.months")|string|tojson }},
+      "ta_year": {{ t("timeago.year")|string|tojson }},
+      "ta_years": {{ t("timeago.years")|string|tojson }},
+      "ta_ago": {{ t("timeago.ago")|string|tojson }},
+      "favourite": {{ t("scroller.favourite")|string|tojson }},
+      "comments_label": {{ t("scroller.comments")|string|tojson }},
+      "add_tag": {{ t("scroller.add_tag")|string|tojson }},
+      "share_label": {{ t("scroller.share")|string|tojson }},
+      "open_label": {{ t("scroller.open")|string|tojson }},
+      "add_label": {{ t("scroller.add")|string|tojson }},
+      "view_label": {{ t("scroller.view")|string|tojson }},
+      "open_post": {{ t("scroller.open_post")|string|tojson }},
+      "already_added": {{ t("scroller.already_added")|string|tojson }},
+      "add_to_site": {{ t("scroller.add_to_site")|string|tojson }},
+      "add_to_site_first": {{ t("scroller.add_to_site_first")|string|tojson }},
+      "replying_to": {{ t("scroller.replying_to")|string|tojson }},
+      "reply": {{ t("scroller.reply")|string|tojson }},
+      "just_now": {{ t("scroller.just_now")|string|tojson }},
+      "failed_load_comments": {{ t("scroller.failed_load_comments")|string|tojson }},
+      "no_comments": {{ t("scroller.no_comments")|string|tojson }},
+      "write_comment": {{ t("scroller.write_comment")|string|tojson }},
+      "login_required": {{ t("scroller.login_required")|string|tojson }},
+      "login_to_comment": {{ t("scroller.login_to_comment")|string|tojson }},
+      "clear_filter": {{ (t("scroller.clear_filter") or "Clear filter")|string|tojson }}
+    },
+    "session": {% if (session is defined and session) %}{
+      "username": {{ (session.user or "")|string|tojson }},
+      "display_name": {{ ((session.display_name or session.user) or "")|string|tojson }},
+      "avatar": {{ ("/a/" ~ session.avatar_file if session.avatar_file else (("/t/" ~ session.avatar) ~ ".webp" if session.avatar else "/a/default.png"))|string|tojson }},
+      "i18n": {
+        "notif_upload_approved": {{ t("notifications.upload_approved_short")|string|tojson }},
+        "notif_upload_pending": {{ t("notifications.upload_pending_short")|string|tojson }},
+        "notif_new_report": {{ t("notifications.new_report_short")|string|tojson }},
+        "notif_upload_denied": {{ t("notifications.upload_denied_short")|string|tojson }},
+        "notif_upload_deleted": {{ t("notifications.upload_deleted_short")|string|tojson }},
+        "notif_upload_success": {{ t("notifications.upload_success")|string|tojson }},
+        "notif_upload_error": {{ t("notifications.upload_error")|string|tojson }},
+        "notif_replied": {{ t("notifications.replied_short")|string|tojson }},
+        "notif_subscribed": {{ t("notifications.subscribed_short")|string|tojson }},
+        "notif_mentioned": {{ t("notifications.mentioned_short")|string|tojson }},
+        "notif_commented": {{ t("notifications.commented")|string|tojson }},
+        "notif_system": {{ t("notifications.system")|string|tojson }},
+        "notif_admin": {{ t("notifications.admin")|string|tojson }},
+        "notif_moderation": {{ t("notifications.moderation")|string|tojson }},
+        "notif_tab_user": {{ t("nav.notif_tab_user")|string|tojson }},
+        "notif_tab_system": {{ t("nav.notif_tab_system")|string|tojson }},
+        "no_notifications": {{ t("nav.no_notifications")|string|tojson }},
+        "add": {{ t("scroller.add")|string|tojson }},
+        "update_preset": {{ t("scroller.update_preset")|string|tojson }},
+        "update_preset_sub": {{ t("scroller.update_preset_sub")|string|tojson }},
+        "no_presets": {{ t("scroller.no_presets")|string|tojson }},
+        "copy_clipboard": {{ t("scroller.copy_clipboard")|string|tojson }},
+        "copied": {{ t("scroller.copied")|string|tojson }},
+        "recent": {{ t("scroller.recent")|string|tojson }},
+        "nothing_found": {{ t("scroller.nothing_found")|string|tojson }},
+        "adjust_filters": {{ t("scroller.adjust_filters")|string|tojson }},
+        "no_custom_emojis": {{ t("scroller.no_custom_emojis")|string|tojson }},
+        "rehost_failed": {{ t("scroller.rehost_failed")|string|tojson }},
+        "chan_load_failed": {{ t("scroller.chan_load_failed")|string|tojson }},
+        "fetch_failed": {{ t("scroller.fetch_failed")|string|tojson }},
+        "invalid_chan_url": {{ t("scroller.invalid_chan_url")|string|tojson }},
+        "chan_catalog_failed": {{ t("scroller.chan_catalog_failed")|string|tojson }},
+        "anonymous": {{ t("scroller.anonymous")|string|tojson }}
+      }
+    }{% else %}null{% endif %}
+  }</script>
+  <script src="/s/js/views/scroller.js?v={{ mtime("/public/s/js/views/scroller.js") }}"></script>
 
   <!-- Loader -->
   <div id="scroller-loader">

@@ -8,12 +8,7 @@
     <p>{{ line }}</p>
   {% endfor %}
   </div>
-  <script nonce="{{ csp_nonce }}">
-    (() => {
-      const d = document.querySelector("div.logwrap");
-      d.scrollTop = d.scrollHeight;
-    })();
-  </script>
+  <script src="/s/js/views/admin/log.js?v={{ mtime("/public/s/js/views/admin/log.js") }}"></script>
   {% endif %}
 </div>
 </div>

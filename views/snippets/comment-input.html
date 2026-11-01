@@ -20,8 +20,5 @@
         <button class="submit-comment" type="button" tabindex="-1" aria-disabled="true"><span class="submit-label">{{ t("comments.post") }}</span><i class="fa-solid fa-spinner fa-spin submit-spinner"></i></button>
     </div>
 </div>
-<script nonce="{{ csp_nonce }}">
-// Same action comments.js registers for renderGuestInput(); defined here too so the server copy works before comments.js (deferred) has run
-F0ckActions.define('comments-guest-login', () => { const b = document.getElementById('nav-login-btn'); if (b) b.click(); });
-</script>
+<script src="/s/js/views/snippets/comment-input.js?v={{ mtime("/public/s/js/views/snippets/comment-input.js") }}"></script>
 {% endif %}

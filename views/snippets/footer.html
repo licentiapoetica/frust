@@ -277,529 +277,329 @@
 <script async src="/s/js/theme.js?v={{ ts|safe }}"></script>
 {% endif %}
 {% if (private_society and not session) %}
-<script nonce="{{ csp_nonce }}">
-  window.f0ckSession = { logged_in: false, is_anon: false, excluded_tags: [], onara: {% if onara %} true {% else %} false {% endif %}, onara_cfg: {% if (onara_cfg != none and onara_cfg != none) %} {% if onara_cfg %} true {% else %} false {% endif %} {% else %} null {% endif %}, enable_item_slugs: {% if enable_item_slugs %} true {% else %} false {% endif %}, enable_anonymous_access: {% if enable_anonymous_access %} true {% else %} false {% endif %}, anon_permissions: {{ (anon_permissions_json or "{}")|safe }}, hide_comments_from_public: {% if hide_comments_from_public %} true {% else %} false {% endif %}, guest_anonymize: {% if guest_anonymize %} true {% else %} false {% endif %}, anon_anonymize: {% if anon_anonymize %} true {% else %} false {% endif %}, is_anonymized: {% if is_anonymized %} true {% else %} false {% endif %}, enable_xd_score: {% if enable_xd_score %} true {% else %} false {% endif %}, default_theme: {{ default_theme|string|tojson }}, show_content_warning: {% if show_content_warning %} true {% else %} false {% endif %}, use_new_layout: {% if default_layout == "legacy" %}false {% else %} true {% endif %}, comment_display_mode: {{ comment_display_mode|safe }}, comment_max_length: {{ (comment_max_length if (comment_max_length != none and comment_max_length != none) else "null")|safe }}, development: {% if development %} true {% else %} false {% endif %}, allow_comment_deletion: {% if allow_comment_deletion %} true {% else %} false {% endif %}, hide_sidebar_default: {% if hide_sidebar_default %} true {% else %} false {% endif %}, public_untagged: {% if public_untagged %} true {% else %} false {% endif %}, public_nsfw: {% if public_nsfw %} true {% else %} false {% endif %} };
-  window.f0ckDebug = window.f0ckSession.development ? console.log.bind(console) : () => {};
-  window.f0ckDefaultThumbSize = {{ default_thumb_size|string|tojson }};
-  (() => {
-    const loginModal = document.getElementById('login-modal');
-    const registerModal = document.getElementById('register-modal');
-    const close = (m) => { if (m) m.style.display = 'none'; };
-    const open = (m) => { if (m) m.style.display = 'flex'; };
-
-    // View switching for login/forgot/reset within the login modal
-    const switchModalView = (view) => {
-      if (!loginModal) return;
-      ['login', 'forgot', 'reset'].forEach(v => {
-        const el = document.getElementById('modal-' + v + '-view');
-        if (el) el.style.display = (v === view) ? 'block' : 'none';
-      });
-    };
-
-    if (loginModal) {
-      const loginClose = document.getElementById('login-modal-close');
-      if (loginClose) loginClose.addEventListener('click', () => close(loginModal));
-      loginModal.addEventListener('click', (e) => { if (e.target === loginModal) close(loginModal); });
-
-      // Forgot Password link
-      const modalForgotBtn = document.getElementById('modal-forgot-btn');
-      if (modalForgotBtn) {
-        modalForgotBtn.addEventListener('click', (e) => { e.preventDefault(); switchModalView('forgot'); });
-      }
-      const forgotToLogin = document.getElementById('forgot-to-login');
-      if (forgotToLogin) {
-        forgotToLogin.addEventListener('click', (e) => { e.preventDefault(); switchModalView('login'); });
-      }
-
-      // Check for reset token or login flag in URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const resetToken = urlParams.get('token');
-      if (resetToken) {
-        const tokenInput = document.getElementById('reset-token');
-        if (tokenInput) {
-          tokenInput.value = resetToken;
-          switchModalView('reset');
-          loginModal.style.display = 'flex';
-          const cleanUrl = window.location.pathname + window.location.search.replace(/[?&]token=[^&]+/, '').replace(/[?&]$/, '') + window.location.hash;
-          window.history.replaceState({}, '', cleanUrl);
-        }
-      } else if (urlParams.get('login') === '1') {
-        switchModalView('login');
-        loginModal.style.display = 'flex';
-        const cleanUrl = window.location.pathname + window.location.search.replace(/[?&]login=1/, '').replace(/[?&]$/, '') + window.location.hash;
-        window.history.replaceState({}, '', cleanUrl);
-      }
-
-      // Login form AJAX
-      const loginForm = loginModal.querySelector('.login-form');
-      if (loginForm && loginForm.id !== 'forgot-password-form' && loginForm.id !== 'reset-password-form') {
-        loginForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const formData = new FormData(loginForm);
-          if (!formData.get('password')) {
-            let errDiv = loginForm.querySelector('.flash-error');
-            if (!errDiv) { errDiv = document.createElement('div'); errDiv.className = 'flash-error'; loginForm.insertBefore(errDiv, loginForm.firstChild); }
-            errDiv.textContent = 'Invalid username or password.';
-            return;
-          }
-          try {
-            const res = await fetch('/login', {
-              method: 'POST',
-              headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams(new FormData(loginForm))
-            });
-            if (res.redirected) { window.location.href = res.url; return; }
-            const json = await res.json();
-            if (json && json.success === false) {
-              let errDiv = loginForm.querySelector('.flash-error');
-              if (!errDiv) { errDiv = document.createElement('div'); errDiv.className = 'flash-error'; loginForm.insertBefore(errDiv, loginForm.firstChild); }
-              errDiv.textContent = json.msg;
-            }
-          } catch (err) { console.error('Login error:', err); }
-        });
-      }
-
-      // Forgot Password form AJAX
-      const forgotForm = document.getElementById('forgot-password-form');
-      if (forgotForm) {
-        forgotForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const email = document.getElementById('forgot-email').value;
-          const status = document.getElementById('forgot-status');
-          const btn = forgotForm.querySelector('button');
-          btn.disabled = true; btn.textContent = 'Sending...';
-          if (status) { status.textContent = ''; status.className = ''; }
-          try {
-            const res = await fetch('/forgot-password', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-              body: new URLSearchParams({ email })
-            });
-            const data = await res.json();
-            if (data.success) {
-              if (status) { status.textContent = data.msg || 'Success! Check your email.'; status.className = 'flash-success'; }
-              forgotForm.reset();
-            } else {
-              if (status) { status.textContent = data.msg || 'Error sending link.'; status.className = 'flash-error'; }
-            }
-          } catch (err) {
-            if (status) { status.textContent = 'Network error.'; status.className = 'flash-error'; }
-          } finally { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
-        });
-      }
-
-      // Reset Password form AJAX
-      const resetForm = document.getElementById('reset-password-form');
-      if (resetForm) {
-        const resetToLogin = document.getElementById('reset-to-login');
-        resetForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const token = document.getElementById('reset-token').value;
-          const password = document.getElementById('reset-password').value;
-          const password_confirm = document.getElementById('reset-password-confirm').value;
-          const status = document.getElementById('reset-status');
-          const btn = resetForm.querySelector('button');
-          if (password !== password_confirm) {
-            if (status) { status.textContent = 'Passwords do not match.'; status.className = 'flash-error'; }
-            return;
-          }
-          if (password.length < 20) {
-            if (status) { status.textContent = 'Password is too short (minimum 20 characters).'; status.className = 'flash-error'; }
-            return;
-          }
-          btn.disabled = true; btn.textContent = 'Updating...';
-          if (status) { status.textContent = ''; status.className = ''; }
-          try {
-            const res = await fetch('/reset-password', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-              body: new URLSearchParams({ token, password, password_confirm })
-            });
-            const data = await res.json();
-            if (data.success) {
-              if (status) { status.textContent = data.msg || 'Password updated successfully!'; status.className = 'flash-success'; }
-              resetForm.reset();
-              btn.style.display = 'none';
-              if (resetToLogin) resetToLogin.style.display = 'inline-block';
-            } else {
-              if (status) { status.textContent = data.msg || 'Error resetting password.'; status.className = 'flash-error'; }
-            }
-          } catch (err) {
-            if (status) { status.textContent = 'Network error.'; status.className = 'flash-error'; }
-          } finally { btn.disabled = false; btn.textContent = 'Update Password'; }
-        });
-        if (resetToLogin) {
-          resetToLogin.addEventListener('click', (e) => {
-            e.preventDefault();
-            switchModalView('login');
-            resetToLogin.style.display = 'none';
-            resetForm.querySelector('button').style.display = 'inline-block';
-          });
-        }
-      }
-    }
-
-    if (registerModal) {
-      const regClose = document.getElementById('register-modal-close');
-      if (regClose) regClose.addEventListener('click', () => close(registerModal));
-      registerModal.addEventListener('click', (e) => { if (e.target === registerModal) close(registerModal); });
-    }
-
-    // ESC key closes modals
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { close(loginModal); close(registerModal); }
-    });
-
-    // Auto-open login modal if URL has #login hash
-    if (window.location.hash === '#login' && loginModal) {
-      switchModalView('login');
-      loginModal.style.display = 'flex';
-    }
-
-    const toRegister = document.getElementById('login-to-register');
-    if (toRegister) toRegister.addEventListener('click', (e) => { e.preventDefault(); close(loginModal); open(registerModal); });
-    const toLogin = document.getElementById('register-to-login');
-    if (toLogin) toLogin.addEventListener('click', (e) => { e.preventDefault(); close(registerModal); open(loginModal); });
-
-    // Registration form AJAX
-    const regForm = document.getElementById('modal-register-form');
-    if (regForm) {
-      regForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const status = document.getElementById('register-status');
-        const formData = new FormData(regForm);
-        const btn = regForm.querySelector('button[type="submit"]');
-        const password = formData.get('password');
-        const password_confirm = formData.get('password_confirm');
-
-        if (password && password.length < 20) {
-          if (status) {
-            status.textContent = 'Password is too short (minimum 20 characters).';
-            status.className = 'flash-error';
-          }
-          return;
-        }
-
-        if (password !== password_confirm) {
-          if (status) {
-            status.textContent = 'Passwords do not match.';
-            status.className = 'flash-error';
-          }
-          return;
-        }
-
-        btn.disabled = true; btn.textContent = 'Creating...';
-        try {
-          const resp = await fetch('/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
-            body: new URLSearchParams(new FormData(regForm)),
-            credentials: 'include'
-          });
-          const json = await resp.json();
-          if (status) { status.textContent = json.msg || ''; status.className = json.success ? 'flash-success' : 'flash-error'; }
-          if (json.success && json.upgraded) setTimeout(() => { location.reload(); }, 1500);
-          else if (json.success) setTimeout(() => { close(registerModal); open(loginModal); }, 2000);
-          else window.f0ckCapReset?.(regForm); // captcha tokens are single-use
-        } catch (err) {
-          if (status) { status.textContent = 'Network error.'; status.className = 'flash-error'; }
-        } finally { btn.disabled = false; btn.textContent = 'Create Account'; }
-      });
-    }
-  })();
-</script>
+<script type="application/json" id="footer-data">{
+  "session": {
+    "logged_in": false,
+    "is_anon": false,
+    "excluded_tags": [],
+    "onara": {% if onara %} true {% else %} false {% endif %},
+    "onara_cfg": {% if (onara_cfg != none and onara_cfg != none) %} {% if onara_cfg %} true {% else %} false {% endif %} {% else %} null {% endif %},
+    "enable_item_slugs": {% if enable_item_slugs %} true {% else %} false {% endif %},
+    "enable_anonymous_access": {% if enable_anonymous_access %} true {% else %} false {% endif %},
+    "anon_permissions": {{ (anon_permissions_json or "{}")|safe }},
+    "hide_comments_from_public": {% if hide_comments_from_public %} true {% else %} false {% endif %},
+    "guest_anonymize": {% if guest_anonymize %} true {% else %} false {% endif %},
+    "anon_anonymize": {% if anon_anonymize %} true {% else %} false {% endif %},
+    "is_anonymized": {% if is_anonymized %} true {% else %} false {% endif %},
+    "enable_xd_score": {% if enable_xd_score %} true {% else %} false {% endif %},
+    "default_theme": {{ default_theme|string|tojson }},
+    "show_content_warning": {% if show_content_warning %} true {% else %} false {% endif %},
+    "use_new_layout": {% if default_layout == "legacy" %}false {% else %} true {% endif %},
+    "comment_display_mode": {{ comment_display_mode|safe }},
+    "comment_max_length": {{ (comment_max_length if (comment_max_length != none and comment_max_length != none) else "null")|safe }},
+    "development": {% if development %} true {% else %} false {% endif %},
+    "allow_comment_deletion": {% if allow_comment_deletion %} true {% else %} false {% endif %},
+    "hide_sidebar_default": {% if hide_sidebar_default %} true {% else %} false {% endif %},
+    "public_untagged": {% if public_untagged %} true {% else %} false {% endif %},
+    "public_nsfw": {% if public_nsfw %} true {% else %} false {% endif %}
+  },
+  "default_thumb_size": {{ default_thumb_size|string|tojson }}
+}</script>
+<script src="/s/js/views/snippets/footer.config.js?v={{ mtime("/public/s/js/views/snippets/footer.config.js") }}"></script>
+<script src="/s/js/views/snippets/footer.private.js?v={{ mtime("/public/s/js/views/snippets/footer.private.js") }}"></script>
 {% else %}
 <script src="/s/js/v0ck.js?v={{ ts|safe }}"></script>
 <script src="/s/js/danmaku.js?v={{ ts|safe }}"></script>
-<script nonce="{{ csp_nonce }}">
-  window.f0ckSession = {
-    onara: {% if onara %} true {% else %} false {% endif %},
-    onara_cfg: {% if (onara_cfg != none and onara_cfg != none) %} {% if onara_cfg %} true {% else %} false {% endif %} {% else %} null {% endif %},
-    public_untagged: {% if public_untagged %} true {% else %} false {% endif %},
-    public_nsfw: {% if public_nsfw %} true {% else %} false {% endif %},
-    enable_item_slugs: {% if enable_item_slugs %} true {% else %} false {% endif %},
-    enable_anonymous_access: {% if enable_anonymous_access %} true {% else %} false {% endif %},
-    anon_permissions: {{ (anon_permissions_json or "{}")|safe }},
-    strict_mode: {% if (session and session.strict_mode) %} true {% else %} false {% endif %},
-    logged_in: {% if session %} true {% else %} false {% endif %},
-    excluded_tags: {% if (session and session.excluded_tags) %} {{ session.excluded_tags|tojson|safe }} {% else %} [] {% endif %},
-    hide_comments_from_public: {% if hide_comments_from_public %} true {% else %} false {% endif %},
-    guest_anonymize: {% if guest_anonymize %} true {% else %} false {% endif %},
-    anon_anonymize: {% if anon_anonymize %} true {% else %} false {% endif %},
-    is_anonymized: {% if is_anonymized %} true {% else %} false {% endif %},
-    use_new_layout: {% if session %}{% if session.use_new_layout %} true {% else %} false {% endif %}{% else %} {% if default_layout == "legacy" %}false {% else %} true {% endif %}{% endif %},
-    csrf_token: {{ ((csrf_token or (session and session.csrf_token)) or "")|string|tojson }},
-    default_theme: {{ default_theme|string|tojson }},
-    private_society: {% if private_society %} true {% else %} false {% endif %},
-    show_content_warning: {% if show_content_warning %} true {% else %} false {% endif %},
-    disable_autoplay: {% if (session and session.disable_autoplay) %} true {% else %} false {% endif %},
-    disable_swiping: {% if (session and session.disable_swiping) %} true {% else %} false {% endif %},
-    show_background: {% if session %}{% if session.show_background != false %} true {% else %} false {% endif %}{% else %} {% if show_background_cfg %} true {% else %} false {% endif %}{% endif %},
-    nsfl_tag_id: {{ nsfl_tag_id|safe }},
-    enable_nsfl: {% if enable_nsfl %} true {% else %} false {% endif %},
-    user: {% if session %} {{ session.user|string|tojson }} {% else %} null {% endif %},
-    login: {% if session %} {{ session.login|string|tojson }} {% else %} null {% endif %},
-    anon_login: {% if (session and session.anon_login) %} {{ session.anon_login|string|tojson }} {% else %} null {% endif %},
-    is_anon: {% if (session and session.is_anon) %} true {% else %} false {% endif %},
-    display_name: {% if (session and session.display_name) %} "{{ session.display_name }}" {% else %} null {% endif %},
-    username_color: {% if (session and session.username_color) %} "{{ session.username_color }}" {% else %} null {% endif %},
-    id: {% if (session and session.id) %} {{ session.id|safe }} {% else %} null {% endif %},
-    user_id: {% if (session and session.id) %} {{ session.id|safe }} {% else %} null {% endif %},
-    is_admin: {% if (session and session.admin) %} true {% else %} false {% endif %},
-    is_moderator: {% if (session and session.is_moderator) %} true {% else %} false {% endif %},
-    enable_swf: {% if enable_swf %} true {% else %} false {% endif %},
-    enable_danmaku: {% if enable_danmaku %} true {% else %} false {% endif %},
-    enable_global_chat: {% if enable_global_chat %} true {% else %} false {% endif %},
-    enable_xd_score: {% if enable_xd_score %} true {% else %} false {% endif %},
-    ruffle_volume: {% if ((session and session.ruffle_volume != none) and session.ruffle_volume != none) %} {{ session.ruffle_volume|safe }} {% else %} 0.5 {% endif %},
-    ruffle_background: {% if (session and session.ruffle_background != false) %} true {% else %} false {% endif %},
-    quote_emojis: {% if (session and session.quote_emojis != false) %} true {% else %} false {% endif %},
-    embed_youtube_in_comments: {% if (session and session.embed_youtube_in_comments != false) %} true {% else %} false {% endif %},
-    avatar: {% if (session and session.avatar) %} {{ session.avatar|safe }} {% else %} null {% endif %},
-    avatar_file: {% if (session and session.avatar_file) %} {{ session.avatar_file|string|tojson }} {% else %} null {% endif %},
-    banner_file: {% if (session and session.banner_file) %} {{ session.banner_file|string|tojson }} {% else %} null {% endif %},
-    banner_position: {% if (session and session.banner_position) %} {{ session.banner_position|string|tojson }} {% else %} null {% endif %},
-    banner_size: {% if (session and session.banner_size) %} {{ session.banner_size|string|tojson }} {% else %} null {% endif %},
-    banner_repeat: {% if (session and session.banner_repeat) %} {{ session.banner_repeat|string|tojson }} {% else %} null {% endif %},
-    receive_system_notifications: {% if session %}{% if session.receive_system_notifications != false %} true {% else %} false {% endif %}{% else %} true {% endif %},
-    receive_user_notifications: {% if session %}{% if session.receive_user_notifications != false %} true {% else %} false {% endif %}{% else %} true {% endif %},
-    do_not_disturb: {% if (session and session.do_not_disturb) %} true {% else %} false {% endif %},
-    comment_banner_enabled: {% if comment_banner_enabled %} true {% else %} false {% endif %},
-    comment_display_mode: {{ comment_display_mode|safe }},
-    comment_max_length: {{ (comment_max_length if (comment_max_length != none and comment_max_length != none) else "null")|safe }},
-    development: {% if development %} true {% else %} false {% endif %},
-    allow_fileupload_comments: {% if allow_fileupload_comments %} true {% else %} false {% endif %},
-    fileupload_comments_multifile: {% if fileupload_comments_multifile %} true {% else %} false {% endif %},
-    fileupload_comments_size: {{ fileupload_comments_size|safe }},
-    fileupload_comments_max: {{ fileupload_comments_max|safe }},
-    fileupload_comments_mode: {{ fileupload_comments_mode|string|tojson }},
-    dm_attachments: {% if dm_attachments %} true {% else %} false {% endif %},
-    dm_unencrypted: {% if dm_unencrypted %} true {% else %} false {% endif %},
-    allow_comment_deletion: {% if allow_comment_deletion %} true {% else %} false {% endif %},
-    enable_comment_polls: {% if enable_comment_polls %} true {% else %} false {% endif %},
-    hide_sidebar_default: {% if hide_sidebar_default %} true {% else %} false {% endif %},
-    mode: {{ (mode if mode is defined else 0)|safe }}
-  };
-  window.f0ckDebug = window.f0ckSession.development ? console.log.bind(console) : () => {};
-  window.f0ckDefaultThumbSize = {{ default_thumb_size|string|tojson }};
-  window.f0ckI18n = {
-    write_comment: {{ t("comments.write_comment")|string|tojson }},
-    post: {{ t("comments.post")|string|tojson }},
-    cancel: {{ t("comments.cancel")|string|tojson }},
-    sidebar_view: {{ t("sidebar.view")|string|tojson }},
-    sidebar_read_more: {{ t("sidebar.read_more")|string|tojson }},
-    sidebar_see_less: {{ t("sidebar.see_less")|string|tojson }},
-    sidebar_show_full_comment: {{ t("sidebar.show_full_comment")|string|tojson }},
-    sidebar_loading_activity: {{ t("sidebar.loading_activity")|string|tojson }},
-    sidebar_no_activity: {{ t("sidebar.no_activity")|string|tojson }},
-    sidebar_failed_to_load: {{ t("sidebar.failed_to_load")|string|tojson }},
-    sidebar_loading_more: {{ t("sidebar.loading_more")|string|tojson }},
-    sidebar_end_of_activity: {{ t("sidebar.end_of_activity")|string|tojson }},
-    sidebar_recommendations: {{ t("sidebar.recommendations")|string|tojson }},
-    sidebar_loading_recommendations: {{ t("sidebar.loading_recommendations")|string|tojson }},
-    sidebar_no_recommendations: {{ t("sidebar.no_recommendations")|string|tojson }},
-    sidebar_refresh_recommendations: {{ t("sidebar.refresh_recommendations")|string|tojson }},
-    select_file: {{ t("upload_btn.select_file")|string|tojson }},
-    enter_url: {{ t("upload_btn.enter_url")|string|tojson }},
-    tags_required: {{ t("upload_btn.tags_required")|string|tojson }},
-    select_rating: {{ t("upload_btn.select_rating")|string|tojson }},
-    embed_youtube: {{ t("upload_btn.embed_youtube")|string|tojson }},
-    upload_from_url: {{ t("upload_btn.upload_from_url")|string|tojson }},
-    upload: {{ t("upload_btn.upload")|string|tojson }},
-    uploading: {{ t("upload.uploading")|string|tojson }},
-    processing: {{ t("toast.processing")|string|tojson }},
-    upload_pending_approval_patient: {{ t("upload.pending_approval_patient")|string|tojson }},
-    upload_shitpost_success: {{ (t("upload.shitpost_success") or "Successfully shitposted {n} items!")|string|tojson }},
-    upload_shitposting_status: {{ (t("upload.shitposting_status") or "Shitposting")|string|tojson }},
-    upload_comment_placeholder: {{ (t("upload.item_comment_placeholder") or "Comment (optional)...")|string|tojson }},
-    upload_tags_placeholder: {{ (t("upload.item_tags_placeholder") or "Tags...")|string|tojson }},
-    upload_add_more: {{ (t("upload.add_more") or "Add more")|string|tojson }},
-    settings_no_banner_set: {{ (t("settings.no_banner_set") or "No banner set")|string|tojson }},
-    // timeago
-    timeago_just_now: {{ t("timeago.just_now")|string|tojson }},
-    timeago_year: {{ t("timeago.year")|string|tojson }},
-    timeago_years: {{ t("timeago.years")|string|tojson }},
-    timeago_month: {{ t("timeago.month")|string|tojson }},
-    timeago_months: {{ t("timeago.months")|string|tojson }},
-    timeago_week: {{ t("timeago.week")|string|tojson }},
-    timeago_weeks: {{ t("timeago.weeks")|string|tojson }},
-    timeago_day: {{ t("timeago.day")|string|tojson }},
-    timeago_days: {{ t("timeago.days")|string|tojson }},
-    timeago_hour: {{ t("timeago.hour")|string|tojson }},
-    timeago_hours: {{ t("timeago.hours")|string|tojson }},
-    timeago_minute: {{ t("timeago.minute")|string|tojson }},
-    timeago_minutes: {{ t("timeago.minutes")|string|tojson }},
-    timeago_second: {{ t("timeago.second")|string|tojson }},
-    timeago_seconds: {{ t("timeago.seconds")|string|tojson }},
-    timeago_ago: {{ t("timeago.ago")|string|tojson }},
-    lang: {{ lang|string|tojson }},
-    // search overlay
-    search_placeholder: {{ t("search_overlay.placeholder")|string|tojson }},
-    search_strict_mode: {{ t("search_overlay.strict_mode")|string|tojson }},
-    // toasts
-    report_success: {{ t("toast.report_success")|string|tojson }},
-    report_error: {{ t("toast.report_error")|string|tojson }},
-    network_error: {{ t("toast.network_error")|string|tojson }},
-    network_error_short: {{ t("toast.network_error_short")|string|tojson }},
-    reason_required: {{ t("toast.reason_required")|string|tojson }},
-    reason_optional: {{ t("toast.reason_optional")|string|tojson }},
-    reason_required_label: {{ t("toast.reason_required_label")|string|tojson }},
-    captcha_required: {{ t("toast.captcha_required")|string|tojson }},
-    captcha_loading: {{ t("toast.captcha_loading")|string|tojson }},
-    confirm_yes: {{ t("toast.yes")|string|tojson }},
-    confirm_no: {{ t("toast.no")|string|tojson }},
-    confirm_btn: {{ t("toast.confirm")|string|tojson }},
-    cancel_btn: {{ t("toast.cancel")|string|tojson }},
-    add_tag: {{ t("toast.add_tag")|string|tojson }},
-    item_pinned: {{ t("toast.item_pinned")|string|tojson }},
-    item_unpinned: {{ t("toast.item_unpinned")|string|tojson }},
-    error_adding_tag: {{ t("toast.error_adding_tag")|string|tojson }},
-    error_saving: {{ t("toast.error_saving")|string|tojson }},
-    zomg_on: {{ t("toast.zomg_on")|string|tojson }},
-    zomg_off: {{ t("toast.zomg_off")|string|tojson }},
-    copied: {{ t("toast.copied")|string|tojson }},
-    exclude_tag: {{ (t("filter.exclude_tag") or "Exclude tag")|string|tojson }},
-    unexclude_tag: {{ (t("filter.unexclude_tag") or "Excluded (click to unexclude)")|string|tojson }},
-    no_tags_excluded: {{ (t("filter.no_tags_excluded") or "No tags excluded yet")|string|tojson }},
-    tag_excluded_msg: {{ (t("filter.tag_excluded_msg") or "Tag {tag} added to excluded tags")|string|tojson }},
-    tag_unexcluded_msg: {{ (t("filter.tag_unexcluded_msg") or "Tag {tag} removed from excluded tags")|string|tojson }},
-    // actions
-    fav_added: {{ t("toast.fav_added")|string|tojson }},
-    fav_removed: {{ t("toast.fav_removed")|string|tojson }},
-    subscribed_thread: {{ t("toast.subscribed_thread")|string|tojson }},
-    unsubscribed_thread: {{ t("toast.unsubscribed_thread")|string|tojson }},
-    oc_marked: {{ t("toast.oc_marked")|string|tojson }},
-    oc_removed: {{ t("toast.oc_removed")|string|tojson }},
-    no_tags_excluded: {{ t("toast.no_tags_excluded")|string|tojson }},
-    tag_delete_title: {{ t("toast.tag_delete_title")|string|tojson }},
-    tag_delete_confirm: {{ t("toast.tag_delete_confirm")|string|tojson }},
-    tag_deleted_success: {{ t("toast.tag_deleted_success")|string|tojson }},
-    item_deleted_success: {{ t("toast.item_deleted_success")|string|tojson }},
-    item_delete_title: {{ t("toast.item_delete_title")|string|tojson }},
-    item_delete_confirm: {{ t("toast.item_delete_confirm")|string|tojson }},
-    // halls
-    hall_added: {{ t("toast.hall_added")|string|tojson }},
-    hall_removed: {{ t("toast.hall_removed")|string|tojson }},
-    hall_my_placeholder: {{ t("hall.my_hall_placeholder")|string|tojson }},
-    hall_no_halls: {{ t("hall.no_halls")|string|tojson }},
-    hall_select_a_hall: {{ t("hall.select_a_hall")|string|tojson }},
-    hall_choose_or_create: {{ t("hall.choose_or_create")|string|tojson }},
-    hall_creating: {{ t("hall.creating")|string|tojson }},
-    hall_adding: {{ t("hall.adding")|string|tojson }},
-    hall_removing: {{ t("hall.removing")|string|tojson }},
-    hall_saving: {{ t("hall.saving")|string|tojson }},
-    hall_deleting: {{ t("hall.deleting")|string|tojson }},
-    hall_saved: {{ t("hall.saved")|string|tojson }},
-    hall_created: {{ t("hall.created")|string|tojson }},
-    hall_add_btn: {{ t("hall.add_btn")|string|tojson }},
-    hall_remove_btn: {{ t("hall.remove_btn")|string|tojson }},
-    hall_name_empty: {{ t("hall.enter_name_error")|string|tojson }},
-    hall_enter_name_error: {{ t("hall.enter_name_error")|string|tojson }},
-    hall_slug_empty_error: {{ t("hall.slug_empty_error")|string|tojson }},
-    hall_delete_confirm: {{ t("hall.delete_confirm")|string|tojson }},
-    hall_image_uploaded: {{ t("hall.image_uploaded")|string|tojson }},
-    hall_image_removed: {{ t("hall.image_removed")|string|tojson }},
-    hall_click_upload_hint: {{ t("hall.click_upload_hint")|string|tojson }},
-    common_save: {{ t("common.save")|string|tojson }},
-    common_delete: {{ t("common.delete")|string|tojson }},
-    common_view: {{ t("common.view")|string|tojson }},
-    common_name: {{ t("common.name")|string|tojson }},
-    common_description: {{ t("common.description")|string|tojson }},
-    common_private: {{ t("common.private")|string|tojson }},
-    // notifications
-    notif_upload_approved: {{ t("notifications.upload_approved_short")|string|tojson }},
-    notif_upload_pending: {{ t("notifications.upload_pending_short")|string|tojson }},
-    notif_new_report: {{ t("notifications.new_report_short")|string|tojson }},
-    notif_upload_denied: {{ t("notifications.upload_denied_short")|string|tojson }},
-    notif_upload_deleted: {{ t("notifications.upload_deleted_short")|string|tojson }},
-    notif_click_reason: {{ t("notifications.click_reason")|string|tojson }},
-    notif_no_reason: {{ t("notifications.no_reason")|string|tojson }},
-    notif_reason_label: {{ t("notifications.reason_label")|string|tojson }},
-    notif_replied: {{ t("notifications.replied_short")|string|tojson }},
-    notif_subscribed: {{ t("notifications.subscribed_short")|string|tojson }},
-    notif_mentioned: {{ t("notifications.mentioned_short")|string|tojson }},
-    notif_commented: {{ t("notifications.commented")|string|tojson }},
-    notif_system: {{ t("notifications.system")|string|tojson }},
-    notif_admin: {{ t("notifications.admin")|string|tojson }},
-    notif_moderation: {{ t("notifications.moderation")|string|tojson }},
-    notif_tab_user: {{ t("nav.notif_tab_user")|string|tojson }},
-    notif_tab_system: {{ t("nav.notif_tab_system")|string|tojson }},
-    no_notifications: {{ t("nav.no_notifications")|string|tojson }},
-    // meme creator
-    meme: {
-      text_layer: {{ t("meme.text_layer")|string|tojson }},
-      enter_text: {{ t("meme.enter_text")|string|tojson }},
-      size_label: {{ t("meme.size_label")|string|tojson }},
-      upload_btn: {{ t("meme.upload_btn")|string|tojson }},
-      choose_image_first: {{ t("meme.choose_image_first")|string|tojson }},
-      create_meme: {{ t("meme.create_meme")|string|tojson }}
+<script type="application/json" id="footer-data">{
+  "session": {
+    "onara": {% if onara %} true {% else %} false {% endif %},
+    "onara_cfg": {% if (onara_cfg != none and onara_cfg != none) %} {% if onara_cfg %} true {% else %} false {% endif %} {% else %} null {% endif %},
+    "public_untagged": {% if public_untagged %} true {% else %} false {% endif %},
+    "public_nsfw": {% if public_nsfw %} true {% else %} false {% endif %},
+    "enable_item_slugs": {% if enable_item_slugs %} true {% else %} false {% endif %},
+    "enable_anonymous_access": {% if enable_anonymous_access %} true {% else %} false {% endif %},
+    "anon_permissions": {{ (anon_permissions_json or "{}")|safe }},
+    "strict_mode": {% if (session and session.strict_mode) %} true {% else %} false {% endif %},
+    "logged_in": {% if session %} true {% else %} false {% endif %},
+    "excluded_tags": {% if (session and session.excluded_tags) %} {{ session.excluded_tags|tojson|safe }} {% else %} [] {% endif %},
+    "hide_comments_from_public": {% if hide_comments_from_public %} true {% else %} false {% endif %},
+    "guest_anonymize": {% if guest_anonymize %} true {% else %} false {% endif %},
+    "anon_anonymize": {% if anon_anonymize %} true {% else %} false {% endif %},
+    "is_anonymized": {% if is_anonymized %} true {% else %} false {% endif %},
+    "use_new_layout": {% if session %}{% if session.use_new_layout %} true {% else %} false {% endif %}{% else %} {% if default_layout == "legacy" %}false {% else %} true {% endif %}{% endif %},
+    "csrf_token": {{ ((csrf_token or (session and session.csrf_token)) or "")|string|tojson }},
+    "default_theme": {{ default_theme|string|tojson }},
+    "private_society": {% if private_society %} true {% else %} false {% endif %},
+    "show_content_warning": {% if show_content_warning %} true {% else %} false {% endif %},
+    "disable_autoplay": {% if (session and session.disable_autoplay) %} true {% else %} false {% endif %},
+    "disable_swiping": {% if (session and session.disable_swiping) %} true {% else %} false {% endif %},
+    "show_background": {% if session %}{% if session.show_background != false %} true {% else %} false {% endif %}{% else %} {% if show_background_cfg %} true {% else %} false {% endif %}{% endif %},
+    "nsfl_tag_id": {{ nsfl_tag_id|safe }},
+    "enable_nsfl": {% if enable_nsfl %} true {% else %} false {% endif %},
+    "user": {% if session %} {{ session.user|string|tojson }} {% else %} null {% endif %},
+    "login": {% if session %} {{ session.login|string|tojson }} {% else %} null {% endif %},
+    "anon_login": {% if (session and session.anon_login) %} {{ session.anon_login|string|tojson }} {% else %} null {% endif %},
+    "is_anon": {% if (session and session.is_anon) %} true {% else %} false {% endif %},
+    "display_name": {% if (session and session.display_name) %}{% set footer_str %}{{ session.display_name }}{% endset %} {{ footer_str|tojson }} {% else %} null {% endif %},
+    "username_color": {% if (session and session.username_color) %}{% set footer_str %}{{ session.username_color }}{% endset %} {{ footer_str|tojson }} {% else %} null {% endif %},
+    "id": {% if (session and session.id) %} {{ session.id|safe }} {% else %} null {% endif %},
+    "user_id": {% if (session and session.id) %} {{ session.id|safe }} {% else %} null {% endif %},
+    "is_admin": {% if (session and session.admin) %} true {% else %} false {% endif %},
+    "is_moderator": {% if (session and session.is_moderator) %} true {% else %} false {% endif %},
+    "enable_swf": {% if enable_swf %} true {% else %} false {% endif %},
+    "enable_danmaku": {% if enable_danmaku %} true {% else %} false {% endif %},
+    "enable_global_chat": {% if enable_global_chat %} true {% else %} false {% endif %},
+    "enable_xd_score": {% if enable_xd_score %} true {% else %} false {% endif %},
+    "ruffle_volume": {% if ((session and session.ruffle_volume != none) and session.ruffle_volume != none) %} {{ session.ruffle_volume|safe }} {% else %} 0.5 {% endif %},
+    "ruffle_background": {% if (session and session.ruffle_background != false) %} true {% else %} false {% endif %},
+    "quote_emojis": {% if (session and session.quote_emojis != false) %} true {% else %} false {% endif %},
+    "embed_youtube_in_comments": {% if (session and session.embed_youtube_in_comments != false) %} true {% else %} false {% endif %},
+    "avatar": {% if (session and session.avatar) %} {{ session.avatar|safe }} {% else %} null {% endif %},
+    "avatar_file": {% if (session and session.avatar_file) %} {{ session.avatar_file|string|tojson }} {% else %} null {% endif %},
+    "banner_file": {% if (session and session.banner_file) %} {{ session.banner_file|string|tojson }} {% else %} null {% endif %},
+    "banner_position": {% if (session and session.banner_position) %} {{ session.banner_position|string|tojson }} {% else %} null {% endif %},
+    "banner_size": {% if (session and session.banner_size) %} {{ session.banner_size|string|tojson }} {% else %} null {% endif %},
+    "banner_repeat": {% if (session and session.banner_repeat) %} {{ session.banner_repeat|string|tojson }} {% else %} null {% endif %},
+    "receive_system_notifications": {% if session %}{% if session.receive_system_notifications != false %} true {% else %} false {% endif %}{% else %} true {% endif %},
+    "receive_user_notifications": {% if session %}{% if session.receive_user_notifications != false %} true {% else %} false {% endif %}{% else %} true {% endif %},
+    "do_not_disturb": {% if (session and session.do_not_disturb) %} true {% else %} false {% endif %},
+    "comment_banner_enabled": {% if comment_banner_enabled %} true {% else %} false {% endif %},
+    "comment_display_mode": {{ comment_display_mode|safe }},
+    "comment_max_length": {{ (comment_max_length if (comment_max_length != none and comment_max_length != none) else "null")|safe }},
+    "development": {% if development %} true {% else %} false {% endif %},
+    "allow_fileupload_comments": {% if allow_fileupload_comments %} true {% else %} false {% endif %},
+    "fileupload_comments_multifile": {% if fileupload_comments_multifile %} true {% else %} false {% endif %},
+    "fileupload_comments_size": {{ fileupload_comments_size|safe }},
+    "fileupload_comments_max": {{ fileupload_comments_max|safe }},
+    "fileupload_comments_mode": {{ fileupload_comments_mode|string|tojson }},
+    "dm_attachments": {% if dm_attachments %} true {% else %} false {% endif %},
+    "dm_unencrypted": {% if dm_unencrypted %} true {% else %} false {% endif %},
+    "allow_comment_deletion": {% if allow_comment_deletion %} true {% else %} false {% endif %},
+    "enable_comment_polls": {% if enable_comment_polls %} true {% else %} false {% endif %},
+    "hide_sidebar_default": {% if hide_sidebar_default %} true {% else %} false {% endif %},
+    "mode": {{ (mode if mode is defined else 0)|safe }}
+  },
+  "default_thumb_size": {{ default_thumb_size|string|tojson }},
+  "i18n": {
+    "write_comment": {{ t("comments.write_comment")|string|tojson }},
+    "post": {{ t("comments.post")|string|tojson }},
+    "cancel": {{ t("comments.cancel")|string|tojson }},
+    "sidebar_view": {{ t("sidebar.view")|string|tojson }},
+    "sidebar_read_more": {{ t("sidebar.read_more")|string|tojson }},
+    "sidebar_see_less": {{ t("sidebar.see_less")|string|tojson }},
+    "sidebar_show_full_comment": {{ t("sidebar.show_full_comment")|string|tojson }},
+    "sidebar_loading_activity": {{ t("sidebar.loading_activity")|string|tojson }},
+    "sidebar_no_activity": {{ t("sidebar.no_activity")|string|tojson }},
+    "sidebar_failed_to_load": {{ t("sidebar.failed_to_load")|string|tojson }},
+    "sidebar_loading_more": {{ t("sidebar.loading_more")|string|tojson }},
+    "sidebar_end_of_activity": {{ t("sidebar.end_of_activity")|string|tojson }},
+    "sidebar_recommendations": {{ t("sidebar.recommendations")|string|tojson }},
+    "sidebar_loading_recommendations": {{ t("sidebar.loading_recommendations")|string|tojson }},
+    "sidebar_no_recommendations": {{ t("sidebar.no_recommendations")|string|tojson }},
+    "sidebar_refresh_recommendations": {{ t("sidebar.refresh_recommendations")|string|tojson }},
+    "select_file": {{ t("upload_btn.select_file")|string|tojson }},
+    "enter_url": {{ t("upload_btn.enter_url")|string|tojson }},
+    "tags_required": {{ t("upload_btn.tags_required")|string|tojson }},
+    "select_rating": {{ t("upload_btn.select_rating")|string|tojson }},
+    "embed_youtube": {{ t("upload_btn.embed_youtube")|string|tojson }},
+    "upload_from_url": {{ t("upload_btn.upload_from_url")|string|tojson }},
+    "upload": {{ t("upload_btn.upload")|string|tojson }},
+    "uploading": {{ t("upload.uploading")|string|tojson }},
+    "processing": {{ t("toast.processing")|string|tojson }},
+    "upload_pending_approval_patient": {{ t("upload.pending_approval_patient")|string|tojson }},
+    "upload_shitpost_success": {{ (t("upload.shitpost_success") or "Successfully shitposted {n} items!")|string|tojson }},
+    "upload_shitposting_status": {{ (t("upload.shitposting_status") or "Shitposting")|string|tojson }},
+    "upload_comment_placeholder": {{ (t("upload.item_comment_placeholder") or "Comment (optional)...")|string|tojson }},
+    "upload_tags_placeholder": {{ (t("upload.item_tags_placeholder") or "Tags...")|string|tojson }},
+    "upload_add_more": {{ (t("upload.add_more") or "Add more")|string|tojson }},
+    "settings_no_banner_set": {{ (t("settings.no_banner_set") or "No banner set")|string|tojson }},
+    {# timeago #}
+    "timeago_just_now": {{ t("timeago.just_now")|string|tojson }},
+    "timeago_year": {{ t("timeago.year")|string|tojson }},
+    "timeago_years": {{ t("timeago.years")|string|tojson }},
+    "timeago_month": {{ t("timeago.month")|string|tojson }},
+    "timeago_months": {{ t("timeago.months")|string|tojson }},
+    "timeago_week": {{ t("timeago.week")|string|tojson }},
+    "timeago_weeks": {{ t("timeago.weeks")|string|tojson }},
+    "timeago_day": {{ t("timeago.day")|string|tojson }},
+    "timeago_days": {{ t("timeago.days")|string|tojson }},
+    "timeago_hour": {{ t("timeago.hour")|string|tojson }},
+    "timeago_hours": {{ t("timeago.hours")|string|tojson }},
+    "timeago_minute": {{ t("timeago.minute")|string|tojson }},
+    "timeago_minutes": {{ t("timeago.minutes")|string|tojson }},
+    "timeago_second": {{ t("timeago.second")|string|tojson }},
+    "timeago_seconds": {{ t("timeago.seconds")|string|tojson }},
+    "timeago_ago": {{ t("timeago.ago")|string|tojson }},
+    "lang": {{ lang|string|tojson }},
+    {# search overlay #}
+    "search_placeholder": {{ t("search_overlay.placeholder")|string|tojson }},
+    "search_strict_mode": {{ t("search_overlay.strict_mode")|string|tojson }},
+    {# toasts #}
+    "report_success": {{ t("toast.report_success")|string|tojson }},
+    "report_error": {{ t("toast.report_error")|string|tojson }},
+    "network_error": {{ t("toast.network_error")|string|tojson }},
+    "network_error_short": {{ t("toast.network_error_short")|string|tojson }},
+    "reason_required": {{ t("toast.reason_required")|string|tojson }},
+    "reason_optional": {{ t("toast.reason_optional")|string|tojson }},
+    "reason_required_label": {{ t("toast.reason_required_label")|string|tojson }},
+    "captcha_required": {{ t("toast.captcha_required")|string|tojson }},
+    "captcha_loading": {{ t("toast.captcha_loading")|string|tojson }},
+    "confirm_yes": {{ t("toast.yes")|string|tojson }},
+    "confirm_no": {{ t("toast.no")|string|tojson }},
+    "confirm_btn": {{ t("toast.confirm")|string|tojson }},
+    "cancel_btn": {{ t("toast.cancel")|string|tojson }},
+    "add_tag": {{ t("toast.add_tag")|string|tojson }},
+    "item_pinned": {{ t("toast.item_pinned")|string|tojson }},
+    "item_unpinned": {{ t("toast.item_unpinned")|string|tojson }},
+    "error_adding_tag": {{ t("toast.error_adding_tag")|string|tojson }},
+    "error_saving": {{ t("toast.error_saving")|string|tojson }},
+    "zomg_on": {{ t("toast.zomg_on")|string|tojson }},
+    "zomg_off": {{ t("toast.zomg_off")|string|tojson }},
+    "copied": {{ t("toast.copied")|string|tojson }},
+    "exclude_tag": {{ (t("filter.exclude_tag") or "Exclude tag")|string|tojson }},
+    "unexclude_tag": {{ (t("filter.unexclude_tag") or "Excluded (click to unexclude)")|string|tojson }},
+    "no_tags_excluded": {{ (t("filter.no_tags_excluded") or "No tags excluded yet")|string|tojson }},
+    "tag_excluded_msg": {{ (t("filter.tag_excluded_msg") or "Tag {tag} added to excluded tags")|string|tojson }},
+    "tag_unexcluded_msg": {{ (t("filter.tag_unexcluded_msg") or "Tag {tag} removed from excluded tags")|string|tojson }},
+    {# actions #}
+    "fav_added": {{ t("toast.fav_added")|string|tojson }},
+    "fav_removed": {{ t("toast.fav_removed")|string|tojson }},
+    "subscribed_thread": {{ t("toast.subscribed_thread")|string|tojson }},
+    "unsubscribed_thread": {{ t("toast.unsubscribed_thread")|string|tojson }},
+    "oc_marked": {{ t("toast.oc_marked")|string|tojson }},
+    "oc_removed": {{ t("toast.oc_removed")|string|tojson }},
+    "no_tags_excluded": {{ t("toast.no_tags_excluded")|string|tojson }},
+    "tag_delete_title": {{ t("toast.tag_delete_title")|string|tojson }},
+    "tag_delete_confirm": {{ t("toast.tag_delete_confirm")|string|tojson }},
+    "tag_deleted_success": {{ t("toast.tag_deleted_success")|string|tojson }},
+    "item_deleted_success": {{ t("toast.item_deleted_success")|string|tojson }},
+    "item_delete_title": {{ t("toast.item_delete_title")|string|tojson }},
+    "item_delete_confirm": {{ t("toast.item_delete_confirm")|string|tojson }},
+    {# halls #}
+    "hall_added": {{ t("toast.hall_added")|string|tojson }},
+    "hall_removed": {{ t("toast.hall_removed")|string|tojson }},
+    "hall_my_placeholder": {{ t("hall.my_hall_placeholder")|string|tojson }},
+    "hall_no_halls": {{ t("hall.no_halls")|string|tojson }},
+    "hall_select_a_hall": {{ t("hall.select_a_hall")|string|tojson }},
+    "hall_choose_or_create": {{ t("hall.choose_or_create")|string|tojson }},
+    "hall_creating": {{ t("hall.creating")|string|tojson }},
+    "hall_adding": {{ t("hall.adding")|string|tojson }},
+    "hall_removing": {{ t("hall.removing")|string|tojson }},
+    "hall_saving": {{ t("hall.saving")|string|tojson }},
+    "hall_deleting": {{ t("hall.deleting")|string|tojson }},
+    "hall_saved": {{ t("hall.saved")|string|tojson }},
+    "hall_created": {{ t("hall.created")|string|tojson }},
+    "hall_add_btn": {{ t("hall.add_btn")|string|tojson }},
+    "hall_remove_btn": {{ t("hall.remove_btn")|string|tojson }},
+    "hall_name_empty": {{ t("hall.enter_name_error")|string|tojson }},
+    "hall_enter_name_error": {{ t("hall.enter_name_error")|string|tojson }},
+    "hall_slug_empty_error": {{ t("hall.slug_empty_error")|string|tojson }},
+    "hall_delete_confirm": {{ t("hall.delete_confirm")|string|tojson }},
+    "hall_image_uploaded": {{ t("hall.image_uploaded")|string|tojson }},
+    "hall_image_removed": {{ t("hall.image_removed")|string|tojson }},
+    "hall_click_upload_hint": {{ t("hall.click_upload_hint")|string|tojson }},
+    "common_save": {{ t("common.save")|string|tojson }},
+    "common_delete": {{ t("common.delete")|string|tojson }},
+    "common_view": {{ t("common.view")|string|tojson }},
+    "common_name": {{ t("common.name")|string|tojson }},
+    "common_description": {{ t("common.description")|string|tojson }},
+    "common_private": {{ t("common.private")|string|tojson }},
+    {# notifications #}
+    "notif_upload_approved": {{ t("notifications.upload_approved_short")|string|tojson }},
+    "notif_upload_pending": {{ t("notifications.upload_pending_short")|string|tojson }},
+    "notif_new_report": {{ t("notifications.new_report_short")|string|tojson }},
+    "notif_upload_denied": {{ t("notifications.upload_denied_short")|string|tojson }},
+    "notif_upload_deleted": {{ t("notifications.upload_deleted_short")|string|tojson }},
+    "notif_click_reason": {{ t("notifications.click_reason")|string|tojson }},
+    "notif_no_reason": {{ t("notifications.no_reason")|string|tojson }},
+    "notif_reason_label": {{ t("notifications.reason_label")|string|tojson }},
+    "notif_replied": {{ t("notifications.replied_short")|string|tojson }},
+    "notif_subscribed": {{ t("notifications.subscribed_short")|string|tojson }},
+    "notif_mentioned": {{ t("notifications.mentioned_short")|string|tojson }},
+    "notif_commented": {{ t("notifications.commented")|string|tojson }},
+    "notif_system": {{ t("notifications.system")|string|tojson }},
+    "notif_admin": {{ t("notifications.admin")|string|tojson }},
+    "notif_moderation": {{ t("notifications.moderation")|string|tojson }},
+    "notif_tab_user": {{ t("nav.notif_tab_user")|string|tojson }},
+    "notif_tab_system": {{ t("nav.notif_tab_system")|string|tojson }},
+    "no_notifications": {{ t("nav.no_notifications")|string|tojson }},
+    {# meme creator #}
+    "meme": {
+      "text_layer": {{ t("meme.text_layer")|string|tojson }},
+      "enter_text": {{ t("meme.enter_text")|string|tojson }},
+      "size_label": {{ t("meme.size_label")|string|tojson }},
+      "upload_btn": {{ t("meme.upload_btn")|string|tojson }},
+      "choose_image_first": {{ t("meme.choose_image_first")|string|tojson }},
+      "create_meme": {{ t("meme.create_meme")|string|tojson }}
     },
-    // global chat
-    chat_title: {{ t("chat.title")|string|tojson }},
-    chat_placeholder: {{ t("chat.placeholder")|string|tojson }},
-    chat_minimize: {{ t("chat.minimize")|string|tojson }},
-    chat_expand: {{ t("chat.expand")|string|tojson }},
-    chat_slow_down: {{ t("chat.slow_down")|string|tojson }},
-    chat_error_send: {{ t("chat.error_send")|string|tojson }},
-    chat_network_error: {{ t("chat.network_error")|string|tojson }},
-    // comment file upload
-    attach_file: {{ t("comments.attach_file")|string|tojson }},
-    uploading_file: {{ t("comments.uploading_file")|string|tojson }},
-    remove_file: {{ t("comments.remove_file")|string|tojson }},
-    file_too_large: {{ t("comments.file_too_large")|string|tojson }},
-    // polls
-    poll_btn_title: {{ (t("comments.poll_btn_title") or "Create poll")|string|tojson }},
-    poll_question_placeholder: {{ (t("comments.poll_question_placeholder") or "Poll question...")|string|tojson }},
-    poll_option_placeholder: {{ (t("comments.poll_option_placeholder") or "Option...")|string|tojson }},
-    poll_add_option: {{ (t("comments.poll_add_option") or "Add option")|string|tojson }},
-    poll_remove: {{ (t("comments.poll_remove") or "Remove poll")|string|tojson }},
-    poll_vote: {{ (t("comments.poll_vote") or "Vote")|string|tojson }},
-    poll_voted: {{ (t("comments.poll_voted") or "You voted")|string|tojson }},
-    poll_votes: {{ (t("comments.poll_votes") or "votes")|string|tojson }},
-    poll_vote_single: {{ (t("comments.poll_vote_single") or "vote")|string|tojson }},
-    poll_delete: {{ (t("comments.poll_delete") or "Delete poll")|string|tojson }},
-    poll_expired: {{ (t("comments.poll_expired") or "Poll closed")|string|tojson }},
-    poll_anonymous: {{ (t("comments.poll_anonymous") or "Anonymous")|string|tojson }},
-    poll_public: {{ (t("comments.poll_public") or "Public votes")|string|tojson }},
-    // url upload tracker
-    url_tracker_title: {{ (t("upload.url_tracker_title") or "URL Uploads")|string|tojson }},
-    url_tracker_queued: {{ (t("upload.url_tracker_queued") or "Queued")|string|tojson }},
-    url_tracker_downloading: {{ (t("upload.url_tracker_downloading") or "Downloading")|string|tojson }},
-    url_tracker_analyzing: {{ (t("upload.url_tracker_analyzing") or "Analyzing")|string|tojson }},
-    url_tracker_saving: {{ (t("upload.url_tracker_saving") or "Saving")|string|tojson }},
-    url_tracker_processing: {{ (t("upload.url_tracker_processing") or "Processing")|string|tojson }},
-    url_tracker_extracting: {{ (t("upload.url_tracker_extracting") or "Extracting")|string|tojson }},
-    url_tracker_complete: {{ (t("upload.url_tracker_complete") or "Complete!")|string|tojson }},
-    url_tracker_failed: {{ (t("upload.url_tracker_failed") or "Upload failed")|string|tojson }},
-    url_tracker_view: {{ (t("upload.url_tracker_view") or "View →")|string|tojson }},
-    // albums
-    upload_album: {{ (t("album.mode_album") or "Upload Album (%s)")|string|tojson }},
-    uploading_album: {{ (t("album.uploading_album") or "Uploading album...")|string|tojson }},
-    album_counter: {{ (t("album.counter") or "%s of %s")|string|tojson }},
-    album_cover: {{ (t("album.cover") or "Cover")|string|tojson }},
-    album_remove: {{ (t("album.remove_picture") or "Remove picture")|string|tojson }},
-    album_move_left: {{ (t("album.move_left") or "Move left")|string|tojson }},
-    album_move_right: {{ (t("album.move_right") or "Move right")|string|tojson }},
-    album_add_more: {{ (t("album.add_more") or "Add more pictures")|string|tojson }},
-    album_select_pictures: {{ (t("album.select_pictures") or "Select pictures for album")|string|tojson }},
-    album_min_pictures: {{ (t("album.min_pictures") or "Add at least 2 pictures for an album")|string|tojson }},
-    album_subf0ck_tags_placeholder: {{ (t("album.subf0ck_tags_placeholder") or "Tags for this subf0ck (optional)")|string|tojson }},
-    // favorites
-    no_favs: {{ (t("profile.no_favs") or "no favorites")|string|tojson }},
-    favs_label: {{ (t("profile.favs_label") or "Favorites")|string|tojson }},
-    guest_favs_saved: {{ (t("profile.guest_favs_saved") or "You have {count} guest favorites saved on this device.")|string|tojson }},
-    sync_guest_favs: {{ (t("profile.sync_guest_favs") or "Import to Account")|string|tojson }},
-    guest_favs_imported: {{ (t("profile.guest_favs_imported") or "Imported favorites to your account!")|string|tojson }},
-    dismiss: {{ (t("common.dismiss") or "Dismiss")|string|tojson }}
-  };
-</script>
+    {# global chat #}
+    "chat_title": {{ t("chat.title")|string|tojson }},
+    "chat_placeholder": {{ t("chat.placeholder")|string|tojson }},
+    "chat_minimize": {{ t("chat.minimize")|string|tojson }},
+    "chat_expand": {{ t("chat.expand")|string|tojson }},
+    "chat_slow_down": {{ t("chat.slow_down")|string|tojson }},
+    "chat_error_send": {{ t("chat.error_send")|string|tojson }},
+    "chat_network_error": {{ t("chat.network_error")|string|tojson }},
+    {# comment file upload #}
+    "attach_file": {{ t("comments.attach_file")|string|tojson }},
+    "uploading_file": {{ t("comments.uploading_file")|string|tojson }},
+    "remove_file": {{ t("comments.remove_file")|string|tojson }},
+    "file_too_large": {{ t("comments.file_too_large")|string|tojson }},
+    {# polls #}
+    "poll_btn_title": {{ (t("comments.poll_btn_title") or "Create poll")|string|tojson }},
+    "poll_question_placeholder": {{ (t("comments.poll_question_placeholder") or "Poll question...")|string|tojson }},
+    "poll_option_placeholder": {{ (t("comments.poll_option_placeholder") or "Option...")|string|tojson }},
+    "poll_add_option": {{ (t("comments.poll_add_option") or "Add option")|string|tojson }},
+    "poll_remove": {{ (t("comments.poll_remove") or "Remove poll")|string|tojson }},
+    "poll_vote": {{ (t("comments.poll_vote") or "Vote")|string|tojson }},
+    "poll_voted": {{ (t("comments.poll_voted") or "You voted")|string|tojson }},
+    "poll_votes": {{ (t("comments.poll_votes") or "votes")|string|tojson }},
+    "poll_vote_single": {{ (t("comments.poll_vote_single") or "vote")|string|tojson }},
+    "poll_delete": {{ (t("comments.poll_delete") or "Delete poll")|string|tojson }},
+    "poll_expired": {{ (t("comments.poll_expired") or "Poll closed")|string|tojson }},
+    "poll_anonymous": {{ (t("comments.poll_anonymous") or "Anonymous")|string|tojson }},
+    "poll_public": {{ (t("comments.poll_public") or "Public votes")|string|tojson }},
+    {# url upload tracker #}
+    "url_tracker_title": {{ (t("upload.url_tracker_title") or "URL Uploads")|string|tojson }},
+    "url_tracker_queued": {{ (t("upload.url_tracker_queued") or "Queued")|string|tojson }},
+    "url_tracker_downloading": {{ (t("upload.url_tracker_downloading") or "Downloading")|string|tojson }},
+    "url_tracker_analyzing": {{ (t("upload.url_tracker_analyzing") or "Analyzing")|string|tojson }},
+    "url_tracker_saving": {{ (t("upload.url_tracker_saving") or "Saving")|string|tojson }},
+    "url_tracker_processing": {{ (t("upload.url_tracker_processing") or "Processing")|string|tojson }},
+    "url_tracker_extracting": {{ (t("upload.url_tracker_extracting") or "Extracting")|string|tojson }},
+    "url_tracker_complete": {{ (t("upload.url_tracker_complete") or "Complete!")|string|tojson }},
+    "url_tracker_failed": {{ (t("upload.url_tracker_failed") or "Upload failed")|string|tojson }},
+    "url_tracker_view": {{ (t("upload.url_tracker_view") or "View →")|string|tojson }},
+    {# albums #}
+    "upload_album": {{ (t("album.mode_album") or "Upload Album (%s)")|string|tojson }},
+    "uploading_album": {{ (t("album.uploading_album") or "Uploading album...")|string|tojson }},
+    "album_counter": {{ (t("album.counter") or "%s of %s")|string|tojson }},
+    "album_cover": {{ (t("album.cover") or "Cover")|string|tojson }},
+    "album_remove": {{ (t("album.remove_picture") or "Remove picture")|string|tojson }},
+    "album_move_left": {{ (t("album.move_left") or "Move left")|string|tojson }},
+    "album_move_right": {{ (t("album.move_right") or "Move right")|string|tojson }},
+    "album_add_more": {{ (t("album.add_more") or "Add more pictures")|string|tojson }},
+    "album_select_pictures": {{ (t("album.select_pictures") or "Select pictures for album")|string|tojson }},
+    "album_min_pictures": {{ (t("album.min_pictures") or "Add at least 2 pictures for an album")|string|tojson }},
+    "album_subf0ck_tags_placeholder": {{ (t("album.subf0ck_tags_placeholder") or "Tags for this subf0ck (optional)")|string|tojson }},
+    {# favorites #}
+    "no_favs": {{ (t("profile.no_favs") or "no favorites")|string|tojson }},
+    "favs_label": {{ (t("profile.favs_label") or "Favorites")|string|tojson }},
+    "guest_favs_saved": {{ (t("profile.guest_favs_saved") or "You have {count} guest favorites saved on this device.")|string|tojson }},
+    "sync_guest_favs": {{ (t("profile.sync_guest_favs") or "Import to Account")|string|tojson }},
+    "guest_favs_imported": {{ (t("profile.guest_favs_imported") or "Imported favorites to your account!")|string|tojson }},
+    "dismiss": {{ (t("common.dismiss") or "Dismiss")|string|tojson }}
+  }
+}</script>
+<script src="/s/js/views/snippets/footer.config.js?v={{ mtime("/public/s/js/views/snippets/footer.config.js") }}"></script>
 <script src="/s/js/passkey.js?v={{ ts|safe }}"></script>
 <script src="/s/js/f0ckm.js?v={{ ts|safe }}"></script>
 <script src="/s/js/sidebar-activity.js?v={{ ts|safe }}"></script>
 <script src="/s/js/flash_yank.js?v={{ ts|safe }}"></script>
 <script src="/s/js/laser-cursor.js?v={{ ts|safe }}"></script>
 {% if (show_koepfe and not (session and session.hide_koepfe)) %}
-<script nonce="{{ csp_nonce }}">window.f0ckKoepfe = {{ koepfe_json|safe }};</script>
+<script type="application/json" id="koepfe-data">{{ koepfe_json|safe }}</script>
+<script src="/s/js/views/snippets/footer.koepfe.js?v={{ mtime("/public/s/js/views/snippets/footer.koepfe.js") }}"></script>
 <script src="/s/js/koepfe.js?v={{ ts|safe }}"></script>
 {% endif %}
 
@@ -820,40 +620,7 @@
 <script src="/s/js/admin.js?v={{ ts|safe }}"></script>
 {% endif %}
 {% endif %}
-<script nonce="{{ csp_nonce }}">
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        let rootFound = false;
-        let scopedFound = false;
-
-        for (let r of registrations) {
-          try {
-            const scopePath = new URL(r.scope).pathname;
-            if (scopePath === '/') {
-              r.unregister().then(() => {
-                console.log('[SW] Root ServiceWorker cleaned up.');
-              });
-              rootFound = true;
-            } else if (scopePath === '/api/v2/export/') {
-              scopedFound = true;
-            }
-          } catch (e) {}
-        }
-
-        // Register the scoped service worker so that exports still work on settings page
-        // without intercepting normal site requests.
-        if (!scopedFound || rootFound) {
-          navigator.serviceWorker.register('/sw.js', { scope: '/api/v2/export/' }).then((registration) => {
-            window.f0ckDebug('ServiceWorker registered with scoped path: ', registration.scope);
-          }).catch((err) => {
-            window.f0ckDebug('ServiceWorker registration failed: ', err);
-          });
-        }
-      });
-    });
-  }
-</script>
+<script src="/s/js/views/snippets/footer.service-worker.js?v={{ mtime("/public/s/js/views/snippets/footer.service-worker.js") }}"></script>
 {% include "snippets/cap-gate.html" %}
 </body>
 
