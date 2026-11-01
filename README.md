@@ -173,6 +173,6 @@ main:
 
 ## Credits
 
-f0ckm grew out of f0ckv2, which in turn grew out of the original f0ck. f0ck was born out of the need for an open-source alternative to pr0gramm with old-school features, such as an IRC bot that picks up URLs and shows the gathered content in an accessible web gallery. Over the last 10 years the project has matured a lot, and here we are.
+f0ckm grew out of f0ckv2, which in turn grew out of the original f0ck. f0ck was born out of the need for an open-source alternative to pr0gramm with old-school features, such as an IRC bot that picks up URLs and shows the gathered content in an accessible web gallery. Over the last 10 years the project has matured a lot, and here we are. It can have many faces and many facades; it is very versatile software.
 
 Inspired by the old pr0gramm. Built by Flummi and Kibi, enhanced with AI LLMs.
