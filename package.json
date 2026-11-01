@@ -11,6 +11,6 @@
     "@cap.js/widget": "0.1.58",
     "@ruffle-rs/ruffle": "0.7.1",
     "jszip": "3.10.2",
-    "marked": "15.0.12"
+    "marked": "18.1.2"
   }
 }
