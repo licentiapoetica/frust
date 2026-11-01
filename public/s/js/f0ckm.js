@@ -23314,6 +23314,8 @@ document.addEventListener('click', (e) => {
         const metaBtn = e.target.closest('#a_metadata');
         if (metaBtn) {
             e.preventDefault();
+            // The button lives in the info modal footer: close that modal first so the two don't stack
+            if (metaBtn.closest('#info-modal')) document.getElementById('info-modal-close')?.click();
             const itemid = metaBtn.dataset.itemId;
             const ytSrc  = metaBtn.dataset.src || null; // Set for YouTube items
             const modal = document.getElementById('metadata-modal');

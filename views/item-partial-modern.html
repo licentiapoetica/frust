@@ -183,9 +183,6 @@
                 {% if enable_oc %}
                 <i class="iconset {{ ("fa-solid" if item.is_oc else "fa-regular") }} fa-star" id="a_oc" data-item-id="{{ item.id }}" data-is-oc="{{ item.is_oc }}" title="{{ ("Remove OC status" if item.is_oc else "Mark as OC") }}"></i>
                 {% endif %}
-                {% if (can_extract_meta is defined and can_extract_meta) %}
-                <i class="iconset fa-solid fa-magic" id="a_metadata" data-item-id="{{ item.id }}" {% if item.mime == "video/youtube" %} data-src="https://www.youtube.com/watch?v={{ item.dest.replace("yt:", "", 1) }}" {% endif %} title="Extract Metadata"></i>
-                {% endif %}
                 {% if is_flash_item %}
                 <i class="iconset fa-solid fa-image" id="a_rethumb" data-item-id="{{ item.id }}" title="Re-upload Thumbnail"></i>
                 {% endif %}

@@ -168,6 +168,11 @@
             <button type="button" class="btn-infobox-action" id="info-rethumb-btn" data-item-id="{{ item.id }}">
                 <i class="fa-solid fa-arrows-rotate"></i> Regenerate Thumbnail
             </button>
+            {% if (can_extract_meta is defined and can_extract_meta) %}
+            <button type="button" class="btn-infobox-action" id="a_metadata" data-item-id="{{ item.id }}" {% if item.mime == "video/youtube" %} data-src="https://www.youtube.com/watch?v={{ item.dest.replace("yt:", "", 1) }}" {% endif %}>
+                <i class="fa-solid fa-magic"></i> {{ t("metadata_modal.title") }}
+            </button>
+            {% endif %}
             {% endif %}
             <button type="button" class="btn-infobox-close" id="info-modal-close">{{ (t("common.close") or "Close") }}</button>
         </div>
