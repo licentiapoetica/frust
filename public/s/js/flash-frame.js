@@ -94,6 +94,11 @@
         autoplay: m.autoplay === false ? 'off' : 'on',
         volume: clamp01(m.volume ?? 0.5),
         unmuteOverlay: 'hidden',
+        // Always fit the movie into the box. SWFs that set StageScaleMode.NO_SCALE
+        // (0x40 Hues, most "app" style SWFs) would otherwise render at their native
+        // size and get cropped whenever the box is smaller than the stage.
+        scale: 'showAll',
+        forceScale: true,
         letterbox: 'on',
         warnOnUnsupportedContent: false,
         contextMenu: 'on',
