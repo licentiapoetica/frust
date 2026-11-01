@@ -110,6 +110,12 @@ bind_from!(Option<bool>, v => v.map(Bind::Bool).unwrap_or(Bind::Null));
 
 const PLACEHOLDER: char = '\u{1}';
 
+/// sqlx 0.9 only runs SQL text marked as audited. Text built by [`Sql`] carries every value as a bound
+/// parameter (`$n`), never spliced into the string, so it is safe by construction.
+fn safe(sql: &str) -> sqlx::AssertSqlSafe<&str> {
+    sqlx::AssertSqlSafe(sql)
+}
+
 /// Composable SQL with bound parameters.
 #[derive(Debug, Clone, Default)]
 pub struct Sql {
@@ -223,7 +229,7 @@ impl Sql {
     /// Run and return rows as JSON objects.
     pub async fn fetch_all<'e, E: sqlx::PgExecutor<'e>>(&self, db: E) -> Result<Vec<Row>> {
         let sql = self.sql();
-        let rows = sqlx::query_with(&sql, self.args()?)
+        let rows = sqlx::query_with(safe(&sql), self.args()?)
             .fetch_all(db)
             .await
             .map_err(|e| query_error(e, &sql))?;
@@ -232,7 +238,7 @@ impl Sql {
 
     pub async fn fetch_optional<'e, E: sqlx::PgExecutor<'e>>(&self, db: E) -> Result<Option<Row>> {
         let sql = self.sql();
-        let row = sqlx::query_with(&sql, self.args()?)
+        let row = sqlx::query_with(safe(&sql), self.args()?)
             .fetch_optional(db)
             .await
             .map_err(|e| query_error(e, &sql))?;
@@ -246,7 +252,7 @@ impl Sql {
         E: sqlx::PgExecutor<'e>,
     {
         let sql = self.sql();
-        sqlx::query_as_with::<_, T, _>(&sql, self.args()?)
+        sqlx::query_as_with::<_, T, _>(safe(&sql), self.args()?)
             .fetch_all(db)
             .await
             .map_err(|e| query_error(e, &sql))
@@ -258,7 +264,7 @@ impl Sql {
         E: sqlx::PgExecutor<'e>,
     {
         let sql = self.sql();
-        sqlx::query_as_with::<_, T, _>(&sql, self.args()?)
+        sqlx::query_as_with::<_, T, _>(safe(&sql), self.args()?)
             .fetch_optional(db)
             .await
             .map_err(|e| query_error(e, &sql))
@@ -271,7 +277,7 @@ impl Sql {
         E: sqlx::PgExecutor<'e>,
     {
         let sql = self.sql();
-        let row = sqlx::query_with(&sql, self.args()?)
+        let row = sqlx::query_with(safe(&sql), self.args()?)
             .fetch_optional(db)
             .await
             .map_err(|e| query_error(e, &sql))?;
@@ -288,7 +294,7 @@ impl Sql {
         E: sqlx::PgExecutor<'e>,
     {
         let sql = self.sql();
-        let rows = sqlx::query_with(&sql, self.args()?)
+        let rows = sqlx::query_with(safe(&sql), self.args()?)
             .fetch_all(db)
             .await
             .map_err(|e| query_error(e, &sql))?;
@@ -298,7 +304,7 @@ impl Sql {
     /// Execute; returns affected row count.
     pub async fn execute<'e, E: sqlx::PgExecutor<'e>>(&self, db: E) -> Result<u64> {
         let sql = self.sql();
-        let r = sqlx::query_with(&sql, self.args()?)
+        let r = sqlx::query_with(safe(&sql), self.args()?)
             .execute(db)
             .await
             .map_err(|e| query_error(e, &sql))?;

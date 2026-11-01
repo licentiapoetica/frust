@@ -73,7 +73,8 @@ async fn wait_for_db(st: &state::AppState) {
                     tracing::info!("[BOOT] Database tables missing! Initializing schema from migrations/f0ckm_schema.sql...");
                     let schema = st.cfg().base.join("migrations/f0ckm_schema.sql");
                     match std::fs::read_to_string(&schema) {
-                        Ok(text) => match sqlx::raw_sql(&text).execute(&st.db).await {
+                        // Schema file from the repository (trusted), run as one script
+                        Ok(text) => match sqlx::raw_sql(sqlx::AssertSqlSafe(text.as_str())).execute(&st.db).await {
                             Ok(_) => tracing::info!("[BOOT] Database schema initialization complete!"),
                             Err(e) => tracing::error!("[BOOT] Schema initialization failed: {e}"),
                         },
@@ -301,7 +302,7 @@ pub fn new_state(cfg: config::Config, db: sqlx::PgPool, i18n: Arc<i18n::I18n>, t
 pub async fn prepare_db(st: &state::AppState) {
     wait_for_db(st).await;
     for m in migrations::STARTUP_MIGRATIONS {
-        if let Err(e) = sqlx::raw_sql(m).execute(&st.db).await {
+        if let Err(e) = sqlx::raw_sql(*m).execute(&st.db).await {
             let first = m.lines().next().unwrap_or("").trim();
             tracing::warn!("[BOOT] startup migration failed ({first}): {e}");
         }
