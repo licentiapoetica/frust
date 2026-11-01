@@ -1,11 +1,11 @@
 <div class="container">
-    <h3 style="text-align: center;">{{ t("nav.tags") }}</h3>
+    <h3 class="tags-title">{{ t("nav.tags") }}</h3>
     <div class="tags-grid" id="tags-container">
         {% include "tag-cards.html" %}
     </div>
 </div>
 
-<div class="pagination-container-fluid" {% if (hidePagination is defined and hidePagination) %} style="display: none;" {% endif %}>
+<div class="pagination-container-fluid{% if (hidePagination is defined and hidePagination) %} index-pagination-hidden{% endif %}">
   <div class="pagination-wrapper bottom-pagination fixed-pagination">
     {% include "snippets/pagination.html" %}
   </div>

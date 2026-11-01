@@ -593,7 +593,7 @@ pub async fn check_guard(st: &AppState, req: &mut Req, guard: Guard) -> Option<R
     }
 }
 
-const CHAN_DENIED_HTML: &str = r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Access Denied</title><link rel="stylesheet" href="/s/css/f0ck.css"></head><body style="background:#111;color:#eee;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;"><div style="text-align:center;padding:30px;background:#1a1a1a;border-radius:12px;border:1px solid #333;max-width:460px;"><div style="font-size:3rem;color:#4ade80;margin-bottom:15px;">🍀</div><h2 style="margin:0 0 10px;">Access Restricted</h2><p style="color:#aaa;line-height:1.5;">This 4chan viewer is only accessible to users with the <strong>4chan</strong> group.</p><a href="/" style="display:inline-block;margin-top:15px;color:#4ade80;text-decoration:none;">← Return to Home</a></div></body></html>"#;
+const CHAN_DENIED_HTML: &str = r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Access Denied</title><link rel="stylesheet" href="/s/css/f0ckm.css"></head><body class="chan-denied"><div class="chan-denied-box"><div class="chan-denied-icon">🍀</div><h2 class="chan-denied-title">Access Restricted</h2><p class="chan-denied-text">This 4chan viewer is only accessible to users with the <strong>4chan</strong> group.</p><a href="/" class="chan-denied-link">← Return to Home</a></div></body></html>"#;
 
 async fn api_key_auth(st: &AppState, req: &mut Req) -> Option<Response> {
     let Some(key) = req.header("x-api-key").map(str::to_string) else {

@@ -1416,7 +1416,7 @@ window.cancelAnimFrame = (function () {
 
     selector.querySelectorAll('.rating-toggle-btn').forEach(btn => {
       const r = btn.dataset.rating;
-      btn.classList.remove('locked');
+      btn.classList.remove('locked', 'excluded-tags-locked-on', 'excluded-tags-locked-guest', 'excluded-tags-locked-single');
       btn.disabled = false;
       btn.style.cursor = '';
       btn.style.opacity = '';
@@ -2605,7 +2605,7 @@ window.cancelAnimFrame = (function () {
       document.querySelectorAll('.pagination-container-fluid').forEach(el => {
         const pagWrapper = el.querySelector('.pagination-wrapper');
         if (!pagWrapper || pagWrapper.innerHTML.trim().length > 0) {
-          el.style.display = '';
+          el.style.display = 'flex';
         }
       });
       modal._isClosing = false;
@@ -2639,7 +2639,7 @@ window.cancelAnimFrame = (function () {
       document.querySelectorAll('.pagination-container-fluid').forEach(el => {
         const pagWrapper = el.querySelector('.pagination-wrapper');
         if (!pagWrapper || pagWrapper.innerHTML.trim().length > 0) {
-          el.style.display = '';
+          el.style.display = 'flex';
         }
       });
       modal._isClosing = false;
@@ -3115,30 +3115,31 @@ window.cancelAnimFrame = (function () {
         return;
       }
       const infoModal = document.getElementById('info-modal');
-      if (infoModal && infoModal.style.display !== 'none') {
+      if (infoModal && getComputedStyle(infoModal).display !== 'none') {
         infoModal.style.display = 'none';
         document.body.classList.remove('modal-open');
         return;
       }
       const visModal = document.getElementById('visibility-modal');
-      if (visModal && visModal.style.display !== 'none') {
+      if (visModal && getComputedStyle(visModal).display !== 'none') {
         visModal.style.display = 'none';
         document.body.classList.remove('modal-open');
         return;
       }
       const reportModal = document.getElementById('report-modal');
-      if (reportModal && reportModal.style.display !== 'none') {
+      if (reportModal && getComputedStyle(reportModal).display !== 'none') {
         reportModal.style.display = 'none';
         document.body.classList.remove('modal-open');
         return;
       }
       const hallsModal = document.getElementById('halls-modal');
-      if (hallsModal && hallsModal.style.display !== 'none') {
+      if (hallsModal && getComputedStyle(hallsModal).display !== 'none') {
         hallsModal.style.display = 'none';
         document.body.classList.remove('modal-open');
         return;
       }
-      const anyOtherModal = document.querySelector('.modal-overlay:not(#onara-modal):not([style*="display: none"]), .modal.show, .swal2-container');
+      // Some overlays are hidden by a CSS class rather than an inline display:none, so pick the first one actually shown
+      const anyOtherModal = Array.from(document.querySelectorAll('.modal-overlay:not(#onara-modal), .modal.show, .swal2-container')).find(m => window.getComputedStyle(m).display !== 'none');
       if (anyOtherModal && window.getComputedStyle(anyOtherModal).display !== 'none') {
         anyOtherModal.style.display = 'none';
         document.body.classList.remove('modal-open');
@@ -4127,7 +4128,7 @@ window.cancelAnimFrame = (function () {
       if (dimsCard && dimsEl) {
         if (sub.width && sub.height) {
           dimsEl.textContent = `${sub.width} × ${sub.height} px`;
-          dimsCard.style.display = '';
+          dimsCard.style.display = 'flex';
         } else {
           dimsCard.style.display = 'none';
         }
@@ -4156,7 +4157,7 @@ window.cancelAnimFrame = (function () {
         if (cleanHash) {
           if (hashEl) hashEl.textContent = cleanHash;
           if (copyHashBtn) copyHashBtn.setAttribute('data-hash', cleanHash);
-          hashCard.style.display = '';
+          hashCard.style.display = 'flex';
         } else {
           hashCard.style.display = 'none';
         }
@@ -5321,9 +5322,9 @@ window.cancelAnimFrame = (function () {
         // For albums: prioritize visible video/audio over the always-present <img>
         const albumVidWrap = mount.querySelector('#f0ck-album-video-wrapper');
         const albumAudWrap = mount.querySelector('#f0ck-album-audio-wrapper, #f0ck-album-audio-container');
-        if (albumVidWrap && albumVidWrap.style.display !== 'none') {
+        if (albumVidWrap && getComputedStyle(albumVidWrap).display !== 'none') {
           elem = mount.querySelector('#f0ck-album-video');
-        } else if (albumAudWrap && albumAudWrap.style.display !== 'none') {
+        } else if (albumAudWrap && getComputedStyle(albumAudWrap).display !== 'none') {
           elem = mount.querySelector('#f0ck-album-audio');
         }
         if (!elem) {
@@ -5338,7 +5339,7 @@ window.cancelAnimFrame = (function () {
       // Album items use different IDs for video/audio
       const albumVideo = document.getElementById('f0ck-album-video');
       const albumVideoWrapper = document.getElementById('f0ck-album-video-wrapper');
-      if (albumVideo && albumVideo.src && albumVideoWrapper && albumVideoWrapper.style.display !== 'none') {
+      if (albumVideo && albumVideo.src && albumVideoWrapper && getComputedStyle(albumVideoWrapper).display !== 'none') {
         elem = albumVideo;
       }
       if (!elem) {
@@ -11793,7 +11794,7 @@ window.cancelAnimFrame = (function () {
           const pageC = urlParamsC.get('p') || urlParamsC.get('page');
           document.title = `${window.f0ckDomain}${pageC ? ` - page ${pageC}` : ''}`;
 
-          document.querySelectorAll('.pagination-container-fluid').forEach(el => el.style.display = '');
+          document.querySelectorAll('.pagination-container-fluid').forEach(el => el.style.display = 'flex');
           if (navbar) navbar.classList.remove('pbwork');
           window.updateVisitIndicators();
           window.initLazyLoading();
@@ -12193,12 +12194,26 @@ window.cancelAnimFrame = (function () {
           if (isAbyss) {
             // Still inject scroller head styles (theming, snap, etc.)
             document.head.querySelectorAll('[data-pjax-abyss]').forEach(el => el.remove());
-            doc.head.querySelectorAll('style').forEach(style => {
+            const abyssLinks = [];
+            doc.head.querySelectorAll('style, link[rel="stylesheet"]').forEach(style => {
+              if (style.tagName === 'LINK') {
+                // The scroller's own stylesheet (scroller.css); skip ones this page already has.
+                const href = style.getAttribute('href');
+                if (document.head.querySelector(`link[rel="stylesheet"][href="${href}"]`)) return;
+                const l = document.createElement('link');
+                l.rel = 'stylesheet';
+                l.href = href;
+                l.setAttribute('data-pjax-abyss', '1');
+                document.head.appendChild(l);
+                abyssLinks.push(waitLink(l));
+                return;
+              }
               const s = document.createElement('style');
               s.setAttribute('data-pjax-abyss', '1');
               s.textContent = style.textContent;
               document.head.appendChild(s);
             });
+            if (abyssLinks.length) await Promise.all(abyssLinks);
             document.body.classList.add('scroller-active');
             document.title = doc.title || document.title;
 
@@ -12764,7 +12779,7 @@ window.cancelAnimFrame = (function () {
       document.querySelectorAll('.pagination-container-fluid').forEach(el => {
         const pagWrapper = el.querySelector('.pagination-wrapper');
         if (!pagWrapper || pagWrapper.innerHTML.trim().length > 0) {
-          el.style.display = '';
+          el.style.display = 'flex';
         }
       });
     }
@@ -15037,7 +15052,7 @@ window.cancelAnimFrame = (function () {
     "?": () => {
       const modal = document.getElementById('shortcuts-modal');
       if (modal) {
-        if (modal.style.display === 'none') {
+        if (getComputedStyle(modal).display === 'none') {
           openModal(modal);
         } else {
           closeModal(modal);
@@ -15047,7 +15062,7 @@ window.cancelAnimFrame = (function () {
     "ß": () => {
       const modal = document.getElementById('shortcuts-modal');
       if (modal) {
-        if (modal.style.display === 'none') {
+        if (getComputedStyle(modal).display === 'none') {
           openModal(modal);
         } else {
           closeModal(modal);
@@ -15056,7 +15071,7 @@ window.cancelAnimFrame = (function () {
     },
     "q": () => {
       const modal = document.getElementById('metadata-modal');
-      if (modal && modal.style.display !== 'none') {
+      if (modal && getComputedStyle(modal).display !== 'none') {
         // Modal is open — close it
         modal.style.display = 'none';
         document.dispatchEvent(new Event('metadata-modal-close'));
@@ -19498,15 +19513,15 @@ class NotificationSystem {
     const adminBadge = document.getElementById('notif-tab-badge-admin');
     if (userBadge) {
       userBadge.textContent = userUnread;
-      userBadge.style.display = userUnread > 0 ? '' : 'none';
+      userBadge.style.display = userUnread > 0 ? 'inline-block' : 'none';
     }
     if (systemBadge) {
       systemBadge.textContent = systemUnread;
-      systemBadge.style.display = systemUnread > 0 ? '' : 'none';
+      systemBadge.style.display = systemUnread > 0 ? 'inline-block' : 'none';
     }
     if (adminBadge) {
       adminBadge.textContent = adminUnread;
-      adminBadge.style.display = adminUnread > 0 ? '' : 'none';
+      adminBadge.style.display = adminUnread > 0 ? 'inline-block' : 'none';
     }
 
     // Forward count to Abyss scroller notification badge if active
@@ -19983,15 +19998,15 @@ class NotificationSystem {
     const adminBadge = document.getElementById('notif-tab-badge-admin');
     if (userBadge) {
       userBadge.textContent = userUnread;
-      userBadge.style.display = userUnread > 0 ? '' : 'none';
+      userBadge.style.display = userUnread > 0 ? 'inline-block' : 'none';
     }
     if (systemBadge) {
       systemBadge.textContent = systemUnread;
-      systemBadge.style.display = systemUnread > 0 ? '' : 'none';
+      systemBadge.style.display = systemUnread > 0 ? 'inline-block' : 'none';
     }
     if (adminBadge) {
       adminBadge.textContent = adminUnread;
-      adminBadge.style.display = adminUnread > 0 ? '' : 'none';
+      adminBadge.style.display = adminUnread > 0 ? 'inline-block' : 'none';
     }
     if (typeof window._scrollerNotifHook === 'function') {
       window._scrollerNotifHook(totalUnread);
@@ -20087,7 +20102,7 @@ class NotificationSystem {
     if (this.countBadge) {
       if (totalUnread > 0) {
         this.countBadge.textContent = totalUnread;
-        this.countBadge.style.display = '';
+        this.countBadge.style.display = 'block';
       } else {
         this.countBadge.style.display = 'none';
       }
@@ -20444,6 +20459,7 @@ class NotificationSystem {
             // Update main #prev arrow
             prevBtn.setAttribute('href', nextUrl);
             prevBtn.style.color = ''; // Remove #ccc
+            prevBtn.classList.remove('item-arrow-inactive');
 
             // Update .nav-prev text links and icons
             document.querySelectorAll('.nav-prev').forEach(btn => {
@@ -22411,7 +22427,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const syncSiteRemoveBtn = () => {
                   if (!siteHallRemoveBtn) return;
                   const slug = select.value;
-                  siteHallRemoveBtn.style.display = (slug && siteHallsOnItem.includes(slug)) ? '' : 'none';
+                  siteHallRemoveBtn.style.display = (slug && siteHallsOnItem.includes(slug)) ? 'inline-block' : 'none';
               };
               syncSiteRemoveBtn();
               select.addEventListener('change', syncSiteRemoveBtn);
@@ -22474,7 +22490,7 @@ document.addEventListener('DOMContentLoaded', () => {
             function syncRemoveBtn() {
                 if (!myHallsRemoveBtn) return;
                 const slug = myHallsSelect.value;
-                myHallsRemoveBtn.style.display = (slug && userHallsOnItem.includes(slug)) ? '' : 'none';
+                myHallsRemoveBtn.style.display = (slug && userHallsOnItem.includes(slug)) ? 'inline-block' : 'none';
             }
             syncRemoveBtn();
             myHallsSelect.addEventListener('change', syncRemoveBtn);
@@ -23761,7 +23777,7 @@ document.addEventListener('click', (e) => {
 
     // Close title editor when clicking outside .item_title
     const openTitleWrap = document.querySelector('.item_title .info-title-edit-wrap');
-    if (openTitleWrap && openTitleWrap.style.display !== 'none' && !e.target.closest('.item_title')) {
+    if (openTitleWrap && getComputedStyle(openTitleWrap).display !== 'none' && !e.target.closest('.item_title')) {
       const container = openTitleWrap.closest('.item_title');
       const textEl = container?.querySelector('.item_title_text');
       const input = container?.querySelector('#info-title-input');

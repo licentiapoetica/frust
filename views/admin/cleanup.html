@@ -4,70 +4,59 @@
     {% include "snippets/admin-back.html" %}
     <div class="container">
         <h2>Cleanup Manager</h2>
-        <p style="color: #ccc; margin-bottom: 20px;">Delete old posts that have no engagement (no comments, no favorites, and no subscriptions) to regain disk space.</p>
+        <p class="adm-page-intro">Delete old posts that have no engagement (no comments, no favorites, and no subscriptions) to regain disk space.</p>
 
-        <div class="admin-cleanup-form" style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+        <div class="admin-cleanup-form adm-cleanup-box adm-cleanup-config">
             <form id="cleanup-form" action="/admin/cleanup" method="POST" data-on="submit:prevent,saveCleanupSettings">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 
 
 
-                <div class="settings-item" style="margin-bottom: 30px;">
-                    <label style="display: block; font-weight: bold; color: var(--accent); margin-bottom: 10px;">Cleanup Date Range</label>
-                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #888;">From:</span>
-                            <input type="date" id="cleanup_start_date" name="cleanup_start_date" value="{{ cleanup_start_date }}" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 4px;">
+                <div class="settings-item adm-cleanup-range">
+                    <label class="adm-form-heading">Cleanup Date Range</label>
+                    <div class="adm-cleanup-dates">
+                        <div class="adm-cleanup-date">
+                            <span class="adm-cleanup-muted">From:</span>
+                            <input type="date" id="cleanup_start_date" name="cleanup_start_date" value="{{ cleanup_start_date }}" class="adm-cleanup-date-input">
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #888;">To:</span>
-                            <input type="date" id="cleanup_end_date" name="cleanup_end_date" value="{{ cleanup_end_date }}" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 4px;">
+                        <div class="adm-cleanup-date">
+                            <span class="adm-cleanup-muted">To:</span>
+                            <input type="date" id="cleanup_end_date" name="cleanup_end_date" value="{{ cleanup_end_date }}" class="adm-cleanup-date-input">
                         </div>
-                        <span style="color: #888; flex-basis: 100%; margin-top: 5px;">Posts uploaded within this period with no engagement will be targeted.</span>
+                        <span class="adm-cleanup-muted adm-cleanup-range-hint">Posts uploaded within this period with no engagement will be targeted.</span>
                     </div>
                 </div>
 
-                <div class="settings-item" style="margin-bottom: 20px;">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #ff6b6b; font-weight: bold;">
-                        <input type="checkbox" id="cleanup_include_engaged" name="cleanup_include_engaged" value="true" {% if cleanup_include_engaged %} checked {% endif %} style="width: 18px; height: 18px; cursor: pointer;">
+                <div class="settings-item adm-cleanup-engaged">
+                    <label class="adm-cleanup-engaged-label">
+                        <input type="checkbox" id="cleanup_include_engaged" name="cleanup_include_engaged" value="true" {% if cleanup_include_engaged %} checked {% endif %} class="adm-cleanup-checkbox">
                         <span>Include items with engagement</span>
                     </label>
-                    <span style="color: #888; display: block; margin-top: 5px; margin-left: 28px;">If checked, cleanup will purge ALL posts in the selected date range, even if they have comments or favorites.</span>
+                    <span class="adm-cleanup-engaged-hint">If checked, cleanup will purge ALL posts in the selected date range, even if they have comments or favorites.</span>
                 </div>
 
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <button type="submit" class="btn-primary" style="width: auto; padding: 12px 40px; font-weight: bold;">Save Configuration</button>
-                    <span id="cleanup-status" style="margin-left: 15px; font-weight: bold; display: none;"></span>
+                <div class="adm-form-actions">
+                    <button type="submit" class="btn-primary adm-cleanup-save">Save Configuration</button>
+                    <span id="cleanup-status" class="adm-cleanup-status"></span>
                 </div>
             </form>
         </div>
 
-        <div class="admin-cleanup-run" style="margin-top: 30px; background: rgba(255,255,255,0.02); padding: 25px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-            <h3 style="margin-top: 0; color: var(--accent);">Execute Cleanup</h3>
+        <div class="admin-cleanup-run adm-cleanup-box adm-cleanup-run">
+            <h3 class="adm-cleanup-run-title">Execute Cleanup</h3>
             <p>Click the button below to start the cleanup process based on the timeframe saved above.</p>
             
-            <div style="display: flex; gap: 20px; align-items: center; margin-top: 20px;">
-                <button data-on="click:runCleanup" id="run-cleanup-btn" class="btn-remove" style="width: auto; padding: 15px 40px; font-weight: bold; font-size: 1.1em; background: #c0392b;">RUN CLEANUP NOW</button>
-                <div id="run-status" style="font-weight: bold; font-size: 1.1em;"></div>
+            <div class="adm-cleanup-run-row">
+                <button data-on="click:runCleanup" id="run-cleanup-btn" class="btn-remove adm-cleanup-run-btn">RUN CLEANUP NOW</button>
+                <div id="run-status" class="adm-cleanup-run-status"></div>
             </div>
         </div>
 
-        <div style="margin-top: 40px; padding: 20px; background: rgba(217, 83, 79, 0.1); border-left: 4px solid #d9534f; border-radius: 4px;">
-            <h4 style="color: #d9534f; margin-top: 0;">Danger Zone</h4>
-            <p style="margin-bottom: 0; color: #eee;">Deletions performed by the cleanup manager are <strong>permanent</strong> and cannot be undone. Files will be removed from disk to regain space. Only posts with 0 comments, 0 favorites, and 0 subscriptions are targeted.</p>
+        <div class="adm-cleanup-danger">
+            <h4 class="adm-cleanup-danger-title">Danger Zone</h4>
+            <p class="adm-cleanup-danger-text">Deletions performed by the cleanup manager are <strong>permanent</strong> and cannot be undone. Files will be removed from disk to regain space. Only posts with 0 comments, 0 favorites, and 0 subscriptions are targeted.</p>
         </div>
     </div>
-
-    <style>
-        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(26px); background-color: #000; }
-        
-        .btn-remove:disabled { opacity: 0.5; cursor: not-allowed; }
-    </style>
 
     <script nonce="{{ csp_nonce }}">
         F0ckActions.define({

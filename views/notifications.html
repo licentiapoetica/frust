@@ -21,8 +21,8 @@
             {% include "snippets/notifications-list.html" %}
         </div>
         {% if pagination.next %}
-        <div id="footbar" data-end-msg="You reached the end" style="text-align: center; padding: 20px;">
-            <span class="loading-spinner" style="color: #888;">{{ t("notifications.scroll_for_more") }}</span>
+        <div id="footbar" data-end-msg="You reached the end">
+            <span class="loading-spinner notifs-page-scroll-hint">{{ t("notifications.scroll_for_more") }}</span>
         </div>
         {% endif %}
         <script nonce="{{ csp_nonce }}">

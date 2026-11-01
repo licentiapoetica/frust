@@ -17,7 +17,7 @@
     <div class="results">
       {% if result is defined and result is not none and result is not false %}
       <h2>{{ (((t("search.results_found")).replace("{count}", count|string, 1)).replace("{page}", pagination.page|string, 1)).replace("{total}", pagination.end|string, 1) }}</h2>
-      <table style="width: 100%" class="table">
+      <table class="table search-results-table">
         <thead>
           <tr>
             <th>{{ t("search.col_thumbnail") }}</th>
@@ -31,7 +31,7 @@
         <tbody>
           {% for key, line in result|entries %}
           <tr>
-            <td style="width: 128px;"><a href="/tag/{{ line.tag }}/{{ line.id }}" target="_blank"><img
+            <td class="search-thumb-cell"><a href="/tag/{{ line.tag }}/{{ line.id }}" target="_blank"><img
                   src="/t/{{ line.id }}.webp" loading="lazy" /></a></td>
             <td><span class="mview_desc">ID:</span><a href="/tag/{{ line.tag }}/{{ line.id }}" target="_blank">{{ line.id }}</a></td>
             <td><span class="mview_desc">Tag:</span><a href="/tag/{{ line.tag }}">{{ line.tag }}</a></td>

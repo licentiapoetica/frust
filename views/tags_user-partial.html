@@ -1,12 +1,12 @@
-<div class="profile-page-wrapper" style="max-width: 800px; margin: 0 auto; width: 100%; padding: 20px 10px; box-sizing: border-box;">
+<div class="profile-page-wrapper">
 <div class="profile_head" data-banner-user="{{ (user.user or "") }}" style="{% if (user.banner_file and user_banner_enabled) %} --author-banner: url('/a/{{ user.banner_file }}'); --author-banner-position: {{ ("center top" if user.banner_position == "center" else (user.banner_position or "center top")) }}; --author-banner-size: {{ (user.banner_size or "cover") }}; {% endif %}">
     {% if user.avatar_file %}
     <div class="profile_head_avatar">
-        <img src="/a/{{ user.avatar_file }}" style="display: grid;width: 55px" />
+        <img src="/a/{{ user.avatar_file }}" class="user-profile-head-avatar-img" />
     </div>
     {% elif (user.avatar and (user.avatar > 0)) %}
     <div class="profile_head_avatar">
-        <img src="/t/{{ user.avatar }}.webp" style="display: grid;width: 55px" />
+        <img src="/t/{{ user.avatar }}.webp" class="user-profile-head-avatar-img" />
     </div>
     {% endif %}
     <div class="layersoffear">
@@ -19,14 +19,14 @@
     </div>
 </div>
 
-<div class="user_content_wrapper" style="display: block;">
+<div class="user_content_wrapper user-profile-content-block">
     <div class="tags-grid" id="tags-container">
         {% include "tag-cards.html" %}
     </div>
 </div>
 </div>
 
-<div class="pagination-container-fluid" {% if (hidePagination is defined and hidePagination) %} style="display: none;" {% endif %}>
+<div class="pagination-container-fluid{% if (hidePagination is defined and hidePagination) %} index-pagination-hidden{% endif %}">
   <div class="pagination-wrapper bottom-pagination fixed-pagination">
     {% include "snippets/pagination.html" %}
   </div>

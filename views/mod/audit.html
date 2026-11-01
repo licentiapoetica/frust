@@ -139,12 +139,12 @@
                     {% if entry.uploader_info %}
                     <div class="audit-card-row">
                         <span class="audit-label">Info:</span>
-                        <span class="audit-value" style="color: #ffb8b8;">{{ entry.uploader_info }}</span>
+                        <span class="audit-value mod-audit-info">{{ entry.uploader_info }}</span>
                     </div>
                     {% endif %}
 
                     {% if ((entry.old_content != none or entry.new_content != none) or entry.details_json) %}
-                    <div class="audit-card-row" style="margin-top: 5px; flex-direction: column; align-items: stretch;">
+                    <div class="audit-card-row mod-audit-changes">
                         <span class="audit-label">Changes:</span>
                         <div class="audit-diff">
                             {% if entry.old_content %}
@@ -154,8 +154,7 @@
                             <div class="diff-added">+ {{ entry.new_content }}</div>
                             {% endif %}
                             {% if entry.details_json %}
-                            <div class="audit-details-json"
-                                style="font-size: 0.85em; color: #aaa; margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;">
+                            <div class="audit-details-json mod-audit-details">
                                 {{ entry.details_json }}
                             </div>
                             {% endif %}
@@ -167,14 +166,13 @@
             {% endfor %}
         </div>
 
-        <div id="audit-loading" style="text-align: center; padding: 20px; display: none;">
+        <div id="audit-loading" class="mod-audit-loading">
             <span class="loading-spinner">Loading more logs...</span>
         </div>
 
         <br>
         {% if (pages is defined and (pages > 1)) %}
-        <div class="pagination-container" id="audit-pagination"
-            style="display: flex; gap: 10px; align-items: center; justify-content: center;">
+        <div class="pagination-container mod-audit-pagination" id="audit-pagination">
             {% if (page > 1) %}
             <a href="/mod/audit?page={{ (page - 1) }}" class="badge badge-secondary">&laquo; Prev</a>
             {% endif %}
@@ -296,17 +294,17 @@
                                 if (log.uploader_info) {
                                     html += '<div class="audit-card-row">' +
                                         '<span class="audit-label">Info:</span>' +
-                                        '<span class="audit-value" style="color: #ffb8b8;">' + escapeHtml(log.uploader_info) + '</span>' +
+                                        '<span class="audit-value mod-audit-info">' + escapeHtml(log.uploader_info) + '</span>' +
                                         '</div>';
                                 }
 
                                 if (log.old_content || log.new_content || log.details_json) {
-                                    html += '<div class="audit-card-row" style="margin-top: 5px; flex-direction: column; align-items: stretch;">' +
+                                    html += '<div class="audit-card-row mod-audit-changes">' +
                                         '<span class="audit-label">Changes:</span>' +
                                         '<div class="audit-diff">' +
                                         (log.old_content ? '<div class="diff-removed">- ' + escapeHtml(log.old_content) + '</div>' : '') +
                                         (log.new_content ? '<div class="diff-added">+ ' + escapeHtml(log.new_content) + '</div>' : '') +
-                                        (log.details_json ? '<div class="audit-details-json" style="font-size: 0.85em; color: #aaa; margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;">' + escapeHtml(log.details_json) + '</div>' : '') +
+                                        (log.details_json ? '<div class="audit-details-json mod-audit-details">' + escapeHtml(log.details_json) + '</div>' : '') +
                                         '</div>' +
                                         '</div>';
                                 }

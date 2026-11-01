@@ -41,7 +41,7 @@
         <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
         <div class="notif-msg">
             <strong>{{ (t("notifications.upload_denied")).replace("{id}", (n.item_slug or n.item_id), 1) }}</strong>
-            <div style="font-size: 0.85em; color: #ffb8b8; margin-top: 4px;">Reason: {{ n.reason }}</div>
+            <div class="notif-list-reason">Reason: {{ n.reason }}</div>
         </div>
         <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
@@ -55,7 +55,7 @@
         <div class="notif-user"><strong>{{ t("notifications.moderation") }}</strong></div>
         <div class="notif-msg">
             <strong>{{ (t("notifications.upload_deleted")).replace("{id}", (n.item_slug or n.item_id), 1) }}</strong>
-            <div style="font-size: 0.85em; color: #ffb8b8; margin-top: 4px;">Reason: {{ n.reason }}</div>
+            <div class="notif-list-reason">Reason: {{ n.reason }}</div>
         </div>
         <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
@@ -94,10 +94,10 @@
         <div class="notif-msg">
             <strong>{{ t("notifications.upload_error") }}</strong>
             {% if (n.data and n.data.msg) %}
-            <div style="font-size: 0.85em; color: #ffb8b8; margin-top: 4px;">Reason: {{ n.data.msg }}</div>
+            <div class="notif-list-reason">Reason: {{ n.data.msg }}</div>
             {% endif %}
             {% if (n.data and n.data.url) %}
-            <div style="font-size: 0.75em; opacity: 0.6; margin-top: 2px; word-break: break-all;">URL: {{ n.data.url }}</div>
+            <div class="notif-list-url">URL: {{ n.data.url }}</div>
             {% endif %}
         </div>
         <div class="notif-time">{{ n.created_at|locale_string }}</div>
@@ -105,12 +105,12 @@
 </a>
 {% elif n.type == "warning" %}
 <div class="notif-item {{ ("" if n.is_read else "unread") }} notif-with-thumb" data-id="{{ n.id }}" data-type="{{ n.type }}" data-item-id="{{ (n.item_id or "") }}" data-item-slug="{{ (n.item_slug or "") }}">
-    <div class="notif-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg-lighter);color:var(--danger);font-size:1.5em;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <div class="notif-thumb notif-list-warn-thumb"><i class="fa-solid fa-triangle-exclamation"></i></div>
     <div class="notif-content">
         <div class="notif-user"><strong>{{ t("notifications.system") }}</strong></div>
         <div class="notif-msg">
             <strong>Account Warning</strong>
-            <div style="font-size: 0.85em; color: #ffb8b8; margin-top: 4px;">Reason: {{ n.reason }}</div>
+            <div class="notif-list-reason">Reason: {{ n.reason }}</div>
         </div>
         <div class="notif-time">{{ n.created_at|locale_string }}</div>
     </div>
@@ -123,7 +123,7 @@
     </div>
     {% endif %}
     <div class="notif-content">
-        <div class="notif-user"><strong {% if n.username_color %} style="color: {{ n.username_color }}" {% endif %}>{{ n.from_user }}</strong></div>
+        <div class="notif-user"><strong {% if n.username_color %} class="notif-list-user-color" style="--username-color: {{ n.username_color }}" {% endif %}>{{ n.from_user }}</strong></div>
         <div class="notif-msg">
             {% if n.type == "comment_reply" %} {{ (t("notifications.replied")).replace("{id}", (n.item_slug or n.item_id), 1) }}
             {% elif n.type == "subscription" %} {{ (t("notifications.subscribed")).replace("{id}", (n.item_slug or n.item_id), 1) }}

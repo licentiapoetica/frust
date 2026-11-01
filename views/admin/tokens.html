@@ -5,14 +5,14 @@
 <div class="container">
         <div class="admin-header-flex">
             <h2>Invite Tokens</h2>
-            <button id="generate-token" class="btn-upload" style="width: auto; padding: 10px 20px;">Generate New Token</button>
+            <button id="generate-token" class="btn-upload adm-tokens-generate">Generate New Token</button>
         </div>
 
         <!-- ═══════════════════ Invite Requests ═══════════════════ -->
-        <div id="invite-requests" style="margin-bottom: 30px; scroll-margin-top: calc(var(--navbar-h, 50px) + 16px);">
-            <h3 style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                <i class="fa-solid fa-inbox" style="color: var(--accent);"></i> Invite Requests
-                <span id="invite-req-count" style="display: none; background: #ff6b6b; color: white; font-size: 0.7em; padding: 2px 8px; border-radius: 10px; font-weight: 600;"></span>
+        <div id="invite-requests" class="adm-tokens-requests">
+            <h3 class="adm-tokens-heading">
+                <i class="fa-solid fa-inbox adm-tokens-heading-icon"></i> Invite Requests
+                <span id="invite-req-count" class="adm-tokens-req-count"></span>
             </h3>
             <div class="upload-form">
                 <table class="responsive-table">
@@ -27,14 +27,14 @@
                         </tr>
                     </thead>
                     <tbody id="invite-req-list">
-                        <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading...</td></tr>
+                        <tr><td colspan="6" class="adm-tokens-empty">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <h3 style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-            <i class="fa-solid fa-ticket" style="color: var(--accent);"></i> Token List
+        <h3 class="adm-tokens-heading">
+            <i class="fa-solid fa-ticket adm-tokens-heading-icon"></i> Token List
         </h3>
         <div class="upload-form">
             <table class="responsive-table">
@@ -77,51 +77,51 @@
                     if (countBadge) {
                         if (pendingCount > 0) {
                             countBadge.textContent = pendingCount;
-                            countBadge.style.display = '';
+                            countBadge.style.display = 'inline';
                         } else {
                             countBadge.style.display = 'none';
                         }
                     }
 
                     if (data.requests.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No invite requests yet.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="6" class="adm-tokens-empty">No invite requests yet.</td></tr>';
                         return;
                     }
 
                     tbody.innerHTML = data.requests.map(r => {
 
-                        const reason = r.reason ? '<span title="' + r.reason.replace(/"/g, '&quot;') + '">' + (r.reason.length > 60 ? r.reason.slice(0, 60) + '…' : r.reason) + '</span>' : '<span style="color: var(--text-muted); font-style: italic;">No reason given</span>';
+                        const reason = r.reason ? '<span title="' + r.reason.replace(/"/g, '&quot;') + '">' + (r.reason.length > 60 ? r.reason.slice(0, 60) + '…' : r.reason) + '</span>' : '<span class="adm-tokens-no-reason">No reason given</span>';
 
                         let statusBadge;
                         if (r.status === 'pending') {
-                            statusBadge = '<span style="color: #ffc107; font-weight: 600;"><i class="fa-solid fa-clock"></i> Pending</span>';
+                            statusBadge = '<span class="adm-tokens-status adm-tokens-status-pending"><i class="fa-solid fa-clock"></i> Pending</span>';
                         } else if (r.status === 'approved') {
-                            statusBadge = '<span style="color: #51cf66; font-weight: 600;"><i class="fa-solid fa-circle-check"></i> Approved</span>';
+                            statusBadge = '<span class="adm-tokens-status adm-tokens-status-approved"><i class="fa-solid fa-circle-check"></i> Approved</span>';
                         } else if (r.status === 'revoked') {
-                            statusBadge = '<span style="color: #e67700; font-weight: 600;"><i class="fa-solid fa-ban"></i> Revoked</span>';
+                            statusBadge = '<span class="adm-tokens-status adm-tokens-status-revoked"><i class="fa-solid fa-ban"></i> Revoked</span>';
                         } else {
-                            statusBadge = '<span style="color: #ff6b6b; font-weight: 600;"><i class="fa-solid fa-circle-xmark"></i> Denied</span>';
+                            statusBadge = '<span class="adm-tokens-status adm-tokens-status-denied"><i class="fa-solid fa-circle-xmark"></i> Denied</span>';
                         }
 
                         let actions = '';
                         if (r.status === 'pending') {
                             actions =
-                                '<div style="display: flex; gap: 6px; flex-wrap: wrap;">' +
-                                    '<button data-on="click:approveInviteReq" data-args="[' + r.id + ']" class="btn-upload" style="padding: 5px 12px; font-size: 0.8em; background: #51cf66; border-color: #51cf66;"><i class="fa-solid fa-check"></i> Approve</button>' +
-                                    '<button data-on="click:denyInviteReq" data-args="[' + r.id + ']" class="btn-remove" style="padding: 5px 12px; font-size: 0.8em;"><i class="fa-solid fa-xmark"></i> Deny</button>' +
+                                '<div class="adm-tokens-req-actions">' +
+                                    '<button data-on="click:approveInviteReq" data-args="[' + r.id + ']" class="btn-upload adm-tokens-approve"><i class="fa-solid fa-check"></i> Approve</button>' +
+                                    '<button data-on="click:denyInviteReq" data-args="[' + r.id + ']" class="btn-remove adm-tokens-deny"><i class="fa-solid fa-xmark"></i> Deny</button>' +
                                 '</div>';
                         } else {
-                            actions = '<span style="color: var(--text-muted); font-size: 0.85em;">' + (r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : '') + '</span>';
+                            actions = '<span class="adm-tokens-reviewed">' + (r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : '') + '</span>';
                         }
 
                         const username = r.requester_login || r.requester_name || (r.fingerprint ? r.fingerprint.slice(0, 12) + '…' : '—');
                         const userCell = r.requester_login
-                            ? '<a href="/user/' + r.requester_login + '" style="color: #5bc0be; text-decoration: none; font-weight: 600;">' + username + '</a>'
-                            : '<span style="color: var(--text-muted);">' + username + '</span>';
+                            ? '<a href="/user/' + r.requester_login + '" class="adm-tokens-user-link">' + username + '</a>'
+                            : '<span class="adm-tokens-user-anon">' + username + '</span>';
 
-                        return '<tr' + (r.status === 'pending' ? ' style="background: rgba(255,193,7,0.04);"' : '') + '>' +
+                        return '<tr' + (r.status === 'pending' ? ' class="adm-tokens-req-pending"' : '') + '>' +
                             '<td data-label="User">' + userCell + '</td>' +
-                            '<td data-label="Reason" style="max-width: 250px;">' + reason + '</td>' +
+                            '<td data-label="Reason" class="adm-tokens-reason">' + reason + '</td>' +
                             '<td data-label="Status">' + statusBadge + '</td>' +
                             '<td data-label="Submitted">' + new Date(r.created_at).toLocaleString() + '</td>' +
                             '<td data-label="Reviewed By">' + (r.reviewed_by_name || '—') + '</td>' +
@@ -129,11 +129,11 @@
                             '</tr>';
                     }).join('');
                 } else {
-                    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Failed to load invite requests.</td></tr>';
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="adm-tokens-empty">Failed to load invite requests.</td></tr>';
                 }
             } catch (e) {
                 console.error('Failed to load invite requests:', e);
-                if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Failed to load invite requests.</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="adm-tokens-empty">Failed to load invite requests.</td></tr>';
             }
         };
 
@@ -196,29 +196,29 @@
                     if (!tbody) return;
                     tbody.innerHTML = data.tokens.map(t =>
                         '<tr>' +
-                        '<td data-label="Token" style="font-family: monospace; font-size: 1.1em; color: var(--accent);">' + t.token + '</td>' +
+                        '<td data-label="Token" class="adm-tokens-token">' + t.token + '</td>' +
                         '<td data-label="Status">' +
-                        (t.is_used ? '<span style="color: #ff6b6b">Used</span>' : '<span style="color: #51cf66">Available</span>') +
+                        (t.is_used ? '<span class="adm-tokens-used">Used</span>' : '<span class="adm-tokens-available">Available</span>') +
                         '</td>' +
                         '<td data-label="Source">' +
-                        (t.created_by_matrix ? '<span style="color: #0DBD8B">[Matrix] ' + t.created_by_matrix + '</span>' :
-                         (t.created_by_discord ? '<span style="color: #5865F2"><i class="fab fa-discord"></i> ' + t.created_by_discord + '</span>' :
-                          (t.created_by_name ? '<span style="color: var(--accent)">' + t.created_by_name + '</span>' : '<span style="color: var(--text-muted)">Admin</span>'))) +
+                        (t.created_by_matrix ? '<span class="adm-tokens-src-matrix">[Matrix] ' + t.created_by_matrix + '</span>' :
+                         (t.created_by_discord ? '<span class="adm-tokens-src-discord"><i class="fab fa-discord"></i> ' + t.created_by_discord + '</span>' :
+                          (t.created_by_name ? '<span class="adm-tokens-src-user">' + t.created_by_name + '</span>' : '<span class="adm-tokens-src-admin">Admin</span>'))) +
                         '</td>' +
                         '<td data-label="Used By">' + (t.used_by_name || '—') + '</td>' +
                         '<td data-label="Created">' + (t.created_at ? new Date(parseInt(t.created_at) * 1000).toLocaleString() : '—') + '</td>' +
                         '<td data-label="Used At">' + (t.used_at ? new Date(t.used_at).toLocaleString() : '—') + '</td>' +
                         '<td data-label="Actions">' +
-                        (!t.is_used ? '<button data-on="click:deleteToken" data-args="[' + t.id + ']" class="btn-remove" style="padding: 5px 10px; font-size: 0.8em;">Delete</button>' : '') +
+                        (!t.is_used ? '<button data-on="click:deleteToken" data-args="[' + t.id + ']" class="btn-remove adm-tokens-delete">Delete</button>' : '') +
                         '</td>' +
                         '</tr>'
                     ).join('');
                 } else {
-                    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Failed to load tokens.</td></tr>';
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="adm-tokens-empty">Failed to load tokens.</td></tr>';
                 }
             } catch (e) {
                 console.error(e);
-                if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Failed to load tokens.</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="adm-tokens-empty">Failed to load tokens.</td></tr>';
             }
         };
 

@@ -23,7 +23,7 @@
         // Show the local file picker only when no pre-selected template exists
         if (!hasLoadedImage) {
             const customSelector = document.getElementById('customTemplateSelector');
-            if (customSelector) customSelector.style.display = '';
+            if (customSelector) customSelector.style.display = 'block';
         }
 
         const memeFont = 'Impact, Charcoal, sans-serif';

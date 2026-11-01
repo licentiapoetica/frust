@@ -472,7 +472,7 @@
     if (val) {
       document.querySelectorAll('.scroll-actions').forEach(actions => {
         // Only add if 4chan buttons are visible (a 4chan feed is active)
-        if (chanOpenBtn && chanOpenBtn.style.display !== 'none') {
+        if (chanOpenBtn && chanOpenBtn.style.display === 'flex') {
           const openBtn = document.createElement('button');
           openBtn.className = 'chan-action-btn';
           openBtn.title = chanOpenBtn.title;
@@ -480,7 +480,7 @@
           openBtn.addEventListener('click', () => chanOpenBtn.click());
           actions.appendChild(openBtn);
         }
-        if (chanGalleryBtn && chanGalleryBtn.style.display !== 'none') {
+        if (chanGalleryBtn && chanGalleryBtn.style.display === 'flex') {
           const galBtn = document.createElement('button');
           galBtn.className = 'chan-action-btn';
           galBtn.title = chanGalleryBtn.title;
@@ -1491,7 +1491,7 @@
 
     // In left-hand mode, inject 4chan action buttons into this slide's actions
     if (leftHandEnabled) {
-      if (chanOpenBtn && chanOpenBtn.style.display !== 'none') {
+      if (chanOpenBtn && chanOpenBtn.style.display === 'flex') {
         const ob = document.createElement('button');
         ob.className = 'chan-action-btn';
         ob.title = chanOpenBtn.title;
@@ -1499,7 +1499,7 @@
         ob.addEventListener('click', () => chanOpenBtn.click());
         actions.appendChild(ob);
       }
-      if (chanGalleryBtn && chanGalleryBtn.style.display !== 'none') {
+      if (chanGalleryBtn && chanGalleryBtn.style.display === 'flex') {
         const gb = document.createElement('button');
         gb.className = 'chan-action-btn';
         gb.title = chanGalleryBtn.title;
@@ -1692,7 +1692,7 @@
 
       let items = data.items || [];
       if (applied.externalUrl && data.posts) {
-        if (chanGalleryBtn) chanGalleryBtn.style.display = '';
+        if (chanGalleryBtn) chanGalleryBtn.style.display = 'flex';
         // Load persisted rehosts from localStorage for this thread
         const threadKey = `rehosted_4chan_${data.board}_${data.tid}`;
         let cachedRehosts = {};
@@ -3392,7 +3392,7 @@
   function unlock4chan() {
     const section = document.getElementById('external-source-section');
     if (section) section.style.display = '';
-    if (chanOpenBtn) chanOpenBtn.style.display = '';
+    if (chanOpenBtn) chanOpenBtn.style.display = 'flex';
   }
   if (window.scrollerIsMod) {
     unlock4chan();
@@ -3477,7 +3477,7 @@
   }
 
   async function loadCatalog(board) {
-    if (chanLoading) chanLoading.style.display = '';
+    if (chanLoading) chanLoading.style.display = 'block';
     if (chanGrid) chanGrid.innerHTML = '';
     try {
       const resp = await fetch(`/api/v2/scroller/external/4chan/${board}/catalog`);
@@ -3712,7 +3712,7 @@
       function toggleScrollerNotifDropdown() {
         sNotifOpen = !sNotifOpen;
         if (sNotifOpen) {
-          sNotifDropdown.style.display = '';
+          sNotifDropdown.style.display = 'block';
           positionDropdown();
           sNotifDropdown.classList.add('visible');
           fetchScrollerNotifs();
@@ -3743,11 +3743,11 @@
         const sysBadge = document.getElementById('scroller-notif-tab-badge-system');
         if (userBadge) {
           userBadge.textContent = userUnread;
-          userBadge.style.display = userUnread > 0 ? '' : 'none';
+          userBadge.style.display = userUnread > 0 ? 'inline-block' : 'none';
         }
         if (sysBadge) {
           sysBadge.textContent = sysUnread;
-          sysBadge.style.display = sysUnread > 0 ? '' : 'none';
+          sysBadge.style.display = sysUnread > 0 ? 'inline-block' : 'none';
         }
       }
 

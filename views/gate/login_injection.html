@@ -1,60 +1,51 @@
 {#- Hidden login/register modal of the private society gate (index.mjs getGateLoginInjection).
     Static apart from the captcha switch (`captcha`) and `csp_nonce`. -#}
-<style>
-  #gate-login-btn:hover, #gate-register-btn:hover { background: #003681 !important; }
-  #gate-passkey-btn:hover { background: #eaeaea !important; }
-</style>
-<div id="hot-corner" style="position:fixed;bottom:0;left:0;width:20px;height:20px;z-index:9999;"></div>
+<link rel="stylesheet" href="/s/css/gate.css?v={{ mtime("/public/s/css/gate.css") }}">
+<div id="hot-corner"></div>
 
-<div id="gate-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10000;align-items:center;justify-content:center;">
-  <div style="background:#f0f0f0;border:1px solid #999;color:#404040;border-radius:0;box-shadow:4px 4px 8px rgba(0,0,0,0.25);font-family:system-ui,-apple-system,sans-serif;padding:28px 32px;min-width:340px;max-width:94vw;width:360px;position:relative;">
-    <button id="gate-modal-close" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:22px;color:#666;cursor:pointer;line-height:1;">&times;</button>
+<div id="gate-modal">
+  <div class="gate-modal-box">
+    <button id="gate-modal-close">&times;</button>
 
     <!-- Login View -->
     <div id="gate-login-view">
-      <form id="gate-login-form" novalidate style="display:flex;flex-direction:column;gap:10px;">
-        <h2 style="text-align:center;margin:0 0 14px;font-size:1.2em;font-weight:600;color:#222;">Sign in</h2>
-        <div id="gate-login-error" style="display:none;background:#fde8e8;border:1px solid #e0a0a0;color:#bd2426;padding:7px 10px;font-size:13px;text-align:center;"></div>
-        <input type="text" name="username" placeholder="Username or email" autocomplete="off" required
-          style="background:white;color:black;border:1px solid #bbb;padding:7px 10px;width:100%;box-sizing:border-box;font-size:14px;font-family:inherit;" />
-        <input type="password" name="password" placeholder="Password" autocomplete="off" required
-          style="background:white;color:black;border:1px solid #bbb;padding:7px 10px;width:100%;box-sizing:border-box;font-size:14px;font-family:inherit;" />
-        <label style="font-size:12px;color:#555;display:flex;align-items:center;gap:6px;"><input type="checkbox" name="kmsi" style="margin:0;"> Stay signed in</label>
-        <button type="submit" id="gate-login-btn" style="background:#0051c3;color:white;border:none;padding:9px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Sign in</button>
-        <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
-          <hr style="flex:1;border:none;border-top:1px solid #ccc;">
-          <span style="font-size:11px;color:#999;">or</span>
-          <hr style="flex:1;border:none;border-top:1px solid #ccc;">
+      <form id="gate-login-form" class="gate-form" novalidate>
+        <h2 class="gate-form-title">Sign in</h2>
+        <div id="gate-login-error" class="gate-msg gate-msg-error"></div>
+        <input type="text" name="username" placeholder="Username or email" autocomplete="off" required class="gate-input" />
+        <input type="password" name="password" placeholder="Password" autocomplete="off" required class="gate-input" />
+        <label class="gate-kmsi"><input type="checkbox" name="kmsi"> Stay signed in</label>
+        <button type="submit" id="gate-login-btn" class="gate-submit-btn">Sign in</button>
+        <div class="gate-or-divider">
+          <hr>
+          <span>or</span>
+          <hr>
         </div>
-        <button type="button" id="gate-passkey-btn" style="background:#f5f5f5;color:#333;border:1px solid #ccc;padding:9px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        <button type="button" id="gate-passkey-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
           Sign in with Passkey
         </button>
-        <p style="text-align:center;font-size:0.85em;margin:6px 0 0;color:#555;">
-          No account? <a href="#" id="gate-to-register" style="color:#0051c3;text-decoration:underline;">Register</a>
+        <p class="gate-form-footer">
+          No account? <a href="#" id="gate-to-register" class="gate-form-link">Register</a>
         </p>
       </form>
     </div>
 
     <!-- Register View -->
-    <div id="gate-register-view" style="display:none;">
-      <form id="gate-register-form" novalidate style="display:flex;flex-direction:column;gap:10px;">
-        <h2 style="text-align:center;margin:0 0 14px;font-size:1.2em;font-weight:600;color:#222;">Create account</h2>
-        <div id="gate-register-error" style="display:none;background:#fde8e8;border:1px solid #e0a0a0;color:#bd2426;padding:7px 10px;font-size:13px;text-align:center;"></div>
-        <div id="gate-register-ok" style="display:none;background:#e8fde8;border:1px solid #a0e0a0;color:#2a7a2a;padding:7px 10px;font-size:13px;text-align:center;"></div>
-        <input type="text" name="username" placeholder="Username" autocomplete="off" required
-          style="background:white;color:black;border:1px solid #bbb;padding:7px 10px;width:100%;box-sizing:border-box;font-size:14px;font-family:inherit;" />
-        <input type="password" name="password" placeholder="Password (min. 20 characters)" autocomplete="off" required minlength="20"
-          style="background:white;color:black;border:1px solid #bbb;padding:7px 10px;width:100%;box-sizing:border-box;font-size:14px;font-family:inherit;" />
-        <input type="password" name="password_confirm" placeholder="Confirm password" autocomplete="off" required minlength="20"
-          style="background:white;color:black;border:1px solid #bbb;padding:7px 10px;width:100%;box-sizing:border-box;font-size:14px;font-family:inherit;" />
-        <input type="text" name="token" placeholder="Invite token" autocomplete="off"
-          style="background:white;color:black;border:1px solid #bbb;padding:7px 10px;width:100%;box-sizing:border-box;font-size:14px;font-family:inherit;" />
-        <input type="text" name="email_confirm_field" style="display:none !important;" tabindex="-1" autocomplete="off" />
-        {% if captcha %}<cap-widget data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %} style="display:block;margin:4px 0;"></cap-widget>{% endif %}
-        <button type="submit" id="gate-register-btn" style="background:#0051c3;color:white;border:none;padding:9px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Create account</button>
-        <p style="text-align:center;font-size:0.85em;margin:6px 0 0;color:#555;">
-          <a href="#" id="gate-to-login" style="color:#0051c3;text-decoration:underline;">Back to sign in</a>
+    <div id="gate-register-view">
+      <form id="gate-register-form" class="gate-form" novalidate>
+        <h2 class="gate-form-title">Create account</h2>
+        <div id="gate-register-error" class="gate-msg gate-msg-error"></div>
+        <div id="gate-register-ok" class="gate-msg gate-msg-ok"></div>
+        <input type="text" name="username" placeholder="Username" autocomplete="off" required class="gate-input" />
+        <input type="password" name="password" placeholder="Password (min. 20 characters)" autocomplete="off" required minlength="20" class="gate-input" />
+        <input type="password" name="password_confirm" placeholder="Confirm password" autocomplete="off" required minlength="20" class="gate-input" />
+        <input type="text" name="token" placeholder="Invite token" autocomplete="off" class="gate-input" />
+        <input type="text" name="email_confirm_field" class="gate-honeypot" tabindex="-1" autocomplete="off" />
+        {% if captcha %}<cap-widget data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% endif %}
+        <button type="submit" id="gate-register-btn" class="gate-submit-btn">Create account</button>
+        <p class="gate-form-footer">
+          <a href="#" id="gate-to-login" class="gate-form-link">Back to sign in</a>
         </p>
       </form>
     </div>
@@ -71,14 +62,14 @@
   // Markup action for the hidden trigger in gate/cloudflare.html (<span data-on="click:openLoginGate" data-arg="login">)
   F0ckActions.define({ openLoginGate: function(el, e, view) { openLoginGate(view); } });
   function gateShowView(view) {
-    document.getElementById('gate-login-view').style.display    = view === 'login'    ? '' : 'none';
-    document.getElementById('gate-register-view').style.display = view === 'register' ? '' : 'none';
+    document.getElementById('gate-login-view').style.display    = view === 'login'    ? 'block' : 'none';
+    document.getElementById('gate-register-view').style.display = view === 'register' ? 'block' : 'none';
   }
   function gateSetError(id, msg) {
     var el = document.getElementById(id);
     if (!el) return;
     el.textContent = msg;
-    el.style.display = msg ? '' : 'none';
+    el.style.display = msg ? 'block' : 'none';
   }
   function gateSetBtn(id, loading) {
     var btn = document.getElementById(id);
@@ -156,7 +147,7 @@
           gateResetCaptcha();
         } else {
           document.getElementById('gate-register-ok').textContent = d.msg || 'Account created! You can now sign in.';
-          document.getElementById('gate-register-ok').style.display = '';
+          document.getElementById('gate-register-ok').style.display = 'block';
           document.getElementById('gate-register-form').reset();
           setTimeout(function() { gateShowView('login'); }, 2000);
         }

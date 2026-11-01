@@ -191,8 +191,8 @@ fn fallback_svg(tag: &str) -> String {
         r##"<svg width="600" height="300" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#{c1};stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#{c2};stop-opacity:1" />
+          <stop offset="0%" stop-color="#{c1}" stop-opacity="1" />
+          <stop offset="100%" stop-color="#{c2}" stop-opacity="1" />
         </linearGradient>
       </defs>
       <rect width="600" height="300" fill="url(#grad)" />

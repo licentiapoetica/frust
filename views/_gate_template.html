@@ -7,14 +7,15 @@
   <title>{{ domain }}</title>
   <link rel="icon" type="image/gif" href="/s/img/favicon.gif" />
   <link rel="stylesheet" id="injected-gate-styles" href="/s/css/f0ckm.css?v={{ ts }}">
+  <link rel="stylesheet" href="/s/css/gate.css?v={{ mtime("/public/s/css/gate.css") }}">
 </head>
 <body class="{{ ("layout-legacy" if default_layout == "legacy" else "layout-modern") }}">
        
-  <div class="wrapper" style="text-align: center;">
+  <div class="wrapper gate-example-wrapper">
       <h2>Example Gate</h2>
       <button type="button" data-on="click:openLoginGate">Login</button>
       
-      <div id="gate-container" style="display:none;">
+      <div id="gate-container">
           {% include "snippets/navbar.html" %}
           {% include "snippets/footer.html" %}
       </div>

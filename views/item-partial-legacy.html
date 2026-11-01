@@ -6,18 +6,18 @@
     <div class="item-main-content">
 
         <div class="_204863">
-            <div class="location">{% if item.is_chan %}<a href="/4/{{ item.external_board }}/catalogue" class="location-link" title="Board /{{ item.external_board }}/ catalogue">/4</a><a href="/4/{{ item.external_board }}/catalogue" class="location-link" title="Board /{{ item.external_board }}/ catalogue">/{{ item.external_board }}</a><a href="/4/{{ item.external_board }}/{{ item.external_tid }}" class="location-link" title="Thread #{{ item.external_tid }} overview">/{{ item.external_tid }}</a><a href="/4/{{ item.external_board }}/{{ item.external_tid }}/{{ item.external_id }}" class="location-link" data-inherit-context="false" title="Post #{{ item.external_id }}">/{{ item.external_id }}</a>{% if item.local_id %}<span class="location-sep" style="opacity: 0.6; margin: 0 4px;">→</span><a href="/{{ (item.local_path or item.local_id) }}" class="location-link is-rehosted" title="View rehosted post /{{ (item.local_path or item.local_id) }} on f0ckm" style="color: #4ade80; font-weight: 700;"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>{% endif %}{% elif (tmp and tmp.tag) %}<a href="/tags" class="location-link" title="All tags">/tag</a><a href="/tag/{{ tmp.tag|encode_uri_component }}{{ (link.suffix or "") }}" class="location-link" title="Tag: {{ tmp.tag }}">/{{ tmp.tag }}</a><a href="/tag/{{ tmp.tag|encode_uri_component }}/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ (link.suffix or "") }}{{ ("#" ~ item.requested_subf0ck_slug if item.requested_subf0ck_slug else "") }}" class="location-link" title="Post #{{ item.id }}">/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ ("#" ~ item.requested_subf0ck_slug if item.requested_subf0ck_slug else "") }}</a>{% else %}{{ (link.mainDisplay or link.main) }}{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ link.suffix }}{{ ("#" ~ item.requested_subf0ck_slug if item.requested_subf0ck_slug else "") }}{% endif %}</div>
+            <div class="location">{% if item.is_chan %}<a href="/4/{{ item.external_board }}/catalogue" class="location-link" title="Board /{{ item.external_board }}/ catalogue">/4</a><a href="/4/{{ item.external_board }}/catalogue" class="location-link" title="Board /{{ item.external_board }}/ catalogue">/{{ item.external_board }}</a><a href="/4/{{ item.external_board }}/{{ item.external_tid }}" class="location-link" title="Thread #{{ item.external_tid }} overview">/{{ item.external_tid }}</a><a href="/4/{{ item.external_board }}/{{ item.external_tid }}/{{ item.external_id }}" class="location-link" data-inherit-context="false" title="Post #{{ item.external_id }}">/{{ item.external_id }}</a>{% if item.local_id %}<span class="location-sep">→</span><a href="/{{ (item.local_path or item.local_id) }}" class="location-link is-rehosted" title="View rehosted post /{{ (item.local_path or item.local_id) }} on f0ckm"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>{% endif %}{% elif (tmp and tmp.tag) %}<a href="/tags" class="location-link" title="All tags">/tag</a><a href="/tag/{{ tmp.tag|encode_uri_component }}{{ (link.suffix or "") }}" class="location-link" title="Tag: {{ tmp.tag }}">/{{ tmp.tag }}</a><a href="/tag/{{ tmp.tag|encode_uri_component }}/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ (link.suffix or "") }}{{ ("#" ~ item.requested_subf0ck_slug if item.requested_subf0ck_slug else "") }}" class="location-link" title="Post #{{ item.id }}">/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ ("#" ~ item.requested_subf0ck_slug if item.requested_subf0ck_slug else "") }}</a>{% else %}{{ (link.mainDisplay or link.main) }}{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}{{ link.suffix }}{{ ("#" ~ item.requested_subf0ck_slug if item.requested_subf0ck_slug else "") }}{% endif %}</div>
             <div class="gapLeft"></div>
         </div>
         {% if enable_item_title %}
         <div class="item_title item-title">
             <span class="item_title_text{% if not item.title %} no-title{% endif %}"{% if can_manage_item %} title="Click to edit"{% endif %}>{% if item.title %}{{ item.title }}{% elif can_manage_item %}<em>Add a title</em>{% endif %}</span>
             {% if can_manage_item %}
-            <div class="info-title-edit-wrap" style="display:none;">
+            <div class="info-title-edit-wrap item-title-edit-wrap">
                 <input type="text" id="info-title-input" class="info-title-input" value="{{ (item.title or "") }}" placeholder="Add a title…" maxlength="500" data-item-id="{{ (item.local_id or item.id) }}" />
                 <button type="button" id="info-title-save" class="info-title-save-btn" title="Save Title"><i class="fa-solid fa-check"></i></button>
             </div>
-            <span id="info-title-status" class="info-title-status" style="display:none"></span>
+            <span id="info-title-status" class="info-title-status item-title-status"></span>
             {% endif %}
         </div>
         {% endif %}
@@ -30,7 +30,7 @@
                 </div>
                 {% else %}
                 <div class="arrow-prev">
-                    <a id="prev" href="#" style="color: #ccc !important;"></a>
+                    <a id="prev" class="item-arrow-inactive" href="#"></a>
                 </div>
                 {% endif %}
             </div>
@@ -44,7 +44,7 @@
                 </div>
                 {% else %}
                 <div class="arrow-next">
-                    <a id="next" href="#" style="color: #ccc !important;"></a>
+                    <a id="next" class="item-arrow-inactive" href="#"></a>
                 </div>
                 {% endif %}
             </div>
@@ -59,7 +59,7 @@
                         {% if pagination.next %}
                         <a class="nav-prev" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}">← {{ t("nav.prev") }}</a>
                         {% else %}
-                        <a class="nav-prev" href="#" style="visibility: hidden">← {{ t("nav.prev") }}</a>
+                        <a class="nav-prev item-nav-hidden" href="#">← {{ t("nav.prev") }}</a>
                         {% endif %}
                         <span>|</span>
                         <a id="random" class="" href="/random">
@@ -69,7 +69,7 @@
                         {% if pagination.prev %}
                         <a class="nav-next" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}">{{ t("nav.next") }} →</a>
                         {% else %}
-                        <a class="nav-next" href="#" style="visibility: hidden">{{ t("nav.next") }} →</a>
+                        <a class="nav-next item-nav-hidden" href="#">{{ t("nav.next") }} →</a>
                         {% endif %}
                     </nav>
                     {% else %}
@@ -77,13 +77,13 @@
                         {% if pagination.next %}
                         <a class="nav-prev" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}"><i class="fa-solid fa-chevron-left"></i></a>
                         {% else %}
-                        <a class="nav-prev" href="#" style="visibility: hidden"><i class="fa-solid fa-chevron-left"></i></a>
+                        <a class="nav-prev item-nav-hidden" href="#"><i class="fa-solid fa-chevron-left"></i></a>
                         {% endif %}
                         <button class="steuerung-scroll-down"><i class="fa-solid fa-chevron-down"></i></button>
                         {% if pagination.prev %}
                         <a class="nav-next" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}"><i class="fa-solid fa-chevron-right"></i></a>
                         {% else %}
-                        <a class="nav-next" href="#" style="visibility: hidden"><i class="fa-solid fa-chevron-right"></i></a>
+                        <a class="nav-next item-nav-hidden" href="#"><i class="fa-solid fa-chevron-right"></i></a>
                         {% endif %}
                     </nav>
                     {% endif %}
@@ -103,12 +103,12 @@
                             {% elif (item.author_avatar and (item.author_avatar > 0)) %}
                                 <img src="/t/{{ item.author_avatar }}.webp" />
                             {% else %}
-                                <img src="/a/default.png" style="border-color: #444;" />
+                                <img src="/a/default.png" class="item-legacy-infobox-avatar-default" />
                             {% endif %}
                         </a>
                         {% else %}
                         <span>
-                            <img src="/a/default.png" style="border-color: #444;" />
+                            <img src="/a/default.png" class="item-legacy-infobox-avatar-default" />
                         </span>
                         {% endif %}
                     </div>
@@ -128,12 +128,12 @@
                                 <div class="gapRight">
                                     {% if item.is_chan %}
                                     {% if item.local_id %}
-                                    <span class="chan-rehosted-wrap" style="display:inline-flex;gap:4px;align-items:center;">
-                                        <a href="/{{ (item.local_path or item.local_id) }}" class="chan-rehost-action-btn rehosted" title="Already rehosted on f0ckm (/{{ (item.local_path or item.local_id) }})" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:4px 12px;border-radius:6px;font-size:0.8rem;background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);text-decoration:none;font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>
-                                        <button type="button" class="chan-rehost-edit-btn" data-item-id="{{ item.local_id }}" title="Edit rating" style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:6px;font-size:0.8rem;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+                                    <span class="chan-rehosted-wrap">
+                                        <a href="/{{ (item.local_path or item.local_id) }}" class="chan-rehost-action-btn rehosted item-chan-rehosted-link" title="Already rehosted on f0ckm (/{{ (item.local_path or item.local_id) }})"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>
+                                        <button type="button" class="chan-rehost-edit-btn item-chan-edit-btn" data-item-id="{{ item.local_id }}" title="Edit rating"><i class="fa-solid fa-pen"></i></button>
                                     </span>
                                     {% else %}
-                                    <button type="button" class="chan-rehost-action-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" title="Rehost to f0ckm" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:4px 16px;min-width:100px;box-sizing:border-box;white-space:nowrap;flex-shrink:0;border-radius:6px;font-size:0.8rem;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);cursor:pointer;font-weight:600;"><i class="fa-solid fa-cloud-arrow-up"></i> Rehost</button>
+                                    <button type="button" class="chan-rehost-action-btn item-chan-rehost-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" title="Rehost to f0ckm"><i class="fa-solid fa-cloud-arrow-up"></i> Rehost</button>
                                     {% endif %}
                                     {% endif %}
                                     {% if session %}
@@ -163,7 +163,7 @@
                                     {% endif %}
                                     {% if is_mod_or_admin %}
                                     <i class="iconset fa-solid fa-thumbtack{{ (" active" if item.is_pinned else "") }}" id="a_pin" data-pinned="{{ item.is_pinned }}" title="{{ ("Unpin from main" if item.is_pinned else "Pin to main") }}"></i>
-                                    <i class="iconset fa-solid fa-ban{{ (" active" if item.visibility == 3 else "") }}" id="a_unavailable" data-item-id="{{ item.id }}" data-visibility="{{ (item.visibility or 0) }}" title="{{ ("Make Available (Public)" if item.visibility == 3 else "Make Unavailable (451)") }}" {% if item.visibility == 3 %} style="color: var(--danger, #ff4444);" {% endif %}></i>
+                                    <i class="iconset fa-solid fa-ban{{ (" active" if item.visibility == 3 else "") }}" id="a_unavailable" data-item-id="{{ item.id }}" data-visibility="{{ (item.visibility or 0) }}" title="{{ ("Make Available (Public)" if item.visibility == 3 else "Make Unavailable (451)") }}"></i>
                                     <i class="iconset fa-solid fa-xmark" id="a_delete" title="Delete"></i>
                                     {% endif %}
                                     {% else %}
@@ -179,7 +179,7 @@
                 {% endif %}
 
                 {# Meta row: user / OC on the left, time (and expiry) on the right #}
-                <div class="blahlol-meta-row" {% if user_alternative_infobox %}style="display:none"{% endif %}>
+                <div class="blahlol-meta-row{% if user_alternative_infobox %} item-legacy-meta-row-hidden{% endif %}">
                     <div class="badge badge-dark blahlol-id-badge">
                         {% if not user_alternative_infobox %}{% if not is_anonymized %}<a id="a_username" data-username="{{ (item.username or "") }}" {% if (session and not session.is_anon) %} data-author-id="{{ (item.author_id or "") }}" {% endif %} href="/user/{{ (item.username or "")|lower }}" {% if ((session and not session.is_anon) and item.author_id) %} tooltip="ID: {{ item.author_id }}" {% endif %} {% if item.author_color %} style="color: {{ item.author_color }}" {% endif %}>{{ ((item.author_display_name or item.username) or "unknown") }}</a>{% else %}<span>anonymous</span>{% endif %} {% endif %}
                         {% if not user_alternative_infobox %}
@@ -187,15 +187,15 @@
                         {% endif %}
                     </div>
                     {% if not user_alternative_infobox %}
-                    <div class="blahlol-meta-right"><span class="badge badge-dark"><a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>{% if item.expires_at %} <span class="badge badge-warning" style="background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.4);" tooltip="Self-destructs {{ item.expires_in }}" flow="up"><i class="fa-solid fa-clock"></i> Expiring ({{ item.expires_in }})</span>{% endif %}</div>
+                    <div class="blahlol-meta-right"><span class="badge badge-dark"><a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>{% if item.expires_at %} <span class="badge badge-warning item-expiring-badge" tooltip="Self-destructs {{ item.expires_in }}" flow="up"><i class="fa-solid fa-clock"></i> Expiring ({{ item.expires_in }})</span>{% endif %}</div>
                     {% endif %}
                 </div>
-                {% if (not user_alternative_infobox and item.is_chan) %} <span class="badge badge-dark chan-post-badge" style="background: rgba(74, 222, 128, 0.15); border: 1px solid rgba(74, 222, 128, 0.3); display: inline-flex; align-items: center; gap: 6px;">
-                    <a href="/4/{{ item.external_board }}/{{ item.external_tid }}" style="color: #4ade80; text-decoration: none; font-weight: 600;" title="View thread overview"><i class="fa-solid fa-clover"></i> /{{ item.external_board }}/{{ item.external_tid }}</a>
+                {% if (not user_alternative_infobox and item.is_chan) %} <span class="badge badge-dark chan-post-badge item-chan-badge item-legacy-chan-badge">
+                    <a href="/4/{{ item.external_board }}/{{ item.external_tid }}" class="item-chan-thread-link" title="View thread overview"><i class="fa-solid fa-clover"></i> /{{ item.external_board }}/{{ item.external_tid }}</a>
                     {% if item.local_id %}
-                    <a href="/{{ (item.local_path or item.local_id) }}" class="chan-rehost-action-btn rehosted" title="Already rehosted on f0ckm (/{{ (item.local_path or item.local_id) }})" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 10px;border-radius:4px;font-size:0.75rem;background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);text-decoration:none;font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>
+                    <a href="/{{ (item.local_path or item.local_id) }}" class="chan-rehost-action-btn rehosted item-legacy-chan-rehosted-link" title="Already rehosted on f0ckm (/{{ (item.local_path or item.local_id) }})"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>
                     {% else %}
-                    <button type="button" class="chan-rehost-action-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" title="Rehost to f0ckm" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 12px;min-width:88px;box-sizing:border-box;white-space:nowrap;flex-shrink:0;border-radius:4px;font-size:0.75rem;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);cursor:pointer;font-weight:600;"><i class="fa-solid fa-cloud-arrow-up"></i> Rehost</button>
+                    <button type="button" class="chan-rehost-action-btn item-legacy-chan-rehost-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" title="Rehost to f0ckm"><i class="fa-solid fa-cloud-arrow-up"></i> Rehost</button>
                     {% endif %}
                 </span>{% endif %}
 
@@ -206,7 +206,7 @@
 
                 {# Action buttons when the alternative user infobox is off (the infobox renders its own set) #}
                 {% if not user_alternative_infobox %}
-                <div class="gapRight blahlol-actions" style="display:flex;width:100%;justify-content:center;margin:4px 0;">
+                <div class="gapRight blahlol-actions item-legacy-actions">
                     {% if session %}
                     {% if user_has_favorited %}
                     <i class="iconset fa-solid fa-heart" id="a_favo" data-item-id="{{ (item.local_id or item.id) }}" {% if item.is_chan %} data-is-chan="true" data-local-id="{{ (item.local_id or "") }}" data-chan-url="{{ item.external_media_url }}" data-chan-board="{{ item.external_board }}" data-chan-tid="{{ item.external_tid }}" data-chan-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" {% endif %} title="Favorite"></i>
@@ -234,7 +234,7 @@
                     {% endif %}
                     {% if is_mod_or_admin %}
                     <i class="iconset fa-solid fa-thumbtack{{ (" active" if item.is_pinned else "") }}" id="a_pin" data-pinned="{{ item.is_pinned }}" title="{{ ("Unpin from main" if item.is_pinned else "Pin to main") }}"></i>
-                    <i class="iconset fa-solid fa-ban{{ (" active" if item.visibility == 3 else "") }}" id="a_unavailable" data-item-id="{{ item.id }}" data-visibility="{{ (item.visibility or 0) }}" title="{{ ("Make Available (Public)" if item.visibility == 3 else "Make Unavailable (451)") }}" {% if item.visibility == 3 %} style="color: var(--danger, #ff4444);" {% endif %}></i>
+                    <i class="iconset fa-solid fa-ban{{ (" active" if item.visibility == 3 else "") }}" id="a_unavailable" data-item-id="{{ item.id }}" data-visibility="{{ (item.visibility or 0) }}" title="{{ ("Make Available (Public)" if item.visibility == 3 else "Make Unavailable (451)") }}"></i>
                     <i class="iconset fa-solid fa-xmark" id="a_delete" title="Delete"></i>
                     {% endif %}
                     {% else %}
@@ -278,11 +278,11 @@
                 <span class="badge" id="favs" {% if not (item.favorites|length) %} hidden{% endif %}>
                     {% for key, fav in item.favorites|entries %}
                     {% if (fav.hide_fav_badge and (not session or session.user != fav.user)) %}
-                    <a class="ghost-fav" tooltip="?" flow="up" style="cursor: default;"><img src="/s/img/ghost_fav.svg" style="height: 32px; width: 32px;" loading="lazy" /></a>
+                    <a class="ghost-fav" tooltip="?" flow="up"><img src="/s/img/ghost_fav.svg" class="item-fav-avatar" loading="lazy" /></a>
                     {% elif (is_anonymized or fav.is_anon) %}
-                    <a class="ghost-fav" tooltip="anonymous" flow="up" style="cursor: default;"><img src="/a/default.png" style="height: 32px; width: 32px;" loading="lazy" /></a>
+                    <a class="ghost-fav" tooltip="anonymous" flow="up"><img src="/a/default.png" class="item-fav-avatar" loading="lazy" /></a>
                     {% else %}
-                    <a href="/user/{{ fav.user|lower }}" tooltip="{{ (fav.display_name or fav.user) }}" flow="up"><img src="{% if fav.avatar_file %}/a/{{ fav.avatar_file }}{% elif fav.avatar %}/t/{{ fav.avatar }}.webp{% else %}/a/default.png{% endif %}" style="height: 32px; width: 32px{% if fav.username_color %}; border-color: {{ fav.username_color }}{% endif %}" loading="lazy" /></a>
+                    <a href="/user/{{ fav.user|lower }}" tooltip="{{ (fav.display_name or fav.user) }}" flow="up"><img src="{% if fav.avatar_file %}/a/{{ fav.avatar_file }}{% elif fav.avatar %}/t/{{ fav.avatar }}.webp{% else %}/a/default.png{% endif %}" class="item-fav-avatar"{% if fav.username_color %} style="border-color: {{ fav.username_color }}"{% endif %} loading="lazy" /></a>
                     {% endif %}
                     {% endfor %}
                 </span>

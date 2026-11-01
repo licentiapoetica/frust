@@ -6,7 +6,7 @@
 
         {% if (pending|length > 0) %}
         <h2>Pending Uploads</h2>
-        <table class="table" style="width: 100%; margin-bottom: 30px;">
+        <table class="table adm-approve-table adm-approve-pending-table">
             <thead>
                 <tr>
                     <td>Preview</td>
@@ -21,7 +21,7 @@
                 {% for key, post in pending|entries %}
                 <tr>
                     <td>
-                        <video controls loop muted preload="none" style="max-height: 200px; max-width: 300px;">
+                        <video controls loop muted preload="none" class="adm-approve-video">
                             <source src="/b/{{ post.dest }}" type="{{ post.mime }}">
                         </video>
                     </td>
@@ -30,7 +30,7 @@
                     <td>{{ post.mime }}</td>
                     <td>
                         {% for key, tag in post.tags|entries %}
-                        <span class="badge badge-secondary" style="margin-right: 5px;">{{ tag }}</span>
+                        <span class="badge badge-secondary adm-approve-tag">{{ tag }}</span>
                         {% endfor %}
                     </td>
                     <td>
@@ -43,16 +43,16 @@
         </table>
         {% endif %}
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
-            <h2 style="color: #ff6b6b; margin: 0;">Soft Deleted</h2>
+        <div class="adm-approve-trash-head">
+            <h2 class="adm-approve-trash-title">Soft Deleted</h2>
             {% if (trash|length > 0) %}
-            <button id="btn-purge-trash" class="badge badge-danger" style="border: none; padding: 10px 15px; cursor: pointer; font-size: 14px;">Purge All Soft-Deleted</button>
+            <button id="btn-purge-trash" class="badge badge-danger adm-approve-purge">Purge All Soft-Deleted</button>
             {% endif %}
         </div>
         <p class="text-muted">These items are in the deleted folder but not purged from DB. Approving them will restore them.</p>
 
         {% if (trash|length > 0) %}
-        <table class="table" style="width: 100%; opacity: 0.8;">
+        <table class="table adm-approve-table adm-approve-trash-table">
             <thead>
                 <tr>
                     <td>Preview</td>
@@ -68,9 +68,9 @@
                 <tr>
                     <td>
                         {% if post.thumbnail %}
-                        <img src="data:image/webp;base64,{{ post.thumbnail }}" style="max-height: 150px; opacity: 0.6;">
+                        <img src="data:image/webp;base64,{{ post.thumbnail }}" class="adm-approve-thumb">
                         {% else %}
-                        <span style="color:red;">[File Missing]</span>
+                        <span class="adm-approve-missing">[File Missing]</span>
                         {% endif %}
                     </td>
                     <td>{{ post.id }}</td>
@@ -78,7 +78,7 @@
                     <td>{{ post.mime }}</td>
                     <td>
                         {% for key, tag in post.tags|entries %}
-                        <span class="badge badge-secondary" style="margin-right: 5px;">{{ tag }}</span>
+                        <span class="badge badge-secondary adm-approve-tag">{{ tag }}</span>
                         {% endfor %}
                     </td>
                     <td>
@@ -90,11 +90,11 @@
             </tbody>
         </table>
         {% else %}
-        <p style="padding: 20px; border: 1px dashed #444; color: #888;">Trash is empty.</p>
+        <p class="adm-approve-trash-empty">Trash is empty.</p>
         {% endif %}
 
         {% if (pending|length == 0 and trash|length == 0) %}
-        <div style="text-align: center; padding: 50px;">
+        <div class="adm-approve-empty">
             <h3>No pending items.</h3>
             <p>Go touch grass?</p>
         </div>
@@ -102,7 +102,7 @@
 
         <br>
         {% if (pages is defined and (pages > 1)) %}
-        <div class="pagination" style="display: flex; gap: 10px; align-items: center; justify-content: center;">
+        <div class="pagination adm-approve-pagination">
             {% if (page > 1) %}
             <a href="/admin/approve?page={{ (page - 1) }}" class="badge badge-secondary">&laquo; Prev</a>
             {% endif %}
@@ -116,13 +116,13 @@
 
 
         <!-- Custom Modal -->
-        <div id="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000;">
-            <div style="background: #222; color: #fff; padding: 20px; border-radius: 8px; max-width: 400px; text-align: center; border: 1px solid #444;">
-                <h3 id="modal-title" style="margin-top: 0;">Confirm Action</h3>
+        <div id="custom-modal" class="adm-approve-modal">
+            <div class="adm-approve-modal-box">
+                <h3 id="modal-title" class="adm-approve-modal-title">Confirm Action</h3>
                 <p id="modal-text">Are you sure?</p>
-                <div style="display: flex; justify-content: space-around; margin-top: 20px;">
-                    <button id="modal-cancel" class="badge badge-secondary" style="border: none; padding: 10px 20px; cursor: pointer;">Cancel</button>
-                    <button id="modal-confirm" class="badge badge-danger" style="border: none; padding: 10px 20px; cursor: pointer;">Confirm</button>
+                <div class="adm-approve-modal-actions">
+                    <button id="modal-cancel" class="badge badge-secondary adm-approve-modal-btn">Cancel</button>
+                    <button id="modal-confirm" class="badge badge-danger adm-approve-modal-btn">Confirm</button>
                 </div>
             </div>
         </div>

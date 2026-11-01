@@ -18,8 +18,8 @@
         </div>
 
         {% if enable_item_title %}
-        <div class="form-section global-title-section upload-await-file" {% if shitpost_mode %} style="display:none;" {% endif %}>
-            <label>Title <span style="opacity: 0.5; font-weight: normal;">{{ t("upload.comment_optional") }}</span></label>
+        <div class="form-section global-title-section upload-await-file{% if shitpost_mode %} upload-form-hidden{% endif %}">
+            <label>Title <span class="upload-form-optional">{{ t("upload.comment_optional") }}</span></label>
             <input type="text" name="title" class="upload-title-input" placeholder="Add a title for this item…" maxlength="500" autocomplete="off">
         </div>
         {% endif %}
@@ -29,17 +29,17 @@
             <div class="drop-zone" id="upload-form-drop-zone">
                 <input type="file" class="file-input" name="file" accept="{{ allowed_mimes }}" multiple>
                 <div class="drop-zone-prompt">
-                    <p class="drop-zone-title" style="font-size: 1.1rem; font-weight: 500;">{{ t("upload.drop_here") }} <span class="drop-zone-max" style="font-size: 0.8em; font-weight: 400; opacity: 0.6;">(max {{ max_file_size }})</span>{% if session.admin %} <span style="font-size: 0.8em; font-weight: 400; color: var(--accent);">{{ t("upload.admin_boost") }}</span>{% endif %}</p>
+                    <p class="drop-zone-title upload-form-drop-title">{{ t("upload.drop_here") }} <span class="drop-zone-max upload-form-drop-max">(max {{ max_file_size }})</span>{% if session.admin %} <span class="upload-form-drop-boost">{{ t("upload.admin_boost") }}</span>{% endif %}</p>
                 </div>
                 <!-- Preview Container -->
-                <div class="file-preview" style="display: none;">
+                <div class="file-preview upload-form-hidden">
                     <!-- Video/images will be injected here via JS -->
                 </div>
             </div>
         </div>
 
         <!-- Album / Batch Mode Switcher (displayed when multiple files are chosen) -->
-        <div class="album-choice-container" id="album-choice-container" style="display: none;">
+        <div class="album-choice-container upload-form-hidden" id="album-choice-container">
             <div class="album-choice-title">
                 <i class="fa-solid fa-layer-group"></i> {{ (t("album.multiple_selected") or "Multiple files selected") }}
             </div>
@@ -57,11 +57,11 @@
 
         {% if web_url_upload %}
         <!-- URL input area -->
-        <div class="upload-mode-content" id="mode-url" style="display: none;">
+        <div class="upload-mode-content upload-form-hidden" id="mode-url">
             <div class="url-input-container">
                 {% if shitpost_mode %}
-                <div class="url-shitpost-container" style="display: flex; flex-direction: column; gap: 6px;">
-                    <input type="url" id="url-upload-input" name="url" placeholder="{{ t("upload.url_placeholder_shitpost") }}" autocomplete="off" style="width: 100%;">
+                <div class="url-shitpost-container upload-form-url-stack">
+                    <input type="url" id="url-upload-input" name="url" placeholder="{{ t("upload.url_placeholder_shitpost") }}" autocomplete="off" class="upload-form-url-input">
                     <button type="button" class="btn-add-urls">
                         <i class="fa-solid fa-plus-circle"></i> {{ t("common.add") }}
                     </button>
@@ -70,12 +70,12 @@
                 <input type="url" id="url-upload-input" name="url" placeholder="{% if enable_youtube_upload %}{{ t("upload.url_placeholder_yt") }}{% else %} {{ t("upload.url_placeholder") }}{% endif %}" autocomplete="off">
                 {% endif %}
             </div>
-            <div class="url-type-badge" id="url-type-badge" style="display: none;"></div>
+            <div class="url-type-badge" id="url-type-badge"></div>
         </div>
         {% endif %}
         
         <!-- Hidden thumbnail input — populated by the Ruffle snapshot button only -->
-        <input type="file" name="thumbnail" id="upload-thumbnail-input" accept="image/jpeg,image/png,image/webp" style="display:none;">
+        <input type="file" name="thumbnail" id="upload-thumbnail-input" accept="image/jpeg,image/png,image/webp" class="upload-form-hidden">
     </div>
 
     <div class="form-section global-rating-section upload-await-file">
@@ -104,15 +104,15 @@
         <div class="visibility-options rating-options">
             <label class="rating-option">
                 <input type="radio" name="visibility" value="0" {{ ("checked" if (session.default_upload_visibility if (session.default_upload_visibility != none and session.default_upload_visibility != none) else default_upload_visibility) == 0 else "") }}>
-                <span class="rating-label sfw" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-globe"></i> {{ t("visibility.public") }}</span>
+                <span class="rating-label sfw"><i class="fa-solid fa-globe"></i> {{ t("visibility.public") }}</span>
             </label>
             <label class="rating-option">
                 <input type="radio" name="visibility" value="1" {{ ("checked" if (session.default_upload_visibility if (session.default_upload_visibility != none and session.default_upload_visibility != none) else default_upload_visibility) == 1 else "") }}>
-                <span class="rating-label nsfw" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-link"></i> {{ t("visibility.unlisted") }}</span>
+                <span class="rating-label nsfw"><i class="fa-solid fa-link"></i> {{ t("visibility.unlisted") }}</span>
             </label>
             <label class="rating-option">
                 <input type="radio" name="visibility" value="2" {{ ("checked" if (session.default_upload_visibility if (session.default_upload_visibility != none and session.default_upload_visibility != none) else default_upload_visibility) == 2 else "") }}>
-                <span class="rating-label nsfl" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i class="fa-solid fa-lock"></i> {{ t("visibility.private") }}</span>
+                <span class="rating-label nsfl"><i class="fa-solid fa-lock"></i> {{ t("visibility.private") }}</span>
             </label>
         </div>
     </div>
@@ -121,7 +121,7 @@
     {% if enable_expiring_uploads != false %}
     <div class="form-section global-expiry-section upload-await-file">
         <label>Expiration / Self-Destruct</label>
-        <select name="expiry" class="expiry-select" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--nav-border-color, rgba(255,255,255,0.1)); border-radius: 6px; cursor: pointer; font-size: 0.95em;">
+        <select name="expiry" class="expiry-select upload-form-expiry">
             <option value="permanent" selected>Permanent (Never expires)</option>
             <option value="30minutes">30 Minutes</option>
             <option value="1hour">1 Hour</option>
@@ -140,7 +140,7 @@
             {% if (min_tags > 0) %}
                 <span class="required">*</span> <span class="tag-count">(0/{{ min_tags }} {{ t("upload.tags_minimum") }})</span>
             {% else %}
-                <span style="opacity: 0.5; font-weight: normal;">{{ t("upload.comment_optional") }}</span>
+                <span class="upload-form-optional">{{ t("upload.comment_optional") }}</span>
             {% endif %}
         </label>
         <div class="tag-input-container">
@@ -153,14 +153,14 @@
             <div class="tag-suggestions"></div>
         </div>
         <input type="hidden" name="tags" class="tags-hidden">
-        <div class="meta-suggestions-container" style="display: none;">
+        <div class="meta-suggestions-container upload-form-hidden">
             <div class="suggestions-header">{{ t("upload.suggestions_header") }}</div>
             <div class="meta-suggestions-list"></div>
         </div>
     </div>
 
     <div class="form-section global-comment-section upload-await-file">
-        <label>{{ t("upload.comment") }} <span style="opacity: 0.5; font-weight: normal;">{{ t("upload.comment_optional") }}</span></label>
+        <label>{{ t("upload.comment") }} <span class="upload-form-optional">{{ t("upload.comment_optional") }}</span></label>
         <div class="upload-comment-input comment-input">
             <textarea class="upload-comment" placeholder="{{ t("upload.comment_placeholder") }}"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
             <div class="input-actions"></div>
@@ -168,9 +168,9 @@
     </div>
 
     <div class="form-section global-redirect-section upload-await-file">
-        <label class="checkbox-container upload-checkbox-label" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9em; user-select: none; margin: 0;">
+        <label class="checkbox-container upload-checkbox-label upload-form-redirect-label">
             <input type="checkbox" id="upload-redirect-checkbox" name="redirect_to_item" class="upload-redirect-checkbox" checked>
-            <span><i class="fa-solid fa-arrow-up-right-from-square" style="opacity: 0.8; margin-right: 2px;"></i> {{ t("upload.redirect_to_item") }}</span>
+            <span><i class="fa-solid fa-arrow-up-right-from-square upload-form-redirect-icon"></i> {{ t("upload.redirect_to_item") }}</span>
         </label>
     </div>
 
@@ -180,11 +180,11 @@
     <div class="form-actions">
         <button type="submit" class="btn-upload" disabled>
             <span class="btn-text">{{ t("upload.select_file") }}</span>
-            <span class="btn-loading" style="display: none;">{{ t("upload.uploading") }}</span>
+            <span class="btn-loading upload-form-hidden">{{ t("upload.uploading") }}</span>
         </button>
     </div>
 
-    <div class="upload-progress" style="display: none;">
+    <div class="upload-progress upload-form-hidden">
         <div class="progress-bar">
             <div class="progress-fill"></div>
         </div>

@@ -5,18 +5,18 @@
     {% include "snippets/admin-back.html" %}
   <div class="container">
 
-    <div class="admin-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-      <h2 style="margin: 0;">NSFP Tag Manager</h2>
+    <div class="admin-header-flex adm-nsfp-header">
+      <h2 class="adm-nsfp-title">NSFP Tag Manager</h2>
     </div>
-    <p style="color: #aaa; margin-top: 4px; margin-bottom: 20px; font-size: 0.9em;">
-      Manage which tags are treated as <strong style="color: var(--accent);">Not Safe For Public</strong> &mdash; hidden from logged-out guests.
+    <p class="adm-nsfp-intro">
+      Manage which tags are treated as <strong class="adm-nsfp-em">Not Safe For Public</strong> &mdash; hidden from logged-out guests.
     </p>
 
     <!-- Current NSFP tags -->
-    <div style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 20px; margin-bottom: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
-        <p style="font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin: 0;">Current NSFP Tags</p>
-        <span id="nsfp-blocked-stat" style="font-size: 0.8em; color: #888;"></span>
+    <div class="adm-nsfp-current">
+      <div class="adm-nsfp-current-head">
+        <p class="adm-nsfp-current-label">Current NSFP Tags</p>
+        <span id="nsfp-blocked-stat" class="adm-nsfp-stat"></span>
       </div>
       <div class="nsfp-chips-area" id="nsfp-chips">
         <span class="nsfp-chips-empty">Loading&hellip;</span>
@@ -25,11 +25,11 @@
     </div>
 
     <!-- Add tag by search -->
-    <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-      <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 14px;">Add Tag to NSFP List</h4>
+    <div class="adm-nsfp-add">
+      <h4 class="adm-nsfp-add-title">Add Tag to NSFP List</h4>
       <div class="nsfp-search-wrap">
         <input type="text" id="nsfp-search" class="nsfp-search-input" placeholder="Search tags..." autocomplete="off">
-        <div class="nsfp-search-dropdown" id="search-dropdown" style="display:none;"></div>
+        <div class="nsfp-search-dropdown adm-nsfp-dropdown" id="search-dropdown"></div>
       </div>
       <span id="add-status" class="nsfp-status-msg"></span>
     </div>
@@ -138,7 +138,7 @@
                 }
             })
             .catch(function (e) {
-                chipsEl.innerHTML = '<span class="nsfp-chips-empty" style="color:#d9534f;">Failed to load: ' + escapeHtml(e.message) + '</span>';
+                chipsEl.innerHTML = '<span class="nsfp-chips-empty adm-nsfp-chips-error">Failed to load: ' + escapeHtml(e.message) + '</span>';
             });
     }
 

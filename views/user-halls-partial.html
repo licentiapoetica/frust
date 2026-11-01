@@ -1,31 +1,15 @@
-<style>
-.hm-btn {
-  display: inline-flex;
-  align-items: center;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 3px;
-  font-size: 0.85em;
-  font-family: var(--font);
-  cursor: pointer;
-  white-space: nowrap;
-  text-decoration: none;
-  box-sizing: border-box;
-  line-height: 1;
-}
-</style>
-<div class="container" style="padding-top: 20px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-    <h3 style="margin:0;">{{ (t("hall.user_halls_title")).replace("{user}", ownerUser.user, 1) }}</h3>
+<div class="container user-halls-page">
+  <div class="user-halls-header">
+    <h3 class="user-halls-title">{{ (t("hall.user_halls_title")).replace("{user}", ownerUser.user, 1) }}</h3>
     {% if (isOwner or (session and session.admin)) %}
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <input type="text" id="uh-new-name" placeholder="{{ t("hall.new_hall_placeholder") }}" style="flex:1;min-width:180px;background:var(--badge-bg);border:1px solid rgba(255,255,255,0.15);color:var(--white);padding:0 10px;height:28px;border-radius:3px;font-family:var(--font);font-size:0.9em;">
-      <button id="btn-create-uh" class="hm-btn" style="background:rgba(255,255,255,0.1);color:var(--white);border:1px solid rgba(255,255,255,0.2);font-weight:bold;">{{ t("hall.new_hall_btn") }}</button>
-      <span id="uh-create-status" style="font-size:0.8em;color:#888;"></span>
+    <div class="user-halls-create">
+      <input type="text" id="uh-new-name" placeholder="{{ t("hall.new_hall_placeholder") }}" class="user-halls-new-name">
+      <button id="btn-create-uh" class="hm-btn user-halls-btn-create">{{ t("hall.new_hall_btn") }}</button>
+      <span id="uh-create-status" class="user-halls-create-status"></span>
     </div>
     {% endif %}
   </div>
-  <div id="uh-config" style="display:none;"
+  <div id="uh-config" class="user-halls-config"
        data-is-admin="{{ ("true" if (session and session.admin) else "false") }}"
        data-owner-id="{{ ownerUser.id }}"
        data-owner-user="{{ ownerUser.user }}"
@@ -33,12 +17,12 @@
        data-enable-upload="{{ ("true" if enable_userhall_image_upload else "false") }}"
        data-i18n-hall-posts="{{ t("hall.posts") }}"></div>
 
-  <div id="hall-manager-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; padding: 35px;">
+  <div id="hall-manager-grid" class="user-halls-grid">
     {% include "user-hall-cards.html" %}
   </div>
 
   {% if (not hallsList or not (hallsList|length)) %}
-  <p style="color:#888;text-align:center;padding:40px 0;">
+  <p class="user-halls-empty">
     {% if isOwner %}
       {{ t("hall.no_halls_owner") }}
     {% else %}
@@ -48,7 +32,7 @@
   {% endif %}
 </div>
 
-<div class="pagination-container-fluid" {% if (hidePagination is defined and hidePagination) %} style="display: none;" {% endif %}>
+<div class="pagination-container-fluid{% if (hidePagination is defined and hidePagination) %} index-pagination-hidden{% endif %}">
   <div class="pagination-wrapper bottom-pagination fixed-pagination">
     {% include "snippets/pagination.html" %}
   </div>
@@ -118,33 +102,33 @@
     div.dataset.slug = slug;
     div.dataset.ownerId = ownerUserId;
     var imgHtml = 
-      '<div class="hall-manager-image" style="position:relative;height:140px;overflow:hidden;background:#111;cursor:pointer;" title="' + (enableUpload ? (i18n.hall_click_upload_hint || 'Click to upload custom image') : (i18n.hall_view || 'View hall')) + '">' +
-        '<img src="/user_hall_image/' + ownerUserId + '/' + slug + '" alt="' + name + '" style="width:100%;height:100%;object-fit:cover;opacity:0.8;">' +
-        '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.1em;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em;text-shadow:0 0 10px rgba(0,0,0,0.9),0 1px 3px rgba(0,0,0,0.8);pointer-events:none;">' + name + '</span>';
+      '<div class="hall-manager-image" title="' + (enableUpload ? (i18n.hall_click_upload_hint || 'Click to upload custom image') : (i18n.hall_view || 'View hall')) + '">' +
+        '<img src="/user_hall_image/' + ownerUserId + '/' + slug + '" alt="' + name + '" class="hall-card-img">' +
+        '<span class="hall-card-name">' + name + '</span>';
     
     if (enableUpload) {
-      imgHtml += '<input type="file" class="uh-img-upload" accept="image/*" style="display:none;">';
+      imgHtml += '<input type="file" class="uh-img-upload" accept="image/*">';
     }
     imgHtml += '</div>';
 
     div.innerHTML = imgHtml + 
-      '<div style="padding:12px;">' +
-        '<div style="margin-bottom:8px;"><label style="font-size:0.8em;color:#888;display:block;">' + (i18n.common_name || 'Name') + '</label>' +
-          '<input type="text" class="uh-name-input" value="' + name + '" style="width:100%;box-sizing:border-box;background:var(--badge-bg);border:1px solid rgba(255,255,255,0.15);color:var(--white);padding:5px 8px;border-radius:3px;font-family:var(--font);"></div>' +
-        '<div style="margin-bottom:8px;"><label style="font-size:0.8em;color:#888;display:block;">' + (i18n.common_description || 'Description') + '</label>' +
-          '<textarea class="uh-desc-input" style="width:100%;box-sizing:border-box;background:var(--badge-bg);border:1px solid rgba(255,255,255,0.15);color:var(--white);padding:5px 8px;border-radius:3px;font-family:var(--font);resize:vertical;min-height:50px;"></textarea></div>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px;">' +
-          '<label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:#aaa;font-size:0.85em;"><input type="checkbox" class="uh-private-toggle"> ' + (i18n.common_private || 'Private') + '</label>' +
+      '<div class="hall-card-body">' +
+        '<div class="hall-card-field"><label class="hall-card-label">' + (i18n.common_name || 'Name') + '</label>' +
+          '<input type="text" class="uh-name-input hall-card-input" value="' + name + '"></div>' +
+        '<div class="hall-card-field"><label class="hall-card-label">' + (i18n.common_description || 'Description') + '</label>' +
+          '<textarea class="uh-desc-input hall-card-input hall-card-textarea"></textarea></div>' +
+        '<div class="hall-card-row hall-card-row-private">' +
+          '<label class="hall-card-private-label"><input type="checkbox" class="uh-private-toggle"> ' + (i18n.common_private || 'Private') + '</label>' +
         '</div>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
-          '<button class="uh-btn-save hm-btn" style="background:var(--accent);color:#000;border:none;font-weight:bold;">' + (i18n.common_save || 'Save') + '</button>' +
-          '<a href="/user/' + ownerUser + '/hall/' + slug + '" class="hm-btn" style="background:rgba(255,255,255,0.05);color:#aaa;border:1px solid rgba(255,255,255,0.1);">' + (i18n.common_view || 'View') + ' →</a>' +
-          '<span style="margin-left:4px;font-size:0.8em;color:#666;">' + 
+        '<div class="hall-card-row">' +
+          '<button class="uh-btn-save hm-btn hall-card-btn-save">' + (i18n.common_save || 'Save') + '</button>' +
+          '<a href="/user/' + ownerUser + '/hall/' + slug + '" class="hm-btn hall-card-btn-view">' + (i18n.common_view || 'View') + ' →</a>' +
+          '<span class="hall-card-posts">' + 
             i18n_posts.replace('{count}', (hall && hall.total_items || 0)) + 
           '</span>' +
-          '<button class="uh-btn-delete hm-btn" style="margin-left:auto;background:rgba(200,0,0,0.25);color:#f55;border:1px solid rgba(200,0,0,0.4);">🗑 ' + (i18n.common_delete || 'Delete') + '</button>' +
+          '<button class="uh-btn-delete hm-btn hall-card-btn-delete">🗑 ' + (i18n.common_delete || 'Delete') + '</button>' +
         '</div>' +
-        '<div class="uh-card-status" style="margin-top:6px;font-size:0.8em;color:#888;min-height:1.2em;"></div>' +
+        '<div class="uh-card-status"></div>' +
       '</div>';
     return div;
   }
@@ -214,7 +198,6 @@
               xBtn.className = 'uh-btn-del-img';
               xBtn.title = 'Remove custom image';
               xBtn.textContent = '✕';
-              xBtn.style.cssText = 'position:absolute;top:6px;right:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:50%;cursor:pointer;font-size:0.75em;line-height:1;z-index:2;padding:0;';
               imgContainer.appendChild(xBtn);
               wireDelBtn(xBtn);
             }

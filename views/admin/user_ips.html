@@ -4,12 +4,12 @@
 <div id="main" class="admin-container">
     {% include "snippets/admin-back.html" %}
     <div class="container">
-        <div style="margin-bottom: 30px;">
-            <a href="/admin/users" style="color: #888; text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 15px;">
+        <div class="adm-ips-head">
+            <a href="/admin/users" class="adm-ips-back">
                 <i class="fa fa-arrow-left"></i> Back to User Manager
             </a>
-            <h2 style="margin: 0; font-weight: 800; letter-spacing: -0.5px;">IP History: {{ targetUser.user }}</h2>
-            <p style="color: #888; margin: 5px 0 0 0;">Historical IP addresses associated with this account.</p>
+            <h2 class="adm-page-title">IP History: {{ targetUser.user }}</h2>
+            <p class="adm-page-subtitle">Historical IP addresses associated with this account.</p>
         </div>
 
         <div class="upload-form">
@@ -42,7 +42,7 @@
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="3" style="text-align: center; padding: 40px; color: #666;">
+                            <td colspan="3" class="adm-ips-empty">
                                 No IP history records found for this user.
                             </td>
                         </tr>

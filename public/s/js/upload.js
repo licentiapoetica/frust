@@ -707,7 +707,7 @@ window.initUploadForm = (selector) => {
                 tab.classList.add('active');
 
                 if (modeFile) modeFile.style.display = (mode === 'file' || mode === 'album') ? '' : 'none';
-                if (modeUrl) modeUrl.style.display = mode === 'url' ? '' : 'none';
+                if (modeUrl) modeUrl.style.display = mode === 'url' ? 'block' : 'none';
 
                 if (mode === 'album') {
                     albumChoiceMode = 'album';

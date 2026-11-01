@@ -23,937 +23,7 @@
   <meta property="twitter:image" content="{{ page_meta.image }}" />
   <meta property="twitter:url" content="{{ page_meta.url }}" />
   {% endif %}
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    /* Kill all mobile tap highlights globally */
-    * { -webkit-tap-highlight-color: transparent; }
-
-    :root {
-      --accent: #fff;
-      --overlay-bg: linear-gradient(to top, rgba(0,0,0,.9) 0%, rgba(0,0,0,.35) 15%, transparent 60%);
-      --badge-sfw: #4caf50;
-      --badge-nsfw: #e91e8c;
-      --badge-nsfl: #c62828;
-      --panel-bg: rgba(10,10,12,.97);
-      --panel-border: rgba(255,255,255,.07);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    }
-    html[theme='f0ck']   { --accent: #9f0; }
-    html[theme='p1nk']   { --accent: #ff00d0; }
-    html[theme='orange'] { --accent: #ff6f00; }
-    html[theme='atmos']  { --accent: #1fb2b0; }
-    html[theme='iced']   { --accent: #0084ff; }
-    html[theme='amoled'] { --accent: #fff; }
-
-    html, body {
-      width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #000; color: #fff;
-      touch-action: pan-y;
-      /* Prevent text/image selection on long-press mobile */
-      -webkit-user-select: none; user-select: none;
-    }
-
-    /* When loaded via PJAX: hide the main-site navbar and pagewrapper since
-       the scroller has its own full-screen topbar (#scroller-topbar). */
-    body.scroller-active .navbar,
-    body.scroller-active .pagewrapper > :not(#main),
-    body.scroller-active .global-sidebar-right { display: none !important; }
-
-    /* #main wrapper needed for PJAX content swap — must fill full viewport
-       so #scroller-feed { height: 100% } has a sized parent to stretch into. */
-    #main { width: 100%; height: 100vh; height: 100dvh; }
-
-    /* ── TOP BAR ──────────────────────────────────── */
-    #scroller-topbar {
-      position: fixed; top: 0; left: 0; right: 0;
-      z-index: 500;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 12px; pointer-events: none;
-    }
-    .topbar-left, .topbar-right {
-      display: flex; align-items: center; gap: 8px; pointer-events: all;
-    }
-    .topbar-icon-btn {
-      background: rgba(0,0,0,.6);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,.11); border-radius: 50%;
-      width: 40px; height: 40px;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: .92rem;
-      text-decoration: none; cursor: pointer;
-      transition: background .17s, transform .12s, border-color .17s; flex-shrink: 0;
-    }
-    .topbar-icon-btn:hover { background: rgba(255,255,255,.18); transform: scale(1.07); }
-    .topbar-icon-btn.has-filter { border-color: var(--accent); color: var(--accent); }
-    @media (max-width: 600px) {
-      .topbar-left, .topbar-right { gap: 4px; }
-      .topbar-icon-btn { width: 32px; height: 32px; font-size: .78rem; }
-      #filter-active-summary { max-width: 140px; font-size: .65rem; padding: 4px 6px 4px 9px; gap: 4px; }
-      #filter-active-clear { width: 16px; height: 16px; font-size: .65rem; }
-    }
-    #filter-active-summary {
-      display: none;
-      background: rgba(0,0,0,.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--accent); border-radius: 50px;
-      padding: 5px 8px 5px 12px; font-size: .7rem; font-weight: 700; letter-spacing: .03em;
-      color: var(--accent); max-width: 220px;
-      align-items: center; gap: 6px;
-    }
-    #filter-active-summary.show { display: inline-flex; }
-    #filter-active-summary-text {
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
-    }
-    #filter-active-clear {
-      background: none; border: none; padding: 0; margin: 0;
-      color: var(--accent); cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 18px; height: 18px; border-radius: 50%;
-      font-size: .72rem; flex-shrink: 0; opacity: .8;
-      transition: opacity .15s, background .15s, color .15s, transform .12s;
-    }
-    #filter-active-clear:hover {
-      opacity: 1; background: rgba(255,255,255,.18); color: #fff; transform: scale(1.15);
-    }
-    #filter-active-clear:active {
-      transform: scale(0.92);
-    }
-
-    /* ── VOLUME POPUP ─────────────────────────────── */
-    #volume-popup {
-      position: fixed; top: 60px; right: 12px;
-      z-index: 510;
-      background: rgba(10,10,12,.95);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255,255,255,.1); border-radius: 14px;
-      padding: 14px 12px;
-      display: flex; flex-direction: column; align-items: center; gap: 10px;
-      opacity: 0; pointer-events: none;
-      transform: translateY(-8px) scale(.96);
-      transition: opacity .2s, transform .2s;
-      touch-action: none;
-    }
-    #volume-popup.open { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); }
-    #volume-slider {
-      -webkit-appearance: none; appearance: none;
-      writing-mode: vertical-lr; direction: rtl;
-      width: 5px; height: 100px;
-      background: rgba(255,255,255,.15); border-radius: 3px; outline: none; cursor: pointer;
-      touch-action: none;
-    }
-    #volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none;
-      width: 16px; height: 16px; border-radius: 50%;
-      background: var(--accent); cursor: pointer;
-      box-shadow: 0 0 6px rgba(0,0,0,.4);
-    }
-    #volume-slider::-moz-range-thumb {
-      width: 16px; height: 16px; border-radius: 50%;
-      background: var(--accent); border: none; cursor: pointer;
-    }
-    .volume-label { font-size: .65rem; font-weight: 700; color: rgba(255,255,255,.5); }
-
-    /* ── FEED ─────────────────────────────────────── */
-    #scroller-feed {
-      width: 100%; height: 100%;
-      overflow-y: scroll; scroll-snap-type: y mandatory;
-      -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-    }
-    #scroller-feed::-webkit-scrollbar { display: none; }
-    #scroller-feed { scrollbar-width: none; }
-
-    /* ── SLIDE ────────────────────────────────────── */
-    .scroll-slide {
-      position: relative; width: 100%;
-      height: 100vh; height: 100dvh;
-      scroll-snap-align: start; scroll-snap-stop: always;
-      display: flex; align-items: center; justify-content: center;
-      background: #000; overflow: hidden;
-      -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
-    }
-    .scroll-bg-blur {
-      position: absolute; inset: 0; z-index: 0;
-      filter: blur(28px) brightness(.38) saturate(1.3); transform: scale(1.15);
-    }
-    /* canvas bg: stretch to fill the container */
-    .scroll-bg-blur canvas, canvas.scroll-bg-blur {
-      width: 100%; height: 100%; display: block; object-fit: cover;
-    }
-    .scroll-media {
-      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-      overflow: hidden; z-index: 1;
-    }
-    .scroll-media video, .scroll-media img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; }
-    .scroll-media video { width: 100%; height: 100%; background: transparent; opacity: 0; }
-    .scroll-media video.ready { opacity: 1; }
-    .audio-cover {
-      width: 200px; height: 200px; border-radius: 50%;
-      background: rgba(255,255,255,.12) center/cover;
-      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-      border: 3px solid rgba(255,255,255,.2);
-      box-shadow: 0 0 60px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.08);
-      animation: vinylSpin 12s linear infinite; animation-play-state: paused;
-      display: flex; align-items: center; justify-content: center;
-      position: relative;
-    }
-    .audio-cover::after {
-      content: ''; width: 44px; height: 44px; border-radius: 50%;
-      background: rgba(0,0,0,.65); border: 3px solid rgba(255,255,255,.18);
-      position: absolute; /* stays centred on top of cover art */
-    }
-    .audio-cover.playing { animation-play-state: running; }
-    @keyframes vinylSpin { to { transform: rotate(360deg); } }
-    .scroll-overlay { position: absolute; inset: 0; background: var(--overlay-bg); z-index: 2; pointer-events: none; }
-    /* Long-press peek: hide all UI so user can view the media cleanly */
-    .ui-peek .scroll-overlay,
-    .ui-peek .scroll-meta,
-    .ui-peek .scroll-actions,
-    .ui-peek .scroll-progress-bar { opacity: 0; pointer-events: none; transition: opacity .15s; }
-
-    /* tap layer z:3 — actions/meta at z:10 win */
-    .tap-overlay { position: absolute; inset: 0; z-index: 3; cursor: pointer; }
-    .tap-pause-icon {
-      position: absolute; top: 50%; left: 50%;
-      transform: translate(-50%, -50%) scale(0);
-      font-size: 4rem; color: rgba(255,255,255,.88); pointer-events: none;
-      transition: opacity .28s, transform .22s cubic-bezier(.34,1.56,.64,1); opacity: 0;
-    }
-    .tap-pause-icon.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    .tap-pause-icon.hide { opacity: 0; transform: translate(-50%, -50%) scale(.55); }
-
-    /* ── DOUBLE-TAP FAV FLASH ─────────────────────── */
-    .fav-flash {
-      position: absolute; top: 50%; left: 50%;
-      font-size: 5rem; color: #ff4081; pointer-events: none;
-      transform: translate(-50%, -50%) scale(0); opacity: 0; z-index: 15;
-      text-shadow: 0 2px 20px rgba(0,0,0,.5);
-      transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .35s;
-    }
-    .fav-flash.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    .fav-flash.hide { transform: translate(-50%, -50%) scale(.6); opacity: 0; }
-
-    /* ── Floating heart (double-tap) ───────────────── */
-    @keyframes tapHeartFloat {
-      0%   { transform: translate(-50%, -50%) scale(0);   opacity: 0; }
-      15%  { transform: translate(-50%, -60%) scale(1.2); opacity: 1; }
-      35%  { transform: translate(calc(-50% + var(--drift, 0px)), -80%) scale(1); opacity: 1; }
-      100% { transform: translate(calc(-50% + var(--drift, 0px)), -200%) scale(.7); opacity: 0; }
-    }
-    .tap-heart {
-      position: absolute; pointer-events: none; z-index: 20;
-      transform: translate(-50%, -50%) scale(0);
-      animation: tapHeartFloat .52s cubic-bezier(.22,1,.36,1) forwards;
-      filter: drop-shadow(0 2px 8px rgba(0,0,0,.4));
-      line-height: 1;
-    }
-
-    /* ── META z:10 ────────────────────────────────── */
-    .scroll-meta { position: absolute; bottom: 0; left: 0; right: 72px; z-index: 10; padding: 16px 16px 44px; pointer-events: none; }
-    .scroll-meta-inner { display: flex; flex-direction: column; gap: 7px; }
-    .scroll-meta-top { display: flex; align-items: center; gap: 10px; }
-    .scroll-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.25); flex-shrink: 0; }
-    .scroll-username { font-weight: 700; font-size: .9rem; text-shadow: 0 1px 6px rgba(0,0,0,.9); }
-    .scroll-timeago { font-size: .7rem; color: rgba(255,255,255,.6); margin-top: 1px; }
-    .scroll-tags { font-size: .74rem; color: rgba(255,255,255,.7); display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-    .scroll-tag-pill {
-      display: inline-block; padding: 2px 8px; border-radius: 50px;
-      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18);
-      font-size: .68rem; font-weight: 600; color: rgba(255,255,255,.85);
-      cursor: pointer; pointer-events: all; position: relative; z-index: 11;
-      transition: background .13s, border-color .13s;
-    }
-    .scroll-tag-pill:hover { background: var(--accent); border-color: var(--accent); color: #000; }
-    .scroll-tag-pill-del {
-      display: none; align-items: center; justify-content: center;
-      margin-left: 2px; font-size: .6rem; opacity: .6; cursor: pointer;
-      background: none; border: none; color: inherit; padding: 0 2px;
-    }
-    .scroll-tag-pill:hover .scroll-tag-pill-del { display: inline-flex; }
-    /* Notification bell in scroller topbar */
-    #scroller-notif-btn { position: relative; }
-    #scroller-notif-badge {
-      display: none; position: absolute; top: 2px; right: 2px;
-      min-width: 16px; height: 16px; padding: 0 4px;
-      background: #e91e8c; color: #fff; border-radius: 50px;
-      font-size: .6rem; font-weight: 700; line-height: 16px;
-      text-align: center; pointer-events: none;
-    }
-    /* Notification dropdown inside scroller */
-    #scroller-notif-dropdown {
-      width: 340px; max-width: calc(100vw - 16px);
-      background: #1a1a1a; border: 1px solid rgba(255,255,255,.1);
-      box-shadow: 0 8px 32px rgba(0,0,0,.6); border-radius: 8px;
-      overflow: hidden; opacity: 0; transform: translateY(-6px);
-      transition: opacity .2s ease, transform .2s ease;
-    }
-    #scroller-notif-dropdown.visible { opacity: 1; transform: translateY(0); display: block !important; }
-    .notif-header {
-      padding: 8px 10px 6px; border-bottom: 1px solid rgba(255,255,255,.08);
-      display: flex; justify-content: space-between; align-items: center; gap: 8px;
-      font-size: .82rem; font-weight: 700; color: rgba(255,255,255,.75); background: #111;
-    }
-    .notif-header button#scroller-mark-all-read {
-      background: none; border: none; color: var(--accent, #e91e8c); cursor: pointer;
-      font-size: .8rem; padding: 2px 4px; flex-shrink: 0;
-    }
-    .notif-header button#scroller-mark-all-read:hover { color: #fff; }
-    .notif-tabs { display: flex; gap: 2px; flex: 1; min-width: 0; }
-    .notif-tab {
-      background: none; border: none; color: #888; font-size: .72rem; font-weight: 600;
-      padding: 4px 10px; cursor: pointer; border-radius: 4px; transition: all .15s ease;
-      text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; position: relative;
-    }
-    .notif-tab:hover { color: #ccc; background: rgba(255,255,255,.05); }
-    .notif-tab.active { color: var(--accent, #e91e8c); background: rgba(233,30,140,.1); }
-    .notif-tab-badge {
-      display: inline-block; background: #e91e8c; color: #fff; font-size: 9px;
-      min-width: 14px; height: 14px; line-height: 14px; text-align: center;
-      border-radius: 7px; padding: 0 3px; margin-left: 3px; font-weight: 700; vertical-align: middle;
-    }
-    .notif-list { max-height: 360px; overflow-y: auto; }
-    .notif-item {
-      padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,.05);
-      background: #1a1a1a; cursor: pointer; transition: background .15s;
-      font-size: .82rem; color: #ddd; display: block; text-decoration: none;
-    }
-    .notif-item:hover { background: #262626; color: #fff; text-decoration: none; }
-    .notif-item.unread { border-left: 3px solid var(--accent, #e91e8c); background: rgba(255,255,255,.03); }
-    .notif-item.notif-with-thumb { display: flex; align-items: flex-start; gap: 10px; }
-    .notif-thumb {
-      flex-shrink: 0; width: 56px; height: 56px; border-radius: 4px;
-      overflow: hidden; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
-    }
-    .notif-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .notif-content { flex: 1; min-width: 0; }
-    .notif-user { font-size: .8rem; margin-bottom: 2px; }
-    .notif-msg { color: #aaa; font-size: .78rem; line-height: 1.3; }
-    .notif-time { font-size: .7rem; color: #666; margin-top: 3px; display: block; }
-    .notif-empty { text-align: center; padding: 20px; color: #666; font-size: .82rem; }
-    .notif-footer {
-      padding: 8px 14px; border-top: 1px solid rgba(255,255,255,.08);
-      text-align: center; background: #111;
-    }
-    .notif-footer a, .view-all-notifs {
-      color: var(--accent, #e91e8c); font-size: .78rem; text-decoration: none;
-    }
-    .notif-footer a:hover { text-decoration: underline; }
-    .scroll-id-link {
-      display: inline-flex; align-items: center; gap: 5px; font-size: .76rem; color: var(--accent); font-weight: 700;
-      text-decoration: none; margin-top: 2px; pointer-events: all; position: relative; z-index: 11; width: fit-content;
-    }
-    .scroll-id-link:hover { text-decoration: underline; }
-    .scroll-user-link { pointer-events: all; position: relative; z-index: 11; text-decoration: none; color: inherit; }
-    .scroll-badges { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; pointer-events: all; position: relative; z-index: 11; }
-    .scroll-rating { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: .67rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-    .scroll-rating.sfw { background: var(--badge-sfw, #4caf50); color: #fff; }
-    .scroll-rating.nsfw { background: var(--badge-nsfw, #e10dc3); color: #fff; }
-    .scroll-rating.nsfl { background: var(--badge-nsfl, #660000); color: #fff; }
-    .scroll-rating.untagged { background: transparent; color: rgba(255,255,255,.5); border: 1px dashed rgba(255,255,255,.3); }
-    .scroll-rating.can-cycle { cursor: pointer; pointer-events: all; position: relative; z-index: 11; }
-    .scroll-rating.can-cycle:hover { filter: brightness(1.2); }
-    .scroll-oc { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: .67rem; font-weight: 700; background: var(--accent); color: #000; }
-
-    /* ── SIDE ACTIONS z:10 ────────────────────────── */
-    .scroll-actions { position: absolute; right: 10px; bottom: 40px; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 18px; width: 56px; }
-    .scroll-btn {
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-      cursor: pointer; text-decoration: none; color: #fff; background: none; border: none; padding: 0;
-      margin: 0; box-sizing: border-box; width: 56px; height: 62px; justify-content: flex-start;
-      transition: transform .12s;
-    }
-    /*.scroll-btn:hover { transform: scale(1.14); }*/
-    .scroll-btn-icon {
-      position: relative;
-      width: 46px; height: 46px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.05rem; transition: background .17s;
-    }
-    /*.scroll-btn:hover .scroll-btn-icon { background: rgba(255,255,255,.22); }*/
-    .scroll-btn-label { font-size: .6rem; font-weight: 600; letter-spacing: .03em; color: rgba(255,255,255,.75); }
-    .scroll-btn-count {
-      font-size: .62rem; font-weight: 800; color: rgb(255, 255, 255); line-height: 1;
-      min-width: 20px; text-align: center;
-    }
-    /*.scroll-btn.faved .scroll-btn-icon { background: rgba(255,64,129,.25); border-color: #ff4081; } */
-    .scroll-btn.faved .scroll-btn-icon i { color: #ff4081; }
-    /*.scroll-btn.faved .scroll-btn-count { color: #ff4081; }*/
-
-    /* Add to site button (External items) */
-    .scroll-btn.rehost-btn .scroll-btn-icon {
-      background: rgba(255, 255, 255, .15);
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-    .scroll-btn.rehost-btn:hover .scroll-btn-icon {
-      background: var(--accent);
-      color: #000;
-    }
-    .scroll-btn.rehost-btn.loading .scroll-btn-icon i {
-      animation: spin .8s linear infinite;
-    }
-    .scroll-btn.rehost-btn.success .scroll-btn-icon {
-      background: #4caf50;
-      border-color: #4caf50;
-      color: #fff;
-    }
-
-    /* Progress indicators for rehosting */
-    .rehost-progress-toast {
-      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-      padding: 10px 20px; border-radius: 50px; border: 1px solid var(--accent);
-      z-index: 1000; font-size: 0.85rem; font-weight: 700; color: #fff;
-      display: none; align-items: center; gap: 10px;
-    }
-    .rehost-progress-toast.show { display: flex; }
-
-    /* ── PROGRESS BAR ─────────────────────────────── */
-    .scroll-progress-bar {
-      position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
-      background: rgba(255,255,255,.15); z-index: 10; cursor: pointer; transition: height .15s;
-    }
-    .scroll-progress-bar:hover { height: 12px; }
-    .scroll-progress-fill { height: 100%; background: var(--accent); width: 0%; pointer-events: none; }
-    .scroll-progress-thumb {
-      display: none; position: absolute; top: 50%; right: 0; width: 12px; height: 12px; border-radius: 50%;
-      background: var(--accent); transform: translate(50%, -50%) scale(0);
-      transition: transform .15s; pointer-events: none;
-    }
-    .scroll-progress-bar:hover .scroll-progress-thumb,
-    .scroll-progress-bar.dragging .scroll-progress-thumb { transform: translate(50%, -50%) scale(1); }
-
-    /* ── EMPTY / SENTINEL ────────────────────────── */
-    #scroller-sentinel { width: 100%; height: 10px; }
-    #scroller-empty {
-      width: 100%; height: 100vh; height: 100dvh; display: none;
-      flex-direction: column; align-items: center; justify-content: center;
-      gap: 14px; scroll-snap-align: start; color: rgba(255,255,255,.35);
-    }
-    #scroller-empty.show { display: flex; }
-    #scroller-empty i { font-size: 2.8rem; }
-
-    /* ── LOADER ─────────────────────────────────── */
-    #scroller-loader {
-      position: fixed; inset: 0; background: #000;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      z-index: 1000; gap: 16px; transition: opacity .3s;
-    }
-    #scroller-loader.hidden { opacity: 0; pointer-events: none; }
-    .loader-logo { font-size: 2.2rem; font-weight: 800; letter-spacing: -.04em; color: var(--accent, #fff); font-family: 'VCR', 'Courier New', monospace; }
-    .loader-sub { font-size: .82rem; color: rgba(255,255,255,.4); letter-spacing: .1em; font-weight: 500; }
-    .loader-spinner { width: 28px; height: 28px; border: 2.5px solid rgba(255,255,255,.1); border-top-color: var(--accent, #fff); border-radius: 50%; animation: spin .65s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .speed-indicator {
-      position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,.15); border-radius: 50px;
-      padding: 8px 16px; font-size: .8rem; font-weight: 800; color: var(--accent);
-      z-index: 1000; pointer-events: none; opacity: 0; transition: opacity .15s;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .speed-indicator.show { opacity: 1; }
-
-    /* ── YT EMBED ────────────────────────────────── */
-    .yt-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-    .yt-container iframe { width: 100%; height: 56.25vw; max-height: 100%; max-width: 177.78vh; border: 0; }
-
-    /* ══════════════════════════════════════════════
-       SHARED PANEL SYSTEM
-       ══════════════════════════════════════════════ */
-    .scroller-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,.5);
-      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-      z-index: 800; opacity: 0; pointer-events: none; transition: opacity .28s;
-    }
-    .scroller-backdrop.open { opacity: 1; pointer-events: all; }
-    .scroller-panel {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 801;
-      background: var(--panel-bg); border-top: 1px solid var(--panel-border);
-      border-radius: 22px 22px 0 0; transform: translateY(105%);
-      transition: transform .32s cubic-bezier(.32,.72,0,1);
-      max-height: 92dvh; max-height: 92vh; overflow: hidden; display: flex; flex-direction: column;
-    }
-    .scroller-panel.open { transform: translateY(0); }
-    .scroller-panel::-webkit-scrollbar { display: none; }
-    .panel-handle { display: flex; justify-content: center; padding: 14px 0 4px; flex-shrink: 0; }
-    .panel-handle-bar { width: 40px; height: 4px; background: rgba(255,255,255,.18); border-radius: 2px; }
-    .panel-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 4px 20px 14px; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,.06);
-    }
-    .panel-title { font-size: 1rem; font-weight: 800; letter-spacing: -.01em; }
-
-    /* ── FILTER PANEL ─────────────────────────────── */
-    #filter-panel { z-index: 802; }
-    .filter-reset-btn { font-size: .74rem; color: var(--accent); font-weight: 700; background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background .15s; }
-    .filter-reset-btn:hover { background: rgba(255,255,255,.08); }
-    .filter-scroll-area { overflow-y: auto; flex: 1; }
-    .filter-scroll-area::-webkit-scrollbar { display: none; }
-    .filter-section { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,.05); }
-    .filter-section:last-of-type { border-bottom: none; }
-    .filter-section-label { font-size: .68rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: rgba(255,255,255,.42); margin-bottom: 12px; }
-    .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
-    .filter-pill { padding: 7px 16px; border-radius: 50px; border: 1px solid rgba(255,255,255,.13); background: rgba(255,255,255,.07); color: #fff; font-size: .81rem; font-weight: 600; cursor: pointer; white-space: nowrap; user-select: none; transition: background .14s, border-color .14s, color .14s; }
-    .filter-pill:hover { background: rgba(255,255,255,.13); }
-    .filter-pill.active { background: var(--accent); border-color: var(--accent); color: #000; }
-    .filter-pill i { margin-right: 5px; font-size: .72rem; }
-    .tag-search-wrap { position: relative; }
-    #filter-tag-input { width: 100%; padding: 10px 38px 10px 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; color: #fff; font-size: .86rem; outline: none; transition: border-color .17s; }
-    #filter-tag-input:focus { border-color: var(--accent); }
-    #filter-tag-input::placeholder { color: rgba(255,255,255,.32); }
-    .tag-search-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.34); font-size: .82rem; pointer-events: none; }
-    #filter-tag-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.5); cursor: pointer; display: none; background: none; border: none; padding: 4px; }
-    #filter-tag-clear.show { display: block; }
-    #tag-suggestions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
-    .tag-suggestion { padding: 5px 12px; border-radius: 50px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); font-size: .76rem; color: rgba(255,255,255,.82); cursor: pointer; transition: background .12s; }
-    .tag-suggestion:hover { background: rgba(255,255,255,.13); }
-    .tag-suggestion .uses { color: rgba(255,255,255,.36); font-size: .67rem; margin-left: 4px; }
-    .tag-suggestion.active { background: var(--accent); border-color: var(--accent); color: #000; }
-    .tag-suggestion.active .uses { color: rgba(0,0,0,.45); }
-    .tag-suggestion.keyboard-focus { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.35); outline: 2px solid var(--accent); outline-offset: 1px; }
-    .tag-suggestion.active.keyboard-focus { outline: 2px solid rgba(0,0,0,.5); outline-offset: 1px; }
-    #filter-active-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .active-tag-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 50px; background: var(--accent); color: #000; font-size: .76rem; font-weight: 700; cursor: pointer; }
-    .active-tag-pill i { font-size: .62rem; }
-    .filter-apply-btn { display: block; margin: 12px 20px 20px; padding: 15px; background: var(--accent); color: #000; font-size: .9rem; font-weight: 800; border: none; border-radius: 14px; cursor: pointer; flex-shrink: 0; transition: opacity .14s, transform .12s; }
-    .filter-apply-btn:hover { opacity: .88; }
-    .filter-apply-btn:active { transform: scale(.98); }
-
-    /* ── SETTINGS PANEL ────────────────────────────── */
-    #settings-panel { z-index: 802; }
-    .settings-toggle-row { display: flex; align-items: center; gap: 14px; padding: 10px 0; }
-    .settings-toggle-info { flex: 1; min-width: 0; }
-    .settings-toggle-name { display: block; font-size: .88rem; font-weight: 700; color: #fff; }
-    .settings-toggle-desc { display: block; font-size: .74rem; color: rgba(255,255,255,.45); margin-top: 2px; line-height: 1.35; }
-    .settings-toggle-switch {
-      width: 44px; height: 24px; border-radius: 50px; flex-shrink: 0;
-      background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.18);
-      position: relative; cursor: pointer; transition: background .2s, border-color .2s;
-    }
-    .settings-toggle-switch.on { background: var(--accent); border-color: var(--accent); }
-    .settings-toggle-knob {
-      position: absolute; top: 2px; left: 2px;
-      width: 18px; height: 18px; border-radius: 50%;
-      background: rgba(255,255,255,.6); transition: transform .2s, background .2s;
-    }
-    .settings-toggle-switch.on .settings-toggle-knob { transform: translateX(20px); background: #000; }
-    /* Save preset button */
-    .settings-save-preset-btn {
-      width: 100%; padding: 11px 16px; margin-bottom: 10px;
-      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13);
-      border-radius: 12px; color: rgba(255,255,255,.85); font-size: .84rem; font-weight: 600;
-      cursor: pointer; text-align: left; transition: background .14s;
-    }
-    .settings-save-preset-btn:hover { background: rgba(255,255,255,.12); }
-    .settings-save-preset-btn i { margin-right: 6px; }
-    /* Preset rows */
-    .preset-row {
-      display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px;
-      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); margin-bottom: 7px;
-      cursor: pointer; transition: background .14s;
-    }
-    .preset-row:hover { background: rgba(255,255,255,.1); }
-    .preset-row-info { flex: 1; min-width: 0; }
-    .preset-row-name { font-size: .86rem; font-weight: 700; color: #fff; }
-    .preset-row-meta { font-size: .72rem; color: rgba(255,255,255,.42); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .preset-row-del { color: rgba(255,255,255,.35); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; font-size: .8rem; flex-shrink: 0; transition: color .14s, background .14s; }
-    .preset-row-del:hover { color: #e55; background: rgba(255,60,60,.12); }
-    .preset-row-edit { color: rgba(255,255,255,.35); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; font-size: .8rem; flex-shrink: 0; transition: color .14s, background .14s; }
-    .preset-row-edit:hover { color: var(--accent); background: rgba(255,255,255,.08); }
-    .preset-row-update { color: rgba(255,255,255,.35); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; font-size: .8rem; flex-shrink: 0; transition: color .14s, background .14s; }
-    .preset-row-update:hover { color: #4caf50; background: rgba(76,175,80,.12); }
-    /* Preset inline editor */
-    .preset-editor { display: none; padding: 8px 12px 10px; border-top: 1px solid rgba(255,255,255,.07); margin-top: 4px; }
-    .preset-editor.open { display: block; }
-    .preset-editor-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; min-height: 22px; }
-    .preset-editor-tag {
-      display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 9px; border-radius: 50px;
-      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18);
-      font-size: .7rem; font-weight: 600; color: rgba(255,255,255,.85);
-    }
-    .preset-editor-tag-del { background: none; border: none; cursor: pointer; color: inherit; opacity: .55; padding: 0; font-size: .68rem; line-height: 1; }
-    .preset-editor-tag-del:hover { opacity: 1; color: #e55; }
-    .preset-editor-add { display: flex; gap: 6px; margin-bottom: 8px; }
-    .preset-editor-add input {
-      flex: 1; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15);
-      border-radius: 8px; color: #fff; font-size: .82rem; padding: 5px 10px; outline: none;
-    }
-    .preset-editor-add input::placeholder { color: rgba(255,255,255,.3); }
-    .preset-editor-add input:focus { border-color: var(--accent); }
-    .preset-editor-add button {
-      padding: 5px 12px; border-radius: 8px; background: rgba(255,255,255,.1);
-      border: 1px solid rgba(255,255,255,.15); color: #fff; font-size: .8rem; cursor: pointer;
-    }
-    .preset-editor-add button:hover { background: var(--accent); border-color: var(--accent); color: #000; }
-    .preset-editor-actions { display: flex; flex-direction: column; gap: 6px; }
-    .preset-editor-save {
-      width: 100%; padding: 8px 14px; border-radius: 8px; background: var(--accent); border: none;
-      color: #000; font-size: .82rem; font-weight: 700; cursor: pointer; text-align: left;
-    }
-    .preset-editor-save:hover { filter: brightness(1.12); }
-    .preset-editor-overwrite {
-      width: 100%; padding: 8px 14px; border-radius: 8px; background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.15); color: #fff; font-size: .82rem; cursor: pointer; text-align: left;
-    }
-    .preset-editor-overwrite:hover { background: rgba(255,255,255,.15); }
-    /* When a preset row is open, don't highlight it on hover */
-    .preset-row.editing { cursor: default; }
-    .preset-row.editing:hover { background: rgba(255,255,255,.05); }
-    .preset-row.editing { flex-wrap: wrap; }
-    /* ui-hidden: hides topbar content + action buttons, but keeps settings button accessible */
-    .ui-hidden .topbar-left { opacity: 0; pointer-events: none; transition: opacity .3s; }
-    .ui-hidden #filter-open-btn,
-    .ui-hidden #scroller-mute-btn {
-      opacity: 0; pointer-events: none;
-      width: 0; min-width: 0; padding: 0; margin: 0; border-width: 0; overflow: hidden;
-      transition: opacity .3s, width .3s, padding .3s, margin .3s, border-width .3s;
-    }
-    /* When not hidden, make sure the buttons transition back smoothly */
-    #filter-open-btn, #scroller-mute-btn {
-      transition: background .17s, transform .12s, border-color .17s,
-                  opacity .3s, width .3s, padding .3s, margin .3s, border-width .3s;
-    }
-    .ui-hidden #settings-open-btn { opacity: .55; transition: opacity .3s; } /* always reachable */
-    .ui-hidden #settings-open-btn:hover { opacity: 1; }
-    .ui-hidden .scroll-actions { opacity: 0; pointer-events: none; transition: opacity .3s; }
-    .ui-hidden .scroll-meta { opacity: 0; pointer-events: none; transition: opacity .3s; }
-
-    /* ── COMMENTS PANEL ───────────────────────────── */
-    #comments-panel { z-index: 802; }
-    #comments-list { flex: 1; overflow-y: auto; padding: 0 16px 8px; }
-    #comments-list::-webkit-scrollbar { width: 10px; }
-    #comments-list::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,.12);
-      background-clip: content-box;
-      border: 3px solid transparent;
-      border-radius: 10px;
-    }
-    .comment-item { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
-    .comment-item:last-child { border-bottom: none; }
-    .comment-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid rgba(255,255,255,.12); }
-    .comment-body { flex: 1; min-width: 0; }
-    .comment-username { font-size: .78rem; font-weight: 700; color: rgba(255,255,255,.9); margin-bottom: 3px; }
-    .comment-content { font-size: .82rem; color: rgba(255,255,255,.78); line-height: 1.45; word-break: break-word; }
-    .scroller-greentext { color: #789922; display: block; }
-    .scroller-spoiler {
-      background: #111; color: #111; border-radius: 3px; cursor: pointer;
-      padding: 0 3px; transition: color .15s, background .15s; user-select: none;
-    }
-    .scroller-spoiler.revealed, .scroller-spoiler:hover { color: inherit; background: rgba(255,255,255,.1); }
-    .scroller-blur { filter: blur(5px); cursor: pointer; transition: filter .2s; display: inline-block; }
-    .scroller-blur.revealed, .scroller-blur:hover { filter: none; }
-    .comment-meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-    .comment-time { font-size: .67rem; color: rgba(255,255,255,.38); }
-    .comment-reply-btn, .comment-quote-btn {
-      background: none; border: none; color: rgba(255,255,255,.45); font-size: .67rem;
-      font-weight: 700; cursor: pointer; padding: 0; text-transform: none;
-    }
-    .comment-reply-btn:hover, .comment-quote-btn:hover { color: var(--accent, #fff); }
-    .comment-context-link { color: var(--accent); text-decoration: none; font-family: 'VCR', monospace; }
-    .comment-context-link:hover { text-decoration: underline; }
-    @keyframes comment-highlight {
-      0% { background: rgba(255,255,255,.15); border-color: var(--accent); }
-      100% { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.05); }
-    }
-    .highlight-comment { animation: comment-highlight 2.5s cubic-bezier(0.2, 0, 0, 1); }
-    .comment-linked {
-      border-left: 2px solid var(--accent) !important;
-      background: rgba(var(--accent-rgb, 233, 30, 140), 0.07) !important;
-    }
-    #reply-indicator {
-      display: flex; align-items: center; gap: 8px;
-      padding: 6px 12px; background: rgba(255,255,255,.05);
-      border-top: 2px solid var(--accent, #4fc3f7);
-      font-size: .78rem; color: rgba(255,255,255,.65);
-    }
-    .reply-indicator-icon { font-size: .72rem; color: var(--accent, #4fc3f7); }
-    .reply-indicator-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #reply-cancel-btn {
-      background: none; border: none; color: rgba(255,255,255,.4); cursor: pointer;
-      padding: 2px 4px; font-size: .8rem;
-    }
-    #reply-cancel-btn:hover { color: #fff; }
-    #comments-loading, #comments-empty { text-align: center; padding: 40px 20px; color: rgba(255,255,255,.35); font-size: .85rem; }
-    #comments-loading .loader-spinner { margin: 0 auto 10px; }
-
-    /* comment input */
-    #comments-input-area {
-      display: flex; flex-direction: column;
-      padding: 10px 14px 16px;
-      border-top: 1px solid rgba(255,255,255,.07); flex-shrink: 0;
-      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-      gap: 8px;
-    }
-    #comments-input-area.hidden { display: none; }
-
-    /* mention dropdown */
-    #mention-dropdown {
-      background: rgba(14,14,18,.98); border: 1px solid rgba(255,255,255,.1);
-      border-radius: 10px; max-height: 160px; overflow-y: auto;
-      display: none;
-    }
-    #mention-dropdown.show { display: block; }
-    .mention-item {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 12px; cursor: pointer; font-size: .82rem;
-      transition: background .12s;
-    }
-    .mention-item:hover, .mention-item.selected { background: rgba(255,255,255,.08); }
-    .mention-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
-
-    /* sitewide emoji autocomplete portal (matches comments.js .emoji-autocomplete) */
-    .emoji-autocomplete {
-      position: fixed; z-index: 9999;
-      background: rgba(10,10,14,.97); border: 1px solid rgba(255,255,255,.12);
-      border-radius: 10px; display: flex; flex-wrap: wrap; gap: 2px; padding: 6px;
-      max-height: 200px; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,.6);
-    }
-    .emoji-ac-item {
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-      padding: 6px 8px; border-radius: 8px; cursor: pointer;
-      transition: background .12s; min-width: 54px;
-    }
-    .emoji-ac-item:hover, .emoji-ac-item.active { background: rgba(255,255,255,.1); }
-    .emoji-ac-item img { width: 32px; height: 32px; object-fit: contain; }
-    .emoji-ac-item span { font-size: .58rem; color: rgba(255,255,255,.5); text-align: center; }
-    /* emoji trigger (☺ button) */
-    .emoji-trigger {
-      background: none; border: none; font-size: 2.2rem; cursor: pointer;
-      padding: 4px 6px; border-radius: 8px; color: rgba(255,255,255,.6);
-      transition: background .12s, color .12s; line-height: 1; flex-shrink: 0;
-    }
-    .emoji-trigger:hover { background: rgba(255,255,255,.1); color: #fff; }
-
-    .comment-input-row { display: flex; align-items: flex-end; gap: 8px; }
-    #comment-input {
-      flex: 1; padding: 10px 14px; background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.12); border-radius: 22px;
-      color: #fff; font-size: .84rem; outline: none; transition: border-color .17s;
-      resize: none; line-height: 1.4;
-    }
-    #comment-input:focus { border-color: var(--accent); }
-    #comment-input::placeholder { color: rgba(255,255,255,.32); }
-    #comment-send-btn {
-      width: 38px; height: 38px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; color: #000; font-size: .88rem;
-      flex-shrink: 0; transition: opacity .15s, transform .12s;
-    }
-    #comment-send-btn:hover { opacity: .85; }
-    #comment-send-btn:active { transform: scale(.93); }
-    #comment-send-btn:disabled { opacity: .4; cursor: default; }
-    .comments-login-note { text-align: center; padding: 12px 16px 20px; font-size: .78rem; color: rgba(255,255,255,.38); }
-    .comments-login-note a { color: var(--accent); }
-    /* ── Tag bar ── slide-up panel, opened by Tag action button */
-    #tag-bar {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 1200;
-      background: rgba(14,14,18,.97); border-top: 1px solid rgba(255,255,255,.1);
-      padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
-      transform: translateY(100%); transition: transform .22s cubic-bezier(.32,0,.67,0);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-    }
-    #tag-bar.open { transform: translateY(0); }
-    #tag-bar-inner { display: flex; align-items: center; gap: 8px; }
-    #scroll-tag-input {
-      flex: 1; padding: 10px 14px; background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.12); border-radius: 22px;
-      color: #fff; font-size: .84rem; outline: none; transition: border-color .17s;
-    }
-    #scroll-tag-input:focus { border-color: var(--accent); }
-    #scroll-tag-input::placeholder { color: rgba(255,255,255,.32); }
-    #scroll-tag-send-btn {
-      width: 38px; height: 38px; border-radius: 50%; background: var(--accent);
-      border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-      color: #000; font-size: .88rem; flex-shrink: 0; transition: opacity .15s, transform .12s;
-    }
-    #scroll-tag-send-btn:hover { opacity: .85; }
-    #scroll-tag-send-btn:active { transform: scale(.93); }
-    #tag-bar-close-btn {
-      width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.15); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      color: rgba(255,255,255,.6); font-size: .8rem; flex-shrink: 0;
-      transition: background .12s;
-    }
-    #tag-bar-close-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
-    /* tag autocomplete dropdown — opens upward */
-    #scroll-tag-suggestions {
-      position: absolute; bottom: calc(100% + 6px); left: 0; right: 0;
-      background: rgba(14,14,18,.98); border: 1px solid rgba(255,255,255,.1);
-      border-radius: 12px; max-height: 180px; overflow-y: auto;
-      display: none; z-index: 1300; box-shadow: 0 -4px 24px rgba(0,0,0,.5);
-    }
-    #scroll-tag-suggestions.show { display: block; }
-    /* ── Share panel ────────────────────────────────── */
-    #share-backdrop {
-      display: none; position: fixed; inset: 0; z-index: 1290;
-      background: rgba(0,0,0,.55); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
-    }
-    #share-backdrop.show { display: block; }
-    #share-panel {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 1300;
-      background: rgba(14,14,18,.98); border-top: 1px solid rgba(255,255,255,.1);
-      padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
-      transform: translateY(100%); transition: transform .22s cubic-bezier(.32,0,.67,0);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-radius: 20px 20px 0 0;
-    }
-    #share-panel.open { transform: translateY(0); }
-    #share-panel-handle {
-      width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.2);
-      margin: 0 auto 16px;
-    }
-    #share-panel-title {
-      font-size: .72rem; font-weight: 700; letter-spacing: .08em;
-      color: rgba(255,255,255,.4); text-transform: uppercase; margin-bottom: 14px;
-    }
-    .share-row {
-      display: flex; align-items: center; gap: 14px; padding: 13px 14px;
-      border-radius: 12px; cursor: pointer; transition: background .14s;
-      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); margin-bottom: 8px;
-    }
-    .share-row:last-child { margin-bottom: 0; }
-    .share-row:hover { background: rgba(255,255,255,.1); }
-    .share-row-icon {
-      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem;
-    }
-    .share-row-icon.copy-icon { background: rgba(99,179,237,.18); color: #63b3ed; }
-    .share-row-icon.dm-icon   { background: rgba(154,117,255,.18); color: #9a75ff; }
-    .share-row-text { flex: 1; min-width: 0; }
-    .share-row-title { font-size: .88rem; font-weight: 600; color: #fff; }
-    .share-row-sub   { font-size: .72rem; color: rgba(255,255,255,.45); margin-top: 2px; }
-    /* DM user search */
-    #share-dm-search {
-      margin-top: 14px; display: none;
-    }
-    #share-dm-search.show { display: block; }
-    #share-user-input {
-      width: 100%; padding: 10px 14px; background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.12); border-radius: 22px;
-      color: #fff; font-size: .84rem; outline: none; transition: border-color .17s; box-sizing: border-box;
-    }
-    #share-user-input:focus { border-color: #9a75ff; }
-    #share-user-input::placeholder { color: rgba(255,255,255,.32); }
-    #share-user-results {
-      margin-top: 8px; max-height: 200px; overflow-y: auto;
-      border-radius: 12px; border: 1px solid rgba(255,255,255,.08);
-      background: rgba(14,14,18,.98); display: none;
-    }
-    #share-user-results.show { display: block; }
-    .share-user-row {
-      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-      cursor: pointer; transition: background .12s;
-    }
-    .share-user-row:hover { background: rgba(255,255,255,.08); }
-    .share-user-row img {
-      width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
-    }
-    .share-user-row-name { font-size: .84rem; font-weight: 600; color: #fff; flex: 1; min-width: 0; }
-    .share-user-row-label { font-size: .7rem; color: rgba(255,255,255,.4); margin-left: auto; flex-shrink: 0; }
-    .share-recents-label {
-      padding: 6px 12px 4px; font-size: .7rem; font-weight: 700; letter-spacing: .06em;
-      color: rgba(255,255,255,.35); text-transform: uppercase;
-    }
-    .scroll-tag-sugg-item {
-      padding: 9px 14px; cursor: pointer; font-size: .84rem; color: rgba(255,255,255,.85);
-      transition: background .1s; display: flex; align-items: center; gap: 8px;
-    }
-    .scroll-tag-sugg-item:hover, .scroll-tag-sugg-item.selected { background: rgba(255,255,255,.08); }
-    .scroll-tag-sugg-count { font-size: .72rem; color: rgba(255,255,255,.35); margin-left: auto; }
-
-    /* ── 4CHAN CATALOG GRID ──────────────────────── */
-    #chan-panel { z-index: 802; }
-    .chan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-    .chan-thread-card {
-      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
-      border-radius: 12px; overflow: hidden; cursor: pointer; transition: background .14s, border-color .14s, transform .12s;
-    }
-    .chan-thread-card:hover { background: rgba(255,255,255,.1); border-color: var(--accent); transform: translateY(-2px); }
-    .chan-thread-card.sticky { border-color: rgba(255,200,0,.3); }
-    .chan-thread-thumb {
-      width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block;
-      background: rgba(255,255,255,.03);
-    }
-    .chan-thread-info { padding: 8px 10px; }
-    .chan-thread-sub {
-      font-size: .76rem; font-weight: 700; color: #fff; line-height: 1.3;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-      min-height: 1.3em;
-    }
-    .chan-thread-com {
-      font-size: .68rem; color: rgba(255,255,255,.5); margin-top: 3px; line-height: 1.25;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .chan-thread-stats {
-      display: flex; gap: 10px; margin-top: 6px; font-size: .65rem; color: rgba(255,255,255,.4); font-weight: 600;
-    }
-    .chan-thread-stats i { margin-right: 3px; font-size: .58rem; }
-    #chan-open-btn i { color: #789922; }
-    #chan-open-btn:hover i { color: var(--accent); }
-    #chan-gallery-btn.active i { color: var(--accent); }
-
-    /* ── Thread Gallery Sidebar ──────── */
-    #chan-gallery-sidebar {
-      position: fixed; top: 55px; right: 0; bottom: 5px; width: 180px;
-      background: rgba(10,10,14,.92); backdrop-filter: blur(20px);
-      border-left: 1px solid rgba(255,255,255,.08);
-      overflow-y: auto; overflow-x: hidden;
-      z-index: 90; display: none;
-      scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent;
-    }
-    #chan-gallery-sidebar.open { display: block; }
-    #chan-gallery-sidebar::-webkit-scrollbar { width: 4px; }
-    #chan-gallery-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
-    .gallery-thumb {
-      width: 100%; aspect-ratio: 1; object-fit: cover; display: block;
-      cursor: pointer; opacity: .6; transition: opacity .15s, outline-color .15s;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      outline: 2px solid transparent; outline-offset: -2px;
-    }
-    .gallery-thumb:hover { opacity: 1; }
-    .gallery-thumb.active { opacity: 1; outline-color: var(--accent); }
-    .gallery-thumb-wrap {
-      position: relative;
-    }
-    .gallery-thumb-idx {
-      position: absolute; top: 3px; left: 5px;
-      font-size: .6rem; font-weight: 700; color: rgba(255,255,255,.7);
-      text-shadow: 0 1px 3px rgba(0,0,0,.8);
-      pointer-events: none;
-    }
-    /* When gallery is open, narrow the feed */
-    body.gallery-open #scroller-feed { margin-right: 180px; }
-    body.gallery-open .scroll-actions { right: 192px; }
-    @media (max-width: 600px) {
-      #chan-gallery-sidebar { width: 100px; top: 50px; }
-      body.gallery-open #scroller-feed { margin-right: 100px; }
-      body.gallery-open .scroll-actions { right: 112px; }
-    }
-
-    /* ── LEFT HAND MODE ──────────────────────── */
-    body.left-hand-mode .scroll-actions { right: auto; left: 10px; }
-    body.left-hand-mode .scroll-meta { right: 0; left: 72px; padding-left: 0; padding-right: 16px; text-align: right; }
-    body.left-hand-mode .scroll-meta-inner { align-items: flex-end; }
-    body.left-hand-mode .scroll-meta-top { flex-direction: row-reverse; }
-    body.left-hand-mode .scroll-tags { justify-content: flex-end; }
-    body.left-hand-mode .scroll-badges { justify-content: flex-end; }
-    body.left-hand-mode.gallery-open .scroll-actions { left: 10px; right: auto; }
-    body.left-hand-mode .topbar-right #chan-open-btn,
-    body.left-hand-mode .topbar-right #chan-gallery-btn { display: none !important; }
-    /* 4chan buttons styled as side-action buttons when inside scroll-actions */
-    .scroll-actions .chan-action-btn {
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-      cursor: pointer; color: #fff; background: none; border: none; padding: 0;
-      transition: transform .12s;
-    }
-    /*.scroll-actions .chan-action-btn:hover { transform: scale(1.14); }*/
-    .scroll-actions .chan-action-btn .scroll-btn-icon {
-      width: 46px; height: 46px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.05rem; transition: background .17s;
-    }
-    .scroll-actions .chan-action-btn:hover .scroll-btn-icon { background: rgba(255,255,255,.22); }
-    .scroll-actions .chan-action-btn .scroll-btn-label { font-size: .6rem; font-weight: 600; letter-spacing: .03em; color: rgba(255,255,255,.75); }
-  </style>
+  <link rel="stylesheet" href="/s/css/scroller.css?v={{ mtime("/public/s/css/scroller.css") }}">
 </head>
 <body class="scroller-active">
   <div id="main">
@@ -1088,29 +158,29 @@
       </div>
     </div>
     <div class="topbar-right">
-      <button id="chan-open-btn" class="topbar-icon-btn" title="{{ t("scroller.chan_threads") }}" style="display:none"><i class="fa-solid fa-clover"></i></button>
-      <button id="chan-gallery-btn" class="topbar-icon-btn" title="{{ t("scroller.thread_gallery") }} (G)" style="display:none"><i class="fa-solid fa-grip"></i></button>
+      <button id="chan-open-btn" class="topbar-icon-btn" title="{{ t("scroller.chan_threads") }}"><i class="fa-solid fa-clover"></i></button>
+      <button id="chan-gallery-btn" class="topbar-icon-btn" title="{{ t("scroller.thread_gallery") }} (G)"><i class="fa-solid fa-grip"></i></button>
       <button id="settings-open-btn" class="topbar-icon-btn" title="{{ t("scroller.settings") }}"><i class="fa-solid fa-gear"></i></button>
       {% if (((session is defined and session) and not session.is_anon) or (((session is defined and session) and enable_anonymous_access) and anon_permissions.filter)) %}
       <button id="filter-open-btn" class="topbar-icon-btn" title="{{ t("scroller.filters") }} (F)"><i class="fa-solid fa-sliders"></i></button>
       {% endif %}
       {% if (session is defined and session) %}
-      <div id="scroller-notif-wrap" style="position:relative;">
+      <div id="scroller-notif-wrap">
         <button id="scroller-notif-btn" class="topbar-icon-btn" title="Notifications">
           <i class="fa-solid fa-bell"></i>
           <span id="scroller-notif-badge"></span>
         </button>
-        <div id="scroller-notif-dropdown" class="notif-dropdown" style="position:fixed; z-index:99999; display:none;">
+        <div id="scroller-notif-dropdown" class="notif-dropdown">
           <div class="notif-header">
             <div class="notif-tabs">
               {% if enable_comments %}
-              <button class="notif-tab active" data-tab="user">{{ t("nav.notif_tab_user") }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-user" style="display:none">0</span></button>
-              <button class="notif-tab" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-system" style="display:none">0</span></button>
+              <button class="notif-tab active" data-tab="user">{{ t("nav.notif_tab_user") }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-user">0</span></button>
+              <button class="notif-tab" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-system">0</span></button>
               {% else %}
-              <button class="notif-tab active" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-system" style="display:none">0</span></button>
+              <button class="notif-tab active" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge" id="scroller-notif-tab-badge-system">0</span></button>
               {% endif %}
               {% if ((session is defined and session) and session.admin) %}
-              <button class="notif-tab" data-tab="admin"><i class="fa-solid fa-shield-halved" style="font-size: 0.85em;"></i> Admin <span class="notif-tab-badge" id="scroller-notif-tab-badge-admin" style="display:none">0</span></button>
+              <button class="notif-tab" data-tab="admin"><i class="fa-solid fa-shield-halved scroller-notif-admin-icon"></i> Admin <span class="notif-tab-badge" id="scroller-notif-tab-badge-admin">0</span></button>
               {% endif %}
             </div>
             <button id="scroller-mark-all-read" title="{{ t("nav.mark_all_read") }}"><i class="fa-solid fa-check-double"></i></button>
@@ -1149,7 +219,7 @@
     <div id="scroller-empty">
       <i class="fa-solid fa-binoculars"></i>
       <p>{{ t("scroller.nothing_found") }}</p>
-      <button data-on="click:click-by-id" data-arg="filter-open-btn" style="margin-top:8px;padding:8px 20px;border-radius:50px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:.8rem;">{{ t("scroller.adjust_filters") }}</button>
+      <button class="scroller-empty-filters-btn" data-on="click:click-by-id" data-arg="filter-open-btn">{{ t("scroller.adjust_filters") }}</button>
     </div>
   </div>
 
@@ -1167,15 +237,15 @@
         <div class="filter-section-label">{{ t("scroller.rating") }}</div>
         <div class="pill-group" id="mode-pills">
           {% if _isScrollerGuest %}
-          <button class="filter-pill active locked" data-mode="0" style="cursor: default;" title="SFW"><i class="fa-solid fa-shield-halved"></i>SFW<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
-          <button class="filter-pill locked" data-mode="1" style="cursor: not-allowed; opacity: 0.45;" title="Only available for members" disabled><i class="fa-solid fa-fire"></i>NSFW<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
+          <button class="filter-pill active locked scroller-pill-guest-current" data-mode="0" title="SFW"><i class="fa-solid fa-shield-halved"></i>SFW<i class="fa-solid fa-lock scroller-pill-lock"></i></button>
+          <button class="filter-pill locked scroller-pill-guest-off" data-mode="1" title="Only available for members" disabled><i class="fa-solid fa-fire"></i>NSFW<i class="fa-solid fa-lock scroller-pill-lock"></i></button>
           {% if enable_nsfl %}
-          <button class="filter-pill locked" data-mode="4" style="cursor: not-allowed; opacity: 0.45;" title="Only available for members" disabled><i class="fa-solid fa-skull"></i>NSFL<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
+          <button class="filter-pill locked scroller-pill-guest-off" data-mode="4" title="Only available for members" disabled><i class="fa-solid fa-skull"></i>NSFL<i class="fa-solid fa-lock scroller-pill-lock"></i></button>
           {% endif %}
-          <button class="filter-pill locked" data-mode="3" style="cursor: not-allowed; opacity: 0.45;" title="Only available for members" disabled>ALL<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
-          <button class="filter-pill locked" data-mode="2" style="cursor: not-allowed; opacity: 0.45;" title="Only available for members" disabled>{{ t("scroller.untagged") }}<i class="fa-solid fa-lock" style="margin-left: 4px; font-size: 0.8em; opacity: 0.7;"></i></button>
+          <button class="filter-pill locked scroller-pill-guest-off" data-mode="3" title="Only available for members" disabled>ALL<i class="fa-solid fa-lock scroller-pill-lock"></i></button>
+          <button class="filter-pill locked scroller-pill-guest-off" data-mode="2" title="Only available for members" disabled>{{ t("scroller.untagged") }}<i class="fa-solid fa-lock scroller-pill-lock"></i></button>
           {% elif _scrollerIsSingleMode %}
-          <button class="filter-pill active locked" data-mode="{{ (0 if _scrollerSingleMode == "sfw" else (1 if _scrollerSingleMode == "nsfw" else (4 if _scrollerSingleMode == "nsfl" else 2))) }}" style="cursor: not-allowed; pointer-events: none;" title="Locked by site permissions"><i class="fa-solid fa-lock" style="margin-right: 4px;"></i>{{ _scrollerSingleMode|upper }}</button>
+          <button class="filter-pill active locked scroller-pill-site-locked" data-mode="{{ (0 if _scrollerSingleMode == "sfw" else (1 if _scrollerSingleMode == "nsfw" else (4 if _scrollerSingleMode == "nsfl" else 2))) }}" title="Locked by site permissions"><i class="fa-solid fa-lock scroller-pill-site-lock"></i>{{ _scrollerSingleMode|upper }}</button>
           {% else %}
           {% if _scrollerShowSfw %}
           <button class="filter-pill active" data-mode="0"><i class="fa-solid fa-shield-halved"></i>SFW</button>
@@ -1199,7 +269,7 @@
         <div class="filter-section-label">{{ t("scroller.media_type") }}</div>
         <div class="pill-group" id="mime-pills">
           {% if _scrollerIsSingleMime %}
-          <button class="filter-pill active locked" data-mime="{{ _scrollerSingleMime }}" style="cursor: not-allowed; pointer-events: none;" title="Locked by site permissions"><i class="fa-solid fa-lock" style="margin-right: 4px;"></i>{{ (t("scroller." ~ _scrollerSingleMime) or _scrollerSingleMime) }}</button>
+          <button class="filter-pill active locked scroller-pill-site-locked" data-mime="{{ _scrollerSingleMime }}" title="Locked by site permissions"><i class="fa-solid fa-lock scroller-pill-site-lock"></i>{{ (t("scroller." ~ _scrollerSingleMime) or _scrollerSingleMime) }}</button>
           {% else %}
           <button class="filter-pill active" data-mime=""><i class="fa-solid fa-layer-group"></i>{{ t("scroller.all") }}</button>
           {% if ("video" in scroller_mime_cats) %}
@@ -1234,13 +304,13 @@
         <div id="tag-suggestions"></div>
         <div id="filter-active-tags"></div>
       </div>
-      <div class="filter-section" style="margin-top:8px">
+      <div class="filter-section scroller-presets-section">
         <div class="filter-section-label">{{ t("scroller.saved_presets") }}</div>
         <button class="settings-save-preset-btn" id="settings-save-preset-btn"><i class="fa-solid fa-floppy-disk"></i> {{ t("scroller.save_preset") }}</button>
         <div id="settings-presets-list"></div>
       </div>
     </div>
-    <button class="filter-apply-btn" id="filter-apply-btn"><i class="fa-solid fa-check" style="margin-right:8px"></i>{{ t("scroller.apply_reload") }}</button>
+    <button class="filter-apply-btn" id="filter-apply-btn"><i class="fa-solid fa-check scroller-apply-icon"></i>{{ t("scroller.apply_reload") }}</button>
   </div>
 
   <!-- 4CHAN PANEL -->
@@ -1248,14 +318,14 @@
   <div id="chan-panel" class="scroller-panel" role="dialog" aria-label="4chan threads">
     <div class="panel-handle"><div class="panel-handle-bar"></div></div>
     <div class="panel-header">
-      <span class="panel-title"><i class="fa-solid fa-clover" style="margin-right:6px;color:var(--accent)"></i>{{ t("scroller.chan_threads") }}</span>
+      <span class="panel-title"><i class="fa-solid fa-clover scroller-chan-title-icon"></i>{{ t("scroller.chan_threads") }}</span>
     </div>
     <div class="filter-scroll-area">
       <div class="filter-section">
         <div class="filter-section-label">{{ t("scroller.load_by_url") }}</div>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="chan-url-input" style="flex:1;padding:10px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:.86rem;outline:none;" placeholder="https://boards.4chan.org/wsg/thread/..." autocomplete="off">
-          <button id="chan-url-load-btn" style="padding:10px 18px;background:var(--accent);color:#000;border:none;border-radius:10px;font-weight:700;font-size:.84rem;cursor:pointer;white-space:nowrap;">{{ t("scroller.load") }}</button>
+        <div class="scroller-chan-url-row">
+          <input type="text" id="chan-url-input" placeholder="https://boards.4chan.org/wsg/thread/..." autocomplete="off">
+          <button id="chan-url-load-btn">{{ t("scroller.load") }}</button>
         </div>
       </div>
       <div class="filter-section">
@@ -1263,18 +333,18 @@
         <div class="pill-group" id="chan-board-pills">
           <button class="filter-pill" data-board="gif"><i class="fa-solid fa-fire"></i>/gif/</button>
           <button class="filter-pill active" data-board="wsg"><i class="fa-solid fa-shield-halved"></i>/wsg/</button>
-          <div style="display:flex;align-items:center;gap:4px;margin-left:4px;">
-            <span style="color:rgba(255,255,255,.4);font-size:.8rem">/</span>
-            <input type="text" id="chan-custom-board" style="width:48px;padding:6px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:.82rem;outline:none;text-align:center;" placeholder="v" maxlength="6" autocomplete="off">
-            <span style="color:rgba(255,255,255,.4);font-size:.8rem">/</span>
-            <button id="chan-custom-board-btn" class="filter-pill" style="padding:6px 10px;font-size:.78rem;">{{ t("scroller.go") }}</button>
+          <div class="scroller-chan-custom-board">
+            <span class="scroller-chan-board-slash">/</span>
+            <input type="text" id="chan-custom-board" placeholder="v" maxlength="6" autocomplete="off">
+            <span class="scroller-chan-board-slash">/</span>
+            <button id="chan-custom-board-btn" class="filter-pill">{{ t("scroller.go") }}</button>
           </div>
         </div>
       </div>
-      <div class="filter-section" style="padding-top:8px">
-        <input type="text" id="chan-catalog-search" style="width:100%;padding:10px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:.86rem;outline:none;margin-bottom:12px;box-sizing:border-box;" placeholder="{{ t("scroller.search_threads") }}" autocomplete="off">
+      <div class="filter-section scroller-chan-catalog-section">
+        <input type="text" id="chan-catalog-search" placeholder="{{ t("scroller.search_threads") }}" autocomplete="off">
         <div id="chan-catalog-grid" class="chan-grid"></div>
-        <div id="chan-catalog-loading" style="text-align:center;padding:30px;color:rgba(255,255,255,.35);display:none"><div class="loader-spinner" style="margin:0 auto 10px"></div>{{ t("scroller.loading_catalog") }}</div>
+        <div id="chan-catalog-loading"><div class="loader-spinner"></div>{{ t("scroller.loading_catalog") }}</div>
       </div>
     </div>
   </div>
@@ -1327,13 +397,12 @@
           </div>
           <div class="settings-toggle-switch" id="st-auto-next"><div class="settings-toggle-knob"></div></div>
         </div>
-        <div class="settings-toggle-row" style="margin-top:2px;">
+        <div class="settings-toggle-row scroller-auto-next-loops-row">
           <div class="settings-toggle-info">
             <span class="settings-toggle-name">{{ t("scroller.loops_before_next") }}</span>
             <span class="settings-toggle-desc">{{ t("scroller.loops_before_next_desc") }}</span>
           </div>
-          <input type="number" id="st-auto-next-loops" min="0" max="99" value="1"
-            style="width:56px;padding:5px 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:.88rem;text-align:center;outline:none;" />
+          <input type="number" id="st-auto-next-loops" min="0" max="99" value="1" />
         </div>
       </div>
 
@@ -1345,19 +414,19 @@
   <div id="comments-panel" class="scroller-panel" role="dialog" aria-label="Comments">
     <div class="panel-handle"><div class="panel-handle-bar"></div></div>
     <div class="panel-header">
-      <span class="panel-title">{{ t("scroller.comments") }} <span id="comments-count" style="color:rgba(255,255,255,.45);font-weight:400;font-size:.85rem"></span></span>
-      <a id="comments-open-link" href="#" target="_blank" style="color:var(--accent);font-size:.78rem;font-weight:700;text-decoration:none;padding:4px 8px;">
-        <i class="fa-solid fa-up-right-from-square" style="margin-right:4px;font-size:.72rem"></i>{{ t("scroller.open") }}
+      <span class="panel-title">{{ t("scroller.comments") }} <span id="comments-count"></span></span>
+      <a id="comments-open-link" href="#" target="_blank">
+        <i class="fa-solid fa-up-right-from-square"></i>{{ t("scroller.open") }}
       </a>
     </div>
     <div id="comments-list">
       <div id="comments-loading"><div class="loader-spinner"></div>{{ t("scroller.loading") }}</div>
-      <div id="comments-empty" style="display:none"><i class="fa-regular fa-comment" style="font-size:2rem;display:block;margin-bottom:10px"></i>{{ t("scroller.no_comments") }}</div>
+      <div id="comments-empty"><i class="fa-regular fa-comment"></i>{{ t("scroller.no_comments") }}</div>
     </div>
     {% if (session is defined and session) %}
     <div id="comments-input-area">
       <div id="mention-dropdown"></div>
-      <div id="reply-indicator" style="display:none">
+      <div id="reply-indicator">
         <i class="fa-solid fa-reply reply-indicator-icon"></i>
         <span class="reply-indicator-text"></span>
         <button id="reply-cancel-btn" type="button"><i class="fa-solid fa-xmark"></i></button>
@@ -1377,7 +446,7 @@
   {% if (session is defined and session) %}
   <div id="tag-bar">
     <div id="tag-bar-inner">
-      <div style="position:relative;flex:1;min-width:0">
+      <div class="scroller-tag-input-wrap">
         <input id="scroll-tag-input" type="text" placeholder="{{ t("scroller.add_tag_placeholder") }}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="70">
         <div id="scroll-tag-suggestions"></div>
       </div>

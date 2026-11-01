@@ -2,27 +2,8 @@
 <div class="pagewrapper">
     <div id="main">
         <div class="meme-layout-wrapper">
-            <link rel="stylesheet" href="/s/css/meme-creator.css">
+            <link rel="stylesheet" href="/s/css/meme-creator.css?v={{ mtime("/public/s/css/meme-creator.css") }}">
             <link rel="preload" href="/s/fonts/impact.woff" as="font" type="font/woff" crossorigin>
-            <style>
-                .meme-title { font-family: 'Impact', 'VCR', sans-serif; }
-                
-                /* NUCLEAR VISIBILITY RESET: Override any and all parent constraints for this page */
-                @media (max-width: 1250px) {
-                    /* Target all possible shell triggers */
-                    html, body, .pagewrapper, #main, .layout-modern react-wrapper, .layout-legacy react-wrapper { 
-                        height: auto !important; 
-                        overflow: visible !important; 
-                        min-height: 100vh !important;
-                        display: block !important; 
-                        flex: none !important;
-                    }
-                    
-                    #main {
-                        padding-bottom: 50px; /* Space for footer/controls */
-                    }
-                }
-            </style>
             <div class="meme-creator-container">
                 <div class="meme-header">
                     <h1 class="meme-title">{{ t("meme.create_meme") }} {{ template.name }}</h1>            </div>
@@ -32,9 +13,9 @@
                     </div>
 
                     <div class="meme-controls">
-                        <div id="customTemplateSelector" class="form-group" style="margin-bottom: 20px; display: none;">
+                        <div id="customTemplateSelector" class="form-group">
                             <label for="customTemplateFile">{{ t("meme.select_image") }}</label>
-                            <input type="file" id="customTemplateFile" accept="image/*" style="display: none;">
+                            <input type="file" id="customTemplateFile" accept="image/*">
                             <button id="selectCustomFileBtn" type="button" class="btn btn-secondary btn-block">
                                 <i class="fa fa-image"></i> {{ t("meme.choose_file_btn") }}
                             </button>
@@ -44,10 +25,10 @@
                             <!-- Dynamic inputs injected by JS -->
                         </div>
 
-                        <button id="addText" class="btn btn-secondary btn-block" style="margin-bottom: 20px;">
+                        <button id="addText" class="btn btn-secondary btn-block">
                             <i class="fa fa-plus"></i> {{ t("meme.add_text_layer") }}
                         </button>
-                            <div class="form-group" style="display: none;">
+                            <div class="form-group meme-tags-group">
                                 <label for="tags">{{ t("meme.tags_label") }}</label>
                                 <input type="text" id="tags" value="meme, {{ (template.category or "General") }}" placeholder="meme, funny, ...">
                             </div>

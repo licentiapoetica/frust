@@ -1,11 +1,6 @@
 {% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
-  <style>
-    /* No blurred item backdrop here: the #bg canvas keeps the last item's image after AJAX navigation.
-       Lives in this page's <style>, so it is gone again as soon as another page is loaded. */
-    body:has(#main > .container.adm.up) #bg { opacity: 0 !important; visibility: hidden !important; }
-  </style>
   <div class="container adm up">
 
     <header class="adm-header">
@@ -72,51 +67,6 @@
   </div>
 
   {% include "snippets/adm-dashboard-style.html" %}
-  <style>
-    .up-notice {
-      display: flex; align-items: center; gap: 10px; margin: -8px 0 22px; padding: 10px 14px;
-      font-size: 0.85em; color: var(--adm-text); background: var(--adm-surface);
-      border: 1px solid var(--adm-border); border-left: 3px solid var(--adm-accent);
-    }
-    .up-notice i { color: var(--adm-accent); }
-    .up-list { display: flex; flex-direction: column; border: 1px solid var(--adm-border); }
-    .up-row { display: flex; align-items: center; gap: 14px; padding: 10px 12px; background: var(--adm-surface); scroll-margin-top: 90px; transition: background 0.3s; }
-    .up-row + .up-row { border-top: 1px solid var(--adm-border); }
-    .up-row:target, .up-row.is-target { background: color-mix(in srgb, var(--adm-accent) 12%, transparent); box-shadow: inset 3px 0 0 var(--adm-accent); }
-    .up-thumb { width: 64px; height: 64px; flex-shrink: 0; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--adm-muted); }
-    .up-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .up-row.is-denied .up-thumb, .up-row.is-removed .up-thumb { color: #ff5c5c; }
-    .up-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-    .up-name { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.92em; overflow: hidden; }
-    .up-name a { color: var(--adm-text); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .up-name a:hover { color: var(--adm-accent); }
-    .up-album { flex-shrink: 0; font-size: 0.78em; font-weight: 700; color: var(--adm-muted); }
-    .up-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 0.76em; color: var(--adm-muted); }
-    .up-reason { font-size: 0.8em; color: #ffb8b8; }
-    .up-status { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
-    .up-del {
-      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; margin: 0; font: inherit; font-size: 0.72em; font-weight: 800;
-      text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; border-radius: 0;
-      background: transparent; color: var(--adm-muted); border: 1px solid var(--adm-border); transition: color 0.15s, border-color 0.15s, background 0.15s;
-    }
-    .up-del:hover { color: #ff5c5c; border-color: rgba(255, 92, 92, 0.5); }
-    .up-del.is-armed { color: #000; background: #ff5c5c; border-color: #ff5c5c; }
-    .up-del:disabled { opacity: 0.6; cursor: progress; }
-    .up-row.is-gone { opacity: 0; transition: opacity 0.25s; }
-    .up-badge {
-      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 0.72em; font-weight: 800;
-      text-transform: uppercase; letter-spacing: 0.08em; text-decoration: none; border: 1px solid var(--adm-border); color: var(--adm-muted);
-    }
-    .up-row.is-pending .up-badge { color: #ffb020; border-color: rgba(255, 176, 32, 0.5); background: rgba(255, 176, 32, 0.1); }
-    .up-row.is-live .up-badge { color: #000; background: var(--adm-accent); border-color: var(--adm-accent); }
-    .up-row.is-live .up-badge:hover { background: transparent; color: var(--adm-accent); }
-    .up-row.is-denied .up-badge, .up-row.is-removed .up-badge { color: #ff5c5c; border-color: rgba(255, 92, 92, 0.5); background: rgba(255, 92, 92, 0.08); }
-    .up-empty { padding: 40px 20px; text-align: center; color: var(--adm-muted); border: 1px dashed var(--adm-border); }
-    @media (max-width: 600px) {
-      .up-row { flex-wrap: wrap; }
-      .up-status { width: 100%; padding-left: 78px; }
-    }
-  </style>
   <script nonce="{{ csp_nonce }}">
     (() => {
       // Highlight + scroll to #i<id> (AJAX navigation uses pushState, which doesn't trigger :target)

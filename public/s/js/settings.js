@@ -2859,8 +2859,8 @@
             apiKeyStatusBox.innerHTML =
                 `<span>Active key: <code style="font-size:0.9em;">${escHTML(preview)}</code></span>` +
                 `<span style="color:var(--text-muted); margin-left:12px; font-size:0.85em;">Created: ${escHTML(date)}</span>`;
-            if (btnRevokeApiKey) btnRevokeApiKey.style.display = '';
-            if (btnShareXDownload) btnShareXDownload.style.display = '';
+            if (btnRevokeApiKey) btnRevokeApiKey.style.display = 'inline-flex';
+            if (btnShareXDownload) btnShareXDownload.style.display = 'inline-flex';
         } else {
             apiKeyStatusBox.innerHTML = '<span class="text-muted">No API key generated yet.</span>';
             if (btnRevokeApiKey) btnRevokeApiKey.style.display = 'none';
@@ -2888,7 +2888,7 @@
     // Generate / Regenerate
     if (btnRegenApiKey) {
         btnRegenApiKey.addEventListener('click', async () => {
-            if (btnRevokeApiKey && btnRevokeApiKey.style.display !== 'none') {
+            if (btnRevokeApiKey && getComputedStyle(btnRevokeApiKey).display !== 'none') {
                 // Key already exists — warn the user
                 if (!confirm('Regenerating will immediately invalidate your current API key. Continue?')) return;
             }
@@ -2907,7 +2907,7 @@
                 if (data.success) {
                     // Show one-time reveal box
                     if (apiKeyFullDisplay) apiKeyFullDisplay.textContent = data.api_key;
-                    if (apiKeyRevealBox) apiKeyRevealBox.style.display = '';
+                    if (apiKeyRevealBox) apiKeyRevealBox.style.display = 'block';
 
                     // Update status row to masked preview
                     const preview = '****' + data.api_key.slice(-8);

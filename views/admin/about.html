@@ -4,28 +4,28 @@
     {% include "snippets/admin-back.html" %}
     <div class="container">
         <h2>About Page Content</h2>
-        <p style="color: #ccc; margin-bottom: 20px;">This text is displayed on the <strong>/about</strong> page. Supports Markdown. Leave empty to show the default static template.</p>
+        <p class="adm-page-intro">This text is displayed on the <strong>/about</strong> page. Supports Markdown. Leave empty to show the default static template.</p>
 
         <div class="admin-motd-form">
             <form id="about-form" action="/admin/about" method="POST" data-on="submit:prevent,savePage" data-arg="about">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <div style="margin-bottom: 20px;">
-                    <label for="about-text" style="display: block; margin-bottom: 8px; color: var(--accent);">About Page Content (Markdown supported)</label>
-                    <textarea id="about-text" name="about_text" style="width: 100%; min-height: 300px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 15px; border-radius: 4px; font-family: inherit; font-size: 1.1em; resize: vertical;"></textarea>
+                <div class="adm-editor-field">
+                    <label for="about-text" class="adm-editor-label">About Page Content (Markdown supported)</label>
+                    <textarea id="about-text" name="about_text" class="adm-editor-text"></textarea>
                     <script nonce="{{ csp_nonce }}">document.getElementById('about-text').value = new TextDecoder('utf-8').decode(Uint8Array.from(atob({{ about_text_b64|string|tojson }}), function(c) { return c.charCodeAt(0); }));</script>
                 </div>
 
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <button type="submit" class="btn-primary" style="width: auto; padding: 10px 30px;">Save</button>
-                    <button type="button" class="btn-remove" style="width: auto; padding: 10px 20px;" data-on="click:clearPage" data-arg="about">Clear</button>
-                    <span id="about-status" style="margin-left: 10px; font-weight: bold; display: none;"></span>
+                <div class="adm-form-actions">
+                    <button type="submit" class="btn-primary adm-editor-save">Save</button>
+                    <button type="button" class="btn-remove adm-editor-clear" data-on="click:clearPage" data-arg="about">Clear</button>
+                    <span id="about-status" class="adm-editor-status"></span>
                 </div>
             </form>
         </div>
 
-        <div style="margin-top: 40px; padding: 20px; background: rgba(0,0,0,0.2); border-left: 4px solid var(--accent); border-radius: 4px;">
-            <h4 style="color: var(--accent); margin-top: 0;">Tips</h4>
-            <p style="margin-bottom: 0;">Use <strong>Markdown</strong> syntax like <code># Header</code>, <code>**bold**</code>, <code>[links](url)</code>, or plain HTML.<br>
+        <div class="adm-editor-tips">
+            <h4 class="adm-editor-tips-title">Tips</h4>
+            <p class="adm-editor-tips-text">Use <strong>Markdown</strong> syntax like <code># Header</code>, <code>**bold**</code>, <code>[links](url)</code>, or plain HTML.<br>
             If empty, the default static about page is shown instead.</p>
         </div>
     </div>

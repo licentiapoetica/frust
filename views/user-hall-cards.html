@@ -1,69 +1,69 @@
 {% for key, hall in hallsList|entries %}
 <div class="hall-manager-card" id="uh-card-{{ hall.slug }}" data-slug="{{ hall.slug }}" data-owner-id="{{ ownerUser.id }}">
-  <div class="hall-manager-image" style="position:relative;height:140px;overflow:hidden;background:#111;cursor:pointer;" title="{{ ("Click to upload a custom image" if enable_userhall_image_upload else "View hall") }}">
+  <div class="hall-manager-image" title="{{ ("Click to upload a custom image" if enable_userhall_image_upload else "View hall") }}">
     {% if hall.user_id %}
-    <img src="/user_hall_image/{{ hall.user_id }}/{{ hall.slug }}" alt="{{ hall.name }}" style="width:100%;height:100%;object-fit:cover;opacity:0.8;">
+    <img src="/user_hall_image/{{ hall.user_id }}/{{ hall.slug }}" alt="{{ hall.name }}" class="hall-card-img">
     {% else %}
-    <img src="/user_hall_image/{{ ownerUser.id }}/{{ hall.slug }}" alt="{{ hall.name }}" style="width:100%;height:100%;object-fit:cover;opacity:0.8;">
+    <img src="/user_hall_image/{{ ownerUser.id }}/{{ hall.slug }}" alt="{{ hall.name }}" class="hall-card-img">
     {% endif %}
     
-    <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.1em;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.05em;text-shadow:0 0 10px rgba(0,0,0,0.9),0 1px 3px rgba(0,0,0,0.8);pointer-events:none;">
+    <span class="hall-card-name">
       {{ hall.name }}
       {% if hall.is_private %}
-        <span style="font-size:0.6em;opacity:0.7;margin-left:4px;">🔒</span>
+        <span class="hall-card-name-lock">🔒</span>
       {% endif %}
     </span>
     
     {% if enable_userhall_image_upload %}
       {% if (isOwner or (session and session.admin)) %}
         {% if hall.custom_image %}
-          <button class="uh-btn-del-img" title="Remove custom image" style="position:absolute;top:6px;right:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:50%;cursor:pointer;font-size:0.75em;line-height:1;z-index:2;padding:0;">✕</button>
+          <button class="uh-btn-del-img" title="Remove custom image">✕</button>
         {% endif %}
-        <input type="file" class="uh-img-upload" accept="image/*" style="display:none;">
+        <input type="file" class="uh-img-upload" accept="image/*">
       {% endif %}
     {% endif %}
   </div>
 
-  <div style="padding:12px;">
+  <div class="hall-card-body">
     {% if (isOwner or (session and session.admin)) %}
-      <div style="margin-bottom:8px;">
-        <label style="font-size:0.8em;color:#888;display:block;">{{ t("common.name") }}</label>
-        <input type="text" class="uh-name-input" value="{{ hall.name }}" style="width:100%;box-sizing:border-box;background:var(--badge-bg);border:1px solid rgba(255,255,255,0.15);color:var(--white);padding:5px 8px;border-radius:3px;font-family:var(--font);">
+      <div class="hall-card-field">
+        <label class="hall-card-label">{{ t("common.name") }}</label>
+        <input type="text" class="uh-name-input hall-card-input" value="{{ hall.name }}">
       </div>
-      <div style="margin-bottom:8px;">
-        <label style="font-size:0.8em;color:#888;display:block;">{{ t("common.description") }}</label>
-        <textarea class="uh-desc-input" style="width:100%;box-sizing:border-box;background:var(--badge-bg);border:1px solid rgba(255,255,255,0.15);color:var(--white);padding:5px 8px;border-radius:3px;font-family:var(--font);resize:vertical;min-height:50px;">{% if hall.description %}{{ hall.description }}{% endif %}</textarea>
+      <div class="hall-card-field">
+        <label class="hall-card-label">{{ t("common.description") }}</label>
+        <textarea class="uh-desc-input hall-card-input hall-card-textarea">{% if hall.description %}{{ hall.description }}{% endif %}</textarea>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px;">
-        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:#aaa;font-size:0.85em;">
+      <div class="hall-card-row hall-card-row-private">
+        <label class="hall-card-private-label">
           <input type="checkbox" class="uh-private-toggle" {% if hall.is_private %} checked {% endif %}>
           {{ t("common.private") }}
         </label>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <button class="uh-btn-save hm-btn" style="background:var(--accent);color:#000;border:none;font-weight:bold;">{{ t("common.save") }}</button>
-        <a href="/user/{{ ownerUser.user }}/hall/{{ hall.slug }}" class="hm-btn" style="background:rgba(255,255,255,0.05);color:#aaa;border:1px solid rgba(255,255,255,0.1);">{{ t("common.view") }} →</a>
-        <span style="margin-left:4px;font-size:0.8em;color:#666;">
+      <div class="hall-card-row">
+        <button class="uh-btn-save hm-btn hall-card-btn-save">{{ t("common.save") }}</button>
+        <a href="/user/{{ ownerUser.user }}/hall/{{ hall.slug }}" class="hm-btn hall-card-btn-view">{{ t("common.view") }} →</a>
+        <span class="hall-card-posts">
           {{ (t("hall.posts")).replace("{count}", hall.total_items, 1) }}
         </span>
-        <button class="uh-btn-delete hm-btn" style="margin-left:auto;background:rgba(200,0,0,0.25);color:#f55;border:1px solid rgba(200,0,0,0.4);">🗑 {{ t("common.delete") }}</button>
+        <button class="uh-btn-delete hm-btn hall-card-btn-delete">🗑 {{ t("common.delete") }}</button>
       </div>
     {% else %}
-      <div style="font-weight:600;margin-bottom:4px;">
+      <div class="hall-card-title">
         {{ hall.name }}
         {% if hall.is_private %}
-          <span style="font-size:0.7em;opacity:0.6;">🔒</span>
+          <span class="hall-card-title-lock">🔒</span>
         {% endif %}
       </div>
       {% if hall.description %}
-        <div style="font-size:0.82em;color:#888;margin-bottom:8px;">{{ hall.description }}</div>
+        <div class="hall-card-desc">{{ hall.description }}</div>
       {% endif %}
-      <a href="/user/{{ ownerUser.user }}/hall/{{ hall.slug }}" class="hm-btn" style="background:rgba(255,255,255,0.05);color:#aaa;border:1px solid rgba(255,255,255,0.1);">{{ t("common.view") }} →</a>
-      <span style="margin-left:6px;font-size:0.8em;color:#666;">
+      <a href="/user/{{ ownerUser.user }}/hall/{{ hall.slug }}" class="hm-btn hall-card-btn-view">{{ t("common.view") }} →</a>
+      <span class="hall-card-posts hall-card-posts-guest">
         {{ (t("hall.posts")).replace("{count}", hall.total_items, 1) }}
       </span>
     {% endif %}
-    <div class="uh-card-status" style="margin-top:6px;font-size:0.8em;color:#888;min-height:1.2em;"></div>
+    <div class="uh-card-status"></div>
   </div>
 </div>
 {% endfor %}

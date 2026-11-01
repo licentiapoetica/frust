@@ -34,238 +34,6 @@
         <a href="#export"><i class="fa-solid fa-file-export"></i> {{ t("settings.export_data_title") }}</a>
         {% endif %}
       </nav>
-      <style>
-        /* Settings: style guide (square, flat, theme colours, no glow).
-           Inline styles on this page hard-code radii/backgrounds, so surfaces and corners are forced. */
-        .settings {
-          --st-accent: var(--accent, #0096ff);
-          --st-text: var(--text-color, var(--white, #fff));
-          --st-muted: var(--text-muted, #8a8f98);
-          --st-surface: rgba(255, 255, 255, 0.04);
-          --st-border: rgba(255, 255, 255, 0.1);
-          --st-gap: 12px; /* space between quicknav and the section it scrolled to */
-          /* --settings-qn-bottom is measured by JS: bottom edge of the fixed quicknav */
-          padding-top: calc(var(--settings-qn-bottom, 100px) - var(--navbar-h, 50px) + 16px);
-          padding-bottom: var(--settings-tail, 40px);
-          text-align: left;
-        }
-        /* No blurred item backdrop here: the #bg canvas keeps the last item's image after AJAX navigation.
-           Lives in this page's <style>, so it is gone again as soon as another page is loaded. */
-        body:has(#main > .settings) #bg { opacity: 0 !important; visibility: hidden !important; }
-
-        /* Corners: none, anywhere (profile card included) */
-        .settings *, .settings *::before, .settings *::after,
-        #settings-quicknav, #settings-quicknav * { border-radius: 0 !important; }
-
-        /* Quicknav: flat bar, segmented square chips, active = solid accent */
-        #settings-quicknav {
-          gap: 4px; padding: 8px 16px; box-sizing: border-box; transition: right 0.3s ease-in-out;
-          background: var(--bg, #111); border-bottom: 1px solid var(--st-border, rgba(255,255,255,0.1));
-          box-shadow: none;
-        }
-        /* Full width on the page too, like in the page modal. The global .settings grid with
-           justify-content: center shrank the page to its content and centered it. */
-        .settings { display: block; }
-
-        /* Full page: title bar fixed under the navbar like the page modal's header (page-modal.html);
-           JS puts the quicknav right below it and matches its height to the sidebar tab row */
-        #settings-page-header {
-          position: fixed; top: var(--navbar-h, 50px); left: 0; right: 0; z-index: 201;
-          display: flex; align-items: center; justify-content: space-between; gap: 12px;
-          box-sizing: border-box; padding: 12px 20px;
-          background: var(--bg, #111); border-bottom: 1px solid var(--accent);
-          transition: right 0.3s ease-in-out;
-        }
-        #settings-page-header.sph-synced { padding-top: 0; padding-bottom: 0; }
-        #settings-page-header .sph-title {
-          margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-          font-size: 1em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
-          color: var(--text-color, #fff) !important;
-        }
-        #settings-page-header .sph-close {
-          display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
-          width: 36px; height: 36px; margin: 0; padding: 0; background: none;
-          border: 1px solid rgba(255, 255, 255, 0.25); color: var(--text-color, #fff);
-          font-size: 1.6em; line-height: 1; cursor: pointer; transition: color 0.15s, border-color 0.15s;
-        }
-        #settings-page-header .sph-close:hover { color: var(--accent); border-color: var(--accent); }
-        .settings.in-page-modal > #settings-page-header { display: none; }
-        /* In the page modal: the quicknav sticks to the top of the modal body (no fixed offset needed) */
-        /* overflow: the global .settings { overflow-x: hidden } would make .settings its own scroll
-           container, so the sticky quicknav would stick inside a box that never scrolls. clip cuts off
-           the same overflow without creating one, so it sticks to the modal body. */
-        .settings.in-page-modal { display: block; padding-top: 0; overflow: visible !important; overflow-x: clip !important; }
-        .settings.in-page-modal > #settings-quicknav {
-          position: sticky; top: 0; left: auto; right: auto; z-index: 5; margin: 0 0 16px;
-          background: var(--bg, #111);
-        }
-
-        /* Height matched to the sidebar tab row (JS): one line, sideways scroll without a visible scrollbar */
-        #settings-quicknav.qn-synced {
-          flex-wrap: nowrap; align-items: center; padding-top: 0; padding-bottom: 0;
-          overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
-          scrollbar-width: none;
-        }
-        #settings-quicknav.qn-synced::-webkit-scrollbar { display: none; }
-        #settings-quicknav.qn-synced a { flex-shrink: 0; }
-        #settings-quicknav a {
-          display: inline-flex; align-items: center; gap: 6px;
-          padding: 5px 12px; font-size: 0.72em; font-weight: 800;
-          text-transform: uppercase; letter-spacing: 0.08em;
-          border: 1px solid rgba(255, 255, 255, 0.1); background: transparent;
-          color: var(--text-muted, #8a8f98);
-        }
-        #settings-quicknav a i { color: var(--accent); transition: color 0.15s; }
-        #settings-quicknav a:hover { color: var(--text-color, #fff); border-color: var(--accent); background: transparent; }
-        #settings-quicknav a.active, html[theme] #settings-quicknav a.active {
-          background: var(--accent); border-color: var(--accent); color: #000 !important;
-        }
-        #settings-quicknav a.active i { color: #000; }
-
-        /* Headings */
-        .settings > h1 {
-          margin: 0 0 6px; font-size: 1.8em; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15;
-          color: var(--st-text); display: flex; align-items: center; gap: 12px;
-        }
-        .settings > h1 i { color: var(--st-accent); }
-        .settings > h2[id] {
-          scroll-margin-top: calc(var(--settings-qn-bottom, 100px) + var(--st-gap));
-          display: flex; align-items: center; gap: 10px;
-          margin: 32px 0 12px; padding: 0 0 8px;
-          font-size: 0.95em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
-          color: var(--st-text); border-bottom: 1px solid var(--st-border);
-        }
-        .settings > h2[id]::before { content: ''; width: 3px; height: 14px; background: var(--st-accent); flex-shrink: 0; }
-        .settings > h2[id] i { color: var(--st-accent); }
-        /* Target heading: accent underline instead of the global inset/background highlight */
-        .settings > h2[id].anchor-target {
-          box-shadow: none !important; background: transparent !important; padding-left: 0;
-          border-bottom-color: var(--st-accent);
-        }
-        .settings h4 { font-weight: 700; color: var(--st-text) !important; }
-        /* Paragraphs carry no margin of their own (many set one inline); the block after one keeps a gap */
-        .settings p { margin: 0 !important; }
-        .settings p + :not(p, script, style) { margin-top: 12px; }
-        .settings h4 i { color: var(--st-accent); }
-
-        /* Cards / panels */
-        .settings fieldset,
-        .settings :is(.account-settings-wrapper, .export-settings-wrapper, .linked-accounts-wrapper) {
-          background: var(--st-surface) !important; border: 1px solid var(--st-border) !important;
-          padding: 18px !important; box-shadow: none; margin-bottom: 20px !important;
-        }
-        .settings fieldset > legend {
-          display: flex; align-items: center; gap: 8px; padding: 0 8px !important;
-          font-size: 0.72em !important; font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.12em;
-          color: var(--st-muted);
-        }
-        .settings fieldset > legend i { color: var(--st-accent); }
-        .settings #invite-request-section,
-        .settings :is(.invite-criterion, .invite-token-row) { background: rgba(0, 0, 0, 0.2) !important; border-color: var(--st-border) !important; }
-        .settings .invite-criterion.met { border-color: rgba(80, 200, 120, 0.5) !important; }
-        .settings .invite-criterion.unmet { border-color: rgba(255, 90, 90, 0.35) !important; }
-        .settings code { background: rgba(0, 0, 0, 0.3) !important; }
-        .settings .setting-item > label > span { color: var(--st-text); }
-
-        /* Live profile card: flat, user colour as the frame, accent only on interaction */
-        .settings .editable-profile-card { box-shadow: none !important; transition: border-color 0.15s; }
-        .settings .editable-profile-card:hover { box-shadow: none !important; border-color: var(--st-accent); }
-        /* The infobox avatar is 22px for comments; the editor needs a real target */
-        .settings .editable-profile-card { gap: 14px; padding: 12px; align-items: flex-start; }
-        .settings .editable-avatar-container { width: 88px; height: 88px; }
-        .settings .editable-avatar-container #live-preview-avatar {
-          display: block; width: 100%; height: 100%; object-fit: cover; border: 1px solid var(--st-border);
-        }
-        @media (max-width: 600px) {
-          .settings .editable-avatar-container { width: 64px; height: 64px; }
-        }
-        .settings .editable-avatar-container .avatar-hover-overlay { background: rgba(0, 0, 0, 0.6); font-size: 1.4rem; }
-        .settings #avatar-progress-wrapper {
-          position: absolute; inset: 0; z-index: 4; pointer-events: none;
-          align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55);
-        }
-        .settings #avatar-progress-text {
-          color: #fff; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.06em;
-          font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-        }
-        .settings #avatar-progress-fill {
-          position: absolute; left: 0; bottom: 0; height: 3px; width: 0;
-          background: var(--st-accent); transition: width 0.15s linear;
-        }
-        .settings #banner-progress-wrapper { position: absolute; inset: 0 0 auto 0; height: 0; z-index: 4; pointer-events: none; }
-        .settings #banner-progress-fill {
-          position: absolute; top: 0; left: 0; height: 3px; width: 0;
-          background: var(--st-accent); transition: width 0.15s linear;
-        }
-        .settings #banner-progress-text {
-          position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 6px;
-          padding: 3px 8px; background: rgba(0, 0, 0, 0.75); border: 1px solid var(--st-accent);
-          color: #fff; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
-          font-variant-numeric: tabular-nums; white-space: nowrap;
-        }
-        .settings .editable-profile-card.is-banner-uploading #desc-edit-controls :is(#banner-choose-btn, #banner-edit-btn, #banner-remove-btn) {
-          opacity: 0.5; pointer-events: none;
-        }
-        .settings #desc-edit-controls .button i { pointer-events: none; } /* delegated handlers check the button's id */
-        .settings .editable-avatar-container.is-uploading { pointer-events: none; }
-        .settings .editable-avatar-container.is-uploading .avatar-hover-overlay,
-        .settings .editable-avatar-container.is-uploading .avatar-quick-remove { opacity: 0 !important; }
-        .settings .editable-avatar-container:hover .avatar-preview-img { outline: 1px solid var(--st-accent); outline-offset: -1px; }
-        .settings .avatar-quick-remove {
-          top: 0; right: 0; width: 20px; height: 20px;
-          background: #000; color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.6);
-          box-shadow: none; transition: background 0.15s, color 0.15s;
-        }
-        .settings .avatar-quick-remove:hover { transform: none; background: #ff6b6b; color: #000; }
-        .settings .avatar-quick-remove i { pointer-events: none; } /* click target must be the button (settings.js checks its id) */
-        .settings .color-picker-badge {
-          width: 22px; height: 22px; border: 1px solid var(--st-border); box-shadow: none;
-          text-shadow: none; transition: border-color 0.15s;
-        }
-        .settings .color-picker-badge:hover { transform: none; border-color: var(--st-text); }
-        .settings .user-infobox-username[contenteditable="true"],
-        .settings .user-infobox-description[contenteditable="true"] {
-          border: 1px solid transparent; border-bottom-color: var(--st-border);
-          transition: border-color 0.15s, background 0.15s;
-        }
-        .settings .user-infobox-description[contenteditable="true"] { border-color: var(--st-border); }
-        .settings :is(.user-infobox-username, .user-infobox-description)[contenteditable="true"]:hover {
-          border-color: var(--st-border); border-bottom-color: var(--st-accent); background: var(--st-surface);
-        }
-        .settings :is(.user-infobox-username, .user-infobox-description)[contenteditable="true"]:focus {
-          outline: none; border: 1px solid var(--st-accent); background: rgba(0, 0, 0, 0.3);
-        }
-        .settings #desc-edit-controls .button { min-height: 28px; padding: 0 10px !important; font-size: 0.68em !important; }
-
-        /* Form controls */
-        .settings :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]):not([type=hidden]), select, textarea) {
-          background: var(--st-surface) !important; border: 1px solid var(--st-border) !important;
-          color: var(--st-text) !important; font-family: inherit; box-shadow: none !important; outline: none;
-          transition: border-color 0.15s;
-        }
-        .settings :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]):not([type=hidden]), select) {
-          min-height: 34px; padding: 6px 10px !important; box-sizing: border-box;
-        }
-        .settings :is(input, select, textarea):focus { border-color: var(--st-accent) !important; }
-        .settings select option { background: var(--bg, #111); color: var(--st-text); }
-        .settings :is(input[type=checkbox], input[type=radio]) { accent-color: var(--st-accent); }
-
-        /* Buttons: solid accent primary, outline secondary, outline red danger; no lift, no glow */
-        .settings .button {
-          display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-          min-height: 34px; padding: 0 16px; box-sizing: border-box;
-          border: 1px solid var(--st-border); background: transparent; color: var(--st-text);
-          font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.76em;
-          transition: background 0.15s, color 0.15s, border-color 0.15s;
-        }
-        .settings .button:hover:not(:disabled) { transform: none; filter: none; border-color: var(--st-accent); color: var(--st-accent); }
-        .settings :is(.button-primary, button[type=submit].button) { background: var(--st-accent); border-color: var(--st-accent); color: #000; }
-        .settings :is(.button-primary, button[type=submit].button):hover:not(:disabled) { background: transparent; color: var(--st-accent); }
-        .settings .button-danger { background: transparent; border-color: rgba(255, 107, 107, 0.5); color: #ff6b6b; }
-        .settings .button-danger:hover:not(:disabled) { background: #ff6b6b; border-color: #ff6b6b; color: #000; }
-        .settings .button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .settings :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--st-accent); outline-offset: 2px; }
-      </style>
       <script nonce="{{ csp_nonce }}">
       (function(){
         var nav = document.getElementById('settings-quicknav');
@@ -520,13 +288,13 @@
       <div class="preferences-settings-wrapper">
 
         <!-- 1. Appearance & Theme -->
-        <fieldset style="border: 1px solid var(--nav-border-color); padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; background: rgba(0,0,0,0.06);">
-          <legend style="width: auto; padding: 0 8px; font-size: 1.05em; font-weight: bold;"><i class="fa-solid fa-palette"></i> {{ t("settings.appearance_section") }}</legend>
+        <fieldset>
+          <legend><i class="fa-solid fa-palette"></i> {{ t("settings.appearance_section") }}</legend>
           
-          <div class="setting-item" style="margin-top: 10px;">
-            <label for="website_theme_select" style="display: block; margin-bottom: 5px; font-weight: bold;">{{ t("settings.theme") }}</label>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <select id="website_theme_select" class="input" style="flex: 1; max-width: 300px;">
+          <div class="setting-item settings-row-first">
+            <label for="website_theme_select" class="settings-field-label">{{ t("settings.theme") }}</label>
+            <div class="settings-select-row">
+              <select id="website_theme_select" class="input settings-select">
                 {% for key, t in themes|entries %}
                 <option value="{{ t }}" {% if theme == t %} selected {% endif %}>{{ t }}</option>
                 {% endfor %}
@@ -534,10 +302,10 @@
             </div>
           </div>
 
-          <div class="setting-item" style="margin-top: 18px;">
-            <label for="website_font_select" style="display: block; margin-bottom: 5px; font-weight: bold;">{{ t("settings.website_font") }}</label>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <select id="website_font_select" class="input" style="flex: 1; max-width: 300px;">
+          <div class="setting-item settings-row-spaced">
+            <label for="website_font_select" class="settings-field-label">{{ t("settings.website_font") }}</label>
+            <div class="settings-select-row">
+              <select id="website_font_select" class="input settings-select">
                 <option value="">{{ t("settings.font_default") }}</option>
                 {% for key, font in fonts|entries %}
                 <option value="{{ font.file }}" data-faces='{{ font.faces|tojson }}' {% if session.font in font.files %} selected {% endif %}>{{ font.name }}</option>
@@ -547,33 +315,33 @@
           </div>
 
           {% if allow_language_change %}
-          <div class="setting-item" style="margin-top: 18px;">
-            <label for="language_select" style="display: block; margin-bottom: 5px; font-weight: bold;">{{ t("settings.language") }}</label>
-            <select id="language_select" class="input" style="padding: 6px 10px; max-width: 300px;">
+          <div class="setting-item settings-row-spaced">
+            <label for="language_select" class="settings-field-label">{{ t("settings.language") }}</label>
+            <select id="language_select" class="input settings-select">
               <option value="" {% if not session.language %} selected {% endif %}>{{ t("settings.language_default") }}</option>
               <option value="en" {% if session.language == "en" %} selected {% endif %}>{{ t("settings.language_en") }}</option>
               <option value="de" {% if session.language == "de" %} selected {% endif %}>{{ t("settings.language_de") }}</option>
               <option value="nl" {% if session.language == "nl" %} selected {% endif %}>{{ t("settings.language_nl") }}</option>
               <option value="zange" {% if session.language == "zange" %} selected {% endif %}>{{ t("settings.language_zange") }}</option>
             </select>
-            <small class="text-muted" style="display: block; margin-top: 4px;">{{ t("settings.language_hint") }}</small>
+            <small class="text-muted settings-hint-block">{{ t("settings.language_hint") }}</small>
           </div>
           {% endif %}
 
-          <div class="setting-item" style="margin-top: 18px;">
-            <label for="show_background_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row-spaced">
+            <label for="show_background_toggle" class="settings-check">
               <input type="checkbox" id="show_background_toggle" {% if session.show_background != false %} checked {% endif %}>
               <span>{{ t("settings.enable_bg_blur") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.enable_bg_blur_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.enable_bg_blur_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="onara_enabled_toggle" style="cursor: {% if (onara_cfg != none and onara_cfg != none) %} not-allowed {% else %} pointer {% endif %}; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="onara_enabled_toggle" class="settings-check{% if (onara_cfg != none and onara_cfg != none) %} settings-check-locked{% endif %}">
               <input type="checkbox" id="onara_enabled_toggle" {% if (onara_cfg != none and onara_cfg != none) %} disabled {% if onara_cfg %} checked {% endif %} {% endif %}>
               <span>Enable Onara viewer</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">
+            <small class="text-muted settings-hint">
               {% if (onara_cfg != none and onara_cfg != none) %}
                 Controlled by site configuration ({% if onara_cfg %}enabled globally{% else %} disabled globally{% endif %}).
               {% else %}
@@ -582,8 +350,8 @@
             </small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="show_motd_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="show_motd_toggle" class="settings-check">
               <input type="checkbox" id="show_motd_toggle" {% if session.show_motd != false %} checked {% endif %}>
               <span>{{ t("settings.show_motd") }}</span>
             </label>
@@ -591,104 +359,104 @@
         </fieldset>
 
         <!-- 2. Interface & Layout -->
-        <fieldset style="border: 1px solid var(--nav-border-color); padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; background: rgba(0,0,0,0.06);">
-          <legend style="width: auto; padding: 0 8px; font-size: 1.05em; font-weight: bold;"><i class="fa-solid fa-desktop"></i> {{ t("settings.ui_section") }}</legend>
+        <fieldset>
+          <legend><i class="fa-solid fa-desktop"></i> {{ t("settings.ui_section") }}</legend>
           
           <div class="setting-item">
-            <label for="use_new_layout_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+            <label for="use_new_layout_toggle" class="settings-check">
               <input type="checkbox" id="use_new_layout_toggle" {% if session.use_new_layout == true %} checked {% endif %}>
               <span>{{ t("settings.modern_layout") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.modern_layout_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.modern_layout_hint") }}</small>
           </div>
 
           {% if not session.use_new_layout %}
-          <div class="setting-item" style="margin-top: 15px;">
+          <div class="setting-item settings-row">
             <label for="alternative_infobox_toggle"
-              style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+              class="settings-check">
               <input type="checkbox" id="alternative_infobox_toggle" {% if session.use_alternative_infobox == true %} checked {% endif %}>
               <span>{{ t("settings.alternative_infobox") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.alternative_infobox_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.alternative_infobox_hint") }}</small>
           </div>
-          <div class="setting-item" style="margin-top: 15px;">
+          <div class="setting-item settings-row">
             <label for="alternative_steuerung_toggle"
-              style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+              class="settings-check">
               <input type="checkbox" id="alternative_steuerung_toggle" {% if session.use_alternative_steuerung == true %} checked {% endif %}>
               <span>{{ t("settings.alternative_steuerung") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.alternative_steuerung_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.alternative_steuerung_hint") }}</small>
           </div>
           {% endif %}
 
           {% if show_koepfe %}
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="hide_koepfe_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="hide_koepfe_toggle" class="settings-check">
               <input type="checkbox" id="hide_koepfe_toggle" {% if session.hide_koepfe == true %} checked {% endif %}>
               <span>{{ t("settings.hide_koepfe") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.hide_koepfe_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.hide_koepfe_hint") }}</small>
           </div>
           {% endif %}
         </fieldset>
 
         <!-- 3. Playback & Navigation Controls -->
-        <fieldset style="border: 1px solid var(--nav-border-color); padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; background: rgba(0,0,0,0.06);">
-          <legend style="width: auto; padding: 0 8px; font-size: 1.05em; font-weight: bold;"><i class="fa-solid fa-play"></i> Playback & Navigation</legend>
+        <fieldset>
+          <legend><i class="fa-solid fa-play"></i> Playback & Navigation</legend>
 
           <div class="setting-item">
-            <label for="disable_autoplay_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+            <label for="disable_autoplay_toggle" class="settings-check">
               <input type="checkbox" id="disable_autoplay_toggle" {% if session.disable_autoplay == true %} checked {% endif %}>
               <span>{{ t("settings.disable_autoplay") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.disable_autoplay_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.disable_autoplay_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="disable_swiping_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="disable_swiping_toggle" class="settings-check">
               <input type="checkbox" id="disable_swiping_toggle" {% if session.disable_swiping == true %} checked {% endif %}>
               <span>{{ t("settings.disable_swiping") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.disable_swiping_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.disable_swiping_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="wheel_nav_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="wheel_nav_toggle" class="settings-check">
               <input type="checkbox" id="wheel_nav_toggle">
               <span>{{ t("settings.scroll_nav") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.scroll_nav_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.scroll_nav_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="image_expand_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="image_expand_toggle" class="settings-check">
               <input type="checkbox" id="image_expand_toggle">
               <span>{{ (t("settings.image_expand_on_click") or "Expand images inline on click") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ (t("settings.image_expand_on_click_hint") or "Instead of opening the scroll zoom modal, clicking an image will expand it to full size within the page.") }}</small>
+            <small class="text-muted settings-hint">{{ (t("settings.image_expand_on_click_hint") or "Instead of opening the scroll zoom modal, clicking an image will expand it to full size within the page.") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="f_for_fullscreen_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="f_for_fullscreen_toggle" class="settings-check">
               <input type="checkbox" id="f_for_fullscreen_toggle">
               <span>{{ (t("settings.f_for_fullscreen") or "F is for Fullscreen") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ (t("settings.f_for_fullscreen_hint") or "Pressing F will toggle fullscreen in the video player instead of favoriting the post (Shift+F to favorite).") }}</small>
+            <small class="text-muted settings-hint">{{ (t("settings.f_for_fullscreen_hint") or "Pressing F will toggle fullscreen in the video player instead of favoriting the post (Shift+F to favorite).") }}</small>
           </div>
         </fieldset>
 
         <!-- 4. Comments & Discussion -->
         {% if enable_comments %}
-        <fieldset style="border: 1px solid var(--nav-border-color); padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; background: rgba(0,0,0,0.06);">
-          <legend style="width: auto; padding: 0 8px; font-size: 1.05em; font-weight: bold;"><i class="fa-solid fa-comments"></i> Comments & Discussion</legend>
+        <fieldset>
+          <legend><i class="fa-solid fa-comments"></i> Comments & Discussion</legend>
 
           <div class="setting-item">
-            <label for="comment_display_mode_select" style="display: block; margin-bottom: 5px; font-weight: bold;">{{ t("settings.comment_display_mode") }}</label>
-            <select id="comment_display_mode_select" class="input" style="padding: 6px 10px; max-width: 300px;" {% if session.force_comment_display_mode %} disabled {% endif %}>
+            <label for="comment_display_mode_select" class="settings-field-label">{{ t("settings.comment_display_mode") }}</label>
+            <select id="comment_display_mode_select" class="input settings-select" {% if session.force_comment_display_mode %} disabled {% endif %}>
               <option value="0" {% if session.comment_display_mode == 0 %} selected {% endif %}>{{ t("settings.comment_display_tree") }}</option>
               <option value="1" {% if session.comment_display_mode == 1 %} selected {% endif %}>{{ t("settings.comment_display_linear") }}</option>
             </select>
-            <small class="text-muted" style="display: block; margin-top: 4px;">
+            <small class="text-muted settings-hint-block">
               {% if session.force_comment_display_mode %}
                 <strong>{{ (t("settings.forced_mode_notice") or "This setting is managed by an administrator.") }}</strong>
               {% else %}
@@ -697,155 +465,155 @@
             </small>
           </div>
 
-          <div class="setting-item" style="margin-top: 18px;">
-            <label for="quote_emojis_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row-spaced">
+            <label for="quote_emojis_toggle" class="settings-check">
               <input type="checkbox" id="quote_emojis_toggle" {% if session.quote_emojis != false %} checked {% endif %}>
               <span>{{ t("settings.render_emojis") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.render_emojis_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.render_emojis_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="embed_youtube_in_comments_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="embed_youtube_in_comments_toggle" class="settings-check">
               <input type="checkbox" id="embed_youtube_in_comments_toggle" {% if session.embed_youtube_in_comments != false %} checked {% endif %}>
               <span>{{ t("settings.embed_yt") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.embed_yt_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.embed_yt_hint") }}</small>
           </div>
         </fieldset>
         {% endif %}
 
         <!-- 5. Content Preferences & Blurring -->
-        <fieldset style="border: 1px solid var(--nav-border-color); padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; background: rgba(0,0,0,0.06);">
-          <legend style="width: auto; padding: 0 8px; font-size: 1.05em; font-weight: bold;"><i class="fa-solid fa-eye-slash"></i> {{ t("settings.content_preferences_section") }}</legend>
+        <fieldset>
+          <legend><i class="fa-solid fa-eye-slash"></i> {{ t("settings.content_preferences_section") }}</legend>
           
           <div class="setting-item">
-            <label for="blur_sfw_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+            <label for="blur_sfw_toggle" class="settings-check">
               <input type="checkbox" id="blur_sfw_toggle">
               <span>{{ t("settings.blur_sfw") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.blur_sfw_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.blur_sfw_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="blur_nsfw_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="blur_nsfw_toggle" class="settings-check">
               <input type="checkbox" id="blur_nsfw_toggle">
               <span>{{ t("settings.blur_nsfw") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.blur_nsfw_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.blur_nsfw_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="blur_nsfl_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="blur_nsfl_toggle" class="settings-check">
               <input type="checkbox" id="blur_nsfl_toggle">
               <span>{{ t("settings.blur_nsfl") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.blur_nsfl_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.blur_nsfl_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="blur_untagged_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="blur_untagged_toggle" class="settings-check">
               <input type="checkbox" id="blur_untagged_toggle">
               <span>{{ t("settings.blur_untagged") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.blur_untagged_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.blur_untagged_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="blur_detail_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="blur_detail_toggle" class="settings-check">
               <input type="checkbox" id="blur_detail_toggle">
               <span>{{ (t("settings.blur_detail") or "Click to reveal item on detail page") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ (t("settings.blur_detail_hint") or "Require clicking to reveal blurred media on the post detail page instead of showing it immediately.") }}</small>
+            <small class="text-muted settings-hint">{{ (t("settings.blur_detail_hint") or "Require clicking to reveal blurred media on the post detail page instead of showing it immediately.") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label for="hide_item_ratings_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label for="hide_item_ratings_toggle" class="settings-check">
               <input type="checkbox" id="hide_item_ratings_toggle">
               <span>{{ (t("settings.hide_item_ratings") or "Hide item ratings") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ (t("settings.hide_item_ratings_hint") or "Don't show SFW/NSFW rating indicators on main page items") }}</small>
+            <small class="text-muted settings-hint">{{ (t("settings.hide_item_ratings_hint") or "Don't show SFW/NSFW rating indicators on main page items") }}</small>
           </div>
         </fieldset>
 
         <!-- 6. Privacy & Upload Defaults -->
-        <fieldset style="border: 1px solid var(--nav-border-color); padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; background: rgba(0,0,0,0.06);">
-          <legend style="width: auto; padding: 0 8px; font-size: 1.05em; font-weight: bold;"><i class="fa-solid fa-user-shield"></i> Privacy & Defaults</legend>
+        <fieldset>
+          <legend><i class="fa-solid fa-user-shield"></i> Privacy & Defaults</legend>
 
           <div class="setting-item">
-            <label for="favorites_private_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+            <label for="favorites_private_toggle" class="settings-check">
               <input type="checkbox" id="favorites_private_toggle" {% if session.favorites_private == true %} checked {% endif %}>
               <span>{{ t("settings.favorites_private") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.favorites_private_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.favorites_private_hint") }}</small>
             
-            <div class="sub-setting-item" style="margin-left: 25px; margin-top: 10px;">
-              <label for="hide_fav_badge_toggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+            <div class="sub-setting-item settings-subrow">
+              <label for="hide_fav_badge_toggle" class="settings-check">
                 <input type="checkbox" id="hide_fav_badge_toggle" {% if session.hide_fav_badge == true %} checked {% endif %}>
                 <span>{{ t("settings.hide_fav_badge") }}</span>
               </label>
-              <small class="text-muted" style="margin-left: 25px;">{{ t("settings.hide_fav_badge_hint") }}</small>
+              <small class="text-muted settings-hint">{{ t("settings.hide_fav_badge_hint") }}</small>
             </div>
           </div>
 
           {% if (allow_user_upload_visibility != false and not session.is_anon) %}
-          <div class="setting-item" style="margin-top: 18px;">
-            <label for="default_upload_visibility_select" style="display: block; font-weight: bold; margin-bottom: 5px;">
+          <div class="setting-item settings-row-spaced">
+            <label for="default_upload_visibility_select" class="settings-field-label">
               <span>{{ t("settings.default_upload_visibility") }}</span>
             </label>
-            <select id="default_upload_visibility_select" class="form-control" style="width: 220px; padding: 6px 10px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--nav-border-color); border-radius: 4px;">
+            <select id="default_upload_visibility_select" class="form-control settings-visibility-select">
               <option value="0" {% if (session.default_upload_visibility == 0 or (not session.default_upload_visibility and session.default_upload_visibility != 0)) %} selected {% endif %}>{{ t("visibility.public") }}</option>
               <option value="1" {% if session.default_upload_visibility == 1 %} selected {% endif %}>{{ t("visibility.unlisted") }}</option>
               <option value="2" {% if session.default_upload_visibility == 2 %} selected {% endif %}>{{ t("visibility.private") }}</option>
             </select>
-            <small class="text-muted" style="display: block; margin-top: 5px;">{{ t("settings.default_upload_visibility_hint") }}</small>
+            <small class="text-muted settings-hint-block-loose">{{ t("settings.default_upload_visibility_hint") }}</small>
           </div>
           {% endif %}
         </fieldset>
 
         <!-- 7. Notifications -->
-        <fieldset style="border: 1px solid var(--nav-border-color); padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; background: rgba(0,0,0,0.06);">
-          <legend style="width: auto; padding: 0 8px; font-size: 1.05em; font-weight: bold;"><i class="fa-solid fa-bell"></i> {{ t("settings.notifications_section") }}</legend>
+        <fieldset>
+          <legend><i class="fa-solid fa-bell"></i> {{ t("settings.notifications_section") }}</legend>
           
           <div class="setting-item">
-            <label class="checkbox-container" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+            <label class="checkbox-container settings-check">
               <input type="checkbox" id="chk-receive-system-notifications" {% if session.receive_system_notifications != false %} checked {% endif %}>
               <span>{{ t("settings.receive_system_notifications") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.receive_system_notifications_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.receive_system_notifications_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label class="checkbox-container" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label class="checkbox-container settings-check">
               <input type="checkbox" id="chk-receive-user-notifications" {% if session.receive_user_notifications != false %} checked {% endif %}>
               <span>{{ t("settings.receive_user_notifications") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.receive_user_notifications_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.receive_user_notifications_hint") }}</small>
           </div>
 
-          <div class="setting-item" style="margin-top: 15px;">
-            <label class="checkbox-container" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+          <div class="setting-item settings-row">
+            <label class="checkbox-container settings-check">
               <input type="checkbox" id="chk-do-not-disturb" {% if session.do_not_disturb == true %} checked {% endif %}>
               <span>{{ t("settings.do_not_disturb") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.do_not_disturb_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.do_not_disturb_hint") }}</small>
           </div>
         </fieldset>
 
         <!-- 8. Flash / SWF Settings (if enabled) -->
         {% if enable_swf %}
-        <fieldset style="border: 1px solid var(--nav-border-color); padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; background: rgba(0,0,0,0.06);">
-          <legend style="width: auto; padding: 0 8px; font-size: 1.05em; font-weight: bold;"><i class="fa-solid fa-bolt"></i> {{ t("settings.flash_section") }}</legend>
+        <fieldset>
+          <legend><i class="fa-solid fa-bolt"></i> {{ t("settings.flash_section") }}</legend>
 
           <div class="setting-item">
             <label for="ruffle_background_toggle"
-              style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+              class="settings-check">
               <input type="checkbox" id="ruffle_background_toggle" {% if session.ruffle_background != false %} checked {% endif %}>
               <span>{{ t("settings.flash_bg") }}</span>
             </label>
-            <small class="text-muted" style="margin-left: 25px;">{{ t("settings.flash_bg_hint") }}</small>
+            <small class="text-muted settings-hint">{{ t("settings.flash_bg_hint") }}</small>
           </div>
-          <div id="ruffle-settings-status" class="avatar-status" style="margin-top: 10px;"></div>
+          <div id="ruffle-settings-status" class="avatar-status"></div>
         </fieldset>
         {% endif %}
 
@@ -855,38 +623,38 @@
       <!-- ═══════════════════════════════ PROFILE ═══════════════════════════════ -->
       <h2 id="profile"><i class="fa-solid fa-user-pen"></i> {{ t("settings.profile") }}</h2>
       
-      <p class="text-muted" style="margin-bottom: 16px; font-size: 0.9em; display: flex; align-items: center; gap: 8px;">
-        <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent);"></i> Click directly on your profile card below to edit your avatar, banner, name, color, or bio.
+      <p class="text-muted settings-profile-hint">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Click directly on your profile card below to edit your avatar, banner, name, color, or bio.
       </p>
 
-      <div class="direct-edit-profile-card-wrapper" style="position: relative; max-width: 750px; margin-bottom: 30px;">
+      <div class="direct-edit-profile-card-wrapper settings-profile-wrap">
         
         <!-- Interactive User Card -->
         <div class="user-infobox-block editable-profile-card" id="live-profile-preview-box" 
              style="--author-accent: {{ (session.username_color or "var(--accent)") }}; --author-border: {{ (session.username_color or "var(--accent)") }}; {% if (banner_file and user_banner_enabled) %} --author-banner: url('/a/{{ banner_file }}?t={{ now() }}'); --author-banner-position: {{ ("center top" if banner_position == "center" else (banner_position or "center top")) }}; --author-banner-size: {{ (banner_size or "cover") }}; {% endif %}">
              
           <!-- Banner upload progress: bar along the card's top edge + badge (settings.js toggles display) -->
-          <div id="banner-progress-wrapper" style="display: none;" role="progressbar" aria-label="Banner upload" aria-valuemin="0" aria-valuemax="100">
+          <div id="banner-progress-wrapper" class="settings-hidden" role="progressbar" aria-label="Banner upload" aria-valuemin="0" aria-valuemax="100">
             <div id="banner-progress-fill"></div>
             <span id="banner-progress-text"></span>
           </div>
 
           <!-- Avatar with Hover Overlay -->
           <div class="user-infobox-avatar editable-avatar-container" id="avatar-choose-btn" title="Click to change avatar">
-            <a href="#" data-on="click:prevent,chooseAvatarFile" style="display:block; position:relative; width:100%; height:100%;">
+            <a href="#" data-on="click:prevent,chooseAvatarFile" class="settings-avatar-link">
               {% if avatar_file %}
                 <img id="live-preview-avatar" class="avatar-preview-img" src="/a/{{ avatar_file }}" />
               {% elif (session.avatar and (session.avatar > 0)) %}
                 <img id="live-preview-avatar" class="avatar-preview-img" src="/t/{{ session.avatar }}.webp" />
               {% else %}
-                <img id="live-preview-avatar" class="avatar-preview-img" src="/a/default.png" style="border-color: #444;" />
+                <img id="live-preview-avatar" class="avatar-preview-img settings-avatar-default" src="/a/default.png" />
               {% endif %}
               <div class="avatar-hover-overlay">
                 <i class="fa-solid fa-camera"></i>
               </div>
             </a>
             <!-- Upload progress, drawn over the live preview (settings.js toggles display) -->
-            <div id="avatar-progress-wrapper" style="display: none;" role="progressbar" aria-label="Avatar upload" aria-valuemin="0" aria-valuemax="100">
+            <div id="avatar-progress-wrapper" class="settings-hidden" role="progressbar" aria-label="Avatar upload" aria-valuemin="0" aria-valuemax="100">
               <span id="avatar-progress-text"></span>
               <div id="avatar-progress-fill"></div>
             </div>
@@ -899,28 +667,28 @@
 
           <div class="user-infobox-info">
             <div class="user-infobox-header">
-              <div class="user-infobox-username-container" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div class="user-infobox-username-container settings-name-row">
                 
                 <!-- Editable Display Name -->
                 <div class="inline-edit-username-wrapper">
                   <span id="live-preview-username" class="user-infobox-username" contenteditable="true" spellcheck="false" title="Click to edit display name">{{ (session.display_name or session.user) }}</span>
-                  <i class="fa-solid fa-pen" style="font-size: 0.65em; opacity: 0.5; margin-left: 2px;" title="Editable"></i>
+                  <i class="fa-solid fa-pen settings-edit-pen" title="Editable"></i>
                 </div>
 
                 <!-- Color Picker Badge -->
-                <div class="inline-color-picker-wrapper" style="position: relative; display: inline-flex; align-items: center;">
-                  <label for="username_color_picker" class="color-picker-badge" id="color-picker-badge" style="background: {{ (session.username_color or "var(--accent)") }};" title="Click to change username color">
+                <div class="inline-color-picker-wrapper settings-color-wrap">
+                  <label for="username_color_picker" class="color-picker-badge settings-color-badge" id="color-picker-badge" style="--settings-badge-color: {{ (session.username_color or "var(--accent)") }};" title="Click to change username color">
                     <i class="fa-solid fa-palette"></i>
                   </label>
                   <!-- Sits exactly under the badge: the native picker popup anchors to this input's box -->
-                  <input type="color" id="username_color_picker" value="{{ (session.username_color or "#ffffff") }}" tabindex="-1" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; pointer-events: none;">
-                  <input type="text" id="username_color_hex" value="{{ (session.username_color or "#ffffff") }}" style="display: none;">
+                  <input type="color" id="username_color_picker" value="{{ (session.username_color or "#ffffff") }}" class="settings-color-input" tabindex="-1" aria-hidden="true">
+                  <input type="text" id="username_color_hex" value="{{ (session.username_color or "#ffffff") }}" class="settings-hidden">
                 </div>
                 
                 <!-- Hidden Backing Save Buttons for JS event trigger -->
-                <button type="button" id="btn-update-display-name" class="inline-save-btn" style="display: none;"><i class="fa-solid fa-check"></i> Save Name</button>
-                <button type="button" id="btn-save-username-color" style="display: none;">Save Color</button>
-                <button type="button" id="btn-reset-username-color" style="display: none;">Reset</button>
+                <button type="button" id="btn-update-display-name" class="inline-save-btn settings-hidden"><i class="fa-solid fa-check"></i> Save Name</button>
+                <button type="button" id="btn-save-username-color" class="settings-hidden">Save Color</button>
+                <button type="button" id="btn-reset-username-color" class="settings-hidden">Reset</button>
 
               </div>
               <span class="user-infobox-timestamp"><a href="#" class="timestamp-link"><time>just now</time></a></span>
@@ -933,14 +701,14 @@
                 <div class="user-infobox-description" id="live-preview-description" contenteditable="true" spellcheck="false" title="Click to edit description" data-placeholder="Click to write a bio...">
                   {{ (session.description or "") }}
                 </div>
-                <div class="description-edit-controls" id="desc-edit-controls" style="display: flex; margin-top: 10px; gap: 8px; align-items: center; flex-wrap: wrap;">
-                  <button type="button" id="btn-save-description" class="button button-sm" style="padding: 4px 10px; font-size: 0.8em;"><i class="fa-solid fa-floppy-disk"></i> {{ t("settings.save_description") }}</button>
-                  <button type="button" id="btn-clear-description" class="button button-danger button-sm" style="padding: 4px 10px; font-size: 0.8em;"><i class="fa-solid fa-trash"></i> {{ t("settings.clear") }}</button>
+                <div class="description-edit-controls settings-desc-controls" id="desc-edit-controls">
+                  <button type="button" id="btn-save-description" class="button button-sm"><i class="fa-solid fa-floppy-disk"></i> {{ t("settings.save_description") }}</button>
+                  <button type="button" id="btn-clear-description" class="button button-danger button-sm"><i class="fa-solid fa-trash"></i> {{ t("settings.clear") }}</button>
                   {% if user_banner_enabled %}
-                  <button type="button" id="banner-choose-btn" class="button button-sm" style="padding: 4px 10px; font-size: 0.8em;"><i class="fa-solid fa-camera"></i> Change Banner</button>
+                  <button type="button" id="banner-choose-btn" class="button button-sm"><i class="fa-solid fa-camera"></i> Change Banner</button>
                   {% if banner_file %}
-                  <button type="button" id="banner-edit-btn" class="button button-sm" style="padding: 4px 10px; font-size: 0.8em;"><i class="fa-solid fa-arrows-up-down-left-right"></i> Reposition</button>
-                  <button type="button" id="banner-remove-btn" class="button button-danger button-sm" style="padding: 4px 10px; font-size: 0.8em;"><i class="fa-solid fa-trash"></i> Remove Banner</button>
+                  <button type="button" id="banner-edit-btn" class="button button-sm"><i class="fa-solid fa-arrows-up-down-left-right"></i> Reposition</button>
+                  <button type="button" id="banner-remove-btn" class="button button-danger button-sm"><i class="fa-solid fa-trash"></i> Remove Banner</button>
                   {% endif %}
                   {% endif %}
                 </div>
@@ -955,53 +723,22 @@
 
 
         <!-- Hidden Backing Elements for JavaScript compatibility -->
-        <input type="file" id="avatar-file-input" accept="image/gif,image/jpeg,image/png,image/webp" style="display: none;">
-        <span id="avatar-filename" style="display: none;"></span>
-        <button type="button" id="avatar-upload-btn" style="display: none;"></button>
+        <input type="file" id="avatar-file-input" accept="image/gif,image/jpeg,image/png,image/webp" class="settings-hidden">
+        <span id="avatar-filename" class="settings-hidden"></span>
+        <button type="button" id="avatar-upload-btn" class="settings-hidden"></button>
 
-        <input type="file" id="banner-file-input" accept="image/gif,image/jpeg,image/png,image/webp" style="display: none;">
-        <span id="banner-filename" style="display: none;"></span>
-        <button type="button" id="banner-upload-btn" style="display: none;"></button>
+        <input type="file" id="banner-file-input" accept="image/gif,image/jpeg,image/png,image/webp" class="settings-hidden">
+        <span id="banner-filename" class="settings-hidden"></span>
+        <button type="button" id="banner-upload-btn" class="settings-hidden"></button>
 
-        <input type="text" id="display_name_input" value="{{ (session.display_name or "") }}" style="display: none;">
+        <input type="text" id="display_name_input" value="{{ (session.display_name or "") }}" class="settings-hidden">
         {% if enable_profile_description %}
-        <textarea id="profile_description" style="display: none;">{{ (session.description or "") }}</textarea>
+        <textarea id="profile_description" class="settings-hidden">{{ (session.description or "") }}</textarea>
         {% endif %}
 
       </div>
       {% endif %}
 
-      <!-- Passkey info cards, shared by the anonymous "Passkey" and the registered "Passkeys" sections -->
-      <style>
-        .settings .pk-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-        .settings .pk-card {
-          display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-          background: rgba(0, 0, 0, 0.25); border: 1px solid var(--st-border); border-left: 3px solid var(--st-accent);
-        }
-        .settings .pk-card > .pk-icon { color: var(--st-accent); font-size: 1.2em; flex-shrink: 0; width: 20px; text-align: center; }
-        .settings .pk-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-        .settings .pk-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; font-size: 0.92em; color: var(--st-text); }
-        .settings .pk-chip {
-          display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px;
-          font-size: 0.68em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
-          border: 1px solid var(--st-border); color: var(--st-muted);
-        }
-        .settings .pk-chip.is-primary { border-color: var(--st-accent); color: var(--st-accent); }
-        .settings .pk-chip.is-current { border-color: #51cf66; color: #51cf66; }
-        .settings .pk-chip.is-current i { font-size: 0.6em; }
-        .settings .pk-locked { color: var(--st-muted); padding: 0 10px; flex-shrink: 0; }
-        .settings .pk-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.76em; color: var(--st-muted); }
-        .settings .pk-meta span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-        .settings .pk-meta code { background: none !important; padding: 0; color: var(--st-text); font-size: 1em; }
-        .settings .pw-off-notice {
-          display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; font-size: 0.85em;
-          border: 1px solid var(--st-accent); background: rgba(0, 0, 0, 0.25); color: var(--st-text);
-        }
-        .settings .pw-off-notice > i { color: var(--st-accent); margin-top: 2px; }
-        .settings .pw-disable { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--st-border); }
-        .settings #pw-disable-form { flex-direction: column; gap: 8px; width: 100%; }
-        .settings .pk-count { font-size: 0.72em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--st-muted); margin-bottom: 8px; }
-      </style>
       <script nonce="{{ csp_nonce }}">
       F0ckActions.define({
         chooseAvatarFile: () => { document.getElementById('avatar-file-input').click(); },
@@ -1055,15 +792,15 @@
       {% if session.is_anon %}
       <!-- ═══════════════════════════════ ANONYMOUS PASSKEY IDENTITY ═══════════════════════════════ -->
       <h2 id="anon-passkey"><i class="fa-solid fa-fingerprint"></i> Passkey</h2>
-      <div class="account-settings-wrapper" style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 6px; border: 1px solid var(--nav-border-color); margin-bottom: 30px;">
+      <div class="account-settings-wrapper">
 
-        <div style="margin-bottom: 16px;">
-          <label style="font-weight: bold; color: var(--text-muted); display: block; margin-bottom: 6px;">Short Fingerprint</label>
-          <code id="settings-anon-fp" style="background: rgba(0,0,0,0.3); padding: 6px 12px; border-radius: 4px; display: inline-block; color: #5bc0be; font-family: monospace;">{{ (session.fingerprint[7:15] if session.fingerprint else "Loading...") }}</code>
+        <div class="settings-fp-block">
+          <label class="settings-fp-label">Short Fingerprint</label>
+          <code id="settings-anon-fp" class="settings-fp-code">{{ (session.fingerprint[7:15] if session.fingerprint else "Loading...") }}</code>
         </div>
 
         <div class="pk-count" id="settings-anon-pk-count"></div>
-        <div class="pk-list" id="settings-anon-pk-list"><p style="color: var(--text-muted); font-size: 0.9em; margin: 0;">Loading…</p></div>
+        <div class="pk-list" id="settings-anon-pk-list"><p class="settings-muted settings-small-note">Loading…</p></div>
         <script nonce="{{ csp_nonce }}">
         F0ckActions.define({
           settingsOpenAnonPasskey: () => {
@@ -1079,14 +816,14 @@
               .then(function(r) { return r.json(); })
               .then(function(d) {
                 if (!list.isConnected) return;
-                if (!d.success) { list.innerHTML = '<p style="color: #e06c75; font-size: 0.9em; margin: 0;">Failed to load passkeys.</p>'; return; }
+                if (!d.success) { list.innerHTML = '<p class="settings-pk-error settings-small-note">Failed to load passkeys.</p>'; return; }
                 var pks = d.passkeys || [];
                 count.textContent = pks.length + ' / ' + d.max + ' passkeys';
                 list.innerHTML = pks.length
                   ? pks.map(function(pk) { return window.f0ckPasskeyCard(pk); }).join('')
-                  : '<p style="color: var(--text-muted); font-size: 0.9em; margin: 0;">No passkeys found.</p>';
+                  : '<p class="settings-muted settings-small-note">No passkeys found.</p>';
               })
-              .catch(function() { list.innerHTML = '<p style="color: #e06c75; font-size: 0.9em; margin: 0;">Failed to load passkeys.</p>'; });
+              .catch(function() { list.innerHTML = '<p class="settings-pk-error settings-small-note">Failed to load passkeys.</p>'; });
           }
           load();
           // Passkeys are added in the Manage modal: refresh when coming back to the page
@@ -1097,37 +834,37 @@
         })();
         </script>
 
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+        <div class="settings-button-row settings-anon-pk-actions">
           <button type="button" class="button button-primary" data-on="click:settingsOpenAnonPasskey"><i class="fa-solid fa-fingerprint"></i> Manage Passkey</button>
         </div>
 
-        <div id="invite-request-section" style="padding: 16px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); font-size: 0.88em; color: var(--text-muted);">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-            <i class="fa-solid fa-ticket" style="color: var(--accent); font-size: 1.1em;"></i>
-            <strong style="color: var(--text-color); font-size: 1.05em;">Want full features?</strong>
+        <div id="invite-request-section" class="settings-invite-request">
+          <div class="settings-invite-head">
+            <i class="fa-solid fa-ticket"></i>
+            <strong>Want full features?</strong>
           </div>
-          <p style="margin: 0 0 12px; line-height: 1.5;">
+          <p class="settings-invite-intro">
             Registered accounts can upload items, customize avatars, create API keys, and invite friends.
             Registration requires an <strong>invite token</strong> — request one below and an admin will review it.
           </p>
 
           <!-- Status container (populated by JS) -->
-          <div id="invite-req-status" style="display: none; margin-bottom: 12px;"></div>
+          <div id="invite-req-status" class="settings-invite-status"></div>
 
           <!-- Request form (hidden when request already exists) -->
           <div id="invite-req-form-wrapper">
-            <div style="margin-bottom: 10px;">
-              <textarea id="invite-req-reason" placeholder="Why do you want to join? (optional, max 500 chars)" maxlength="500" rows="2" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.25); color: var(--text-color); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 8px 10px; font-family: inherit; font-size: 0.95em; resize: vertical;"></textarea>
+            <div class="settings-invite-field">
+              <textarea id="invite-req-reason" placeholder="Why do you want to join? (optional, max 500 chars)" maxlength="500" rows="2" class="settings-invite-reason"></textarea>
             </div>
-            <button type="button" id="invite-req-submit" class="button button-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <button type="button" id="invite-req-submit" class="button button-primary">
               <i class="fa-solid fa-paper-plane"></i> Request Invite Token
             </button>
           </div>
 
           <!-- Token display (shown when approved) -->
-          <div id="invite-req-token-display" style="display: none; margin-top: 10px;"></div>
+          <div id="invite-req-token-display" class="settings-invite-token"></div>
 
-          <div id="invite-req-error" style="display: none; margin-top: 10px; padding: 8px 12px; background: rgba(255,80,80,0.12); border: 1px solid rgba(255,80,80,0.25); border-radius: 4px; color: #ff6b6b; font-size: 0.9em;"></div>
+          <div id="invite-req-error" class="settings-invite-error"></div>
         </div>
 
         <script nonce="{{ csp_nonce }}">
@@ -1141,7 +878,7 @@
 
           function showError(msg) {
             errorEl.textContent = msg;
-            errorEl.style.display = msg ? '' : 'none';
+            errorEl.style.display = msg ? 'block' : 'none';
           }
 
           function renderStatus(data) {
@@ -1152,34 +889,34 @@
               return;
             }
 
-            statusEl.style.display = '';
+            statusEl.style.display = 'block';
 
             if (data.status === 'pending') {
               formWrapper.style.display = 'none';
               statusEl.innerHTML =
-                '<div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: rgba(255,193,7,0.08); border: 1px solid rgba(255,193,7,0.2); border-radius: 4px;">' +
-                  '<i class="fa-solid fa-clock" style="color: #ffc107; font-size: 1.1em;"></i>' +
+                '<div class="settings-req-box settings-req-pending">' +
+                  '<i class="fa-solid fa-clock settings-req-icon"></i>' +
                   '<div>' +
-                    '<strong style="color: #ffc107;">Request pending</strong>' +
-                    '<div style="font-size: 0.9em; margin-top: 2px; color: var(--text-muted);">Submitted ' + new Date(data.created_at).toLocaleString() + ' — waiting for admin review.</div>' +
+                    '<strong class="settings-req-title">Request pending</strong>' +
+                    '<div class="settings-req-sub">Submitted ' + new Date(data.created_at).toLocaleString() + ' — waiting for admin review.</div>' +
                   '</div>' +
                 '</div>';
             } else if (data.status === 'approved') {
               formWrapper.style.display = 'none';
               statusEl.innerHTML =
-                '<div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: rgba(81,207,102,0.08); border: 1px solid rgba(81,207,102,0.2); border-radius: 4px;">' +
-                  '<i class="fa-solid fa-circle-check" style="color: #51cf66; font-size: 1.1em;"></i>' +
+                '<div class="settings-req-box settings-req-approved">' +
+                  '<i class="fa-solid fa-circle-check settings-req-icon"></i>' +
                   '<div>' +
-                    '<strong style="color: #51cf66;">Request approved!</strong>' +
-                    '<div style="font-size: 0.9em; margin-top: 2px; color: var(--text-muted);">Your invite token is ready. Use it to register your account.</div>' +
+                    '<strong class="settings-req-title">Request approved!</strong>' +
+                    '<div class="settings-req-sub">Your invite token is ready. Use it to register your account.</div>' +
                   '</div>' +
                 '</div>';
               if (data.token) {
-                tokenDisplay.style.display = '';
+                tokenDisplay.style.display = 'block';
                 tokenDisplay.innerHTML =
-                  '<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">' +
-                    '<code style="background: rgba(0,0,0,0.3); padding: 8px 14px; border-radius: 4px; color: #5bc0be; font-family: monospace; font-size: 1.1em; letter-spacing: 0.5px; user-select: all;">' + data.token + '</code>' +
-                    '<button type="button" class="button button-primary" id="invite-register-now-btn" style="display: inline-flex; align-items: center; gap: 6px;">' +
+                  '<div class="settings-copy-row">' +
+                    '<code class="settings-req-token-code">' + data.token + '</code>' +
+                    '<button type="button" class="button button-primary" id="invite-register-now-btn">' +
                       '<i class="fa-solid fa-user-plus"></i> Register Now' +
                     '</button>' +
                   '</div>';
@@ -1201,11 +938,11 @@
               formWrapper.style.display = '';
               const isRevoked = data.status === 'revoked';
               statusEl.innerHTML =
-                '<div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.2); border-radius: 4px;">' +
-                  '<i class="fa-solid fa-circle-xmark" style="color: #ff6b6b; font-size: 1.1em;"></i>' +
+                '<div class="settings-req-box settings-req-denied">' +
+                  '<i class="fa-solid fa-circle-xmark settings-req-icon"></i>' +
                   '<div>' +
-                    '<strong style="color: #ff6b6b;">' + (isRevoked ? 'Token revoked' : 'Request denied') + '</strong>' +
-                    '<div style="font-size: 0.9em; margin-top: 2px; color: var(--text-muted);">' + (isRevoked ? 'Your invite token was revoked by an admin. You can submit a new request.' : 'Your previous request was denied. You can submit a new one.') + '</div>' +
+                    '<strong class="settings-req-title">' + (isRevoked ? 'Token revoked' : 'Request denied') + '</strong>' +
+                    '<div class="settings-req-sub">' + (isRevoked ? 'Your invite token was revoked by an admin. You can submit a new request.' : 'Your previous request was denied. You can submit a new one.') + '</div>' +
                   '</div>' +
                 '</div>';
             }
@@ -1290,21 +1027,21 @@
       {% if (not session.is_anon and session) %}
       <!-- ═══════════════════════════════ PASSKEYS ═══════════════════════════════ -->
       <h2 id="passkeys"><i class="fa-solid fa-fingerprint"></i> Passkeys</h2>
-      <div class="account-settings-wrapper" style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 6px; border: 1px solid var(--nav-border-color); margin-bottom: 30px;">
-        <p style="color: var(--text-muted); margin: 0;">
+      <div class="account-settings-wrapper">
+        <p class="settings-muted">
           Passkeys let you sign in without a password using your OS, Bitwarden, or any compatible password manager. They are phishing-resistant and device-bound.
         </p>
 
-        <div id="settings-passkey-list" style="margin: 12px 0 16px;">
-          <p style="color: var(--text-muted); font-size: 0.9em;">Loading...</p>
+        <div id="settings-passkey-list" class="settings-pk-list-wrap">
+          <p class="settings-muted settings-small-note">Loading...</p>
         </div>
 
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div class="settings-button-row">
           <button type="button" class="button button-primary" id="settings-passkey-add-btn" data-on="click:settingsPasskeyAdd">
             <i class="fa-solid fa-plus"></i> Add a passkey
           </button>
         </div>
-        <div id="settings-passkey-status" style="margin-top: 10px; font-size: 0.88em; display: none;"></div>
+        <div id="settings-passkey-status" class="settings-pk-status"></div>
       </div>
       <script nonce="{{ csp_nonce }}">
       (function() {
@@ -1316,7 +1053,7 @@
             const data = await res.json();
             const passkeys = data.passkeys || [];
             if (passkeys.length === 0) {
-              container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9em;">No passkeys registered yet.</p>';
+              container.innerHTML = '<p class="settings-muted settings-small-note">No passkeys registered yet.</p>';
               return;
             }
             container.classList.add('pk-list');
@@ -1326,7 +1063,7 @@
               });
             }).join('');
           } catch (e) {
-            container.innerHTML = '<p style="color: #e06c75; font-size: 0.9em;">Failed to load passkeys.</p>';
+            container.innerHTML = '<p class="settings-pk-error settings-small-note">Failed to load passkeys.</p>';
           }
         }
 
@@ -1385,43 +1122,40 @@
       {% if not session.is_anon %}
       <!-- ═══════════════════════════════ ACCOUNT ═══════════════════════════════ -->
       <h2 id="account"><i class="fa-solid fa-shield-halved"></i> {{ t("settings.account") }}</h2>
-      <div class="account-settings-wrapper"
-        style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 6px; border: 1px solid var(--nav-border-color); margin-bottom: 30px;">
-        <table class="table account-info-table"
-          style="margin-bottom: 30px; border-collapse: separate; border-spacing: 0 5px;">
+      <div class="account-settings-wrapper">
+        <table class="table account-info-table settings-account-table">
           <tbody>
             <tr>
-              <td style="width: 150px; font-weight: bold; color: var(--text-muted); border: none;">{{ t("settings.user_id") }}</td>
-              <td style="border: none;">{{ session.id }}</td>
+              <td class="settings-account-key">{{ t("settings.user_id") }}</td>
+              <td class="settings-account-value">{{ session.id }}</td>
             </tr>
             <tr>
-              <td style="font-weight: bold; color: var(--text-muted); border: none;">{{ t("settings.username") }}</td>
-              <td style="border: none;">{{ session.user }}</td>
+              <td class="settings-account-key">{{ t("settings.username") }}</td>
+              <td class="settings-account-value">{{ session.user }}</td>
             </tr>
             <tr>
-              <td style="font-weight: bold; color: var(--text-muted); border: none;">{{ t("settings.email") }}</td>
-              <td id="display-email" style="border: none;">{{ (email or t("settings.email_not_set")) }}</td>
+              <td class="settings-account-key">{{ t("settings.email") }}</td>
+              <td id="display-email" class="settings-account-value">{{ (email or t("settings.email_not_set")) }}</td>
             </tr>
             <tr>
-              <td style="font-weight: bold; color: var(--text-muted); border: none;">{{ t("settings.joined") }}</td>
-              <td style="border: none;">{% if joined %}{{ joined|locale_date }}{% else %} {{ t("settings.joined_unknown") }} {% endif %}</td>
+              <td class="settings-account-key">{{ t("settings.joined") }}</td>
+              <td class="settings-account-value">{% if joined %}{{ joined|locale_date }}{% else %} {{ t("settings.joined_unknown") }} {% endif %}</td>
             </tr>
           </tbody>
         </table>
 
-        <div class="account-actions-grid"
-          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
-          <div class="password-change-section" style="display: flex; flex-direction: column; gap: 15px;">
+        <div class="account-actions-grid settings-account-grid">
+          <div class="password-change-section settings-account-col">
             {% if password_disabled %}
-            <h4 style="margin-top: 0; color: var(--accent);"><i class="fa-solid fa-key"></i> Set a password</h4>
+            <h4 class="settings-account-heading"><i class="fa-solid fa-key"></i> Set a password</h4>
             <div class="pw-off-notice">
               <i class="fa-solid fa-fingerprint"></i>
               <div><strong>Password login is disabled.</strong> This account can only be accessed with a passkey. Setting a password turns password login back on.</div>
             </div>
             {% else %}
-            <h4 style="margin-top: 0; color: var(--accent);"><i class="fa-solid fa-key"></i> {{ t("settings.change_password") }}</h4>
+            <h4 class="settings-account-heading"><i class="fa-solid fa-key"></i> {{ t("settings.change_password") }}</h4>
             {% endif %}
-            <form id="password-change-form" style="display: flex; flex-direction: column; gap: 10px;">
+            <form id="password-change-form" class="settings-account-form">
               {% if not password_disabled %}
               <input type="password" id="current_password" class="input"
                 placeholder="{{ t("settings.current_password") }}" required autocomplete="current-password">
@@ -1440,9 +1174,9 @@
             <div class="pw-disable">
               <button type="button" id="btn-pw-disable-open" class="button button-danger"><i class="fa-solid fa-lock"></i> Disable password</button>
               <small class="text-muted">Sign in with a passkey only. Requires at least one passkey; setting a password later turns it back on.</small>
-              <form id="pw-disable-form" style="display: none;">
+              <form id="pw-disable-form" class="settings-hidden">
                 <input type="password" id="pw-disable-current" class="input" placeholder="{{ t("settings.current_password") }}" required autocomplete="current-password">
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <div class="settings-button-row settings-button-row-tight">
                   <button type="submit" class="button button-danger"><i class="fa-solid fa-lock"></i> Confirm: passkey only</button>
                   <button type="button" id="btn-pw-disable-cancel" class="button">Cancel</button>
                 </div>
@@ -1485,9 +1219,9 @@
             {% endif %}
           </div>
 
-          <div class="email-update-section" style="display: flex; flex-direction: column; gap: 15px;">
-            <h4 style="margin-top: 0; color: var(--accent);"><i class="fa-solid fa-envelope"></i> {{ t("settings.update_email") }}</h4>
-            <form id="email-update-form" style="display: flex; flex-direction: column; gap: 10px;">
+          <div class="email-update-section settings-account-col">
+            <h4 class="settings-account-heading"><i class="fa-solid fa-envelope"></i> {{ t("settings.update_email") }}</h4>
+            <form id="email-update-form" class="settings-account-form">
               <input type="email" id="email_input" class="input" placeholder="{{ t("settings.new_email") }}"
                 value="{{ email }}" required>
               <button type="submit" id="btn-update-email" class="button">{{ t("settings.update_email_btn") }}</button>
@@ -1506,67 +1240,63 @@
       {% if (not session.is_anon and enable_user_api_keys) %}
       <!-- ═══════════════════════════════ API KEY ═══════════════════════════════ -->
       <h2 id="apikey"><i class="fa-solid fa-key"></i> Upload API Key</h2>
-      <div id="api-key-section" class="account-settings-wrapper"
-        style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 6px; border: 1px solid var(--nav-border-color); margin-bottom: 30px;">
-        <p style="color: var(--text-muted); margin-bottom: 15px;">
+      <div id="api-key-section" class="account-settings-wrapper">
+        <p class="settings-muted">
           Use this key to upload files via external tools or scripts like ShareX.
           The key grants <strong>upload access only</strong> to your account.
         </p>
 
-        <div id="api-key-status-box" style="margin-bottom: 15px;">
+        <div id="api-key-status-box" class="settings-api-status">
           <span class="text-muted" id="api-key-loading-text">Loading&hellip;</span>
         </div>
 
         <!-- Shown only after regenerate — full key revealed once for copying -->
-        <div id="api-key-reveal" style="display:none; margin-bottom: 15px;">
-          <div style="background: rgba(0,180,100,0.12); border: 1px solid rgba(0,180,100,0.4); border-radius: 4px; padding: 14px;">
-            <strong style="display:block; margin-bottom: 6px;">&#9888; Copy your key now &mdash; it will not be shown again in full:</strong>
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-              <code id="api-key-full-display"
-                style="flex: 1; word-break: break-all; font-size: 0.85em; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 4px; user-select: all;"></code>
-              <button type="button" id="btn-copy-api-key" class="button"
-                style="white-space: nowrap; padding: 6px 14px;">Copy</button>
+        <div id="api-key-reveal" class="settings-api-reveal">
+          <div class="settings-api-reveal-box">
+            <strong class="settings-api-reveal-title">&#9888; Copy your key now &mdash; it will not be shown again in full:</strong>
+            <div class="settings-copy-row">
+              <code id="api-key-full-display" class="settings-api-key-code"></code>
+              <button type="button" id="btn-copy-api-key" class="button settings-copy-btn">Copy</button>
             </div>
           </div>
         </div>
 
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <div class="settings-button-row settings-button-row-center">
           <button type="button" id="btn-regen-api-key" class="button button-primary">Generate / Regenerate Key</button>
-          <a id="btn-sharex-download" href="/api/v2/settings/api-key/sharex-config" download style="display:none; box-sizing:border-box; line-height:normal;" class="button">&#11123; ShareX Config</a>
-          <button type="button" id="btn-revoke-api-key" class="button button-danger" style="display:none;">Revoke Key</button>
+          <a id="btn-sharex-download" href="/api/v2/settings/api-key/sharex-config" download class="button settings-sharex-btn settings-hidden">&#11123; ShareX Config</a>
+          <button type="button" id="btn-revoke-api-key" class="button button-danger settings-hidden">Revoke Key</button>
         </div>
-        <div id="api-key-action-status" class="avatar-status" style="margin-top: 10px;"></div>
+        <div id="api-key-action-status" class="avatar-status"></div>
       </div>
       {% endif %}
 
       {% if (not session.is_anon and (matrix_enabled or telegram_enabled)) %}
       <!-- ═══════════════════════════════ LINKED ACCOUNTS ═══════════════════════════════ -->
       <h2 id="linked"><i class="fa-solid fa-link"></i> {{ t("settings.linked_accounts") }}</h2>
-      <div class="linked-accounts-wrapper" style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 6px; border: 1px solid var(--nav-border-color); margin-bottom: 30px;">
+      <div class="linked-accounts-wrapper">
         <p>{{ t("settings.matrix_link_desc") }}</p>
 
-        <div id="linked-accounts-container" style="margin-bottom: 1rem;">
+        <div id="linked-accounts-container" class="settings-linked-current">
           <strong>{{ t("settings.active_links") }}</strong>
-          <div id="linked-accounts-list" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 5px;">
+          <div id="linked-accounts-list" class="settings-linked-list">
             <span class="text-muted">{{ t("settings.loading") }}</span>
           </div>
         </div>
 
         <div class="link-action-area">
-          <h4 style="margin-top: 20px;">{{ t("settings.add_new_link") }}</h4>
-          <p style="margin-bottom: 10px; color: var(--text-muted); font-size: 0.9em;">
+          <h4 class="settings-linked-heading">{{ t("settings.add_new_link") }}</h4>
+          <p class="settings-muted settings-small-note">
             {{ t("settings.matrix_instructions") }}
           </p>
           {% if telegram_enabled %}
-          <p style="margin-bottom: 15px; color: var(--text-muted); font-size: 0.9em;">
+          <p class="settings-muted settings-small-note">
             <strong>Telegram:</strong> Generate a token below, then send <code>!link &lt;TOKEN&gt;</code> to the Telegram bot.
           </p>
           {% endif %}
 
-          <div id="token-display-area" style="display: none; margin-bottom: 15px;">
+          <div id="token-display-area" class="settings-link-token-area">
             <div class="alert alert-info">
-              <strong>{{ t("settings.your_token") }}</strong> <code id="generated-token-code"
-                style="font-size: 1.2em; user-select: all; margin-left: 10px; word-break: break-all;"></code>
+              <strong>{{ t("settings.your_token") }}</strong> <code id="generated-token-code" class="settings-link-token-code"></code>
               <br><small>{{ t("settings.one_time_use") }}</small>
             </div>
           </div>
@@ -1579,13 +1309,12 @@
       {% if (not session.is_anon and enable_user_invites) %}
       <!-- ═══════════════════════════════ INVITES ═══════════════════════════════ -->
       <h2 id="invites"><i class="fa-solid fa-ticket"></i> {{ t("invites.section_title") }}</h2>
-      <div id="invite-section" class="account-settings-wrapper"
-        style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 6px; border: 1px solid var(--nav-border-color); margin-bottom: 30px;">
+      <div id="invite-section" class="account-settings-wrapper">
 
-        <p id="invite-section-desc" style="color: var(--text-muted); margin-bottom: 15px;">{{ t("invites.section_desc") }}</p>
+        <p id="invite-section-desc" class="settings-muted">{{ t("invites.section_desc") }}</p>
 
         <!-- Criteria grid -->
-        <div id="invite-criteria-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 18px;">
+        <div id="invite-criteria-grid" class="settings-invite-criteria">
           <div class="invite-criterion" id="ic-uploads">
             <span class="ic-icon">⋯</span>
             <span class="ic-label">{{ t("invites.criteria_uploads") }}</span>
@@ -1609,72 +1338,25 @@
         </div>
 
         <!-- Eligibility badge + slot indicator -->
-        <div id="invite-status-line" style="margin-bottom: 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-          <span id="invite-eligible-badge" style="font-weight: bold; font-size: 0.95em;"></span>
-          <span id="invite-slots-info" style="color: var(--text-muted); font-size: 0.9em;"></span>
+        <div id="invite-status-line" class="settings-invite-statusline">
+          <span id="invite-eligible-badge" class="settings-invite-badge"></span>
+          <span id="invite-slots-info" class="settings-muted settings-small-note"></span>
         </div>
 
         <!-- Token list -->
-        <div id="invite-token-list" style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px;">
-          <span class="text-muted" style="font-size: 0.9em;">{{ t("invites.loading") }}</span>
+        <div id="invite-token-list" class="settings-invite-tokens">
+          <span class="text-muted settings-small-note">{{ t("invites.loading") }}</span>
         </div>
 
         <!-- Generate button + status -->
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <div class="settings-button-row settings-button-row-center">
           <button type="button" id="btn-gen-invite" class="button button-primary" disabled>{{ t("invites.generate_btn") }}</button>
         </div>
-        <div id="invite-action-status" class="avatar-status" style="margin-top: 10px;"></div>
+        <div id="invite-action-status" class="avatar-status"></div>
       </div>
 
-      <style>
-        .invite-criterion {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          padding: 10px 14px;
-          border-radius: 6px;
-          border: 1px solid var(--nav-border-color);
-          background: rgba(255,255,255,0.03);
-          font-size: 0.88em;
-        }
-        .invite-criterion.met {
-          border-color: rgba(80, 200, 120, 0.5);
-          background: rgba(80, 200, 120, 0.07);
-        }
-        .invite-criterion.unmet {
-          border-color: rgba(255, 90, 90, 0.35);
-          background: rgba(255, 90, 90, 0.05);
-        }
-        .ic-icon { font-size: 1.2em; }
-        .ic-label { font-weight: bold; color: var(--text-muted); }
-        .ic-values { font-family: monospace; font-size: 1.05em; }
-        .invite-token-row {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          padding: 10px 14px;
-          border-radius: 6px;
-          border: 1px solid var(--nav-border-color);
-          background: rgba(255,255,255,0.02);
-          font-size: 0.88em;
-        }
-        .invite-token-code {
-          font-family: monospace;
-          font-size: 1.05em;
-          letter-spacing: 0.04em;
-          color: var(--accent);
-          user-select: all;
-          flex: 1;
-          word-break: break-all;
-        }
-        .invite-token-status-used { color: #ff6b6b; }
-        .invite-token-status-unused { color: #51cf66; }
-        .invite-refresh-note { font-size: 0.82em; color: var(--text-muted); }
-      </style>
-
       <!-- i18n strings for invite JS (rendered server-side) -->
-      <div id="invite-i18n" style="display:none"
+      <div id="invite-i18n" class="settings-hidden"
         data-eligible="{{ t("invites.eligible") }}"
         data-not-eligible="{{ t("invites.not_eligible") }}"
         data-slots-used="{{ t("invites.slots_used") }}"
@@ -1721,7 +1403,7 @@
             const res = await fetch('/api/v2/settings/invites');
             const data = await res.json();
             if (!data.success) {
-              tokenList.innerHTML = '<span style="color:#ff6b6b">' + (data.msg || 'Error') + '</span>';
+              tokenList.innerHTML = '<span class="settings-invite-fail">' + (data.msg || 'Error') + '</span>';
               return;
             }
 
@@ -1760,7 +1442,7 @@
             genBtn.disabled = !data.eligible || (!data.is_admin && data.slots_available <= 0);
 
             if (!data.tokens || data.tokens.length === 0) {
-              tokenList.innerHTML = '<span class="text-muted" style="font-size:0.9em;">' + T('noInvites') + '</span>';
+              tokenList.innerHTML = '<span class="text-muted settings-small-note">' + T('noInvites') + '</span>';
             } else {
               tokenList.innerHTML = data.tokens.map(tok => {
                 const isUsed = tok.is_used;
@@ -1778,13 +1460,13 @@
                     '</span>';
                 }
                 const userLink = tok.used_by_name
-                  ? '<a href="/user/' + encodeURIComponent(tok.used_by_name.toLowerCase()) + '" style="color:inherit;text-decoration:underline;">' + tok.used_by_name + '</a>'
+                  ? '<a href="/user/' + encodeURIComponent(tok.used_by_name.toLowerCase()) + '" class="settings-invite-user">' + tok.used_by_name + '</a>'
                   : '?';
                 const statusHtml = isUsed
                   ? '<span class="invite-token-status-used">' + T('statusUsedBy', { user: userLink }) + ' (' + (usedAt || '?') + ')</span>' + refreshNote
                   : '<span class="invite-token-status-unused">' + T('statusUnused') + '</span>';
                 const deleteBtn = !isUsed
-                  ? '<button class="button button-danger" style="padding:3px 10px;font-size:0.8em;" data-invite-delete="' + tok.id + '">' + T('deleteBtn') + '</button>'
+                  ? '<button class="button button-danger settings-invite-delete" data-invite-delete="' + tok.id + '">' + T('deleteBtn') + '</button>'
                   : '';
                 return '<div class="invite-token-row">' +
                   '<span class="invite-token-code">' + tok.token + '</span>' +
@@ -1807,7 +1489,7 @@
             }
           } catch (e) {
             console.error('[Invites] load error:', e);
-            tokenList.innerHTML = '<span style="color:#ff6b6b">Failed to load</span>';
+            tokenList.innerHTML = '<span class="settings-invite-fail">Failed to load</span>';
           }
         };
 
@@ -1845,28 +1527,28 @@
       {% if enable_data_export %}
       <!-- ═══════════════════════════════ EXPORT ═══════════════════════════════ -->
       <h2 id="export"><i class="fa-solid fa-file-export"></i> {{ (t("settings.export_data_title") or "Export Data") }}</h2>
-      <div class="export-settings-wrapper" style="background: rgba(0,0,0,0.1); padding: 20px; border-radius: 6px; border: 1px solid var(--nav-border-color); margin-bottom: 30px;">
+      <div class="export-settings-wrapper">
         <p>{{ (t("settings.export_data_desc") or "Download a copy of your data. This process happens entirely in your browser to protect your privacy and save server resources.") }}</p>
         
-        <div class="setting-item" style="margin-bottom: 15px;">
-          <label class="checkbox-container" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+        <div class="setting-item settings-export-option">
+          <label class="checkbox-container settings-check">
             <input type="checkbox" id="export_uploads" checked>
             <span>{{ (t("settings.export_uploads") or "Your Uploads") }}</span>
           </label>
         </div>
-        <div class="setting-item" style="margin-bottom: 20px;">
-          <label class="checkbox-container" style="cursor: pointer; display: flex; align-items: center; gap: 10px;">
+        <div class="setting-item settings-export-option-end">
+          <label class="checkbox-container settings-check">
             <input type="checkbox" id="export_favorites" checked>
             <span>{{ (t("settings.export_favorites") or "Your Favorites") }}</span>
           </label>
         </div>
 
-        <div id="export-progress-container" style="display: none; margin-bottom: 20px;">
-          <div class="progress-bar-wrapper" style="height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 5px;">
-            <div id="export-progress-bar" style="height: 100%; width: 0%; background: var(--accent); transition: width 0.3s;"></div>
+        <div id="export-progress-container" class="settings-export-progress">
+          <div class="progress-bar-wrapper settings-export-track">
+            <div id="export-progress-bar" class="settings-export-bar"></div>
           </div>
-          <div id="export-status-text" 
-               style="font-size: 0.9em; color: var(--text-muted);"
+          <div id="export-status-text"
+               class="settings-muted settings-small-note"
                data-fetching="{{ t("settings.export_fetching_data") }}"
                data-processing="{{ t("settings.export_processing_files") }}"
                data-generating="{{ t("settings.export_generating_zip") }}"
@@ -1876,28 +1558,16 @@
                data-no-data="{{ t("settings.export_no_data") }}"
                data-failed-alert="{{ t("settings.export_failed_alert") }}"
                data-domain="{{ site_domain }}"
-          ><span id="export-status-msg">{{ (t("settings.export_preparing") or "Preparing...") }}</span><span class="export-dots" id="export-animated-dots" style="display:none;"><span>.</span><span>.</span><span>.</span></span></div>
+          ><span id="export-status-msg">{{ (t("settings.export_preparing") or "Preparing...") }}</span><span class="export-dots settings-hidden" id="export-animated-dots"><span>.</span><span>.</span><span>.</span></span></div>
         </div>
 
         <button type="button" id="btn-start-export" class="button button-primary">
-          <i class="fa-solid fa-download" style="margin-right: 5px;"></i> {{ (t("settings.start_export") or "Generate Export (ZIP)") }}
+          <i class="fa-solid fa-download settings-export-icon"></i> {{ (t("settings.start_export") or "Generate Export (ZIP)") }}
         </button>
       </div>
       {% endif %}
 
 
-      <style>
-        @keyframes exportDotBounce {
-          0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
-          40%            { transform: translateY(-5px); opacity: 1; }
-        }
-        .export-dots span {
-          display: inline-block;
-          animation: exportDotBounce 1.2s infinite ease-in-out;
-        }
-        .export-dots span:nth-child(2) { animation-delay: 0.2s; }
-        .export-dots span:nth-child(3) { animation-delay: 0.4s; }
-      </style>
       <script src="/s/js/jszip.min.js?v={{ mtime("/public/s/js/jszip.min.js") }}"></script>
       <script src="/s/js/settings.js?v={{ mtime("/public/s/js/settings.js") }}"></script>
     </div>

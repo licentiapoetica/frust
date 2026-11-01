@@ -30,7 +30,7 @@
                     </video>
                     {% elif post.mime == "application/pdf" %}
                     <div class="embed-responsive embed-responsive-16by9">
-                        <iframe class="embed-responsive-item" src="/mod/deleted/b/{{ post.dest }}#toolbar=0" loading="lazy" style="border: none;"></iframe>
+                        <iframe class="embed-responsive-item mod-trash-pdf" src="/mod/deleted/b/{{ post.dest }}#toolbar=0" loading="lazy"></iframe>
                     </div>
                     {% else %}
                     <img src="/mod/deleted/t/{{ post.id }}.webp" alt="Preview" loading="lazy">
@@ -79,7 +79,7 @@
         </div>
         {% endif %}
     </div>
-    {# Inside #main so AJAX navigation (which only swaps #main) brings the styles, modal and scripts along #}
+    {# Inside #main so AJAX navigation (which only swaps #main) brings the modal and scripts along #}
     {% include "snippets/mod-cards.html" %}
     <script nonce="{{ csp_nonce }}">
       (() => {

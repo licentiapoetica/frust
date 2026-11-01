@@ -1,5 +1,5 @@
 {% if session %}
-<div id="mod-action-modal" class="modal-overlay" style="display:none;">
+<div id="mod-action-modal" class="modal-overlay footer-hidden">
   <div class="modal-content ma-modal-content">
     <div class="ma-header">
       <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="mod-action-cancel">&times;</button>
@@ -17,112 +17,44 @@
   </div>
 </div>
 
-<style>
-/* Moderator action modal — same rules as the report/info/visibility modals */
-#mod-action-modal .ma-modal-content {
-  --ma-accent: var(--accent, #0096ff);
-  --ma-text: var(--text-color, #fff);
-  --ma-muted: var(--text-muted, #8a8f98);
-  --ma-surface: rgba(255, 255, 255, 0.04);
-  --ma-border: rgba(255, 255, 255, 0.1);
-  --ma-danger: #ff5c5c;
-  width: min(440px, 92vw); min-width: 0;
-  max-height: min(90vh, 90dvh);
-  display: flex; flex-direction: column; overflow: hidden;
-  padding: 0; text-align: left;
-  border-radius: 0 !important;
-  border: 1px solid var(--accent) !important;
-  background: var(--bg) !important;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5) !important;
-  color: var(--ma-text);
-}
-#mod-action-modal .ma-modal-content * { border-radius: 0 !important; }
-#mod-action-modal .ma-header { position: relative; flex-shrink: 0; padding: 18px 64px 14px 24px; border-bottom: 1px solid var(--ma-border); }
-#mod-action-modal .ma-header h3 { margin: 0; font-size: 1.2em; font-weight: 700; color: var(--ma-text); overflow-wrap: anywhere; }
-#mod-action-modal .ma-body {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  padding: 16px 24px; display: flex; flex-direction: column; gap: 12px;
-}
-#mod-action-modal #mod-action-content { font-size: 0.9em; line-height: 1.5; color: var(--ma-muted); overflow-wrap: anywhere; }
-#mod-action-modal #mod-action-content:empty { display: none; }
-#mod-action-modal #mod-action-content strong, #mod-action-modal #mod-action-content b { color: var(--ma-text); }
-#mod-action-modal textarea.mod-reason {
-  width: 100%; min-height: 0; box-sizing: border-box; margin: 0; padding: 10px 12px;
-  background: var(--ma-surface) !important; border: 1px solid var(--ma-border) !important; color: var(--ma-text) !important;
-  font: inherit; font-size: 0.9em; outline: none; box-shadow: none !important; transition: border-color 0.15s;
-}
-#mod-action-modal textarea.mod-reason:focus { border-color: var(--ma-accent) !important; }
-#mod-action-modal textarea.mod-reason::placeholder { color: var(--ma-muted); }
-#mod-action-modal #mod-action-error {
-  margin: 0; padding: 10px 12px; font-size: 0.84em; line-height: 1.45; color: #ff8a8a; text-align: left;
-  background: rgba(224, 108, 117, 0.1); border: 1px solid rgba(224, 108, 117, 0.3);
-}
-#mod-action-modal #mod-action-error:empty { display: none !important; }
-#mod-action-modal .ma-footer {
-  flex-shrink: 0; display: flex; justify-content: flex-end; gap: 8px; margin: 0;
-  padding: 14px 24px; border-top: 1px solid var(--ma-border); background: rgba(0, 0, 0, 0.2);
-}
-#mod-action-modal .ma-footer button {
-  height: 40px; margin: 0; padding: 0 18px; font: inherit; font-size: 0.85em; cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center; transition: background 0.18s, color 0.18s, border-color 0.18s;
-}
-#mod-action-modal #mod-action-cancel { background: transparent; border: 1px solid var(--ma-border); color: var(--ma-muted); font-weight: 600; }
-#mod-action-modal #mod-action-cancel:hover { color: var(--ma-text); border-color: rgba(255, 255, 255, 0.25); background: var(--ma-surface); }
-#mod-action-modal #mod-action-confirm {
-  background: var(--ma-danger); border: 1px solid var(--ma-danger); color: #000;
-  font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
-}
-#mod-action-modal #mod-action-confirm:hover:not(:disabled) { background: transparent; color: var(--ma-danger); }
-#mod-action-modal #mod-action-confirm:disabled { opacity: 0.6; cursor: progress; }
-#mod-action-modal .ma-footer button:focus-visible { outline: 2px solid var(--ma-accent); outline-offset: 2px; }
-@media (max-width: 600px) {
-  #mod-action-modal { padding: 0 !important; align-items: stretch !important; }
-  #mod-action-modal .ma-modal-content {
-    width: 100vw; max-width: none; height: 100vh; height: 100dvh; max-height: none;
-    border: 0 !important; box-shadow: none !important;
-  }
-  #mod-action-modal .ma-footer { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
-  #mod-action-modal .ma-footer button { flex: 1; }
-}
-</style>
 {% endif %}
 
 {% if session %}
-<div id="halls-modal" class="modal-overlay" style="display:none;">
+<div id="halls-modal" class="modal-overlay footer-hidden">
   <div class="modal-content">
     <h3>{{ t("hall.modal_title") }}</h3>
     {% if (session.admin or session.is_moderator) %}
-    <div class="form-group" style="margin-bottom: 8px;">
-      <label for="hall-select" style="display: block; margin-bottom: 5px; font-size:0.83em; color:#888;">{{ t("hall.site_hall_label") }}</label>
-      <select id="hall-select" class="form-control" style="width: 100%; background: #333; color: #fff; border: 1px solid #444; padding: 5px;">
+    <div class="form-group footer-halls-group">
+      <label for="hall-select" class="footer-halls-label">{{ t("hall.site_hall_label") }}</label>
+      <select id="hall-select" class="form-control footer-halls-select">
         <option value="">{{ t("hall.choose_hall") }}</option>
       </select>
     </div>
-    <div id="halls-modal-error" class="error-msg" style="display:none; color: #ff5555; margin-bottom: 8px;"></div>
-    <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; margin-bottom:14px;">
-      <button id="halls-modal-confirm" class="btn-primary" style="padding: 6px 14px;">{{ t("hall.add_btn") }}</button>
-      <button id="halls-modal-remove" class="btn-danger" style="padding: 6px 14px; display:none;">{{ t("hall.remove_btn") }}</button>
+    <div id="halls-modal-error" class="error-msg footer-hidden footer-halls-error"></div>
+    <div class="modal-actions footer-halls-actions footer-halls-actions-site">
+      <button id="halls-modal-confirm" class="btn-primary footer-halls-btn">{{ t("hall.add_btn") }}</button>
+      <button id="halls-modal-remove" class="btn-danger footer-halls-btn footer-hidden">{{ t("hall.remove_btn") }}</button>
     </div>
-    <hr style="border-color:rgba(255,255,255,0.1);margin:0 0 12px 0;">
+    <hr class="footer-halls-divider">
     {% endif %}
     <div id="my-halls-section">
-      <label style="display: block; margin-bottom: 5px; font-size:0.83em; color:#888;">{{ t("hall.my_hall_label") }}</label>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <select id="my-hall-select" class="form-control" style="flex:1;min-width:120px;background: #333; color: #fff; border: 1px solid #444; padding: 5px;">
+      <label class="footer-halls-label">{{ t("hall.my_hall_label") }}</label>
+      <div class="footer-halls-my-row">
+        <select id="my-hall-select" class="form-control footer-halls-select footer-halls-my-select">
           <option value="">{{ t("hall.my_hall_placeholder") }}</option>
         </select>
-        <button id="my-halls-modal-confirm" class="btn-primary" style="padding: 6px 14px; white-space:nowrap;">{{ t("common.add") }}</button>
-        <button id="my-halls-modal-remove" class="btn-secondary" style="padding: 6px 14px; white-space:nowrap; display:none;">{{ t("common.remove") }}</button>
+        <button id="my-halls-modal-confirm" class="btn-primary footer-halls-btn footer-halls-btn-nowrap">{{ t("common.add") }}</button>
+        <button id="my-halls-modal-remove" class="btn-secondary footer-halls-btn footer-halls-btn-nowrap footer-hidden">{{ t("common.remove") }}</button>
       </div>
-      <div style="margin-top:6px;display:flex;gap:6px;align-items:center;">
-        <span style="font-size:0.78em;color:#888;">{{ t("hall.create_new") }}</span>
-        <input type="text" id="my-hall-new-name" placeholder="{{ t("hall.new_name_placeholder") }}" style="flex:1;background:#2a2a2a;border:1px solid rgba(255,255,255,0.12);color:#fff;padding:3px 8px;border-radius:3px;font-family:var(--font);font-size:0.85em;height:26px;box-sizing:border-box;">
+      <div class="footer-halls-new-row">
+        <span class="footer-halls-new-label">{{ t("hall.create_new") }}</span>
+        <input type="text" id="my-hall-new-name" placeholder="{{ t("hall.new_name_placeholder") }}" class="footer-halls-new-input">
       </div>
-      <div id="my-halls-modal-error" class="error-msg" style="display:none; color: #ff5555; margin-top: 6px; font-size:0.83em;"></div>
+      <div id="my-halls-modal-error" class="error-msg footer-hidden footer-halls-my-error"></div>
     </div>
 
-    <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; margin-top:14px;">
-      <button id="halls-modal-cancel" class="btn-secondary" style="padding: 6px 14px;">{{ t("common.cancel") }}</button>
+    <div class="modal-actions footer-halls-actions footer-halls-actions-bottom">
+      <button id="halls-modal-cancel" class="btn-secondary footer-halls-btn">{{ t("common.cancel") }}</button>
     </div>
   </div>
 </div>
@@ -141,7 +73,7 @@
 </div>
 {% endif %}
 {% if (not private_society or session) %}
-<div id="report-modal" class="modal-overlay" style="display:none;">
+<div id="report-modal" class="modal-overlay footer-hidden">
   <div class="modal-content report-modal-content">
     <div class="rm-header">
       <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="report-cancel">&times;</button>
@@ -186,7 +118,7 @@
     </div>
     <textarea id="report-reason" class="mod-reason" placeholder="{{ t("report.placeholder") }}"></textarea>
     {% if (captcha_enabled and not session) %}
-    <cap-widget id="modal-report-captcha" class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %} style="display: block; margin: 10px auto;"></cap-widget>
+    <cap-widget id="modal-report-captcha" class="cap-dark footer-report-captcha" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
     {% endif %}
     <div id="report-error" class="error-msg"></div>
     </div>
@@ -197,106 +129,12 @@
   </div>
 </div>
 
-<style>
-/* Report modal — same style rules as the login/info modals: square, flat, accent primary button */
-#report-modal .report-modal-content {
-  --rm-accent: var(--accent, #0096ff);
-  --rm-text: var(--text-color, #fff);
-  --rm-muted: var(--text-muted, #8a8f98);
-  --rm-surface: rgba(255, 255, 255, 0.04);
-  --rm-border: rgba(255, 255, 255, 0.1);
-  width: min(460px, 92vw);
-  max-height: min(90vh, 90dvh);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0;
-  text-align: left;
-  border-radius: 0 !important;
-  border: 1px solid var(--accent) !important;
-  background: var(--bg) !important;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5) !important;
-  color: var(--rm-text);
-}
-#report-modal .report-modal-content * { border-radius: 0 !important; }
-#report-modal .rm-header { position: relative; flex-shrink: 0; padding: 20px 64px 14px 24px; border-bottom: 1px solid var(--rm-border); }
-#report-modal .rm-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 24px; scrollbar-width: none !important; -ms-overflow-style: none; }
-#report-modal .rm-body::-webkit-scrollbar { display: none; width: 0; height: 0; }
-#report-modal .rm-body > :last-child { margin-bottom: 0; }
-#report-modal .rm-header h3 { margin: 0; font-size: 1.25em; font-weight: 700; color: var(--rm-text); }
-#report-modal .rm-header p { margin: 6px 0 0; font-size: 0.85em; line-height: 1.5; color: var(--rm-muted); }
 
-#report-modal #report-categories { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-#report-modal .report-category-option {
-  display: flex; align-items: flex-start; gap: 11px; padding: 10px 12px;
-  background: var(--rm-surface); border: 1px solid var(--rm-border);
-  cursor: pointer; user-select: none; transition: border-color 0.15s, background 0.15s;
-}
-#report-modal .report-category-option:hover { border-color: rgba(255, 255, 255, 0.22); }
-#report-modal .report-category-option:has(.report-cat-check:checked) {
-  border-color: var(--rm-accent);
-  background: color-mix(in srgb, var(--rm-accent) 8%, transparent);
-}
-#report-modal .report-cat-check { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
-#report-modal .rm-check {
-  width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.25); background: var(--rm-surface);
-  font-size: 0.7em; color: transparent; transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-#report-modal .report-cat-check:checked + .rm-check { background: var(--rm-accent); border-color: var(--rm-accent); color: #000; }
-#report-modal .report-cat-check:focus-visible + .rm-check { outline: 2px solid var(--rm-accent); outline-offset: 2px; }
-#report-modal .rm-text { display: flex; flex-direction: column; gap: 2px; font-size: 0.88em; line-height: 1.4; }
-#report-modal .rm-text strong { color: var(--rm-text); font-weight: 700; }
-#report-modal .rm-text span { color: var(--rm-muted); }
-#report-modal .rm-danger .rm-text strong { color: var(--danger, #ff5c5c); }
-#report-modal .rm-danger:has(.report-cat-check:checked) { border-color: var(--danger, #ff5c5c); background: rgba(255, 92, 92, 0.08); }
-#report-modal .rm-danger .report-cat-check:checked + .rm-check { background: var(--danger, #ff5c5c); border-color: var(--danger, #ff5c5c); }
-
-#report-modal textarea.mod-reason {
-  width: 100%; min-height: 90px; box-sizing: border-box; margin: 0; padding: 10px 12px;
-  background: var(--rm-surface); border: 1px solid var(--rm-border); color: var(--rm-text);
-  font: inherit; font-size: 0.9em; resize: vertical; outline: none; box-shadow: none;
-  transition: border-color 0.15s;
-}
-#report-modal textarea.mod-reason:focus { border-color: var(--rm-accent); }
-#report-modal textarea.mod-reason::placeholder { color: var(--rm-muted); }
-
-#report-modal .modal-actions {
-  flex-shrink: 0; display: flex; justify-content: flex-end; gap: 8px; margin: 0;
-  padding: 14px 24px; border-top: 1px solid var(--rm-border); background: rgba(0, 0, 0, 0.2);
-}
-@media (max-width: 600px) {
-  #report-modal { padding: 0 !important; align-items: stretch !important; }
-  #report-modal .report-modal-content {
-    width: 100vw; max-width: none;
-    height: 100vh; height: 100dvh; max-height: none;
-    border: 0 !important; box-shadow: none !important;
-  }
-  #report-modal .modal-actions { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
-  #report-modal .modal-actions button { flex: 1; }
-}
-#report-modal .modal-actions button {
-  height: 40px; margin: 0; padding: 0 18px; font: inherit; font-size: 0.85em; cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  transition: background 0.18s, color 0.18s, border-color 0.18s;
-}
-#report-modal #report-cancel { background: transparent; border: 1px solid var(--rm-border); color: var(--rm-muted); font-weight: 600; }
-#report-modal #report-cancel:hover { color: var(--rm-text); border-color: rgba(255, 255, 255, 0.25); background: var(--rm-surface); }
-#report-modal #report-submit {
-  background: var(--rm-accent); border: 1px solid var(--rm-accent); color: #000;
-  font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
-}
-#report-modal #report-submit:hover:not(:disabled) { background: transparent; color: var(--rm-accent); }
-#report-modal #report-submit:disabled { opacity: 0.6; cursor: progress; }
-#report-modal button:focus-visible { outline: 2px solid var(--rm-accent); outline-offset: 2px; }
-</style>
-
-<div id="warning-modal" class="modal-overlay" style="display:none; z-index: 100100;">
+<div id="warning-modal" class="modal-overlay footer-hidden footer-warning-modal">
   <div class="modal-content content-warning-content">
-    <h3 style="color: var(--danger);">{{ t("account_warning.title") }}</h3>
+    <h3 class="footer-warning-title">{{ t("account_warning.title") }}</h3>
     <p>{{ t("account_warning.text") }}</p>
-    <blockquote id="warning-reason" style="border-left: 4px solid var(--danger); padding-left: 10px; margin: 10px 0;"></blockquote>
+    <blockquote id="warning-reason" class="footer-warning-reason"></blockquote>
     <input type="hidden" id="warning-id">
     <div class="modal-actions">
       <button id="warning-acknowledge" class="btn-danger">{{ t("account_warning.acknowledge") }}</button>
@@ -336,13 +174,13 @@
       <button type="button" class="sidebar-tab" data-tab="recommendations" title="{{ t("sidebar.recommendations") }}" aria-label="{{ t("sidebar.recommendations") }}">
         <i class="fa-solid fa-compass"></i>
       </button>
-      <button type="button" class="sidebar-tab" id="sidebar-tab-tag" data-tab="tag" title="Tag Feed" aria-label="Tag Feed" style="display: none;">
+      <button type="button" class="sidebar-tab footer-hidden" id="sidebar-tab-tag" data-tab="tag" title="Tag Feed" aria-label="Tag Feed">
         <i class="fa-solid fa-hashtag"></i>
       </button>
-      <button type="button" class="sidebar-tab" id="sidebar-tab-chan" data-tab="chan" title="4chan Thread" aria-label="4chan Thread" style="display: none;">
+      <button type="button" class="sidebar-tab footer-hidden" id="sidebar-tab-chan" data-tab="chan" title="4chan Thread" aria-label="4chan Thread">
         <i class="fa-solid fa-clover"></i>
       </button>
-      <button type="button" class="sidebar-tab" id="sidebar-tab-favs" data-tab="favs" title="Favorites" aria-label="Favorites" style="display: none;">
+      <button type="button" class="sidebar-tab footer-hidden" id="sidebar-tab-favs" data-tab="favs" title="Favorites" aria-label="Favorites">
         <i class="fa-solid fa-heart"></i>
       </button>
       <button type="button" class="sidebar-tab" id="sidebar-tab-tuner" data-tab="tuner" title="Tuner & Debug (Audio, Danmaku & Background)" aria-label="Tuner & Debug (Audio, Danmaku & Background)">
@@ -357,13 +195,13 @@
       </div>
     </div>
     {% endif %}
-    <div id="sidebar-recommendations-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="recommendations" style="display: none;">
+    <div id="sidebar-recommendations-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="recommendations">
       <div class="sidebar-loading-state">
         <i class="fa-solid fa-circle-notch fa-spin"></i>
         <span>{{ t("sidebar.loading_recommendations") }}</span>
       </div>
     </div>
-    <div id="sidebar-tag-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="tag" style="display: none;">
+    <div id="sidebar-tag-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="tag">
       <div class="sidebar-tag-header">
         <div class="sidebar-tag-title">
           <i class="fa-solid fa-hashtag"></i>
@@ -381,14 +219,14 @@
         </div>
       </div>
     </div>
-    <div id="sidebar-chan-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="chan" style="display: none;">
+    <div id="sidebar-chan-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="chan">
       <div class="sidebar-tag-header">
         <div class="sidebar-tag-title">
-          <i class="fa-solid fa-clover" style="color: #4ade80;"></i>
+          <i class="fa-solid fa-clover footer-chan-icon"></i>
           <span class="sidebar-chan-name"></span>
           <span class="sidebar-chan-count"></span>
         </div>
-        <a href="#" class="sidebar-chan-overview-btn" title="View thread overview" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.06); color: #aaa; text-decoration: none;">
+        <a href="#" class="sidebar-chan-overview-btn footer-chan-overview-btn" title="View thread overview">
           <i class="fa-solid fa-list"></i>
         </a>
       </div>
@@ -399,7 +237,7 @@
         </div>
       </div>
     </div>
-    <div id="sidebar-favs-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="favs" style="display: none;">
+    <div id="sidebar-favs-container" class="sidebar-recommendations-list sidebar-tab-content" data-tab-content="favs">
       <div class="sidebar-tag-header">
         <div class="sidebar-tag-title">
           <i class="fa-solid fa-heart"></i>
@@ -414,7 +252,7 @@
         </div>
       </div>
     </div>
-    <div id="sidebar-tuner-container" class="sidebar-tuner-container sidebar-tab-content" data-tab-content="tuner" style="display: none;">
+    <div id="sidebar-tuner-container" class="sidebar-tuner-container sidebar-tab-content" data-tab-content="tuner">
     </div>
   </div>
   <div class="global-sidebar-right-footer">
@@ -424,7 +262,7 @@
     <a href="/rules" data-page-modal title="{{ t("footer.rules") }}" aria-label="{{ t("footer.rules") }}"><i class="fa-solid fa-scale-balanced"></i></a>
     <a href="/about" data-page-modal title="{{ t("footer.about") }}" aria-label="{{ t("footer.about") }}"><i class="fa-solid fa-info"></i></a>
     <a href="/privacy" data-page-modal title="Privacy" aria-label="Privacy"><i class="fa-solid fa-shield-halved"></i></a>
-    <div id="help-button" style="color: var(--accent); font-weight: bold; opacity: 0.7;" title="Keyboard Shortcuts" aria-label="Keyboard Shortcuts"><i class="fa-solid fa-keyboard"></i></div>
+    <div id="help-button" class="footer-help-btn" title="Keyboard Shortcuts" aria-label="Keyboard Shortcuts"><i class="fa-solid fa-keyboard"></i></div>
     {% if not (url.pathname|length == 2 and url.pathname[1:] in "0123456789") %}
     {# id kept: f0ckm.js / sidebar-activity.js hook the AJAX random transition on #nav-random #}
     <a href="/random" id="nav-random" title="{{ t("nav.random") }}" aria-label="{{ t("nav.random") }}"><i class="fa-solid fa-shuffle"></i></a>

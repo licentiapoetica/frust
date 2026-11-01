@@ -3,311 +3,23 @@
 <div class="pagewrapper">
 <div id="main" class="admin-container">
     {% include "snippets/admin-back.html" %}
-    <style>
-        .admin-users-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 8px;
-            color: var(--white);
-        }
-        .admin-users-table th {
-            padding: 15px;
-            text-align: left;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 1px;
-            color: #888;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .admin-users-table tr {
-            transition: all 0.2s ease;
-        }
-        .admin-users-table tbody tr {
-            background: rgba(255, 255, 255, 0.02);
-        }
-        .admin-users-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .admin-users-table td {
-            padding: 15px;
-            vertical-align: middle;
-        }
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            display: inline-block;
-        }
-        .status-active { background: linear-gradient(135deg, #28a745, #20c997); color: #fff; }
-        .status-pending { background: linear-gradient(135deg, #f08c00, #ffc107); color: #000; }
-        .status-banned { background: linear-gradient(135deg, #e03131, #f03e3e); color: #fff; }
-        .status-system { background: #5c0a0a; color: #ffb3b3; border: 1px solid #8b1a1a; }
-        
-        .method-tag {
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            background: rgba(var(--accent-rgb, 0, 150, 255), 0.1);
-            border: 1px solid rgba(var(--accent-rgb, 0, 150, 255), 0.2);
-            color: var(--accent);
-            border-radius: 4px;
-        }
-        
-        .stat-box {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.85rem;
-            color: #ccc;
-            transition: color 0.2s, transform 0.1s;
-        }
-        .stat-box:hover {
-            color: var(--accent);
-            transform: translateY(-1px);
-        }
-        .stat-box svg { opacity: 0.6; }
-
-        .btn-modern {
-            border: 0;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            color: #fff;
-            white-space: nowrap;
-        }
-        .btn-modern:hover { opacity: 0.8; }
-        .btn-ban { background: #e03131; }
-        .btn-unban { background: #28a745; }
-        .btn-files { background: #f08c00; }
-        .btn-comms { background: #4dabf7; }
-        .btn-verify { background: #5c7cfa; }
-        .btn-create { background: linear-gradient(135deg, #5c7cfa, #339af0); }
-        .btn-role   { background: rgba(180, 100, 255, 0.15); color: #c084fc; border: 1px solid rgba(180, 100, 255, 0.3); }
-        .btn-role:hover { background: rgba(180, 100, 255, 0.25); opacity: 1; }
-
-        .legacy-filter-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            padding: 0 14px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            font-size: 0.85rem;
-            color: #aaa;
-            white-space: nowrap;
-            user-select: none;
-            transition: all 0.2s ease;
-            height: 42px;
-            box-sizing: border-box;
-        }
-        .legacy-filter-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.2);
-            color: #fff;
-        }
-        .legacy-filter-btn.active {
-            background: rgba(var(--accent-rgb, 0, 150, 255), 0.15);
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-        .legacy-filter-btn input {
-            cursor: pointer;
-            accent-color: var(--accent);
-            width: 15px;
-            height: 15px;
-            margin: 0;
-        }
-
-        .admin-select-filter {
-            padding: 0 14px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: #ccc;
-            font-size: 0.85rem;
-            outline: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            height: 42px;
-            box-sizing: border-box;
-        }
-        .admin-select-filter:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.2);
-            color: #fff;
-        }
-        .admin-select-filter:focus {
-            border-color: var(--accent);
-        }
-        .admin-select-filter.active {
-            background: rgba(var(--accent-rgb, 0, 150, 255), 0.15);
-            border-color: var(--accent);
-            color: var(--accent);
-            font-weight: 600;
-        }
-        .admin-select-filter option {
-            background: #1a1a1a;
-            color: #fff;
-        }
-        .admin-select-filter:disabled {
-            opacity: 0.35;
-            cursor: not-allowed;
-        }
-
-        .btn-filter-reset {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #aaa;
-            padding: 0 14px;
-            height: 42px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-            box-sizing: border-box;
-            white-space: nowrap;
-        }
-        .btn-filter-reset:hover {
-            background: rgba(255, 60, 60, 0.15);
-            border-color: rgba(255, 60, 60, 0.3);
-            color: #ff6b6b;
-        }
-
-        /* Create User Modal */
-        #create-user-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(4px);
-        }
-        #create-user-modal.open { display: flex; }
-        .cum-box {
-            background: #141414;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 30px;
-            width: 100%;
-            max-width: 460px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-            position: relative;
-            animation: cum-in 0.2s ease;
-        }
-        @keyframes cum-in {
-            from { transform: translateY(-16px); opacity: 0; }
-            to   { transform: translateY(0);     opacity: 1; }
-        }
-        .cum-box h3 {
-            margin: 0 0 20px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--white);
-        }
-        .cum-field {
-            margin-bottom: 14px;
-        }
-        .cum-field label {
-            display: block;
-            font-size: 0.75rem;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            margin-bottom: 5px;
-        }
-        .cum-field input,
-        .cum-field select {
-            width: 100%;
-            padding: 10px 14px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 6px;
-            color: #fff;
-            font-size: 0.9rem;
-            outline: none;
-            transition: border-color 0.2s;
-            box-sizing: border-box;
-        }
-        .cum-field input:focus,
-        .cum-field select:focus {
-            border-color: var(--accent);
-        }
-        .cum-field select option { background: #1a1a1a; }
-        .cum-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            justify-content: flex-end;
-        }
-        .cum-close-btn {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: none;
-            border: none;
-            color: #666;
-            font-size: 1.2rem;
-            cursor: pointer;
-            line-height: 1;
-            transition: color 0.2s;
-        }
-        .cum-close-btn:hover { color: #fff; }
-        #cum-error {
-            font-size: 0.8rem;
-            color: #ff6b6b;
-            margin-top: 12px;
-            display: none;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            object-fit: cover;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .avatar-placeholder {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #333, #111);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: var(--accent);
-            font-size: 1.2rem;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-    </style>
 
     <!-- Create User Modal -->
     <div id="create-user-modal">
         <div class="cum-box">
             <button class="cum-close-btn" data-on="click:closeCreateUserModal" title="Close">&times;</button>
-            <h3><i class="fa fa-user-plus" style="margin-right: 8px; color: var(--accent);"></i>Create New User</h3>
+            <h3><i class="fa fa-user-plus adm-users-modal-icon"></i>Create New User</h3>
 
             <div class="cum-field">
-                <label for="cum-username">Username <span style="color:#e03131">*</span></label>
+                <label for="cum-username">Username <span class="adm-users-required">*</span></label>
                 <input type="text" id="cum-username" placeholder="e.g. john_doe" autocomplete="off">
             </div>
             <div class="cum-field">
-                <label for="cum-email">Email <span style="color:#666">(optional)</span></label>
+                <label for="cum-email">Email <span class="adm-users-field-hint">(optional)</span></label>
                 <input type="email" id="cum-email" placeholder="user@example.com" autocomplete="off">
             </div>
             <div class="cum-field">
-                <label for="cum-password">Password <span style="color:#e03131">*</span> <span style="color:#666;font-size:0.7rem">(min 20 chars)</span></label>
+                <label for="cum-password">Password <span class="adm-users-required">*</span> <span class="adm-users-field-hint adm-users-field-hint-small">(min 20 chars)</span></label>
                 <input type="password" id="cum-password" placeholder="Strong password…" autocomplete="new-password">
             </div>
             <div class="cum-field">
@@ -322,7 +34,7 @@
             <div id="cum-error"></div>
 
             <div class="cum-actions">
-                <button class="btn-modern" style="background:#333;" data-on="click:closeCreateUserModal">Cancel</button>
+                <button class="btn-modern adm-users-btn-cancel" data-on="click:closeCreateUserModal">Cancel</button>
                 <button class="btn-modern btn-create" id="cum-submit-btn" data-on="click:submitCreateUser">
                     <i class="fa fa-plus"></i> Create User
                 </button>
@@ -332,27 +44,26 @@
 
     <!-- .container: the admin skin's 1200px column, same width and gutters as the back bar above -->
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; gap: 20px; flex-wrap: wrap;">
+        <div class="adm-users-header">
             <div>
-                <h2 style="margin: 0; font-weight: 800; letter-spacing: -0.5px;">User Management</h2>
-                <p style="color: #888; margin: 5px 0 0 0;">Administration hub for <span id="total-count">{{ total }}</span> <span id="total-label">{{ totalLabel }}</span>.</p>
+                <h2 class="adm-page-title">User Management</h2>
+                <p class="adm-page-subtitle">Administration hub for <span id="total-count">{{ total }}</span> <span id="total-label">{{ totalLabel }}</span>.</p>
             </div>
             <div>
-                <button class="btn-modern btn-create" data-on="click:openCreateUserModal" style="padding: 11px 18px; font-size: 0.85rem; white-space: nowrap; height: 42px;" title="Create new user">
+                <button class="btn-modern btn-create adm-users-btn-create" data-on="click:openCreateUserModal" title="Create new user">
                     <i class="fa fa-user-plus"></i> Create User
                 </button>
             </div>
         </div>
 
         <!-- Filter & Search Toolbar -->
-        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 25px; flex-wrap: wrap;">
-            <div style="flex-grow: 1; min-width: 240px; position: relative;">
-                <input type="text" id="user-search" placeholder='Search by name or email… use "exact" for exact match' 
-                       style="width: 100%; height: 42px; padding: 0 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; outline: none; transition: border-color 0.2s; box-sizing: border-box;"
+        <div class="adm-users-toolbar">
+            <div class="adm-users-search-wrap">
+                <input type="text" id="user-search" class="adm-users-search" placeholder='Search by name or email… use "exact" for exact match' 
                        value="{{ q }}">
-                <div id="search-spinner" style="position: absolute; right: 15px; top: 11px; display: none;">
-                    <svg class="spinner" width="20" height="20" viewBox="0 0 50 50" style="animation: rotate 2s linear infinite;">
-                        <circle cx="25" cy="25" r="20" fill="none" stroke="var(--accent)" stroke-width="5" stroke-dasharray="90,150" stroke-dashoffset="0" style="stroke-linecap: round;"></circle>
+                <div id="search-spinner" class="adm-users-spinner">
+                    <svg class="spinner adm-users-spinner-svg" width="20" height="20" viewBox="0 0 50 50">
+                        <circle cx="25" cy="25" r="20" fill="none" stroke="var(--accent)" stroke-width="5" stroke-dasharray="90,150" stroke-dashoffset="0" class="adm-users-spinner-circle"></circle>
                     </svg>
                 </div>
             </div>
@@ -377,11 +88,11 @@
             <!-- Legacy Only Toggle -->
             <label id="legacy-filter-label" class="legacy-filter-btn {{ ("active" if onlyLegacy else "") }}" title="Toggle to only show legacy ghost users">
                 <input type="checkbox" id="legacy-filter" {{ ("checked" if onlyLegacy else "") }}>
-                <span><i class="fa fa-ghost" style="opacity: 0.8; margin-right: 4px;"></i>Only legacy</span>
+                <span><i class="fa fa-ghost adm-users-legacy-icon"></i>Only legacy</span>
             </label>
 
             <!-- Reset Filters Button -->
-            <button id="reset-filters-btn" class="btn-filter-reset" style="display: {{ ("inline-flex" if (((q or status) or role) or onlyLegacy) else "none") }};" title="Reset all filters and search">
+            <button id="reset-filters-btn" class="btn-filter-reset{% if not (((q or status) or role) or onlyLegacy) %} adm-users-hidden{% endif %}" title="Reset all filters and search">
                 <i class="fa fa-rotate-left"></i> Reset
             </button>
         </div>
@@ -395,15 +106,15 @@
                         <th>Date</th>
                         <th>Age</th>
                         <th>Status</th>
-                        <th style="text-align: right;">Actions</th>
+                        <th class="adm-users-th-actions">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="user-table-body">
                     {% include "admin/users_list.html" %}
                 </tbody>
             </table>
-            <div id="loading-trigger" style="height: 20px; margin-top: 10px;"></div>
-            <div id="no-users-msg" style="display: {{ ("block" if users|length == 0 else "none") }}; padding: 40px; text-align: center; color: #666;">
+            <div id="loading-trigger" class="adm-users-loading-trigger"></div>
+            <div id="no-users-msg" class="adm-users-empty{% if not (users|length == 0) %} adm-users-hidden{% endif %}">
                 {{ emptyMsg }}
             </div>
         </div>
@@ -557,7 +268,7 @@
             var currentDisplay = btn.dataset.display || '';
 
             var hint = currentDisplay
-                ? 'Current nick: <strong style="color: var(--accent);">' + escHTML(currentDisplay) + '</strong><br>Enter a new stylized name, or leave empty to clear it.'
+                ? 'Current nick: <strong class="adm-users-hint-nick">' + escHTML(currentDisplay) + '</strong><br>Enter a new stylized name, or leave empty to clear it.'
                 : 'Enter a stylized display name for <strong>' + escHTML(userName) + '</strong>. Leave empty to clear.';
 
             ModAction.confirm('Set Display Name', hint, async (newName) => {
@@ -577,7 +288,7 @@
                     if (row) {
                         var link = row.querySelector('.user-info-cell a');
                         if (link && data.display_name) {
-                            link.innerHTML = '<span style="color: var(--accent);">' + escHTML(data.display_name) + '</span> <span style="font-size: 0.75em; color: #666;">(' + escHTML(userName) + ')</span>';
+                            link.innerHTML = '<span class="adm-users-display-name">' + escHTML(data.display_name) + '</span> <span class="adm-users-login">(' + escHTML(userName) + ')</span>';
                         } else if (link) {
                             link.textContent = userName;
                         }
@@ -613,7 +324,7 @@
                 }, { hideReason: true });
             } else {
                 var hint = 'Select comment display mode to force for <strong>' + escHTML(userName) + '</strong>:<br><br>' +
-                           '<select id="force-mode-select" class="input" style="width: 100%; padding: 8px;">' +
+                           '<select id="force-mode-select" class="input adm-users-modal-select">' +
                            '<option value="0" ' + (currentMode == '0' ? 'selected' : '') + '>Tree</option>' +
                            '<option value="1" ' + (currentMode == '1' ? 'selected' : '') + '>Linear</option>' +
                            '</select>';
@@ -819,11 +530,6 @@
         }, { threshold: 0.1 });
         observer.observe(loadingTrigger);
 
-        // Styling for spinner
-        var style = document.createElement('style');
-        style.innerHTML = '@keyframes rotate { 100% { transform: rotate(360deg); } }';
-        document.head.appendChild(style);
-
         // --- Create User Modal ---
         var createUserModal = document.getElementById('create-user-modal');
 
@@ -912,7 +618,7 @@
             var currentRole = btn.dataset.role || 'user';
 
             var hint = 'Select the new role for <strong>' + escHTML(userName) + '</strong>:<br><br>' +
-                       '<select id="set-role-select" class="input" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff;">' +
+                       '<select id="set-role-select" class="input adm-users-modal-select adm-users-role-select">' +
                        '<option value="user"'   + (currentRole === 'user'  ? ' selected' : '') + '>User (no special permissions)</option>' +
                        '<option value="mod"'    + (currentRole === 'mod'   ? ' selected' : '') + '>Moderator</option>' +
                        '<option value="admin"'  + (currentRole === 'admin' ? ' selected' : '') + '>Admin (full access)</option>' +
@@ -950,9 +656,9 @@
             var is4chan = currentGroups.indexOf('4chan') !== -1;
 
             var hint = 'Manage groups for <strong>' + escHTML(userName) + '</strong>:<br><br>' +
-                       '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:6px;border:1px solid rgba(255,255,255,0.1);">' +
-                       '<input type="checkbox" id="group-4chan-checkbox" value="4chan"' + (is4chan ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:#4ade80;cursor:pointer;">' +
-                       '<span><strong style="color:#4ade80;">🍀 4chan</strong> — Grants access to the 4chan catalogue, thread viewer, and rehosting</span>' +
+                       '<label class="adm-users-group-option">' +
+                       '<input type="checkbox" id="group-4chan-checkbox" value="4chan"' + (is4chan ? ' checked' : '') + ' class="adm-users-group-checkbox">' +
+                       '<span><strong class="adm-users-group-name">🍀 4chan</strong> — Grants access to the 4chan catalogue, thread viewer, and rehosting</span>' +
                        '</label>';
 
             ModAction.confirm('Manage Groups', hint, async () => {

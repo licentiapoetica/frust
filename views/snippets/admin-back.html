@@ -16,54 +16,6 @@
 
 {% include "snippets/admin-skin.html" %}
 
-<style>
-  .adm-back {
-    --ab-accent: var(--accent, #0096ff);
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    max-width: 1200px; margin: 0 auto; padding: 18px 16px 0; box-sizing: border-box;
-    text-align: left;
-  }
-  .adm-back, .adm-back * { border-radius: 0 !important; }
-  .adm-back-link {
-    position: relative; display: inline-flex; align-items: stretch; overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.03);
-    color: var(--text-color, var(--white, #fff)); text-decoration: none;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .adm-back-link::after {
-    content: ''; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
-    background: var(--ab-accent); transform: scaleX(0); transform-origin: left; transition: transform 0.25s ease;
-  }
-  .adm-back-link:hover, .adm-back-link:focus-visible {
-    border-color: var(--ab-accent); background: color-mix(in srgb, var(--ab-accent) 8%, transparent);
-    color: var(--text-color, var(--white, #fff)); text-decoration: none; outline: none;
-  }
-  .adm-back-link:hover::after, .adm-back-link:focus-visible::after { transform: scaleX(1); }
-  .adm-back-arrow {
-    display: flex; align-items: center; justify-content: center; width: 38px;
-    background: var(--ab-accent); color: #000; font-size: 0.9em;
-  }
-  .adm-back-arrow i { transition: transform 0.2s ease; }
-  .adm-back-link:hover .adm-back-arrow i { transform: translateX(-3px); }
-  .adm-back-text {
-    display: flex; flex-direction: column; justify-content: center; padding: 6px 14px 7px 12px;
-    font-size: 0.86em; font-weight: 700; line-height: 1.2; white-space: nowrap;
-  }
-  .adm-back-text small {
-    font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
-    color: var(--text-muted, #8a8f98);
-  }
-  .adm-back-crumb {
-    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;
-    color: var(--text-muted, #8a8f98);
-  }
-  .adm-back-crumb:not(:empty)::before { content: '/ '; color: var(--ab-accent); }
-  @media (prefers-reduced-motion: reduce) {
-    .adm-back-link::after, .adm-back-arrow i { transition: none; }
-  }
-</style>
-
 <script nonce="{{ csp_nonce }}">
   (() => {
     // Breadcrumb = the page's own heading (first h1/h2 in #main). The rest of the page isn't in the

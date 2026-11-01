@@ -1,97 +1,6 @@
 {% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main" class="ranking-page">
-  <style>
-    /* Ranking: style guide (square, flat, theme colours, no glow). Scoped to .ranking-page so it also
-       applies inside the page modal, which lifts this #main (styles included) over the current page. */
-    .ranking-page {
-      --rk-accent: var(--accent, #0096ff);
-      --rk-text: var(--text-color, var(--white, #fff));
-      --rk-muted: var(--text-muted, #8a8f98);
-      --rk-surface: rgba(255, 255, 255, 0.04);
-      --rk-border: rgba(255, 255, 255, 0.1);
-      --rk-gold: #ffd700; --rk-silver: #c0c0c0; --rk-bronze: #cd7f32;
-    }
-    .ranking-page *, .ranking-page *::before, .ranking-page *::after { border-radius: 0 !important; }
-
-    /* Podium: flat tiles, medal colour as frame + label, no bounce, no glow */
-    .ranking-page .ranking-podium { background: none; gap: 16px; margin: 0 0 20px; padding: 0; align-items: stretch; }
-    .ranking-page .podium-item {
-      flex: 1 1 0; max-width: 240px; padding: 22px 14px 16px; box-sizing: border-box;
-      background: var(--rk-surface); border: 1px solid var(--rk-border); border-top: 3px solid var(--medal, var(--rk-accent));
-      justify-content: flex-start; transition: border-color 0.15s, background 0.15s;
-    }
-    .ranking-page .podium-item:hover { transform: none; background: rgba(255, 255, 255, 0.06); border-color: var(--medal, var(--rk-accent)); }
-    .ranking-page .podium-item.rank-1 { --medal: var(--rk-gold); transform: none; padding-top: 40px; }
-    .ranking-page .podium-item.rank-1:hover { transform: none; }
-    .ranking-page .podium-item.rank-2 { --medal: var(--rk-silver); }
-    .ranking-page .podium-item.rank-3 { --medal: var(--rk-bronze); }
-    .ranking-page .podium-avatar,
-    .ranking-page :is(.rank-1, .rank-2, .rank-3) .podium-avatar {
-      width: 96px; height: 96px; border: 2px solid var(--medal, var(--rk-accent)); box-shadow: none; background: #000;
-    }
-    .ranking-page .rank-1 .podium-avatar { width: 120px; height: 120px; }
-    .ranking-page .podium-crown { top: -34px; filter: none; transform: translateX(-50%); font-size: 1.6em; }
-    .ranking-page .podium-avatar-wrapper { margin-bottom: 18px; }
-    .ranking-page .podium-rank-label,
-    .ranking-page :is(.rank-1, .rank-2, .rank-3) .podium-rank-label {
-      bottom: -11px; padding: 2px 10px; font-size: 0.85em; font-weight: 800; letter-spacing: 0.06em;
-      background: var(--medal, var(--rk-accent)); color: #000; box-shadow: none;
-    }
-    .ranking-page .podium-name { font-size: 1.15em; text-shadow: none; color: var(--rk-text); overflow-wrap: anywhere; }
-    .ranking-page .podium-count,
-    .ranking-page :is(.rank-1, .rank-2, .rank-3) .podium-count {
-      color: var(--rk-muted); font-size: 0.72em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
-    }
-
-    /* Tables */
-    .ranking-page .clean-table { background: transparent; border: 1px solid var(--rk-border); border-collapse: collapse; }
-    .ranking-page .clean-table th {
-      padding: 10px 12px; font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-      color: var(--rk-muted); background: var(--rk-surface); border-bottom: 1px solid var(--rk-border);
-    }
-    .ranking-page .clean-table td { padding: 10px 12px; border-bottom: 1px solid var(--rk-border); color: var(--rk-text); line-height: 1.4; }
-    .ranking-page .clean-table tbody tr { transition: background 0.12s; }
-    .ranking-page .clean-table tbody tr:hover { background: var(--rk-surface); }
-    .ranking-page .rank-cell { color: var(--rk-accent) !important; font-variant-numeric: tabular-nums; }
-    .ranking-page .count-cell, .ranking-page .stats-table td:last-child, .ranking-page .f0cks-table td:last-child { font-variant-numeric: tabular-nums; }
-    .ranking-page .rank-avatar { border: 1px solid var(--rk-border); }
-
-    /* Side panels */
-    .ranking-page .section-small { gap: 20px; }
-    .ranking-page .stats-box-simple {
-      background: var(--rk-surface); border: 1px solid var(--rk-border); box-shadow: none; padding: 16px; box-sizing: border-box;
-    }
-    .ranking-page .stats-box-simple h3 {
-      display: flex; align-items: center; gap: 8px; margin: 0 0 4px; padding: 0 0 10px;
-      font-size: 0.78em; font-weight: 800; letter-spacing: 0.12em; color: var(--rk-muted);
-      border-bottom: 1px solid var(--rk-border);
-    }
-    .ranking-page .stats-box-simple h3::before { content: ''; width: 3px; height: 10px; background: var(--rk-accent); flex-shrink: 0; }
-    .ranking-page .stats-box-simple .clean-table { border: 0; margin-top: 0; }
-    .ranking-page .stats-box-simple .clean-table td { padding: 8px 0; }
-    .ranking-page .stats-box-simple .clean-table tbody tr:hover { background: transparent; }
-    .ranking-page .stats-box-simple .clean-table tbody tr:last-child td { border-bottom: 0; }
-    /* Both columns start on the same top line */
-    .ranking-page .ranking-wrapper { gap: 28px; margin-top: 0; align-items: flex-start; }
-    .ranking-page .section-big > .clean-table:first-child { margin-top: 0; }
-
-    @media (max-width: 992px) {
-      .ranking-page .ranking-podium { flex-direction: row; align-items: stretch; gap: 10px; padding-top: 0; }
-      .ranking-page .podium-item { padding: 18px 8px 12px; }
-      .ranking-page .podium-item.rank-1 { padding-top: 34px; }
-      .ranking-page .podium-avatar, .ranking-page :is(.rank-1, .rank-2, .rank-3) .podium-avatar { width: 64px; height: 64px; }
-      .ranking-page .rank-1 .podium-avatar { width: 80px; height: 80px; }
-      .ranking-page .podium-item.rank-1 { order: 2 !important; }
-      .ranking-page .podium-item.rank-2 { order: 1 !important; }
-      .ranking-page .podium-item.rank-3 { order: 3 !important; }
-      .ranking-page .podium-name { font-size: 0.95em; }
-    }
-    @media (max-width: 420px) {
-      .ranking-page .ranking-podium { flex-direction: column; align-items: stretch; gap: 26px; }
-      .ranking-page .podium-item { max-width: none; order: unset !important; }
-    }
-  </style>
   
   <div class="ranking-wrapper">
     <div class="section-big">
@@ -181,7 +90,7 @@
             {% for key, favo in favotop|entries %}
             <tr>
               <td><a href="/{{ (favo.slug if (enable_item_slugs and favo.slug) else favo.id) }}">#{{ (favo.slug if (enable_item_slugs and favo.slug) else favo.id) }}</a></td>
-              <td>{{ favo.favs }} <span style="opacity: 0.5; font-size: 0.8em;">{{ t("ranking.favs") }}</span></td>
+              <td>{{ favo.favs }} <span class="ranking-favs-unit">{{ t("ranking.favs") }}</span></td>
             </tr>
             {% endfor %}
           </tbody>

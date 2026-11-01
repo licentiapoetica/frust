@@ -5,10 +5,10 @@
         <a href="{{ item.dest }}" id="elfe" target="_blank" class="album-stage-link">
             <img id="f0ck-image" class="img-fluid album-active-image" src="{{ item.dest }}" loading="lazy" decoding="async" />
         </a>
-        <div id="f0ck-album-video-wrapper" class="album-video-wrapper embed-responsive embed-responsive-16by9" style="display: none; position: absolute; inset: 0; width: 100%; height: 100%;">
+        <div id="f0ck-album-video-wrapper" class="album-video-wrapper embed-responsive embed-responsive-16by9 item-media-hidden">
             <video id="f0ck-album-video" class="embed-responsive-item" preload="auto" loop playsinline></video>
         </div>
-        <div id="f0ck-album-audio-wrapper" class="album-audio-wrapper embed-responsive embed-responsive-16by9" style="display: none; position: absolute; inset: 0; width: 100%; height: 100%; background: #000;">
+        <div id="f0ck-album-audio-wrapper" class="album-audio-wrapper embed-responsive embed-responsive-16by9 item-media-hidden">
             <div class="sidebar-media-placeholder audio">
                 <div class="audio-track-info-badge">
                     <div class="audio-track-info-details">
@@ -62,7 +62,7 @@
     <video id="my-video" class="embed-responsive-item" width="{{ (item.width or 640) }}" height="{{ (item.height or 360) }}" src="{{ item.dest }}" preload="auto" data-size="{{ item.size }}" loop playsinline {% if (not session or session.disable_autoplay != true) %} autoplay {% endif %}></video>
 </div>
 {% elif item.mime.startswith("audio") %}
-<div class="embed-responsive embed-responsive-16by9" style="background: #000;">
+<div class="embed-responsive embed-responsive-16by9 item-media-audio-stage">
     <div class="sidebar-media-placeholder audio {% if item.coverart %}has-cover{% endif %}">
         <div class="audio-reactive-bg"></div>
         <div class="audio-track-info-badge">
@@ -76,7 +76,7 @@
         </div>
     </div>
     <audio id="my-video" class="embed-responsive-item" preload="auto" loop crossorigin="anonymous" src="{{ item.dest }}" data-setup="{}" data-size="{{ item.size }}" {% if item.coverart %}poster="{{ item.coverart }}"{% endif %} type="{{ item.mime }}" {% if (not session or session.disable_autoplay != true) %} autoplay {% endif %}></audio>
-    <img id="f0ck-audio-cover" {% if item.coverart %}src="{{ item.coverart }}"{% endif %} style="display: none;">
+    <img id="f0ck-audio-cover" {% if item.coverart %}src="{{ item.coverart }}"{% endif %} class="item-media-hidden">
 </div>
 {% elif item.mime.startswith("image") %}
 <div class="embed-responsive embed-responsive-16by9">
@@ -94,8 +94,8 @@
     <div id="ruffle-container" class="embed-responsive-item" data-swf="{{ item.dest }}"></div>
 </div>
 {% elif (item.mime == "application/pdf" and enable_pdf) %}
-<div class="embed-responsive embed-responsive-16by9" style="background: #fff;border: 1px solid #444; overflow: hidden;">
-    <iframe class="embed-responsive-item" src="{{ item.dest }}#toolbar=0" sandbox="allow-scripts allow-same-origin" loading="lazy" style="border: none; overscroll-behavior: contain !important;"></iframe>
+<div class="embed-responsive embed-responsive-16by9 item-media-pdf">
+    <iframe class="embed-responsive-item item-media-pdf-frame" src="{{ item.dest }}#toolbar=0" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe>
 </div>
 {% elif is_archive_item %}
 <div class="embed-responsive embed-responsive-16by9 archive-download-view">

@@ -5,7 +5,7 @@
   <!-- Brand: always visible, flush left -->
   <a class="navbar-brand" href="/">
     {% if custom_brand_image %}
-      <img id="navbar-logo" src="{{ custom_brand_image }}" alt="{{ domain }}" data-on="load:sync-navbar" style="max-height: 40px; vertical-align: middle; max-width: 180px; width: auto;">
+      <img id="navbar-logo" src="{{ custom_brand_image }}" alt="{{ domain }}" data-on="load:sync-navbar" class="navbar-logo-img">
     {% else %}
       <span class="f0ck">{{ (custom_navbar_brand_text or domain) }}</span>
     {% endif %}
@@ -15,7 +15,7 @@
   <div class="nav-collapse" id="navbarContent">
       <div class="nav-links">
         {% if (not session.is_anon or (enable_anonymous_access and anon_permissions.upload)) %}
-        <a id="nav-upload-link" style="cursor:pointer;"><i class="fa-solid fa-angle-up"></i> {{ t("nav.upload") }}</a>
+        <a id="nav-upload-link" class="navbar-upload-link"><i class="fa-solid fa-angle-up"></i> {{ t("nav.upload") }}</a>
         {% endif %}
         {% if meme_creator %}
         <a id="nav-meme-link" href="/meme"><i class="fa-regular fa-image"></i> {{ t("nav.meme") }}</a>
@@ -29,7 +29,7 @@
         {% endif %}
         <a href="/tags" title="{{ t("nav.tags") }}"><i class="fa-solid fa-tags"></i></a>
         {% if session.can_chan %}
-        <a href="/4/wsg/catalogue" id="nav-chan-link" title="4chan Viewer & Rehost" style="color: #4ade80;"><i class="fa-solid fa-clover"></i></a>
+        <a href="/4/wsg/catalogue" id="nav-chan-link" class="navbar-chan-link" title="4chan Viewer & Rehost"><i class="fa-solid fa-clover"></i></a>
         {% endif %}
         {% if abyss_enabled %}
         <a href="/abyss" title="{{ t("nav.abyss") }}"><i class="fa-solid fa-dice-d6"></i></a>
@@ -67,7 +67,7 @@
           {% endif %}
           <a href="/pending" class="nav-menu-pending">Pending{% if session.own_pending_count is number %}<span class="nav-menu-count {% if session.own_pending_count == 0 %}is-zero{% endif %}" title="{{ session.own_pending_count }} upload(s) awaiting approval">{{ session.own_pending_count }}</span>{% endif %}</a>
           {% if (enable_anonymous_access and session.is_anon) %}
-          <a href="#" id="nav-user-anon-identity-btn" style="white-space: nowrap;" data-on="click:prevent,openAnonPasskey">Passkey Identity</a>
+          <a href="#" id="nav-user-anon-identity-btn" class="navbar-anon-identity-link" data-on="click:prevent,openAnonPasskey">Passkey Identity</a>
           {% endif %}
           <a href="/user/{{ ((session.login if (session.is_anon and session.login) else session.user))|lower }}/favs" class="mobile-only">{{ t("nav.favs") }}</a>
           <a href="/settings" class="mobile-only" data-page-modal title="{{ t("nav.settings") }}">{{ t("nav.settings") }}</a>
@@ -80,19 +80,19 @@
       <div id="nav-notifications" class="nav-item-rel">
         <a href="#" id="nav-notif-btn" title="Notifications">
           <i class="fa-solid fa-bell"></i>
-          <span class="notif-count" style="display:none">0</span>
+          <span class="notif-count navbar-hidden">0</span>
         </a>
         <div id="notif-dropdown" class="notif-dropdown">
           <div class="notif-header">
             <div class="notif-tabs">
               {% if enable_comments %}
-              <button class="notif-tab active" data-tab="user">{{ t("nav.notif_tab_user") }} <span class="notif-tab-badge" id="notif-tab-badge-user" style="display:none">0</span></button>
-              <button class="notif-tab" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge" id="notif-tab-badge-system" style="display:none">0</span></button>
+              <button class="notif-tab active" data-tab="user">{{ t("nav.notif_tab_user") }} <span class="notif-tab-badge navbar-hidden" id="notif-tab-badge-user">0</span></button>
+              <button class="notif-tab" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge navbar-hidden" id="notif-tab-badge-system">0</span></button>
               {% else %}
-              <button class="notif-tab active" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge" id="notif-tab-badge-system" style="display:none">0</span></button>
+              <button class="notif-tab active" data-tab="system">{{ t("nav.notif_tab_system") }} <span class="notif-tab-badge navbar-hidden" id="notif-tab-badge-system">0</span></button>
               {% endif %}
               {% if (session and session.admin) %}
-              <button class="notif-tab" data-tab="admin">Admin <span class="notif-tab-badge" id="notif-tab-badge-admin" style="display:none">0</span></button>
+              <button class="notif-tab" data-tab="admin">Admin <span class="notif-tab-badge navbar-hidden" id="notif-tab-badge-admin">0</span></button>
               {% endif %}
             </div>
             <button id="mark-all-read" title="{{ t("nav.mark_all_read") }}"><i class="fa-solid fa-check-double"></i></button>
@@ -123,7 +123,7 @@
       <div id="nav-dm" class="nav-item-rel">
         <a href="/messages" id="nav-dm-btn" title="Direct Messages">
           <i class="fa-solid fa-envelope"></i>
-          <span id="dm-badge" class="notif-count-dm" style="display:none">0</span>
+          <span id="dm-badge" class="notif-count-dm navbar-hidden">0</span>
         </a>
       </div>
       {% endif %}
@@ -133,7 +133,7 @@
 
       <!-- Filter -->
       {% if (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
-      <a href="#" id="nav-filter-btn" title="Filter" style="position: relative; display: inline-flex; align-items: center; justify-content: center; z-index: 1000;">
+      <a href="#" id="nav-filter-btn" class="navbar-filter-btn" title="Filter">
         <i class="fa-solid fa-filter"></i>
         {% if session.mode == 0 %}
         <span id="nav-filter-badge" class="filter-badge filter-badge-sfw">SFW</span>
@@ -163,10 +163,10 @@
   </div><!-- /.nav-right-group -->
 
   <!-- MOTD: below the nav row -->
-  <div class="motd-container" id="motd-container" {% if (motd is undefined or motd == "") %} style="display:none" {% endif %}>
+  <div class="motd-container{% if (motd is undefined or motd == "") %} navbar-hidden{% endif %}" id="motd-container">
     <span class="motd-content" id="motd-display"></span>
-    <div id="motd-data" style="display:none">{% if motd is defined %}{{ motd }}{% endif %}</div>
-    <div id="user-pref-show-motd" style="display:none">{% if session.show_motd != false %}true{% else %} false {% endif %}</div>
+    <div id="motd-data" class="navbar-hidden">{% if motd is defined %}{{ motd }}{% endif %}</div>
+    <div id="user-pref-show-motd" class="navbar-hidden">{% if session.show_motd != false %}true{% else %} false {% endif %}</div>
   </div>
 
 </nav>
@@ -183,7 +183,7 @@
     <button class="admin-bar-exit-btn" id="admin-bar-exit-impersonate" title="Exit impersonation and return to your admin session">
       <i class="fa-solid fa-door-open"></i> Exit
     </button>
-    <button class="admin-bar-close-btn" id="admin-bar-close-imp" title="Close admin bar (^ or ~)" aria-label="Close admin bar" style="margin-left: 8px;">
+    <button class="admin-bar-close-btn navbar-admin-close-imp" id="admin-bar-close-imp" title="Close admin bar (^ or ~)" aria-label="Close admin bar">
       <i class="fa-solid fa-xmark"></i>
     </button>
   </div>
@@ -213,8 +213,8 @@
     </div>
 
     <!-- Preview As role toggle (right-aligned) -->
-    <div class="admin-bar-preview" id="admin-bar-preview-wrap" style="margin-left: auto;">
-      <span class="admin-bar-preview-label"><i class="fa-solid fa-eye" style="opacity:0.6;"></i> Preview:</span>
+    <div class="admin-bar-preview navbar-admin-preview-wrap" id="admin-bar-preview-wrap">
+      <span class="admin-bar-preview-label"><i class="fa-solid fa-eye navbar-admin-preview-icon"></i> Preview:</span>
       <div class="admin-bar-preview-pills" id="admin-bar-preview-pills">
         <button class="admin-bar-preview-pill active" data-role="admin" title="View as yourself (admin)">Admin</button>
         <button class="admin-bar-preview-pill" data-role="mod" title="Simulate moderator view">Mod</button>
@@ -232,7 +232,7 @@
 
 <!-- Floating exit-preview pill (visible only during role preview) -->
 {% if (session.admin or session._preview_role) %}
-<div id="admin-preview-exit-pill" style="display:none;">
+<div id="admin-preview-exit-pill" class="navbar-hidden">
   <i class="fa-solid fa-eye"></i>
   <span id="admin-preview-exit-label">Previewing as User</span>
   <button id="admin-preview-exit-btn" title="Return to admin view"><i class="fa-solid fa-xmark"></i> Exit</button>
@@ -246,7 +246,7 @@
 
   <a class="navbar-brand" href="/">
     {% if custom_brand_image %}
-      <img id="navbar-logo" src="{{ custom_brand_image }}" alt="{{ domain }}" data-on="load:sync-navbar" style="max-height: 40px; vertical-align: middle; max-width: 180px; width: auto;">
+      <img id="navbar-logo" src="{{ custom_brand_image }}" alt="{{ domain }}" data-on="load:sync-navbar" class="navbar-logo-img">
     {% else %}
       <span class="f0ck">{{ (custom_navbar_brand_text or domain) }}</span>
     {% endif %}
@@ -261,7 +261,7 @@
           <i class="fa-solid fa-layer-group"></i>
         </a>
         <div class="nav-user-menu">
-          <a href="/halls" style="font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 5px;"><i class="fa-solid fa-building-columns"></i> Overview</a>
+          <a href="/halls" class="navbar-halls-overview"><i class="fa-solid fa-building-columns"></i> Overview</a>
           {% if (halls is defined and (halls|length > 0)) %}
             {% for key, h in halls|entries %}
               <a href="/h/{{ h.slug }}">{{ h.name }}</a>
@@ -287,7 +287,7 @@
         <span id="nav-anon-label">{% if ((enable_anonymous_access and session) and session.is_anon) %}anonymous{% else %} guest {% endif %}</span>
         <span class="nav-avatar-caret">▾</span>
       </button>
-      <div class="nav-user-menu" id="nav-visitor-menu" style="min-width: 100%; width: max-content; white-space: nowrap;">
+      <div class="nav-user-menu" id="nav-visitor-menu">
         {% if ((enable_anonymous_access and session) and session.is_anon) %}
         <a href="/favs" id="nav-guest-favs-link" class="mobile-only">{{ t("nav.favs") }}</a>
         {% endif %}
@@ -316,9 +316,9 @@
     </button>
   </div>
 
-  <div class="motd-container" id="motd-container" {% if (motd is undefined or motd == "") %} style="display:none" {% endif %}>
+  <div class="motd-container{% if (motd is undefined or motd == "") %} navbar-hidden{% endif %}" id="motd-container">
     <span class="motd-content" id="motd-display"></span>
-    <div id="motd-data" style="display:none">{% if motd is defined %}{{ motd }}{% endif %}</div>
+    <div id="motd-data" class="navbar-hidden">{% if motd is defined %}{{ motd }}{% endif %}</div>
   </div>
 
 </nav>
@@ -476,7 +476,7 @@ F0ckActions.define({
           <i class="fa-solid fa-user-secret"></i> Login as Anonymous
         </button>
         {% if registration_open %}
-        <button type="button" id="modal-login-register-btn" class="lm-btn lm-btn-ghost" style="margin-top: 8px;">
+        <button type="button" id="modal-login-register-btn" class="lm-btn lm-btn-ghost navbar-lm-register-btn">
           <i class="fa-solid fa-user-plus"></i> Register
         </button>
         {% endif %}
@@ -490,225 +490,6 @@ F0ckActions.define({
       {% endif %}
     </div>
 
-    <style>
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) {
-      --lm-accent: var(--accent, #0096ff);
-      --lm-text: var(--text-color, #fff);
-      --lm-muted: var(--text-muted, #8a8f98);
-      --lm-surface: rgba(255, 255, 255, 0.04);
-      --lm-border: rgba(255, 255, 255, 0.1);
-      --lm-radius: 0;
-      padding: 28px 28px 24px;
-      font-family: inherit;
-      color: var(--lm-text);
-    }
-    #login-modal .login-modal-content,
-    #register-modal .login-modal-content { border-radius: 0; }
-
-    /* Header */
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-header { text-align: center; margin-bottom: 22px; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-title {
-      margin: 0; font-size: 1.5em; font-weight: 700; letter-spacing: -0.01em; color: var(--lm-text);
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-subtitle {
-      margin-top: 4px; font-size: 0.82em; color: var(--lm-muted); letter-spacing: 0.02em;
-    }
-
-    /* Segmented tabs */
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-tabs {
-      display: flex; gap: 4px; padding: 4px; margin-bottom: 20px;
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid var(--lm-border);
-      border-radius: var(--lm-radius);
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-tab {
-      flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-      padding: 8px 0; margin: 0;
-      background: transparent; border: 0; border-radius: var(--lm-radius);
-      color: var(--lm-muted); font: inherit; font-size: 0.88em; font-weight: 600;
-      cursor: pointer; transition: background 0.18s, color 0.18s, box-shadow 0.18s;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-tab:hover { color: var(--lm-text); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-tab.is-active {
-      color: var(--lm-text);
-      background: rgba(255, 255, 255, 0.08);
-      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 2px 8px rgba(0, 0, 0, 0.35);
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-tab.is-active i { color: var(--lm-accent); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-panel { animation: lm-fade 0.2s ease; }
-    @keyframes lm-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-
-    /* Form */
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) form.lm-form {
-      display: flex; flex-direction: column; gap: 12px;
-      padding: 0; margin: 0; background: none; border: 0; box-shadow: none; width: 100%;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-field { position: relative; display: block; margin: 0; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-field-icon {
-      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-      color: var(--lm-muted); font-size: 0.9em; pointer-events: none; transition: color 0.15s;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) input.lm-input {
-      width: 100%; box-sizing: border-box; height: 46px; margin: 0;
-      padding: 0 42px 0 40px;
-      background: var(--lm-surface);
-      border: 1px solid var(--lm-border);
-      border-radius: var(--lm-radius);
-      color: var(--lm-text); font: inherit; font-size: 0.95em;
-      outline: none; box-shadow: none;
-      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) input.lm-input::placeholder { color: var(--lm-muted); opacity: 0.8; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) input.lm-input:hover { border-color: rgba(255, 255, 255, 0.18); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) input.lm-input:focus {
-      border-color: var(--lm-accent);
-      background: rgba(255, 255, 255, 0.06);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--lm-accent) 22%, transparent);
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-field:focus-within .lm-field-icon { color: var(--lm-accent); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-reveal {
-      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-      width: 34px; height: 34px; margin: 0; padding: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: transparent; border: 0; border-radius: var(--lm-radius);
-      color: var(--lm-muted); cursor: pointer; transition: color 0.15s, background 0.15s;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-reveal:hover { color: var(--lm-text); background: rgba(255, 255, 255, 0.06); }
-
-    /* Remember me + forgot */
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-      font-size: 0.85em; margin: 2px 0 4px;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-check {
-      display: inline-flex; align-items: center; gap: 9px; cursor: pointer; color: var(--lm-muted); user-select: none;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-check input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-check-box {
-      width: 18px; height: 18px; flex-shrink: 0;
-      display: inline-flex; align-items: center; justify-content: center;
-      border: 1px solid rgba(255, 255, 255, 0.25); border-radius: var(--lm-radius);
-      background: var(--lm-surface); font-size: 0.7em; color: transparent;
-      transition: background 0.15s, border-color 0.15s, color 0.15s;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-check:hover .lm-check-box { border-color: var(--lm-accent); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-check input:checked + .lm-check-box { background: var(--lm-accent); border-color: var(--lm-accent); color: #000; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-check input:focus-visible + .lm-check-box { box-shadow: 0 0 0 3px color-mix(in srgb, var(--lm-accent) 30%, transparent); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-check input:checked ~ span:last-child { color: var(--lm-text); }
-
-    /* Links */
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-link {
-      color: var(--lm-accent); text-decoration: none; font-weight: 600; transition: opacity 0.15s;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-link:hover { text-decoration: underline; text-underline-offset: 3px; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-link-muted { color: var(--lm-muted); font-weight: 500; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-link-muted:hover { color: var(--lm-text); }
-
-    /* Buttons */
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn {
-      width: 100%; height: 46px; margin: 0; padding: 0 16px;
-      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-      border-radius: var(--lm-radius); font: inherit; font-size: 0.95em; font-weight: 700;
-      cursor: pointer; transition: transform 0.12s, box-shadow 0.18s, background 0.18s, border-color 0.18s, filter 0.18s;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn-primary {
-      margin-top: 6px;
-      border: 1px solid var(--lm-accent); color: #000;
-      background: var(--lm-accent);
-      box-shadow: none;
-      text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn-primary:hover { background: transparent; color: var(--lm-accent); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn-primary:active { transform: translateY(1px); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn-primary .fa-arrow-right { font-size: 0.85em; transition: transform 0.18s; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn-primary:hover .fa-arrow-right { transform: translateX(3px); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn:disabled { opacity: 0.6; cursor: progress; filter: none; transform: none; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn:focus-visible { outline: 2px solid var(--lm-accent); outline-offset: 2px; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn-ghost {
-      background: var(--lm-surface); border: 1px solid var(--lm-border); color: var(--lm-muted); font-weight: 600;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-btn-ghost:hover { color: var(--lm-text); border-color: rgba(255, 255, 255, 0.22); background: rgba(255, 255, 255, 0.07); }
-
-    /* Passkey panel */
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-panel-passkey { text-align: center; padding-top: 4px; }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-passkey-icon {
-      width: 76px; height: 76px; margin: 0 auto 16px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: var(--lm-radius); font-size: 2.2em; color: var(--lm-accent);
-      background: radial-gradient(circle, color-mix(in srgb, var(--lm-accent) 20%, transparent) 0%, transparent 70%);
-      border: 1px solid color-mix(in srgb, var(--lm-accent) 30%, transparent);
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-passkey-text {
-      margin: 0 auto 20px; max-width: 320px; font-size: 0.88em; line-height: 1.6; color: var(--lm-muted);
-    }
-
-    /* Errors (also covers the .flash-error the login JS injects) */
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-error,
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .flash-error {
-      margin: 10px 0 0; padding: 10px 12px; text-align: left;
-      font-size: 0.84em; line-height: 1.45; color: #ff8a8a;
-      background: rgba(224, 108, 117, 0.1);
-      border: 1px solid rgba(224, 108, 117, 0.3);
-      border-radius: var(--lm-radius);
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) form .flash-error { margin: 0; }
-    #register-modal #modal-register-view #register-status:empty { display: none; }
-    #register-modal #modal-register-view #register-status.flash-success {
-      padding: 10px 12px; font-size: 0.84em; line-height: 1.45; color: #7ee2a0;
-      background: rgba(74, 222, 128, 0.1);
-      border: 1px solid rgba(74, 222, 128, 0.3);
-      border-radius: var(--lm-radius);
-    }
-
-    /* Anon setup */
-    #anon-setup-modal #anon-setup-view .lm-note {
-      margin: 0 0 20px; padding: 9px 12px; text-align: left;
-      font-size: 0.8em; line-height: 1.5; color: var(--lm-muted);
-      background: var(--lm-surface); border: 1px solid var(--lm-border); border-left: 2px solid var(--lm-accent);
-    }
-    #anon-setup-modal #anon-setup-view .lm-note i { color: var(--lm-accent); margin-right: 4px; }
-    #anon-setup-modal #anon-setup-view .lm-title { margin-bottom: 18px; }
-    #anon-setup-modal #anon-setup-view .anon-consent { margin: 0 0 16px; text-align: left; }
-    /* Disabled until the privacy consent is ticked (spinner state keeps the progress cursor) */
-    #anon-setup-modal #anon-setup-view .lm-btn:disabled:not(:has(.fa-spinner)) { cursor: not-allowed; opacity: 0.45; }
-    #anon-setup-modal #anon-setup-view .lm-textbtn {
-      margin: 0; padding: 0; background: none; border: 0;
-      font: inherit; font-weight: 600; color: var(--lm-accent); cursor: pointer;
-    }
-    #anon-setup-modal #anon-setup-view .lm-textbtn:hover { text-decoration: underline; text-underline-offset: 3px; }
-
-    /* Anon passkey identity */
-    #anon-passkey-modal #anon-passkey-view .lm-stat {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      margin: 0 0 16px; padding: 12px 14px;
-      background: var(--lm-surface); border: 1px solid var(--lm-border);
-    }
-    #anon-passkey-modal #anon-passkey-view .lm-stat-label {
-      font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--lm-muted);
-    }
-    #anon-passkey-modal #anon-passkey-view .lm-stat code { color: var(--lm-accent); font-size: 0.95em; }
-
-    /* Register-only */
-    #register-modal #modal-register-view .lm-check-multiline { align-items: flex-start; line-height: 1.5; }
-    #register-modal #modal-register-view .lm-check-multiline .lm-check-box { margin-top: 1px; }
-    #register-modal #modal-register-view .lm-captcha { display: block; margin: 4px auto; }
-
-    /* Divider + footer */
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-divider {
-      display: flex; align-items: center; gap: 12px; margin: 20px 0 14px;
-      color: var(--lm-muted); font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.12em;
-    }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-divider::before,
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-divider::after { content: ''; flex: 1; height: 1px; background: var(--lm-border); }
-    :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-footer {
-      margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--lm-border);
-      text-align: center; font-size: 0.88em; color: var(--lm-muted);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) * { animation: none !important; transition: none !important; }
-    }
-    </style>
 
     <script nonce="{{ csp_nonce }}">
     function switchLoginTab(tab) {
@@ -740,13 +521,13 @@ F0ckActions.define({
     <!-- Forgot Password View -->
     <div id="modal-forgot-view" style="display: none;">
       <form class="login-form" id="forgot-password-form" novalidate>
-        <h2 style="text-align: center; margin-bottom: 20px;">{{ t("auth.forgot_title") }}</h2>
-        <p style="text-align: center; margin-bottom: 20px; font-size: 0.9em; color: #ccc;">{{ t("auth.forgot_desc") }}</p>
+        <h2 class="navbar-lm-view-title">{{ t("auth.forgot_title") }}</h2>
+        <p class="navbar-lm-view-desc">{{ t("auth.forgot_desc") }}</p>
         <input type="email" id="forgot-email" placeholder="{{ t("auth.email_address") }}" required />
-        <div id="forgot-status" style="margin-bottom: 15px; text-align: center; font-size: 0.9em;"></div>
+        <div id="forgot-status"></div>
         <button type="submit">{{ t("auth.send_reset") }}</button>
-        <div style="text-align: center; margin-top: 20px;">
-          <a href="#" id="forgot-to-login" style="font-size: 0.9em; color: var(--accent); text-decoration: underline;">{{ t("auth.back_to_login") }}</a>
+        <div class="navbar-lm-back-row">
+          <a href="#" id="forgot-to-login" class="navbar-lm-back-link">{{ t("auth.back_to_login") }}</a>
         </div>
       </form>
     </div>
@@ -755,15 +536,15 @@ F0ckActions.define({
     <!-- Reset Password View -->
     <div id="modal-reset-view" style="display: none;">
       <form class="login-form" id="reset-password-form" novalidate>
-        <h2 style="text-align: center; margin-bottom: 20px;">{{ t("auth.reset_title") }}</h2>
-        <p style="text-align: center; margin-bottom: 20px; font-size: 0.9em; color: #ccc;">{{ t("auth.reset_desc") }}</p>
+        <h2 class="navbar-lm-view-title">{{ t("auth.reset_title") }}</h2>
+        <p class="navbar-lm-view-desc">{{ t("auth.reset_desc") }}</p>
         <input type="hidden" id="reset-token" />
         <input type="password" id="reset-password" placeholder="{{ t("auth.new_password_min") }}" required minlength="20" autocomplete="new-password" />
         <input type="password" id="reset-password-confirm" placeholder="{{ t("auth.confirm_new_password") }}" required minlength="20" autocomplete="new-password" />
-        <div id="reset-status" style="margin-bottom: 15px; text-align: center; font-size: 0.9em;"></div>
+        <div id="reset-status"></div>
         <button type="submit">{{ t("auth.update_password") }}</button>
-        <div style="text-align: center; margin-top: 20px;">
-          <a href="#" id="reset-to-login" style="font-size: 0.9em; color: var(--accent); text-decoration: underline; display: none;">{{ t("auth.back_to_login") }}</a>
+        <div class="navbar-lm-back-row">
+          <a href="#" id="reset-to-login" class="navbar-lm-back-link" style="display: none;">{{ t("auth.back_to_login") }}</a>
         </div>
       </form>
     </div>
@@ -772,9 +553,9 @@ F0ckActions.define({
 
 {% if enable_anonymous_access %}
 <!-- Anonymous Passkey Identity Modal -->
-<div id="anon-passkey-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center;">
-  <div style="max-width: 380px; width: 92vw; max-height: 90vh; overflow-y: auto; padding: 0; border: 1px solid var(--accent); border-radius: 0; background: var(--bg); box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative;">
-    <button id="anon-passkey-modal-close" style="position: absolute; top: 14px; right: 14px; background: none; border: none; color: var(--text-muted, #aaa); font-size: 1.3em; cursor: pointer; line-height: 1;">&times;</button>
+<div id="anon-passkey-modal" class="navbar-anon-modal" style="display: none;">
+  <div class="navbar-anon-modal-box">
+    <button id="anon-passkey-modal-close" class="navbar-anon-modal-close">&times;</button>
 
     <div id="anon-passkey-view">
       <div class="lm-header">
@@ -827,9 +608,9 @@ F0ckActions.define({
 
 {% if enable_anonymous_access %}
 <!-- Anonymous Passkey Setup Modal — shown when user clicks "Login as anonymous" -->
-<div id="anon-setup-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center;">
-  <div style="max-width: 420px; width: 92vw; padding: 0; border: 1px solid var(--accent); border-radius: 0; background: var(--bg); box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative;">
-    <button id="anon-setup-modal-close" style="position: absolute; top: 14px; right: 14px; background: none; border: none; color: var(--text-muted, #aaa); font-size: 1.3em; cursor: pointer; line-height: 1;">&times;</button>
+<div id="anon-setup-modal" class="navbar-anon-modal" style="display: none;">
+  <div class="navbar-anon-modal-box">
+    <button id="anon-setup-modal-close" class="navbar-anon-modal-close">&times;</button>
 
     <div id="anon-setup-view">
       <!-- New user view (no passkey yet) -->
@@ -879,50 +660,6 @@ F0ckActions.define({
     </div>
   </div>
 </div>
-<style>
-  #privacy-consent-modal {
-    position: fixed; inset: 0; z-index: 100000;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px);
-  }
-  #privacy-consent-modal .pc-content {
-    width: 100vw; height: 100vh; height: 100dvh;
-    display: flex; flex-direction: column; overflow: hidden;
-    background: var(--bg); border: 0; border-radius: 0;
-  }
-  #privacy-consent-modal .pc-header {
-    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 14px 20px; border-bottom: 1px solid var(--accent);
-  }
-  #privacy-consent-modal .pc-header h3 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.1em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
-  #privacy-consent-modal .pc-header h3 i { color: var(--accent); }
-  #privacy-consent-modal .pc-close {
-    width: 36px; height: 36px; margin: 0; padding: 0; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-    background: none; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 0;
-    color: var(--text-color, #fff); font-size: 1.6em; line-height: 1; cursor: pointer; transition: color 0.15s, border-color 0.15s;
-  }
-  #privacy-consent-modal .pc-close:hover { color: var(--accent); border-color: var(--accent); }
-  #privacy-consent-modal .pc-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-  #privacy-consent-modal .pc-body .pv { padding-top: 20px; }
-  #privacy-consent-modal .pc-loading { padding: 40px 20px; text-align: center; color: var(--text-muted, #aaa); }
-  #privacy-consent-modal .pc-footer {
-    flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; gap: 16px;
-    padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2);
-  }
-  #privacy-consent-modal .pc-hint { font-size: 0.85em; color: var(--text-muted, #aaa); }
-  #privacy-consent-modal .pc-accept {
-    height: 42px; padding: 0 22px; margin: 0; font: inherit; font-size: 0.85em; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; border-radius: 0;
-    display: inline-flex; align-items: center; gap: 8px;
-    background: var(--accent); color: #000; border: 1px solid var(--accent); transition: background 0.18s, color 0.18s;
-  }
-  #privacy-consent-modal .pc-accept:hover:not(:disabled) { background: transparent; color: var(--accent); }
-  #privacy-consent-modal .pc-accept:disabled { opacity: 0.4; cursor: not-allowed; }
-  @media (max-width: 600px) {
-    #privacy-consent-modal .pc-footer { flex-direction: column; align-items: stretch; gap: 8px; text-align: center; }
-    #privacy-consent-modal .pc-accept { justify-content: center; }
-  }
-</style>
 <script nonce="{{ csp_nonce }}">
 (function() {
   function closeSetupModal() {
@@ -1077,7 +814,7 @@ F0ckActions.define({
 
 {% if (not private_society or session) %}
 <!-- Shortcuts Modal -->
-<div id="shortcuts-modal" style="display: none;">
+<div id="shortcuts-modal" class="navbar-hidden">
   <div class="login-modal-content sc-content">
     <div class="sc-header">
       <h2><i class="fa-solid fa-keyboard"></i> {{ t("shortcuts.title") }}</h2>
@@ -1121,58 +858,6 @@ F0ckActions.define({
   </div>
 </div>
 
-<style>
-  /* Keyboard shortcuts modal: style guide (square, flat, accent border), fixed header, only the list scrolls */
-  #shortcuts-modal .sc-content {
-    --sc-muted: var(--text-muted, #8a8f98);
-    --sc-border: rgba(255, 255, 255, 0.1);
-    width: min(520px, 92vw); max-width: none; max-height: min(90vh, 90dvh);
-    display: flex; flex-direction: column; overflow: hidden;
-    margin: 0; padding: 0; text-align: left;
-    background: var(--bg) !important; border: 1px solid var(--accent) !important;
-    border-radius: 0 !important; box-shadow: 0 0 20px rgba(0, 0, 0, 0.5) !important;
-  }
-  #shortcuts-modal .sc-content * { border-radius: 0 !important; }
-  #shortcuts-modal .sc-header {
-    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 16px 20px; border-bottom: 1px solid var(--sc-border);
-  }
-  #shortcuts-modal .sc-header h2 {
-    display: flex; align-items: center; gap: 10px; margin: 0;
-    font-size: 1.05em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
-  }
-  #shortcuts-modal .sc-header h2 i { color: var(--accent); }
-  #shortcuts-modal #shortcuts-modal-close {
-    position: static; width: 36px; height: 36px; margin: 0; padding: 0; flex-shrink: 0;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: none; border: 1px solid rgba(255, 255, 255, 0.25); color: var(--text-color, #fff);
-    font-size: 1.6em; line-height: 1; opacity: 1; cursor: pointer; transition: color 0.15s, border-color 0.15s;
-  }
-  #shortcuts-modal #shortcuts-modal-close:hover { color: var(--accent); border-color: var(--accent); }
-  #shortcuts-modal .sc-body {
-    flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-    padding: 6px 20px 16px; scrollbar-width: thin; scrollbar-color: var(--accent) transparent;
-  }
-  #shortcuts-modal .shortcut-list { gap: 0; margin: 0; }
-  #shortcuts-modal .shortcut-item {
-    align-items: center; margin: 0; padding: 10px 0; border-bottom: 1px solid var(--sc-border);
-  }
-  #shortcuts-modal .shortcut-item:last-child { border-bottom: 0; }
-  #shortcuts-modal .shortcut-item span:last-child { color: var(--sc-muted); opacity: 1; }
-  #shortcuts-modal .shortcut-item kbd {
-    display: inline-block; min-width: 22px; padding: 2px 7px; text-align: center;
-    font-size: 0.85em; font-family: inherit; font-weight: 700;
-    background: transparent; border: 1px solid var(--accent); color: var(--accent); box-shadow: none;
-  }
-  @media (max-width: 600px) {
-    #shortcuts-modal { padding: 0 !important; align-items: stretch !important; }
-    #shortcuts-modal .sc-content {
-      width: 100vw; height: 100vh; height: 100dvh; max-height: none;
-      border: 0 !important; box-shadow: none !important;
-    }
-    #shortcuts-modal .sc-body { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
-  }
-</style>
 <div id="flash-container"></div>
 {% endif %}
 
@@ -1247,7 +932,7 @@ F0ckActions.define({
 <!-- Global Drop Overlay -->
 <div id="drop-overlay">
   <div class="overlay-content">
-    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 5rem;"></i>
+    <i class="fa-solid fa-cloud-arrow-up navbar-drop-icon"></i>
     <h2>{{ t("upload.drop_anywhere") }}</h2>
   </div>
 </div>
@@ -1257,7 +942,7 @@ F0ckActions.define({
   <div class="modal-content">
     <button class="modal-close" id="drag-modal-close" title="Cancel Upload">&times;</button>
     <div class="modal-body">
-      <div class="upload-container" style="padding: 0; animation: none; opacity: 1;">
+      <div class="upload-container navbar-upload-container">
           <div class="upload-title">
           <span class="upload-title-text">{{ t("upload.title") }}</span>
           <div class="upload-limit-info">
@@ -1286,454 +971,6 @@ F0ckActions.define({
 {% endif %}
 
 {% if (session and ((session.admin or session._is_impersonating) or session._preview_role)) %}
-<style>
-/* ── Admin Bar ──────────────────────────────────────────────────────────────── */
-.admin-bar {
-  position: fixed;
-  bottom: 0;
-  left: var(--admin-bar-left, 0px);
-  right: var(--admin-bar-right, 300px);
-  width: auto;
-  font-family: var(--font, system-ui, sans-serif);
-  font-size: 0.76rem;
-  z-index: 100080 !important;
-  box-shadow: 0 -3px 14px rgba(0, 0, 0, 0.5);
-  border-top: 1px solid rgba(255, 190, 0, 0.28);
-  border-bottom: none;
-  transform: translateY(100%);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.22s ease,
-              left 0.3s ease-in-out,
-              right 0.3s ease-in-out;
-}
-
-.admin-bar.open {
-  transform: translateY(0);
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-body.onara-modal-open .admin-bar {
-  z-index: 100080 !important;
-  filter: none !important;
-}
-
-body.onara-modal-open .admin-bar.open {
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-
-/* Sidebar boundaries via CSS */
-body.sidebar-right-hidden .admin-bar {
-  right: 0 !important;
-}
-
-@media (max-width: 999px) {
-  .admin-bar {
-    right: min(280px, 80vw);
-  }
-  body.sidebar-right-hidden .admin-bar {
-    right: 0 !important;
-  }
-}
-
-body:not(:has(.global-sidebar-right, .item-sidebar-right, .index-sidebar-right)) .admin-bar {
-  right: 0 !important;
-}
-
-@media (min-width: 1000px) {
-  body.layout-modern:not(.sidebar-left-hidden):not(.comments-hidden):has(.item-sidebar-left) .admin-bar {
-    left: min(350px, 30vw);
-  }
-  body.layout-modern.sidebar-left-hidden .admin-bar,
-  body.layout-modern.comments-hidden .admin-bar,
-  body:has(.item-layout-container.sidebar-hidden) .admin-bar {
-    left: 0 !important;
-  }
-}
-
-/* Lift bottom pagination smoothly if admin bar is open */
-body.admin-bar-open .pagination-container-fluid {
-  bottom: 32px;
-}
-.pagination-container-fluid {
-  transition: right 0.3s ease-in-out, bottom 0.3s ease-in-out !important;
-}
-
-.admin-bar-close-btn {
-  background: transparent;
-  border: none;
-  color: rgba(255, 210, 80, 0.45);
-  cursor: pointer;
-  padding: 3px 7px;
-  font-size: 0.8rem;
-  border-radius: 3px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 6px;
-  transition: color 0.15s, background 0.15s;
-  flex-shrink: 0;
-  line-height: 1;
-}
-.admin-bar-close-btn:hover {
-  color: #ffd844;
-  background: rgba(255, 200, 0, 0.15);
-}
-
-/* Normal admin bar */
-.admin-bar-inner {
-  background: linear-gradient(90deg, #1a1200 0%, #1e1600 40%, #141000 100%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 14px;
-  height: 32px;
-  overflow: hidden;
-}
-
-.admin-bar-brand {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #f5c400;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-size: 0.72rem;
-  opacity: 0.9;
-  white-space: nowrap;
-  padding-right: 4px;
-}
-.admin-bar-brand i { font-size: 0.78rem; }
-
-.admin-bar-links {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.admin-bar-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: rgba(255, 210, 80, 0.75) !important;
-  text-decoration: none !important;
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 0.74rem;
-  transition: background 0.15s, color 0.15s;
-  white-space: nowrap;
-  position: relative;
-}
-.admin-bar-link:hover {
-  background: rgba(255, 200, 0, 0.12);
-  color: #ffd844 !important;
-}
-.admin-bar-badge {
-  background: #e05020;
-  color: #fff;
-  border-radius: 9px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 0 5px;
-  min-width: 16px;
-  text-align: center;
-  line-height: 16px;
-  display: inline-block;
-}
-
-.admin-bar-sep {
-  flex: 1;
-  height: 14px;
-  border-left: 1px solid rgba(255, 200, 0, 0.12);
-  margin: 0 4px;
-  flex-basis: 0;
-  min-width: 0;
-}
-
-/* View-as widget */
-.admin-bar-viewas {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.admin-bar-viewas-input-wrap {
-  position: relative;
-}
-.admin-bar-input {
-  background: rgba(255, 200, 0, 0.07);
-  border: 1px solid rgba(255, 200, 0, 0.2);
-  border-radius: 4px;
-  color: #ffd844;
-  font-size: 0.73rem;
-  font-family: var(--font, system-ui, sans-serif);
-  padding: 2px 8px;
-  width: 160px;
-  outline: none;
-  transition: border-color 0.15s, width 0.2s;
-}
-.admin-bar-input::placeholder { color: rgba(255,210,80,0.35); }
-.admin-bar-input:focus {
-  border-color: rgba(255, 200, 0, 0.55);
-  width: 210px;
-}
-.admin-bar-viewas-btn {
-  background: rgba(255, 200, 0, 0.12);
-  border: 1px solid rgba(255, 200, 0, 0.3);
-  border-radius: 4px;
-  color: #ffd844;
-  cursor: pointer;
-  padding: 2px 8px;
-  font-size: 0.72rem;
-  transition: background 0.15s, border-color 0.15s;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.admin-bar-viewas-btn:hover {
-  background: rgba(255, 200, 0, 0.22);
-  border-color: rgba(255, 200, 0, 0.55);
-}
-.admin-bar-viewas-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Autocomplete suggestions */
-.admin-viewas-suggestions {
-  position: absolute;
-  top: calc(100% + 3px);
-  left: 0;
-  right: 0;
-  background: #1a1600;
-  border: 1px solid rgba(255, 200, 0, 0.3);
-  border-radius: 4px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
-  z-index: 100090 !important;
-  display: none;
-  overflow: hidden;
-  min-width: 180px;
-}
-.admin-viewas-suggestions.open { display: block; }
-.admin-viewas-suggestion {
-  padding: 5px 10px;
-  color: rgba(255, 210, 80, 0.85);
-  cursor: pointer;
-  font-size: 0.76rem;
-  transition: background 0.1s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.admin-viewas-suggestion:hover,
-.admin-viewas-suggestion.active {
-  background: rgba(255, 200, 0, 0.14);
-  color: #ffd844;
-}
-.admin-viewas-suggestion i { opacity: 0.5; font-size: 0.72rem; }
-
-/* Impersonation banner */
-.admin-bar-impersonate-notice {
-  background: linear-gradient(90deg, #1a0800 0%, #200c00 40%, #180a00 100%);
-  border-top: 1px solid rgba(255, 120, 0, 0.35);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 14px;
-  height: 30px;
-  overflow: hidden;
-  animation: admin-imp-pulse 3s ease-in-out infinite;
-}
-@keyframes admin-imp-pulse {
-  0%, 100% { border-top-color: rgba(255, 120, 0, 0.35); }
-  50%       { border-top-color: rgba(255, 160, 0, 0.7); }
-}
-
-.admin-bar-imp-icon {
-  color: #ff8c00;
-  font-size: 0.85rem;
-  animation: admin-imp-wiggle 4s ease-in-out infinite;
-  flex-shrink: 0;
-}
-@keyframes admin-imp-wiggle {
-  0%, 90%, 100% { transform: rotate(0deg); }
-  92% { transform: rotate(-8deg); }
-  96% { transform: rotate(8deg); }
-}
-
-.admin-bar-imp-text {
-  color: #ffb84d;
-  font-size: 0.77rem;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.admin-bar-imp-text strong { color: #ffcc00; }
-.admin-bar-imp-hint {
-  color: rgba(255, 160, 60, 0.55);
-  font-size: 0.71rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.admin-bar-exit-btn {
-  margin-left: auto;
-  flex-shrink: 0;
-  background: rgba(255, 80, 0, 0.18);
-  border: 1px solid rgba(255, 100, 0, 0.45);
-  border-radius: 4px;
-  color: #ff8c40;
-  cursor: pointer;
-  padding: 2px 10px;
-  font-size: 0.73rem;
-  font-family: var(--font, system-ui, sans-serif);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 22px;
-}
-.admin-bar-exit-btn:hover {
-  background: rgba(255, 80, 0, 0.35);
-  border-color: rgba(255, 120, 0, 0.7);
-  color: #ffaa66;
-}
-
-/* Preview As role pills */
-.admin-bar-preview {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.admin-bar-preview-label {
-  color: rgba(255,210,80,0.55);
-  font-size: 0.72rem;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.admin-bar-preview-pills {
-  display: flex;
-  gap: 2px;
-}
-.admin-bar-preview-pill {
-  background: rgba(255,200,0,0.07);
-  border: 1px solid rgba(255,200,0,0.18);
-  border-radius: 3px;
-  color: rgba(255,210,80,0.55);
-  cursor: pointer;
-  font-size: 0.71rem;
-  font-family: var(--font, system-ui, sans-serif);
-  padding: 1px 7px;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-  white-space: nowrap;
-}
-.admin-bar-preview-pill:hover {
-  background: rgba(255,200,0,0.16);
-  color: #ffd844;
-  border-color: rgba(255,200,0,0.4);
-}
-.admin-bar-preview-pill.active {
-  background: rgba(255,200,0,0.22);
-  color: #ffd844;
-  border-color: rgba(255,200,0,0.55);
-  font-weight: 600;
-}
-
-/* Floating exit-preview pill */
-#admin-preview-exit-pill {
-  position: fixed;
-  bottom: 18px;
-  right: 18px;
-  z-index: 99999;
-  background: #1a1200;
-  border: 1px solid rgba(255,200,0,0.45);
-  border-radius: 20px;
-  color: #ffd844;
-  font-size: 0.76rem;
-  font-family: var(--font, system-ui, sans-serif);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-  animation: preview-pill-in 0.2s ease;
-}
-@keyframes preview-pill-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-#admin-preview-exit-pill span { font-weight: 600; }
-#admin-preview-exit-btn {
-  background: rgba(255,200,0,0.15);
-  border: 1px solid rgba(255,200,0,0.35);
-  border-radius: 10px;
-  color: #ffd844;
-  cursor: pointer;
-  font-size: 0.71rem;
-  font-family: var(--font, system-ui, sans-serif);
-  padding: 1px 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: background 0.15s;
-}
-#admin-preview-exit-btn:hover { background: rgba(255,200,0,0.3); }
-
-/* Body class rules: simulate role views */
-body.preview-as-user .admin-bar,
-body.preview-as-mod  .admin-bar { display: none !important; }
-
-/* Hide all owner/admin/mod actions in user preview */
-body.preview-as-user #a_delete,
-body.preview-as-user #a_rethumb,
-body.preview-as-user .removetag,
-body.preview-as-user .can-cycle,
-body.preview-as-user .info-title-edit-wrap,
-body.preview-as-user #info-title-save,
-body.preview-as-user #info-title-status,
-body.preview-as-user #info-visibility-edit-btn,
-body.preview-as-user #info-rethumb-btn,
-body.preview-as-user #info-set-expiry-btn,
-body.preview-as-user .infobox-action-btn,
-body.preview-as-user .btn-infobox-action,
-body.preview-as-user .admin-delete-btn,
-body.preview-as-user .admin-edit-btn,
-body.preview-as-user .admin-pin-btn,
-body.preview-as-user .delete-btn,
-body.preview-as-user .poll-delete-btn { display: none !important; }
-/* Title stays visible but loses its click-to-edit */
-body.preview-as-user .item_title_text { display: inline !important; cursor: default !important; pointer-events: none !important; }
-body.preview-as-user .item_title_text.no-title { display: none !important; }
-
-/* Hide admin-only actions in mod preview (keep delete — mods can delete) */
-body.preview-as-mod #a_rethumb,
-body.preview-as-mod .removetag,
-body.preview-as-mod #info-rethumb-btn,
-body.preview-as-mod .btn-infobox-action { display: none !important; }
-
-@media (max-width: 640px) {
-  .admin-bar-imp-hint { display: none; }
-  .admin-bar-links a span:not(.admin-bar-badge) { display: none; }
-  .admin-bar-input { width: 110px; }
-  .admin-bar-input:focus { width: 140px; }
-  .admin-bar-preview-label { display: none; }
-}
-</style>
 
 <script nonce="{{ csp_nonce }}">
 (function() {

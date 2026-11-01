@@ -1,9 +1,9 @@
-{# Shared card UI for mod/approve.html and mod/trash.html: styles, confirmation modal, rating toggle and helpers on window.mq (page actions live in each page) #}
-<div id="mq-modal" class="mq-modal" style="display:none;">
+{# Shared card UI for mod/approve.html and mod/trash.html: confirmation modal (styles in f0ckm.css), rating toggle and helpers on window.mq (page actions live in each page) #}
+<div id="mq-modal" class="mq-modal">
   <div class="mq-modal-box">
     <h3 id="mq-modal-title">Confirm action</h3>
     <p id="mq-modal-text">Are you sure?</p>
-    <div id="mq-modal-reason-wrap" style="display:none;">
+    <div id="mq-modal-reason-wrap">
       <label for="mq-modal-reason">Reason (required)</label>
       <textarea id="mq-modal-reason" rows="3" placeholder="Enter a reason…"></textarea>
     </div>
@@ -13,82 +13,6 @@
     </div>
   </div>
 </div>
-
-<style>
-  /* Moderation queues — square, flat, theme colours */
-  .mq {
-    --mq-accent: var(--accent, #0096ff);
-    --mq-text: var(--text-color, var(--white, #fff));
-    --mq-muted: var(--text-muted, #8a8f98);
-    --mq-surface: rgba(255, 255, 255, 0.04);
-    --mq-border: rgba(255, 255, 255, 0.1);
-    --mq-danger: #ff5c5c;
-    max-width: 1200px; margin: 0 auto; padding: 24px 16px 60px;
-    text-align: left; color: var(--mq-text); line-height: 1.5;
-  }
-  .mq *, .mq *::before, .mq *::after, .mq-modal *, .mq-modal *::before, .mq-modal *::after { border-radius: 0 !important; }
-
-  .mq-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
-  .mq-title { margin: 0; font-size: 1.8em; font-weight: 800; line-height: 1.1; }
-  .mq-subtitle { margin-top: 6px; font-size: 0.85em; color: var(--mq-muted); }
-
-
-  .mq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-  .mq-card { display: flex; flex-direction: column; background: var(--mq-surface); border: 1px solid var(--mq-border); transition: opacity 0.3s, border-color 0.15s; }
-  .mq-card:hover { border-color: rgba(255, 255, 255, 0.2); }
-  .mq-media { position: relative; aspect-ratio: 16 / 10; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .mq-media img, .mq-media video { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .mq-media .embed-responsive { width: 100%; }
-  .mq-trash .mq-media img, .mq-trash .mq-media video { filter: grayscale(50%); }
-  .mq-body { display: flex; flex-direction: column; gap: 8px; padding: 12px; flex: 1; }
-  .mq-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.8em; color: var(--mq-muted); }
-  .mq-meta strong { color: var(--mq-text); font-weight: 700; }
-  .mq-reason { padding: 6px 8px; font-size: 0.8em; color: #ffb8b8; background: rgba(255, 92, 92, 0.08); border-left: 2px solid var(--mq-danger); }
-  .mq-tags { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; }
-  .mq-tags .badge { margin: 0; }
-  .mq-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: auto; }
-  .mq-actions .mq-btn-rating { grid-column: span 2; }
-
-  .mq-btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; margin: 0; padding: 0 12px;
-    font: inherit; font-size: 0.8em; font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap;
-    border: 1px solid var(--mq-border); background: transparent; color: var(--mq-text);
-    transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
-  }
-  .mq-btn:hover { text-decoration: none; }
-  .mq-btn:disabled { opacity: 0.5; cursor: progress; }
-  .mq-btn-primary { background: var(--mq-accent); border-color: var(--mq-accent); color: #000; text-transform: uppercase; letter-spacing: 0.06em; }
-  .mq-btn-primary:hover:not(:disabled) { background: transparent; color: var(--mq-accent); }
-  .mq-btn-danger { border-color: rgba(255, 92, 92, 0.5); color: var(--mq-danger); }
-  .mq-btn-danger:hover:not(:disabled) { background: rgba(255, 92, 92, 0.15); }
-  .mq-btn-ghost { color: var(--mq-muted); }
-  .mq-btn-ghost:hover:not(:disabled) { color: var(--mq-text); border-color: rgba(255, 255, 255, 0.25); background: var(--mq-surface); }
-  .mq-btn:focus-visible { outline: 2px solid var(--mq-accent); outline-offset: 2px; }
-
-  .mq-note { margin: 0 0 16px; font-size: 0.85em; color: var(--mq-muted); }
-  .mq-empty { padding: 40px 20px; text-align: center; color: var(--mq-muted); border: 1px dashed var(--mq-border); }
-  .mq-empty strong { display: block; margin-bottom: 4px; color: var(--mq-text); font-size: 1.05em; }
-
-  .mq-pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 24px; font-size: 0.85em; color: var(--mq-muted); }
-
-  .mq-modal { position: fixed; inset: 0; z-index: 100100; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(4px); padding: 16px; }
-  .mq-modal-box {
-    width: min(420px, 100%); padding: 22px; text-align: left; color: var(--text-color, #fff);
-    background: var(--bg); border: 1px solid var(--accent); box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-  }
-  .mq-modal-box h3 { margin: 0 0 6px; font-size: 1.15em; font-weight: 700; }
-  .mq-modal-box p { margin: 0 0 14px; font-size: 0.88em; color: var(--text-muted, #8a8f98); }
-  .mq-modal-box label { display: block; margin-bottom: 6px; font-size: 0.78em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted, #8a8f98); }
-  .mq-modal-box textarea {
-    width: 100%; box-sizing: border-box; padding: 10px 12px; margin-bottom: 14px; resize: vertical;
-    background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); color: inherit; font: inherit; font-size: 0.9em; outline: none;
-  }
-  .mq-modal-box textarea:focus { border-color: var(--accent); }
-  .mq-modal-box textarea.is-invalid { border-color: #ff5c5c; }
-  .mq-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
-  .mq-modal .mq-btn { height: 38px; padding: 0 16px; }
-</style>
-
 <script nonce="{{ csp_nonce }}">
   // Shared helpers for the moderation card pages. Re-assigned on every (AJAX) page load.
   window.mq = (() => {
@@ -142,7 +66,7 @@
     });
     btnCancel.addEventListener('click', close);
     modal.addEventListener('click', e => { if (e.target === modal) close(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display !== 'none') close(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') close(); });
 
     const post = async (url, body) => {
       const res = await fetch(url, {

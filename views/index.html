@@ -3,34 +3,16 @@
 <head><title>502 Bad Gateway</title></head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
 <body bgcolor="white">
+{#- In <body> (not <head>) so it stays after the f0ckm.css that openLoginGate appends to <head> #}
+<link rel="stylesheet" href="/s/css/gate.css?v={{ mtime("/public/s/css/gate.css") }}">
 <div id="nginx-502-gate">
   <center><h1>502 Bad Gatew<span id="secret-letter">a</span>y</h1></center>
-  <hr><center><span style="cursor: text;top: -7px; position: relative;">nginx</span></center>
+  <hr><center><span class="index-page-nginx-label">nginx</span></center>
 </div>
 
-<div id="hot-corner" style="position:fixed; bottom:0; left:0; width:20px; height:20px; z-index:9999;"></div>
+<div id="hot-corner"></div>
 
-<style>
-#nginx-502-gate {
-  background: white !important; color: black !important;
-  font-family: serif !important; font-size: 16px !important; margin: 1px !important;
-}
-#nginx-502-gate center { display: block !important; text-align: center !important; margin: 0 !important; padding: 0 !important; }
-#nginx-502-gate h1 { font-family: serif !important; font-size: 2em !important; font-weight: bold !important; margin: .67em 0 !important; display: block !important; color: black !important; cursor: text !important; }
-#nginx-502-gate hr { margin: 15px 0 !important; display: block !important; border: 0 !important; border-top: 2px solid gray !important; }
-#secret-letter { cursor: text; }
-#login-modal, #register-modal { background: rgba(0,0,0,0.1) !important; z-index: 10000 !important; }
-#login-modal .login-modal-content, #register-modal .login-modal-content { background: #f0f0f0 !important; border: 1px solid #777 !important; color: black !important; border-radius: 0 !important; box-shadow: 4px 4px 0 rgba(0,0,0,0.2) !important; font-family: sans-serif !important; }
-.login-modal-content h2 { color: black !important; margin-bottom: 15px !important; font-size: 1.3em !important; }
-.login-form input[type="text"], .login-form input[type="password"], .login-form input[type="email"] { background: white !important; color: black !important; border: 1px solid #999 !important; border-radius: 0 !important; padding: 6px !important; width: 100% !important; box-sizing: border-box !important; margin-bottom: 10px !important; }
-.login-form button[type="submit"] { background: #e1e1e1 !important; color: black !important; border: 1px solid #777 !important; border-radius: 0 !important; padding: 8px !important; font-weight: bold !important; cursor: pointer !important; opacity: 1 !important; }
-.login-form button[type="submit"]:hover { background: #d1d1d1 !important; }
-.login-form label, .login-form p, .login-form a { color: #444 !important; font-size: 0.9em !important; }
-.login-form a { text-decoration: underline !important; }
-#login-modal-close, #register-modal-close { color: #444 !important; font-size: 24px !important; }
-</style>
-
-<div id="gate-container" style="display:none;">
+<div id="gate-container">
   {% include "snippets/navbar.html" %}
   {% include "snippets/footer.html" %}
 </div>

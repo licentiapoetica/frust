@@ -4,27 +4,27 @@
     {% include "snippets/admin-back.html" %}
     <div class="container">
         <h2>Moderator Message of the Day (MOTD)</h2>
-        <p style="color: #ccc; margin-bottom: 20px;">This message is displayed site-wide. It will automatically be tagged with your name (<code>t. {{ (session.display_name or session.user) }}</code>).</p>
+        <p class="adm-page-intro">This message is displayed site-wide. It will automatically be tagged with your name (<code>t. {{ (session.display_name or session.user) }}</code>).</p>
 
         <div class="admin-motd-form">
             <form id="motd-form" action="/mod/motd" method="POST" data-on="submit:prevent,saveMotd">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <div style="margin-bottom: 20px;">
-                    <label for="motd-text" style="display: block; margin-bottom: 8px; color: var(--accent);">MOTD Content (Markdown supported)</label>
-                    <textarea id="motd-text" name="motd" style="width: 100%; min-height: 200px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 15px; border-radius: 4px; font-family: inherit; font-size: 1.1em; resize: vertical;">{{ motd }}</textarea>
+                <div class="adm-editor-field">
+                    <label for="motd-text" class="adm-editor-label">MOTD Content (Markdown supported)</label>
+                    <textarea id="motd-text" name="motd" class="adm-editor-text adm-editor-text-short">{{ motd }}</textarea>
                 </div>
 
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <button type="submit" class="btn-primary" style="width: auto; padding: 10px 30px;">Save MOTD</button>
-                    <button type="button" class="btn-remove" style="width: auto; padding: 10px 20px;" data-on="click:clearMotd">Clear MOTD</button>
-                    <span id="motd-status" style="margin-left: 10px; font-weight: bold; display: none;"></span>
+                <div class="adm-form-actions">
+                    <button type="submit" class="btn-primary adm-editor-save">Save MOTD</button>
+                    <button type="button" class="btn-remove adm-editor-clear" data-on="click:clearMotd">Clear MOTD</button>
+                    <span id="motd-status" class="adm-editor-status"></span>
                 </div>
             </form>
         </div>
 
-        <div style="margin-top: 40px; padding: 20px; background: rgba(0,0,0,0.2); border-left: 4px solid var(--accent); border-radius: 4px;">
-            <h4 style="color: var(--accent); margin-top: 0;">Preview Tip</h4>
-            <p style="margin-bottom: 0;">You can use <strong>Markdown</strong> syntax like <code># Header</code>, <code>**bold**</code>, <code>[links](url)</code>, or standard HTML. Your username will be appended as a signature.
+        <div class="adm-editor-tips">
+            <h4 class="adm-editor-tips-title">Preview Tip</h4>
+            <p class="adm-editor-tips-text">You can use <strong>Markdown</strong> syntax like <code># Header</code>, <code>**bold**</code>, <code>[links](url)</code>, or standard HTML. Your username will be appended as a signature.
             </p>
         </div>
     </div>

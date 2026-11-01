@@ -1,48 +1,48 @@
 {% include "snippets/header.html" %}
 <div class="pagewrapper">
-  <div id="main" style="padding: 40px 15px; box-sizing: border-box;">
-    <div style="min-height: 70vh; display: flex; align-items: center; justify-content: center;">
+  <div id="main" class="banned-page-main">
+    <div class="banned-page-center">
       
       <!-- BANNED VIEW -->
-      <div id="banned-view" class="banned-container" style="display: {{ ("block" if isBanned else "none") }}; background: rgba(18, 18, 20, 0.95); padding: 40px 30px; margin: 0 auto; text-align: center; max-width: 520px; width: 100%; box-sizing: border-box;">
-          <h1 style="color: #ff4757; margin-bottom: 20px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">YOU ARE BANNED!</h1>
-          <img src="/s/img/banned_angry.png" alt="Banned" style="width: 170px; height: auto; margin: 0 auto 25px auto; display: block;" />
-          <div style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 14px 18px; margin-bottom: 25px; text-align: left;">
-              <p style="margin: 0 0 8px 0; font-size: 0.95em; color: #ddd;">
-                  <span style="color: #888; font-size: 0.82em; text-transform: uppercase; display: block; margin-bottom: 2px;">Reason</span>
-                  <strong id="ban-reason-display" style="color: #ff6b6b; word-break: break-word;">{{ reason }}</strong>
+      <div id="banned-view" class="banned-container{% if not isBanned %} banned-page-hidden{% endif %}">
+          <h1 class="banned-title">YOU ARE BANNED!</h1>
+          <img src="/s/img/banned_angry.png" alt="Banned" class="banned-img" />
+          <div class="banned-details">
+              <p class="banned-detail">
+                  <span class="banned-detail-label">Reason</span>
+                  <strong id="ban-reason-display">{{ reason }}</strong>
               </p>
-              <p style="margin: 0; font-size: 0.95em; color: #ddd;">
-                  <span style="color: #888; font-size: 0.82em; text-transform: uppercase; display: block; margin-bottom: 2px;">Ban expires</span>
-                  <strong id="ban-expires-display" style="color: #bbb;">{{ expires }}</strong>
+              <p class="banned-detail">
+                  <span class="banned-detail-label">Ban expires</span>
+                  <strong id="ban-expires-display">{{ expires }}</strong>
               </p>
           </div>
           <div>
-              <a href="/logout" class="btn btn-outline-danger" style="padding: 10px 24px; border: 1px solid #e74c3c; color: #e74c3c; text-decoration: none; border-radius: 6px; font-weight: 600;">Leave</a>
+              <a href="/logout" class="btn btn-outline-danger banned-leave-btn">Leave</a>
           </div>
       </div>
 
       <!-- UNBANNED / GOOD STANDING VIEW -->
-      <div id="unbanned-view" class="unbanned-container" style="display: {{ ("none" if isBanned else "block") }}; background: rgba(18, 18, 20, 0.95); padding: 40px 30px; margin: 0 auto; border: 2px solid #2ecc71; text-align: center; border-radius: 12px; max-width: 520px; width: 100%; box-shadow: 0 10px 50px rgba(46, 204, 113, 0.25); box-sizing: border-box;">
-          <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(46, 204, 113, 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; border: 2px solid rgba(46, 204, 113, 0.4);">
-              <i class="fa-solid fa-shield-halved" style="font-size: 38px; color: #2ecc71;"></i>
+      <div id="unbanned-view" class="unbanned-container{% if isBanned %} banned-page-hidden{% endif %}">
+          <div class="banned-ok-badge">
+              <i class="fa-solid fa-shield-halved"></i>
           </div>
-          <h1 style="color: #2ecc71; margin-bottom: 10px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; font-size: 1.7em;">YOU ARE NOT BANNED</h1>
-          <p style="font-size: 1em; color: #aaa; margin-bottom: 22px; line-height: 1.5;">
+          <h1 class="banned-ok-title">YOU ARE NOT BANNED</h1>
+          <p class="banned-ok-text">
               Your account, connection, and device are in good standing. There are no active bans on this browser.
           </p>
-          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 14px 18px; margin-bottom: 25px; text-align: left;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                  <span style="color: #888; font-size: 0.88em; text-transform: uppercase;">Status</span>
-                  <span style="color: #2ecc71; font-weight: 700; font-size: 0.9em;"><i class="fa-solid fa-circle" style="font-size: 0.6em; vertical-align: middle; margin-right: 4px;"></i> Clear / Active</span>
+          <div class="banned-details">
+              <div class="banned-ok-row">
+                  <span class="banned-ok-label">Status</span>
+                  <span class="banned-ok-status"><i class="fa-solid fa-circle"></i> Clear / Active</span>
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="color: #888; font-size: 0.88em; text-transform: uppercase;">IP Address</span>
-                  <code style="color: #ddd; font-family: monospace; font-size: 0.9em;">{{ (clientIp or "127.0.0.1") }}</code>
+              <div class="banned-ok-row">
+                  <span class="banned-ok-label">IP Address</span>
+                  <code class="banned-ok-ip">{{ (clientIp or "127.0.0.1") }}</code>
               </div>
           </div>
           <div>
-              <a href="/" class="btn" style="background: #2ecc71; border: 1px solid #27ae60; color: #fff; padding: 10px 28px; border-radius: 6px; font-size: 1em; font-weight: 600; text-decoration: none; display: inline-block;">Return to Home</a>
+              <a href="/" class="btn banned-home-btn">Return to Home</a>
           </div>
       </div>
 

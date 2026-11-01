@@ -1,52 +1,45 @@
 {% include "snippets/header.html" %}
-<style>
-@media (min-width: 1200px) {
-  .container:not(:has(.item-layout-container)) {
-    max-width: 1140px;
-  }
-}
-</style>
 <div class="pagewrapper">
 <div id="main" class="admin-container">
     {% include "snippets/admin-back.html" %}
     <div class="container">
-        <div class="admin-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div class="admin-header-flex adm-wordfilter-header">
             <h2>Wordfilter Manager</h2>
         </div>
 
     <!-- Rule Add Section -->
-    <div class="wordfilter-form-container" style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 6px; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);">
-        <h4 style="color: var(--accent); margin-top: 0; margin-bottom: 15px;">Create Wordfilter Rule</h4>
-        <form id="wordfilter-form" data-on="submit:prevent,wfAddRule" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px;">
-                <label for="word" style="display: block; margin-bottom: 6px; font-size: 0.9em; color: #ccc;">Target Word</label>
-                <input type="text" id="word" name="word" required placeholder="Word to match..." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 4px; font-size: 1em;">
+    <div class="wordfilter-form-container adm-wordfilter-form-box">
+        <h4 class="adm-wordfilter-form-title">Create Wordfilter Rule</h4>
+        <form id="wordfilter-form" data-on="submit:prevent,wfAddRule" class="adm-wordfilter-form">
+            <div class="adm-wordfilter-field">
+                <label for="word" class="adm-wordfilter-label">Target Word</label>
+                <input type="text" id="word" name="word" required placeholder="Word to match..." class="adm-wordfilter-input">
             </div>
-            <div style="flex: 1; min-width: 200px;">
-                <label for="replacement" style="display: block; margin-bottom: 6px; font-size: 0.9em; color: #ccc;">Replacement Word</label>
-                <input type="text" id="replacement" name="replacement" required placeholder="Replace with..." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; border-radius: 4px; font-size: 1em;">
+            <div class="adm-wordfilter-field">
+                <label for="replacement" class="adm-wordfilter-label">Replacement Word</label>
+                <input type="text" id="replacement" name="replacement" required placeholder="Replace with..." class="adm-wordfilter-input">
             </div>
-            <button type="submit" class="btn-upload" style="width: auto; padding: 11px 25px; margin-bottom: 1px;">Add Rule</button>
+            <button type="submit" class="btn-upload adm-wordfilter-add">Add Rule</button>
         </form>
-        <span id="form-status" style="margin-top: 10px; display: block; font-weight: bold; font-size: 0.9em;"></span>
+        <span id="form-status" class="adm-wordfilter-status"></span>
      </div>
  
      <!-- Active Rules List -->
-     <div class="wordfilter-table-container" style="background: rgba(0,0,0,0.1); border-radius: 6px; padding: 5px; border: 1px solid rgba(255,255,255,0.05);">
+     <div class="wordfilter-table-container adm-wordfilter-table-box">
          <table class="responsive-table">
              <thead>
                  <tr>
                      <th>Original Word</th>
                      <th>Replacement</th>
                      <th>Created</th>
-                     <th style="text-align: right;">Actions</th>
+                     <th class="adm-wordfilter-th-actions">Actions</th>
                  </tr>
              </thead>
              <tbody id="filter-list">
                  <!-- Dynamically loaded -->
              </tbody>
          </table>
-         <div id="no-rules-msg" style="text-align: center; padding: 40px; color: #aaa; display: none;">
+         <div id="no-rules-msg" class="adm-wordfilter-empty">
              No wordfilter rules active. Add one above!
          </div>
      </div>
@@ -76,11 +69,11 @@
                         noRulesMsg.style.display = 'none';
                         tbody.innerHTML = data.filters.map(f =>
                             '<tr>' +
-                                '<td data-label="Original Word" style="font-weight: bold; color: var(--accent);">' + escapeHtml(f.word) + '</td>' +
-                                '<td data-label="Replacement" style="font-family: monospace; color: #fff;">' + escapeHtml(f.replacement) + '</td>' +
+                                '<td data-label="Original Word" class="adm-wordfilter-word">' + escapeHtml(f.word) + '</td>' +
+                                '<td data-label="Replacement" class="adm-wordfilter-replacement">' + escapeHtml(f.replacement) + '</td>' +
                                 '<td data-label="Created">' + (f.created_at ? new Date(f.created_at).toLocaleString() : '—') + '</td>' +
-                                '<td data-label="Actions" style="text-align: right;">' +
-                                    '<button data-on="click:wfDeleteRule" data-args="[' + f.id + ']" class="btn-remove" style="padding: 5px 12px; font-size: 0.85em; border-radius: 4px; border: 0; cursor: pointer;">Delete</button>' +
+                                '<td data-label="Actions" class="adm-wordfilter-actions-cell">' +
+                                    '<button data-on="click:wfDeleteRule" data-args="[' + f.id + ']" class="btn-remove adm-wordfilter-delete">Delete</button>' +
                                 '</td>' +
                             '</tr>'
                         ).join('');

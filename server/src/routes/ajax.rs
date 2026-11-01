@@ -524,7 +524,7 @@ async fn items(st: AppState, req: Req) -> Res {
     if !ok(&data) && crate::config::truthy(&data["is_private"]) {
         let lang = session.and_then(|s| s.language.clone()).filter(|l| !l.is_empty()).unwrap_or_else(|| super::index::req_lang(&st, &req));
         let msg = st.i18n.translator(&lang).t("profile.private_favorites");
-        let html = format!(r#"<div class="private-favs-msg" style="padding: 30px; text-align: center; color: var(--text-muted); font-size: 1.1em;">{msg}</div>"#);
+        let html = format!(r#"<div class="private-favs-msg private-favs-msg-ajax">{msg}</div>"#);
         return Ok(json_body(&json!({ "success": false, "is_private": true, "html": html, "hasMore": false })));
     }
     if !ok(&data) && page == 1 && newer.is_none() {

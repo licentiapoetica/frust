@@ -12,15 +12,6 @@
     </div>
   </div>
 </template>
-<style>
-  .cap-gate-overlay { position: fixed; inset: 0; z-index: 100000; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.7); }
-  .cap-gate-box { background: #111; border: 1px solid #333; color: #e0e0e0; padding: 20px 24px; width: min(320px, calc(100vw - 32px)); text-align: center; }
-  .cap-gate-box h3 { margin: 0 0 6px; font-size: 1.1em; }
-  .cap-gate-box p { margin: 0 0 14px; font-size: 0.9em; color: #aaa; }
-  .cap-gate-box cap-widget { display: block; margin: 0 auto; }
-  .cap-gate-error { min-height: 1.2em; margin: 8px 0 4px; color: #f55b50; font-size: 0.85em; }
-  .cap-gate-cancel { background: none; border: 1px solid #444; color: #ccc; padding: 6px 14px; cursor: pointer; font: inherit; }
-  .cap-gate-cancel:hover { border-color: #888; color: #fff; }
-</style>
+<link rel="stylesheet" href="/s/css/cap-gate.css?v={{ mtime("/public/s/css/cap-gate.css") }}">
 <script src="/s/cap/cap-gate.js?v={{ mtime("/public/s/cap/cap-gate.js") }}" defer></script>
 {% endif %}

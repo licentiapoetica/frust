@@ -339,3 +339,62 @@ body.sidebar-right-hidden .meme-layout-wrapper {
     padding-right: 0 !important;
 }
 
+
+
+/* ==== Moved from inline styles: meme pages ==== */
+
+/* ---- meme-creator.html: former <style> block (scoped to the creator page; meme-select.html loads this file too) ---- */
+:where(.meme-creator-container) .meme-title {
+  font-family: 'Impact', 'VCR', sans-serif;
+}
+
+/* NUCLEAR VISIBILITY RESET: Override any and all parent constraints for this page */
+@media (max-width: 1250px) {
+  /* Target all possible shell triggers */
+  html:where(:has(.meme-creator-container)),
+  :where(html:has(.meme-creator-container)) body,
+  :where(html:has(.meme-creator-container)) .pagewrapper,
+  :where(html:has(.meme-creator-container)) #main,
+  :where(html:has(.meme-creator-container)) .layout-modern react-wrapper,
+  :where(html:has(.meme-creator-container)) .layout-legacy react-wrapper {
+    height: auto !important;
+    overflow: visible !important;
+    min-height: 100vh !important;
+    display: block !important;
+    flex: none !important;
+  }
+
+  :where(html:has(.meme-creator-container)) #main {
+    padding-bottom: 50px; /* Space for footer/controls */
+  }
+}
+
+/* ---- meme-creator.html: inline styles ---- */
+/* Shown by meme-creator.js (style.display = 'block') for custom templates */
+#customTemplateSelector {
+  margin-bottom: 20px;
+  display: none;
+}
+
+#customTemplateFile {
+  display: none;
+}
+
+#addText {
+  margin-bottom: 20px;
+}
+
+.meme-layout-wrapper .form-group.meme-tags-group {
+  display: none;
+}
+
+/* ---- meme-select.html ---- */
+.custom-template-card .template-image-wrapper {
+  background: var(--nav-bg, #2b2b2b);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.custom-template-card .meme-custom-template-icon {
+  font-size: 3.5rem;
+  color: var(--accent, #9f0);
+}

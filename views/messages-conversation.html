@@ -14,14 +14,14 @@
             <img class="dm-header-avatar" src="/a/default.png" alt="">
             {% endif %}
             <div class="dm-header-name-wrap">
-                <a href="/user/{{ other.user|lower }}" class="dm-header-username" {% if other.username_color %} style="color:{{ other.username_color }}" {% endif %}>{{ (other.display_name or other.user) }}</a>
+                <a href="/user/{{ other.user|lower }}" class="dm-header-username{% if other.username_color %} messages-user-colored{% endif %}"{% if other.username_color %} style="--messages-user-color: {{ other.username_color }}"{% endif %}>{{ (other.display_name or other.user) }}</a>
                 <span id="dm-presence" class="dm-presence"></span>
             </div>
         </div>
     </div>
 
     <!-- Key notice -->
-    <div id="dm-key-notice" class="dm-key-notice" style="display:none;"></div>
+    <div id="dm-key-notice" class="dm-key-notice"></div>
 
     <!-- Thread -->
     <div id="dm-thread"

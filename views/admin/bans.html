@@ -3,28 +3,28 @@
 <div class="pagewrapper">
 <div id="main" class="admin-container">
     {% include "snippets/admin-back.html" %}
-    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px 15px;">
-        <div style="margin-bottom: 25px;">
-            <a href="/admin" style="color: var(--accent); text-decoration: none; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px;">
+    <div class="container adm-bans-page">
+        <div class="adm-bans-header">
+            <a href="/admin" class="adm-bans-back-link">
                 <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
             </a>
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div class="adm-bans-header-row">
                 <div>
-                    <h2 style="margin: 0; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;">
-                        <i class="fa-solid fa-shield-halved" style="color: var(--accent);"></i> Ban & Fingerprint Manager
+                    <h2 class="adm-bans-title">
+                        <i class="fa-solid fa-shield-halved adm-bans-title-icon"></i> Ban & Fingerprint Manager
                     </h2>
-                    <p style="color: #aaa; margin: 6px 0 0 0; font-size: 0.95rem;">
+                    <p class="adm-bans-subtitle">
                         Inspect, track, and manage OpenSSH key fingerprints, IP bans, anonymous identities, and audit activity.
                     </p>
                 </div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button data-on="click:openBanModal" data-args='["fingerprint"]\' class="btn-upload" style="width: auto; padding: 8px 16px; background: #e74c3c; border-color: #c0392b; font-size: 0.85rem; cursor: pointer; border-radius: 4px; color: #fff;">
+                <div class="adm-bans-header-actions">
+                    <button data-on="click:openBanModal" data-args='["fingerprint"]\' class="btn-upload adm-bans-ban-btn adm-bans-ban-btn-fingerprint">
                         <i class="fa-solid fa-ban"></i> Ban Fingerprint
                     </button>
-                    <button data-on="click:openBanModal" data-args='["hardware"]\' class="btn-upload" style="width: auto; padding: 8px 16px; background: #8e44ad; border-color: #7d3c98; font-size: 0.85rem; cursor: pointer; border-radius: 4px; color: #fff;">
+                    <button data-on="click:openBanModal" data-args='["hardware"]\' class="btn-upload adm-bans-ban-btn adm-bans-ban-btn-hardware">
                         <i class="fa-solid fa-microchip"></i> Ban Hardware ID
                     </button>
-                    <button data-on="click:openBanModal" data-args='["ip"]\' class="btn-upload" style="width: auto; padding: 8px 16px; background: #d35400; border-color: #ba4a00; font-size: 0.85rem; cursor: pointer; border-radius: 4px; color: #fff;">
+                    <button data-on="click:openBanModal" data-args='["ip"]\' class="btn-upload adm-bans-ban-btn adm-bans-ban-btn-ip">
                         <i class="fa-solid fa-network-wired"></i> Ban IP
                     </button>
                 </div>
@@ -32,31 +32,31 @@
         </div>
 
         <!-- Quick Stats Cards -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
-            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Banned Fingerprints</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #ff6b6b; margin-top: 4px;">{{ (bannedFingerprints|length if bannedFingerprints else 0) }}</div>
+        <div class="adm-bans-stats">
+            <div class="adm-bans-stat-card">
+                <div class="adm-bans-stat-label">Banned Fingerprints</div>
+                <div class="adm-bans-stat-value adm-bans-stat-value-fingerprints">{{ (bannedFingerprints|length if bannedFingerprints else 0) }}</div>
             </div>
-            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Banned Hardware IDs</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #cc5de8; margin-top: 4px;">{{ (bannedHardware|length if bannedHardware else 0) }}</div>
+            <div class="adm-bans-stat-card">
+                <div class="adm-bans-stat-label">Banned Hardware IDs</div>
+                <div class="adm-bans-stat-value adm-bans-stat-value-hardware">{{ (bannedHardware|length if bannedHardware else 0) }}</div>
             </div>
-            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Banned IP Addresses</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #ffa94d; margin-top: 4px;">{{ (bannedIps|length if bannedIps else 0) }}</div>
+            <div class="adm-bans-stat-card">
+                <div class="adm-bans-stat-label">Banned IP Addresses</div>
+                <div class="adm-bans-stat-value adm-bans-stat-value-ips">{{ (bannedIps|length if bannedIps else 0) }}</div>
             </div>
-            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Known Anonymous Keys</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #69db7c; margin-top: 4px;">{{ (anonIdentities|length if anonIdentities else 0) }}</div>
+            <div class="adm-bans-stat-card">
+                <div class="adm-bans-stat-label">Known Anonymous Keys</div>
+                <div class="adm-bans-stat-value adm-bans-stat-value-identities">{{ (anonIdentities|length if anonIdentities else 0) }}</div>
             </div>
-            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 16px; text-align: center;">
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Recent Logged Actions</div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: #74c0fc; margin-top: 4px;">{{ (recentActivity|length if recentActivity else 0) }}</div>
+            <div class="adm-bans-stat-card">
+                <div class="adm-bans-stat-label">Recent Logged Actions</div>
+                <div class="adm-bans-stat-value adm-bans-stat-value-activity">{{ (recentActivity|length if recentActivity else 0) }}</div>
             </div>
         </div>
 
         <!-- Navigation Tabs -->
-        <div style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 20px; overflow-x: auto;">
+        <div class="adm-bans-tabs">
             <button data-on="click:switchTab" data-arg="fingerprints" id="tab-btn-fingerprints" class="admin-tab-btn active-tab">
                 <i class="fa-solid fa-key"></i> Banned Fingerprints ({{ (bannedFingerprints|length if bannedFingerprints else 0) }})
             </button>
@@ -76,8 +76,8 @@
 
         <!-- TAB 1: BANNED FINGERPRINTS -->
         <div id="tab-pane-fingerprints" class="tab-pane active-pane">
-            <div class="upload-form" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px;">
-                <table class="responsive-table clean-table" style="width: 100%;">
+            <div class="upload-form adm-bans-pane-card">
+                <table class="responsive-table clean-table adm-bans-table">
                     <thead>
                         <tr>
                             <th>Fingerprint</th>
@@ -94,7 +94,7 @@
                             {% for key, fp in bannedFingerprints|entries %}
                             <tr>
                                 <td data-label="Fingerprint">
-                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                    <div class="adm-bans-code-row">
                                         <code class="clickable-code" data-on="click:copyText" data-arg="{{ fp.fingerprint }}" title="Click to copy full fingerprint">
                                             {{ fp.fingerprint }}
                                         </code>
@@ -105,15 +105,15 @@
                                 </td>
                                 <td data-label="Linked Account">
                                     {% if fp.anon_login %}
-                                        <a href="/user/{{ fp.anon_login }}" target="_blank" style="color: var(--accent); font-weight: bold; text-decoration: none;">
+                                        <a href="/user/{{ fp.anon_login }}" target="_blank" class="adm-bans-account-link">
                                             <i class="fa-solid fa-user-secret"></i> {{ (fp.anon_user or fp.anon_login) }}
                                         </a>
                                     {% else %}
-                                        <span style="color: #888;">—</span>
+                                        <span class="adm-bans-muted">—</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Reason">
-                                    <span style="color: #ff8787; font-weight: 500;">{{ (fp.reason or "No reason specified") }}</span>
+                                    <span class="adm-bans-reason">{{ (fp.reason or "No reason specified") }}</span>
                                 </td>
                                 <td data-label="Banned By">
                                     {{ (fp.banned_by_user or "System / Admin") }}
@@ -123,13 +123,13 @@
                                 </td>
                                 <td data-label="Expires">
                                     {% if fp.expires_at %}
-                                        <span style="color: #fcc419;">{{ fp.expires_at|locale_string }}</span>
+                                        <span class="adm-bans-expires">{{ fp.expires_at|locale_string }}</span>
                                     {% else %}
-                                        <span style="color: #ff6b6b; font-weight: bold;">Permanent</span>
+                                        <span class="adm-bans-permanent">Permanent</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Action">
-                                    <button data-on="click:unbanFingerprint" data-arg="{{ fp.fingerprint }}" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
+                                    <button data-on="click:unbanFingerprint" data-arg="{{ fp.fingerprint }}" class="btn-remove adm-bans-row-btn adm-bans-row-btn-unban">
                                         <i class="fa-solid fa-unlock"></i> Unban
                                     </button>
                                 </td>
@@ -137,8 +137,8 @@
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 30px; color: #888;">
-                                    <i class="fa-solid fa-circle-check" style="color: #51cf66; margin-right: 6px;"></i> No banned fingerprints.
+                                <td colspan="7" class="adm-bans-empty">
+                                    <i class="fa-solid fa-circle-check adm-bans-empty-icon"></i> No banned fingerprints.
                                 </td>
                             </tr>
                         {% endif %}
@@ -148,9 +148,9 @@
         </div>
 
         <!-- TAB: BANNED HARDWARE -->
-        <div id="tab-pane-hardware" class="tab-pane" style="display: none;">
-            <div class="upload-form" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px;">
-                <table class="responsive-table clean-table" style="width: 100%;">
+        <div id="tab-pane-hardware" class="tab-pane">
+            <div class="upload-form adm-bans-pane-card">
+                <table class="responsive-table clean-table adm-bans-table">
                     <thead>
                         <tr>
                             <th>Hardware Fingerprint</th>
@@ -166,7 +166,7 @@
                             {% for key, hw in bannedHardware|entries %}
                             <tr>
                                 <td data-label="Hardware ID">
-                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                    <div class="adm-bans-code-row">
                                         <code class="clickable-code" data-on="click:copyText" data-arg="{{ hw.hw_fingerprint }}" title="Click to copy hardware ID">
                                             {{ hw.hw_fingerprint[0:24] }}...
                                         </code>
@@ -176,13 +176,13 @@
                                     </div>
                                 </td>
                                 <td data-label="Reason">
-                                    <span style="color: #ff8787;">{{ (hw.reason or "Banned") }}</span>
+                                    <span class="adm-bans-hw-reason">{{ (hw.reason or "Banned") }}</span>
                                 </td>
                                 <td data-label="Banned By">
                                     {% if hw.banned_by_user %}
-                                        <span style="color: #aaa;">{{ hw.banned_by_user }}</span>
+                                        <span class="adm-bans-banned-by">{{ hw.banned_by_user }}</span>
                                     {% else %}
-                                        <span style="color: #777;">System</span>
+                                        <span class="adm-bans-dim">System</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Date">
@@ -190,13 +190,13 @@
                                 </td>
                                 <td data-label="Expires">
                                     {% if hw.expires_at %}
-                                        <span style="color: #fcc419;">{{ hw.expires_at|locale_string }}</span>
+                                        <span class="adm-bans-expires">{{ hw.expires_at|locale_string }}</span>
                                     {% else %}
-                                        <span style="color: #ff6b6b; font-weight: bold;">Permanent</span>
+                                        <span class="adm-bans-permanent">Permanent</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Action">
-                                    <button data-on="click:unbanHardware" data-arg="{{ hw.hw_fingerprint }}" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
+                                    <button data-on="click:unbanHardware" data-arg="{{ hw.hw_fingerprint }}" class="btn-remove adm-bans-row-btn adm-bans-row-btn-unban">
                                         <i class="fa-solid fa-unlock"></i> Unban
                                     </button>
                                 </td>
@@ -204,8 +204,8 @@
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="6" style="text-align: center; padding: 30px; color: #888;">
-                                    <i class="fa-solid fa-circle-check" style="color: #51cf66; margin-right: 6px;"></i> No banned hardware fingerprints.
+                                <td colspan="6" class="adm-bans-empty">
+                                    <i class="fa-solid fa-circle-check adm-bans-empty-icon"></i> No banned hardware fingerprints.
                                 </td>
                             </tr>
                         {% endif %}
@@ -215,9 +215,9 @@
         </div>
 
         <!-- TAB 2: BANNED IPS -->
-        <div id="tab-pane-ips" class="tab-pane" style="display: none;">
-            <div class="upload-form" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px;">
-                <table class="responsive-table clean-table" style="width: 100%;">
+        <div id="tab-pane-ips" class="tab-pane">
+            <div class="upload-form adm-bans-pane-card">
+                <table class="responsive-table clean-table adm-bans-table">
                     <thead>
                         <tr>
                             <th>IP / Hash</th>
@@ -233,7 +233,7 @@
                             {% for key, item in bannedIps|entries %}
                             <tr>
                                 <td data-label="IP / Hash">
-                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                    <div class="adm-bans-code-row">
                                         <code class="clickable-code" data-on="click:copyText" data-arg="{{ item.ip }}" title="Click to copy IP">
                                             {{ item.ip }}
                                         </code>
@@ -242,13 +242,13 @@
                                         </button>
                                     </div>
                                     {% if (item.ip_hash and item.ip_hash != item.ip) %}
-                                        <div style="font-size: 0.75rem; color: #777; margin-top: 3px;">
+                                        <div class="adm-bans-ip-hash">
                                             Hash: {{ item.ip_hash[0:16] }}...
                                         </div>
                                     {% endif %}
                                 </td>
                                 <td data-label="Reason">
-                                    <span style="color: #ff8787; font-weight: 500;">{{ (item.reason or "No reason specified") }}</span>
+                                    <span class="adm-bans-reason">{{ (item.reason or "No reason specified") }}</span>
                                 </td>
                                 <td data-label="Banned By">
                                     {{ (item.banned_by_user or "System / Admin") }}
@@ -258,13 +258,13 @@
                                 </td>
                                 <td data-label="Expires">
                                     {% if item.expires_at %}
-                                        <span style="color: #fcc419;">{{ item.expires_at|locale_string }}</span>
+                                        <span class="adm-bans-expires">{{ item.expires_at|locale_string }}</span>
                                     {% else %}
-                                        <span style="color: #ff6b6b; font-weight: bold;">Permanent</span>
+                                        <span class="adm-bans-permanent">Permanent</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Action">
-                                    <button data-on="click:unbanIp" data-arg="{{ item.ip }}" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
+                                    <button data-on="click:unbanIp" data-arg="{{ item.ip }}" class="btn-remove adm-bans-row-btn adm-bans-row-btn-unban">
                                         <i class="fa-solid fa-unlock"></i> Unban
                                     </button>
                                 </td>
@@ -272,8 +272,8 @@
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="6" style="text-align: center; padding: 30px; color: #888;">
-                                    <i class="fa-solid fa-circle-check" style="color: #51cf66; margin-right: 6px;"></i> No banned IP addresses.
+                                <td colspan="6" class="adm-bans-empty">
+                                    <i class="fa-solid fa-circle-check adm-bans-empty-icon"></i> No banned IP addresses.
                                 </td>
                             </tr>
                         {% endif %}
@@ -283,9 +283,9 @@
         </div>
 
         <!-- TAB 3: ANONYMOUS IDENTITIES -->
-        <div id="tab-pane-identities" class="tab-pane" style="display: none;">
-            <div class="upload-form" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px;">
-                <table class="responsive-table clean-table" style="width: 100%;">
+        <div id="tab-pane-identities" class="tab-pane">
+            <div class="upload-form adm-bans-pane-card">
+                <table class="responsive-table clean-table adm-bans-table">
                     <thead>
                         <tr>
                             <th>Account</th>
@@ -303,16 +303,16 @@
                             <tr>
                                 <td data-label="Account">
                                     {% if idn.login %}
-                                        <a href="/user/{{ idn.login }}" target="_blank" style="color: var(--accent); font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                                        <a href="/user/{{ idn.login }}" target="_blank" class="adm-bans-account-link adm-bans-account-link-flex">
                                             <i class="fa-solid fa-user-secret"></i> {{ (idn.user or idn.login) }}
                                         </a>
-                                        <div style="font-size: 0.75rem; color: #888;">UID: {{ idn.user_id }}</div>
+                                        <div class="adm-bans-uid">UID: {{ idn.user_id }}</div>
                                     {% else %}
-                                        <span style="color: #888;">UID: {{ idn.user_id }} (Deleted)</span>
+                                        <span class="adm-bans-muted">UID: {{ idn.user_id }} (Deleted)</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Fingerprint">
-                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                    <div class="adm-bans-code-row">
                                         <code class="clickable-code" data-on="click:copyText" data-arg="{{ idn.fingerprint }}" title="Click to copy full fingerprint">
                                             {{ idn.fingerprint[0:22] }}...
                                         </code>
@@ -323,7 +323,7 @@
                                 </td>
                                 <td data-label="Hardware ID">
                                     {% if idn.hw_fingerprint %}
-                                        <div style="display: flex; align-items: center; gap: 6px;">
+                                        <div class="adm-bans-code-row">
                                             <code class="clickable-code" data-on="click:copyText" data-arg="{{ idn.hw_fingerprint }}" title="Click to copy full hardware ID">
                                                 {{ idn.hw_fingerprint[0:18] }}...
                                             </code>
@@ -331,43 +331,43 @@
                                                 <i class="fa-regular fa-copy"></i>
                                             </button>
                                             {% if idn.is_hw_banned %}
-                                                <span class="badge" style="background: #e74c3c; color: #fff; padding: 2px 5px; border-radius: 3px; font-size: 0.65rem;">HW BANNED</span>
+                                                <span class="badge adm-bans-hw-badge">HW BANNED</span>
                                             {% else %}
-                                                <button data-on="click:openBanModal" data-args='{{ ["hardware", idn.hw_fingerprint, idn.user_id]|tojson }}' class="btn-icon" title="Ban Hardware ID" style="color: #e74c3c; margin-left: 2px;">
+                                                <button data-on="click:openBanModal" data-args='{{ ["hardware", idn.hw_fingerprint, idn.user_id]|tojson }}' class="btn-icon adm-bans-hw-ban-btn" title="Ban Hardware ID">
                                                     <i class="fa-solid fa-ban"></i>
                                                 </button>
                                             {% endif %}
                                         </div>
                                     {% else %}
-                                        <span style="color: #666; font-size: 0.8rem;">—</span>
+                                        <span class="adm-bans-no-hw">—</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Created / IP">
                                     <div>{{ (idn.created_at|locale_date if idn.created_at else "—") }}</div>
                                     {% if idn.created_ip %}
-                                        <div style="font-size: 0.75rem; color: #888; font-family: monospace;">{{ idn.created_ip[0:16] }}...</div>
+                                        <div class="adm-bans-ip-sub">{{ idn.created_ip[0:16] }}...</div>
                                     {% endif %}
                                 </td>
                                 <td data-label="Last Seen / IP">
                                     <div>{{ (idn.last_seen|locale_date if idn.last_seen else "—") }}</div>
                                     {% if idn.last_ip %}
-                                        <div style="font-size: 0.75rem; color: #888; font-family: monospace;">{{ idn.last_ip[0:16] }}...</div>
+                                        <div class="adm-bans-ip-sub">{{ idn.last_ip[0:16] }}...</div>
                                     {% endif %}
                                 </td>
                                 <td data-label="Status">
                                     {% if ((idn.is_banned or idn.is_fp_banned) or idn.is_hw_banned) %}
-                                        <span class="badge" style="background: #e74c3c; color: #fff; padding: 3px 8px; border-radius: 3px; font-size: 0.75rem;">BANNED</span>
+                                        <span class="badge adm-bans-status-badge adm-bans-status-banned">BANNED</span>
                                     {% else %}
-                                        <span class="badge" style="background: #27ae60; color: #fff; padding: 3px 8px; border-radius: 3px; font-size: 0.75rem;">ACTIVE</span>
+                                        <span class="badge adm-bans-status-badge adm-bans-status-active">ACTIVE</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Actions">
                                     {% if (idn.is_banned or idn.is_fp_banned) %}
-                                        <button data-on="click:unbanFingerprint" data-arg="{{ idn.fingerprint }}" class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #27ae60; border-color: #2ecc71; color: #fff; cursor: pointer; border-radius: 4px;">
+                                        <button data-on="click:unbanFingerprint" data-arg="{{ idn.fingerprint }}" class="btn-remove adm-bans-row-btn adm-bans-row-btn-unban">
                                             <i class="fa-solid fa-unlock"></i> Unban Key
                                         </button>
                                     {% else %}
-                                        <button data-on="click:promptBanIdentity" data-args='{{ [idn.user_id, idn.fingerprint]|tojson }}' class="btn-remove" style="padding: 4px 10px; font-size: 0.8rem; background: #e74c3c; border-color: #c0392b; color: #fff; cursor: pointer; border-radius: 4px;">
+                                        <button data-on="click:promptBanIdentity" data-args='{{ [idn.user_id, idn.fingerprint]|tojson }}' class="btn-remove adm-bans-row-btn adm-bans-row-btn-ban">
                                             <i class="fa-solid fa-ban"></i> Ban Key
                                         </button>
                                     {% endif %}
@@ -376,7 +376,7 @@
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 30px; color: #888;">
+                                <td colspan="7" class="adm-bans-empty">
                                     No anonymous identities found in database.
                                 </td>
                             </tr>
@@ -387,9 +387,9 @@
         </div>
 
         <!-- TAB 4: ACTIVITY AUDIT LOG -->
-        <div id="tab-pane-activity" class="tab-pane" style="display: none;">
-            <div class="upload-form" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px;">
-                <table class="responsive-table clean-table" style="width: 100%;">
+        <div id="tab-pane-activity" class="tab-pane">
+            <div class="upload-form adm-bans-pane-card">
+                <table class="responsive-table clean-table adm-bans-table">
                     <thead>
                         <tr>
                             <th>Time</th>
@@ -405,16 +405,16 @@
                         {% if (recentActivity and (recentActivity|length > 0)) %}
                             {% for key, act in recentActivity|entries %}
                             <tr>
-                                <td data-label="Time" style="white-space: nowrap; font-size: 0.85rem;">
+                                <td data-label="Time" class="adm-bans-time-cell">
                                     {{ (act.created_at|locale_string if act.created_at else "—") }}
                                 </td>
                                 <td data-label="User">
                                     {% if act.login %}
-                                        <a href="/user/{{ act.login }}" target="_blank" style="color: var(--accent); text-decoration: none;">
+                                        <a href="/user/{{ act.login }}" target="_blank" class="adm-bans-activity-user-link">
                                             {{ (act.user or act.login) }}
                                         </a>
                                     {% else %}
-                                        <span style="color: #888;">UID: {{ act.user_id }}</span>
+                                        <span class="adm-bans-muted">UID: {{ act.user_id }}</span>
                                     {% endif %}
                                 </td>
                                 <td data-label="Action">
@@ -425,29 +425,29 @@
                                 <td data-label="Target ID">
                                     {% if act.target_id %}
                                         {% if (act.action == "comment" or act.action == "upload") %}
-                                            <a href="/{{ act.target_id }}" target="_blank" style="color: var(--accent); text-decoration: underline;">
+                                            <a href="/{{ act.target_id }}" target="_blank" class="adm-bans-target-link">
                                                 #{{ act.target_id }}
                                             </a>
                                         {% else %}
                                             #{{ act.target_id }}
                                         {% endif %}
                                     {% else %}
-                                        <span style="color: #777;">—</span>
+                                        <span class="adm-bans-dim">—</span>
                                     {% endif %}
                                 </td>
-                                <td data-label="Details" style="font-size: 0.8rem; font-family: monospace; max-width: 300px; word-break: break-all;">
+                                <td data-label="Details" class="adm-bans-details-cell">
                                     {% if act.details %}
                                         {{ act.details|tojson }}
                                     {% else %}
-                                        <span style="color: #777;">—</span>
+                                        <span class="adm-bans-dim">—</span>
                                     {% endif %}
                                 </td>
-                                <td data-label="IP" style="font-family: monospace; font-size: 0.8rem;">
+                                <td data-label="IP" class="adm-bans-mono-cell">
                                     {{ act.ip }}
                                 </td>
-                                <td data-label="Hardware ID" style="font-family: monospace; font-size: 0.8rem;">
+                                <td data-label="Hardware ID" class="adm-bans-mono-cell">
                                     {% if act.hw_fingerprint %}
-                                        <div style="display: flex; align-items: center; gap: 6px;">
+                                        <div class="adm-bans-code-row">
                                             <code class="clickable-code" data-on="click:copyText" data-arg="{{ act.hw_fingerprint }}" title="Click to copy Hardware ID">
                                                 {{ act.hw_fingerprint[0:16] }}...
                                             </code>
@@ -456,14 +456,14 @@
                                             </button>
                                         </div>
                                     {% else %}
-                                        <span style="color: #777;">—</span>
+                                        <span class="adm-bans-dim">—</span>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 30px; color: #888;">
+                                <td colspan="7" class="adm-bans-empty">
                                     No anonymous activity recorded yet.
                                 </td>
                             </tr>
@@ -477,29 +477,29 @@
 
 <!-- Modals, styles and script live inside #main: AJAX navigation only swaps #main -->
 <!-- Modal: Ban Fingerprint or IP -->
-<div id="ban-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 10000; align-items: center; justify-content: center;">
-    <div style="background: #1e1e1e; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; width: 92%; max-width: 500px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-        <h3 id="modal-title" style="margin-top: 0; margin-bottom: 15px; color: #fff; display: flex; align-items: center; gap: 8px;">
-            <i class="fa-solid fa-ban" style="color: #e74c3c;"></i> Ban Target
+<div id="ban-modal" class="modal-overlay adm-bans-modal">
+    <div class="adm-bans-modal-box">
+        <h3 id="modal-title" class="adm-bans-modal-title">
+            <i class="fa-solid fa-ban adm-bans-icon-ban"></i> Ban Target
         </h3>
 
         <form id="ban-form" data-on="submit:submitBan">
             <input type="hidden" id="ban-target-type" value="fingerprint">
             <input type="hidden" id="ban-target-user-id" value="">
 
-            <div style="margin-bottom: 15px;">
-                <label id="target-value-label" style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 5px;">OpenSSH Fingerprint</label>
-                <input type="text" id="ban-target-value" required style="width: 100%; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; padding: 8px 10px; color: #fff; font-family: monospace; font-size: 0.9rem; box-sizing: border-box;" placeholder="SHA256:...">
+            <div class="adm-bans-modal-field">
+                <label id="target-value-label" class="adm-bans-modal-label">OpenSSH Fingerprint</label>
+                <input type="text" id="ban-target-value" required class="adm-bans-modal-input adm-bans-modal-input-mono" placeholder="SHA256:...">
             </div>
 
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 5px;">Ban Reason (Displayed to User)</label>
-                <input type="text" id="ban-reason" required value="Violation of community guidelines" style="width: 100%; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; padding: 8px 10px; color: #fff; font-size: 0.9rem; box-sizing: border-box;">
+            <div class="adm-bans-modal-field">
+                <label class="adm-bans-modal-label">Ban Reason (Displayed to User)</label>
+                <input type="text" id="ban-reason" required value="Violation of community guidelines" class="adm-bans-modal-input">
             </div>
 
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 5px;">Duration</label>
-                <select id="ban-duration" style="width: 100%; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; padding: 8px 10px; color: #fff; font-size: 0.9rem; box-sizing: border-box;">
+            <div class="adm-bans-modal-field">
+                <label class="adm-bans-modal-label">Duration</label>
+                <select id="ban-duration" class="adm-bans-modal-input">
                     <option value="1">1 Hour</option>
                     <option value="24">24 Hours</option>
                     <option value="168">7 Days</option>
@@ -508,83 +508,20 @@
                 </select>
             </div>
 
-            <div id="cascade-ips-group" style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="ban-cascade-ips" checked style="cursor: pointer;">
-                <label for="ban-cascade-ips" style="color: #ddd; font-size: 0.85rem; cursor: pointer;">
+            <div id="cascade-ips-group" class="adm-bans-cascade">
+                <input type="checkbox" id="ban-cascade-ips" checked class="adm-bans-cascade-check">
+                <label for="ban-cascade-ips" class="adm-bans-cascade-label">
                     Also ban all associated IP addresses used by this identity
                 </label>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" data-on="click:closeBanModal" style="background: transparent; border: 1px solid #555; color: #ccc; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
-                <button type="submit" style="background: #e74c3c; border: 1px solid #c0392b; color: #fff; padding: 8px 18px; border-radius: 4px; font-weight: bold; cursor: pointer;">Enforce Ban</button>
+            <div class="adm-bans-modal-actions">
+                <button type="button" data-on="click:closeBanModal" class="adm-bans-modal-cancel">Cancel</button>
+                <button type="submit" class="adm-bans-modal-submit">Enforce Ban</button>
             </div>
         </form>
     </div>
 </div>
-
-<style>
-.admin-tab-btn {
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: #888;
-    padding: 10px 16px;
-    font-size: 0.95rem;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.15s ease;
-}
-.admin-tab-btn:hover {
-    color: #fff;
-}
-.admin-tab-btn.active-tab {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-    font-weight: bold;
-}
-.clickable-code {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 2px 6px;
-    border-radius: 3px;
-    color: #a5d8ff;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-.clickable-code:hover {
-    background: rgba(255,255,255,0.12);
-    color: #d0ebff;
-}
-.btn-icon {
-    background: none;
-    border: none;
-    color: #888;
-    cursor: pointer;
-    font-size: 0.85rem;
-    padding: 2px;
-}
-.btn-icon:hover {
-    color: var(--accent);
-}
-.action-badge {
-    display: inline-block;
-    padding: 2px 7px;
-    border-radius: 3px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-.action-comment { background: rgba(51, 154, 240, 0.2); color: #74c0fc; border: 1px solid #339af0; }
-.action-upload { background: rgba(81, 207, 102, 0.2); color: #51cf66; border: 1px solid #51cf66; }
-.action-tag, .action-cycle_rating { background: rgba(252, 196, 25, 0.2); color: #fcc419; border: 1px solid #fcc419; }
-.action-favorite, .action-favorites_import { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; border: 1px solid #ff6b6b; }
-.action-comment_delete, .action-delete_tag { background: rgba(224, 49, 49, 0.2); color: #ff8787; border: 1px solid #e03131; }
-.action-handshake { background: rgba(132, 94, 247, 0.2); color: #b197fc; border: 1px solid #845ef7; }
-</style>
 
 <script nonce="{{ csp_nonce }}">
 F0ckActions.define({
@@ -638,17 +575,17 @@ function openBanModal(type, targetValue = '', userId = null) {
     const targetInput = document.getElementById('ban-target-value');
 
     if (type === 'fingerprint') {
-        modalTitle.innerHTML = '<i class="fa-solid fa-key" style="color: #e74c3c;"></i> Ban Key Fingerprint';
+        modalTitle.innerHTML = '<i class="fa-solid fa-key adm-bans-icon-ban"></i> Ban Key Fingerprint';
         valueLabel.innerText = 'OpenSSH Key Fingerprint (e.g. SHA256:...)';
         targetInput.placeholder = 'SHA256:...';
         cascadeGroup.style.display = 'flex';
     } else if (type === 'hardware') {
-        modalTitle.innerHTML = '<i class="fa-solid fa-microchip" style="color: #cc5de8;"></i> Ban Hardware ID';
+        modalTitle.innerHTML = '<i class="fa-solid fa-microchip adm-bans-icon-hw"></i> Ban Hardware ID';
         valueLabel.innerText = 'Hardware Fingerprint (e.g. HW:...)';
         targetInput.placeholder = 'HW:...';
         cascadeGroup.style.display = 'flex';
     } else {
-        modalTitle.innerHTML = '<i class="fa-solid fa-network-wired" style="color: #d35400;"></i> Ban IP Address';
+        modalTitle.innerHTML = '<i class="fa-solid fa-network-wired adm-bans-icon-ip"></i> Ban IP Address';
         valueLabel.innerText = 'IP Address (IPv4 or IPv6 or Hash)';
         targetInput.placeholder = '198.51.100.42';
         cascadeGroup.style.display = 'none';

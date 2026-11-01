@@ -2156,3 +2156,72 @@
     background: rgba(0, 0, 0, 0.65);
 }
 
+
+
+/* ==== Moved from inline styles: upload form ==== */
+
+/* ---- snippets/upload-form.html (upload page + navbar upload dropdown) ---- */
+/* Initial hidden state; upload.js shows these with inline display values.
+   #url-type-badge is hidden by .url-type-badge; views/upload.html's .upload-container starts at opacity 0 via .upload-container. */
+.upload-form .upload-form-hidden {
+  display: none;
+}
+
+.upload-form-optional {
+  opacity: 0.5;
+  font-weight: normal;
+}
+
+.upload-form-drop-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.upload-form-drop-max {
+  font-size: 0.8em;
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+.upload-form-drop-boost {
+  font-size: 0.8em;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+.upload-form-url-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.url-input-container input[type="url"].upload-form-url-input {
+  width: 100%;
+}
+
+/* .upload-form scope so it beats the html[theme=…] select rules like the inline style did */
+.upload-form select.upload-form-expiry {
+  width: 100%;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  border: 1px solid var(--nav-border-color, rgba(255, 255, 255, 0.1));
+  cursor: pointer;
+  font-size: 0.95em;
+}
+
+.global-redirect-section .upload-checkbox-label.upload-form-redirect-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  user-select: none;
+  margin: 0;
+}
+
+.upload-form-redirect-icon {
+  opacity: 0.8;
+  margin-right: 2px;
+}
+

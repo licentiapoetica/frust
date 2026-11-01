@@ -5,48 +5,48 @@
   <div class="container">
     <h1>ADMINBEREICH</h1>
     <h5>Global Chat Management</h5>
-    <a href="/admin" style="font-size: 0.8em; color: var(--accent); text-decoration: none;"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+    <a href="/admin" class="adm-chat-back"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
     <hr>
 
-    <div class="chat-cheatsheet" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 4px; margin-bottom: 20px;">
-      <label style="display: block; font-weight: bold; color: var(--accent); margin-bottom: 10px;">Global Chat Cheat Sheet</label>
-      <p style="font-size: 0.85em; color: #ccc; margin-bottom: 10px;">Admin commands for the global chat widget.</p>
-      <table style="width: 100%; font-size: 0.85em; border-collapse: collapse;">
-        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-          <th style="text-align: left; padding: 8px 0; color: #fff;">Command</th>
-          <th style="text-align: left; padding: 8px 0; color: #fff;">Description</th>
+    <div class="chat-cheatsheet adm-chat-panel">
+      <label class="adm-form-heading">Global Chat Cheat Sheet</label>
+      <p class="adm-chat-panel-desc">Admin commands for the global chat widget.</p>
+      <table class="adm-chat-cheats">
+        <tr class="adm-chat-cheats-head">
+          <th>Command</th>
+          <th>Description</th>
         </tr>
         <tr>
-          <td style="padding: 8px 0;"><code style="color: var(--accent);">/clear</code></td>
-          <td style="padding: 8px 0;">Deletes all messages and restarts history.</td>
+          <td><code class="adm-chat-cmd">/clear</code></td>
+          <td>Deletes all messages and restarts history.</td>
         </tr>
         <tr>
-          <td style="padding: 8px 0;"><code style="color: var(--accent);">/setbackground &lt;url&gt; [opts]</code></td>
-          <td style="padding: 8px 0;">Sets a background image. Opts: <code style="color: #aaa;">center / cover no-repeat</code> etc.</td>
+          <td><code class="adm-chat-cmd">/setbackground &lt;url&gt; [opts]</code></td>
+          <td>Sets a background image. Opts: <code class="adm-chat-opts">center / cover no-repeat</code> etc.</td>
         </tr>
         <tr>
-          <td style="padding: 8px 0;"><code style="color: var(--accent);">/clearbg</code></td>
-          <td style="padding: 8px 0;">Removes the chat background.</td>
+          <td><code class="adm-chat-cmd">/clearbg</code></td>
+          <td>Removes the chat background.</td>
         </tr>
         <tr>
-          <td style="padding: 8px 0;"><code style="color: var(--accent);">/settopic &lt;text&gt;</code></td>
-          <td style="padding: 8px 0;">Sets the pinned topic at the top of the chat.</td>
+          <td><code class="adm-chat-cmd">/settopic &lt;text&gt;</code></td>
+          <td>Sets the pinned topic at the top of the chat.</td>
         </tr>
         <tr>
-          <td style="padding: 8px 0;"><code style="color: var(--accent);">/cleartopic</code></td>
-          <td style="padding: 8px 0;">Removes the pinned topic.</td>
+          <td><code class="adm-chat-cmd">/cleartopic</code></td>
+          <td>Removes the pinned topic.</td>
         </tr>
       </table>
     </div>
 
-    <div class="chat-bg-tool" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 4px; margin-bottom: 20px;">
-      <label style="display: block; font-weight: bold; color: var(--accent); margin-bottom: 10px;">Chat Background Builder</label>
-      <p style="font-size: 0.85em; color: #ccc; margin-bottom: 10px;">Craft the perfect background command or apply it instantly.</p>
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <input type="text" id="bg_url" placeholder="Image URL (must be from allowed host)" style="width: 100%; background: #333; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; outline: none;">
+    <div class="chat-bg-tool adm-chat-panel">
+      <label class="adm-form-heading">Chat Background Builder</label>
+      <p class="adm-chat-panel-desc">Craft the perfect background command or apply it instantly.</p>
+      <div class="adm-chat-builder">
+        <input type="text" id="bg_url" placeholder="Image URL (must be from allowed host)" class="adm-chat-field adm-chat-url">
         
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <select id="bg_pos" style="background: #333; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; cursor: pointer; outline: none;">
+        <div class="adm-chat-builder-row">
+          <select id="bg_pos" class="adm-chat-field adm-chat-select">
             <option value="center">Position: Center</option>
             <option value="top">Position: Top</option>
             <option value="bottom">Position: Bottom</option>
@@ -58,18 +58,18 @@
             <option value="bottom right">Position: Bottom Right</option>
           </select>
           
-          <div style="display: flex; gap: 5px; flex-grow: 1; min-width: 150px;">
-            <select id="bg_size_presets" style="background: #333; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px 0 0 4px; cursor: pointer; outline: none; flex-shrink: 0;">
+          <div class="adm-chat-size-group">
+            <select id="bg_size_presets" class="adm-chat-field adm-chat-select adm-chat-size-preset">
               <option value="cover">Size: Cover</option>
               <option value="contain">Size: Contain</option>
               <option value="auto">Size: Auto</option>
               <option value="100% 100%">Size: Stretch</option>
               <option value="">Custom...</option>
             </select>
-            <input type="text" id="bg_size" value="cover" placeholder="e.g. 50% or 200px" style="background: #333; border: 1px solid #444; border-left: 0; color: #fff; padding: 8px; border-radius: 0 4px 4px 0; outline: none; flex-grow: 1;">
+            <input type="text" id="bg_size" value="cover" placeholder="e.g. 50% or 200px" class="adm-chat-field adm-chat-size">
           </div>
           
-          <select id="bg_repeat" style="background: #333; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; cursor: pointer; outline: none;">
+          <select id="bg_repeat" class="adm-chat-field adm-chat-select">
             <option value="no-repeat">Repeat: No</option>
             <option value="repeat">Repeat: Yes</option>
             <option value="repeat-x">Repeat: X only</option>
@@ -77,25 +77,20 @@
           </select>
         </div>
         
-        <div style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">
-           <span style="color: #888; white-space: nowrap;">Command:</span>
-           <code id="bg_command_output" style="color: var(--accent); white-space: nowrap; overflow-x: auto; flex-grow: 1;">/setbackground  center / cover no-repeat</code>
-           <button data-on="click:copyBgCommand" class="bg-copy-btn" style="background: #444; border: 0; color: #fff; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold; transition: background 0.2s;">Copy</button>
+        <div class="adm-chat-command">
+           <span class="adm-chat-command-label">Command:</span>
+           <code id="bg_command_output" class="adm-chat-command-output">/setbackground  center / cover no-repeat</code>
+           <button data-on="click:copyBgCommand" class="bg-copy-btn adm-chat-copy">Copy</button>
         </div>
         
-        <div style="display: flex; gap: 10px;">
-          <button data-on="click:applyBgFromAdmin" id="apply_bg_btn" class="bg-fade-btn" style="flex-grow: 1; background: var(--accent); border: 0; color: #000; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: opacity 0.2s;">Apply Instantly</button>
-          <button data-on="click:clearBgFromAdmin" class="bg-fade-btn" style="background: #d9534f; border: 0; color: #fff; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: opacity 0.2s;">Clear Background</button>
+        <div class="adm-chat-actions">
+          <button data-on="click:applyBgFromAdmin" id="apply_bg_btn" class="bg-fade-btn adm-chat-action adm-chat-apply">Apply Instantly</button>
+          <button data-on="click:clearBgFromAdmin" class="bg-fade-btn adm-chat-action adm-chat-clear">Clear Background</button>
         </div>
       </div>
-      <span id="chat-status" style="display: block; margin-top: 10px; font-size: 0.8em; font-weight: bold; text-align: right;"></span>
+      <span id="chat-status" class="adm-chat-status"></span>
     </div>
   </div>
-
-  <style>
-    .bg-copy-btn:hover { background: #555 !important; }
-    .bg-fade-btn:hover { opacity: 0.9; }
-  </style>
 
   <script nonce="{{ csp_nonce }}">
     F0ckActions.define({

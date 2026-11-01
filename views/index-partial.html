@@ -36,7 +36,7 @@
       </div>
   </div>
 
-  <div class="pagination-container-fluid" {% if (hidePagination is defined and hidePagination) %} style="display: none;" {% endif %}>
+  <div class="pagination-container-fluid{% if (hidePagination is defined and hidePagination) %} index-pagination-hidden{% endif %}">
     <div class="pagination-wrapper bottom-pagination fixed-pagination">
       {% include "snippets/pagination.html" %}
     </div>

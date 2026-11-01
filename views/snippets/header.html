@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ (lang or "en") }}" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}" res="{% if fullscreen is defined %}{{ ("fullscreen" if fullscreen == 1 else "") }}{% endif %}" data-thumb-size="{{ (default_thumb_size or "m") }}">
+<html lang="{{ (lang or "en") }}" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}" res="{% if fullscreen is defined %}{{ ("fullscreen" if fullscreen == 1 else "") }}{% endif %}" data-thumb-size="{{ (default_thumb_size or "m") }}"{% if (session and session.font) %} class="header-font-user"{% elif ((default_font is defined and default_font) and (default_font|length > 0)) %} class="header-font-site"{% endif %}>
 
 <head>
   {% if (page_meta is defined and page_meta.title) %}<title>{{ domain }} - {{ page_meta.title }}</title>{% elif item is defined %}<title>{{ domain }} - {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</title>{% else %}<title>{{ domain }}</title>{% endif %}
@@ -10,6 +10,9 @@
   <meta name="apple-mobile-web-app-title" content="{{ domain }}">
   <meta name="csrf-token" content="{{ csrf_token }}">
   <script nonce="{{ csp_nonce }}">(function(){var h=document.documentElement;if(localStorage.getItem('hideItemRatings')==='true')h.classList.add('hide-item-ratings-active');if(localStorage.getItem('blurNsfw')==='true')h.classList.add('blur-nsfw-active');if(localStorage.getItem('blurNsfl')==='true')h.classList.add('blur-nsfl-active');if(localStorage.getItem('blurSfw')==='true')h.classList.add('blur-sfw-active');if(localStorage.getItem('blurUntagged')==='true')h.classList.add('blur-untagged-active');if(localStorage.getItem('blurDetail')!=='false')h.classList.add('blur-detail-active');if(localStorage.getItem('imageExpandOnClick')!=='false')h.classList.add('image-expand-active');var ts=localStorage.getItem('scroller_thumb_size');if(ts&&['s','m','l','xl'].includes(ts))h.dataset.thumbSize=ts;})();</script>
+  {# Only what has to be inline: values from config/session (fonts, favicon, comment banner) and the
+     html background/colour, which must apply before any stylesheet loads and on the private-society
+     pages that load no site CSS (see the stylesheet links below). Static rules live in f0ckm.css. #}
   <style>
     html { background-color: #000; color: #fff; }
     {# One @font-face per weight of the chosen family (font_faces: crate::fonts) #}
@@ -32,25 +35,6 @@
       --font: 'SiteDefaultFont', monospace !important;
       {% endif %}
     }
-    {% if (session and session.font) %}
-    *:not(canvas):not(.meme-title):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
-      font-family: 'CustomUserFont', monospace !important;
-    }
-    /* Explicitly protect FA pseudo-elements */
-    .fa-solid::before, .fa-regular::before, .fa-brands::before,
-    .fas::before, .far::before, .fab::before, .fa::before {
-      font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
-    }
-    {% elif ((default_font is defined and default_font) and (default_font|length > 0)) %}
-    *:not(canvas):not(.meme-title):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
-      font-family: 'SiteDefaultFont', monospace !important;
-    }
-    /* Explicitly protect FA pseudo-elements */
-    .fa-solid::before, .fa-regular::before, .fa-brands::before,
-    .fas::before, .far::before, .fab::before, .fa::before {
-      font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
-    }
-    {% endif %}
   </style>
   <link rel="preload" href="/s/vcr.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="/s/fa/all.min.css">
@@ -112,39 +96,30 @@
   {% endif %}
 
   {% if (session and session.force_password_change) %}
-  <style>
-      #main, footer, .global-sidebar-right, .navbar, #bg {
-          display: none !important;
-      }
-      body {
-          background: #000 !important;
-          overflow: hidden !important;
-      }
-  </style>
-  <div id="force-password-modal" class="modal-overlay" style="display: flex; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100100; background: #000;">
-      <div class="modal-content" style="background: #1a1a1a; padding: 40px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(0, 150, 255, 0.3);">
-          <h2 style="margin-top: 0; color: #fff; font-weight: 800; letter-spacing: -0.5px;">{{ t("auth.password_change_required") }}</h2>
-          <p style="color: #ccc; line-height: 1.6;">{{ t("auth.password_change_desc") }}</p>
+  <div id="force-password-modal" class="modal-overlay force-pw-modal">
+      <div class="modal-content force-pw-content">
+          <h2 class="force-pw-title">{{ t("auth.password_change_required") }}</h2>
+          <p class="force-pw-desc">{{ t("auth.password_change_desc") }}</p>
           
-          <form id="force-password-form" style="margin-top: 30px;">
-              <div class="form-group" style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-size: 0.8rem; color: #888; text-transform: uppercase;">{{ t("auth.new_password_label") }}</label>
+          <form id="force-password-form" class="force-pw-form">
+              <div class="form-group force-pw-group">
+                  <label class="force-pw-label">{{ t("auth.new_password_label") }}</label>
                   <input type="password" id="force_new_password" required minlength="20" placeholder="{{ t("auth.min_chars_placeholder") }}" 
-                         style="width: 100%; padding: 12px 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; outline: none; transition: border-color 0.2s;">
+                         class="force-pw-input">
               </div>
-              <div class="form-group" style="margin-bottom: 25px;">
-                  <label style="display: block; margin-bottom: 8px; font-size: 0.8rem; color: #888; text-transform: uppercase;">{{ t("auth.confirm_password_label") }}</label>
+              <div class="form-group force-pw-group force-pw-group-last">
+                  <label class="force-pw-label">{{ t("auth.confirm_password_label") }}</label>
                   <input type="password" id="force_new_password_confirm" required minlength="20" placeholder="{{ t("auth.confirm_placeholder") }}"
-                         style="width: 100%; padding: 12px 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; outline: none; transition: border-color 0.2s;">
+                         class="force-pw-input">
               </div>
               
-              <div id="force-password-status" style="margin-bottom: 15px; font-size: 0.85rem; display: none; padding: 10px; border-radius: 4px;"></div>
+              <div id="force-password-status" class="force-pw-status"></div>
               
-              <button type="submit" style="width: 100%; padding: 15px; background: var(--accent, #0096ff); color: #000; border: 0; border-radius: 6px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;">{{ t("auth.update_password_btn") }}</button>
+              <button type="submit" class="force-pw-submit">{{ t("auth.update_password_btn") }}</button>
           </form>
           
-          <div style="margin-top: 20px; text-align: center;">
-              <a href="/logout" style="color: #666; font-size: 0.8rem; text-decoration: none;">{{ t("auth.or_logout") }}</a>
+          <div class="force-pw-logout">
+              <a href="/logout" class="force-pw-logout-link">{{ t("auth.or_logout") }}</a>
           </div>
       </div>
   </div>
