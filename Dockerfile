@@ -2,8 +2,10 @@
 
 # ── 1. f0ckm binary ──────────────────────────────────────────────────────────────
 # Rust on Alpine targets musl and links statically, so the binary runs on the plain Alpine runtime.
-FROM rust:1.90-alpine3.22 AS build
-RUN apk add --no-cache musl-dev gcc
+# OpenSSL (needed by webauthn-rs for passkeys) is linked statically too.
+FROM rust:1.98-alpine3.22 AS build
+RUN apk add --no-cache musl-dev gcc openssl-dev openssl-libs-static pkgconf
+ENV OPENSSL_STATIC=1
 WORKDIR /build/server
 COPY server/Cargo.toml server/Cargo.lock ./
 COPY server/src ./src
@@ -22,7 +24,7 @@ COPY scripts/vendor.mjs ./scripts/
 RUN node scripts/vendor.mjs /out
 
 # ── 3. Runtime ───────────────────────────────────────────────────────────────────
-FROM alpine:3.23
+FROM alpine:3.24
 ARG GIT_HASH=unknown
 ENV GIT_HASH=$GIT_HASH
 
