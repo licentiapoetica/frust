@@ -799,7 +799,7 @@
     display: none !important;
 }
 
-.upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section) {
+.upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section, .global-redirect-section) {
     animation: upload-options-in 0.2s ease-out;
 }
 
@@ -809,7 +809,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section) { animation: none; }
+    .upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section, .global-redirect-section) { animation: none; }
 }
 
 /* Tags */

@@ -1171,9 +1171,10 @@ window.initUploadForm = (selector) => {
             hasContent = urlInput && urlInput.value.trim().length > 0;
         }
 
-        // Title, rating, visibility, expiry, tags and comment appear once there's something to upload (a file, or a URL)
+        // Title, rating, visibility, expiry, tags, comment and the redirect checkbox appear once there's
+        // something to upload (a file, or a URL)
         const awaiting = activeMode === 'url' ? !hasContent : selectedFiles.length === 0;
-        form.querySelectorAll('.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section')
+        form.querySelectorAll('.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section, .global-redirect-section')
             .forEach(sec => sec.classList.toggle('upload-await-file', awaiting));
 
         if (submitBtn) submitBtn.disabled = !(hasContent && hasRating && hasTags);
