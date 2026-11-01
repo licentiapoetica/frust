@@ -22,6 +22,9 @@
     if (!themes.includes(theme)) theme = defaultTheme;
     document.documentElement.setAttribute('theme', theme);
     Cookie.set('theme', theme, { path: '/', days: 360 });
+    // Settings open (page or modal): keep its theme dropdown in step with the shortcut
+    const select = document.getElementById('website_theme_select');
+    if (select && select.value !== theme) select.value = theme;
   };
 
   const cycleTheme = () => {
@@ -38,7 +41,8 @@
   }
 
   document.addEventListener('keydown', e => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    // SELECT too: "t" in a focused dropdown jumps to an option starting with t
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable) return;
     if (e.key === 't') {
       e.preventDefault();
       cycleTheme();
