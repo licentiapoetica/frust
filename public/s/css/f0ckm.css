@@ -12984,10 +12984,13 @@ html[theme="f0ck95d"] .badge-dark {
   transition: opacity 0.15s ease;
 }
 
-/* The "|" separators: aligned like the links, or they sit on the baseline next to middle-aligned links */
+/* The "|" separators: aligned like the links (or they sit on the baseline next to
+   middle-aligned links), dimmed and spaced so they don't read as a letter "I" */
 .steuerung > span {
   display: inline-block;
   vertical-align: middle;
+  margin-inline: 0.35em;
+  opacity: 0.4;
 }
 
 .steuerung a:hover,
