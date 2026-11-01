@@ -59,7 +59,7 @@ static SECRET: Lazy<Vec<u8>> = Lazy::new(|| crate::util::random_bytes(32));
 
 fn sign(url: &str) -> String {
     use base64::Engine;
-    use hmac::Mac;
+    use hmac::{KeyInit, Mac};
     let mut mac = hmac::Hmac::<sha2::Sha256>::new_from_slice(&SECRET).expect("hmac key");
     mac.update(url.as_bytes());
     let full = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());

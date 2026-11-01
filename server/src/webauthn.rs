@@ -482,11 +482,18 @@ mod tests {
 
     impl Authenticator {
         fn new() -> Self {
-            Authenticator { key: SigningKey::random(&mut rand::rngs::OsRng), cred_id: crate::util::random_bytes(32), counter: 0 }
+            // p256 0.14 takes a newer RNG interface than rand 0.8: build the key from 32 random bytes
+            // (retried in the practically impossible case that they exceed the curve order)
+            let key = loop {
+                if let Ok(k) = SigningKey::from_slice(&crate::util::random_bytes(32)) {
+                    break k;
+                }
+            };
+            Authenticator { key, cred_id: crate::util::random_bytes(32), counter: 0 }
         }
 
         fn cose_key(&self) -> Vec<u8> {
-            let point = self.key.verifying_key().to_encoded_point(false);
+            let point = self.key.verifying_key().to_sec1_point(false);
             use ciborium::Value as C;
             let m = C::Map(vec![
                 (C::Integer(1.into()), C::Integer(2.into())),

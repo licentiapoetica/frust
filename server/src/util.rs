@@ -82,8 +82,8 @@ pub fn md5(s: &str) -> String {
 }
 
 pub fn hmac_sha256_hex(key: &[u8], data: &[u8]) -> String {
-    use hmac::{Hmac, Mac};
-    let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(key).expect("hmac accepts any key length");
+    use hmac::{Hmac, KeyInit, Mac};
+    let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(key).expect("hmac accepts any key length");
     mac.update(data);
     hex::encode(mac.finalize().into_bytes())
 }
@@ -341,7 +341,8 @@ pub fn escape_like(s: &str) -> String {
 const SCRYPT_LOG_N: u8 = 14; // Node default N=16384, r=8, p=1
 
 fn scrypt_derive(password: &str, salt: &str) -> Option<Vec<u8>> {
-    let params = scrypt::Params::new(SCRYPT_LOG_N, 8, 1, 64).ok()?;
+    let params = scrypt::Params::new(SCRYPT_LOG_N, 8, 1).ok()?;
+    // 64-byte key: the output length is the buffer's
     let mut out = vec![0u8; 64];
     scrypt::scrypt(password.as_bytes(), salt.as_bytes(), &params, &mut out).ok()?;
     Some(out)
@@ -573,6 +574,12 @@ mod password_tests {
         assert!(verify_password("correct horse battery staple!".into(), h.clone()).await);
         assert!(!verify_password("wrong".into(), h.clone()).await);
         assert!(!password_needs_rehash(&h));
+
+        // Same key as Node's crypto.scryptSync(password, salt, 64) (N=16384, r=8, p=1), so old hashes verify
+        assert_eq!(
+            hex::encode(scrypt_derive("correct horse", "f0cksalt").unwrap()),
+            "f17c57f1efae51d9580b8361453626ba0afd95b57ec37e0703a99dd98f20220f8c325d1feeaf25a4813654fbdd9af682758336f79c3378834ce5492952e13b53"
+        );
 
         let salt = "0123456789abcdef";
         let legacy = format!("$f0ck${salt}:{}", hex::encode(scrypt_derive("pw", salt).unwrap()));
