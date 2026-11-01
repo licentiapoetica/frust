@@ -165,16 +165,17 @@
         }
     });
 
-    // Open on 'u' shortcut (not on /upload, not when typing)
+    // Toggle on 'u' shortcut (not on /upload, not when typing). Like the navbar link, closing
+    // keeps the picked file / typed tags.
     window.addEventListener('keydown', (e) => {
         if (e.key === 'u' && !e.ctrlKey && !e.altKey && !e.metaKey) {
             const tag = document.activeElement?.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable) return;
             if (window.location.pathname === '/upload') return;
-            if (dragModal.classList.contains('show')) return;
-            
+
             e.preventDefault();
-            showModal();
+            if (dragModal.classList.contains('show')) hideModal();
+            else showModal();
         }
     });
 
