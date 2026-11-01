@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 # ── 2. Browser libraries (jszip, marked, Cap captcha, Ruffle) ───────────────────
 # Versions and checksums come from package-lock.json; scripts/vendor.mjs copies the served files.
-FROM node:24-alpine AS vendor
+FROM node:26-alpine AS vendor
 WORKDIR /vendor
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
