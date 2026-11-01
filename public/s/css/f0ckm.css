@@ -15256,6 +15256,21 @@ span#tags .tag-controls {
   padding-bottom: 2.5px;
 }
 
+/* Even spacing: only the row's gap separates rating badge, tags and the add-tag button. Before, each
+   tag had margin-right: 0.5rem and the button's box added padding on top, so the gap before "+" was wider. */
+span#tags {
+  column-gap: 0.5rem;
+}
+
+span#tags .tags-inner > span {
+  margin-right: 0 !important;
+}
+
+span#tags .tag-controls {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 span#tags .tag-ac-wrapper form {
   height: 100%;
 }
