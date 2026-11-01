@@ -8,6 +8,8 @@ mod maintenance;
 mod regen;
 mod users;
 
+pub use users::seed;
+
 use crate::config::Config;
 use crate::state::AppState;
 use anyhow::{Result, bail};

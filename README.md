@@ -19,43 +19,37 @@ Node.js is no longer needed.
 
 ## prod
 
-first things
-
-`cp .env.example .env`
-
-fill with for example: f0ckm (prefilled)
-
-Copy the example configuration and customize it:
-
-`cp config_example.yaml config.yaml`
-
-Edit to needs, for sql you can do this:
-
-host can either be localhost or the docker containers hostname, when running via docker this must be the dockers hostname, if you choose localhost you wont need to add the ENV `DB_HOST=localhost` and if you also change the port to be `DB_PORT=5454` you wont need this ENV either, but then Docker wont find the DB.
-
-```yaml
-sql:
-  host: f0ckm-db
-  port: 5432
-  user: f0ckm
-  password: f0ckm
-  database: f0ckm
-  max: 50
+```bash
+git clone <repo> f0ckm && cd f0ckm
+./install.sh
 ```
 
-`docker compose up -d`
+It asks for the domain, an email for Let's Encrypt and the admin account, then writes `.env` and
+`config.yaml` with generated secrets, builds and starts everything and creates the admin. Leave the
+domain empty for a local install on http://localhost:1337. The domain's DNS has to point at the server
+and ports 80/443 must be open for the certificate. Unattended:
+`DOMAIN=f0ck.example EMAIL=you@example.com ADMIN_PASSWORD=... ./install.sh`.
 
-The server creates the database schema on first start (from `migrations/f0ckm_schema.sql`). Then:
+Running it again is safe: existing `.env`/`config.yaml` are kept and no second admin is created.
+The database schema and default settings are created on the first start.
 
-`docker exec -t f0ckm f0ckm seed`
-
-`docker exec -it f0ckm f0ckm create-admin admin`  (asks for the password; at least 20 characters)
+Postgres (`127.0.0.1:5454`) and the app (`127.0.0.1:1337`) only listen on the server itself; public
+traffic goes through nginx-proxy.
 
 For regular building after making changes to the source code
 
 `bash build.bash master`
 
-now vist http://localhost:1337 in your browser
+### Manual setup
+
+`cp .env.example .env` and set `POSTGRES_PASSWORD` and `IP_HASH_SECRET` (`openssl rand -hex 32`); for a
+public domain also `COMPOSE_PROFILES=f0ckm-nginx`, `VIRTUAL_HOST`, `LETSENCRYPT_HOST`, `LETSENCRYPT_EMAIL`.
+`cp config_example.yaml config.yaml` and set `main.url` and `invite_secret`. Then:
+
+```bash
+docker compose up -d
+docker exec -it f0ckm f0ckm create-admin admin   # asks for the password; at least 20 characters
+```
 
 ## dev
 

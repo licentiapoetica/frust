@@ -75,7 +75,14 @@ async fn wait_for_db(st: &state::AppState) {
                     match std::fs::read_to_string(&schema) {
                         // Schema file from the repository (trusted), run as one script
                         Ok(text) => match sqlx::raw_sql(sqlx::AssertSqlSafe(text.as_str())).execute(&st.db).await {
-                            Ok(_) => tracing::info!("[BOOT] Database schema initialization complete!"),
+                            Ok(_) => {
+                                tracing::info!("[BOOT] Database schema initialization complete!");
+                                // Fresh database: default settings and rating tags, so `f0ckm seed` isn't a setup step.
+                                // Only here, since seeding resets renamed rating tags.
+                                if let Err(e) = cli::seed(st).await {
+                                    tracing::error!("[BOOT] Seeding the new database failed: {e}");
+                                }
+                            }
                             Err(e) => tracing::error!("[BOOT] Schema initialization failed: {e}"),
                         },
                         Err(e) => tracing::error!("[BOOT] Cannot read {}: {e}", schema.display()),

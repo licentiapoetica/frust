@@ -10,7 +10,7 @@ services:
         - GIT_HASH=${GIT_HASH:-unknown}
     networks:
       - f0ckm-net
-    volumes:
+    volumes: &f0ckm-volumes
       - ./config.yaml:/opt/f0ckm/config.yaml:ro,Z
       # Templates and translations are re-read when they change, so edits apply without a rebuild
       - ./views/:/opt/f0ckm/views/:Z
@@ -52,11 +52,37 @@ services:
       # Dedicated secret for IP hashing (HMAC). Set in .env, keep it out of config.yaml and DB backups.
       - IP_HASH_SECRET=${IP_HASH_SECRET:-}
     ports:
-      - "1337:1337"
+      # Loopback only: public traffic goes through nginx-proxy, which reaches the container on the Docker network
+      - "127.0.0.1:1337:1337"
     restart: unless-stopped
     depends_on:
+      f0ckm-init:
+        condition: service_completed_successfully
       f0ckm-db:
         condition: service_healthy
+
+  # Runs once before f0ckm: creates missing data folders and hands them to the app user.
+  # Docker creates missing bind-mount folders as root, and a checkout made as root is root-owned;
+  # the app runs as ${UID:-1000} and couldn't write to either. Only folders with the wrong owner are touched.
+  f0ckm-init:
+    container_name: f0ckm-init
+    image: alpine:3.23
+    network_mode: none
+    volumes: *f0ckm-volumes
+    environment:
+      - OWNER=${UID:-1000}:${GID:-1000}
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        cd /opt/f0ckm
+        for d in public/a public/b public/c public/e public/cu public/t deleted pending \
+                 public/s/emojis public/memes public/ca tmp logs public/tag_cache public/s/fonts \
+                 public/hall_cache public/hall_custom public/s/koepfe f0ckm-data/import public/s/img/navbar; do
+          if [ "$$(stat -c %u:%g "$$d")" != "$$OWNER" ]; then
+            echo "chown $$OWNER $$d"
+            chown -R "$$OWNER" "$$d"
+          fi
+        done
 
   tor:
     image: dockurr/tor
@@ -77,19 +103,21 @@ services:
     container_name: f0ckm-db
     image: postgres:17
     environment:
-      POSTGRES_DB: f0ckm
-      POSTGRES_USER: f0ckm
-      POSTGRES_PASSWORD: f0ckm
+      POSTGRES_DB: ${POSTGRES_DB:-f0ckm}
+      POSTGRES_USER: ${POSTGRES_USER:-f0ckm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-f0ckm}
       PGDATA: /data/postgres
     volumes:
       - ./f0ckm-data/postgres:/data/postgres:Z
+    # Loopback only, for running the server outside Docker during development.
+    # Docker's port rules bypass host firewalls (ufw), so never publish this on all interfaces.
     ports:
-      - "5454:5432"
+      - "127.0.0.1:5454:5432"
     networks:
       - f0ckm-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 3s
       timeout: 3s
       retries: 5
