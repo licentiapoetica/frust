@@ -21,8 +21,8 @@ sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio",
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 serde_yaml = "0.9"
-minijinja = { version = "2", features = ["loader", "json", "urlencode", "speedups", "builtins", "debug"] }
-minijinja-contrib = { version = "2", features = ["pycompat", "datetime"] }
+minijinja = { version = "3", features = ["serde", "json", "urlencode", "speedups", "builtins", "debug"] }
+minijinja-contrib = { version = "3", features = ["pycompat", "datetime"] }
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 regex = "1"

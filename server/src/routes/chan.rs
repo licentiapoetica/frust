@@ -43,7 +43,7 @@ const COMMON_BOARDS: [(&str, &str, &str); 12] = [
 
 /// `String(v)` for JSON values (numbers print like JavaScript).
 pub(crate) fn js_str(v: &Value) -> String {
-    crate::tpl::js_to_string(&minijinja::Value::from_serialize(v))
+    crate::tpl::js_to_string(&crate::tpl::to_jvalue(v))
 }
 
 /// `Number(p[k])` for post numbers.

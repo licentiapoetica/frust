@@ -733,7 +733,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             "network": actitem.val("usernetwork"),
         },
         "item": item_v,
-        "title": format!("{} - {}", if has_slug { crate::tpl::js_to_string(&minijinja::Value::from_serialize(&slug_val)) } else { itemid.to_string() }, cfg.str_or("websrv.domain", "")),
+        "title": format!("{} - {}", if has_slug { crate::tpl::js_to_string(&crate::tpl::to_jvalue(&slug_val)) } else { itemid.to_string() }, cfg.str_or("websrv.domain", "")),
         "pagination": {
             "end": pick(&end_item, json!(itemid)),
             "start": pick(&start_item, json!(itemid)),
@@ -909,7 +909,7 @@ async fn build_album(c: &AlbumCtx<'_>, actitem: &mut Row, requested_sub: &mut Op
 
     let mut req_idx = 0;
     if let Some(req) = requested_sub.as_deref() {
-        let s = |v: &Value| crate::tpl::js_to_string(&minijinja::Value::from_serialize(v));
+        let s = |v: &Value| crate::tpl::js_to_string(&crate::tpl::to_jvalue(v));
         let found = album.iter().position(|a| {
             let slug = if a["slug"].is_null() { String::new() } else { s(&a["slug"]) };
             let sid = if a["subf0ck_id"].is_null() { String::new() } else { s(&a["subf0ck_id"]) };
@@ -928,7 +928,7 @@ async fn build_album(c: &AlbumCtx<'_>, actitem: &mut Row, requested_sub: &mut Op
         }
         *requested_sub = if requested_sub.is_some() || c.tag.is_some() {
             let v = if crate::config::truthy(&target["slug"]) { &target["slug"] } else { &target["id"] };
-            Some(crate::tpl::js_to_string(&minijinja::Value::from_serialize(v)))
+            Some(crate::tpl::js_to_string(&crate::tpl::to_jvalue(v)))
         } else {
             None
         };

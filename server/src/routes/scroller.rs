@@ -51,7 +51,7 @@ fn scroller_flags(cfg: &crate::config::Config, session: Option<&Session>) -> Map
     let perms = s::anon_permissions(cfg);
     let list = |k: &str, dflt: &[&str]| -> Vec<String> {
         match perms.get(k) {
-            Some(v) if crate::config::truthy(v) => v.as_array().map(|a| a.iter().map(|x| crate::tpl::js_to_string(&minijinja::Value::from_serialize(x))).collect()).unwrap_or_default(),
+            Some(v) if crate::config::truthy(v) => v.as_array().map(|a| a.iter().map(|x| crate::tpl::js_to_string(&crate::tpl::to_jvalue(x))).collect()).unwrap_or_default(),
             _ => dflt.iter().map(|s| s.to_string()).collect(),
         }
     };

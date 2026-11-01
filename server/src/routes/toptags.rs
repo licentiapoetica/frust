@@ -174,7 +174,7 @@ pub async fn tags_query(
 pub fn process_tags(tags: Vec<Value>) -> Vec<Value> {
     tags.into_iter()
         .map(|mut t| {
-            let tag = crate::tpl::js_to_string(&minijinja::Value::from_serialize(&t["tag"]));
+            let tag = crate::tpl::js_to_string(&crate::tpl::to_jvalue(&t["tag"]));
             let enc = crate::util::encode_uri_component(&tag);
             let safe = match t["normalized"].as_str().filter(|n| !n.is_empty()) {
                 Some(n) => n.to_string(),

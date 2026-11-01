@@ -95,7 +95,7 @@ async fn random(st: AppState, req: Req) -> Res {
         return Ok(html_code(body, 404));
     }
     let link = &data["link"];
-    let id = crate::tpl::js_to_string(&minijinja::Value::from_serialize(&data["itemid"]));
+    let id = crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["itemid"]));
     // link.main is already percent-encoded (the old code encoded it a second time)
     let target = format!(
         "{}{}{}{}",

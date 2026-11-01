@@ -49,6 +49,11 @@ fn write_escaped(out: &mut Output, s: &str) -> std::fmt::Result {
 }
 
 /// JavaScript `String(value)` for template values.
+/// Any serializable value as a template value (minijinja 3 dropped `Value::from_serialize`).
+pub fn to_jvalue<T: serde::Serialize>(v: T) -> JValue {
+    JValue::from(minijinja::value::Serde(v))
+}
+
 pub fn js_to_string(v: &JValue) -> String {
     use minijinja::value::ValueKind;
     match v.kind() {
@@ -71,12 +76,12 @@ pub fn js_to_string(v: &JValue) -> String {
     }
 }
 
-fn js_formatter(out: &mut Output, state: &State, value: &JValue) -> Result<(), Error> {
+fn js_formatter(out: &mut Output, state: &mut State, value: &JValue) -> Result<(), Error> {
     if value.is_undefined() || value.is_none() {
         return Ok(());
     }
     let s = js_to_string(value);
-    let r = if value.is_safe() || state.auto_escape() == AutoEscape::None { out.write_str(&s) } else { write_escaped(out, &s) };
+    let r = if value.is_safe() || *state.auto_escape() == AutoEscape::None { out.write_str(&s) } else { write_escaped(out, &s) };
     r.map_err(|_| Error::new(ErrorKind::WriteFailure, "write failed"))
 }
 
@@ -182,7 +187,7 @@ fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static> {
     env.set_undefined_behavior(UndefinedBehavior::Chainable);
     env.set_auto_escape_callback(|name| if name.ends_with(".html") { AutoEscape::Html } else { AutoEscape::None });
     env.set_formatter(js_formatter);
-    env.set_keep_trailing_newline(true);
+    env.set_syntax(minijinja::syntax::SyntaxConfig::builder().keep_trailing_newline(true).build().expect("default syntax is valid"));
     minijinja_contrib::add_to_environment(&mut env);
     env.set_unknown_method_callback(minijinja_contrib::pycompat::unknown_method_callback);
 
@@ -205,7 +210,7 @@ fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static> {
         }
         match tr.t_value(&key, Some(&repl)) {
             Value::String(s) => Ok(JValue::from_safe_string(s)),
-            other => Ok(JValue::from_serialize(&other)),
+            other => Ok(to_jvalue(&other)),
         }
     });
 
@@ -356,7 +361,7 @@ impl Templates {
         }
         let env = self.env.read();
         let file = if name.ends_with(".html") { name.to_string() } else { format!("{name}.html") };
-        let result = env.get_template(&file).and_then(|t| t.render(ctx));
+        let result = env.get_template(&file).and_then(|t| t.render(to_jvalue(ctx)));
         match result {
             Ok(s) => collapse_blank_lines(&s),
             Err(e) => {

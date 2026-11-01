@@ -289,7 +289,7 @@ async fn user_profile(st: AppState, req: Req) -> Res {
     } else {
         format!("https://{domain}/a/default.png")
     };
-    let n = |k: &str| crate::tpl::js_to_string(&minijinja::Value::from_serialize(count.get(k).unwrap_or(&Value::Null)));
+    let n = |k: &str| crate::tpl::js_to_string(&crate::tpl::to_jvalue(count.get(k).unwrap_or(&Value::Null)));
     let description = if is_ghost { format!("{} legacy uploads", n("f0cks")) } else { format!("{} uploads, {} favorites", n("f0cks"), n("favs")) };
     let mut data = json!({
         "user": Value::Object(user_data),
@@ -621,7 +621,7 @@ pub(crate) fn item_template_flags(cfg: &crate::config::Config, data: &mut Value,
     data["can_extract_meta"] = json!(!mime.is_empty() && !mime.contains("flash") && !is_archive);
     let favs = data["item"]["favorites"].as_array().cloned().unwrap_or_default();
     data["user_has_favorited"] = json!(crate::util::user_has_favorited(session, &favs));
-    let slugs = |k: &str| data["item"][k].as_array().map(|a| a.iter().map(|h| crate::tpl::js_to_string(&minijinja::Value::from_serialize(&h["slug"]))).collect::<Vec<_>>().join(","));
+    let slugs = |k: &str| data["item"][k].as_array().map(|a| a.iter().map(|h| crate::tpl::js_to_string(&crate::tpl::to_jvalue(&h["slug"]))).collect::<Vec<_>>().join(","));
     let (hs, uhs) = (slugs("halls").unwrap_or_default(), slugs("user_halls").unwrap_or_default());
     data["halls_slugs"] = json!(hs);
     data["user_halls_slugs"] = json!(uhs);
@@ -711,7 +711,7 @@ async fn onara_page(st: &AppState, req: &Req, tpl_req: &Req, opts: &FeedOpts<'_>
         item_page = pg.parse::<i64>().ok().filter(|&n| n != 0).unwrap_or(1);
     } else if !is_random && data["item"].is_object() {
         let o = FeedOpts {
-            target_item_id: Some(crate::tpl::js_to_string(&minijinja::Value::from_serialize(&data["item"]["id"]))),
+            target_item_id: Some(crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["item"]["id"]))),
             target_item_pinned: Some(crate::config::truthy(&data["item"]["is_pinned"])),
             min_xd_score: min_xd(req, opts.session),
             itemid: None,
@@ -762,7 +762,7 @@ async fn onara_page(st: &AppState, req: &Req, tpl_req: &Req, opts: &FeedOpts<'_>
             };
             let first = |keys: &[&str]| keys.iter().map(|k| &item[*k]).find(|v| crate::config::truthy(v)).cloned();
             let thumb = first(&["thumb", "thumbnail"])
-                .or_else(|| crate::config::truthy(&item["id"]).then(|| json!(format!("/t/{}.webp", crate::tpl::js_to_string(&minijinja::Value::from_serialize(&item["id"]))))))
+                .or_else(|| crate::config::truthy(&item["id"]).then(|| json!(format!("/t/{}.webp", crate::tpl::js_to_string(&crate::tpl::to_jvalue(&item["id"]))))))
                 .unwrap_or(Value::Null);
             let dest = item["dest"].as_str().map(|d| d.strip_prefix("/b/").unwrap_or(d).to_string()).unwrap_or_default();
             let mut g = item.clone();

@@ -219,7 +219,7 @@ fn item_envelope(st: &AppState, req: &Req, data: &Value, itemid: &str, numeric_f
     let cfg = st.cfg();
     let item = &data["item"];
     let t = |k: &str| crate::config::truthy(&item[k]);
-    let js = |v: &Value| crate::tpl::js_to_string(&minijinja::Value::from_serialize(v));
+    let js = |v: &Value| crate::tpl::js_to_string(&crate::tpl::to_jvalue(v));
     let nsfl = cfg.nsfl_tag_id();
     let numeric_id = if t("id") { json!(js(&item["id"])) } else { numeric_fallback.map(Value::String).unwrap_or(Value::Null) };
     let mode = if t("is_nsfl") {
@@ -319,7 +319,7 @@ async fn item_random(st: AppState, req: Req) -> Res {
     };
     let random = f0cklib::get_random(&st, &base).await?;
     let itemid = match random.get("itemid").filter(|v| crate::config::truthy(v)) {
-        Some(v) => crate::tpl::js_to_string(&minijinja::Value::from_serialize(v)),
+        Some(v) => crate::tpl::js_to_string(&crate::tpl::to_jvalue(v)),
         None => {
             return Ok(json_body(&json!({ "html": "", "error": true, "success": false, "message": "No items found" })));
         }
@@ -361,7 +361,7 @@ async fn item_random(st: AppState, req: Req) -> Res {
             None => session.map(|s| s.min_xd_score as f64).unwrap_or(0.0),
         };
         let o = FeedOpts {
-            target_item_id: Some(if crate::config::truthy(&data["item"]["id"]) { crate::tpl::js_to_string(&minijinja::Value::from_serialize(&data["item"]["id"])) } else { itemid.clone() }),
+            target_item_id: Some(if crate::config::truthy(&data["item"]["id"]) { crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["item"]["id"])) } else { itemid.clone() }),
             target_item_pinned: Some(crate::config::truthy(&data["item"]["is_pinned"])),
             min_xd_score: min_xd,
             tagger: q_nonempty(&req, "tagger"),
@@ -459,7 +459,7 @@ async fn item(st: AppState, req: Req) -> Res {
     let mut page = Value::Null;
     if s::is_onara_enabled_for(&cfg, &req.cookies, session, q(&req, "onara") == Some("1")) || q(&req, "get_page") == Some("1") {
         let o = FeedOpts {
-            target_item_id: Some(if crate::config::truthy(&data["item"]["id"]) { crate::tpl::js_to_string(&minijinja::Value::from_serialize(&data["item"]["id"])) } else { itemid.clone() }),
+            target_item_id: Some(if crate::config::truthy(&data["item"]["id"]) { crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["item"]["id"])) } else { itemid.clone() }),
             target_item_pinned: Some(crate::config::truthy(&data["item"]["is_pinned"])),
             min_xd_score: session.map(|s| s.min_xd_score as f64).unwrap_or(0.0),
             tagger: q_nonempty(&req, "tagger"),
