@@ -474,7 +474,7 @@ async fn post_comment_inner(
     let subscribers = sql!("SELECT user_id FROM comment_subscriptions WHERE item_id = ", item_id, " AND is_subscribed = true").fetch_all(&st.db).await?;
     let stripped = SPOILER_RE.replace_all(&content, "");
     let mut names: Vec<String> = Vec::new();
-    for caps in MENTION_ANY_RE.captures_iter(&stripped).flatten() {
+    for caps in MENTION_ANY_RE.captures_iter(&*stripped).flatten() {
         let n = caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str().trim().to_string()).unwrap_or_default();
         if !names.contains(&n) {
             names.push(n);

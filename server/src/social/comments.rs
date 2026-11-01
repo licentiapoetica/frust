@@ -300,7 +300,7 @@ pub async fn process_mentions(st: &AppState, comments: Vec<Row>) -> Vec<Row> {
         .into_iter()
         .map(|mut c| {
             let content = c.string("content");
-            let new = MENTION_RE.replace_all(&content, |caps: &fancy_regex::Captures| {
+            let new = MENTION_RE.replace_all(&content, |caps: &fancy_regex::Captures<str>| {
                 let whole = caps.get(0).map(|m| m.as_str()).unwrap_or("");
                 let name = caps.get(1).map(|m| m.as_str()).unwrap_or("");
                 if valid.contains(&name.to_lowercase()) { format!("[@{name}](/user/{name})") } else { whole.to_string() }
