@@ -112,6 +112,11 @@
   // Set by toggleSidebarRight at the moment the main content changes width (before the slide when
   // opening, after it when closing); wins over the body class, which only flips once the slide ends.
   let rightOverride = null;
+  // Title bar of a modal page loaded as a full page (see "Full page" below); null when there is none
+  let pageHeader = null;
+  const pageHeaderShown = () => !!pageHeader && pageHeader.isConnected;
+  // Something to keep in place: the open modal, or a full page's title bar
+  const placing = () => modal.style.display !== 'none' || pageHeaderShown();
   const place = () => {
     const vw = window.innerWidth;
     const nav = visibleRect('body > nav.navbar, nav.navbar');
@@ -127,17 +132,26 @@
     // Left (comments) sidebar on item pages
     const ls = visibleRect('.item-sidebar-left');
     const left = ls && ls.right > 1 && ls.right < vw / 2 ? Math.round(ls.right) : 0;
-    modal.style.setProperty('--pgm-top', `${top}px`);
     // Desktop, sidebar beside the content: the header takes the exact height of the sidebar's tab row,
     // so the two form one continuous bar under the navbar
     const tabs = right > 0 && rsEl ? rsEl.querySelector('.sidebar-tabs') : null;
     const tabsH = tabs ? tabs.getBoundingClientRect().height : 0;
-    if (tabsH > 0) {
-      modal.style.setProperty('--pgm-header-h', `${tabsH}px`);
-      modal.classList.add('pgm-header-synced');
-    } else {
-      modal.style.removeProperty('--pgm-header-h');
-      modal.classList.remove('pgm-header-synced');
+    for (const el of pageHeaderShown() ? [modal, pageHeader] : [modal]) {
+      el.style.setProperty('--pgm-top', `${top}px`);
+      if (tabsH > 0) {
+        el.style.setProperty('--pgm-header-h', `${tabsH}px`);
+        el.classList.add('pgm-header-synced');
+      } else {
+        el.style.removeProperty('--pgm-header-h');
+        el.classList.remove('pgm-header-synced');
+      }
+    }
+    if (pageHeaderShown()) {
+      pageHeader.style.setProperty('--pgm-right', `${right}px`);
+      pageHeader.style.setProperty('--pgm-left', `${left}px`);
+      // The bar is fixed: the spacer keeps the page's content from starting underneath it
+      const spacer = pageHeader.nextElementSibling;
+      if (spacer && spacer.classList.contains('pgm-page-spacer')) spacer.style.height = `${Math.ceil(pageHeader.getBoundingClientRect().height)}px`;
     }
     const sides = `${left}|${right}`;
     if (sides !== lastSides) {
@@ -153,7 +167,7 @@
   // Follow sidebar slide animations for a moment after a toggle
   let followUntil = 0;
   const follow = () => {
-    if (modal.style.display === 'none') return;
+    if (!placing()) return;
     place();
     if (performance.now() < followUntil) requestAnimationFrame(follow);
   };
@@ -162,17 +176,17 @@
     followUntil = performance.now() + ms;
     if (!running) requestAnimationFrame(follow);
   };
-  window.addEventListener('resize', () => { if (modal.style.display !== 'none') place(); }, { passive: true });
+  window.addEventListener('resize', () => { if (placing()) place(); }, { passive: true });
   window.addEventListener('f0ck:sidebar-right-layout', (e) => {
     const d = e.detail || {};
     rightOverride = { right: d.open && !d.overlay ? Math.min(Math.round(d.width || 0), Math.round(window.innerWidth / 2)) : 0, until: performance.now() + 800 };
-    if (modal.style.display !== 'none') place();
+    if (placing()) place();
   });
 
   // Sidebar toggles commit their body class when the slide has finished: update once then. The left
   // (comments) sidebar may still be transitioning, so check again after it settles.
   new MutationObserver(() => {
-    if (modal.style.display === 'none') return;
+    if (!placing()) return;
     place();
     setTimeout(place, 400);
   }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
@@ -182,7 +196,7 @@
   const LAYOUT_SEL = 'nav.navbar, .global-sidebar-right, .item-sidebar-right, .index-sidebar-right, .item-sidebar-left';
   const watched = new WeakSet();
   const ro = typeof ResizeObserver === 'function'
-    ? new ResizeObserver(() => { if (modal.style.display !== 'none') place(); })
+    ? new ResizeObserver(() => { if (placing()) place(); })
     : null;
   const watchLayout = () => {
     document.querySelectorAll(LAYOUT_SEL).forEach((el) => {
@@ -191,7 +205,7 @@
       if (ro) ro.observe(el);
       // Class/style toggles inside the navbar (collapse "show", inline heights) may animate: follow for a bit
       if (el.matches('nav.navbar')) {
-        new MutationObserver(() => { if (modal.style.display !== 'none') followFor(600); })
+        new MutationObserver(() => { if (placing()) followFor(600); })
           .observe(el, { attributes: true, attributeFilter: ['class', 'style'], subtree: true });
       }
     });
@@ -201,6 +215,9 @@
     if (!isOpen || baseUrl === null) {
       baseUrl = location.pathname + location.search + location.hash;
       baseTitle = document.title;
+      // The address bar shows the modal page, so a reload loses the page underneath: remember it for
+      // the close button of the reloaded page (settings.html)
+      try { sessionStorage.setItem('f0ck_pgm_base', baseUrl); } catch {}
     }
     // Fade in on a fresh open, and when reopened while the close animation is still running
     const fadeIn = !isOpen;
@@ -233,6 +250,7 @@
       if (baseTitle !== null) document.title = baseTitle;
     }
     baseUrl = baseTitle = null;
+    try { sessionStorage.removeItem('f0ck_pgm_base'); } catch {}
     markActive();
 
     const hide = () => {
@@ -304,17 +322,66 @@
 
   modal.querySelector('.pgm-close').addEventListener('click', () => close());
   // Back/forward changes the page underneath: don't leave the modal covering it
-  window.addEventListener('popstate', () => { if (isOpen) close(false); else markActive(); });
+  // ── Full page: a modal page loaded as a page (direct visit, or F5 while it was open in the modal) ──
+  // It gets the modal's title bar, fixed over the content area like the modal itself (place() keeps it
+  // there). Close returns to the page the modal was opened over, else home. /settings brings its own
+  // bar, since its quicknav is fixed under the navbar too (settings.html).
+  const titleFor = (path) => {
+    const link = [...document.querySelectorAll('a[data-page-modal][title]')].find((l) => pathOf(l.getAttribute('href')) === path);
+    return link?.getAttribute('title') || document.title.split(/\s+[-|–]\s+/)[0] || path.slice(1);
+  };
+  const leavePage = () => {
+    let back = null;
+    try { back = sessionStorage.getItem('f0ck_pgm_base'); sessionStorage.removeItem('f0ck_pgm_base'); } catch {}
+    // Paths on this site only, and never the page itself
+    if (!back || back[0] !== '/' || back[1] === '/' || back[1] === '\\' || pathOf(back) === pathOf(location.pathname)) back = '/';
+    location.assign(back);
+  };
+  const syncPageHeader = () => {
+    if (isOpen) return; // the modal shows its own URL in the address bar meanwhile
+    const main = document.getElementById('main');
+    const path = pathOf(location.pathname);
+    const want = !!main && MODAL_PAGES.test(location.pathname) && path !== '/settings';
+    if (want && pageHeaderShown() && pageHeader.parentNode === main && pageHeader.dataset.path === path) return;
+    // Gone or stale (AJAX navigation replaces #main's content, which takes the bar with it)
+    if (pageHeader) {
+      const spacer = pageHeader.nextElementSibling;
+      if (spacer && spacer.classList.contains('pgm-page-spacer')) spacer.remove();
+      pageHeader.remove();
+      pageHeader = null;
+    }
+    // Copies restored with a cached #main have no click handler: drop them too
+    main?.querySelectorAll(':scope > #pgm-page-header, :scope > .pgm-page-spacer').forEach((el) => el.remove());
+    if (!want) return;
+    const bar = document.createElement('div');
+    bar.id = 'pgm-page-header';
+    bar.className = 'pgm-header';
+    bar.dataset.path = path;
+    bar.innerHTML = '<h3 class="pgm-title"></h3><div class="pgm-actions"><button type="button" class="pgm-close" title="Close" aria-label="Close">&times;</button></div>';
+    bar.querySelector('.pgm-title').textContent = titleFor(path);
+    bar.querySelector('.pgm-close').addEventListener('click', leavePage);
+    const spacer = document.createElement('div');
+    spacer.className = 'pgm-page-spacer';
+    main.prepend(bar, spacer);
+    pageHeader = bar;
+    watchLayout();
+    place();
+  };
+  const mainEl = document.getElementById('main');
+  if (mainEl) new MutationObserver(syncPageHeader).observe(mainEl, { childList: true });
+
+  window.addEventListener('popstate', () => { if (isOpen) close(false); else { markActive(); syncPageHeader(); } });
   // AJAX navigation (push/replaceState) can enter or leave a modal page: keep the highlight in step
   for (const fn of ['pushState', 'replaceState']) {
     const orig = history[fn];
     history[fn] = function (...args) {
       const r = orig.apply(this, args);
-      if (!isOpen) markActive();
+      if (!isOpen) { markActive(); syncPageHeader(); }
       return r;
     };
   }
   markActive();
+  syncPageHeader();
   // Capture phase + stop: the page sits on top (e.g. over the Onara viewer), so Escape closes only it
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || !isOpen) return;

@@ -20,31 +20,38 @@
   /* The Onara viewer (10050) lifts the sidebar (10060) and its drag zone (10059) above itself; keep the same
      order: page over Onara, still under the sidebar controls and the navbar (10070) */
   body.onara-modal-open #page-modal { z-index: 10055; }
-  #page-modal .pgm-header {
+  /* Same title bar on a modal page loaded as a full page (page-modal.js adds it at the top of #main):
+     fixed over the content area like the modal. Under the sidebars and the modal itself. */
+  #pgm-page-header {
+    position: fixed; z-index: 200;
+    top: var(--pgm-top, var(--navbar-h, 50px)); right: var(--pgm-right, 0px); left: var(--pgm-left, 0px);
+    box-sizing: border-box; background: var(--bg); color: var(--text-color, #fff);
+  }
+  #page-modal .pgm-header, #pgm-page-header {
     flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;
     padding: 12px 20px; border-bottom: 1px solid var(--accent);
   }
   /* Height matched to the sidebar tab row (page-modal.js measures it); the close button scales with it */
-  #page-modal.pgm-header-synced .pgm-header {
+  #page-modal.pgm-header-synced .pgm-header, #pgm-page-header.pgm-header-synced {
     box-sizing: border-box; height: var(--pgm-header-h); padding-top: 0; padding-bottom: 0;
   }
-  #page-modal.pgm-header-synced .pgm-close {
+  :is(#page-modal, #pgm-page-header).pgm-header-synced .pgm-close {
     width: calc(var(--pgm-header-h) - 12px); height: calc(var(--pgm-header-h) - 12px);
     font-size: 1.3em;
   }
-  #page-modal .pgm-title {
+  :is(#page-modal, #pgm-page-header) .pgm-title {
     margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     font-size: 1em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
   }
-  #page-modal .pgm-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-  #page-modal .pgm-close {
+  :is(#page-modal, #pgm-page-header) .pgm-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  :is(#page-modal, #pgm-page-header) .pgm-close {
     display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
     margin: 0; padding: 0; background: none; border: 1px solid transparent; border-radius: 0;
     color: var(--text-color, #fff); font-size: 1em; line-height: 1; cursor: pointer; text-decoration: none;
     transition: color 0.15s, border-color 0.15s;
   }
-  #page-modal .pgm-close { font-size: 1.6em; border-color: rgba(255, 255, 255, 0.25); }
-  #page-modal .pgm-close:hover { color: var(--accent); border-color: var(--accent); }
+  :is(#page-modal, #pgm-page-header) .pgm-close { font-size: 1.6em; border-color: rgba(255, 255, 255, 0.25); }
+  :is(#page-modal, #pgm-page-header) .pgm-close:hover { color: var(--accent); border-color: var(--accent); }
   #page-modal .pgm-body {
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
     padding-bottom: env(safe-area-inset-bottom, 0px);

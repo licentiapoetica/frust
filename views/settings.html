@@ -2,6 +2,11 @@
 <div class="pagewrapper">
   <div id="main">
     <div class="settings">
+      <!-- Title bar on the full page (after a reload): same as the page modal's header, which brings its own -->
+      <div id="settings-page-header">
+        <h3 class="sph-title">{{ t("settings.title") }}</h3>
+        <button type="button" class="sph-close" title="Close" aria-label="Close">&times;</button>
+      </div>
       <!-- Quick navigation -->
       <nav id="settings-quicknav" aria-label="Settings sections">
         <a href="#preferences"><i class="fa-solid fa-sliders"></i> {{ t("settings.preferences") }}</a>
@@ -61,6 +66,30 @@
         /* Full width on the page too, like in the page modal. The global .settings grid with
            justify-content: center shrank the page to its content and centered it. */
         .settings { display: block; }
+
+        /* Full page: title bar fixed under the navbar like the page modal's header (page-modal.html);
+           JS puts the quicknav right below it and matches its height to the sidebar tab row */
+        #settings-page-header {
+          position: fixed; top: var(--navbar-h, 50px); left: 0; right: 0; z-index: 201;
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          box-sizing: border-box; padding: 12px 20px;
+          background: var(--bg, #111); border-bottom: 1px solid var(--accent);
+          transition: right 0.3s ease-in-out;
+        }
+        #settings-page-header.sph-synced { padding-top: 0; padding-bottom: 0; }
+        #settings-page-header .sph-title {
+          margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          font-size: 1em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+          color: var(--text-color, #fff) !important;
+        }
+        #settings-page-header .sph-close {
+          display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+          width: 36px; height: 36px; margin: 0; padding: 0; background: none;
+          border: 1px solid rgba(255, 255, 255, 0.25); color: var(--text-color, #fff);
+          font-size: 1.6em; line-height: 1; cursor: pointer; transition: color 0.15s, border-color 0.15s;
+        }
+        #settings-page-header .sph-close:hover { color: var(--accent); border-color: var(--accent); }
+        .settings.in-page-modal > #settings-page-header { display: none; }
         /* In the page modal: the quicknav sticks to the top of the modal body (no fixed offset needed) */
         /* overflow: the global .settings { overflow-x: hidden } would make .settings its own scroll
            container, so the sticky quicknav would stick inside a box that never scrolls. clip cuts off
@@ -248,6 +277,18 @@
         // quicknav sticks to the top of it instead of being fixed under the navbar
         var sc = nav.closest('.pgm-body');
         if (sc) root.classList.add('in-page-modal');
+
+        // Full page (e.g. after F5 while the settings were open in the page modal): own title bar. Close
+        // goes back to the page the modal was opened over (page-modal.js remembers it), else home.
+        var header = sc ? null : root.querySelector('#settings-page-header');
+        if (header) {
+          header.querySelector('.sph-close').addEventListener('click', function() {
+            var back = null;
+            try { back = sessionStorage.getItem('f0ck_pgm_base'); sessionStorage.removeItem('f0ck_pgm_base'); } catch (e) {}
+            if (!back || back.charAt(0) !== '/' || back.charAt(1) === '/' || /^\/settings\/?(?:[?#]|$)/.test(back)) back = '/';
+            location.assign(back);
+          });
+        }
         function scrollTop() { return sc ? sc.scrollTop : window.scrollY; }
         function scrollToY(y) { if (sc) sc.scrollTop = y; else window.scrollTo({ top: y, behavior: 'instant' }); }
         function viewBottom() { return sc ? sc.getBoundingClientRect().bottom : window.innerHeight; }
@@ -280,17 +321,21 @@
           // In the page modal the modal already sits beside the sidebar and its header matches the tabs
           var right = sc ? 0 : contentRight();
           nav.style.right = sc ? '' : right + 'px';
-          // Sidebar beside the content: exactly the height of its tab row, one continuous bar under the navbar
+          // Sidebar beside the content: exactly the height of its tab row, one continuous bar under the
+          // navbar. On the full page that bar is the title bar (as in the page modal), the quicknav below it.
           var rs = right > 0 ? sidebarEl() : null;
           var tabs = rs ? rs.querySelector('.sidebar-tabs') : null;
           var tabsH = tabs ? tabs.getBoundingClientRect().height : 0;
+          var bar = header || nav;
+          if (header) header.style.right = right + 'px';
           if (tabsH > 0) {
-            nav.style.height = tabsH + 'px';
-            nav.classList.add('qn-synced');
+            bar.style.height = tabsH + 'px';
+            bar.classList.add(header ? 'sph-synced' : 'qn-synced');
           } else {
-            nav.style.height = '';
-            nav.classList.remove('qn-synced');
+            bar.style.height = '';
+            bar.classList.remove('sph-synced', 'qn-synced');
           }
+          if (header) nav.style.top = Math.round(header.getBoundingClientRect().bottom) + 'px';
           var bottom = Math.ceil(nav.getBoundingClientRect().bottom);
           root.style.setProperty('--settings-qn-bottom', bottom + 'px');
           // Enough tail space that even the last section can scroll up to sit right under the quicknav
