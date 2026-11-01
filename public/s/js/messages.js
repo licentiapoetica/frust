@@ -62,6 +62,27 @@ if (window.__dmLoaded) {
 
     // ── Seed-phrase vault crypto ───────────────────────────────────────────────
 
+    // The wordlist (~50 KB) is only needed to create a recovery phrase, so it's loaded on first use
+    // instead of on every page. Same cache-busting version as this script.
+    const WORDLIST_SRC = (() => {
+        const v = (document.currentScript?.src || '').match(/[?&]v=([^&]+)/);
+        return '/s/js/wordlist.js' + (v ? '?v=' + v[1] : '');
+    })();
+    let wordlistPromise = null;
+    function loadWordlist() {
+        if (window.DM_WORDLIST) return Promise.resolve();
+        if (!wordlistPromise) {
+            wordlistPromise = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = WORDLIST_SRC;
+                s.onload = () => resolve();
+                s.onerror = () => { wordlistPromise = null; s.remove(); reject(new Error('Wordlist failed to load')); };
+                document.head.appendChild(s);
+            });
+        }
+        return wordlistPromise;
+    }
+
     function generateMnemonic() {
         const list = window.DM_WORDLIST;
         if (!list || list.length < 2) throw new Error('Wordlist not loaded');
@@ -2308,16 +2329,7 @@ if (window.__dmLoaded) {
 
     function showSeedSetupModal() {
         return new Promise(resolve => {
-            // Wait up to 2s for the wordlist to be available
-            const MAX_WAIT = 2000;
-            const POLL = 50;
-            let waited = 0;
             const tryBuild = () => {
-                const list = window.DM_WORDLIST;
-                if ((!list || list.length < 100) && waited < MAX_WAIT) {
-                    waited += POLL;
-                    return setTimeout(tryBuild, POLL);
-                }
                 let words;
                 try { words = generateMnemonic(); }
                 catch (e) {
@@ -2331,7 +2343,8 @@ if (window.__dmLoaded) {
                 }
                 buildSeedModal(words, resolve);
             };
-            setTimeout(tryBuild, 0);
+            // A failed load leaves the list missing: generateMnemonic then shows the error notice
+            loadWordlist().catch((e) => console.error('[DM]', e)).then(tryBuild);
         });
     }
 
