@@ -300,9 +300,8 @@
         <a href="/settings" id="nav-anon-settings-btn" data-page-modal title="Settings" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}><i class="fa-solid fa-gear"></i> Settings</a>
         {% endif %}
         <a href="#" id="nav-login-btn">{{ t("nav.login") }}</a>
-        {% if registration_open %}
+        {# Always shown: with registration closed the register modal asks for an invite token #}
         <a href="#" id="nav-register-btn">{{ t("nav.register") }}</a>
-        {% endif %}
         {% if enable_anonymous_access %}
         <div class="nav-user-divider" id="nav-anon-divider" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}></div>
         <a href="#" id="nav-anon-logout-btn" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}><i class="fa-solid fa-right-from-bracket"></i> Logout (Guest)</a>
@@ -405,19 +404,15 @@
           data-on="click:prevent,openAnonSetup">
           <i class="fa-solid fa-user-secret"></i> Login as Anonymous
         </button>
-        {% if registration_open %}
         <button type="button" id="modal-login-register-btn" class="lm-btn lm-btn-ghost navbar-lm-register-btn">
           <i class="fa-solid fa-user-plus"></i> Register
         </button>
-        {% endif %}
       </div>
       {% endif %}
 
-      {% if (registration_open or private_society) %}
       <p class="lm-footer">
         {{ t("auth.no_account") }} <a href="#" id="login-to-register" class="lm-link">{{ t("auth.register_now") }}</a>
       </p>
-      {% endif %}
     </div>
 
 
