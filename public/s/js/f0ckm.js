@@ -18494,6 +18494,9 @@ class NotificationSystem {
       this.retryCount = 0;
       document.documentElement.dataset.sseReady = '1';
       document.dispatchEvent(new CustomEvent('f0ck:sse_ready'));
+      // A reconnect means new_item events may have been missed while the socket was down
+      if (this._wsWasOpen && !document.hidden) this.checkForNewItems();
+      this._wsWasOpen = true;
     };
 
     ws.onmessage = (e) => {
@@ -19401,14 +19404,21 @@ class NotificationSystem {
     // Skip for random mode as 'newest' doesn't apply
     if (document.cookie.includes('random_mode=1') || window.location.search.includes('random=1')) return;
 
-    // Get max ID in the current grid
+    // Get max ID in the current grid. Links can be slugs (/BWxnzgz3PQx), so the
+    // id comes from data-item-id; the href is only a fallback for numeric links.
+    const thumbId = (t) => {
+      const id = parseInt(t.dataset.itemId, 10);
+      if (id > 0) return id;
+      const match = (t.getAttribute('href') || '').replace(/#.*$/, '').match(/\/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
     const thumbs = Array.from(grid.querySelectorAll('a.thumb, a.lazy-thumb'));
     if (thumbs.length === 0) return;
 
-    const ids = thumbs.map(t => {
-      const match = t.getAttribute('href').match(/\/(\d+)$/);
-      return match ? parseInt(match[1]) : 0;
-    }).filter(id => id > 0);
+    // Pinned items sit on top regardless of age, so the newest non-pinned item is
+    // the real boundary (a recently pinned high id would otherwise hide new uploads).
+    const unpinned = thumbs.filter(t => !t.classList.contains('is-pinned'));
+    const ids = (unpinned.length ? unpinned : thumbs).map(thumbId).filter(id => id > 0);
 
     if (ids.length === 0) return;
     const maxId = Math.max(...ids);
@@ -19475,23 +19485,21 @@ class NotificationSystem {
         // We should skip items that are already in the grid (duplicates)
         const entries = Array.from(temp.querySelectorAll('a.thumb, a.lazy-thumb'));
         entries.reverse().forEach(entry => {
-          const idMatch = entry.href.match(/\/(\d+)$/);
-          if (idMatch && !grid.querySelector(`a[href$="/${idMatch[1]}"]`)) {
-             const pinnedItems = grid.querySelectorAll('.is-pinned');
-             if (pinnedItems.length > 0) {
-               pinnedItems[pinnedItems.length - 1].after(entry);
-             } else {
-               grid.prepend(entry);
-             }
-             // Animate in
-             entry.style.opacity = '0';
-             entry.style.transform = 'scale(0.9)';
-             requestAnimationFrame(() => {
-               entry.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-               entry.style.opacity = '1';
-               entry.style.transform = 'scale(1)';
-             });
+          const id = thumbId(entry);
+          if (!id) return;
+          // Pinned items come back too; skip anything already in the grid
+          // (by id, or by href for the live socket's thumbs/ghosts)
+          const href = entry.getAttribute('href') || '';
+          if (grid.querySelector(`a[data-item-id="${id}"]`) || grid.querySelector(`a[href$="/${id}"]`)) return;
+          if (href && grid.querySelector(`a[href="${CSS.escape(href)}"]`)) return;
+          const pinnedItems = grid.querySelectorAll('.is-pinned');
+          if (pinnedItems.length > 0) {
+            pinnedItems[pinnedItems.length - 1].after(entry);
+          } else {
+            grid.prepend(entry);
           }
+          entry.classList.add('grid-item-enter');
+          entry.addEventListener('animationend', () => entry.classList.remove('grid-item-enter'), { once: true });
         });
 
         if (window.initLazyLoading) window.initLazyLoading();

@@ -21417,6 +21417,16 @@ body.scroller-active #gchat-reopen-bubble {
   font-size: 1em;
 }
 
+/* New items prepended to the grid when a tab catches up (checkForNewItems) */
+a.grid-item-enter {
+  animation: grid-item-enter 0.4s ease;
+}
+
+@keyframes grid-item-enter {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* ── Filtered-upload ghost thumbnail ──────────────────────────────────────────
    Shown when the current user's freshly-uploaded item is hidden by an active
    content filter (SFW / NSFW / NSFL mode). Disappears on manual page reload.
