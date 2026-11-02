@@ -23981,13 +23981,11 @@ document.addEventListener('click', (e) => {
             const label = document.getElementById('info-expiry-label');
             if (label) {
               if (data.expires_at) {
-                label.innerHTML = `<i class="fa-solid fa-clock"></i> ${data.expires_in || ('in ' + new Date(data.expires_at * 1000).toLocaleString())}`;
+                label.innerHTML = `<i class="fa-solid fa-clock info-modal-icon-expiring"></i> ${data.expires_in || ('in ' + new Date(data.expires_at * 1000).toLocaleString())}`;
                 label.setAttribute('title', new Date(data.expires_at * 1000).toLocaleString());
-                label.style.color = '#ffaa00';
               } else {
-                label.innerHTML = '<i class="fa-solid fa-clock-slash" style="color: var(--text-muted, #888);"></i> Never';
+                label.innerHTML = '<i class="fa-solid fa-clock-slash info-modal-icon-muted"></i> Never';
                 label.removeAttribute('title');
-                label.style.color = '';
               }
             }
             if (data.purged) {

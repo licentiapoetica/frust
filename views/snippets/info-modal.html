@@ -57,7 +57,7 @@
                                 {% if item.expires_at %}
                                 <i class="fa-solid fa-clock info-modal-icon-expiring"></i> {{ (item.expires_in or "in " ~ ((item.expires_at * 1000)|locale_string)) }}
                                 {% else %}
-                                <i class="fa-solid fa-clock-slash info-modal-icon-muted"></i> Permanent
+                                <i class="fa-solid fa-clock-slash info-modal-icon-muted"></i> Never
                                 {% endif %}
                             </span>
                             {% if can_manage_item %}
