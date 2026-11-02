@@ -13550,6 +13550,11 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
   margin-left: auto;
 }
 
+/* Guest navbar: a little more room after the filter badge at the right edge */
+.nav-right-group.nav-right-group-guest {
+  padding-right: 15px;
+}
+
 /* MOTD: wraps to its own full-width row below brand+links+right-group */
 .motd-container {
   order: 999;
