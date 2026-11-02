@@ -69,7 +69,7 @@ async fn submit(st: AppState, mut req: Req) -> Res {
 
     let cfg = st.cfg();
     let ip = req.real_ip();
-    if req.session().is_none() && crate::cap::required(&cfg, &req) {
+    if crate::cap::required(&cfg, &req) {
         let token = js_str(body.get("cap-token"));
         match crate::cap::verify(token.as_deref()) {
             Captcha::Ok => {}

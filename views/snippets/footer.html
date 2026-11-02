@@ -117,7 +117,7 @@
       </label>
     </div>
     <textarea id="report-reason" class="mod-reason" placeholder="{{ t("report.placeholder") }}"></textarea>
-    {% if (captcha_enabled and not session) %}
+    {% if captcha_enabled %}
     <cap-widget id="modal-report-captcha" class="cap-dark footer-report-captcha" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
     {% endif %}
     <div id="report-error" class="error-msg"></div>

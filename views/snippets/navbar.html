@@ -690,8 +690,8 @@
 
 {% endif %}
 
-{% if (captcha_enabled and (not session or session.is_anon)) %}
-{# Cap captcha for the register modal (and the guest report modal in footer.html) #}
+{% if captcha_enabled %}
+{# Cap captcha for the register modal and the report modal in footer.html (reports need it for everyone) #}
 <script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
 <script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
 {% endif %}

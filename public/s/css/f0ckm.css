@@ -14133,13 +14133,6 @@ textarea.mod-reason:focus {
   animation: fieldShake 0.4s ease-in-out;
 }
 
-#modal-report-recaptcha.field-error {
-  border: 1px solid #ff6b6b !important;
-  border-radius: 4px;
-  box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.4) !important;
-  padding: 4px;
-}
-
 @keyframes fieldShake {
   0%, 100% { transform: translateX(0); }
   20%, 60% { transform: translateX(-6px); }
@@ -30733,8 +30726,11 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
 }
 
 /* Report modal */
+/* Flex, not block: the widget's inner box is inline-block, so a block host adds a text line's
+   descender space under it (a gap inside the error border). */
 #report-modal .footer-report-captcha {
-  display: block;
+  display: flex;
+  width: fit-content;
   margin: 10px auto;
 }
 
