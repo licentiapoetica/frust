@@ -14,7 +14,7 @@ pub fn register(r: &mut Router) {
 }
 
 async fn page(st: AppState, req: Req) -> Res {
-    let Some(s) = req.session().cloned() else { return Ok(redirect("/login")) };
+    let Some(s) = req.session().cloned() else { return Ok(guest_page(&st, &req)) };
     let cfg = st.cfg();
     let uid = s.id as i32;
     // The old route also loaded `select * from user_sessions` (session hashes and CSRF tokens of
@@ -61,14 +61,38 @@ async fn page(st: AppState, req: Req) -> Res {
             "url": format!("https://{}/settings", cfg.str_or("main.url.domain", "")),
         },
     });
-    let body = crate::tpl::render(&st, Some(&req), "settings", data);
-    let mut r = html(body);
+    Ok(no_store(html(crate::tpl::render(&st, Some(&req), "settings", data))))
+}
+
+/// Visitors without a session get the preferences that live in this browser (theme and language
+/// cookies, localStorage toggles); everything stored per account stays hidden (`guest` in settings.html).
+fn guest_page(st: &AppState, req: &Req) -> axum::response::Response {
+    let cfg = st.cfg();
+    let data = json!({
+        "guest": true,
+        "session": false,
+        "excluded_tags": [],
+        "enable_swf": cfg.get("enable_swf"),
+        "enable_data_export": false,
+        "enable_user_api_keys": false,
+        "enable_user_invites": false,
+        "site_domain": cfg.get("main.url.domain"),
+        "page_meta": {
+            "title": "settings",
+            "description": "Settings",
+            "url": format!("https://{}/settings", cfg.str_or("main.url.domain", "")),
+        },
+    });
+    no_store(html(crate::tpl::render(st, Some(req), "settings", data)))
+}
+
+fn no_store(mut r: axum::response::Response) -> axum::response::Response {
     let h = r.headers_mut();
     h.insert("cache-control", axum::http::HeaderValue::from_static("no-store, no-cache, must-revalidate, proxy-revalidate"));
     h.insert("pragma", axum::http::HeaderValue::from_static("no-cache"));
     h.insert("expires", axum::http::HeaderValue::from_static("0"));
     h.insert("surrogate-control", axum::http::HeaderValue::from_static("no-store"));
-    Ok(r)
+    r
 }
 
 async fn export_data(st: AppState, req: Req) -> Res {

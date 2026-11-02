@@ -197,6 +197,7 @@
     "hide_infobox_hint": "Hide the uploader, time, action buttons and tags under items for a minimal view. Keyboard shortcuts keep working.",
     "hide_navbar": "Hide Navbar",
     "hide_navbar_hint": "Make the top navigation bar invisible (its space is kept). Settings stay reachable at /settings.",
+    "guest_hint": "You're not logged in: these settings are saved in this browser only. Log in for more options.",
     "comment_display_mode": "Comment Display Mode",
     "comment_display_tree": "Reply Tree (Default)",
     "comment_display_linear": "Linear",

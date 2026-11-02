@@ -197,6 +197,7 @@
     "hide_infobox_hint": "Uploader, Zeit, Aktionsknöpfe und Tags unter Items ausblenden für eine minimale Ansicht. Tastenkürzel funktionieren weiterhin.",
     "hide_navbar": "Navigationsleiste ausblenden",
     "hide_navbar_hint": "Die obere Navigationsleiste unsichtbar machen (ihr Platz bleibt erhalten). Die Einstellungen bleiben unter /settings erreichbar.",
+    "guest_hint": "Du bist nicht eingeloggt: Diese Einstellungen werden nur in diesem Browser gespeichert. Logg dich ein für mehr Optionen.",
     "comment_display_mode": "Kommentar-Anzeigemodus",
     "comment_display_tree": "Antwort-Baum (Standard)",
     "comment_display_linear": "Linear",

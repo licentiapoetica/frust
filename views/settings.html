@@ -1,7 +1,7 @@
 {% include "snippets/header.html" %}
 <div class="pagewrapper">
   <div id="main">
-    <div class="settings">
+    <div class="settings"{% if guest %} data-guest="true"{% endif %}>
       <!-- Title bar on the full page (after a reload): same as the page modal's header, which brings its own -->
       <div id="settings-page-header">
         <h3 class="sph-title">{{ t("settings.title") }}</h3>
@@ -10,6 +10,7 @@
       <!-- Quick navigation -->
       <nav id="settings-quicknav" aria-label="Settings sections">
         <a href="#preferences"><i class="fa-solid fa-sliders"></i> {{ t("settings.preferences") }}</a>
+        {% if not guest %}
         {% if not session.is_anon %}
         <a href="#profile"><i class="fa-solid fa-user-pen"></i> {{ t("settings.profile") }}</a>
         {% endif %}
@@ -33,12 +34,16 @@
         {% if enable_data_export %}
         <a href="#export"><i class="fa-solid fa-file-export"></i> {{ t("settings.export_data_title") }}</a>
         {% endif %}
+        {% endif %}
       </nav>
       <script src="/s/js/views/settings.quicknav.js?v={{ mtime("/public/s/js/views/settings.quicknav.js") }}"></script>
 
 
       <!-- ═══════════════════════════════ PREFERENCES ═══════════════════════════════ -->
       <h2 id="preferences"><i class="fa-solid fa-sliders"></i> {{ t("settings.preferences") }}</h2>
+      {% if guest %}
+      <p class="settings-muted settings-guest-hint"><i class="fa-solid fa-circle-info"></i> {{ t("settings.guest_hint") }}</p>
+      {% endif %}
       <div class="preferences-settings-wrapper">
 
         <!-- 1. Appearance & Theme -->
@@ -56,6 +61,7 @@
             </div>
           </div>
 
+          {% if not guest %}
           <div class="setting-item settings-row-spaced">
             <label for="website_font_select" class="settings-field-label">{{ t("settings.website_font") }}</label>
             <div class="settings-select-row">
@@ -67,6 +73,7 @@
               </select>
             </div>
           </div>
+          {% endif %}
 
           {% if allow_language_change %}
           <div class="setting-item settings-row-spaced">
@@ -84,7 +91,7 @@
 
           <div class="setting-item settings-row-spaced">
             <label for="show_background_toggle" class="settings-check">
-              <input type="checkbox" id="show_background_toggle" {% if session.show_background != false %} checked {% endif %}>
+              <input type="checkbox" id="show_background_toggle" {% if guest %}{% if show_background_cfg %} checked {% endif %}{% elif session.show_background != false %} checked {% endif %}>
               <span>{{ t("settings.enable_bg_blur") }}</span>
             </label>
             <small class="text-muted settings-hint">{{ t("settings.enable_bg_blur_hint") }}</small>
@@ -104,18 +111,21 @@
             </small>
           </div>
 
+          {% if not guest %}
           <div class="setting-item settings-row">
             <label for="show_motd_toggle" class="settings-check">
               <input type="checkbox" id="show_motd_toggle" {% if session.show_motd != false %} checked {% endif %}>
               <span>{{ t("settings.show_motd") }}</span>
             </label>
           </div>
+          {% endif %}
         </fieldset>
 
         <!-- 2. Interface & Layout -->
         <fieldset>
           <legend><i class="fa-solid fa-desktop"></i> {{ t("settings.ui_section") }}</legend>
           
+          {% if not guest %}
           <div class="setting-item">
             <label for="use_new_layout_toggle" class="settings-check">
               <input type="checkbox" id="use_new_layout_toggle" {% if session.use_new_layout == true %} checked {% endif %}>
@@ -152,8 +162,9 @@
             <small class="text-muted settings-hint">{{ t("settings.hide_koepfe_hint") }}</small>
           </div>
           {% endif %}
+          {% endif %}
 
-          <div class="setting-item settings-row">
+          <div class="setting-item{% if not guest %} settings-row{% endif %}">
             <label for="hide_infobox_toggle" class="settings-check">
               <input type="checkbox" id="hide_infobox_toggle">
               <span>{{ t("settings.hide_infobox") }}</span>
@@ -174,6 +185,7 @@
         <fieldset>
           <legend><i class="fa-solid fa-play"></i> Playback & Navigation</legend>
 
+          {% if not guest %}
           <div class="setting-item">
             <label for="disable_autoplay_toggle" class="settings-check">
               <input type="checkbox" id="disable_autoplay_toggle" {% if session.disable_autoplay == true %} checked {% endif %}>
@@ -189,8 +201,9 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.disable_swiping_hint") }}</small>
           </div>
+          {% endif %}
 
-          <div class="setting-item settings-row">
+          <div class="setting-item{% if not guest %} settings-row{% endif %}">
             <label for="wheel_nav_toggle" class="settings-check">
               <input type="checkbox" id="wheel_nav_toggle">
               <span>{{ t("settings.scroll_nav") }}</span>
@@ -216,7 +229,7 @@
         </fieldset>
 
         <!-- 4. Comments & Discussion -->
-        {% if enable_comments %}
+        {% if (enable_comments and not guest) %}
         <fieldset>
           <legend><i class="fa-solid fa-comments"></i> Comments & Discussion</legend>
 
@@ -265,6 +278,7 @@
             <small class="text-muted settings-hint">{{ t("settings.blur_sfw_hint") }}</small>
           </div>
 
+          {% if not guest %}
           <div class="setting-item settings-row">
             <label for="blur_nsfw_toggle" class="settings-check">
               <input type="checkbox" id="blur_nsfw_toggle">
@@ -288,6 +302,7 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.blur_untagged_hint") }}</small>
           </div>
+          {% endif %}
 
           <div class="setting-item settings-row">
             <label for="blur_detail_toggle" class="settings-check">
@@ -306,6 +321,7 @@
           </div>
         </fieldset>
 
+        {% if not guest %}
         <!-- 6. Privacy & Upload Defaults -->
         <fieldset>
           <legend><i class="fa-solid fa-user-shield"></i> Privacy & Defaults</legend>
@@ -386,10 +402,11 @@
           <div id="ruffle-settings-status" class="avatar-status"></div>
         </fieldset>
         {% endif %}
+        {% endif %}
 
       </div>
 
-      {% if not session.is_anon %}
+      {% if (not guest and not session.is_anon) %}
       <!-- ═══════════════════════════════ PROFILE ═══════════════════════════════ -->
       <h2 id="profile"><i class="fa-solid fa-user-pen"></i> {{ t("settings.profile") }}</h2>
       
@@ -584,7 +601,7 @@
       <script src="/s/js/views/settings.passkeys.js?v={{ mtime("/public/s/js/views/settings.passkeys.js") }}"></script>
       {% endif %}
 
-      {% if not session.is_anon %}
+      {% if (not guest and not session.is_anon) %}
       <!-- ═══════════════════════════════ ACCOUNT ═══════════════════════════════ -->
       <h2 id="account"><i class="fa-solid fa-shield-halved"></i> {{ t("settings.account") }}</h2>
       <div class="account-settings-wrapper">
@@ -670,7 +687,7 @@
       </div>
       {% endif %}
 
-      {% if (not session.is_anon and enable_user_api_keys) %}
+      {% if (not guest and not session.is_anon and enable_user_api_keys) %}
       <!-- ═══════════════════════════════ API KEY ═══════════════════════════════ -->
       <h2 id="apikey"><i class="fa-solid fa-key"></i> Upload API Key</h2>
       <div id="api-key-section" class="account-settings-wrapper">
@@ -703,7 +720,7 @@
       </div>
       {% endif %}
 
-      {% if (not session.is_anon and (matrix_enabled or telegram_enabled)) %}
+      {% if (not guest and not session.is_anon and (matrix_enabled or telegram_enabled)) %}
       <!-- ═══════════════════════════════ LINKED ACCOUNTS ═══════════════════════════════ -->
       <h2 id="linked"><i class="fa-solid fa-link"></i> {{ t("settings.linked_accounts") }}</h2>
       <div class="linked-accounts-wrapper">
@@ -739,7 +756,7 @@
       </div>
       {% endif %}
 
-      {% if (not session.is_anon and enable_user_invites) %}
+      {% if (not guest and not session.is_anon and enable_user_invites) %}
       <!-- ═══════════════════════════════ INVITES ═══════════════════════════════ -->
       <h2 id="invites"><i class="fa-solid fa-ticket"></i> {{ t("invites.section_title") }}</h2>
       <div id="invite-section" class="account-settings-wrapper">

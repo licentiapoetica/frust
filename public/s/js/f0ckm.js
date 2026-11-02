@@ -3199,6 +3199,7 @@ window.cancelAnimFrame = (function () {
     // Update session preference and persist if logged in
     if (window.f0ckSession) {
         window.f0ckSession.show_background = background;
+        if (!window.f0ckSession.logged_in) return;
         try {
             await fetch('/api/v2/settings/background', {
                 method: 'PUT',

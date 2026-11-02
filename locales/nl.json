@@ -195,6 +195,7 @@
     "hide_infobox_hint": "Verberg uploader, tijd, actieknoppen en tags onder items voor een minimale weergave. Sneltoetsen blijven werken.",
     "hide_navbar": "Navigatiebalk verbergen",
     "hide_navbar_hint": "Maak de bovenste navigatiebalk onzichtbaar (de ruimte blijft behouden). Instellingen blijven bereikbaar via /settings.",
+    "guest_hint": "Je bent niet ingelogd: deze instellingen worden alleen in deze browser opgeslagen. Log in voor meer opties.",
     "comment_display_mode": "Reactie-weergavemodus",
     "comment_display_tree": "Antwoordboom (Standaard)",
     "comment_display_linear": "Lineair",

@@ -1,6 +1,9 @@
 (() => {
     // Settings script — and loaded via AJAX or full page load specifically for settings.
     var i18n = window.f0ckI18n || {};
+    // Visitor without a session (settings.html marks it): only the browser-side preferences are on the page.
+    // Not from window.f0ckSession: on a full page load the footer sets that after this script ran.
+    const isGuest = !!document.querySelector('.settings[data-guest]');
 
     // Update the navbar avatar image live and all rendered avatars for the current user
     const updateNavAvatar = (src) => {
@@ -1617,7 +1620,21 @@
 
     // Background Blur Toggle
     const backgroundToggle = document.getElementById('show_background_toggle');
-    if (backgroundToggle) {
+    if (backgroundToggle && isGuest) {
+        // Guests: the choice lives in localStorage only (footer.config.js applies it); none stored → site default
+        const stored = localStorage.getItem('background');
+        if (stored !== null) backgroundToggle.checked = stored !== 'false';
+        backgroundToggle.addEventListener('change', () => {
+            const show_background = backgroundToggle.checked;
+            window.background = show_background;
+            localStorage.setItem('background', show_background ? 'true' : 'false');
+            if (window.f0ckSession) window.f0ckSession.show_background = show_background;
+            if (window.initBackground) window.initBackground();
+            document.querySelectorAll("#togglebg").forEach(el => {
+                el.classList.toggle('active', show_background);
+            });
+        });
+    } else if (backgroundToggle) {
         backgroundToggle.addEventListener('change', async () => {
             const show_background = backgroundToggle.checked;
             try {
@@ -1808,9 +1825,26 @@
 
     // Language Preference Selector
     const languageSelect = document.getElementById('language_select');
+    const setLanguageCookie = (language) => {
+        if (language) {
+            document.cookie = `language=${encodeURIComponent(language)}; path=/; max-age=${365 * 24 * 3600}; SameSite=Lax`;
+        } else {
+            document.cookie = `language=; path=/; max-age=0; SameSite=Lax`;
+        }
+    };
+    if (languageSelect && isGuest) {
+        const row = document.cookie.split('; ').find(c => c.startsWith('language='));
+        const current = row ? decodeURIComponent(row.slice('language='.length)) : '';
+        if ([...languageSelect.options].some(o => o.value === current)) languageSelect.value = current;
+    }
     if (languageSelect) {
         languageSelect.addEventListener('change', async () => {
             const language = languageSelect.value; // '' = site default, 'en', 'de', etc.
+            if (isGuest) {
+                setLanguageCookie(language);
+                window.location.reload();
+                return;
+            }
             try {
                 const res = await fetch('/api/v2/settings/language', {
                     method: 'PUT',
@@ -1820,11 +1854,7 @@
                 const data = await res.json();
                 if (data.success) {
                     // Set/clear cookie so the running server picks up the change immediately
-                    if (language) {
-                        document.cookie = `language=${encodeURIComponent(language)}; path=/; max-age=${365 * 24 * 3600}; SameSite=Lax`;
-                    } else {
-                        document.cookie = `language=; path=/; max-age=0; SameSite=Lax`;
-                    }
+                    setLanguageCookie(language);
                     // Reload so server renders in the new language
                     window.location.reload();
                 } else {

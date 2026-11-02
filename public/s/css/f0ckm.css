@@ -35820,6 +35820,18 @@ html[theme] #settings-quicknav a.active {
   margin-top: 10px;
 }
 
+/* settings.html for guests: only the browser-side preferences are listed */
+.settings .settings-guest-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+}
+
+.settings .settings-guest-hint > i {
+  color: var(--accent);
+}
+
 /* ---- settings.html: profile card (former inline styles) ---- */
 .settings .settings-profile-hint {
   font-size: 0.9em;

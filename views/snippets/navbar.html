@@ -297,8 +297,9 @@
         {% if enable_anonymous_access %}
 
         <a href="#" id="nav-anon-identity-btn" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %} data-on="click:prevent,openAnonPasskey"><i class="fa-solid fa-fingerprint"></i> Passkey Identity</a>
-        <a href="/settings" id="nav-anon-settings-btn" data-page-modal title="Settings" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}><i class="fa-solid fa-gear"></i> Settings</a>
         {% endif %}
+        {# Guests too: /settings shows them the preferences kept in this browser #}
+        <a href="/settings" class="mobile-only" data-page-modal title="{{ t("nav.settings") }}">{{ t("nav.settings") }}</a>
         <a href="#" id="nav-login-btn">{{ t("nav.login") }}</a>
         {# Always shown: with registration closed the register modal asks for an invite token #}
         <a href="#" id="nav-register-btn">{{ t("nav.register") }}</a>
@@ -312,6 +313,8 @@
     <!-- Quick Favs for Anon -->
     <a href="/favs" id="nav-guest-favs" title="{{ t("nav.favs") }}" class="desktop-only"><i class="fa-solid fa-heart"></i></a>
     {% endif %}
+    <!-- Quick Settings -->
+    <a href="/settings" title="{{ t("nav.settings") }}" class="desktop-only" data-page-modal><i class="fa-solid fa-gear"></i></a>
     <button class="navbar-toggler" type="button" id="nav-toggler"
       data-on="click:toggleNavbar">
       <span></span><span></span><span></span>
