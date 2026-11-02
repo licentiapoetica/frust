@@ -30,6 +30,10 @@ domain empty for a local install on http://localhost:1337. The domain's DNS has 
 and ports 80/443 must be open for the certificate. Unattended:
 `DOMAIN=f0ck.example EMAIL=you@example.com ADMIN_PASSWORD=... ./install.sh`.
 
+The image is built with BuildKit when the `docker-buildx` plugin is installed, which caches the Rust
+build between rebuilds. Without it (or with the old `docker-compose` v1) it still builds, just from
+scratch every time.
+
 Running it again is safe: existing `.env`/`config.yaml` are kept and no second admin is created.
 The database schema and default settings are created on the first start.
 
