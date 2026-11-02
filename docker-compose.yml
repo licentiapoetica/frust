@@ -60,6 +60,8 @@ services:
         condition: service_completed_successfully
       f0ckm-db:
         condition: service_healthy
+      tor:
+        condition: service_started
 
   # Runs once before f0ckm: creates missing data folders and hands them to the app user.
   # Docker creates missing bind-mount folders as root, and a checkout made as root is root-owned;
@@ -84,11 +86,10 @@ services:
           fi
         done
 
+  # SOCKS proxy for outgoing fetches (config.yaml main.socks: socks5h://tor:9050) and the .onion hidden service
   tor:
     image: dockurr/tor
     container_name: tor
-    profiles:
-      - tor
     ports:
       - "127.0.0.1:9050:9050"
       - "127.0.0.1:8118:8118"

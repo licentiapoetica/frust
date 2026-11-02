@@ -4,7 +4,9 @@ main:
     domain: example.com
     regex: example\.com
   onion: http://your-onion-address.onion
-  socks: socks5://127.0.0.1:9050
+  # Tor SOCKS proxy for outgoing fetches; socks5h resolves DNS through Tor. The tor container in Docker,
+  # socks5h://127.0.0.1:9050 when running the server outside Docker
+  socks: socks5h://tor:9050
   # JavaScript runtime yt-dlp uses for YouTube (link uploads): deno (default, in the Docker image), node, bun or quickjs
   # ytdlp_js_runtime: deno
   # Chat bots (IRC/Slack/Telegram/Matrix): YouTube links become embeds like on the web upload.

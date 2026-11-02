@@ -158,7 +158,7 @@ Leave it out to run your own reverse proxy in front of `127.0.0.1:1337`; see
 
 ## Tor Hidden Service (.onion)
 
-Tor is bundled in `docker-compose.yml` and preconfigured as long as COMPOSE_PROFILES=tor is set with a hidden service pointing to the application (`f0ckm:1337`).
+Tor is bundled in `docker-compose.yml` and always runs next to f0ckm. It is the SOCKS proxy for outgoing fetches (`main.socks: socks5h://tor:9050` in `config.yaml`) and serves a hidden service pointing to the application (`f0ckm:1337`).
 
 When running `docker compose up -d`, Tor automatically generates a `.onion` address for your node. You can find your onion address by running:
 
