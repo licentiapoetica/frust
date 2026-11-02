@@ -102,10 +102,10 @@ fi
 [ "${DOMAIN:-}" = localhost ] && DOMAIN=
 
 # ── config.yaml ──────────────────────────────────────────────────────────────────
-if [ -f config.yaml ]; then
-    say "Keeping existing config.yaml"
-else
-    say "Writing config.yaml from config_example.yaml"
+# config_example.yaml filled in for this install. A new config.yaml is written from it, and an existing
+# one gets the settings it is missing from it after the build (so new keys never arrive with dev defaults)
+render_config() {
+    local full host regex
     if [ -n "$DOMAIN" ]; then full="https://$DOMAIN"; host=$DOMAIN; else full="http://localhost:1337"; host=localhost; fi
     regex=$(printf '%s' "$host" | sed 's/\./\\\\./g')
     sed -e "s|^    full: https://example.com$|    full: $full|" \
@@ -115,7 +115,13 @@ else
         -e "s|^  development: true$|  development: false|" \
         -e "s|^  host: localhost$|  host: f0ckm-db|" \
         ${EMAIL:+-e "s|^  mail: admin@example.com$|  mail: $EMAIL|"} \
-        config_example.yaml > config.yaml
+        config_example.yaml
+}
+if [ -f config.yaml ]; then
+    say "Keeping existing config.yaml (missing settings are added after the build)"
+else
+    say "Writing config.yaml from config_example.yaml"
+    render_config > config.yaml
     chmod 600 config.yaml
     grep -q 'YOUR_SECRET_HERE' config.yaml && warn "invite_secret was not replaced; set it in config.yaml"
 fi
@@ -128,6 +134,14 @@ export GIT_HASH="f0ckm-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
 IMAGE="$(sed -n 's/^F0CKM_IMAGE=//p' .env | tail -n 1)"; IMAGE=${IMAGE:-f0ckm}
 TAG="$(sed -n 's/^F0CKM_TAG=//p' .env | tail -n 1)"; TAG=${TAG:-latest}
 $SUDO scripts/docker-build.sh --build-arg GIT_HASH="$GIT_HASH" -t "$IMAGE:$TAG"
+
+# Add settings config.yaml is missing (new options since it was written), keeping its values and comments.
+# Runs as the file's owner, so the result keeps owner and permissions.
+say "Checking config.yaml for missing settings"
+render_config | docker run --rm -i --network none --user "$(stat -c %u:%g config.yaml)" \
+    -v "$PWD/config.yaml:/opt/f0ckm/config.yaml:Z" "$IMAGE:$TAG" config-update --from - \
+    || warn "could not add the missing settings to config.yaml; compare it with config_example.yaml by hand"
+
 compose up -d
 
 say "Waiting for f0ckm to answer"

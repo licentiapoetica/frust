@@ -40,6 +40,11 @@ Media:
   autotag <from_id> [<to_id>] [--dry-run]   Rate untagged images sfw/nsfw via the configured NSFW APIs
   clean [--dry-run] [--yes]                 Find missing media and delete unreferenced files
 
+Config:
+  config-update [--from <file>|-] [--dry-run]
+                                            Add settings missing from config.yaml, with their comments,
+                                            from config_example.yaml (or <file>, - = stdin)
+
 Build / development:
   build-css [--check]                       Build public/s/css/bundle.css (also done at server start)
   check-templates                           Compile every template in views/
@@ -66,6 +71,7 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
             return Ok(0);
         }
         "build-css" => return build_css::run(base, &Args::parse(args, &["--check"], &[])?),
+        "config-update" => return config_update(base, &Args::parse(args, &["--dry-run"], &["--from"])?),
         "hash-password" => return users::hash_password(&Args::parse(args, &[], &[])?).await,
         "check-templates" => {
             let i18n = Arc::new(crate::i18n::I18n::new(crate::locales_dir(base)));
@@ -112,6 +118,33 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
         "clean" => maintenance::clean(&st, &Args::parse(args, &["--dry-run", "--yes", "-y"], &[])?).await,
         _ => unreachable!(),
     }
+}
+
+/// `config-update`: add the settings config.yaml is missing from the example config.
+fn config_update(base: &Path, args: &Args) -> Result<i32> {
+    use anyhow::Context;
+    let from = args.value(&["--from"]).map(str::to_string).unwrap_or_else(|| base.join("config_example.yaml").to_string_lossy().into_owned());
+    let example = if from == "-" {
+        std::io::read_to_string(std::io::stdin()).context("Cannot read the example config from stdin")?
+    } else {
+        std::fs::read_to_string(&from).with_context(|| format!("Cannot read {from}"))?
+    };
+    let link = base.join("config.yaml");
+    let path = std::fs::canonicalize(&link).unwrap_or(link);
+    let text = std::fs::read_to_string(&path).with_context(|| format!("Cannot read {}", path.display()))?;
+    let (out, added) = crate::config_write::add_missing(&text, &example)?;
+    if added.is_empty() {
+        println!("config.yaml has every setting of the example config");
+        return Ok(0);
+    }
+    if !args.flag(&["--dry-run"]) {
+        crate::config_write::replace_file(&path, &out)?;
+    }
+    println!("{} {} setting(s) to config.yaml:", if args.flag(&["--dry-run"]) { "Would add" } else { "Added" }, added.len());
+    for k in &added {
+        println!("  {k}");
+    }
+    Ok(0)
 }
 
 async fn state(base: &Path) -> Result<AppState> {
