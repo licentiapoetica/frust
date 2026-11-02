@@ -874,7 +874,7 @@ async fn process(st: &AppState, cfg: &Config, job: &UrlJob, job_id: &str, uuid: 
     queue::gen_blurred_thumbnail(cfg, item_id, manual).await;
     finish_item(st, cfg, job, item_id, &filename, &mime_t, manual).await;
     if !manual && job.visibility == 0 {
-        st.bot.notify_matrix(cfg, &format!("{} uploaded a new item {}/{item_id}", job.owner, cfg.url_full())).await;
+        st.bot.notify_matrix(cfg, &format!("{} uploaded a new item {}", job.owner, crate::bot::item_url(st, item_id).await)).await;
     }
     Ok(Some(item_id))
 }

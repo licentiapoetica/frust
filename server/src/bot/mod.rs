@@ -284,6 +284,24 @@ pub fn get_level(cfg: &Config, user: &User) -> (i64, bool) {
     (0, false)
 }
 
+/// Public link to an item as the site itself links it: `<main.url.full>/<slug>` when item slugs are
+/// enabled (`enable_item_slugs`) and the item has one, else `<main.url.full>/<id>`. Used for every
+/// link the bot posts (replies, upload notices, webhooks).
+pub async fn item_url(st: &AppState, id: i64) -> String {
+    let cfg = st.cfg();
+    let path = if crate::settings::enable_item_slugs(&cfg) {
+        crate::sql!("SELECT slug FROM items WHERE id = ", id as i32, " LIMIT 1")
+            .fetch_scalar::<String, _>(&st.db)
+            .await
+            .ok()
+            .flatten()
+            .filter(|s| !s.is_empty())
+    } else {
+        None
+    };
+    format!("{}/{}", cfg.url_full(), path.unwrap_or_else(|| id.to_string()))
+}
+
 /// Exponential reconnect backoff: 5 s, 10 s, … capped at 5 minutes.
 pub(crate) struct Backoff(u32);
 

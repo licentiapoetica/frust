@@ -888,11 +888,11 @@ async fn file_upload(
         let payload = new_item_payload(&cfg, ctx, item_id, &filename, &actual);
         let (manual, visibility, owner, mime_type) = (ctx.manual, ctx.visibility, ctx.owner.clone(), actual.clone());
         tokio::spawn(async move {
-            let base = cfg.url_full().to_string();
+            let link = crate::bot::item_url(&st, item_id).await;
             if visibility == 0 {
                 if let Some(hook) = cfg.client("discord").and_then(|c| c["webhook_url"].as_str()).filter(|h| !h.is_empty()) {
                     let kind = mime_type.split('/').next().unwrap_or("");
-                    let msg = format!("{owner} uploaded a new {kind}: {base}/{item_id}");
+                    let msg = format!("{owner} uploaded a new {kind}: {link}");
                     if let Err(e) = st.http.post(hook).json(&json!({ "content": msg })).send().await {
                         tracing::error!("[UPLOAD] Discord Webhook failed: {e}");
                     }
@@ -901,7 +901,7 @@ async fn file_upload(
             if !manual {
                 notify_new_item(&st, &payload).await;
                 if visibility == 0 {
-                    st.bot.notify_matrix(&cfg, &format!("{owner} uploaded a new item {base}/{item_id}")).await;
+                    st.bot.notify_matrix(&cfg, &format!("{owner} uploaded a new item {link}")).await;
                 }
             } else {
                 queue::notify_admins(&st, item_id).await;

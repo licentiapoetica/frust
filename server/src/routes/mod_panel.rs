@@ -531,7 +531,7 @@ async fn approve(st: AppState, mut req: Req) -> Res {
 
         if item.i64("visibility").unwrap_or(0) == 0 {
             let cfg = st.cfg();
-            let message = format!("{username} uploaded a new video {}/{id}", cfg.url_full());
+            let message = format!("{username} uploaded a new video {}", crate::bot::item_url(&st, id64).await);
             if let Some(hook) = cfg.client("discord").and_then(|c| c["webhook_url"].as_str()).filter(|h| !h.is_empty()).map(str::to_string) {
                 let (http, msg) = (st.http.clone(), message.clone());
                 tokio::spawn(async move {
