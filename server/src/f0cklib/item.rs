@@ -12,7 +12,8 @@ fn not_found() -> Value {
 
 /// "Sorry, this post is currently not visible." with OG data for link previews.
 /// `slug`: `Some(..)` adds the `slug` key (some branches of the old code included it).
-fn not_visible(cfg: &Config, itemid: i64, slug: Option<Value>, blur: bool, hall_slug: Option<&str>) -> Value {
+/// `locked`: hidden by visitor permissions (guest/anon), not by the viewer's filter, so `bypass` can't show it.
+fn not_visible(cfg: &Config, itemid: i64, slug: Option<Value>, blur: bool, hall_slug: Option<&str>, locked: bool) -> Value {
     let domain = cfg.str_or("main.url.domain", "");
     let thumbs = cfg.str_or("websrv.paths.thumbnails", "");
     let og_url = match hall_slug.filter(|h| !h.is_empty()) {
@@ -26,7 +27,7 @@ fn not_visible(cfg: &Config, itemid: i64, slug: Option<Value>, blur: bool, hall_
     item["og_thumbnail"] = json!(format!("{thumbs}/{itemid}{}.webp", if blur { "_blur" } else { "" }));
     item["og_url"] = json!(og_url);
     item["og_description"] = json!("Content not visible in current mode");
-    json!({ "success": false, "message": "Sorry, this post is currently not visible.", "item": item })
+    json!({ "success": false, "message": "Sorry, this post is currently not visible.", "item": item, "locked": locked })
 }
 
 fn nonempty_file(p: &Path) -> bool {
@@ -301,7 +302,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             blocked = rating.is_none();
         }
         if blocked {
-            return Ok(not_visible(&cfg, itemid, None, true, hall_slug.as_deref()));
+            return Ok(not_visible(&cfg, itemid, None, true, hall_slug.as_deref(), true));
         }
     }
 
@@ -555,7 +556,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     if session.is_none() && !is_owner_or_admin && visibility == 0 {
         let blocked = (is_nsfw && !cfg.truthy("websrv.public_nsfw")) || is_nsfl || (is_untagged && !cfg.truthy("websrv.public_untagged"));
         if blocked {
-            return Ok(not_visible(&cfg, itemid, None, is_nsfw, hall_slug.as_deref()));
+            return Ok(not_visible(&cfg, itemid, None, is_nsfw, hall_slug.as_deref(), true));
         }
     } else if is_anon_session(session) && !is_owner_or_admin && visibility == 0 {
         let allowed = anon_allowed_modes(&cfg);
@@ -565,7 +566,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             || (is_untagged && !has("untagged") && eff_mode != 2)
             || (is_sfw && !has("sfw"));
         if blocked {
-            return Ok(not_visible(&cfg, itemid, None, is_nsfw, hall_slug.as_deref()));
+            return Ok(not_visible(&cfg, itemid, None, is_nsfw, hall_slug.as_deref(), true));
         }
     }
 
@@ -585,7 +586,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             },
         };
         if blocked {
-            return Ok(not_visible(&cfg, itemid, Some(slug_or_null(&actitem)), is_nsfw, hall_slug.as_deref()));
+            return Ok(not_visible(&cfg, itemid, Some(slug_or_null(&actitem)), is_nsfw, hall_slug.as_deref(), false));
         }
     }
 
@@ -821,7 +822,7 @@ async fn build_album(c: &AlbumCtx<'_>, actitem: &mut Row, requested_sub: &mut Op
     let vis = SubVisibility { cfg, session: c.o.session, eff_mode: c.eff_mode, safe_ratings: c.safe.clone(), excluded_tags: c.excluded_tags };
     album_rows.retain(|r| c.o.bypass_filter || vis.visible(&with_parent(tags_of(r))));
 
-    let not_visible_v = || not_visible(cfg, itemid, Some(slug_or_null(actitem)), true, c.hall_slug);
+    let not_visible_v = || not_visible(cfg, itemid, Some(slug_or_null(actitem)), true, c.hall_slug, false);
     if album_rows.is_empty() {
         return Ok(AlbumOutcome::NotVisible(not_visible_v()));
     }

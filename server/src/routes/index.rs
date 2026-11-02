@@ -494,7 +494,7 @@ async fn generic(st: AppState, req: Req) -> Res {
                 "error_mode_label": label,
                 "error_filter_hint": label.map(|l| tr.t_with("error.filter_hint", &[("mode", &format!("<strong>{l}</strong>"))])),
                 "error_filter_hint_link": tr.t("error.filter_hint_link"),
-                "error_see_anyways": tr.t("error.see_anyways"),
+                "error_see_anyways": if crate::config::truthy(&data["locked"]) { Value::Null } else { json!(tr.t("error.see_anyways")) },
             });
             if d["item"].is_null() {
                 d.as_object_mut().map(|m| m.shift_remove("item"));

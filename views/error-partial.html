@@ -15,11 +15,13 @@
       <div class="_error_filter_hint">
         <div class="_error_filter_hint_text">{{ error_filter_hint|safe }}</div>
         <a href="#" data-action="open-filter-modal" class="_error_filter_hint_link">{{ error_filter_hint_link }}</a>
+        {% if error_see_anyways %}
         <div class="_error_filter_actions">
           <button type="button" class="btn _error_see_anyways_btn" data-action="see-anyways" data-item-id="{{ (item_id or "") }}" data-item-slug="{{ (item_slug or "") }}">
             <i class="fa fa-eye"></i> {{ error_see_anyways }}
           </button>
         </div>
+        {% endif %}
       </div>
       {% endif %}
     </div>
