@@ -2,10 +2,10 @@
 //! or a replied-to Matrix/Telegram file), downloads them with yt-dlp/curl/the Matrix media API,
 //! checks size/mime/reposts and adds the item to the site.
 //!
-//! Flow per platform (unchanged):
+//! Flow per platform:
 //! * IRC/Slack: any link in a channel whose name contains `main.upload_channel_keyword` (`w0bm`),
-//!   or anywhere with the trigger (`!w`).
-//! * Telegram/Matrix: `!w -sfw|-nsfw -t tag1, tag2` (min tags from settings), account must be linked
+//!   or anywhere with the trigger (`!w`). IRC follows the site's rating/tag rules (tags only after `-t`).
+//! * Telegram/Matrix: `!w -sfw|-nsfw|-nsfl -t tag1, tag2` (site rating/tag rules), account must be linked
 //!   (`!link`); Matrix only in `upload_channel_id` if set; Telegram also forwarded messages and the
 //!   rest of a media group started with `!w`.
 
@@ -36,8 +36,9 @@ static RE_PH: Lazy<Regex> =
 static RE_IGNORE: Lazy<Regex> = Lazy::new(|| Regex::new(r"!i(gnore)?\b").unwrap());
 static RE_SFW: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)(?:^|\s)-sfw\b").unwrap());
 static RE_NSFW: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)(?:^|\s)-nsfw\b").unwrap());
-static RE_TAGS: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)-t\s+(\S.+)").unwrap());
-static RE_FLAGS: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\s*-(nsfw|sfw)\b").unwrap());
+static RE_NSFL: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)(?:^|\s)-nsfl\b").unwrap());
+static RE_TAGS: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)-t\s+(\S.*)").unwrap());
+static RE_FLAGS: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\s*-(nsfw|sfw|nsfl)\b").unwrap());
 static RE_T_FLAG: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\s*-t\b").unwrap());
 
 const PC_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";
@@ -47,6 +48,13 @@ const TG_MEDIA_KEYS: [&str; 7] = ["video", "audio", "photo", "document", "animat
 
 /// Media groups (Telegram albums) whose first message carried `!w`.
 static MEDIA_GROUPS: Lazy<Mutex<HashSet<String>>> = Lazy::new(|| Mutex::new(HashSet::new()));
+
+/// Upload size limit in bytes before the admin multiplier: `main.maxfilesize`, or 150 MiB when it
+/// is missing or not positive (same default as the web upload). Without the fallback every bot
+/// upload was "too large".
+pub(crate) fn max_file_size(cfg: &Config) -> f64 {
+    cfg.f64("main.maxfilesize").filter(|m| *m > 0.0).unwrap_or(150.0 * 1024.0 * 1024.0)
+}
 
 fn trigger_word(cfg: &Config) -> String {
     cfg.str_or("main.trigger", "!w").to_string()
@@ -91,32 +99,112 @@ pub fn extract_links(text: &str, domain: &str) -> Vec<String> {
     RE_ALL.find_iter(text).map(|m| m.as_str().to_string()).filter(|l| domain.is_empty() || !l.contains(domain)).collect()
 }
 
-/// Result of parsing `!w -sfw|-nsfw -t tags`.
+/// What a chat upload must carry, from the same site config as the web upload
+/// (`routes/uploads/upload.rs`): normally a rating plus the admin setting `min_tags`; in
+/// `websrv.shitpost_mode` a rating only with `websrv.shitpost_require_rating` and
+/// `websrv.shitpost_min_tags` tags.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Rules {
+    pub rating_required: bool,
+    pub min_tags: usize,
+    /// `-nsfl` is accepted (`enable_nsfl`).
+    pub nsfl: bool,
+    /// Without `-t`, read the rest of the message as tags (Telegram/Matrix). IRC lines are chat
+    /// text, so there tags are only taken after `-t`.
+    pub bare_tags: bool,
+}
+
+impl Rules {
+    pub fn from_site(cfg: &Config, min_tags_setting: i64, bare_tags: bool) -> Rules {
+        if crate::settings::shitpost_mode(cfg) {
+            Rules {
+                rating_required: cfg.get("websrv.shitpost_require_rating") == &Value::Bool(true),
+                min_tags: crate::config::as_int(cfg.get("websrv.shitpost_min_tags")).unwrap_or(0).max(0) as usize,
+                nsfl: cfg.enable_nsfl(),
+                bare_tags,
+            }
+        } else {
+            Rules { rating_required: true, min_tags: min_tags_setting.max(0) as usize, nsfl: cfg.enable_nsfl(), bare_tags }
+        }
+    }
+
+    /// Usage line for replies, e.g. `!w <url> -sfw/-nsfw -t tag1, tag2 (rating and at least 2 tags required)`.
+    pub fn usage(&self, trigger: &str, with_url: bool) -> String {
+        let url = if with_url { " <url>" } else { "" };
+        let flags = if self.nsfl { "-sfw/-nsfw/-nsfl" } else { "-sfw/-nsfw" };
+        let rating = if self.rating_required { format!(" {flags}") } else { format!(" [{flags}]") };
+        let tags = if self.min_tags > 0 { " -t tag1, tag2" } else { " [-t tag1, tag2]" };
+        let need = match (self.rating_required, self.min_tags) {
+            (true, 0) => " (rating required)".to_string(),
+            (true, n) => format!(" (rating and at least {n} tag{} required)", if n == 1 { "" } else { "s" }),
+            (false, 0) => String::new(),
+            (false, n) => format!(" (at least {n} tag{} required)", if n == 1 { "" } else { "s" }),
+        };
+        format!("{trigger}{url}{rating}{tags}{need}")
+    }
+}
+
+/// Upload rating, assigned as its rating tag.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Rating {
+    Sfw,
+    Nsfw,
+    Nsfl,
+}
+
+impl Rating {
+    /// Tag id like the web upload: sfw = 1, nsfw = 2, nsfl = `nsfl_tag_id` (default 3).
+    pub fn tag_id(self, cfg: &Config) -> i64 {
+        match self {
+            Rating::Sfw => 1,
+            Rating::Nsfw => 2,
+            Rating::Nsfl => cfg.nsfl_tag_id(),
+        }
+    }
+}
+
+/// Result of parsing `!w -sfw|-nsfw|-nsfl -t tags`.
 #[derive(Debug, PartialEq, Eq)]
 pub enum WArgs {
-    Ok { nsfw: bool, tags: Vec<String> },
+    /// `rating` is `None` only when the site doesn't require one.
+    Ok { rating: Option<Rating>, tags: Vec<String> },
+    /// Nothing given although something is required.
     Help,
     BothRatings,
     MissingRating,
+    /// `-nsfl` while `enable_nsfl` is off.
+    NsflDisabled,
     TooFewTags(usize),
 }
 
-pub fn parse_w_args(message: &str, trigger: &str, min_tags: usize) -> WArgs {
+fn is_rating_name(t: &str) -> bool {
+    ["sfw", "nsfw", "nsfl"].contains(&t.to_lowercase().as_str())
+}
+
+pub fn parse_w_args(message: &str, trigger: &str, rules: Rules) -> WArgs {
     let has_sfw = RE_SFW.is_match(message);
     let has_nsfw = RE_NSFW.is_match(message);
+    let has_nsfl = RE_NSFL.is_match(message);
     let tag_match = RE_TAGS.captures(message);
-    if !has_sfw && !has_nsfw && tag_match.is_none() {
-        return WArgs::Help;
-    }
-    if has_sfw && has_nsfw {
+    if [has_sfw, has_nsfw, has_nsfl].iter().filter(|b| **b).count() > 1 {
         return WArgs::BothRatings;
     }
-    if !has_sfw && !has_nsfw {
-        return WArgs::MissingRating;
+    if has_nsfl && !rules.nsfl {
+        return WArgs::NsflDisabled;
     }
+    let rating = if has_nsfl {
+        Some(Rating::Nsfl)
+    } else if has_nsfw {
+        Some(Rating::Nsfw)
+    } else if has_sfw {
+        Some(Rating::Sfw)
+    } else {
+        None
+    };
+    let explicit_tags = tag_match.is_some();
     let input = match tag_match {
         Some(c) => c[1].to_string(),
-        None => {
+        None if rules.bare_tags => {
             let trig = Regex::new(&format!(r"(?i){}(0bm)?\b", regex::escape(trigger))).ok();
             let s = RE_ALL.replace_all(message, "");
             let s = match trig {
@@ -126,17 +214,26 @@ pub fn parse_w_args(message: &str, trigger: &str, min_tags: usize) -> WArgs {
             let s = RE_FLAGS.replace_all(&s, "");
             RE_T_FLAG.replace_all(&s, "").trim().to_string()
         }
+        None => String::new(),
     };
+    // like the web upload: rating names are not tags (the rating comes from the flag)
     let mut tags: Vec<String> = Vec::new();
-    for t in input.split(',').map(str::trim).filter(|t| !t.is_empty()) {
+    for t in input.split(',').map(str::trim).filter(|t| !t.is_empty() && !is_rating_name(t)) {
         if !tags.iter().any(|x| x == t) {
             tags.push(t.to_string());
         }
     }
-    if tags.len() < min_tags {
+    let nothing_given = rating.is_none() && !explicit_tags && tags.is_empty();
+    if nothing_given && (rules.rating_required || rules.min_tags > 0) {
+        return WArgs::Help;
+    }
+    if rules.rating_required && rating.is_none() {
+        return WArgs::MissingRating;
+    }
+    if tags.len() < rules.min_tags {
         return WArgs::TooFewTags(tags.len());
     }
-    WArgs::Ok { nsfw: has_nsfw, tags }
+    WArgs::Ok { rating, tags }
 }
 
 fn yt_dlp_base(cfg: &Config) -> Vec<String> {
@@ -269,6 +366,28 @@ fn trunc(s: &str, n: usize) -> String {
     s.chars().take(n).collect()
 }
 
+/// The website account (`id`, `user`) linked to the sender's Telegram/Matrix account
+/// (`!link`). Always `None` on IRC and Slack, which have no account linking.
+pub(crate) async fn linked_user(st: &crate::state::AppState, e: &Message) -> Result<Option<(i64, String)>> {
+    let kind = match e.kind {
+        Kind::Matrix => "matrix",
+        Kind::Tg => "telegram",
+        _ => return Ok(None),
+    };
+    let alias = e.user.account.clone().unwrap_or_default();
+    let row = sql!(
+        r#"SELECT "user".id, "user"."user" FROM user_alias JOIN "user" ON "user".id = user_alias.userid
+           WHERE lower(user_alias.alias) = lower("#,
+        alias,
+        ") AND user_alias.type = ",
+        kind,
+        " LIMIT 1"
+    )
+    .fetch_optional(&st.db)
+    .await?;
+    Ok(row.and_then(|r| r.i64("id").map(|id| (id, r.string("user")))))
+}
+
 pub async fn run(rt: Arc<Runtime>, e: Message) -> Result<()> {
     let st = &rt.st;
     let cfg = st.cfg();
@@ -327,34 +446,6 @@ pub async fn run(rt: Arc<Runtime>, e: Message) -> Result<()> {
     }
 
     let is_w = rt.regex(&format!(r"(?i){}(0bm)?\b", regex::escape(&trigger))).is_some_and(|r| r.is_match(&e.message));
-    let min_tags = st.settings.min_tags().max(0) as usize;
-    let mut rating: Option<bool> = None; // Some(nsfw)
-    let mut tags: Vec<String> = vec![];
-    if is_w && matches!(e.kind, Kind::Matrix | Kind::Tg) {
-        match parse_w_args(&e.message, &trigger, min_tags) {
-            WArgs::Ok { nsfw, tags: t } => {
-                rating = Some(nsfw);
-                tags = t;
-            }
-            WArgs::Help => {
-                e.reply(&format!("{trigger} -sfw/-nsfw -t tag1,tag2,tag3 (at least {min_tags} tags required)")).await;
-                return Ok(());
-            }
-            WArgs::BothRatings => {
-                e.reply("pick one: -sfw or -nsfw, not both").await;
-                return Ok(());
-            }
-            WArgs::MissingRating => {
-                e.reply(&format!("missing rating: {trigger} -sfw/-nsfw -t tag1,tag2,tag3")).await;
-                return Ok(());
-            }
-            WArgs::TooFewTags(n) => {
-                e.reply(&format!("at least {min_tags} tags required (got {n}): {trigger} -sfw/-nsfw -t tag1, tag2, tag3")).await;
-                return Ok(());
-            }
-        }
-    }
-
     let forwarded = e.raw.get("forward_origin").is_some() || e.raw.get("forward_from").is_some() || e.raw.get("forward_date").is_some();
     let media_group = e.raw["media_group_id"].as_str().map(str::to_string);
     let keyword = cfg.str_or("main.upload_channel_keyword", "w0bm").to_lowercase();
@@ -362,26 +453,48 @@ pub async fn run(rt: Arc<Runtime>, e: Message) -> Result<()> {
         return Ok(());
     }
 
+    // Rating and tags follow the site's upload rules (`Rules::from_site`). They apply to `!w` on
+    // Matrix/Telegram and to every IRC upload (links in upload channels too). Slack and forwarded
+    // Telegram messages upload without them.
+    let irc = e.kind == Kind::Irc;
+    let rules = Rules::from_site(&cfg, st.settings.min_tags(), !irc);
+    let usage = rules.usage(&trigger, irc);
+    let mut rating: Option<Rating> = None;
+    let mut tags: Vec<String> = vec![];
+    if irc || (is_w && matches!(e.kind, Kind::Matrix | Kind::Tg)) {
+        match parse_w_args(&e.message, &trigger, rules) {
+            WArgs::Ok { rating: r, tags: t } => {
+                rating = r;
+                tags = t;
+            }
+            WArgs::Help => {
+                e.reply(&usage).await;
+                return Ok(());
+            }
+            WArgs::BothRatings => {
+                e.reply(if rules.nsfl { "pick one: -sfw, -nsfw or -nsfl" } else { "pick one: -sfw or -nsfw, not both" }).await;
+                return Ok(());
+            }
+            WArgs::NsflDisabled => {
+                e.reply("NSFL mode is currently disabled").await;
+                return Ok(());
+            }
+            WArgs::MissingRating => {
+                e.reply(&format!("missing rating: {usage}")).await;
+                return Ok(());
+            }
+            WArgs::TooFewTags(n) => {
+                e.reply(&format!("at least {} tags required (got {n}): {usage}", rules.min_tags)).await;
+                return Ok(());
+            }
+        }
+    }
+
     // linked website account (required for !w on Matrix/Telegram)
     let mut website_user: Option<(i64, String)> = None;
     if matches!(e.kind, Kind::Matrix | Kind::Tg) {
-        let (alias, kind) = match e.kind {
-            Kind::Matrix => (e.user.account.clone().unwrap_or_default(), "matrix"),
-            _ => (e.user.account.clone().unwrap_or_default(), "telegram"),
-        };
-        match sql!(
-            r#"SELECT "user".id, "user"."user" FROM user_alias JOIN "user" ON "user".id = user_alias.userid
-               WHERE lower(user_alias.alias) = lower("#,
-            alias,
-            ") AND user_alias.type = ",
-            kind,
-            " LIMIT 1"
-        )
-        .fetch_optional(&st.db)
-        .await
-        {
-            Ok(Some(r)) => website_user = r.i64("id").map(|id| (id, r.string("user"))),
-            Ok(None) => {}
+        match linked_user(st, &e).await {
+            Ok(u) => website_user = u,
             Err(err) => tracing::error!("[PARSER] DB Link check error: {err:#}"),
         }
         if is_w && website_user.is_none() {
@@ -421,7 +534,7 @@ struct Upload {
     rt: Arc<Runtime>,
     cfg: Arc<Config>,
     website_user: Option<(i64, String)>,
-    rating: Option<bool>,
+    rating: Option<Rating>,
     tags: Vec<String>,
 }
 
@@ -430,19 +543,18 @@ impl Upload {
     async fn process(&self, e: &Message, link: &str) -> Result<bool> {
         let st = &self.rt.st;
         let cfg = &self.cfg;
-        let full = cfg.url_full();
         let shown = super::telegram::sanitize_url(link);
         let s = site(link);
 
         if s != Site::Mxc {
             if let Some(id) = pipeline::check_repost_link(st, &shown).await.unwrap_or(None) {
-                e.reply(&format!("repost motherf0cker (link): {full}/{id}")).await;
+                e.reply(&format!("repost motherf0cker (link): {}", super::item_url(st, id).await)).await;
                 return Ok(true);
             }
         }
         let uuid = pipeline::gen_uuid();
         let level = get_level(cfg, &e.user).0;
-        let base_max = cfg.f64("main.maxfilesize").unwrap_or(0.0);
+        let base_max = max_file_size(cfg);
         let max_bytes = if level > 50 { base_max * cfg.f64("main.adminmultiplier").unwrap_or(1.0) } else { base_max };
 
         // extension probe
@@ -584,7 +696,6 @@ impl Upload {
     async fn finish(&self, e: &Message, progress: &Progress<'_>, link: &str, mut source: PathBuf, uuid: &str, max_bytes: f64, secs: u64) -> Result<bool> {
         let st = &self.rt.st;
         let cfg = &self.cfg;
-        let full = cfg.url_full();
         let size = tokio::fs::metadata(&source).await?.len();
         if size as f64 > max_bytes {
             let _ = tokio::fs::remove_file(&source).await;
@@ -640,7 +751,7 @@ impl Upload {
         }
         if let Some(id) = repost {
             let _ = tokio::fs::remove_file(&source).await;
-            progress.say(&format!("repost motherf0cker (checksum): {full}/{id}")).await;
+            progress.say(&format!("repost motherf0cker (checksum): {}", super::item_url(st, id).await)).await;
             return Ok(false);
         }
 
@@ -674,8 +785,8 @@ impl Upload {
             }
         }
 
-        if let Some(nsfw) = self.rating {
-            if let Err(err) = self.assign_tags(item_id, nsfw).await {
+        if self.rating.is_some() || !self.tags.is_empty() {
+            if let Err(err) = self.assign_tags(item_id).await {
                 tracing::error!("[PARSER] Failed to assign tags: {err:#}");
             }
         }
@@ -690,16 +801,17 @@ impl Upload {
             }
         }
 
+        let link = super::item_url(st, item_id).await;
         if manual {
             pipeline::notify_admins(st, item_id).await;
         } else {
-            st.bot.notify_matrix(cfg, &format!("{username} uploaded a new video {full}/{item_id}")).await;
+            st.bot.notify_matrix(cfg, &format!("{username} uploaded a new video {link}")).await;
         }
 
         let speed = crate::util::calc_speed(size as f64, secs as f64);
         let speed = if speed.is_finite() { format!("{speed:.2} Mbit/s") } else { "yes".into() };
         let out = format!(
-            "{}size: {} | speed: {speed} | link: {full}/{item_id}",
+            "{}size: {} | speed: {speed} | link: {link}",
             if manual { "[approval pending] " } else { "" },
             crate::util::format_size_f(size as f64)
         );
@@ -710,13 +822,16 @@ impl Upload {
         Ok(true)
     }
 
-    /// Rating tag (sfw = 1, nsfw = 2) + user tags, attributed to the linked website user.
-    async fn assign_tags(&self, item_id: i64, nsfw: bool) -> Result<()> {
+    /// Rating tag (sfw = 1, nsfw = 2, nsfl = `nsfl_tag_id`) + user tags, attributed to the linked
+    /// website user.
+    async fn assign_tags(&self, item_id: i64) -> Result<()> {
         let db = &self.rt.st.db;
         let user_id = self.website_user.as_ref().map(|(id, _)| *id as i32).unwrap_or(1);
         let item = item_id as i32;
-        let rating_tag: i32 = if nsfw { 2 } else { 1 };
-        sql!("INSERT INTO tags_assign (tag_id, item_id, user_id) VALUES (", rating_tag, ", ", item, ", ", user_id, ")").execute(db).await?;
+        if let Some(rating) = self.rating {
+            let rating_tag = rating.tag_id(&self.cfg) as i32;
+            sql!("INSERT INTO tags_assign (tag_id, item_id, user_id) VALUES (", rating_tag, ", ", item, ", ", user_id, ")").execute(db).await?;
+        }
         for name in &self.tags {
             let name = trunc(name, 255);
             let id = match sql!("SELECT id FROM tags WHERE tag = ", name.clone(), " LIMIT 1").fetch_scalar::<i32, _>(db).await? {
@@ -755,16 +870,21 @@ mod tests {
         assert_eq!(site("https://example.com/v.mp4"), Site::Generic);
     }
 
+    const TG: Rules = Rules { rating_required: true, min_tags: 3, nsfl: false, bare_tags: true };
+    const IRC: Rules = Rules { rating_required: true, min_tags: 0, nsfl: false, bare_tags: false };
+
     #[test]
     fn w_arguments() {
-        assert_eq!(parse_w_args("!w", "!w", 3), WArgs::Help);
-        assert_eq!(parse_w_args("!w -sfw -nsfw -t a", "!w", 0), WArgs::BothRatings);
-        assert_eq!(parse_w_args("!w -t a,b,c", "!w", 3), WArgs::MissingRating);
-        assert_eq!(parse_w_args("!w -sfw -t a, b", "!w", 3), WArgs::TooFewTags(2));
-        assert_eq!(parse_w_args("!w -nsfw -t big cat, dog,  dog ,x", "!w", 3), WArgs::Ok { nsfw: true, tags: vec!["big cat".into(), "dog".into(), "x".into()] });
-        assert_eq!(parse_w_args("!w https://x.org/v.mp4 -sfw a, b", "!w", 2), WArgs::Ok { nsfw: false, tags: vec!["a".into(), "b".into()] });
+        let r2 = Rules { min_tags: 2, ..TG };
+        assert_eq!(parse_w_args("!w", "!w", TG), WArgs::Help);
+        assert_eq!(parse_w_args("!w -sfw -nsfw -t a", "!w", Rules { min_tags: 0, ..TG }), WArgs::BothRatings);
+        assert_eq!(parse_w_args("!w -t a,b,c", "!w", TG), WArgs::MissingRating);
+        assert_eq!(parse_w_args("!w -sfw -t a, b", "!w", TG), WArgs::TooFewTags(2));
+        assert_eq!(parse_w_args("!w -nsfw -t big cat, dog,  dog ,x", "!w", TG), WArgs::Ok { rating: Some(Rating::Nsfw), tags: vec!["big cat".into(), "dog".into(), "x".into()] });
+        assert_eq!(parse_w_args("!w https://x.org/v.mp4 -sfw a, b", "!w", r2), WArgs::Ok { rating: Some(Rating::Sfw), tags: vec!["a".into(), "b".into()] });
+        // rating names don't count as tags (like the web upload)
+        assert_eq!(parse_w_args("!w -sfw -t sfw, a", "!w", r2), WArgs::TooFewTags(1));
     }
-
     #[test]
     fn builds_ytdlp_args() {
         let cfg = test_cfg(json!({ "main": { "socks": "socks5://127.0.0.1:9050" } }));
@@ -778,6 +898,63 @@ mod tests {
         assert!(a.windows(2).any(|w| w == ["--max-filesize", "358400k"]));
         assert_eq!(a.last().unwrap(), "https://e.org/v");
         assert_eq!(referer_for("https://i.imgur.com/a.mp4", None), "https://imgur.com/");
+    }
+
+    #[test]
+    fn irc_arguments() {
+        let p = |m: &str, r: Rules| parse_w_args(m, "!w", r);
+        assert_eq!(p("look https://x.org/v.mp4", IRC), WArgs::Help);
+        assert_eq!(p("!w https://x.org/v.mp4 -t a", IRC), WArgs::MissingRating);
+        // the chat text around the link never becomes tags
+        assert_eq!(p("lol https://x.org/v.mp4 -nsfw", IRC), WArgs::Ok { rating: Some(Rating::Nsfw), tags: vec![] });
+        assert_eq!(p("https://x.org/v.mp4 -sfw -t cat, loop", IRC), WArgs::Ok { rating: Some(Rating::Sfw), tags: vec!["cat".into(), "loop".into()] });
+        assert_eq!(p("https://x.org/v.mp4 -sfw -nsfw", IRC), WArgs::BothRatings);
+        assert_eq!(p("https://x.org/v.mp4 -sfwx", IRC), WArgs::Help);
+        // site requires tags → IRC too
+        let irc3 = Rules { min_tags: 3, ..IRC };
+        assert_eq!(p("lol https://x.org/v.mp4 -sfw", irc3), WArgs::TooFewTags(0));
+        assert_eq!(p("https://x.org/v.mp4 -sfw -t a, b, c", irc3), WArgs::Ok { rating: Some(Rating::Sfw), tags: vec!["a".into(), "b".into(), "c".into()] });
+    }
+
+    #[test]
+    fn site_rules() {
+        let cfg = test_cfg(json!({}));
+        assert_eq!(Rules::from_site(&cfg, 3, false), Rules { rating_required: true, min_tags: 3, nsfl: false, bare_tags: false });
+        let cfg = test_cfg(json!({ "websrv": { "shitpost_mode": true } }));
+        let r = Rules::from_site(&cfg, 3, false);
+        assert_eq!(r, Rules { rating_required: false, min_tags: 0, nsfl: false, bare_tags: false });
+        // shitpost mode without requirements: a plain link uploads untagged
+        assert_eq!(parse_w_args("https://x.org/v.mp4", "!w", r), WArgs::Ok { rating: None, tags: vec![] });
+        let cfg = test_cfg(json!({ "websrv": { "shitpost_mode": true, "shitpost_require_rating": true, "shitpost_min_tags": 1 } }));
+        let r = Rules::from_site(&cfg, 3, false);
+        assert_eq!(r, Rules { rating_required: true, min_tags: 1, nsfl: false, bare_tags: false });
+        assert_eq!(r.usage("!w", true), "!w <url> -sfw/-nsfw -t tag1, tag2 (rating and at least 1 tag required)");
+        assert_eq!(IRC.usage("!w", true), "!w <url> -sfw/-nsfw [-t tag1, tag2] (rating required)");
+    }
+
+    #[test]
+    fn nsfl_rating() {
+        let on = Rules { nsfl: true, ..IRC };
+        let p = |m: &str, r: Rules| parse_w_args(m, "!w", r);
+        assert_eq!(p("https://x.org/v.mp4 -nsfl", IRC), WArgs::NsflDisabled);
+        assert_eq!(p("https://x.org/v.mp4 -nsfl", on), WArgs::Ok { rating: Some(Rating::Nsfl), tags: vec![] });
+        assert_eq!(p("https://x.org/v.mp4 -nsfl -nsfw", on), WArgs::BothRatings);
+        // the flag isn't read as a tag on Telegram/Matrix either
+        assert_eq!(parse_w_args("!w -nsfl gore, x", "!w", Rules { nsfl: true, min_tags: 2, ..TG }), WArgs::Ok { rating: Some(Rating::Nsfl), tags: vec!["gore".into(), "x".into()] });
+        assert_eq!(on.usage("!w", true), "!w <url> -sfw/-nsfw/-nsfl [-t tag1, tag2] (rating required)");
+        // site config: enable_nsfl, nsfl_tag_id
+        let cfg = test_cfg(json!({ "enable_nsfl": true, "nsfl_tag_id": 7 }));
+        assert!(Rules::from_site(&cfg, 0, false).nsfl);
+        assert_eq!(Rating::Nsfl.tag_id(&cfg), 7);
+        assert_eq!(Rating::Nsfl.tag_id(&test_cfg(json!({}))), 3);
+        assert!(!Rules::from_site(&test_cfg(json!({})), 0, false).nsfl);
+    }
+
+    #[test]
+    fn size_limit_fallback() {
+        assert_eq!(max_file_size(&test_cfg(json!({ "main": { "maxfilesize": 1000 } }))), 1000.0);
+        assert_eq!(max_file_size(&test_cfg(json!({ "main": {} }))), 150.0 * 1024.0 * 1024.0);
+        assert_eq!(max_file_size(&test_cfg(json!({ "main": { "maxfilesize": 0 } }))), 150.0 * 1024.0 * 1024.0);
     }
 
     #[test]

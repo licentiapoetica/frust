@@ -56,15 +56,15 @@ pub fn all() -> Vec<Trigger> {
     vec![
         t("level", Call::Re(r"(?i)^!level (.*)"), 0, Kind::ALL, None, h!(level)),
         t("self", Call::Re(r"(?i)^!self$"), 0, Kind::ALL, None, h!(self_info)),
-        t("delete", Call::Re(r"(?i)^!(del|rm) .*"), 0, Kind::ALL, Some("!del <id> ..."), h!(delete)),
+        t("delete", Call::Re(r"(?i)^!(del|rm) .*"), 100, Kind::ALL, Some("!del <id or slug> ..."), h!(delete)),
         t("recover", Call::Re(r"(?i)^!(recover) .*"), 100, Kind::ALL, None, h!(recover)),
         t("f0ckgag", Call::Dyn(f0ckgag_pattern), 0, Kind::ALL, None, h!(f0ckgag)),
         t("f0ck", Call::Re(r"(?i)^!f0ck .*"), 100, Kind::ALL, None, h!(f0ck)),
         t("help", Call::Re(r"(?i)^!help$"), 0, Kind::ALL, Some("!help"), h!(help)),
         t("invite_matrix", Call::Re(r"(?i)^!invite$"), 0, &[Kind::Matrix], Some("!invite"), h!(invite_matrix)),
-        t("matrix_link", Call::Re(r"(?i)(^!link(?:\s+(.+))?$)|(^[a-z0-9]{6}$)"), 0, &[Kind::Matrix], None, h!(matrix_link)),
+        t("matrix_link", Call::Re(r"(?i)(^!link(?:\s+(.+))?$)|(^(?:[a-z0-9]{6}|[0-9a-f]{64})$)"), 0, &[Kind::Matrix], None, h!(matrix_link)),
         t("telegram_link", Call::Re(r"(?i)^!link(?:\s+(.+))?$"), 0, &[Kind::Tg], None, h!(telegram_link)),
-        t("tags show", Call::Re(r"(?i)^!tags show [0-9]+$"), 100, Kind::ALL, None, h!(tags_show)),
+        t("tags show", Call::Re(r"(?i)^!tags show [A-Za-z0-9_-]+$"), 100, Kind::ALL, None, h!(tags_show)),
         t("thumbnailer", Call::Re(r"(?i)^!thumb .*"), 100, Kind::ALL, None, h!(thumbnailer)),
         t("parser", Call::Dyn(super::parser::pattern), 0, Kind::ALL, None, h!(super::parser::run)),
     ]
@@ -91,34 +91,32 @@ async fn self_info(_rt: Arc<Runtime>, e: Message) -> Result<()> {
 
 // ── delete.mjs ──────────────────────────────────────────────────────────────
 
+/// An item id from a command argument: a numeric id or a slug (album items resolve to their item).
+/// Ids 0 and 1 are never touched.
+async fn resolve_item(st: &crate::state::AppState, arg: &str) -> Option<i32> {
+    crate::f0cklib::resolve_numeric_item_id(st, arg).await.and_then(|id| i32::try_from(id).ok()).filter(|id| *id > 1)
+}
+
+/// `!del` — admins only (level 100, like the website, where only admins and moderators delete
+/// items). The old uploader exception (same nick, channel and network within 10 minutes) is gone:
+/// IRC nicks aren't authenticated, so anyone could take the nick and delete the upload.
 async fn delete(rt: Arc<Runtime>, e: Message) -> Result<()> {
     let st = &rt.st;
     let cfg = st.cfg();
-    let level = get_level(&cfg, &e.user).0;
+    if get_level(&cfg, &e.user).0 < 100 {
+        // the trigger level already keeps others out; this guards against a lowered level
+        return Ok(());
+    }
     let mut deleted = vec![];
     for arg in &e.args {
-        let Ok(id) = arg.parse::<i32>() else { continue };
-        if id <= 1 {
-            continue;
-        }
-        let Some(item) = sql!("SELECT dest, mime, username, userchannel, usernetwork, stamp FROM items WHERE id = ", id, " AND active = true LIMIT 1")
-            .fetch_optional(&st.db)
-            .await?
-        else {
-            e.reply(&format!("f0ck {id}: f0ck not found")).await;
+        let Some(id) = resolve_item(st, arg).await else {
+            e.reply(&format!("f0ck {arg}: f0ck not found")).await;
             continue;
         };
-        let me = if e.user.nick.is_empty() { e.user.username.clone().unwrap_or_default() } else { e.user.nick.clone() };
-        let owner = item.str("username") == Some(me.as_str()) && item.str("userchannel") == Some(e.channel.as_str()) && item.str("usernetwork") == Some(e.network.as_str());
-        if !owner && level < 100 {
-            e.reply(&format!("f0ck {id}: insufficient permissions")).await;
+        let Some(item) = sql!("SELECT dest, mime FROM items WHERE id = ", id, " AND active = true LIMIT 1").fetch_optional(&st.db).await? else {
+            e.reply(&format!("f0ck {arg}: f0ck not found")).await;
             continue;
-        }
-        // fix: the old code never selected `stamp`, so the 10-minute limit never applied
-        if crate::util::now_secs() >= item.i64("stamp").unwrap_or(0) + 600 && level < 100 {
-            e.reply(&format!("f0ck {id}: too late lol")).await;
-            continue;
-        }
+        };
         sql!("UPDATE items SET active = false, is_deleted = true WHERE id = ", id).execute(&st.db).await?;
         pipeline::move_to_deleted(st, &item.string("dest"), id as i64).await?;
         let thumb = format!("{id}.webp");
@@ -126,7 +124,7 @@ async fn delete(rt: Arc<Runtime>, e: Message) -> Result<()> {
         if item.string("mime").starts_with("audio") {
             pipeline::move_file(&cfg.paths.ca.join(&thumb), &cfg.paths.deleted.join("ca").join(&thumb)).await;
         }
-        deleted.push(id.to_string());
+        deleted.push(arg.clone());
     }
     e.reply(&format!("deleted {}/{} f0cks ({})", deleted.len(), e.args.len(), deleted.join(","))).await;
     Ok(())
@@ -137,12 +135,12 @@ async fn recover(rt: Arc<Runtime>, e: Message) -> Result<()> {
     let cfg = st.cfg();
     let mut recovered = vec![];
     for arg in &e.args {
-        let Ok(id) = arg.parse::<i32>() else { continue };
-        if id <= 1 {
+        let Some(id) = resolve_item(st, arg).await else {
+            e.reply(&format!("f0ck {arg}: f0ck not found")).await;
             continue;
-        }
+        };
         let Some(item) = sql!("SELECT dest, mime FROM items WHERE id = ", id, " AND active = false LIMIT 1").fetch_optional(&st.db).await? else {
-            e.reply(&format!("f0ck {id}: f0ck not found")).await;
+            e.reply(&format!("f0ck {arg}: f0ck not found")).await;
             continue;
         };
         let dest = item.string("dest");
@@ -157,7 +155,7 @@ async fn recover(rt: Arc<Runtime>, e: Message) -> Result<()> {
         }
         // fix: also clear is_deleted (the old code left recovered items flagged as deleted)
         sql!("UPDATE items SET active = true, is_deleted = false WHERE id = ", id).execute(&st.db).await?;
-        recovered.push(id.to_string());
+        recovered.push(arg.clone());
     }
     e.reply(&format!("recovered {}/{} f0cks ({})", recovered.len(), e.args.len(), recovered.join(","))).await;
     Ok(())
@@ -165,11 +163,18 @@ async fn recover(rt: Arc<Runtime>, e: Message) -> Result<()> {
 
 // ── f0ckgag.mjs ─────────────────────────────────────────────────────────────
 
+/// Links to an item on this site. Group 3 is the id, the 11-character slug, or `b/<file>`; it must
+/// be followed by the end of the path, so `/notifications` isn't read as a slug.
 fn f0ckgag_pattern(cfg: &Config) -> String {
     let host = cfg.str("main.url.regex").filter(|s| !s.is_empty()).map(str::to_string).unwrap_or_else(|| regex::escape(cfg.domain()));
     format!(
-        r"(?i)(https?://{host})(/(?:video|image|audio|tag/[^/\s]+|user/[^/\s]+(?:/favs)?|h/[^/\s]+))?/([0-9]+|(?:b/)[A-Za-z0-9_]{{8}}\.(?:jpg|webm|gif|mp4|png|mov|mp3|ogg|flac))"
+        r"(?i)(https?://{host})(/(?:video|image|audio|tag/[^/\s]+|user/[^/\s]+(?:/favs)?|h/[^/\s]+))?/([0-9]+|[A-Za-z0-9_-]{{11}}|(?:b/)[A-Za-z0-9_]{{8}}\.(?:jpg|webm|gif|mp4|png|mov|mp3|ogg|flac))(?:[^A-Za-z0-9_-]|$)"
     )
+}
+
+/// The item part (id, slug or `b/<file>`) of the first link to this site in a message.
+fn f0ckgag_target(re: &regex::Regex, msg: &str) -> Option<String> {
+    re.captures(msg).and_then(|c| c.get(3)).map(|m| m.as_str().rsplit('/').next().unwrap_or("").to_string())
 }
 
 /// `new Date(stamp * 1e3).toString().slice(0, 24)`
@@ -181,8 +186,7 @@ fn js_date(stamp: i64) -> String {
 async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
     let cfg = rt.st.cfg();
     let Some(re) = rt.regex(&f0ckgag_pattern(&cfg)) else { return Ok(()) };
-    let Some(m) = re.find(&e.message) else { return Ok(()) };
-    let dat = m.as_str().rsplit('/').next().unwrap_or("").to_string();
+    let Some(dat) = f0ckgag_target(&re, &e.message) else { return Ok(()) };
     let nsfl = cfg.nsfl_tag_id() as i32;
     let mut q = sql!(
         "SELECT i.id, i.mime, i.size, i.username, i.stamp,
@@ -192,7 +196,10 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
     if dat.contains('.') {
         q.push("WHERE i.dest = ").bind(dat);
     } else {
-        let Ok(id) = dat.parse::<i32>() else { return Ok(()) };
+        let Some(id) = crate::f0cklib::resolve_numeric_item_id(&rt.st, &dat).await.and_then(|i| i32::try_from(i).ok()) else {
+            e.reply("no f0cks given! lol D:").await;
+            return Ok(());
+        };
         q.push("WHERE i.id = ").bind(id);
     }
     let Some(row) = q.push(" LIMIT 1").fetch_optional(&rt.st.db).await? else {
@@ -201,7 +208,7 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
     };
     let rating = row.str("rating").filter(|s| !s.is_empty()).unwrap_or("untagged").to_string();
     let id = row.i64("id").unwrap_or(0);
-    let link = format!("{}/{id}", url_full(&cfg)).replace("http://", "https://");
+    let link = super::item_url(&rt.st, id).await.replace("http://", "https://");
     let size = format!("~{}", crate::util::format_size(row.val("size")));
     let date = js_date(row.i64("stamp").unwrap_or(0));
     let (user, mime) = (row.string("username"), row.string("mime"));
@@ -274,7 +281,7 @@ async fn f0ck(rt: Arc<Runtime>, e: Message) -> Result<()> {
             .await;
         }
         Some("limit") => {
-            let max = cfg.f64("main.maxfilesize").unwrap_or(0.0);
+            let max = super::parser::max_file_size(&cfg);
             let mult = cfg.f64("main.adminmultiplier").unwrap_or(1.0);
             e.reply(&format!("up to {} ({} for admins)", fs(max), fs(max * mult))).await;
         }
@@ -337,9 +344,22 @@ pub fn help_text(rt: &Runtime, kind: Kind, level: i64, trigger_word: &str) -> St
         .filter(|t| t.active && t.clients.contains(&kind) && t.level <= level)
         .filter_map(|t| t.help.map(str::to_string))
         .collect();
-    cmds.push(if kind == Kind::Matrix { format!("{trigger_word} -sfw/nsfw -t tag1,tag2,tag3") } else { format!("{trigger_word} <url> or attachment") });
+    let rules = |bare_tags| super::parser::Rules::from_site(&rt.st.cfg(), rt.st.settings.min_tags(), bare_tags);
+    cmds.push(match kind {
+        Kind::Matrix | Kind::Tg => rules(true).usage(trigger_word, false),
+        Kind::Irc => rules(false).usage(trigger_word, true),
+        Kind::Slack => format!("{trigger_word} <url>"),
+    });
     cmds.sort();
     cmds.dedup();
+    format_help(kind, &cmds)
+}
+
+fn format_help(kind: Kind, cmds: &[String]) -> String {
+    if kind == Kind::Irc {
+        // one line: the IRC client refuses messages with 5+ lines, and markdown doesn't render there
+        return format!("[b]Available commands:[/b] {}", cmds.join(" | "));
+    }
     format!("**Available Commands:**\n```\n{}\n```", cmds.join("\n"))
 }
 
@@ -480,16 +500,17 @@ async fn telegram_link(rt: Arc<Runtime>, e: Message) -> Result<()> {
 // ── tags.mjs ────────────────────────────────────────────────────────────────
 
 async fn tags_show(rt: Arc<Runtime>, e: Message) -> Result<()> {
-    let Some(id) = e.args.get(1).and_then(|a| a.parse::<i64>().ok()).filter(|i| *i > 0) else {
+    let arg = e.args.get(1).map(String::as_str).unwrap_or("");
+    let Some(id) = crate::f0cklib::resolve_numeric_item_id(&rt.st, arg).await.filter(|i| *i > 0) else {
         e.reply("lol no").await;
         return Ok(());
     };
-    let full = url_full(&rt.st.cfg());
+    let link = super::item_url(&rt.st, id).await;
     let tags: Vec<String> = pipeline::get_tags(&rt.st, id).await?.iter().map(|t| t.string("tag")).collect();
     if tags.is_empty() {
-        e.reply(&format!("item {full}/{id} has no tags!")).await;
+        e.reply(&format!("item {link} has no tags!")).await;
     } else {
-        e.reply(&format!("item {full}/{id} is tagged as: {}", tags.join(", "))).await;
+        e.reply(&format!("item {link} is tagged as: {}", tags.join(", "))).await;
     }
     Ok(())
 }
@@ -500,16 +521,16 @@ async fn thumbnailer(rt: Arc<Runtime>, e: Message) -> Result<()> {
     let st = &rt.st;
     let mut done = vec![];
     for arg in &e.args {
-        let Ok(id) = arg.parse::<i32>() else { continue };
-        if id <= 1 {
+        let Some(id) = resolve_item(st, arg).await else {
+            e.reply(&format!("f0ck {arg}: f0ck not found")).await;
             continue;
-        }
+        };
         let Some(item) = sql!("SELECT id, dest, mime, src FROM items WHERE id = ", id, " AND active = true LIMIT 1").fetch_optional(&st.db).await? else {
-            e.reply(&format!("f0ck {id}: f0ck not found")).await;
+            e.reply(&format!("f0ck {arg}: f0ck not found")).await;
             continue;
         };
         pipeline::gen_thumbnail(st, &item.string("dest"), &item.string("mime"), id as i64, &item.string("src"), false).await?;
-        done.push(id.to_string());
+        done.push(arg.clone());
     }
     e.reply(&format!("thumbnails: {}/{} ({})", done.len(), e.args.len(), done.join(","))).await;
     Ok(())
@@ -531,10 +552,32 @@ mod tests {
         assert!(!re("delete").is_match("!rm"));
         assert!(re("matrix_link").is_match("ab12cd"));
         assert!(re("matrix_link").is_match("!link AB12CD"));
+        // current link tokens: 64 upper-case hex characters, pasted on their own in the DM
+        let token = crate::util::generate_token().to_uppercase();
+        assert!(re("matrix_link").is_match(&token));
+        assert!(!re("matrix_link").is_match(&format!("{token}0")));
+        assert!(!re("matrix_link").is_match("just some chat message"));
         assert!(re("tags show").is_match("!tags show 12"));
+        assert!(re("tags show").is_match("!tags show AbC_dEf-123"));
+        assert_eq!(all().into_iter().find(|t| t.name == "delete").unwrap().level, 100);
         let g = re("f0ckgag");
-        assert_eq!(g.find("look https://f0ck.me/video/1234 lol").unwrap().as_str().rsplit('/').next(), Some("1234"));
+        let t = |m: &str| f0ckgag_target(&g, m);
+        assert_eq!(t("look https://f0ck.me/video/1234 lol").as_deref(), Some("1234"));
+        assert_eq!(t("https://f0ck.me/AbC_dEf-123").as_deref(), Some("AbC_dEf-123"));
+        assert_eq!(t("see https://f0ck.me/tag/cats/AbC_dEf-123?x=1").as_deref(), Some("AbC_dEf-123"));
+        assert_eq!(t("https://f0ck.me/b/abcdefgh.mp4").as_deref(), Some("abcdefgh.mp4"));
+        // longer path words aren't slugs
+        assert_eq!(t("https://f0ck.me/notifications"), None);
         assert!(g.is_match("https://f0ck.me/user/x/favs/77"));
         assert!(!g.is_match("https://example.com/1234"));
+    }
+
+    #[test]
+    fn help_fits_irc() {
+        let cmds: Vec<String> = ["!del <id> ...", "!help", "!w <url> or attachment"].iter().map(|s| s.to_string()).collect();
+        let text = format_help(Kind::Irc, &cmds);
+        let lines = crate::bot::irc::build_lines(crate::bot::Mode::Normal, "#c", &text).expect("IRC refuses the help text");
+        assert_eq!(lines, vec!["PRIVMSG #c :\x02Available commands:\x02 !del <id> ... | !help | !w <url> or attachment"]);
+        assert!(format_help(Kind::Matrix, &cmds).contains("```\n!del <id> ...\n!help\n"));
     }
 }
