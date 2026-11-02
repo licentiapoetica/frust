@@ -332,6 +332,13 @@ html[theme="amoled"] table.table a {
   text-decoration: underline;
 }
 
+/* Links are white like the text in amoled, so underline them on the text pages
+   (about, rules, terms, privacy) to keep them recognisable. */
+html[theme="amoled"] .rules a,
+html[theme="amoled"] .pv a {
+  text-decoration: underline;
+}
+
 :root[theme='light'],
 :root[theme='paper'],
 html[theme='light'],
