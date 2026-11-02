@@ -11,6 +11,11 @@
 //! `difficulty` (4 hex digits = 16 bits per puzzle), `skip_onion` (false), and for uploads and
 //! comments `uploads` / `comments` ("off", "anon", "all") with `pass_minutes` (10; 0 = every time)
 //! and `pass_minutes_anon` (anonymous accounts; defaults to `pass_minutes`).
+//!
+//! Login and register: an IP with `security::CAPTCHA_AFTER_FAILURES` failed logins or registrations
+//! gets a harder challenge (`hard_challenge_count`, default 4x `challenge_count`; `hard_difficulty`,
+//! default `difficulty`). Login then needs a captcha, register (which always needs one) a hard one.
+//! Tokens remember whether their challenge was hard, so easy ones solved earlier don't count.
 
 use crate::config::Config;
 use crate::http::{Req, Res, Router, json_resp};
@@ -33,11 +38,18 @@ struct Pending {
     expires: i64,
     count: usize,
     difficulty: usize,
+    hard: bool,
+}
+
+struct Redeemed {
+    expires: i64,
+    /// Solved from a hard challenge (see the module docs).
+    hard: bool,
 }
 
 static CHALLENGES: Lazy<DashMap<String, Pending>> = Lazy::new(DashMap::new);
 /// `"<id>:<sha256(vertoken)>"` -> expiry (the plain token is only ever sent to the client).
-static TOKENS: Lazy<DashMap<String, i64>> = Lazy::new(DashMap::new);
+static TOKENS: Lazy<DashMap<String, Redeemed>> = Lazy::new(DashMap::new);
 static IP_HITS: Lazy<DashMap<String, (i64, u32)>> = Lazy::new(DashMap::new);
 static LAST_SWEEP: AtomicI64 = AtomicI64::new(0);
 
@@ -63,6 +75,16 @@ pub enum Captcha {
 
 /// Check a `cap-token` from a form. Each token works once.
 pub fn verify(token: Option<&str>) -> Captcha {
+    check(token, false)
+}
+
+/// Like [`verify`], but only tokens from a hard challenge pass (login / register after repeated
+/// failures). An easy token is used up and counts as failed.
+pub fn verify_hard(token: Option<&str>) -> Captcha {
+    check(token, true)
+}
+
+fn check(token: Option<&str>, need_hard: bool) -> Captcha {
     let Some(token) = token.map(str::trim).filter(|t| !t.is_empty()) else { return Captcha::Missing };
     let mut parts = token.split(':');
     let (Some(id), Some(vertoken), None) = (parts.next(), parts.next(), parts.next()) else { return Captcha::Failed };
@@ -71,7 +93,7 @@ pub fn verify(token: Option<&str>) -> Captcha {
     }
     let key = format!("{id}:{}", crate::util::sha256(vertoken));
     match TOKENS.remove(&key) {
-        Some((_, expires)) if expires > crate::util::now_ms() => Captcha::Ok,
+        Some((_, t)) if t.expires > crate::util::now_ms() && (t.hard || !need_hard) => Captcha::Ok,
         _ => Captcha::Failed,
     }
 }
@@ -226,10 +248,17 @@ fn reply(v: Value) -> Res {
     Ok(r)
 }
 
-fn settings(cfg: &Config) -> (usize, usize) {
-    let count = cfg.int_or("cap.challenge_count", 50).clamp(1, 500) as usize;
-    let difficulty = cfg.int_or("cap.difficulty", 4).clamp(1, 8) as usize;
-    (count, difficulty)
+/// (puzzle count, difficulty) of a challenge; `hard` for IPs with repeated login/register failures.
+fn settings(cfg: &Config, hard: bool) -> (usize, usize) {
+    let count = cfg.int_or("cap.challenge_count", 50).clamp(1, 500);
+    let difficulty = cfg.int_or("cap.difficulty", 4).clamp(1, 8);
+    if !hard {
+        return (count as usize, difficulty as usize);
+    }
+    // Never easier than the normal challenge
+    let hard_count = cfg.int_or("cap.hard_challenge_count", count * 4).clamp(count, 2000);
+    let hard_difficulty = cfg.int_or("cap.hard_difficulty", difficulty).clamp(difficulty, 8);
+    (hard_count as usize, hard_difficulty as usize)
 }
 
 /// Drop expired entries, at most once a minute.
@@ -239,7 +268,7 @@ fn sweep(now: i64) {
         return;
     }
     CHALLENGES.retain(|_, p| p.expires > now);
-    TOKENS.retain(|_, exp| *exp > now);
+    TOKENS.retain(|_, t| t.expires > now);
     PASSES.retain(|_, exp| *exp > now);
     IP_HITS.retain(|_, (start, _)| now - *start < 60_000);
 }
@@ -267,10 +296,11 @@ async fn challenge(st: AppState, req: Req) -> Res {
         tracing::warn!("[CAP] Too many open challenges, refusing new ones");
         return reply(json!({ "error": "Server busy, try again later" }));
     }
-    let (count, difficulty) = settings(&cfg);
+    let hard = crate::security::needs_hard_captcha(&st, &req.real_ip()).await;
+    let (count, difficulty) = settings(&cfg, hard);
     let token = crate::util::random_hex(25);
     let expires = now + CHALLENGE_TTL_MS;
-    CHALLENGES.insert(token.clone(), Pending { expires, count, difficulty });
+    CHALLENGES.insert(token.clone(), Pending { expires, count, difficulty, hard });
     reply(json!({ "challenge": { "c": count, "s": SALT_LEN, "d": difficulty }, "token": token, "expires": expires }))
 }
 
@@ -296,7 +326,7 @@ async fn redeem(_st: AppState, mut req: Req) -> Res {
     let id = crate::util::random_hex(8);
     let vertoken = crate::util::random_hex(15);
     let expires = now + TOKEN_TTL_MS;
-    TOKENS.insert(format!("{id}:{}", crate::util::sha256(&vertoken)), expires);
+    TOKENS.insert(format!("{id}:{}", crate::util::sha256(&vertoken)), Redeemed { expires, hard: pending.hard });
     reply(json!({ "success": true, "token": format!("{id}:{vertoken}"), "expires": expires }))
 }
 
@@ -354,10 +384,22 @@ mod tests {
     #[test]
     fn redeemed_token_works_once() {
         let key = format!("abcd:{}", crate::util::sha256("secret"));
-        TOKENS.insert(key, crate::util::now_ms() + 60_000);
+        TOKENS.insert(key, Redeemed { expires: crate::util::now_ms() + 60_000, hard: false });
         assert!(matches!(verify(Some("abcd:secret")), Captcha::Ok));
         assert!(matches!(verify(Some("abcd:secret")), Captcha::Failed));
         assert!(matches!(verify(Some("")), Captcha::Missing));
         assert!(matches!(verify(Some("a:b:c")), Captcha::Failed));
+    }
+
+    #[test]
+    fn hard_check_needs_hard_token() {
+        let easy = format!("e1:{}", crate::util::sha256("easy"));
+        TOKENS.insert(easy, Redeemed { expires: crate::util::now_ms() + 60_000, hard: false });
+        assert!(matches!(verify_hard(Some("e1:easy")), Captcha::Failed));
+        // Used up by the failed check
+        assert!(matches!(verify(Some("e1:easy")), Captcha::Failed));
+        let hard = format!("h1:{}", crate::util::sha256("hard"));
+        TOKENS.insert(hard, Redeemed { expires: crate::util::now_ms() + 60_000, hard: true });
+        assert!(matches!(verify_hard(Some("h1:hard")), Captcha::Ok));
     }
 }

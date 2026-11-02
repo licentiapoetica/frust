@@ -7,6 +7,10 @@
   <title>login</title>
   <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
   <link href="/s/css/f0ckm.css?v={{ mtime("/public/s/css/f0ckm.css") }}" rel="stylesheet" />
+  {% if captcha %}
+  <script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
+  <script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
+  {% endif %}
 </head>
 <body class="login-page">
   <form class="login-form" method="post" action="/login" novalidate>
@@ -17,6 +21,10 @@
     <input type="text" name="username" placeholder="{{ t("auth.username_placeholder") }}" autocomplete="off" required />
     <input type="password" name="password" placeholder="{{ t("auth.password_placeholder") }}" autocomplete="off" required />
     <p><input type="checkbox" id="kmsi" name="kmsi" /> <label for="kmsi">{{ t("auth.stay_signed_in_label") }}</label></p>
+    {% if captcha %}
+    {# Repeated failed logins from this IP #}
+    <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+    {% endif %}
     <button type="submit">{{ t("auth.login_title") }}</button>
     {% if smtp_enabled %}
     <div class="login-forgot">

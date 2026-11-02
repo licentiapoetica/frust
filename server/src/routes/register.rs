@@ -56,35 +56,53 @@ async fn login(st: AppState, mut req: Req) -> Res {
     let username = req.post_str("username").await;
     let password = req.post_str("password").await;
     let kmsi = req.post().await?.get("kmsi").is_some();
+    let captcha_token = req.post_str("cap-token").await;
     let ajax = is_ajax(&req);
+    let captcha_on = crate::cap::required(&cfg, &req);
 
-    if crate::security::is_rate_limited(&st, &ip, None, "login").await {
-        let msg = "Too many attempts.";
-        if ajax {
-            return Ok(json_msg(false, msg, 429));
+    // After repeated failures from this IP a (hard) captcha is needed, much later a lockout
+    let (captcha_needed, failures) = match crate::security::auth_gate(&st, &ip, "login", captcha_on).await {
+        crate::security::AuthGate::Locked => {
+            let msg = "Too many attempts.";
+            if ajax {
+                return Ok(json_msg(false, msg, 429));
+            }
+            return Ok(reply(429, "text/html", msg));
         }
-        return Ok(reply(429, "text/html", msg));
-    }
+        crate::security::AuthGate::Open { captcha, failures } => (captcha, failures),
+    };
+    // Whether the next try needs the captcha, counting the failure about to be recorded
+    let captcha_next = captcha_on && failures + 1 >= crate::security::CAPTCHA_AFTER_FAILURES;
 
-    let fail = |msg: &'static str| {
-        let st = st.clone();
-        let ip = ip.clone();
-        let username = username.clone();
-        let theme = req.theme.clone();
-        async move {
+    let respond = |msg: &str, captcha: bool| {
+        if ajax {
+            return json_raw(&json!({ "success": false, "msg": msg, "captcha": captcha }), 200);
+        }
+        html(crate::tpl::render(&st, None, "login", json!({ "error": msg, "theme": req.theme, "captcha": captcha })))
+    };
+
+    macro_rules! fail {
+        ($msg:expr) => {{
             crate::security::record_attempt(&st, &ip, username.as_deref(), "login", false).await;
             // Slows down brute force and evens out timing
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            if ajax {
-                return json_msg(false, msg, 200);
-            }
-            html(crate::tpl::render(&st, None, "login", json!({ "error": msg, "theme": theme })))
-        }
-    };
+            return Ok(respond($msg, captcha_next));
+        }};
+    }
 
     let (Some(username), Some(password)) = (username.clone().filter(|u| !u.is_empty()), password.filter(|p| !p.is_empty())) else {
-        return Ok(fail("Invalid username or password.").await);
+        fail!("Invalid username or password.");
     };
+
+    // Checked before the password, so guesses without a solved captcha learn nothing. A missing or
+    // wrong captcha isn't counted as a failed login (it would only push the lockout closer).
+    if captcha_needed {
+        match crate::cap::verify_hard(captcha_token.as_deref()) {
+            Captcha::Ok => {}
+            Captcha::Missing => return Ok(respond("Too many failed logins, please complete the captcha.", true)),
+            Captcha::Failed => return Ok(respond("Captcha expired or invalid. Please try again.", true)),
+        }
+    }
 
     let user = sql!(
         r#"select id, password, activated, banned, ban_reason, ban_expires, force_password_change from "user" where "login" = "#,
@@ -96,15 +114,15 @@ async fn login(st: AppState, mut req: Req) -> Res {
     let Some(user) = user else {
         let dummy = DUMMY_HASH.get_or_init(|| crate::util::hash_password(crate::util::random_hex(16))).await;
         let _ = crate::util::verify_password(password, dummy.clone()).await;
-        return Ok(fail("user doesn't exist or wrong password").await);
+        fail!("user doesn't exist or wrong password");
     };
     let stored_hash = user.string("password");
     if !crate::util::verify_password(password.clone(), stored_hash.clone()).await {
-        return Ok(fail("user doesn't exist or wrong password").await);
+        fail!("user doesn't exist or wrong password");
     }
     // activated is nullable (default true): only an explicit false blocks
     if user.val("activated") == &Value::Bool(false) {
-        return Ok(fail("This account is not activated. Please check your email.").await);
+        fail!("This account is not activated. Please check your email.");
     }
     let user_id = user.i64("id").unwrap_or(0);
 
@@ -339,10 +357,16 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
 
     let page = |key: &str, msg: &str| html(crate::tpl::render(&st, Some(&req), "register", json!({ "theme": theme, key: msg, "registration_open": registration_open })));
 
-    if crate::security::is_rate_limited(&st, &ip, None, "register").await {
-        let msg = "Too many attempts.";
-        return Ok(if ajax { json_msg(false, msg, 200) } else { page("error", msg) });
-    }
+    // Register always needs the captcha (when on); after repeated failures from this IP a hard one
+    let captcha_on = crate::cap::required(&cfg, &req);
+    let hard_captcha = match crate::security::auth_gate(&st, &ip, "register", captcha_on).await {
+        crate::security::AuthGate::Locked => {
+            let msg = "Too many attempts.";
+            return Ok(if ajax { json_msg(false, msg, 200) } else { page("error", msg) });
+        }
+        // Also hard after repeated failed logins, like the challenge the widget got (cap::challenge)
+        crate::security::AuthGate::Open { captcha, .. } => captcha_on && (captcha || crate::security::needs_hard_captcha(&st, &ip).await),
+    };
 
     macro_rules! render_error {
         ($msg:expr) => {{
@@ -369,8 +393,9 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
         render_error!("Passwords do not match.");
     }
 
-    if crate::cap::required(&cfg, &req) {
-        match crate::cap::verify(captcha.as_deref()) {
+    if captcha_on {
+        let checked = if hard_captcha { crate::cap::verify_hard(captcha.as_deref()) } else { crate::cap::verify(captcha.as_deref()) };
+        match checked {
             Captcha::Ok => {}
             Captcha::Missing => render_error!("Please complete the captcha."),
             Captcha::Failed => render_error!("Captcha expired or invalid. Please try again."),

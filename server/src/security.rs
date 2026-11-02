@@ -8,6 +8,12 @@ use serde_json::{Value, json};
 
 const RATE_LIMIT_WINDOW_MINUTES: i64 = 600;
 const MAX_ATTEMPTS: i64 = 5;
+/// Failed logins / registrations from one IP (within the rate-limit window) after which a captcha
+/// is required, and a harder one than usual (see `cap::challenge`).
+pub const CAPTCHA_AFTER_FAILURES: i64 = MAX_ATTEMPTS;
+/// Hard lockout for login / register while the captcha is on: past the captcha step the captcha
+/// slows guessing down, so the lockout comes later than the `MAX_ATTEMPTS` used without one.
+const LOCKOUT_WITH_CAPTCHA: i64 = 30;
 
 pub struct IpHashSecrets {
     pub current: String,
@@ -138,6 +144,41 @@ pub async fn is_rate_limited(st: &AppState, ip: &str, username: Option<&str>, ki
         }
     }
     false
+}
+
+/// Failed `kind` attempts from this IP within the rate-limit window.
+pub async fn failed_attempts(st: &AppState, ip: &str, kind: &str) -> i64 {
+    let ip_hash = hash_ip(&st.cfg(), ip);
+    count_attempts(st, "ip_hash", &ip_hash, kind).await
+}
+
+/// This IP failed login or registration often enough to get the harder captcha.
+pub async fn needs_hard_captcha(st: &AppState, ip: &str) -> bool {
+    for kind in ["login", "register"] {
+        if failed_attempts(st, ip, kind).await >= CAPTCHA_AFTER_FAILURES {
+            return true;
+        }
+    }
+    false
+}
+
+pub enum AuthGate {
+    /// Too many failures: refuse outright.
+    Locked,
+    /// Go ahead; `captcha`: a (hard) captcha must be solved first.
+    Open { captcha: bool, failures: i64 },
+}
+
+/// Rate limit for login / register (`kind`) from this IP. `captcha_on`: Cap is required for this
+/// request (`cap::required`). Without a captcha the old lockout after `MAX_ATTEMPTS` failures stays.
+pub async fn auth_gate(st: &AppState, ip: &str, kind: &str, captcha_on: bool) -> AuthGate {
+    let failures = failed_attempts(st, ip, kind).await;
+    let lockout = if captcha_on { LOCKOUT_WITH_CAPTCHA } else { MAX_ATTEMPTS };
+    if failures >= lockout {
+        tracing::warn!("[SECURITY] Rate limit hit for {kind}: ip_hash={}, attempts={failures}/{lockout}", hash_ip(&st.cfg(), ip));
+        return AuthGate::Locked;
+    }
+    AuthGate::Open { captcha: captcha_on && failures >= CAPTCHA_AFTER_FAILURES, failures }
 }
 
 pub async fn log_user_ip(st: &AppState, user_id: i64, ip: &str) {

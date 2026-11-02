@@ -31,6 +31,18 @@
     (root || document).querySelectorAll('cap-widget').forEach((w) => { try { w.reset(); } catch {} });
   };
 
+  // Captcha the server asked for after a failed submit (login after repeated failures): reset the
+  // widget inside `form`, or put it in from the form's <template class="cap-on-demand"> first.
+  window.f0ckCapShow = (form) => {
+    if (!form) return;
+    if (form.querySelector('cap-widget')) return window.f0ckCapReset(form);
+    const tpl = form.querySelector('template.cap-on-demand');
+    if (!tpl) return;
+    const widget = document.importNode(tpl.content.firstElementChild, true);
+    tpl.replaceWith(widget);
+    window.f0ckCapWatch(widget);
+  };
+
   // Current token of the widget inside `root` ('' when unsolved).
   window.f0ckCapToken = (root) => (root || document).querySelector('cap-widget input[name="cap-token"]')?.value || '';
 

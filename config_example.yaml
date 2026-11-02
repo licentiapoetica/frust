@@ -336,12 +336,17 @@ smtp:
   password: smtp_password
   from: admin@example.com
   mail_reset_password: false
-# Self-hosted proof-of-work captcha (Cap, https://trycap.dev) on registration and guest reports.
+# Self-hosted proof-of-work captcha (Cap, https://trycap.dev) on registration, reports and on
+# login after repeated failures.
 # No third-party service: the browser solves small SHA-256 puzzles, the server checks them.
 cap:
   enabled: false
   challenge_count: 50   # puzzles per captcha
   difficulty: 4         # hex digits per puzzle (each +1 = 16x more work)
+  # Login asks for a captcha after 5 failed logins from an IP (lockout only after 30), and that IP
+  # (also on register) gets a harder one. Left out: 4x challenge_count, same difficulty.
+  # hard_challenge_count: 200
+  # hard_difficulty: 4
   skip_onion: false     # true: no captcha for .onion visitors (e.g. Tor Browser "Safest" has no JS)
   # Also before uploading / commenting: off, anon (anonymous accounts only) or all.
   # Admins, mods and API-key uploads are never asked. One solved captcha covers that action

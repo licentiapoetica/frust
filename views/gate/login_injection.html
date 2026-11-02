@@ -1,5 +1,6 @@
 {#- Hidden login/register modal of the private society gate (index.mjs getGateLoginInjection).
-    Static apart from the captcha switch (`captcha`). -#}
+    Static apart from the captcha switch (`captcha`). The login captcha only appears after repeated
+    failed logins (the server answers `captcha: true`). -#}
 <link rel="stylesheet" href="/s/css/gate.css?v={{ mtime("/public/s/css/gate.css") }}">
 <div id="hot-corner"></div>
 
@@ -15,6 +16,7 @@
         <input type="text" name="username" placeholder="Username or email" autocomplete="off" required class="gate-input" />
         <input type="password" name="password" placeholder="Password" autocomplete="off" required class="gate-input" />
         <label class="gate-kmsi"><input type="checkbox" name="kmsi"> Stay signed in</label>
+        {% if captcha %}<template class="cap-on-demand"><cap-widget data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget></template>{% endif %}
         <button type="submit" id="gate-login-btn" class="gate-submit-btn">Sign in</button>
         <div class="gate-or-divider">
           <hr>

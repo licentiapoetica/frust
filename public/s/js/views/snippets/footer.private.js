@@ -71,6 +71,8 @@
             let errDiv = loginForm.querySelector('.flash-error');
             if (!errDiv) { errDiv = document.createElement('div'); errDiv.className = 'flash-error'; loginForm.insertBefore(errDiv, loginForm.firstChild); }
             errDiv.textContent = json.msg;
+            // Repeated failures: the server now wants a captcha (tokens are single-use, so a new one each try)
+            if (json.captcha) window.f0ckCapShow?.(loginForm);
           }
         } catch (err) { console.error('Login error:', err); }
       });

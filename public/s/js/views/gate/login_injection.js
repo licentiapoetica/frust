@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     e.preventDefault();
     gateSetError('gate-login-error', '');
     gateSetBtn('gate-login-btn', true);
+    var form = this;
     var fd = new FormData(this);
     var body = new URLSearchParams(fd).toString();
     fetch('/login', {
@@ -58,6 +59,8 @@ document.addEventListener('DOMContentLoaded', function() {
       if (d.success === false) {
         gateSetError('gate-login-error', d.msg || 'Login failed.');
         gateSetBtn('gate-login-btn', false);
+        // Repeated failures: the server now wants a captcha (a new one each try)
+        if (d.captcha && window.f0ckCapShow) window.f0ckCapShow(form);
       } else {
         window.location.reload();
       }
