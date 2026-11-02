@@ -14,8 +14,8 @@ const SETTINGS: [(&str, &str); 8] = [
     ("motd", "Hello World!"),
     ("manual_approval", "false"),
     ("min_tags", "0"),
-    // true: open registration with e-mail; false: registration by invite token
-    ("registration_open", "true"),
+    // false: registering needs an invite token (the default); true: anyone can register
+    ("registration_open", "false"),
     ("trusted_uploads", "0"),
     ("about_text", ""),
     ("rules_text", ""),

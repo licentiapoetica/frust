@@ -217,7 +217,7 @@ websrv:
   enable_archive: true
   archive_thumb: /s/img/archive.webp
   enable_item_title: true
-  open_registration: true
+  open_registration: false
   open_registration_web_toggle: false
   open_registration_require_mail_andor_token: false
   private_society: false
