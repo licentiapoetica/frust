@@ -21955,7 +21955,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             fetch('/api/v2/report', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-Token': window.getCsrfToken() || ''
+                },
                 body: payload
             })
             .then(res => res.json())
