@@ -815,11 +815,12 @@ impl Upload {
         let st = &self.rt.st;
         let cfg = &self.cfg;
         let username = self.username(e);
+        let slug = crate::util::generate_slug(11);
         let item_id: i64 = sql!(
             "INSERT INTO items (src, dest, mime, size, checksum, phash, username, userchannel, usernetwork, stamp, active, slug) VALUES (",
             it.src, ", ", it.dest.clone(), ", ", it.mime.clone(), ", ", it.size as i32, ", ", it.checksum, ", ", it.phash, ", ",
             trunc(&username, 40), ", ", trunc(&e.channel, 255), ", ", trunc(&e.network, 40), ", ", crate::util::now_secs() as i32, ", ",
-            !it.manual, ", ", crate::util::generate_slug(11), ") RETURNING id"
+            !it.manual, ", ", slug.clone(), ") RETURNING id"
         )
         .fetch_scalar::<i32, _>(&st.db)
         .await?
@@ -853,6 +854,14 @@ impl Upload {
         if it.manual {
             pipeline::notify_admins(st, item_id).await;
         } else {
+            // live feed: the main page adds the item without a reload (same event as web uploads)
+            crate::f0cklib::clear_count_cache(st);
+            let payload = json!({
+                "id": item_id, "dest": it.dest, "mime": it.mime, "username": trunc(&username, 40), "display_name": Value::Null,
+                "tag_id": self.rating.map(|r| r.tag_id(cfg)).unwrap_or(0), "is_oc": false, "slug": slug, "visibility": 0,
+                "is_album": false, "album_count": 0,
+            });
+            crate::social::helpers::notify(st, "new_item", &payload).await;
             st.bot.notify_matrix(cfg, &format!("{username} uploaded a new video {url}")).await;
         }
         Ok(url)
