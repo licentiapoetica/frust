@@ -163,8 +163,12 @@ if [ -n "$DOMAIN" ] && [ "$PROXY" = nginx ]; then
     echo "    the certificate is issued within a minute or two after that."
 elif [ -n "$DOMAIN" ]; then
     say "Done: f0ckm runs on http://127.0.0.1:1337; point your proxy for https://$DOMAIN at it"
-    echo "    Pass Host, X-Real-IP, X-Forwarded-For and X-Forwarded-Proto, the WebSocket upgrade for"
-    echo "    /api/notifications/ws, and allow big uploads. nginx example: config/nginx/own-proxy.example.conf"
+    echo "    nginx site for it (adjust the certificate paths; other proxies need the same headers,"
+    echo "    WebSocket upgrade and upload limits). Also in config/nginx/own-proxy.example.conf:"
+    echo
+    # The example without its header comment, for this domain
+    sed -e '1,/^$/d' -e "s/f0ck\.example/$DOMAIN/g" config/nginx/own-proxy.example.conf
+    echo
 else
     say "Done: http://localhost:1337"
 fi
