@@ -1518,6 +1518,28 @@
         });
     }
 
+    const hideInfoboxToggle = document.getElementById('hide_infobox_toggle');
+    if (hideInfoboxToggle) {
+        hideInfoboxToggle.checked = localStorage.getItem('hideInfobox') === 'true';
+        hideInfoboxToggle.addEventListener('change', () => {
+            const enabled = hideInfoboxToggle.checked;
+            localStorage.setItem('hideInfobox', enabled ? 'true' : 'false');
+            document.documentElement.classList.toggle('hide-infobox-active', enabled);
+            showStatus(enabled ? 'User info box hidden!' : 'User info box shown!', 'success');
+        });
+    }
+
+    const hideNavbarToggle = document.getElementById('hide_navbar_toggle');
+    if (hideNavbarToggle) {
+        hideNavbarToggle.checked = localStorage.getItem('hideNavbar') === 'true';
+        hideNavbarToggle.addEventListener('change', () => {
+            const enabled = hideNavbarToggle.checked;
+            localStorage.setItem('hideNavbar', enabled ? 'true' : 'false');
+            document.documentElement.classList.toggle('hide-navbar-active', enabled);
+            showStatus(enabled ? 'Navbar hidden! Settings stay reachable at /settings.' : 'Navbar shown!', 'success');
+        });
+    }
+
     // Granular Thumbnail Blur Toggles
     const blurNsfwToggle = document.getElementById('blur_nsfw_toggle');
     if (blurNsfwToggle) {

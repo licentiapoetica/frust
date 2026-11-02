@@ -9635,6 +9635,27 @@ div.posts>a[data-mode="null"]>p::before {
   display: none !important;
 }
 
+/* Settings → Hide User Info Box: drop the uploader / time / action-button box and the tag box
+   (legacy infobox, legacy meta row + actions + tags, modern meta + actions + sidebar tags). Favs stay. */
+html.hide-infobox-active .blahlol > .user-infobox-block,
+html.hide-infobox-active .blahlol > #tags,
+html.hide-infobox-active .sidebar-tags-container,
+html.hide-infobox-active .blahlol > .blahlol-meta-row,
+html.hide-infobox-active .blahlol > .item-legacy-actions,
+html.hide-infobox-active .blahlol > .blahlol-meta,
+html.hide-infobox-active .blahlol > .blahlol-meta + .gapRight {
+  display: none !important;
+}
+
+/* Legacy: with everything above hidden, .blahlol can end up empty, and its top border (plus the bottom
+   border it gets when comments are hidden) is left as a stray line. Drop it when nothing visible is
+   left in it and no comment box follows (comments hidden with "c", or comments disabled); with
+   comments showing, its top border is the comment box's top edge, so it stays. */
+html.hide-infobox-active body.layout-legacy.comments-hidden:not(.comments-sliding) .blahlol:not(:has(> #favs:not([hidden]), > .xd-score-wrapper, > .item-legacy-chan-badge, > #hall-badge-container > *)),
+html.hide-infobox-active body.layout-legacy:not(:has(#comments-container)) .blahlol:not(:has(> #favs:not([hidden]), > .xd-score-wrapper, > .item-legacy-chan-badge, > #hall-badge-container > *)) {
+  display: none !important;
+}
+
 div#footbar {
   width: 100%;
   text-align: center;
@@ -13452,6 +13473,45 @@ body > nav.navbar {
   background: var(--nav-bg) !important;
   visibility: visible !important;
   opacity: 1 !important;
+}
+
+/* ── Settings → Hide Navbar ──
+   The navbar turns invisible but keeps its space, so the page doesn't move. Everything in it is
+   hidden and unclickable too (some children force visibility: visible, so they're covered as well). */
+html.hide-navbar-active body > nav.navbar,
+html.hide-navbar-active body > nav.navbar * {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* The way back: a faint button in the top-left corner of the navbar's empty space (navbar.html,
+   f0ckm.js turns the setting off on click). Shown only while the navbar is hidden. */
+html.hide-navbar-active #navbar-unhide-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 10071;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--white);
+  font-size: 12px;
+  opacity: .2;
+  cursor: pointer;
+  transition: opacity .15s ease, border-color .15s ease;
+}
+
+html.hide-navbar-active #navbar-unhide-btn:hover,
+html.hide-navbar-active #navbar-unhide-btn:focus-visible {
+  opacity: 1;
+  border-color: var(--nav-border-color);
+  background: var(--nav-bg);
 }
 
 /* Brand: always visible, flush left */

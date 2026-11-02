@@ -421,6 +421,8 @@ window.cancelAnimFrame = (function () {
   if (localStorage.getItem('blurDetail') !== 'false') htmlEl.classList.add('blur-detail-active');
   if (localStorage.getItem('imageExpandOnClick') !== 'false') htmlEl.classList.add('image-expand-active');
   if (localStorage.getItem('hideItemRatings') === 'true') htmlEl.classList.add('hide-item-ratings-active');
+  if (localStorage.getItem('hideInfobox') === 'true') htmlEl.classList.add('hide-infobox-active');
+  if (localStorage.getItem('hideNavbar') === 'true') htmlEl.classList.add('hide-navbar-active');
 
   window.updateVisitIndicators = () => {
       try {
@@ -11487,6 +11489,16 @@ window.cancelAnimFrame = (function () {
   const _navEl = document.querySelector('.navbar');
   if (_navEl && window.ResizeObserver) {
     new ResizeObserver(window.syncNavbarHeight).observe(_navEl);
+  }
+  // Settings → Hide Navbar: the corner button (navbar.html) turns the setting back off
+  const _navUnhideBtn = document.getElementById('navbar-unhide-btn');
+  if (_navUnhideBtn) {
+    _navUnhideBtn.addEventListener('click', () => {
+      try { localStorage.setItem('hideNavbar', 'false'); } catch (e) {}
+      document.documentElement.classList.remove('hide-navbar-active');
+      const toggle = document.getElementById('hide_navbar_toggle');
+      if (toggle) toggle.checked = false;
+    });
   }
   const _existingNavbarLogo = document.getElementById('navbar-logo');
   if (_existingNavbarLogo && !_existingNavbarLogo.complete) {

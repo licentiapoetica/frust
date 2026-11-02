@@ -30,6 +30,7 @@
     "prev": "vorige",
     "next": "volgende",
     "random_nav": "willekeurig",
+    "show_navbar": "Navigatiebalk tonen",
     "abyss": "Afgrond"
   },
   "upload": {
@@ -190,6 +191,10 @@
     "embed_yt_hint": "YouTube-links vervangen door inline videospelers",
     "hide_koepfe": "Köpfe verbergen",
     "hide_koepfe_hint": "De Köpfe uitschakelen",
+    "hide_infobox": "Gebruikersinfobox verbergen",
+    "hide_infobox_hint": "Verberg uploader, tijd, actieknoppen en tags onder items voor een minimale weergave. Sneltoetsen blijven werken.",
+    "hide_navbar": "Navigatiebalk verbergen",
+    "hide_navbar_hint": "Maak de bovenste navigatiebalk onzichtbaar (de ruimte blijft behouden). Instellingen blijven bereikbaar via /settings.",
     "comment_display_mode": "Reactie-weergavemodus",
     "comment_display_tree": "Antwoordboom (Standaard)",
     "comment_display_linear": "Lineair",

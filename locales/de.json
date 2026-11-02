@@ -30,6 +30,7 @@
     "prev": "zurück",
     "next": "weiter",
     "random_nav": "Zufall",
+    "show_navbar": "Navigationsleiste einblenden",
     "abyss": "Abgrund"
   },
   "upload": {
@@ -192,6 +193,10 @@
     "embed_yt_hint": "YouTube-Videos durch eingebettete Videoplayer ersetzen",
     "hide_koepfe": "Köpfe ausblenden",
     "hide_koepfe_hint": "Die Köpfe deaktivieren",
+    "hide_infobox": "User-Infobox ausblenden",
+    "hide_infobox_hint": "Uploader, Zeit, Aktionsknöpfe und Tags unter Items ausblenden für eine minimale Ansicht. Tastenkürzel funktionieren weiterhin.",
+    "hide_navbar": "Navigationsleiste ausblenden",
+    "hide_navbar_hint": "Die obere Navigationsleiste unsichtbar machen (ihr Platz bleibt erhalten). Die Einstellungen bleiben unter /settings erreichbar.",
     "comment_display_mode": "Kommentar-Anzeigemodus",
     "comment_display_tree": "Antwort-Baum (Standard)",
     "comment_display_linear": "Linear",

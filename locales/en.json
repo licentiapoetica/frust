@@ -30,6 +30,7 @@
     "prev": "prev",
     "next": "next",
     "random_nav": "random",
+    "show_navbar": "Show navbar",
     "abyss": "Abyss"
   },
   "upload": {
@@ -192,6 +193,10 @@
     "embed_yt_hint": "Replace YouTube links with inline video players",
     "hide_koepfe": "Hide Köpfe",
     "hide_koepfe_hint": "Disable the Köpfe",
+    "hide_infobox": "Hide User Info Box",
+    "hide_infobox_hint": "Hide the uploader, time, action buttons and tags under items for a minimal view. Keyboard shortcuts keep working.",
+    "hide_navbar": "Hide Navbar",
+    "hide_navbar_hint": "Make the top navigation bar invisible (its space is kept). Settings stay reachable at /settings.",
     "comment_display_mode": "Comment Display Mode",
     "comment_display_tree": "Reply Tree (Default)",
     "comment_display_linear": "Linear",
