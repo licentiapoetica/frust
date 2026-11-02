@@ -553,12 +553,13 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     let r = Rating::of(&cfg, &effective_tags);
     let (is_nsfl, is_nsfw, is_sfw) = (r.nsfl, r.nsfw, r.sfw);
     let is_untagged = r.untagged();
-    if session.is_none() && !is_owner_or_admin && visibility == 0 {
+    // Rating permissions of guests/anons hold for unlisted posts too; only the owner/staff skip them.
+    if session.is_none() && !is_owner_or_admin {
         let blocked = (is_nsfw && !cfg.truthy("websrv.public_nsfw")) || is_nsfl || (is_untagged && !cfg.truthy("websrv.public_untagged"));
         if blocked {
             return Ok(not_visible(&cfg, itemid, None, is_nsfw, hall_slug.as_deref(), true));
         }
-    } else if is_anon_session(session) && !is_owner_or_admin && visibility == 0 {
+    } else if is_anon_session(session) && !is_owner_or_admin {
         let allowed = anon_allowed_modes(&cfg);
         let has = |m: &str| allowed.iter().any(|x| x == m);
         let blocked = (is_nsfw && !has("nsfw"))
@@ -820,6 +821,11 @@ async fn build_album(c: &AlbumCtx<'_>, actitem: &mut Row, requested_sub: &mut Op
         }
     };
     let vis = SubVisibility { cfg, session: c.o.session, eff_mode: c.eff_mode, safe_ratings: c.safe.clone(), excluded_tags: c.excluded_tags };
+    // Visitor permissions first: nothing left there is locked, `bypass` can't help.
+    album_rows.retain(|r| vis.permitted(&with_parent(tags_of(r))));
+    if album_rows.is_empty() {
+        return Ok(AlbumOutcome::NotVisible(not_visible(cfg, itemid, Some(slug_or_null(actitem)), true, c.hall_slug, true)));
+    }
     album_rows.retain(|r| c.o.bypass_filter || vis.visible(&with_parent(tags_of(r))));
 
     let not_visible_v = || not_visible(cfg, itemid, Some(slug_or_null(actitem)), true, c.hall_slug, false);

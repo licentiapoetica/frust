@@ -792,6 +792,23 @@ pub(crate) struct SubVisibility<'a> {
 }
 
 impl SubVisibility<'_> {
+    /// Rating allowed for this visitor at all (guest: `websrv.public_*`, anon: `allowed_modes`).
+    /// Unlike the filter, `bypass` never overrides this.
+    pub fn permitted(&self, tags: &[Value]) -> bool {
+        let cfg = self.cfg;
+        let r = Rating::of(cfg, tags);
+        let untagged = r.untagged();
+        if is_guest(self.session) {
+            return !(r.nsfl || (r.nsfw && !cfg.truthy("websrv.public_nsfw")) || (untagged && !cfg.truthy("websrv.public_untagged")));
+        }
+        if is_anon_session(self.session) {
+            let allowed = anon_allowed_modes(cfg);
+            let has = |x: &str| allowed.iter().any(|a| a == x);
+            return !((r.nsfl && !has("nsfl")) || (r.nsfw && !has("nsfw")) || (untagged && !has("untagged")) || (r.sfw && !has("sfw")));
+        }
+        true
+    }
+
     pub fn visible(&self, tags: &[Value]) -> bool {
         let cfg = self.cfg;
         let r = Rating::of(cfg, tags);
