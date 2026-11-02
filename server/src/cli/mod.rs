@@ -124,14 +124,22 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
 fn config_update(base: &Path, args: &Args) -> Result<i32> {
     use anyhow::Context;
     let from = args.value(&["--from"]).map(str::to_string).unwrap_or_else(|| base.join("config_example.yaml").to_string_lossy().into_owned());
+    let link = base.join("config.yaml");
+    let path = std::fs::canonicalize(&link).unwrap_or(link);
+    let text = std::fs::read_to_string(&path).with_context(|| format!("Cannot read {}", path.display()))?;
+    // Exit code 2: the server can't load this file either (install.sh stops on it)
+    if let Err(e) = crate::config_write::parse_yaml(&text) {
+        eprintln!("error: config.yaml is not valid YAML: {e}");
+        if text.contains('\t') {
+            eprintln!("       YAML indentation must use spaces; tabs are on line(s): {}", tab_lines(&text));
+        }
+        return Ok(2);
+    }
     let example = if from == "-" {
         std::io::read_to_string(std::io::stdin()).context("Cannot read the example config from stdin")?
     } else {
         std::fs::read_to_string(&from).with_context(|| format!("Cannot read {from}"))?
     };
-    let link = base.join("config.yaml");
-    let path = std::fs::canonicalize(&link).unwrap_or(link);
-    let text = std::fs::read_to_string(&path).with_context(|| format!("Cannot read {}", path.display()))?;
     let (out, added) = crate::config_write::add_missing(&text, &example)?;
     if added.is_empty() {
         println!("config.yaml has every setting of the example config");
@@ -145,6 +153,11 @@ fn config_update(base: &Path, args: &Args) -> Result<i32> {
         println!("  {k}");
     }
     Ok(0)
+}
+
+/// Line numbers (1-based) that contain a tab, e.g. "12, 117".
+fn tab_lines(text: &str) -> String {
+    text.lines().enumerate().filter(|(_, l)| l.contains('\t')).map(|(i, _)| (i + 1).to_string()).collect::<Vec<_>>().join(", ")
 }
 
 async fn state(base: &Path) -> Result<AppState> {

@@ -138,9 +138,15 @@ $SUDO scripts/docker-build.sh --build-arg GIT_HASH="$GIT_HASH" -t "$IMAGE:$TAG"
 # Add settings config.yaml is missing (new options since it was written), keeping its values and comments.
 # Runs as the file's owner, so the result keeps owner and permissions.
 say "Checking config.yaml for missing settings"
+# Exit code 2 means config.yaml doesn't parse: the server wouldn't start, so stop before replacing the running one.
+rc=0
 render_config | docker run --rm -i --network none --user "$(stat -c %u:%g config.yaml)" \
-    -v "$PWD/config.yaml:/opt/f0ckm/config.yaml:Z" "$IMAGE:$TAG" config-update --from - \
-    || warn "could not add the missing settings to config.yaml; compare it with config_example.yaml by hand"
+    -v "$PWD/config.yaml:/opt/f0ckm/config.yaml:Z" "$IMAGE:$TAG" config-update --from - || rc=$?
+case $rc in
+    0) ;;
+    2) die "config.yaml is not valid YAML (see above), f0ckm can't start with it. Fix it and run ./install.sh again" ;;
+    *) warn "could not add the missing settings to config.yaml; compare it with config_example.yaml by hand" ;;
+esac
 
 compose up -d
 
