@@ -36,7 +36,17 @@ if ! docker info >/dev/null 2>&1; then
         || die "can't talk to Docker. Is it running, and is your user allowed to use it?"
 fi
 docker() { if [ -n "$SUDO" ]; then sudo docker "$@"; else command docker "$@"; fi; }
-docker compose version >/dev/null 2>&1 || die "the Docker Compose plugin is missing (docker compose)"
+# Compose v2 is the `docker compose` plugin; older installs only have the standalone `docker-compose`
+if docker compose version >/dev/null 2>&1; then
+    COMPOSE="docker compose"
+    compose() { docker compose "$@"; }
+elif command -v docker-compose >/dev/null 2>&1 && \
+        { if [ -n "$SUDO" ]; then sudo docker-compose version; else docker-compose version; fi; } >/dev/null 2>&1; then
+    COMPOSE="docker-compose"
+    compose() { if [ -n "$SUDO" ]; then sudo docker-compose "$@"; else command docker-compose "$@"; fi; }
+else
+    die "Docker Compose is missing (neither 'docker compose' nor 'docker-compose' works)"
+fi
 
 [ -d config.yaml ] && die "config.yaml is a directory (Docker creates one when the file is missing). Remove it: rmdir config.yaml"
 
@@ -95,13 +105,14 @@ fi
 
 # ── Build and start ──────────────────────────────────────────────────────────────
 say "Building and starting (the first build compiles the server and takes a few minutes)"
-GIT_HASH="f0ckm-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" docker compose up -d --build
+export GIT_HASH="f0ckm-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+compose up -d --build
 
 say "Waiting for f0ckm to answer"
 for i in $(seq 1 90); do
     code=$(docker exec f0ckm curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:1337/ 2>/dev/null || true)
     [ -n "$code" ] && [ "$code" != 000 ] && break
-    [ "$i" = 90 ] && die "f0ckm did not come up; see: docker compose logs f0ckm"
+    [ "$i" = 90 ] && die "f0ckm did not come up; see: $COMPOSE logs f0ckm"
     sleep 2
 done
 
@@ -131,4 +142,4 @@ if [ -n "$DOMAIN" ]; then
 else
     say "Done: http://localhost:1337"
 fi
-echo "    Logs: docker compose logs -f f0ckm    Settings: config.yaml (picked up live)"
+echo "    Logs: $COMPOSE logs -f f0ckm    Settings: config.yaml (picked up live)"
