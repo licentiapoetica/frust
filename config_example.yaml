@@ -7,6 +7,9 @@ main:
   socks: socks5://127.0.0.1:9050
   # JavaScript runtime yt-dlp uses for YouTube (link uploads): deno (default, in the Docker image), node, bun or quickjs
   # ytdlp_js_runtime: deno
+  # Chat bots (IRC/Slack/Telegram/Matrix): YouTube links become embeds like on the web upload.
+  # Set true to download them with yt-dlp instead.
+  # bot_youtube_download: false
   mail: admin@example.com
   maxfilesize: 104857600
   adminmultiplier: 3.5

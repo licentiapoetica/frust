@@ -530,6 +530,25 @@ pub async fn run(rt: Arc<Runtime>, e: Message) -> Result<()> {
     Ok(())
 }
 
+/// `main.bot_youtube_download`: download YouTube links with yt-dlp instead of embedding them
+/// (default off).
+pub fn youtube_download(cfg: &Config) -> bool {
+    cfg.bool("main.bot_youtube_download").unwrap_or(false)
+}
+
+/// Row for `Upload::add_item`.
+struct NewItem {
+    src: String,
+    dest: String,
+    mime: String,
+    size: i64,
+    checksum: String,
+    phash: Option<String>,
+    /// Source link, for the thumbnail.
+    link: String,
+    manual: bool,
+}
+
 struct Upload {
     rt: Arc<Runtime>,
     cfg: Arc<Config>,
@@ -551,6 +570,9 @@ impl Upload {
                 e.reply(&format!("repost motherf0cker (link): {}", super::item_url(st, id).await)).await;
                 return Ok(true);
             }
+        }
+        if s == Site::YouTube && !youtube_download(cfg) {
+            return self.embed_youtube(e, link).await;
         }
         let uuid = pipeline::gen_uuid();
         let level = get_level(cfg, &e.user).0;
@@ -761,17 +783,43 @@ impl Upload {
         tokio::fs::copy(&source, dest_dir.join(&filename)).await?;
         let _ = tokio::fs::remove_file(&source).await;
 
-        let username = match &self.website_user {
+        let src = if e.media.is_some() || link.contains("api.telegram.org") || link.starts_with("mxc://") { String::new() } else { trunc(link, 255) };
+        let link = self.add_item(e, NewItem { src, dest: filename, mime, size: size as i64, checksum, phash, link: link.to_string(), manual }).await?;
+
+        let speed = crate::util::calc_speed(size as f64, secs as f64);
+        let speed = if speed.is_finite() { format!("{speed:.2} Mbit/s") } else { "yes".into() };
+        let out = format!(
+            "{}size: {} | speed: {speed} | link: {link}",
+            if manual { "[approval pending] " } else { "" },
+            crate::util::format_size_f(size as f64)
+        );
+        if let (Kind::Tg, Some(m)) = (e.kind, &progress.sent) {
+            e.delete_message(&m["chat"]["id"], m["message_id"].as_i64().unwrap_or(0)).await;
+        }
+        e.reply(&out).await;
+        Ok(true)
+    }
+
+    /// Name the item is stored under: the linked website account, else the chat name.
+    fn username(&self, e: &Message) -> String {
+        match &self.website_user {
             Some((_, u)) => u.clone(),
             None if e.kind == Kind::Tg => e.user.username.clone().filter(|u| !u.is_empty()).unwrap_or_else(|| e.user.nick.clone()),
             None => if e.user.nick.is_empty() { e.user.username.clone().unwrap_or_default() } else { e.user.nick.clone() },
-        };
-        let src = if e.media.is_some() || link.contains("api.telegram.org") || link.starts_with("mxc://") { String::new() } else { trunc(link, 255) };
+        }
+    }
+
+    /// Insert the item, then comment subscription, rating/tags, thumbnails and notifications.
+    /// Returns the item URL.
+    async fn add_item(&self, e: &Message, it: NewItem) -> Result<String> {
+        let st = &self.rt.st;
+        let cfg = &self.cfg;
+        let username = self.username(e);
         let item_id: i64 = sql!(
             "INSERT INTO items (src, dest, mime, size, checksum, phash, username, userchannel, usernetwork, stamp, active, slug) VALUES (",
-            src, ", ", filename.clone(), ", ", mime.clone(), ", ", size as i64 as i32, ", ", checksum, ", ", phash, ", ",
+            it.src, ", ", it.dest.clone(), ", ", it.mime.clone(), ", ", it.size as i32, ", ", it.checksum, ", ", it.phash, ", ",
             trunc(&username, 40), ", ", trunc(&e.channel, 255), ", ", trunc(&e.network, 40), ", ", crate::util::now_secs() as i32, ", ",
-            !manual, ", ", crate::util::generate_slug(11), ") RETURNING id"
+            !it.manual, ", ", crate::util::generate_slug(11), ") RETURNING id"
         )
         .fetch_scalar::<i32, _>(&st.db)
         .await?
@@ -792,34 +840,60 @@ impl Upload {
         }
 
         let thumb = async {
-            pipeline::gen_thumbnail(st, &filename, &mime, item_id, link, manual).await?;
-            pipeline::gen_blurred_thumbnail(st, item_id, manual).await
+            pipeline::gen_thumbnail(st, &it.dest, &it.mime, item_id, &it.link, it.manual).await?;
+            pipeline::gen_blurred_thumbnail(st, item_id, it.manual).await
         };
         if thumb.await.is_err() {
-            if let Err(err) = pipeline::placeholder_thumbnail(st, item_id, manual).await {
+            if let Err(err) = pipeline::placeholder_thumbnail(st, item_id, it.manual).await {
                 tracing::error!("[PARSER] placeholder thumbnail failed for {item_id}: {err:#}");
             }
         }
 
-        let link = super::item_url(st, item_id).await;
-        if manual {
+        let url = super::item_url(st, item_id).await;
+        if it.manual {
             pipeline::notify_admins(st, item_id).await;
         } else {
-            st.bot.notify_matrix(cfg, &format!("{username} uploaded a new video {link}")).await;
+            st.bot.notify_matrix(cfg, &format!("{username} uploaded a new video {url}")).await;
         }
+        Ok(url)
+    }
 
-        let speed = crate::util::calc_speed(size as f64, secs as f64);
-        let speed = if speed.is_finite() { format!("{speed:.2} Mbit/s") } else { "yes".into() };
-        let out = format!(
-            "{}size: {} | speed: {speed} | link: {link}",
-            if manual { "[approval pending] " } else { "" },
-            crate::util::format_size_f(size as f64)
-        );
-        if let (Kind::Tg, Some(m)) = (e.kind, &progress.sent) {
-            e.delete_message(&m["chat"]["id"], m["message_id"].as_i64().unwrap_or(0)).await;
+    /// YouTube link without `main.bot_youtube_download`: a `video/youtube` embed item, the same
+    /// as a YouTube link in the web upload (`websrv.enable_youtube_upload`). Nothing is downloaded.
+    async fn embed_youtube(&self, e: &Message, link: &str) -> Result<bool> {
+        let st = &self.rt.st;
+        let Some(video_id) = RE_YT.captures(link).map(|c| c[1].to_string()) else { return Ok(true) };
+        if !self.cfg.enabled("websrv.enable_youtube_upload") {
+            e.reply("youtube embeds are disabled").await;
+            return Ok(true);
         }
-        e.reply(&out).await;
-        Ok(true)
+        let yt_url = format!("https://www.youtube.com/watch?v={video_id}");
+        if let Some(id) = pipeline::check_repost_link(st, &yt_url).await.unwrap_or(None) {
+            e.reply(&format!("repost motherf0cker (link): {}", super::item_url(st, id).await)).await;
+            return Ok(true);
+        }
+        let manual = st.settings.manual_approval();
+        let item = NewItem {
+            src: yt_url.clone(),
+            dest: format!("yt:{video_id}"),
+            mime: "video/youtube".into(),
+            size: 0,
+            checksum: format!("yt_{video_id}_{}", crate::util::now_ms()),
+            phash: None,
+            link: yt_url,
+            manual,
+        };
+        match self.add_item(e, item).await {
+            Ok(url) => {
+                e.reply(&format!("{}youtube | link: {url}", if manual { "[approval pending] " } else { "" })).await;
+                Ok(true)
+            }
+            Err(err) => {
+                tracing::error!("[PARSER] YouTube embed {video_id}: {err:#}");
+                e.reply("something went wrong lol").await;
+                Ok(false)
+            }
+        }
     }
 
     /// Rating tag (sfw = 1, nsfw = 2, nsfl = `nsfl_tag_id`) + user tags, attributed to the linked
@@ -850,6 +924,13 @@ impl Upload {
 mod tests {
     use super::*;
     use crate::bot::tests::test_cfg;
+
+    #[test]
+    fn youtube_download_needs_opt_in() {
+        assert!(!youtube_download(&test_cfg(json!({}))));
+        assert!(!youtube_download(&test_cfg(json!({ "main": { "bot_youtube_download": false } }))));
+        assert!(youtube_download(&test_cfg(json!({ "main": { "bot_youtube_download": true } }))));
+    }
 
     #[test]
     fn finds_links() {
