@@ -8,6 +8,8 @@
 # Asks for anything it needs; for unattended installs set these instead:
 #   DOMAIN=f0ck.example  EMAIL=you@example.com  ADMIN_USER=admin  ADMIN_PASSWORD=...  ./install.sh
 # Leave DOMAIN empty for a local install on http://localhost:1337 without nginx/Let's Encrypt.
+# PROXY=nginx (default) runs the bundled nginx-proxy + Let's Encrypt; PROXY=own skips them, so your own
+# reverse proxy forwards the domain to 127.0.0.1:1337 (example: config/nginx/own-proxy.example.conf).
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -54,12 +56,24 @@ fi
 if [ -f .env ]; then
     say "Keeping existing .env"
     DOMAIN=${DOMAIN:-$(sed -n 's/^VIRTUAL_HOST=//p' .env)}
+    if grep -q '^COMPOSE_PROFILES=.*f0ckm-nginx' .env; then PROXY=nginx; else PROXY=own; fi
 else
     ask DOMAIN "Domain (empty for a local install on localhost:1337)"
     DOMAIN=${DOMAIN#http*://}; DOMAIN=${DOMAIN%%/*}
     if [ -n "$DOMAIN" ]; then
-        ask EMAIL "Email for Let's Encrypt"
-        [ -n "${EMAIL:-}" ] || die "an email is needed for the Let's Encrypt certificate"
+        if [ -z "${PROXY:-}" ] && [ -t 0 ]; then
+            echo "Reverse proxy for $DOMAIN:"
+            echo "  1) install the bundled nginx with automatic Let's Encrypt certificates"
+            echo "  2) bring my own (nginx, Caddy, Traefik, ...) and forward it to 127.0.0.1:1337"
+            read -r -p "Choose [1]: " ans
+            case ${ans:-1} in 1|n*|N*) PROXY=nginx ;; 2|o*|O*|b*|B*) PROXY=own ;; *) die "pick 1 or 2" ;; esac
+        fi
+        PROXY=${PROXY:-nginx}
+        case $PROXY in nginx|own) ;; *) die "PROXY must be 'nginx' or 'own', not '$PROXY'" ;; esac
+        if [ "$PROXY" = nginx ]; then
+            ask EMAIL "Email for Let's Encrypt"
+            [ -n "${EMAIL:-}" ] || die "an email is needed for the Let's Encrypt certificate"
+        fi
     fi
     DB_PASS=$(secret 32)
     # An existing database keeps the password it was created with (the old default was f0ckm)
@@ -74,10 +88,13 @@ else
         echo "POSTGRES_PASSWORD=$DB_PASS"
         echo "IP_HASH_SECRET=$(secret 64)"
         if [ -n "$DOMAIN" ]; then
-            echo "COMPOSE_PROFILES=f0ckm-nginx"
+            # VIRTUAL_HOST also tells a re-run which domain this install uses
             echo "VIRTUAL_HOST=$DOMAIN"
-            echo "LETSENCRYPT_HOST=$DOMAIN"
-            echo "LETSENCRYPT_EMAIL=$EMAIL"
+            if [ "$PROXY" = nginx ]; then
+                echo "COMPOSE_PROFILES=f0ckm-nginx"
+                echo "LETSENCRYPT_HOST=$DOMAIN"
+                echo "LETSENCRYPT_EMAIL=$EMAIL"
+            fi
         fi
     } > .env
     chmod 600 .env
@@ -140,10 +157,14 @@ fi
 
 # ── Done ─────────────────────────────────────────────────────────────────────────
 echo
-if [ -n "$DOMAIN" ]; then
+if [ -n "$DOMAIN" ] && [ "$PROXY" = nginx ]; then
     say "Done: https://$DOMAIN"
     echo "    The domain's DNS has to point at this server and ports 80/443 must be open;"
     echo "    the certificate is issued within a minute or two after that."
+elif [ -n "$DOMAIN" ]; then
+    say "Done: f0ckm runs on http://127.0.0.1:1337; point your proxy for https://$DOMAIN at it"
+    echo "    Pass Host, X-Real-IP, X-Forwarded-For and X-Forwarded-Proto, the WebSocket upgrade for"
+    echo "    /api/notifications/ws, and allow big uploads. nginx example: config/nginx/own-proxy.example.conf"
 else
     say "Done: http://localhost:1337"
 fi

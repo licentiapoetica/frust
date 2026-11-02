@@ -24,11 +24,15 @@ git clone <repo> f0ckm && cd f0ckm
 ./install.sh
 ```
 
-It asks for the domain, an email for Let's Encrypt and the admin account, then writes `.env` and
+It asks for the domain, whether to install the bundled nginx (with automatic Let's Encrypt) or use
+your own reverse proxy, an email for Let's Encrypt and the admin account, then writes `.env` and
 `config.yaml` with generated secrets, builds and starts everything and creates the admin. Leave the
-domain empty for a local install on http://localhost:1337. The domain's DNS has to point at the server
-and ports 80/443 must be open for the certificate. Unattended:
-`DOMAIN=f0ck.example EMAIL=you@example.com ADMIN_PASSWORD=... ./install.sh`.
+domain empty for a local install on http://localhost:1337. With the bundled nginx the domain's DNS has
+to point at the server and ports 80/443 must be open for the certificate. With your own proxy, forward
+the domain to `127.0.0.1:1337`; [config/nginx/own-proxy.example.conf](config/nginx/own-proxy.example.conf)
+shows what it needs (Host/IP headers, WebSocket upgrade, big uploads). Unattended:
+`DOMAIN=f0ck.example EMAIL=you@example.com ADMIN_PASSWORD=... ./install.sh` (add `PROXY=own` to skip
+the bundled nginx).
 
 The image is built with BuildKit when the `docker-buildx` plugin is installed, which caches the Rust
 build between rebuilds. Without it (or with the old `docker-compose` v1) it still builds, just from
@@ -38,7 +42,7 @@ Running it again is safe: existing `.env`/`config.yaml` are kept and no second a
 The database schema and default settings are created on the first start.
 
 Postgres (`127.0.0.1:5454`) and the app (`127.0.0.1:1337`) only listen on the server itself; public
-traffic goes through nginx-proxy.
+traffic goes through nginx-proxy or your own proxy.
 
 For regular building after making changes to the source code
 
@@ -149,6 +153,8 @@ All configuration lives in one file, `config.yaml` (start from `config_example.y
 ## NGINX
 
 uncomment in .env # COMPOSE_PROFILES=f0ckm-nginx to enable nginx proxy with automatic lets encrypt.
+Leave it out to run your own reverse proxy in front of `127.0.0.1:1337`; see
+[config/nginx/own-proxy.example.conf](config/nginx/own-proxy.example.conf).
 
 ## Tor Hidden Service (.onion)
 
