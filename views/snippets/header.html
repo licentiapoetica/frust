@@ -92,7 +92,7 @@
   <canvas class="hidden-xs" id="bg"></canvas>
   {% endif %}
   {% include "snippets/navbar.html" %}
-  {% if (session or (enable_anonymous_access and anon_permissions.filter)) %}
+  {% if (not private_society or session) %}
   {% include "snippets/excluded-tags-modal.html" %}
   {% endif %}
 

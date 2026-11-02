@@ -315,6 +315,11 @@
     {% endif %}
     <!-- Quick Settings -->
     <a href="/settings" title="{{ t("nav.settings") }}" class="desktop-only" data-page-modal><i class="fa-solid fa-gear"></i></a>
+    <!-- Filter: guests stay on SFW, the modal keeps random mode, mime types and grid size -->
+    <a href="#" id="nav-filter-btn" class="navbar-filter-btn" title="Filter">
+      <i class="fa-solid fa-filter"></i>
+      <span id="nav-filter-badge" class="filter-badge filter-badge-sfw">SFW</span>
+    </a>
     <button class="navbar-toggler" type="button" id="nav-toggler"
       data-on="click:toggleNavbar">
       <span></span><span></span><span></span>
