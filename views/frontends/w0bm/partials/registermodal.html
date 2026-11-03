@@ -1,0 +1,28 @@
+{#- partials/registermodal.blade.php. GET /register redirects to /#register (:target opens it;
+    w0bm.js also reads /#register:<token> and /#register:error|success:<message>). -#}
+<div class="modal fade" id="register" tabindex="-1" role="dialog" aria-labelledby="Register">
+    <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                <h4 class="modal-title" id="registerModalTitle">Register</h4>
+            </div>
+            <div class="w0bm-register-msg alert" hidden></div>
+            <div class="advantages">
+                <p>Registering on {{ domain }} has some advantages...</p>
+                <p>With an account you can comment, favor uploads, upload, tag, filter out unwanted tags and watch NSFW!</p>
+            </div>
+            <div class="reg_wrapper">
+                <div class="register">
+                    <div class="col-md-10">
+                        {% include "frontends/w0bm/partials/registerform.html" %}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <p>Back to <a href="#loginmodal" data-toggle="modal" data-target="#loginmodal">Login?</a></p>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,16 @@
+{#- Notification rows (also rendered for /ajax/notifications) as msglist.php list-group items -#}
+{% for n in notifications %}
+{% set ref = (n.item_slug or n.item_id) %}
+{% if n.type == "approve" %}{% set href = "/" ~ ref %}{% set icon = "fa-check" %}{% set subject = (t("notifications.upload_approved")).replace("{id}", ref|string, 1) %}
+{% elif n.type == "admin_pending" %}{% set href = "/mod/approve" %}{% set icon = "fa-clock-o" %}{% set subject = (t("notifications.upload_pending")).replace("{id}", ref|string, 1) %}
+{% elif n.type == "report" %}{% set href = "/mod/reports" %}{% set icon = "fa-warning" %}{% set subject = (t("notifications.new_report")).replace("{id}", (n.reference_id or "")|string, 1) %}
+{% elif n.type == "deny" %}{% set href = "/" ~ ref %}{% set icon = "fa-times" %}{% set subject = (t("notifications.upload_denied")).replace("{id}", ref|string, 1) ~ (" – " ~ n.reason if n.reason else "") %}
+{% elif n.type == "item_deleted" %}{% set href = "/" ~ ref %}{% set icon = "fa-trash" %}{% set subject = (t("notifications.upload_deleted")).replace("{id}", ref|string, 1) ~ (" – " ~ n.reason if n.reason else "") %}
+{% elif n.type == "upload_comment" %}{% set href = "/" ~ ref ~ "#c" ~ n.reference_id %}{% set icon = "fa-commenting" %}{% set subject = t("notifications.new_comments") ~ " " ~ (t("notifications.on_your_upload")).replace("{id}", ref|string, 1) %}
+{% elif n.type == "upload_success" %}{% set href = "/" ~ ref %}{% set icon = "fa-cloud-upload" %}{% set subject = t("notifications.upload_success") %}
+{% elif n.type == "upload_error" %}{% set href = ("/" ~ ref if n.item_id else "/upload") %}{% set icon = "fa-exclamation-circle" %}{% set subject = t("notifications.upload_error") ~ ((" – " ~ n.data.msg) if (n.data and n.data.msg) else "") %}
+{% elif n.type == "warning" %}{% set href = "/notifications" %}{% set icon = "fa-exclamation-triangle" %}{% set subject = "Account Warning – " ~ (n.reason or "") %}
+{% else %}{% set href = "/" ~ ref ~ "#c" ~ (n.comment_id or n.reference_id) %}{% set icon = ("fa-reply" if n.type == "comment_reply" else ("fa-at" if n.type == "mention" else "fa-bell")) %}{% set subject = (n.from_user or "") ~ " " ~ ((t("notifications.replied") if n.type == "comment_reply" else (t("notifications.subscribed") if n.type == "subscription" else t("notifications.mentioned")))).replace("{id}", ref|string, 1) %}
+{% endif %}
+<a href="{{ href }}" data-id="{{ n.id }}" class="list-group-item{% if not n.is_read %} list-group-item-info{% endif %}"><i class="fa {{ icon }}"></i> {{ subject }} <small><time class="timeago" datetime="{{ n.created_at|iso_date }}" title="{{ n.created_at|iso_date }}">{{ n.created_at|time_ago }}</time></small></a>
+{% endfor %}

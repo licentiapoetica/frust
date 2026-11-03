@@ -1,0 +1,4 @@
+{#- partials/flash.blade.php (messages are added by w0bm.js) -#}
+<div class="flashcontainer">
+    <div class="flash-inner">{% if (error is defined and error) %}<div class="alert alert-danger alert-dismissable" role="alert"><a href="#_" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></a>{{ error }}</div>{% endif %}</div>
+</div>

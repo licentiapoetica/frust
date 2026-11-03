@@ -1,0 +1,46 @@
+{#- Search (f0ckm /search) as w0bm's index.blade.php table -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
+{% block title %}Search - {{ domain }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h3 id="index">Search{% if (result is defined and result is not none and result is not false) %} <small>{{ count }} results</small>{% endif %}</h3>
+    <form method="get" action="/search" class="w0bm-searchform">
+        <button type="submit" class="suchbutton"><i class="fa fa-search w0bm-white"></i></button>
+        <input class="suchleiste" placeholder="tag1, tag2 … or title:text" name="tag" type="text" value="{{ (searchstring or "") }}">
+        <label class="w0bm-strict"><input type="checkbox" name="mode" value="strict"{% if search_mode == "strict" %} checked{% endif %}> strict</label>
+    </form>
+</div>
+{% if (result is defined and result is not none and result is not false) %}
+<table class="table table-hover table-condensed">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Tag</th>
+        <th class="hidden-xs">Type</th>
+        <th>User</th>
+        <th class="hidden-xs">Score</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for line in result %}
+    <tr data-thumb="/t/{{ line.id }}.webp">
+        <td><span class="w0bm-rowthumb"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></span><a href="{% if line.tag %}/tag/{{ line.tag|encode_uri_component }}/{{ line.id }}{% else %}/{{ line.id }}{% endif %}">{{ line.id }}</a></td>
+        <td>{% if line.tag %}<a href="/tag/{{ line.tag|encode_uri_component }}">{{ line.tag }}</a>{% else %}{{ (line.title or "") }}{% endif %}</td>
+        <td class="hidden-xs">{{ line.mime }}</td>
+        <td><a href="/user/{{ (line.username or "")|lower }}">{{ line.username }}</a></td>
+        <td class="hidden-xs">{% if line.score is defined and line.score is not none %}{{ line.score|fixed(2) }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+    {% if not (result|length) %}
+    <tr><td colspan="5">Nothing found :(</td></tr>
+    {% endif %}
+    </tbody>
+</table>
+<div class="page w0bm-page-bottom">
+    {% include "frontends/w0bm/partials/pagination.html" %}
+</div>
+{% endif %}
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

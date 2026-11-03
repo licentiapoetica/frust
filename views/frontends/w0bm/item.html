@@ -1,0 +1,120 @@
+{#- video.blade.php: the item page -#}
+{% extends "frontends/w0bm/layout.html" %}
+
+{% block bodyclass %}w0bm-item-page{% endblock %}
+
+{% block modals %}
+{% include "frontends/w0bm/partials/report.html" %}
+{% if (can_manage_item or is_mod_or_admin) %}
+{% include "frontends/w0bm/partials/frontendedit.html" %}
+{% endif %}
+{% endblock %}
+
+{% block aside %}
+<aside id="sidebar" class="aside panel hidden-xs{% if not (enable_comments and (session or not hide_comments_from_public)) %} w0bm-sidebar-nocomments{% endif %}">
+    {% include "frontends/w0bm/partials/flash.html" %}
+    {% if (enable_comments and (session or not hide_comments_from_public)) %}
+    {% include "frontends/w0bm/partials/comments.html" %}
+    {% endif %}
+    {% include "frontends/w0bm/partials/tags.html" %}
+</aside>
+{% endblock %}
+
+{% block content %}
+{% set iid = (item.slug if (enable_item_slugs and item.slug) else item.id) %}
+<div class="vertical-align">
+    <div class="wrapper">
+        <div class="videotitle-div">
+            <h5 class="w0bm-title-h5" id="w0bm-item-title">{% if (enable_item_title and item.title) %}{{ item.title }}{% endif %}</h5>
+        </div>
+        <div class="embed-responsive embed-responsive-16by9 w0bm-media" data-mime="{{ item.mime }}" data-mode="{% if item.is_nsfl %}nsfl{% elif item.is_nsfw %}nsfw{% elif item.is_sfw %}sfw{% else %}untagged{% endif %}">
+            {% include "frontends/w0bm/partials/media.html" %}
+        </div>
+        <div class="text-center w0bm-itemnav">
+            {% if pagination.prev %}
+            <a class="first" href="{{ link.main }}{{ pagination.start }}{{ link.suffix }}">← first</a>
+            <a id="prev" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}">← prev</a> |
+            {% else %}
+            <a class="first w0bm-invisible" href="#" aria-hidden="true" tabindex="-1">← first</a>
+            <a id="prev" class="w0bm-invisible" href="#" aria-hidden="true" tabindex="-1">← prev</a> |
+            {% endif %}
+            {% if (tmp and tmp.tag) %}
+            <a id="w0bm-context" href="/tag/{{ tmp.tag|encode_uri_component }}">{{ tmp.tag }}</a>
+            {% elif (tmp and tmp.user) %}
+            <a id="w0bm-context" href="{{ link.main }}">{{ tmp.user }}</a>
+            {% elif (tmp and tmp.hall) %}
+            <a id="w0bm-context" href="/h/{{ (tmp.hall.slug if tmp.hall is mapping else tmp.hall) }}">{{ (tmp.hall.name if tmp.hall is mapping else tmp.hall) }}</a>
+            {% elif (tmp and tmp.userHall) %}
+            <a id="w0bm-context" href="{{ link.main }}">{{ (tmp.userHall.name if tmp.userHall is mapping else tmp.userHall) }}</a>
+            {% else %}
+            <a id="w0bm-context" href="/random">random</a>
+            {% endif %}
+            {% if pagination.next %}
+            | <a id="next" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}">next →</a>
+            <a class="last" href="{{ link.main }}{{ pagination.end }}{{ link.suffix }}">last →</a>
+            {% else %}
+            | <a id="next" class="w0bm-invisible" href="#" aria-hidden="true" tabindex="-1">next →</a>
+            <a class="last w0bm-invisible" href="#" aria-hidden="true" tabindex="-1">last →</a>
+            {% endif %}
+        </div>
+        <div class="vidinfo">
+            <span class="videoinfo">
+                {% if (enable_comments and (session or not hide_comments_from_public)) %}
+                <button title="Toggle comments" class="hidden-xs toggle-comments w0bm-js-only" id="toggle"><i class="fa fa-comments"></i> <span id="commentAmount">0</span></button>
+                {% endif %}
+                <button title="Toggle Background" class="hidden-xs bg-toggle w0bm-js-only" id="togglebg"><i class="fa fa-adjust w0bm-yellow"></i></button>
+                <button class="copylink w0bm-js-only" data-clipboard-text="https://{{ domain }}/{{ iid }}" title="Copy URL!"><i class="fa fa-link"></i></button>
+                <div class="dropdown">
+                    <a class="fa fa-download w0bm-popover-btn" id="dlbutton" href="{% if item.mime == "video/youtube" %}{{ item.src.long }}{% else %}{{ item.dest }}{% endif %}" {% if item.mime != "video/youtube" %}download{% endif %} data-toggle="popover" data-placement="top" title="Download" data-popover="#w0bm-dl-popover"></a>
+                    <template id="w0bm-dl-popover">
+                        <div class="downloadvid">
+                            <ul class="downloadlist">
+                                {% if item.mime == "video/youtube" %}
+                                <li><a class="file_size" href="{{ item.src.long }}" rel="noopener" target="_blank">YouTube</a></li>
+                                {% else %}
+                                <li><a class="file_size" href="{{ item.dest }}" download>{{ ((item.mime.split("/"))[1]).replace("x-shockwave-flash", "swf", 1)|upper }}</a> <span class="filesize"> ({{ item.size }})</span></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </template>
+                </div>
+                <a title="Report" id="webm_report" class="webm-report w0bm-iconbtn" href="#webmreportmodal" data-toggle="modal" data-target="#webmreportmodal"><i class="fa fa-warning fa-md"></i></a>
+                <div class="favbutton">
+                {% if session %}
+                    <form method="post" action="/api/v2/togglefav" class="w0bm-inline-form" id="w0bm-fav-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="postid" value="{{ item.id }}">
+                        <input type="hidden" name="action" value="{{ ("remove" if user_has_favorited else "add") }}">
+                        <button id="fav" type="submit" class="w0bm-favbtn" title="Favorite" data-faved="{{ ("1" if user_has_favorited else "0") }}"><i class="fa {{ ("fa-heart" if user_has_favorited else "fa-heart-o") }} w0bm-pink"></i></button>
+                    </form>
+                {% else %}
+                    <a href="#loginmodal" data-toggle="modal" data-target="#loginmodal" title="Login to favorite"><i class="fa fa-heart-o"></i></a>
+                {% endif %}
+                </div>
+                {% if (session and enable_comments) %}
+                <button class="w0bm-iconbtn w0bm-js-only" id="w0bm-subscribe" title="{{ ("Unsubscribe" if isSubscribed else "Subscribe to comments") }}" data-subscribed="{{ ("1" if isSubscribed else "0") }}"><i class="fa {{ ("fa-bell" if isSubscribed else "fa-bell-o") }}"></i></button>
+                {% endif %}
+                <a class="fa fa-info-circle w0bm-popover-btn" id="infobox" href="#w0bm-info" data-toggle="popover" data-placement="top" title="Information" data-popover="#w0bm-info-popover"></a>
+                <template id="w0bm-info-popover">{% include "frontends/w0bm/partials/iteminfo.html" %}</template>
+                <span id="uploader">{% if not is_anonymized %}contributed by <a class="w0bm-white{% if item.author_color %} w0bm-usercolor{% endif %}" href="/user/{{ (item.username or "")|lower }}"{% if item.author_color %} style="--user-color: {{ item.author_color }}"{% endif %}>{{ (item.author_display_name or item.username) }}</a>{% endif %}</span>
+                {% if item.is_oc %}<span class="w0bm-oc" title="Original Content">OC</span>{% endif %}
+                <time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ item.timestamp.timefull }}" title="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time>
+                {% if (can_manage_item or is_mod_or_admin) %} <a class="edit_video" href="#webmeditmodal" data-toggle="modal" data-target="#webmeditmodal">[edit]</a>{% endif %}
+                {% if is_mod_or_admin %} <a class="delete_video w0bm-js-only" href="#" data-id="{{ item.id }}">[del]</a>{% endif %}
+            </span>
+        </div>
+        {% include "frontends/w0bm/partials/infobox-nojs.html" %}
+    </div>
+</div>
+<script type="application/json" id="w0bm-item-data">{{ {
+    "id": item.id,
+    "slug": item.slug,
+    "can_manage": (can_manage_item and true or false),
+    "can_rate": (can_rate_item and true or false),
+    "is_mod": (is_mod_or_admin and true or false),
+    "locked": (item.is_comments_locked and true or false),
+    "subscribed": (isSubscribed and true or false),
+    "mime": item.mime,
+    "autoplay": (not session or session.disable_autoplay != true)
+}|tojson }}</script>
+{% endblock %}

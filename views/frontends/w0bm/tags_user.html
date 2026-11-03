@@ -1,0 +1,16 @@
+{#- A user's tags in w0bm's category tiles -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block title %}Tags of {{ user.user }} - {{ domain }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h3{% if user.username_color %} class="w0bm-usercolor" style="--user-color: {{ user.username_color }}"{% endif %}>{{ user.user }}'s Tags <small><a href="/user/{{ user.user|lower }}">back to profile</a></small></h3>
+</div>
+<div class="extraction_point w0bm-hallgrid" id="categories">
+    {% include "frontends/w0bm/tag-cards.html" %}
+</div>
+<div class="clearfix"></div>
+<div class="page w0bm-page-bottom">
+    {% include "frontends/w0bm/partials/pagination.html" %}
+</div>
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

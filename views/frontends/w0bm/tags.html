@@ -1,0 +1,19 @@
+{#- Tag overview (f0ckm /tags) in w0bm's categories.blade.php style -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block title %}Tags - {{ domain }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h3>Tags</h3>
+    {% include "frontends/w0bm/partials/searchform.html" %}
+</div>
+<div class="extraction_point w0bm-hallgrid" id="categories">
+    {% include "frontends/w0bm/tag-cards.html" %}
+</div>
+<div class="clearfix"></div>
+{% if (toptags and (toptags|length >= 50)) %}
+<div class="text-center w0bm-js-only">
+    <button type="button" class="btn btn-primary" id="w0bm-more-tags" data-page="2">Load more</button>
+</div>
+{% endif %}
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

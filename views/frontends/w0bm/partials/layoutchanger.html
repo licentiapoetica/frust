@@ -1,0 +1,13 @@
+{#- partials/layoutchanger.blade.php: picks the site frontend (/frontend/<name> sets a cookie) -#}
+<li role="presentation" class="dropdown w0bm-dropdown layoutChanger" id="layoutSwitcher">
+    <a data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+        <span class="caret"></span> Layout
+    </a>
+    <ul class="dropdown-menu">
+        <div class="layoutblah">
+            {% for fe in frontends %}
+            <a class="layoutbutton{% if fe == frontend %} active{% endif %}" href="/frontend/{{ fe }}">{{ fe }}</a>
+            {% endfor %}
+        </div>
+    </ul>
+</li>

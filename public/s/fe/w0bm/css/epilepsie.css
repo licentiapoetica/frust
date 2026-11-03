@@ -1,0 +1,98 @@
+body {
+    animation: epilepsie 0.1s infinite;
+}
+
+@keyframes epilepsie {
+            0%   {background:red;}
+            25%  {background:yellow;}
+            50%  {background:#1FB2B0;}
+            75%  {background:#23dd06;}
+            100% {background:red;}
+}
+
+.embed-responsive-16by9 {
+    animation: megakrebs 0.1s infinite;
+}
+
+@keyframes megakrebs {
+            0%   {filter: invert(50%)}
+            25%  {filter: hue-rotate(90deg)}
+            50%  {filter: invert(100%)}
+            75%  {filter: hue-rotate(90deg)}
+            100% {filter: invert(50%)}
+}
+
+.navbar-inverse {
+    animation: megakrebs 0.1s infinite;
+    animation: epilepsie 0.1s infinite;
+}
+
+.navbar-brand > img {
+    animation: megakrebs 0.1s infinite;
+}
+
+a {
+    animation: swkrebs 0.1s infinite;
+}
+
+@keyframes swkrebs {
+    from { color: #f00;}
+    to { color: #0098ff; }
+}
+
+span.videoinfo {
+    animation: megakrebs 0.1s infinite;
+}
+
+#sidebar {
+    animation: megakrebs 0.1s infinite;
+}
+
+.dropdown-menu {
+    border: 1px solid #131619!important;
+    padding: 5px!important;
+    margin: -15px 15px 0!important;
+    border-radius: 0px!important;
+    background-color: #21292f;
+    min-width: 100px;
+}
+
+button.w0bmcustom-css {
+    width: 100%;
+    padding-bottom: 5px;
+    background: #232222;
+    padding: 5px;
+    border: 1px solid black;
+    margin-bottom: 5px;
+    color: #adadad;
+}
+
+button.w0bmcustom-css:hover {
+    background: rgba(84, 84, 84, 0.5);
+}
+
+button.chilledblue-css {
+    width: 100%;
+    padding-bottom: 5px;
+    background: #142121;
+    border: 1px solid #131916;
+    color: #adadad;
+    margin-bottom: 5px;
+}
+button.chilledblue-css:hover {
+    background: #183333b8;
+}
+
+button.epilepsie-css {
+    width: 100%;
+    padding-bottom: 5px;
+    background: #232222;
+    padding: 5px;
+    border: 1px solid black;
+    margin-bottom: 5px;
+    color: #adadad;
+}
+
+button.epilepsie-css:hover {
+    background: rgba(84, 84, 84, 0.5);
+}

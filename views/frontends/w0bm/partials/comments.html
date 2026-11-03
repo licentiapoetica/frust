@@ -1,0 +1,46 @@
+{#- partials/comments.blade.php + commentform.blade.php. The list is loaded by w0bm.js from
+    /api/comments/:id; the form posts to /api/comments. -#}
+{% if session %}
+{% if (item.is_comments_locked and not is_mod_or_admin) %}
+<div class="panel panel-default w0bm-locked"><div class="panel-body">🔒 Comments are disabled on this upload.</div></div>
+{% elif (session.is_anon and anon_permissions and not anon_permissions.comment) %}
+<div class="panel panel-default w0bm-locked"><div class="panel-body">🔒 Anonymous comments are disabled.</div></div>
+{% else %}
+<div id="commentForm" class="hidden-xs">
+<form action="/api/comments" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="item_id" value="{{ item.id }}">
+    <div class="sees panel panel-default">
+        <div class="fickfackfoo panel-body">
+            <textarea name="content" placeholder="Write something" id="cinput" class="form-control" required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+        </div>
+        <div class="commbordersoos">
+            <div id="comment_tools" class="commentform-panel-footer"><button type="submit" class="btn btn-primary btn-sm">Post</button>
+                <div class="textmodifierss w0bm-js-only">
+                    <a class="rainbow w0bm-fmt" href="#" data-fmt="rb">[rb]</a>
+                    <a class="reich w0bm-fmt" href="#" data-fmt="reich">[reich]</a>
+                    <a class="anim w0bm-fmt" href="#" data-fmt="krebs">[krebs]</a>
+                    <a class="spoiler w0bm-fmt w0bm-white" href="#" data-fmt="spoiler">[spoiler]</a>
+                    <div class="emoji-shit">
+                        <div class="header"><span>😂</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="parent" class="emojis-box w0bm-hidden">
+            <div id="child" class="emojis"></div>
+        </div>
+    </div>
+</form>
+</div>
+{% endif %}
+{% endif %}
+<div id="comment_container_scrollable" class="comments hidden-xs">
+    <div class="commentwrapper" id="w0bm-comments" data-item-id="{{ item.id }}">
+        <div class="panel panel-default nocomments w0bm-js-only">
+            <div class="panel-body">
+                No comments yet …<br />
+            </div>
+        </div>
+    </div>
+</div>

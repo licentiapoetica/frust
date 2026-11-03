@@ -1,0 +1,46 @@
+<form class="form-horizontal" method="post" action="/register">
+    <div class="form-group">
+        <div class="reg_username">
+            <input class="form-control" placeholder="Username" name="username" type="text" autocomplete="username" required>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="reg_password">
+            <input class="form-control" placeholder="Password (min. 20 characters)" name="password" type="password" autocomplete="new-password" minlength="20" required>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="reg_password">
+            <input class="form-control" placeholder="Password Confirmation" name="password_confirm" type="password" autocomplete="new-password" minlength="20" required>
+        </div>
+    </div>
+    {% if not registration_open %}
+    <div class="form-group">
+        <div class="reg_username">
+            <input class="form-control" placeholder="Invite token" name="token" type="text" value="{{ (token if token is defined else "") }}" autocomplete="off" required>
+        </div>
+    </div>
+    {% elif registration_require_mail_andor_token %}
+    <div class="form-group">
+        <div class="reg_username">
+            <input class="form-control" placeholder="E-Mail" name="email" type="email" autocomplete="email" required>
+        </div>
+    </div>
+    {% endif %}
+    <input type="text" name="email_confirm_field" class="register-honeypot w0bm-hidden" tabindex="-1" autocomplete="off">
+    {% if captcha_enabled %}
+    <div class="form-group">
+        <div class="recaptcha">
+            <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+        </div>
+    </div>
+    {% endif %}
+    <div class="form-group terms">
+        <div class="verify_rules">
+            <p><input type="checkbox" required name="tos" id="tos"> <label for="tos">{% if private_society %}{{ t("auth.tos_private_simple") }}{% else %}I am at least 18 years or older and I have read and understand the <a href="/rules" target="_blank">Rules</a> and <a href="/terms" target="_blank">Terms</a>{% endif %}</label></p>
+        </div>
+        <div class="submit_registration">
+            <button type="submit" class="btn btn-primary">Register</button>
+        </div>
+    </div>
+</form>

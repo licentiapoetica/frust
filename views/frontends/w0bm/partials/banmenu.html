@@ -1,0 +1,37 @@
+{#- partials/banmenu.blade.php -> /api/v2/admin/ban, /api/v2/admin/unban -#}
+<form id="banmenu" method="POST" action="/api/v2/admin/{{ ("unban" if user.banned else "ban") }}" class="w0bm-setting" data-json="1" data-int="user_id" data-reload="1">
+    <input type="hidden" name="user_id" value="{{ user.id }}">
+    <div class="modal fade" id="banmenumodal" tabindex="-1" role="dialog" aria-labelledby="Ban user">
+        <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                    <h4 class="modal-title" id="banModalTitle">{{ ("Unban" if user.banned else "Ban") }} {{ user.user }}</h4>
+                </div>
+                {% if not user.banned %}
+                <div class="modal-body w0bm-modal-body-col">
+                    <div class="form-group">
+                        <label for="reason">Reason</label>
+                        <input class="form-control" type="text" name="reason" id="reason" placeholder="Reason">
+                    </div>
+                    <div class="form-group">
+                        <label for="duration">Duration</label>
+                        <select class="form-control" name="duration" id="duration">
+                            <option value="1">1 hour</option>
+                            <option value="24">1 day</option>
+                            <option value="168">1 week</option>
+                            <option value="720">1 month</option>
+                            <option value="permanent">permanent</option>
+                        </select>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="modal-footer">
+                    <a href="#_" class="btn btn-primary" data-dismiss="modal">Close</a>
+                    <input type="submit" class="btn btn-danger w0bm-js-only" value="{{ ("UNBAN!" if user.banned else "BAN!") }}">
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

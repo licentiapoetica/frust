@@ -1,0 +1,32 @@
+{#- Laravel paginator markup ($videos->render()) from f0ckm's pagination data. `pg_suffix` is an
+    extra query string (e.g. "?view=index"). -#}
+{% set pg_suffix = (pg_suffix or "") %}
+{% if (pagination is defined and link is defined and pagination and (pagination.end and pagination.end != 1 or pagination.next or pagination.prev)) %}
+<ul class="pagination">
+    {% if pagination.prev %}
+    <li><a href="{{ link.main }}{{ link.path }}{{ pagination.prev }}{{ link.suffix }}{{ pg_suffix }}" rel="prev">&laquo;</a></li>
+    {% else %}
+    <li class="disabled"><span>&laquo;</span></li>
+    {% endif %}
+    {% if (pagination.cheat and pagination.cheat[0] != pagination.start) %}
+    <li><a href="{{ link.main }}{{ link.path }}{{ pagination.start }}{{ link.suffix }}{{ pg_suffix }}">{{ pagination.start }}</a></li>
+    {% if pagination.cheat[0] != pagination.start + 1 %}<li class="disabled"><span>...</span></li>{% endif %}
+    {% endif %}
+    {% for i in (pagination.cheat or []) %}
+    {% if i == pagination.page %}
+    <li class="active"><span>{{ i }}</span></li>
+    {% else %}
+    <li><a href="{{ link.main }}{{ link.path }}{{ i }}{{ link.suffix }}{{ pg_suffix }}">{{ i }}</a></li>
+    {% endif %}
+    {% endfor %}
+    {% if (pagination.cheat and pagination.cheat[-1] != pagination.end) %}
+    {% if pagination.cheat[-1] != pagination.end - 1 %}<li class="disabled"><span>...</span></li>{% endif %}
+    <li><a href="{{ link.main }}{{ link.path }}{{ pagination.end }}{{ link.suffix }}{{ pg_suffix }}">{{ pagination.end }}</a></li>
+    {% endif %}
+    {% if pagination.next %}
+    <li><a href="{{ link.main }}{{ link.path }}{{ pagination.next }}{{ link.suffix }}{{ pg_suffix }}" rel="next">&raquo;</a></li>
+    {% else %}
+    <li class="disabled"><span>&raquo;</span></li>
+    {% endif %}
+</ul>
+{% endif %}

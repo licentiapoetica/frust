@@ -1,0 +1,12 @@
+{#- popover-content.blade.php: what the (i) popover shows -#}
+{% if item.title %}Title: {{ item.title }}<br>{% endif %}
+{% if (item.src and item.src.long) %}Source: <a href="{{ item.src.long }}" rel="noopener noreferrer" target="_blank">{{ (item.src.short or item.src.long) }}</a><br>{% endif %}
+{% if item.original_filename %}File: {{ item.original_filename }}<br>{% endif %}
+Type: {{ item.mime }}{% if item.mime != "video/youtube" %} ({{ item.size }}){% endif %}<br>
+{% if (item.width and item.height) %}Dimensions: {{ item.width }}×{{ item.height }}<br>{% endif %}
+Rating: {% if item.is_nsfl %}NSFL{% elif item.is_nsfw %}NSFW{% elif item.is_sfw %}SFW{% else %}untagged{% endif %}<br>
+{% if (halls_enabled and item.halls and (item.halls|length)) %}Category: {% for h in item.halls %}<a href="/h/{{ h.slug }}">{{ h.name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}<br>{% endif %}
+{% if (item.favorites and (item.favorites|length)) %}Favorites: {% for f in item.favorites %}{% if (f.hide_fav_badge and (not session or session.user != f.user)) or is_anonymized or f.is_anon %}?{% else %}<a href="/user/{{ f.user|lower }}">{{ (f.display_name or f.user) }}</a>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}<br>{% endif %}
+{% if (enable_xd_score and (item.xd_score > 0)) %}xD Score: {{ item.xd_score }} ({{ item.xd_label }})<br>{% endif %}
+{% if item.expires_at %}Self-destructs {{ item.expires_in }}<br>{% endif %}
+ID: {{ item.id }}

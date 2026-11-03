@@ -1,0 +1,21 @@
+{#- login.blade.php (rendered after a failed login without JavaScript, when w0bm is the site's frontend) -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block title %}Login - {{ domain }}{% endblock %}
+{% block content %}
+<div class="centered">
+    <div class="modal-content col-md-5 w0bm-pagebox">
+        <div class="modal-header">
+            <h4 class="modal-title" id="filterModalTitle">Login</h4>
+        </div>
+        {% include "frontends/w0bm/partials/flash.html" %}
+        <div class="login_wrapper">
+            <div class="col-md">
+                {% include "frontends/w0bm/partials/loginform.html" %}
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a href="/register">Register</a> | <a href="/rules">Rules</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

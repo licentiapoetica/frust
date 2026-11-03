@@ -1,0 +1,31 @@
+{#- main.blade.php (grid) and index.blade.php (?view=index table) -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
+{% block bodyclass %}w0bm-index-page{% endblock %}
+{% block content %}
+{% set tableview = (url and url.qs and url.qs.view == "index") %}
+{% set pg_suffix = ("?view=index" if tableview else "") %}
+{% if tableview %}
+<div class="page-header">
+    <h3 id="index">{% include "frontends/w0bm/partials/pagetitle.html" %} <small>{{ (total or 0) }} results</small></h3>
+    {% include "frontends/w0bm/partials/searchform.html" %}
+</div>
+{% include "frontends/w0bm/partials/itemtable.html" %}
+<div class="page w0bm-page-bottom">
+    {% include "frontends/w0bm/partials/pagination.html" %}
+</div>
+{% else %}
+<div class="page-header">
+    <div class="page">
+        {% include "frontends/w0bm/partials/pagination.html" %}
+        {% include "frontends/w0bm/partials/searchform.html" %}
+    </div>
+    {% if (tmp and (tmp.tag or tmp.user or tmp.hall or tmp.userHall)) %}
+    <h3 class="w0bm-feed-title">{% include "frontends/w0bm/partials/pagetitle.html" %} <small>{{ (total or 0) }} results</small></h3>
+    {% endif %}
+</div>
+{% include "frontends/w0bm/partials/thumbgrid.html" %}
+{% endif %}
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

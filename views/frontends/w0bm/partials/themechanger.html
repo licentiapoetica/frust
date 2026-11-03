@@ -1,0 +1,21 @@
+{#- partials/themechanger.blade.php: the alternate stylesheets (JS switches them, see early.js) -#}
+<li role="presentation" class="dropdown w0bm-dropdown w0bm-js-only">
+    <a data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+        <span class="caret"></span> Theme
+    </a>
+    <ul class="dropdown-menu">
+        <div id="switcher">
+            <button class="w0bmcustom-css" data-style="w0bmcustom">Default</button>
+            <br>
+            <button class="w0bm_override-css" data-style="DARK">DARK</button>
+            <br>
+            <button class="chilledblue-css" data-style="Chilledblue">Chilledblue</button>
+            <br>
+            <button class="xayd-css" data-style="Xayd">Xayd</button>
+            <br>
+            <button class="glitch-css" data-style="Glitch">Glitch</button>
+            <br>
+            <button class="epilepsie-css" data-style="Epilepsie" data-confirm="This theme can cause seizures and headaches, use with care!">Epilepsie</button>
+        </div>
+    </ul>
+</li>

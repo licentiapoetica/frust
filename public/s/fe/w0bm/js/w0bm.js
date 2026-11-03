@@ -1,0 +1,1588 @@
+/*
+ * w0bm frontend for f0ckm: a jQuery-free rewrite of w0bm.com's w0bmscript.js plus the bits of
+ * Bootstrap 3 / video.js / bootstrap-tagsinput / timeago / clipboard.js it used, talking to the
+ * f0ckm API.
+ *
+ * Page data comes from <script type="application/json"> blocks: #w0bm-data (every page) and
+ * #w0bm-item-data (item page). Styles are never set from here, only classes, except CSS custom
+ * properties for live numbers (playback progress, volume).
+ */
+(() => {
+  'use strict';
+
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const readJSON = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    try { return JSON.parse(el.textContent); } catch { return null; }
+  };
+  const DATA = readJSON('w0bm-data') || {};
+  const ITEM = readJSON('w0bm-item-data');
+  const csrf = () => DATA.csrf || $('meta[name="csrf-token"]')?.content || '';
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+  };
+  const isMobile = matchMedia('(max-width: 767px)').matches || /Mobi|Android/i.test(navigator.userAgent);
+
+  function escapeHTML(str) {
+    return String(str ?? '').replace(/[&<>"'`=\/]/g, (s) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;',
+    })[s]);
+  }
+
+  // ── API ────────────────────────────────────────────────────────────────────────────────
+  // body: plain object / FormData / URLSearchParams (sent urlencoded) or {json: …}
+  async function api(url, { method = 'POST', body, json } = {}) {
+    const headers = { 'X-CSRF-Token': csrf(), 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' };
+    let payload;
+    if (json !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      payload = JSON.stringify(json);
+    } else if (body !== undefined) {
+      payload = body instanceof URLSearchParams ? body : new URLSearchParams(body instanceof FormData ? body : Object.entries(body));
+    }
+    let res, data = null;
+    try {
+      res = await fetch(url, { method, headers, body: payload, credentials: 'same-origin' });
+    } catch {
+      return { ok: false, status: 0, data: null, msg: 'Network error' };
+    }
+    try { data = await res.json(); } catch { /* not JSON */ }
+    const ok = res.ok && !(data && data.success === false);
+    return { ok, status: res.status, data, msg: (data && (data.msg || data.message)) || (ok ? '' : 'Error ' + res.status) };
+  }
+
+  // ── Flash messages (partials/flash.blade.php) ─────────────────────────────────────────
+  function flash(type, message) {
+    if (type === 'error') type = 'danger';
+    const box = $('#sidebar .flashcontainer > .flash-inner') || $('#w0bm-flash > .flash-inner');
+    if (!box) return;
+    const div = document.createElement('div');
+    div.className = 'alert alert-' + type + ' alert-dismissable';
+    div.setAttribute('role', 'alert');
+    div.innerHTML = '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
+    div.append(document.createTextNode(message));
+    box.appendChild(div);
+    const n = box.children.length;
+    setTimeout(() => {
+      div.classList.add('w0bm-alert-out');
+      setTimeout(() => div.remove(), 300);
+    }, 3000 + n * 1000);
+  }
+  // Server-rendered alerts fade out like alertrm()
+  $$('.flash-inner > .alert').forEach((a, i) => setTimeout(() => {
+    a.classList.add('w0bm-alert-out');
+    setTimeout(() => a.remove(), 300);
+  }, 3000 + i * 1000));
+
+  // ── Modals (Bootstrap 3 modal, :target without JS) ────────────────────────────────────
+  function openModal(m) {
+    if (!m) return;
+    $$('.modal.w0bm-modal-open').forEach((o) => o !== m && closeModal(o));
+    m.classList.add('w0bm-modal-open', 'in');
+    document.body.classList.add('modal-open');
+    const t = m.querySelector('.w0bm-random-title');
+    if (t) {
+      try {
+        const titles = JSON.parse(t.dataset.titles);
+        t.textContent = titles[Math.floor(Math.random() * titles.length)];
+      } catch { /* keep */ }
+    }
+    m.dispatchEvent(new CustomEvent('w0bm:open'));
+    const input = m.querySelector('input[type="text"]:not([type="hidden"]), textarea');
+    if (input) setTimeout(() => input.focus(), 50);
+  }
+  function closeModal(m) {
+    if (!m) return;
+    m.classList.remove('w0bm-modal-open', 'in');
+    if (!$('.modal.w0bm-modal-open')) document.body.classList.remove('modal-open');
+    if (location.hash === '#' + m.id) history.replaceState(null, '', location.pathname + location.search);
+    // /?login=1 opened the login modal: drop the parameter once it is closed
+    if (m.id === 'loginmodal' && /[?&]login=/.test(location.search)) {
+      const u = new URL(location.href);
+      u.searchParams.delete('login');
+      history.replaceState(null, '', u.pathname + u.search + u.hash);
+    }
+  }
+  // /register redirects to /#register, /#register:<token> or /#register:error|success:<message>
+  const regHash = decodeURIComponent(location.hash.slice(1));
+  if (/^register(:|$)/.test(regHash) && $('#register')) {
+    const m = $('#register');
+    const parts = regHash.split(':');
+    const box = m.querySelector('.w0bm-register-msg');
+    if ((parts[1] === 'error' || parts[1] === 'success') && box) {
+      box.textContent = parts.slice(2).join(':');
+      box.className = 'w0bm-register-msg alert alert-' + (parts[1] === 'error' ? 'danger' : 'success');
+      box.hidden = false;
+    } else if (parts[1]) {
+      const tok = m.querySelector('input[name="token"]');
+      if (tok) tok.value = parts.slice(1).join(':');
+    }
+    history.replaceState(null, '', location.pathname + location.search);
+    openModal(m);
+  } else if (location.hash && location.hash.length > 1) {
+    const m = document.getElementById(location.hash.slice(1));
+    if (m && m.classList.contains('modal')) {
+      history.replaceState(null, '', location.pathname + location.search);
+      openModal(m);
+    }
+  }
+
+  // ── Dropdowns, alerts, collapse, modal triggers (one delegated click handler) ─────────
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    const modalTrigger = t.closest('[data-toggle="modal"]');
+    if (modalTrigger) {
+      e.preventDefault();
+      const sel = modalTrigger.dataset.target || modalTrigger.getAttribute('href');
+      closeDropdowns();
+      openModal(sel ? $(sel) : null);
+      return;
+    }
+    const dismissModal = t.closest('[data-dismiss="modal"], .w0bm-modal-shade');
+    if (dismissModal) {
+      e.preventDefault();
+      closeModal(dismissModal.closest('.modal'));
+      return;
+    }
+    const dismissAlert = t.closest('[data-dismiss="alert"]');
+    if (dismissAlert) {
+      e.preventDefault();
+      dismissAlert.closest('.alert')?.remove();
+      return;
+    }
+    const dd = t.closest('[data-toggle="dropdown"]');
+    if (dd) {
+      e.preventDefault();
+      const li = dd.parentElement;
+      const wasOpen = li.classList.contains('open');
+      closeDropdowns();
+      if (!wasOpen) {
+        li.classList.add('open');
+        dd.setAttribute('aria-expanded', 'true');
+      }
+      return;
+    }
+    if (!t.closest('.dropdown-menu')) closeDropdowns();
+  });
+  function closeDropdowns() {
+    $$('.w0bm-dropdown.open').forEach((li) => {
+      li.classList.remove('open');
+      li.querySelector('[data-toggle="dropdown"]')?.setAttribute('aria-expanded', 'false');
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      $$('.modal.w0bm-modal-open').forEach(closeModal);
+      closeDropdowns();
+      $$('.w0bm-popover-host > .popover').forEach((p) => p.remove());
+    }
+  });
+
+  // Theme switcher (themechanger.blade.php)
+  $$('#switcher button[data-style]').forEach((b) => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (b.dataset.confirm && !confirm(b.dataset.confirm)) return;
+    window.w0bmStyle?.set(b.dataset.style);
+  }));
+
+  // ── Tooltips & popovers (Bootstrap 3 look, positioned by CSS) ─────────────────────────
+  function initTooltip(el) {
+    if (el.dataset.w0bmTip) return;
+    el.dataset.w0bmTip = '1';
+    const title = el.getAttribute('title');
+    if (!title) return;
+    el.dataset.originalTitle = title;
+    el.removeAttribute('title');
+    el.classList.add('w0bm-tip-host');
+    el.addEventListener('mouseenter', () => {
+      if (el.querySelector(':scope > .tooltip')) return;
+      const tip = document.createElement('div');
+      tip.className = 'tooltip top in';
+      tip.setAttribute('role', 'tooltip');
+      tip.innerHTML = '<div class="tooltip-arrow"></div><div class="tooltip-inner"></div>';
+      tip.lastChild.textContent = el.dataset.originalTitle;
+      el.appendChild(tip);
+    });
+    el.addEventListener('mouseleave', () => el.querySelector(':scope > .tooltip')?.remove());
+  }
+  const initTooltips = (root = document) => $$('[data-toggle="tooltip"]', root).forEach(initTooltip);
+
+  function initPopover(btn) {
+    const tpl = $(btn.dataset.popover);
+    if (!tpl) return;
+    const title = btn.getAttribute('title') || '';
+    btn.removeAttribute('title');
+    const host = document.createElement('span');
+    host.className = 'w0bm-popover-host';
+    btn.parentNode.insertBefore(host, btn);
+    host.appendChild(btn);
+    let hideTimer;
+    const show = () => {
+      clearTimeout(hideTimer);
+      if (host.querySelector(':scope > .popover')) return;
+      const pop = document.createElement('div');
+      pop.className = 'popover top in';
+      pop.setAttribute('role', 'tooltip');
+      pop.innerHTML = '<div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div>';
+      pop.querySelector('.popover-title').textContent = title;
+      pop.querySelector('.popover-content').appendChild(tpl.content.cloneNode(true));
+      host.appendChild(pop);
+    };
+    const hide = () => {
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => host.querySelector(':scope > .popover')?.remove(), 100);
+    };
+    host.addEventListener('mouseenter', show);
+    host.addEventListener('mouseleave', hide);
+    btn.addEventListener('click', (e) => {
+      // touch: tap toggles; the download button still downloads on desktop
+      if (btn.id === 'dlbutton' && !isMobile) return;
+      e.preventDefault();
+      if (host.querySelector(':scope > .popover')) host.querySelector(':scope > .popover').remove();
+      else show();
+    });
+  }
+  $$('[data-toggle="popover"][data-popover]').forEach(initPopover);
+
+  // ── timeago (jquery.timeago with w0bm's Laravel-like strings) ─────────────────────────
+  function timeago(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d)) return '';
+    let distance = Date.now() - d.getTime();
+    const future = distance < 0;
+    distance = Math.abs(distance);
+    const seconds = distance / 1000, minutes = seconds / 60, hours = minutes / 60, days = hours / 24, years = days / 365;
+    const r = (s, n) => s.replace(/%d/i, Math.round(n));
+    const words = seconds < 45 && r('%d seconds', seconds) ||
+      seconds < 90 && '1 minute' ||
+      minutes < 45 && r('%d minutes', minutes) ||
+      minutes < 90 && '1 hour' ||
+      hours < 24 && r('%d hours', hours) ||
+      hours < 42 && '1 day' ||
+      days < 30 && r('%d days', days) ||
+      days < 45 && '1 month' ||
+      days < 365 && r('%d months', days / 30) ||
+      years < 1.5 && '1 year' ||
+      r('%d years', years);
+    return words + (future ? ' from now' : ' ago');
+  }
+  function refreshTimeago(root = document) {
+    $$('time.timeago[datetime]', root).forEach((t) => {
+      const d = new Date(t.getAttribute('datetime'));
+      if (isNaN(d)) return;
+      if (!t.dataset.w0bmTitled) {
+        t.dataset.w0bmTitled = '1';
+        if (t.dataset.originalTitle !== undefined) t.dataset.originalTitle = d.toLocaleString();
+        else t.setAttribute('title', d.toLocaleString());
+      }
+      const s = timeago(d);
+      if (t.textContent !== s) t.textContent = s;
+    });
+  }
+  refreshTimeago();
+  initTooltips();
+  setInterval(refreshTimeago, 1000);
+
+  // Missing thumbnails get w0bm's 404 thumb (main.blade.php)
+  const thumbFallback = (img) => {
+    if (img.tagName !== 'IMG' || img.dataset.w0bmFallback) return;
+    if (!img.closest('.main-item, .w0bm-rowthumb, .w0bm-thumbs')) return;
+    img.dataset.w0bmFallback = '1';
+    img.classList.add('nothumb');
+    img.src = '/s/fe/w0bm/img/small_404.gif';
+  };
+  document.addEventListener('error', (e) => thumbFallback(e.target), true);
+  $$('.main-item img, .w0bm-thumbs img').forEach((img) => { if (img.complete && !img.naturalWidth) thumbFallback(img); });
+  document.addEventListener('error', (e) => {
+    const img = e.target;
+    if (img.tagName === 'IMG' && img.classList.contains('w0bm-avatar')) img.remove();
+  }, true);
+
+  // ── Copy link (clipboard.js) ──────────────────────────────────────────────────────────
+  $$('.copylink[data-clipboard-text]').forEach((b) => b.addEventListener('click', async (e) => {
+    e.preventDefault();
+    b.focus();
+    const text = b.dataset.clipboardText;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.className = 'sr-only';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch { /* nothing left to try */ }
+      ta.remove();
+      b.focus();
+    }
+  }));
+
+  // ── bootstrap-tagsinput ───────────────────────────────────────────────────────────────
+  // Replaces <input data-role="tagsinput"> with the plugin's markup; the original input keeps
+  // the comma-joined value. el.w0bmTags = { items(), add(), remove(), removeAll() }.
+  function tagsinput(input, { beforeAdd } = {}) {
+    if (input.w0bmTags) return input.w0bmTags;
+    const items = [];
+    const box = document.createElement('div');
+    box.className = 'bootstrap-tagsinput';
+    const typer = document.createElement('input');
+    typer.type = 'text';
+    typer.placeholder = input.placeholder || '';
+    typer.setAttribute('autocomplete', 'off');
+    typer.size = Math.max(typer.placeholder.length, 1);
+    box.appendChild(typer);
+    input.parentNode.insertBefore(box, input);
+    input.type = 'hidden';
+    const sync = () => {
+      input.value = items.join(',');
+      typer.placeholder = items.length ? '' : (input.getAttribute('placeholder') || '');
+    };
+    const api_ = {
+      items: () => items.slice(),
+      add(tag) {
+        tag = String(tag).trim();
+        if (!tag) return;
+        if (items.some((t) => t.toLowerCase() === tag.toLowerCase())) return;
+        if (beforeAdd && beforeAdd(tag) === false) return;
+        items.push(tag);
+        const span = document.createElement('span');
+        span.className = 'tag label label-info';
+        span.textContent = tag;
+        const rm = document.createElement('span');
+        rm.dataset.role = 'remove';
+        rm.addEventListener('click', () => api_.remove(tag));
+        span.appendChild(rm);
+        box.insertBefore(span, typer);
+        sync();
+        input.dispatchEvent(new CustomEvent('itemAdded', { detail: tag }));
+      },
+      remove(tag) {
+        const i = items.findIndex((t) => t === tag);
+        if (i < 0) return;
+        items.splice(i, 1);
+        box.querySelectorAll('.tag')[i]?.remove();
+        sync();
+        input.dispatchEvent(new CustomEvent('itemRemoved', { detail: tag }));
+      },
+      removeAll() { items.slice().forEach((t) => api_.remove(t)); },
+      flush() {
+        if (typer.value.trim()) {
+          typer.value.split(',').forEach((t) => api_.add(t));
+          typer.value = '';
+        }
+      },
+      input: typer,
+    };
+    typer.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ',') {
+        if (e.key === 'Enter' && !typer.value.trim()) return; // submit the form
+        e.preventDefault();
+        api_.flush();
+      } else if (e.key === 'Backspace' && !typer.value && items.length) {
+        api_.remove(items[items.length - 1]);
+      }
+    });
+    typer.addEventListener('blur', () => api_.flush());
+    box.addEventListener('click', () => typer.focus());
+    (input.defaultValue || '').split(',').forEach((t) => api_.add(t));
+    input.w0bmTags = api_;
+    return api_;
+  }
+
+  // ── Search forms: members use /search?tag=, guests the tag page ───────────────────────
+  $$('form.w0bm-searchform').forEach((f) => f.addEventListener('submit', (e) => {
+    const q = (f.querySelector('input[name="tag"]')?.value || '').trim();
+    if (!q) { e.preventDefault(); return; }
+    if (f.dataset.guest) {
+      e.preventDefault();
+      location.href = '/tag/' + encodeURIComponent(q.split(',')[0].trim());
+    }
+  }));
+
+  // ── Captcha (Cap) on demand ───────────────────────────────────────────────────────────
+  let capLoading = null;
+  function loadCap() {
+    if (capLoading) return capLoading;
+    const add = (src) => new Promise((res) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = res;
+      s.onerror = res;
+      document.head.appendChild(s);
+    });
+    capLoading = add('/s/cap/cap-config.js').then(() => add('/s/cap/cap.min.js'));
+    return capLoading;
+  }
+  // Widgets in the page load Cap right away, those in modals when the modal opens
+  if ($$('cap-widget').some((w) => !w.closest('.modal'))) loadCap();
+  document.addEventListener('w0bm:open', (e) => { if (e.target.querySelector('cap-widget')) loadCap(); }, true);
+  function showCap(form) {
+    const tpl = form.querySelector('template.w0bm-cap-template');
+    if (tpl && !form.querySelector('cap-widget')) {
+      tpl.parentNode.insertBefore(tpl.content.cloneNode(true), tpl);
+      loadCap();
+    }
+  }
+
+  // ── Login (modal + page) ──────────────────────────────────────────────────────────────
+  $$('form.w0bm-loginform').forEach((f) => f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = f.querySelector('.w0bm-login-error');
+    const btn = f.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    const fd = new FormData(f);
+    if (!f.querySelector('input[name="kmsi"]')?.checked) fd.delete('kmsi');
+    const r = await api('/login', { body: fd });
+    btn.disabled = false;
+    if (r.data && r.data.success) {
+      const u = new URL(location.href);
+      u.searchParams.delete('login');
+      location.href = r.data.redirect && r.data.redirect !== '/' ? r.data.redirect : (u.pathname + u.search);
+      return;
+    }
+    if (r.data && r.data.redirect) { location.href = r.data.redirect; return; }
+    if (r.data && r.data.captcha) showCap(f);
+    if (err) {
+      err.textContent = r.msg || 'Login failed';
+      err.hidden = false;
+    } else {
+      flash('error', r.msg || 'Login failed');
+    }
+  }));
+
+  // ── Navbar badges (unread notifications / DMs) ────────────────────────────────────────
+  function setBadge(el, n) {
+    if (!el) return;
+    el.textContent = n > 99 ? '99+' : String(n);
+    el.classList.toggle('w0bm-has-count', n > 0);
+  }
+  if (DATA.user) {
+    const poll = async () => {
+      const n = await api('/api/notifications', { method: 'GET' });
+      if (n.ok && Array.isArray(n.data?.notifications)) setBadge($('#w0bm-notif-badge'), n.data.notifications.filter((x) => !x.is_read).length);
+      if ($('#w0bm-dm-badge')) {
+        const d = await api('/api/dm/unread', { method: 'GET' });
+        if (d.ok) setBadge($('#w0bm-dm-badge'), +d.data?.count || 0);
+      }
+    };
+    poll();
+    setInterval(() => { if (!document.hidden) poll(); }, 60000);
+  }
+
+  // ── Filter modal (filterselect.blade.php): excluded tags ──────────────────────────────
+  const filterInput = $('#filter');
+  if (filterInput) {
+    const tags = tagsinput(filterInput);
+    let initial = [];
+    const load = async () => {
+      const r = await api('/api/v2/settings/excluded_tags', { method: 'GET' });
+      if (!r.ok) return;
+      tags.removeAll();
+      initial = (r.data.tags || []).map((t) => ({ name: t.tag, key: t.normalized || t.tag, id: t.id }));
+      initial.forEach((t) => tags.add(t.name));
+    };
+    load();
+    $('#submitfilter')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      tags.flush();
+      const now = tags.items();
+      const lower = now.map((t) => t.toLowerCase());
+      const removed = initial.filter((t) => !lower.includes(t.name.toLowerCase()));
+      const added = now.filter((t) => !initial.some((i) => i.name.toLowerCase() === t.toLowerCase()));
+      let failed = [];
+      for (const t of removed) {
+        const r = await api('/api/v2/settings/excluded_tags/' + encodeURIComponent(t.key), { method: 'DELETE' });
+        if (!r.ok) failed.push(t.name + ': ' + r.msg);
+      }
+      for (const t of added) {
+        const r = await api('/api/v2/settings/excluded_tags', { body: { tagname: t } });
+        if (!r.ok) failed.push(t + ': ' + r.msg);
+      }
+      if (failed.length) {
+        flash('error', 'Error updating filter (' + failed.join(', ') + ')');
+        load();
+      } else {
+        flash('success', 'Filter successfully updated');
+        closeModal($('#filterselectmodal'));
+        if (removed.length || added.length) setTimeout(() => location.reload(), 600);
+      }
+    });
+  }
+
+  // ── Generic JSON forms (report …) ─────────────────────────────────────────────────────
+  $$('form.w0bm-ajaxform').forEach((f) => f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const r = await api(f.action, { body: new FormData(f) });
+    if (r.ok) {
+      flash('success', f.dataset.success || 'Done');
+      f.reset();
+      closeModal(f.querySelector('.modal'));
+    } else {
+      flash('error', r.msg || 'Error');
+    }
+  }));
+
+  // ════════════════════════════════════════════════════════════════════════════════════
+  // Item page
+  // ════════════════════════════════════════════════════════════════════════════════════
+  const media = $('#video');
+  const mediaBox = $('.w0bm-media');
+  let player = null;
+
+  const fmtTime = (s) => {
+    if (!isFinite(s) || s < 0) s = 0;
+    s = Math.floor(s);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(sec).padStart(2, '0');
+  };
+
+  // video.js 5 skin for a native <video>/<audio> (same DOM, so video-js.min.css + vjsnew.css apply)
+  function buildPlayer(el) {
+    const isAudio = el.tagName === 'AUDIO';
+    const wrap = document.createElement('div');
+    wrap.className = 'video-js vjs-default-skin vjs-paused vjs-controls-enabled vjs-workinghover vjs-user-active' + (isAudio ? ' w0bm-vjs-audio vjs-has-started' : '');
+    el.parentNode.insertBefore(wrap, el);
+    wrap.appendChild(el);
+    el.removeAttribute('id');
+    wrap.id = 'video';
+    el.id = 'video_html5_api';
+    el.controls = false;
+    el.classList.add('vjs-tech');
+    const rates = [2, 1.5, 1, 0.5, 0.25];
+    wrap.insertAdjacentHTML('beforeend',
+      '<button class="vjs-big-play-button" type="button" aria-live="polite" title="Play Video"><span class="vjs-control-text">Play Video</span></button>' +
+      '<div class="vjs-control-bar">' +
+        '<div class="vjs-progress-control vjs-control"><div tabindex="0" class="vjs-progress-holder vjs-slider vjs-slider-horizontal" role="slider" aria-label="progress bar"><div class="vjs-load-progress"></div><div class="vjs-play-progress vjs-slider-bar" data-current-time="0:00"><span class="vjs-control-text"><span>Progress</span>: 0%</span></div></div></div>' +
+        '<button class="vjs-play-control vjs-control vjs-button vjs-paused" type="button" title="Play"><span class="vjs-control-text">Play</span></button>' +
+        '<button class="vjs-mute-control vjs-control vjs-button vjs-vol-3" type="button" title="Mute"><span class="vjs-control-text">Mute</span></button>' +
+        '<div class="vjs-volume-control vjs-control"><div tabindex="0" class="vjs-volume-bar vjs-slider-bar vjs-slider vjs-slider-horizontal" role="slider" aria-label="volume level"><div class="vjs-volume-level"><span class="vjs-control-text"></span></div></div></div>' +
+        '<div class="vjs-current-time vjs-time-control vjs-control"><div class="vjs-current-time-display" aria-live="off"><span class="vjs-control-text">Current Time </span><span class="w0bm-t">0:00</span></div></div>' +
+        '<div class="vjs-time-control vjs-time-divider"><div><span>/</span></div></div>' +
+        '<div class="vjs-duration vjs-time-control vjs-control"><div class="vjs-duration-display" aria-live="off"><span class="vjs-control-text">Duration Time </span><span class="w0bm-t">0:00</span></div></div>' +
+        '<div class="vjs-custom-control-spacer vjs-spacer">&nbsp;</div>' +
+        '<div class="vjs-playback-rate vjs-menu-button vjs-menu-button-popup vjs-control vjs-button" tabindex="0" role="menuitem" aria-live="polite" title="Playback Rate"><div class="vjs-menu" role="presentation"><ul class="vjs-menu-content" role="menu">' +
+          rates.map((r) => '<li class="vjs-menu-item' + (r === 1 ? ' vjs-selected' : '') + '" tabindex="-1" role="menuitemcheckbox" data-rate="' + r + '">' + r + 'x</li>').join('') +
+        '</ul></div><div class="vjs-playback-rate-value">1x</div></div>' +
+        (isAudio ? '' : '<button class="vjs-fullscreen-control vjs-control vjs-button" type="button" title="Fullscreen"><span class="vjs-control-text">Fullscreen</span></button>') +
+      '</div>');
+
+    const q = (s) => wrap.querySelector(s);
+    const playBtn = q('.vjs-play-control'), muteBtn = q('.vjs-mute-control');
+    const holder = q('.vjs-progress-holder'), volBar = q('.vjs-volume-bar');
+    const cur = q('.vjs-current-time-display .w0bm-t'), dur = q('.vjs-duration-display .w0bm-t');
+    const playProg = q('.vjs-play-progress');
+    const rateBtn = q('.vjs-playback-rate'), rateVal = q('.vjs-playback-rate-value');
+    const box = wrap.parentElement;
+    const setVar = (k, v) => box.style.setProperty(k, String(v));
+
+    const p = {
+      el, wrap,
+      paused: () => el.paused,
+      play: () => el.play().catch(() => {}),
+      pause: () => el.pause(),
+      toggle: () => (el.paused ? p.play() : p.pause()),
+      volume(v) {
+        if (v === undefined) return el.volume;
+        el.volume = Math.min(1, Math.max(0, v));
+        if (el.volume > 0) el.muted = false;
+      },
+      duration: () => el.duration,
+      currentTime(t) {
+        if (t === undefined) return el.currentTime;
+        el.currentTime = t;
+      },
+    };
+
+    const updState = () => {
+      const paused = el.paused;
+      wrap.classList.toggle('vjs-paused', paused);
+      wrap.classList.toggle('vjs-playing', !paused);
+      playBtn.classList.toggle('vjs-paused', paused);
+      playBtn.classList.toggle('vjs-playing', !paused);
+      playBtn.title = paused ? 'Play' : 'Pause';
+      playBtn.firstChild.textContent = playBtn.title;
+      if (!paused) wrap.classList.add('vjs-has-started');
+      wrap.classList.toggle('vjs-ended', el.ended);
+    };
+    const updTime = () => {
+      const d = el.duration;
+      const frac = d > 0 && isFinite(d) ? el.currentTime / d : 0;
+      setVar('--progress', frac.toFixed(5));
+      cur.textContent = fmtTime(el.currentTime);
+      playProg.dataset.currentTime = fmtTime(el.currentTime);
+      if (el.buffered.length && d > 0 && isFinite(d)) setVar('--buffered', (el.buffered.end(el.buffered.length - 1) / d).toFixed(4));
+    };
+    const updVol = () => {
+      const v = el.muted ? 0 : el.volume;
+      setVar('--volume', v.toFixed(3));
+      const lvl = v === 0 ? 0 : v < 0.33 ? 1 : v < 0.67 ? 2 : 3;
+      muteBtn.className = 'vjs-mute-control vjs-control vjs-button vjs-vol-' + lvl;
+      muteBtn.title = el.muted ? 'Unmute' : 'Mute';
+      // 1/x keeps the sign of -0: muted with volume 0 (w0bmscript.js)
+      store.set('volume', String(el.volume * (el.muted ? -1 : 1)));
+    };
+
+    // saved volume (default 0.3)
+    const saved = parseFloat(store.get('volume') ?? '0.3');
+    el.volume = Math.abs(isNaN(saved) ? 0.3 : saved);
+    el.muted = 0 > 1 / (isNaN(saved) ? 0.3 : saved);
+
+    ['play', 'pause', 'ended'].forEach((ev) => el.addEventListener(ev, updState));
+    el.addEventListener('timeupdate', updTime);
+    el.addEventListener('progress', updTime);
+    el.addEventListener('durationchange', () => { dur.textContent = fmtTime(el.duration); updTime(); });
+    el.addEventListener('loadedmetadata', () => { dur.textContent = fmtTime(el.duration); });
+    el.addEventListener('volumechange', updVol);
+    el.addEventListener('waiting', () => wrap.classList.add('vjs-waiting'));
+    el.addEventListener('playing', () => wrap.classList.remove('vjs-waiting'));
+    el.addEventListener('seeking', () => wrap.classList.add('vjs-seeking'));
+    el.addEventListener('seeked', () => wrap.classList.remove('vjs-seeking'));
+
+    playBtn.addEventListener('click', p.toggle);
+    q('.vjs-big-play-button').addEventListener('click', p.play);
+    el.addEventListener('click', p.toggle);
+    muteBtn.addEventListener('click', () => {
+      if (el.muted || el.volume === 0) {
+        el.muted = false;
+        if (el.volume === 0) el.volume = 0.3;
+      } else {
+        el.muted = true;
+      }
+    });
+
+    // sliders
+    const drag = (bar, onFrac) => {
+      const at = (e) => {
+        const r = bar.getBoundingClientRect();
+        return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+      };
+      bar.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        bar.setPointerCapture(e.pointerId);
+        wrap.classList.add('vjs-scrubbing');
+        onFrac(at(e));
+        const move = (ev) => onFrac(at(ev));
+        const up = () => {
+          wrap.classList.remove('vjs-scrubbing');
+          bar.removeEventListener('pointermove', move);
+          bar.removeEventListener('pointerup', up);
+          bar.removeEventListener('pointercancel', up);
+        };
+        bar.addEventListener('pointermove', move);
+        bar.addEventListener('pointerup', up);
+        bar.addEventListener('pointercancel', up);
+      });
+    };
+    drag(holder, (f) => { if (el.duration && isFinite(el.duration)) { el.currentTime = f * el.duration; updTime(); } });
+    drag(volBar, (f) => { el.volume = f; el.muted = f === 0; });
+    holder.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') { el.currentTime += 5; e.preventDefault(); e.stopPropagation(); }
+      if (e.key === 'ArrowLeft') { el.currentTime -= 5; e.preventDefault(); e.stopPropagation(); }
+    });
+
+    // playback rate menu
+    const setRate = (r) => {
+      el.playbackRate = r;
+      rateVal.textContent = r + 'x';
+      rateBtn.querySelectorAll('.vjs-menu-item').forEach((li) => li.classList.toggle('vjs-selected', +li.dataset.rate === r));
+    };
+    rateBtn.addEventListener('click', (e) => {
+      const li = e.target.closest('.vjs-menu-item');
+      if (li) { setRate(+li.dataset.rate); rateBtn.querySelector('.vjs-menu').classList.remove('vjs-lock-showing'); return; }
+      // clicking the button cycles like video.js
+      const i = rates.indexOf(el.playbackRate);
+      setRate(rates[(i - 1 + rates.length) % rates.length]);
+    });
+
+    // fullscreen
+    const fsBtn = q('.vjs-fullscreen-control');
+    const toggleFs = () => {
+      if (document.fullscreenElement) document.exitFullscreen?.();
+      else wrap.requestFullscreen?.().catch(() => {});
+    };
+    fsBtn?.addEventListener('click', toggleFs);
+    if (!isAudio) el.addEventListener('dblclick', toggleFs);
+    document.addEventListener('fullscreenchange', () => {
+      const fs = document.fullscreenElement === wrap;
+      wrap.classList.toggle('vjs-fullscreen', fs);
+      if (fsBtn) fsBtn.title = fs ? 'Non-Fullscreen' : 'Fullscreen';
+    });
+    p.toggleFullscreen = toggleFs;
+
+    // user activity (inactivityTimeout: 1000)
+    let idle;
+    const active = () => {
+      wrap.classList.add('vjs-user-active');
+      wrap.classList.remove('vjs-user-inactive');
+      clearTimeout(idle);
+      idle = setTimeout(() => {
+        if (!el.paused && !isAudio) {
+          wrap.classList.remove('vjs-user-active');
+          wrap.classList.add('vjs-user-inactive');
+        }
+      }, 1000);
+    };
+    wrap.addEventListener('mousemove', active);
+    wrap.addEventListener('touchstart', active, { passive: true });
+    wrap.addEventListener('mouseleave', () => { if (!el.paused && !isAudio) { wrap.classList.remove('vjs-user-active'); wrap.classList.add('vjs-user-inactive'); } });
+
+    updState();
+    updVol();
+    updTime();
+    return p;
+  }
+
+  if (media && (media.tagName === 'VIDEO' || media.tagName === 'AUDIO')) {
+    player = buildPlayer(media);
+    if (ITEM && ITEM.autoplay && player.paused()) player.play();
+
+    // 3px progress line under the player
+    if (mediaBox) {
+      const line = document.createElement('div');
+      line.className = 'w0bm-progressline';
+      line.innerHTML = '<div></div>';
+      mediaBox.appendChild(line);
+      mediaBox.classList.add('w0bm-has-progress');
+    }
+  }
+
+  // Album: thumbnails swap the stage
+  $$('.w0bm-album').forEach((album) => {
+    const stage = album.querySelector('.w0bm-album-stage');
+    album.querySelectorAll('.w0bm-album-thumb').forEach((a) => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      album.querySelectorAll('.w0bm-album-thumb').forEach((x) => x.classList.toggle('active', x === a));
+      const src = a.dataset.src, mime = a.dataset.mime || '';
+      stage.textContent = '';
+      if (mime.startsWith('video')) {
+        const v = document.createElement('video');
+        v.src = src; v.controls = true; v.loop = true; v.autoplay = true; v.playsInline = true;
+        stage.appendChild(v);
+      } else if (mime.startsWith('audio')) {
+        const v = document.createElement('audio');
+        v.src = src; v.controls = true; v.loop = true; v.autoplay = true;
+        stage.appendChild(v);
+      } else {
+        const l = document.createElement('a');
+        l.href = src; l.target = '_blank';
+        const img = document.createElement('img');
+        img.src = src;
+        l.appendChild(img);
+        stage.appendChild(l);
+      }
+    }));
+  });
+
+  // Flash (sandboxed Ruffle frame from /s/js/flash-embed.js)
+  const swf = $('#w0bm-flash[data-swf]');
+  if (swf && window.customElements?.get('f0ck-flash')) {
+    const el = document.createElement('f0ck-flash');
+    swf.appendChild(el);
+    el.load({ url: swf.dataset.swf }).then(() => swf.classList.add('w0bm-flash-loaded')).catch(() => el.remove());
+  }
+
+  // ── The blurred background (#bg) ──────────────────────────────────────────────────────
+  const canvas = $('#bg');
+  if (canvas) {
+    const img = $('#w0bm-image') || $('.w0bm-album-image');
+    const source = player ? (player.el.tagName === 'VIDEO' ? player.el : null) : img;
+    if (!source) {
+      canvas.remove();
+      $('#togglebg')?.remove();
+    } else {
+      if (store.get('background') == null) store.set('background', isMobile ? 'false' : 'true');
+      let background = store.get('background') === 'true';
+      const ctx = canvas.getContext('2d');
+      let cw = 0, ch = 0;
+      const size = () => {
+        cw = canvas.width = canvas.clientWidth | 0;
+        ch = canvas.height = canvas.clientHeight | 0;
+      };
+      size();
+      canvas.classList.toggle('w0bm-bg-off', !background);
+      const drawOnce = () => {
+        try { ctx.drawImage(source, 0, 0, cw, ch); } catch { /* not ready / tainted */ }
+      };
+      const loop = () => {
+        if (!background) return;
+        if (source.tagName === 'VIDEO') {
+          if (source.paused || source.ended) return;
+          drawOnce();
+          requestAnimationFrame(loop);
+        } else if (source.complete) {
+          drawOnce();
+        } else {
+          source.addEventListener('load', drawOnce, { once: true });
+        }
+      };
+      if (source.tagName === 'VIDEO') source.addEventListener('play', loop);
+      window.addEventListener('resize', () => { size(); if (source.tagName !== 'VIDEO' || source.paused) drawOnce(); });
+      loop();
+      $('#togglebg')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        background = !background;
+        store.set('background', String(background));
+        canvas.classList.toggle('w0bm-bg-off', !background);
+        if (background) { size(); drawOnce(); loop(); }
+      });
+    }
+  }
+
+  // ── Comments sidebar toggle (C) ───────────────────────────────────────────────────────
+  const aside = $('.aside');
+  if (aside && $('#toggle')) {
+    if (store.get('comments') == null) store.set('comments', 'true');
+    const apply = () => aside.classList.toggle('w0bm-hidden', store.get('comments') !== 'true');
+    apply();
+    var toggleComments = () => { store.set('comments', String(store.get('comments') !== 'true')); apply(); };
+    $('#toggle').addEventListener('click', (e) => { e.preventDefault(); toggleComments(); });
+  }
+
+  // ── Keyboard / mouse wheel navigation ─────────────────────────────────────────────────
+  const visible = (el) => el && !el.classList.contains('w0bm-invisible');
+  const goNext = () => { const n = $('#next'); if (visible(n)) n.click(); };
+  const goPrev = () => { const p = $('#prev'); if (visible(p)) p.click(); };
+  if (ITEM) {
+    document.addEventListener('keydown', (e) => {
+      if (e.defaultPrevented || /^(input|textarea|select)$/i.test(e.target.nodeName) || e.target.isContentEditable || e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return;
+      if ($('.modal.w0bm-modal-open')) return;
+      switch (e.keyCode) {
+        case 39: case 68: case 76: goNext(); break; // → d l
+        case 37: case 65: case 72: goPrev(); break; // ← a h
+        case 82: $('#w0bm-context')?.click(); break; // r
+        case 70: $('#fav')?.click(); break; // f
+        case 67: if (typeof toggleComments === 'function') toggleComments(); break; // c
+        case 87: case 38: if (player) { e.preventDefault(); player.volume(player.volume() + 0.1); } break; // w ↑
+        case 83: case 40: if (player) { e.preventDefault(); player.volume(player.volume() - 0.1); } break; // s ↓
+        case 32: if (player) { e.preventDefault(); player.toggle(); } break; // space
+        default: break;
+      }
+    });
+    const main = $('.wrapper > .w0bm-main');
+    main?.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (e.target.closest('.modal, .popover, .vjs-volume-control')) return;
+      // pages taller than the window keep scrolling normally
+      const se = document.scrollingElement;
+      if (se && se.scrollHeight > window.innerHeight + 5) return;
+      e.preventDefault();
+      if (e.deltaY > 0) goNext(); else if (e.deltaY < 0) goPrev();
+    }, { passive: false });
+  }
+
+  // ── Favorite ──────────────────────────────────────────────────────────────────────────
+  const favForm = $('#w0bm-fav-form');
+  favForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const action = favForm.querySelector('input[name="action"]');
+    const r = await api('/api/v2/togglefav', { body: new FormData(favForm) });
+    if (!r.ok) { flash('error', r.msg || 'Error'); return; }
+    const faved = action.value === 'add';
+    action.value = faved ? 'remove' : 'add';
+    const icon = favForm.querySelector('i');
+    icon.classList.toggle('fa-heart', faved);
+    icon.classList.toggle('fa-heart-o', !faved);
+  });
+
+  // ── Subscribe to comments ─────────────────────────────────────────────────────────────
+  const subBtn = $('#w0bm-subscribe');
+  subBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const r = await api('/api/subscribe/' + ITEM.id);
+    if (!r.ok) { flash('error', r.msg || 'Error'); return; }
+    const on = !!r.data.subscribed;
+    subBtn.querySelector('i').className = 'fa ' + (on ? 'fa-bell' : 'fa-bell-o');
+    subBtn.title = on ? 'Unsubscribe' : 'Subscribe to comments';
+    flash('success', on ? 'Subscribed to comments' : 'Unsubscribed');
+  });
+
+  // ── Edit / delete the item ────────────────────────────────────────────────────────────
+  const editForm = $('#webmedit');
+  editForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = editForm.dataset.itemId;
+    const errors = [];
+    const title = editForm.querySelector('input[name="title"]');
+    if (title && title.value !== title.defaultValue) {
+      const r = await api('/api/v2/items/' + id + '/title', { method: 'PATCH', json: { title: title.value } });
+      if (r.ok) {
+        title.defaultValue = title.value;
+        const h = $('#w0bm-item-title');
+        if (h) h.textContent = r.data.title || '';
+      } else errors.push(r.msg);
+    }
+    const rating = editForm.querySelector('select[name="rating"]');
+    if (rating && rating.value && !rating.querySelector('option:checked')?.defaultSelected) {
+      const r = await api('/api/v2/tags/' + id + '/cycle-rating', { method: 'PUT', body: { rating: rating.value } });
+      if (r.ok) {
+        rating.querySelectorAll('option').forEach((o) => { o.defaultSelected = o.selected; });
+        reloadTags();
+      } else errors.push(r.msg);
+    }
+    if (errors.length) flash('error', 'Error updating upload: ' + errors.join(', '));
+    else flash('success', 'Upload successfully updated');
+    closeModal($('#webmeditmodal'));
+  });
+  $('.delete_video')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const reason = prompt('Reason for deleting ' + ITEM.id);
+    if (reason === null) return;
+    const r = await api('/api/v2/admin/deletepost', { body: { postid: ITEM.id, reason: reason.trim() } });
+    if (r.ok) {
+      flash('success', 'Deleted');
+      const n = $('#prev:not(.w0bm-invisible)') || $('#next:not(.w0bm-invisible)');
+      setTimeout(() => { location.href = n ? n.href : '/'; }, 500);
+    } else flash('error', r.msg || 'Error deleting');
+  });
+
+  // ── Tags ──────────────────────────────────────────────────────────────────────────────
+  const tagDisplay = $('#tag-display');
+  function renderTags(tags) {
+    if (!tagDisplay) return;
+    const canDelete = tagDisplay.dataset.canDelete === '1';
+    tagDisplay.textContent = '';
+    if (!tags || !tags.length) { tagDisplay.textContent = 'No tags yet ...'; return; }
+    const ratings = ['sfw', 'nsfw', 'nsfl'];
+    tags.forEach((t, i) => {
+      const norm = t.normalized || String(t.tag).toLowerCase();
+      const span = document.createElement('span');
+      span.className = 'label label-default' + (ratings.includes(norm) ? ' w0bm-rating-tag' : '');
+      span.dataset.tag = t.tag;
+      const a = document.createElement('a');
+      a.href = '/tag/' + encodeURIComponent(norm);
+      a.className = 'default-link' + (ratings.includes(norm) ? ' w0bm-tag-' + norm : '');
+      a.textContent = t.tag;
+      span.appendChild(a);
+      if (canDelete && !ratings.includes(norm)) {
+        span.append(' ');
+        const d = document.createElement('a');
+        d.className = 'delete-tag default-link';
+        d.href = '#';
+        d.innerHTML = '<i class="fa fa-times"></i>';
+        span.appendChild(d);
+      }
+      tagDisplay.appendChild(span);
+      if (i < tags.length - 1) tagDisplay.append(' ');
+    });
+    markRatingTags();
+  }
+  async function reloadTags() {
+    if (!ITEM) return;
+    const r = await api('/api/v2/tags/' + ITEM.id, { method: 'GET' });
+    if (r.ok) renderTags(r.data.tags);
+  }
+  function markRatingTags() {
+    if (!tagDisplay || tagDisplay.dataset.canRate !== '1') return;
+    tagDisplay.querySelectorAll('.w0bm-rating-tag').forEach((s) => {
+      s.classList.add('w0bm-can-rate');
+      s.title = 'Click to change the rating';
+    });
+  }
+  markRatingTags();
+  tagDisplay?.addEventListener('click', async (e) => {
+    const del = e.target.closest('.delete-tag');
+    if (del) {
+      e.preventDefault();
+      const tag = del.closest('.label').dataset.tag;
+      if (!confirm('Do you really want to delete this tag?')) return;
+      const r = await api('/api/v2/tags/' + ITEM.id + '/' + encodeURIComponent(tag), { method: 'DELETE' });
+      if (r.ok) {
+        flash('success', 'Tag successfully deleted');
+        renderTags(r.data.tags);
+      } else flash('error', r.msg || 'Error deleting tag');
+      return;
+    }
+    const rating = e.target.closest('.w0bm-rating-tag.w0bm-can-rate');
+    if (rating) {
+      e.preventDefault();
+      const r = await api('/api/v2/tags/' + ITEM.id + '/cycle-rating', { method: 'PUT', body: {} });
+      if (r.ok) { flash('success', 'Rating: ' + (r.data.rating_label || '')); reloadTags(); }
+      else flash('error', r.msg || 'Error');
+    }
+  });
+  const tagForm = $('form.w0bm-tagform');
+  const tagInput = $('#tags');
+  if (tagForm && tagInput) {
+    const ti = tagsinput(tagInput, {
+      beforeAdd(tag) {
+        const existing = $$('#tag-display .label').map((s) => (s.dataset.tag || '').toLowerCase());
+        if (existing.includes(tag.toLowerCase())) { flash('info', 'Tag already exists'); return false; }
+        return true;
+      },
+    });
+    tagForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      ti.flush();
+      const list = ti.items();
+      if (!list.length) { flash('error', 'No tags specified'); return; }
+      let last = null, errors = [];
+      for (const tag of list) {
+        const r = await api('/api/v2/tags/' + ITEM.id, { body: { tagname: tag } });
+        if (r.ok) last = r.data.tags;
+        else errors.push(tag + ': ' + r.msg);
+        if (r.data && r.data.tags) last = r.data.tags;
+      }
+      if (last) renderTags(last);
+      ti.removeAll();
+      if (errors.length) flash('error', 'Error saving tag(s): ' + errors.join(', '));
+      else {
+        const t = $('#tag-add-toggle');
+        if (t) t.checked = false;
+      }
+    });
+  }
+
+  // ── Comments ──────────────────────────────────────────────────────────────────────────
+  let emojis = null; // name -> url
+  async function loadEmojis() {
+    if (emojis) return emojis;
+    emojis = {};
+    const r = await api('/api/v2/emojis', { method: 'GET' });
+    if (r.ok) (r.data.emojis || []).forEach((e) => { if (e.name && e.url) emojis[e.name] = e.url; });
+    return emojis;
+  }
+  const allowedImgHosts = (() => {
+    try { return JSON.parse($('#w0bm-images')?.textContent || '[]'); } catch { return []; }
+  })();
+  const isAllowedMedia = (url) => {
+    try {
+      const u = new URL(url, location.href);
+      if (u.origin === location.origin) return true;
+      return allowedImgHosts.some((h) => u.hostname === h || u.hostname.endsWith('.' + h));
+    } catch { return false; }
+  };
+
+  // w0bm's simplemd for f0ckm comments: greentext, links, media, mentions, emojis, timestamps,
+  // [spoiler] [blur] [rb] [reich] [krebs], **bold**, *italic*, `code`
+  function renderComment(text) {
+    const codes = [];
+    let s = escapeHTML(text || '').replace(/&#x2F;/g, '/').replace(/&#x3D;/g, '=').replace(/&#x60;/g, '`');
+    s = s.replace(/```([\s\S]*?)```/g, (m, c) => { codes.push('<pre>' + c.replace(/^\n/, '') + '</pre>'); return '\u0000' + (codes.length - 1) + '\u0000'; });
+    s = s.replace(/`([^`\n]+)`/g, (m, c) => { codes.push('<code>' + c + '</code>'); return '\u0000' + (codes.length - 1) + '\u0000'; });
+    s = s.split('\n').map((line) => (/^&gt;(?!&gt;\d)/.test(line) ? '<span class="greentext">' + line + '</span>' : line)).join('\n');
+    s = s.replace(/(^|[\s(])((?:https?:\/\/|\/(?:b|c)\/)[^\s<>"']+)/g, (m, pre, url) => {
+      const clean = url.replace(/&amp;/g, '&');
+      const path = clean.split(/[?#]/)[0].toLowerCase();
+      if (isAllowedMedia(clean)) {
+        if (/\.(png|jpe?g|gif|webp|avif)$/.test(path)) return pre + '<a href="' + url + '" target="_blank" rel="noopener noreferrer"><img class="comment_image" src="' + url + '" alt="" loading="lazy"></a>';
+        if (/\.(mp4|webm|mov|ogv)$/.test(path)) return pre + '<video src="' + url + '" controls loop muted playsinline preload="metadata"></video>';
+        if (/\.(mp3|ogg|wav|flac|opus|m4a|aac)$/.test(path)) return pre + '<audio src="' + url + '" controls preload="metadata"></audio>';
+      }
+      const ext = !clean.startsWith('/') && !clean.startsWith(location.origin);
+      return pre + '<a href="' + url + '"' + (ext ? ' rel="extern noopener noreferrer" target="_blank"' : '') + '>' + url + '</a>';
+    });
+    s = s.replace(/(^|[\s(])@([A-Za-z0-9_\-]{1,32})/g, (m, pre, u) => pre + '<a class="w0bm-mention" href="/user/' + u.toLowerCase() + '">@' + u + '</a>');
+    s = s.replace(/(^|\s)&gt;&gt;(\d+)/g, (m, pre, id) => pre + '<a class="w0bm-quote" href="#c' + id + '">&gt;&gt;' + id + '</a>');
+    s = s.replace(/\b(\d{1,2}:\d{2})\b(?![^<]*>)/g, '<a class="comment_clickable_timestamp" href="#">$1</a>');
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    const wrapTag = (tag, cls) => {
+      const re = new RegExp('\\[' + tag + '\\]((?:(?!\\[' + tag + '\\])[\\s\\S])*?)\\[\\/' + tag + '\\]', 'gi');
+      for (let i = 0; i < 10; i++) {
+        const n = s.replace(re, '<span class="' + cls + '">$1</span>');
+        if (n === s) break;
+        s = n;
+      }
+    };
+    wrapTag('spoiler', 'spoiler');
+    wrapTag('blur', 'blur-text');
+    wrapTag('rb', 'rainbow');
+    wrapTag('reich', 'reich');
+    wrapTag('krebs', 'anim');
+    if (emojis) s = s.replace(/:([a-z0-9_\-]+):/g, (m, n) => (emojis[n] ? '<img class="comment_emoji" src="' + escapeHTML(emojis[n]) + '" alt=":' + n + ':" title=":' + n + ':">' : m));
+    s = s.replace(/\u0000(\d+)\u0000/g, (m, i) => codes[+i]);
+    return s.replace(/\n/g, '<br>');
+  }
+
+  const commentBox = $('#w0bm-comments');
+  let comments = [];
+  function commentPanel(c) {
+    const mine = DATA.user && c.username && c.username.toLowerCase() === String(DATA.user).toLowerCase() && !c.is_anon;
+    const div = document.createElement('div');
+    div.className = 'panel ' + (c.is_deleted ? 'panel-danger' : 'panel-default') + (c.is_pinned ? ' w0bm-pinned' : '');
+    div.dataset.id = c.id;
+    div.id = 'c' + c.id;
+    const body = document.createElement('div');
+    body.className = 'panel-body';
+    if (c.parent_id) body.insertAdjacentHTML('beforeend', '<div class="w0bm-reply-to">↳ <a href="#c' + c.parent_id + '">&gt;&gt;' + c.parent_id + '</a></div>');
+    body.insertAdjacentHTML('beforeend', c.is_deleted && !DATA.is_mod ? '<i>[deleted]</i>' : renderComment(c.content));
+    (c.files || []).filter((f) => f.dest && !String(c.content || '').includes(f.dest)).forEach((f) => {
+      const url = '/c/' + String(f.dest || '').replace(/^\/?c\//, '');
+      const m = f.mime || '';
+      if (m.startsWith('image')) body.insertAdjacentHTML('beforeend', '<br><a href="' + escapeHTML(url) + '" target="_blank"><img class="comment_image" src="' + escapeHTML(url) + '" alt="" loading="lazy"></a>');
+      else if (m.startsWith('video')) body.insertAdjacentHTML('beforeend', '<br><video src="' + escapeHTML(url) + '" controls loop playsinline preload="metadata"></video>');
+      else if (m.startsWith('audio')) body.insertAdjacentHTML('beforeend', '<br><audio src="' + escapeHTML(url) + '" controls preload="metadata"></audio>');
+      else body.insertAdjacentHTML('beforeend', '<br><a href="' + escapeHTML(url) + '" download>' + escapeHTML(f.original_filename || url) + '</a>');
+    });
+    const foot = document.createElement('div');
+    foot.className = 'panel-footer';
+    const name = c.is_anon ? 'Anonymous' + (c.anon_short_fingerprint ? ' (' + c.anon_short_fingerprint + ')' : '') : (c.display_name || c.username);
+    foot.innerHTML = 'by ' + (c.is_anon || !c.username
+      ? '<span>' + escapeHTML(name) + '</span>'
+      : '<a href="/user/' + encodeURIComponent(String(c.username).toLowerCase()) + '"' + (c.username_color ? ' class="w0bm-usercolor"' : '') + '>' + escapeHTML(name) + '</a>') +
+      ' <small><time class="timeago" data-toggle="tooltip" data-placement="top" datetime="' + escapeHTML(c.created_at) + '" title="' + escapeHTML(c.created_at) + '"></time></small>' +
+      (c.is_pinned ? ' <i class="fa fa-thumb-tack" title="pinned"></i>' : '') +
+      '<span class="w0bm-c-actions">' +
+        (DATA.user && !c.is_deleted && !(ITEM && ITEM.locked && !DATA.is_mod) && $('#cinput') ? ' <a class="reply_comment" href="#">[reply]</a>' : '') +
+        (!c.is_deleted && (DATA.is_mod || (mine && DATA.allow_comment_deletion)) ? ' <a class="delete_comment" href="#">[del]</a>' : '') +
+        (!c.is_deleted && DATA.is_mod ? ' <a class="edit_comment" href="#">[edit]</a>' : '') +
+        (!c.is_deleted && DATA.is_mod ? ' <a class="pin_comment" href="#">[' + (c.is_pinned ? 'unpin' : 'pin') + ']</a>' : '') +
+        (DATA.user ? ' <a class="report_comment" href="#" title="Report"><i class="fa fa-warning"></i></a>' : '') +
+      '</span>';
+    if (c.username_color) foot.querySelector('a.w0bm-usercolor')?.style.setProperty('--user-color', c.username_color);
+    div.append(body, foot);
+    return div;
+  }
+  function renderComments() {
+    if (!commentBox) return;
+    commentBox.textContent = '';
+    const list = comments.filter((c) => DATA.is_mod || !c.is_deleted || comments.some((x) => x.parent_id === c.id));
+    if (!list.length) {
+      commentBox.innerHTML = '<div class="panel panel-default nocomments"><div class="panel-body">No comments yet …<br /></div></div>';
+    } else {
+      list.forEach((c) => commentBox.appendChild(commentPanel(c)));
+    }
+    const amount = $('#commentAmount');
+    if (amount) amount.textContent = String(comments.filter((c) => !c.is_deleted).length);
+    refreshTimeago(commentBox);
+    initTooltips(commentBox);
+  }
+  async function loadComments(scrollTo) {
+    if (!commentBox || !ITEM) return;
+    await loadEmojis();
+    const r = await api('/api/comments/' + ITEM.id + '?sort=old', { method: 'GET' });
+    if (!r.ok) return;
+    comments = (r.data.comments || []).slice().sort((a, b) => (b.is_pinned - a.is_pinned) || (new Date(a.created_at) - new Date(b.created_at)));
+    renderComments();
+    const target = scrollTo || (location.hash.match(/^#c(\d+)$/) || [])[1];
+    if (target) {
+      const el = document.getElementById('c' + target);
+      if (el) {
+        el.classList.add('w0bm-highlight');
+        el.scrollIntoView({ block: 'center' });
+      }
+    } else if (scrollTo === undefined && commentBox.parentElement) {
+      // newest at the bottom, like w0bm
+    }
+  }
+  loadComments();
+
+  commentBox?.addEventListener('click', async (e) => {
+    const ts = e.target.closest('.comment_clickable_timestamp');
+    if (ts) {
+      e.preventDefault();
+      const m = ts.textContent.match(/(\d{1,2}):(\d{2})/);
+      if (player && m) {
+        const seek = +m[1] * 60 + +m[2];
+        if (!player.duration() || seek <= player.duration()) player.currentTime(seek);
+      }
+      return;
+    }
+    const panel = e.target.closest('.panel[data-id]');
+    if (!panel) return;
+    const id = panel.dataset.id;
+    const c = comments.find((x) => String(x.id) === id);
+    if (e.target.closest('.reply_comment')) {
+      e.preventDefault();
+      const ta = $('#cinput');
+      const form = ta.form;
+      let parent = form.querySelector('input[name="parent_id"]');
+      if (!parent) {
+        parent = document.createElement('input');
+        parent.type = 'hidden';
+        parent.name = 'parent_id';
+        form.appendChild(parent);
+      }
+      parent.value = id;
+      if (c && c.username && !c.is_anon && !ta.value.includes('@' + c.username)) ta.value = '@' + c.username + ' ' + ta.value;
+      ta.focus();
+      return;
+    }
+    if (e.target.closest('.delete_comment')) {
+      e.preventDefault();
+      let reason = '';
+      if (DATA.is_mod && !(c && DATA.user && c.username === DATA.user)) {
+        reason = prompt('Reason for deleting comment ' + id + ' by ' + (c ? c.username : ''));
+        if (reason === null) return;
+      } else if (!confirm('Delete this comment?')) return;
+      const r = await api('/api/comments/' + id + '/delete', { body: { reason: reason.trim() } });
+      if (r.ok) { flash('success', 'Comment deleted'); loadComments(null); }
+      else flash('error', r.msg || 'Error deleting comment');
+      return;
+    }
+    if (e.target.closest('.pin_comment')) {
+      e.preventDefault();
+      const r = await api('/api/comments/' + id + '/pin', { body: {} });
+      if (r.ok) loadComments(null);
+      else flash('error', r.msg || 'Error');
+      return;
+    }
+    if (e.target.closest('.report_comment')) {
+      e.preventDefault();
+      const reason = prompt('Why do you report this comment?');
+      if (!reason || !reason.trim()) return;
+      const r = await api('/api/v2/report', { body: { comment_id: id, reason: reason.trim(), 'categories[]': 'other' } });
+      if (r.ok) flash('success', 'Report sent. Thanks!');
+      else flash('error', r.msg || 'Error');
+      return;
+    }
+    const edit = e.target.closest('.edit_comment');
+    if (edit && c) {
+      e.preventDefault();
+      const body = panel.querySelector('.panel-body');
+      const ta = document.createElement('textarea');
+      ta.className = 'form-control';
+      ta.value = c.content || '';
+      body.replaceWith(ta);
+      const actions = panel.querySelector('.w0bm-c-actions');
+      const old = actions.innerHTML;
+      actions.innerHTML = ' <a href="#" class="saveCommentEdit">[save]</a> <a href="#" class="abortCommentEdit">[abort]</a>';
+      actions.querySelector('.abortCommentEdit').addEventListener('click', (ev) => {
+        ev.preventDefault();
+        ta.replaceWith(body);
+        actions.innerHTML = old;
+      });
+      actions.querySelector('.saveCommentEdit').addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        const r = await api('/api/comments/' + id + '/edit', { body: { content: ta.value } });
+        if (r.ok) { flash('success', 'Comment edited successfully'); loadComments(null); }
+        else { flash('error', r.msg || 'Error editing comment'); ta.replaceWith(body); actions.innerHTML = old; }
+      });
+    }
+  });
+
+  const commentForm = $('#commentForm > form');
+  if (commentForm) {
+    let lastComment = '';
+    let capTries = 0;
+    const ta = commentForm.querySelector('textarea');
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commentForm.requestSubmit(); }
+    });
+    commentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(commentForm);
+      const sig = fd.get('content') + '|' + (fd.get('parent_id') || '');
+      if (!String(fd.get('content') || '').trim()) return;
+      if (sig === lastComment) { flash('error', "nope. just don't. seriously... don't."); return; }
+      if (player && player.el.tagName === 'VIDEO' && /\b\d{1,2}:\d{2}\b/.test(fd.get('content')) === false && player.currentTime() > 0) {
+        fd.set('video_time', String(player.currentTime()));
+      }
+      const btn = commentForm.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      const r = await api('/api/comments', { body: fd });
+      btn.disabled = false;
+      if (r.ok) {
+        capTries = 0;
+        lastComment = sig;
+        ta.value = '';
+        ta.blur();
+        commentForm.querySelector('input[name="parent_id"]')?.remove();
+        commentForm.querySelector('cap-widget')?.remove();
+        await loadComments(r.data.comment ? r.data.comment.id : null);
+        const sc = $('#comment_container_scrollable');
+        if (sc && !(r.data.comment)) sc.scrollTop = sc.scrollHeight;
+      } else {
+        if (r.data && r.data.captcha_required && window.f0ckCaptchaGate && capTries < 1) {
+          capTries++;
+          try {
+            await window.f0ckCaptchaGate(r.data.captcha_required);
+            commentForm.requestSubmit();
+            return;
+          } catch { /* cancelled */ }
+        }
+        capTries = 0;
+        flash('error', r.msg || 'Error saving comment');
+      }
+    });
+    // [rb] [reich] [krebs] [spoiler] (formatText)
+    $$('.w0bm-fmt', commentForm).forEach((a) => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tag = a.dataset.fmt;
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      const sel = ta.value.slice(start, end);
+      ta.setRangeText('[' + tag + ']' + sel + '[/' + tag + ']', start, end, 'end');
+      if (!sel) ta.setSelectionRange(start + tag.length + 2, start + tag.length + 2);
+      ta.focus();
+    }));
+    // emoji box
+    const emojiBtn = $('.emoji-shit', commentForm);
+    const emojiBox = $('#parent', commentForm);
+    emojiBtn?.addEventListener('click', async () => {
+      const list = await loadEmojis();
+      const child = $('#child', emojiBox);
+      if (!child.childElementCount) {
+        const names = Object.keys(list);
+        if (!names.length) child.textContent = 'No emojis yet';
+        names.forEach((n) => {
+          const a = document.createElement('a');
+          a.className = 'w0bm_emoji_anchor';
+          a.title = ':' + n + ':';
+          a.href = '#';
+          a.innerHTML = '<img class="comment_emoji_small" loading="lazy" alt="">';
+          a.firstChild.src = list[n];
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            ta.setRangeText(':' + n + ': ', ta.selectionStart, ta.selectionEnd, 'end');
+            ta.focus();
+          });
+          child.appendChild(a);
+        });
+      }
+      emojiBox.classList.toggle('w0bm-hidden');
+    });
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════════════
+  // Other pages
+  // ════════════════════════════════════════════════════════════════════════════════════
+
+  // Notifications page: read all / one
+  $('#w0bm-readall')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const tab = e.currentTarget.dataset.tab || '';
+    const r = await api('/api/notifications/read' + (tab ? '?tab=' + encodeURIComponent(tab) : ''), { body: {} });
+    if (r.ok) {
+      flash('success', 'Marked all messages as read');
+      $$('.list-group-item-info').forEach((x) => x.classList.remove('list-group-item-info'));
+      setBadge($('#w0bm-notif-badge'), 0);
+    } else flash('error', 'Failed to mark all messages as read');
+  });
+  $$('.w0bm-notif a.list-group-item[data-id]').forEach((a) => a.addEventListener('click', () => {
+    if (a.classList.contains('list-group-item-info')) {
+      navigator.sendBeacon?.('/api/notifications/' + a.dataset.id + '/read?csrf_token=' + encodeURIComponent(csrf()));
+    }
+  }));
+  const moreNotifs = $('#w0bm-more-notifs');
+  moreNotifs?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const page = +(moreNotifs.dataset.next || 2);
+    const tab = moreNotifs.dataset.tab || '';
+    const r = await api('/ajax/notifications?page=' + page + (tab ? '&tab=' + encodeURIComponent(tab) : ''), { method: 'GET' });
+    if (!r.ok) return;
+    $('.w0bm-notif .list-group')?.insertAdjacentHTML('beforeend', r.data.html || '');
+    refreshTimeago();
+    if (r.data.hasMore) moreNotifs.dataset.next = String(r.data.nextPage || page + 1);
+    else moreNotifs.remove();
+  });
+
+  // User comments page: server-rendered raw text -> comment markup
+  (async () => {
+    const list = $$('.w0bm-cmd');
+    if (!list.length) return;
+    await loadEmojis();
+    list.forEach((el) => { el.innerHTML = renderComment(el.textContent); el.classList.add('w0bm-md-done'); });
+  })();
+
+  // Tags page: "Load more" (/api/tags renders tag-cards.html of this frontend)
+  const moreTags = $('#w0bm-more-tags');
+  moreTags?.addEventListener('click', async () => {
+    const page = +moreTags.dataset.page || 2;
+    moreTags.disabled = true;
+    const r = await api('/api/tags?ajax=1&page=' + page, { method: 'GET' });
+    moreTags.disabled = false;
+    if (!r.ok) return;
+    $('#categories')?.insertAdjacentHTML('beforeend', r.data.html || '');
+    if (r.data.hasMore) moreTags.dataset.page = String(page + 1);
+    else moreTags.remove();
+  });
+
+  // Markdown of rules/about/terms (admin-written; rendered escaped, then a small Markdown subset)
+  function renderMarkdown(src) {
+    const esc = (t) => escapeHTML(t).replace(/&#x2F;/g, '/').replace(/&#x3D;/g, '=').replace(/&#x60;/g, '`');
+    const inline = (t) => esc(t)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/|#|mailto:)[^)\s]+)\)/g, '<a href="$2">$1</a>')
+      .replace(/(^|[\s(])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" rel="extern noopener noreferrer" target="_blank">$2</a>');
+    const out = [];
+    let list = null, para = [], code = null;
+    const flushPara = () => { if (para.length) { out.push('<p>' + para.map(inline).join('<br>') + '</p>'); para = []; } };
+    const flushList = () => { if (list) { out.push('<' + list.tag + '>' + list.items.map((i) => '<li>' + inline(i) + '</li>').join('') + '</' + list.tag + '>'); list = null; } };
+    for (const line of String(src).split(/\r?\n/)) {
+      if (code !== null) {
+        if (/^```/.test(line)) { out.push('<pre>' + esc(code.join('\n')) + '</pre>'); code = null; } else code.push(line);
+        continue;
+      }
+      if (/^```/.test(line)) { flushPara(); flushList(); code = []; continue; }
+      let m;
+      if ((m = line.match(/^(#{1,6})\s+(.*)$/))) { flushPara(); flushList(); const n = Math.min(6, m[1].length + 3); out.push('<h' + n + '>' + inline(m[2]) + '</h' + n + '>'); continue; }
+      if ((m = line.match(/^\s*[-*+]\s+(.*)$/)) || (m = line.match(/^\s*\d+[.)]\s+(.*)$/))) {
+        flushPara();
+        const tag = /^\s*\d/.test(line) ? 'ol' : 'ul';
+        if (!list || list.tag !== tag) { flushList(); list = { tag, items: [] }; }
+        list.items.push(m[1]);
+        continue;
+      }
+      if (/^\s*(---|\*\*\*)\s*$/.test(line)) { flushPara(); flushList(); out.push('<hr>'); continue; }
+      if ((m = line.match(/^>\s?(.*)$/))) { flushPara(); flushList(); out.push('<blockquote>' + inline(m[1]) + '</blockquote>'); continue; }
+      if (!line.trim()) { flushPara(); flushList(); continue; }
+      flushList();
+      para.push(line);
+    }
+    if (code !== null) out.push('<pre>' + esc(code.join('\n')) + '</pre>');
+    flushPara();
+    flushList();
+    return out.join('');
+  }
+  $$('.w0bm-md').forEach((el) => {
+    el.innerHTML = renderMarkdown(el.textContent);
+    el.classList.add('w0bm-md-done');
+  });
+
+  // Subscriptions page: unsubscribe without reload
+  $$('form.w0bm-unsub').forEach((f) => f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const r = await api(f.action, { body: new FormData(f) });
+    if (r.ok) f.closest('.w0bm-subrow')?.remove();
+    else flash('error', r.msg || 'Error');
+  }));
+
+  // ── Upload (upload.blade.php) ─────────────────────────────────────────────────────────
+  const ulForm = $('#w0bm-upload');
+  if (ulForm) {
+    const tagsUl = tagsinput($('#tags_upload'));
+    const fileInput = $('#w0bm-file');
+    const dnd = $('#dragndrop');
+    const dndText = $('#dragndrop-text');
+    const defaultPreview = dndText.innerHTML;
+    const progress = $('#w0bm-progress');
+    const stats = $('#upload-stats');
+    let currentFile = null;
+    let xhr = null;
+    const humanFileSize = (size) => {
+      if (!size) return '0 B';
+      const i = Math.floor(Math.log(size) / Math.log(1024));
+      return (size / Math.pow(1024, i)).toFixed(2) + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
+    };
+    const maxBytes = +ulForm.dataset.maxBytes || 0;
+    const reset = () => {
+      currentFile = null;
+      fileInput.value = '';
+      dndText.innerHTML = defaultPreview;
+      dnd.classList.remove('w0bm-dnd-has-file');
+      if (xhr) { xhr.abort(); xhr = null; }
+    };
+    const preview = (file) => {
+      if (maxBytes && file.size > maxBytes) {
+        flash('error', 'File too big. Max ' + humanFileSize(maxBytes));
+        return;
+      }
+      currentFile = file;
+      dnd.classList.add('w0bm-dnd-has-file');
+      dndText.textContent = '';
+      const url = URL.createObjectURL(file);
+      let el;
+      if (file.type.startsWith('video')) {
+        el = document.createElement('video');
+        el.id = 'video_preview';
+        Object.assign(el, { src: url, autoplay: true, controls: true, loop: true, muted: true });
+      } else if (file.type.startsWith('image')) {
+        el = document.createElement('img');
+        el.id = 'video_preview';
+        el.src = url;
+      } else if (file.type.startsWith('audio')) {
+        el = document.createElement('audio');
+        Object.assign(el, { src: url, controls: true });
+      }
+      if (el) dndText.appendChild(el);
+      const info = document.createElement('span');
+      info.className = 'upload-info';
+      info.append(file.name + ' — ' + humanFileSize(file.size) + ' — ');
+      const clear = document.createElement('a');
+      clear.id = 'dragndrop-clear';
+      clear.className = 'fa fa-times';
+      clear.href = '#';
+      clear.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); reset(); });
+      info.appendChild(clear);
+      dndText.appendChild(info);
+    };
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) preview(fileInput.files[0]); });
+    $('#dragndrop-link').addEventListener('click', (e) => { if (currentFile) e.preventDefault(); });
+    ['dragenter', 'dragover'].forEach((ev) => dnd.addEventListener(ev, (e) => { e.preventDefault(); dnd.classList.add('w0bm-dnd-over'); }));
+    ['dragleave', 'drop'].forEach((ev) => dnd.addEventListener(ev, (e) => { e.preventDefault(); dnd.classList.remove('w0bm-dnd-over'); }));
+    dnd.addEventListener('drop', (e) => { const f = e.dataTransfer?.files?.[0]; if (f) preview(f); });
+
+    const send = (fd) => new Promise((resolve) => {
+      xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/v2/upload');
+      xhr.setRequestHeader('X-CSRF-Token', csrf());
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      const started = Date.now();
+      xhr.upload.addEventListener('progress', (e) => {
+        if (!e.lengthComputable) return;
+        progress.style.setProperty('--progress', (e.loaded / e.total).toFixed(4));
+        const secs = Math.max(0.001, (Date.now() - started) / 1000);
+        stats.textContent = 'Speed: ' + humanFileSize(e.loaded / secs) + '/s Uploaded: ' + humanFileSize(e.loaded) + ' / ' + humanFileSize(e.total);
+      });
+      xhr.addEventListener('load', () => {
+        let data = null;
+        try { data = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
+        resolve({ status: xhr.status, data });
+      });
+      xhr.addEventListener('error', () => resolve({ status: 0, data: null }));
+      xhr.addEventListener('abort', () => resolve({ status: -1, data: null }));
+      xhr.send(fd);
+    });
+
+    ulForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      tagsUl.flush();
+      const fd = new FormData(ulForm);
+      fd.delete('file');
+      const url = String(fd.get('url') || '').trim();
+      if (!currentFile && !url) { flash('error', 'Select a file first'); return; }
+      if (!fd.get('rating')) { flash('error', 'Choose a rating (SFW/NSFW)'); return; }
+      const minTags = +ulForm.dataset.minTags || 0;
+      if (tagsUl.items().length < minTags) { flash('error', 'Add at least ' + minTags + ' tags'); return; }
+      fd.set('tags', tagsUl.items().join(','));
+      if (currentFile && !url) fd.set('file', currentFile, currentFile.name);
+      const btn = $('#btn-upload');
+      btn.disabled = true;
+      progress.classList.remove('w0bm-hidden');
+      let r = await send(fd);
+      if (r.status === 403 && r.data && r.data.captcha_required && window.f0ckCaptchaGate) {
+        try {
+          await window.f0ckCaptchaGate(r.data.captcha_required);
+          r = await send(fd);
+        } catch { /* cancelled */ }
+      }
+      btn.disabled = false;
+      xhr = null;
+      if (r.data && r.data.success) {
+        flash('success', r.data.msg || 'Upload successful');
+        setTimeout(() => { location.href = r.data.redirect || '/pending'; }, 800);
+        return;
+      }
+      progress.classList.add('w0bm-hidden');
+      if (r.status !== -1) flash('error', (r.data && (r.data.msg || r.data.message)) || (r.status === 413 ? 'File too large' : 'Upload failed'));
+    });
+  }
+
+  // Settings page: small JSON forms (data-method, JSON or urlencoded)
+  $$('form.w0bm-setting').forEach((f) => f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(f);
+    const out = {};
+    const ints = (f.dataset.int || '').split(',').filter(Boolean);
+    for (const [k, v] of fd.entries()) if (k !== 'csrf_token') out[k] = ints.includes(k) && /^-?\d+$/.test(v) ? +v : v;
+    $$('input[type="checkbox"][name]', f).forEach((c) => { out[c.name] = c.checked; });
+    const method = f.dataset.method || 'POST';
+    const r = f.dataset.json ? await api(f.action, { method, json: out }) : await api(f.action, { method, body: fd });
+    const st = f.querySelector('.w0bm-status');
+    if (r.ok) {
+      if (st) st.textContent = '✔ saved';
+      else flash('success', 'Saved');
+      if (f.dataset.reload) setTimeout(() => location.reload(), 400);
+    } else {
+      flash('error', r.msg || 'Error');
+    }
+  }));
+  $$('form.w0bm-setting input[type="checkbox"][data-autosave], form.w0bm-setting select[data-autosave]').forEach((c) => c.addEventListener('change', () => c.form.requestSubmit()));
+
+  window.w0bm = { api, flash, openModal, closeModal, tagsinput, escapeHTML, timeago, player: () => player };
+})();

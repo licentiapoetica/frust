@@ -1,0 +1,71 @@
+{#- Ranking/stats (f0ckm /ranking) in w0bm boxes and tables (stats.blade.php's place) -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
+{% block title %}Stats - {{ domain }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h3>Stats</h3>
+</div>
+<div class="row">
+    <div class="col-md-7">
+        <h4 class="w0bm-section-title">Top taggers</h4>
+        <table class="table table-hover table-condensed w0bm-ranking">
+            <thead><tr><th>#</th><th>User</th><th>Tagged</th></tr></thead>
+            <tbody>
+            {% for u in list %}
+            <tr>
+                <td>{% if loop.index == 1 %}👑 {% endif %}{{ loop.index }}</td>
+                <td><a href="/user/{{ u.user|lower }}">{{ (u.display_name or u.user) }}</a></td>
+                <td>{{ u.count }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-5">
+        <h4 class="w0bm-section-title">Numbers</h4>
+        <div class="box">
+            <table class="table table-condensed w0bm-ranking">
+                <tbody>
+                    <tr><td>Uploads</td><td>{{ stats.total }}</td></tr>
+                    <tr><td>Comments</td><td>{{ totalComments }}</td></tr>
+                    <tr><td>Users</td><td>{{ totalUsers }}</td></tr>
+                    <tr><td>Anonymous users</td><td>{{ totalAnonUsers }}</td></tr>
+                    <tr><td>Favorites</td><td>{{ totalFavs }}</td></tr>
+                    <tr><td>Tagged</td><td>{{ stats.tagged }}</td></tr>
+                    <tr><td>Untagged</td><td>{{ stats.untagged }}</td></tr>
+                    <tr><td><span class="w0bm-tag-sfw">SFW</span></td><td>{{ stats.sfw }}</td></tr>
+                    <tr><td><span class="w0bm-tag-nsfw">NSFW</span></td><td>{{ stats.nsfw }}</td></tr>
+                    {% if enable_nsfl %}<tr><td><span class="w0bm-tag-nsfl">NSFL</span></td><td>{{ stats.nsfl }}</td></tr>{% endif %}
+                    <tr><td>Deleted</td><td>{{ stats.deleted }}</td></tr>
+                    <tr><td>Disk usage</td><td>{{ diskSize }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <h4 class="w0bm-section-title">Most favorited</h4>
+        <div class="box">
+            <table class="table table-condensed w0bm-ranking">
+                <tbody>
+                {% for favo in favotop %}
+                <tr><td><a href="/{{ (favo.slug if (enable_item_slugs and favo.slug) else favo.id) }}">/{{ (favo.slug if (enable_item_slugs and favo.slug) else favo.id) }}</a></td><td>{{ favo.favs }} <i class="fa fa-heart w0bm-pink"></i></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if (enable_xd_score and xdtop and (xdtop|length > 0)) %}
+        <h4 class="w0bm-section-title">Top xD</h4>
+        <div class="box">
+            <table class="table table-condensed w0bm-ranking">
+                <tbody>
+                {% for it in xdtop %}
+                <tr><td><a href="/{{ (it.slug if (enable_item_slugs and it.slug) else it.id) }}">/{{ (it.slug if (enable_item_slugs and it.slug) else it.id) }}</a></td><td>{{ it.xd_label }} {{ it.xd_score }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

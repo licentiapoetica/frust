@@ -1,0 +1,19 @@
+{#- main.blade.php: the thumbnail grid -#}
+<div class="items">
+    {% for item in items %}
+    <div class="main-item{% if (tmp and tmp.tag) %} w0bm-hastag{% endif %}{% if item.is_pinned %} w0bm-pinned{% endif %} w0bm-mode-{{ (item.rating_class or "untagged") }}">
+        <a href="{{ link.main }}{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" title="{{ (item.title or ((item.slug if (enable_item_slugs and item.slug) else item.id)|string)) }}{% if not is_anonymized %} – {{ (item.display_name or item.username) }}{% endif %}">
+            {% if ((item.is_audio and not item.has_coverart) and not item.thumb) %}
+            <span class="w0bm-thumb-placeholder"><i class="fa fa-music"></i></span>
+            {% else %}
+            <img src="{{ (item.thumb or ("/t/" ~ item.id ~ ".webp")) }}" alt="{{ item.id }}" loading="lazy">
+            {% endif %}
+            {% if item.is_oc %}<span class="w0bm-thumb-oc">OC</span>{% endif %}
+            {% if (item.is_album and (item.album_count > 1)) %}<span class="w0bm-thumb-album"><i class="fa fa-clone"></i> {{ item.album_count }}</span>{% endif %}
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% if (not items or not (items|length)) %}
+<div class="w0bm-noresults"><img src="/s/fe/w0bm/img/small_404.gif" class="nothumb" alt=""> Nothing found :(</div>
+{% endif %}

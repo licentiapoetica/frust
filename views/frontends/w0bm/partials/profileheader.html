@@ -1,0 +1,27 @@
+{#- partials/profileheader.blade.php -#}
+<div class="page-header">
+    {% if user.avatar_file %}<img class="w0bm-avatar" src="/a/{{ user.avatar_file }}" alt="">{% elif (user.avatar and (user.avatar > 0)) %}<img class="w0bm-avatar" src="/t/{{ user.avatar }}.webp" alt="">{% endif %}
+    <h3{% if user.username_color %} class="w0bm-usercolor" style="--user-color: {{ user.username_color }}"{% endif %}>{{ (user.display_name or user.user) }} {% if user.id %}<small>ID: {{ user.id }}</small>{% endif %}{% if user.is_ghost %} <small>(legacy)</small>{% endif %} {% if user.banned %}<span class="w0bm-banned">({{ (user.ban_duration or "banned") }})</span>{% endif %}</h3>
+    <div class="admin-settings">
+        {% if (session and (session.admin or session.is_moderator) and user.id and session.user != user.user) %}
+        <span id="pannade"><a href="#banmenumodal" data-toggle="modal" data-target="#banmenumodal">{% if user.banned %}[unban user]{% else %}[ban user]{% endif %}</a></span>
+        {% endif %}
+        {% if (session and private_messages and user.id and not session.is_anon and session.user != user.user) %}
+        <span><a href="/messages/{{ user.user|encode_uri_component }}">[message]</a></span>
+        {% endif %}
+        {% if (session and session.user == user.user) %}
+        <span><a href="/settings">[edit profile]</a></span>
+        {% endif %}
+    </div>
+    <span id="jointime">Joined: <time class="timeago" datetime="{{ user.timestamp.timefull }}" title="{{ user.timestamp.timefull }}" data-toggle="tooltip">{{ user.timestamp.timeago }}</time></span>
+    <div class="profile-info">
+        <span id="count-upload"> <a href="/user/{{ user.user|lower }}/uploads"> <i class="fa fa-cloud-upload"></i> {{ (count.f0cks or 0) }} Uploads</a></span>
+        {% if not user.is_ghost %}
+        <span id="comments-user"> <a href="/user/{{ user.user|lower }}/comments"><i class="fa fa-commenting"></i> {{ (count.comments or 0) }} Comments</a></span>
+        <span id="favs-user"><a href="/user/{{ user.user|lower }}/favs"><i class="fa fa-heart"></i> {{ (count.favs or 0) }} Favorites</a></span>
+        <span id="tags-user"><a href="/user/{{ user.user|lower }}/tags"><i class="fa fa-tags"></i> {{ (count.tags or 0) }} Tags</a></span>
+        {% if userhalls_enabled %}<span id="halls-user"><a href="/user/{{ user.user|lower }}/halls"><i class="fa fa-clone"></i> {{ (count.halls or 0) }} Halls</a></span>{% endif %}
+        {% endif %}
+    </div>
+    {% if user.description %}<div class="w0bm-userdesc">{{ user.description }}</div>{% endif %}
+</div>

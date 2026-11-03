@@ -1,0 +1,86 @@
+{#- partials/navigation.blade.php -#}
+<nav class="navbar navbar-inverse navbar-static-top">
+    <div class="container-fluid">
+        {#- No-JS: the hamburger is a label for this checkbox (CSS opens the menu) -#}
+        <input type="checkbox" id="w0bm-navtoggle" class="w0bm-cbtoggle" aria-hidden="true" tabindex="-1">
+        <div class="navbar-header">
+            <label for="w0bm-navtoggle" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </label>
+            <a class="navbar-brand" href="/">
+                {% if custom_brand_image %}
+                <img src="{{ custom_brand_image }}" alt="{{ domain }}">
+                {% else %}
+                <img src="/s/fe/w0bm/img/logo.svg" alt="{{ domain }}">
+                {% endif %}
+            </a>
+        </div>
+
+        <div class=" collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav navbar-left">
+                {% if halls_enabled %}
+                <li><a href="/halls"><i class="fa fa-clone"></i><span class="hidden-sm"> Categories</span></a></li>
+                {% else %}
+                <li><a href="/tags"><i class="fa fa-clone"></i><span class="hidden-sm"> Tags</span></a></li>
+                {% endif %}
+                <li><a href="/?view=index"><i class="fa fa-list"></i><span class="hidden-sm"> Index</span></a></li>
+                {% include "frontends/w0bm/partials/themechanger.html" %}
+                {% if (frontend_switch and frontends and (frontends|length > 1)) %}
+                {% include "frontends/w0bm/partials/layoutchanger.html" %}
+                {% endif %}
+                <li><a href="#searchmodal" data-toggle="modal" data-target="#searchmodal"><i class="fa fa-search"></i><span class="hidden-sm"> Find shit</span></a></li>
+            </ul>
+            {% if session %}
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="/notifications" title="Notifications"><i class="fa fa-envelope"></i> <span class="badge message-badge" id="w0bm-notif-badge">0</span></a></li>
+                {% if (private_messages and not session.is_anon) %}
+                <li><a href="/messages" title="Direct Messages"><i class="fa fa-comments"></i> <span class="badge message-badge" id="w0bm-dm-badge">0</span></a></li>
+                {% endif %}
+                {% if (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
+                <li><a href="#filterselectmodal" data-toggle="modal" data-target="#filterselectmodal"><i class="fa fa-filter"></i><span class="hidden-sm"> Filter</span></a></li>
+                {% endif %}
+                {% if (not session.is_anon or (enable_anonymous_access and anon_permissions.upload)) %}
+                <li><a href="/upload"><i class="fa fa-cloud-upload"></i><span class="hidden-sm"> Upload</span></a></li>
+                {% endif %}
+                <li><a href="/user/{{ ((session.login if (session.is_anon and session.login) else session.user))|lower }}/favs" title="Favorites"><i class="fa fa-heart"></i></a></li>
+                <li role="presentation" class="dropdown w0bm-dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user"></i> {{ (session.display_name or session.user) }} <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="/user/{{ ((session.login if (session.is_anon and session.login) else session.user))|lower }}"><i class="fa fa-user"></i> Profile</a></li>
+                        <li><a href="/settings"><i class="fa fa-cog"></i> Settings</a></li>
+                        {% if enable_comments %}
+                        <li><a href="/subscriptions"><i class="fa fa-bell"></i> Subscriptions</a></li>
+                        {% endif %}
+                        <li><a href="/pending"><i class="fa fa-clock-o"></i> Pending{% if session.own_pending_count %} <span class="badge">{{ session.own_pending_count }}</span>{% endif %}</a></li>
+                        {% if (userhalls_enabled and not session.is_anon) %}
+                        <li><a href="/user/{{ session.user|lower }}/halls"><i class="fa fa-clone"></i> My Halls</a></li>
+                        {% endif %}
+                        <li><a href="/ranking"><i class="fa fa-trophy"></i> Ranking</a></li>
+                        <li><a href="/tags"><i class="fa fa-tags"></i> Tags</a></li>
+                        {% if (session.admin or session.is_moderator) %}
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/mod"><i class="fa fa-gavel"></i> Mod</a></li>
+                        {% if session.admin %}
+                        <li><a href="/admin"><i class="fa fa-wrench"></i> Admin{% if session.pending_count %} <span class="badge">{{ session.pending_count }}</span>{% endif %}</a></li>
+                        {% endif %}
+                        {% endif %}
+                    </ul>
+                </li>
+                <li><a href="/logout"><i class="fa fa-sign-out"></i><span class="hidden-sm"> Logout</span></a></li>
+            </ul>
+            {% else %}
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="#loginmodal" data-toggle="modal" data-target="#loginmodal"><i class="fa fa-sign-in"></i> Login</a></li>
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+{% include "frontends/w0bm/partials/searchmodal.html" %}
+{% if not session %}
+{% include "frontends/w0bm/partials/loginmodal.html" %}
+{% include "frontends/w0bm/partials/registermodal.html" %}
+{% endif %}

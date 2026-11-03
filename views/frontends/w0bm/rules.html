@@ -1,0 +1,16 @@
+{#- rules: the admin-edited Markdown in a rulez.blade.php box (w0bm.js renders the Markdown) -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block title %}Rulez - {{ domain }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h3>Rulez</h3>
+</div>
+<div class="box">
+    {% if rules_text %}
+    <div class="w0bm-prose w0bm-md">{{ rules_text }}</div>
+    {% else %}
+    <p><i>Nothing here yet …</i></p>
+    {% endif %}
+</div>
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

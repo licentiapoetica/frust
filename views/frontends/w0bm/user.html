@@ -1,0 +1,32 @@
+{#- profile.blade.php -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
+{% block bodyclass %}w0bm-profile-page{% endblock %}
+{% block modals %}
+{% if (session and (session.admin or session.is_moderator) and user.id) %}
+{% include "frontends/w0bm/partials/banmenu.html" %}
+{% endif %}
+{% endblock %}
+{% block content %}
+{% include "frontends/w0bm/partials/profileheader.html" %}
+<fieldset>
+    <legend class="w0bm-section-title"><a href="{{ (f0cks.link.main if (f0cks and f0cks.link and f0cks.link.main) else ("/user/" ~ (user.user|lower) ~ "/uploads")) }}">View Uploads</a> <small>{{ (count.f0cks or 0) }}</small></legend>
+    {% set rows = (f0cks.items if f0cks else []) %}
+    {% set rowlink = (f0cks.link.main if (f0cks and f0cks.link) else "/") %}
+    {% include "frontends/w0bm/partials/itemrows.html" %}
+</fieldset>
+{% if favs is defined %}
+<fieldset>
+    <legend class="w0bm-section-title"><a href="{{ (favs.link.main if (favs and favs.link and favs.link.main) else ("/user/" ~ (user.user|lower) ~ "/favs")) }}">View Favorites</a> <small>{{ (count.favs or 0) }}</small></legend>
+    {% if favs %}
+    {% set rows = favs.items %}
+    {% set rowlink = (favs.link.main if favs.link else "/") %}
+    {% include "frontends/w0bm/partials/itemrows.html" %}
+    {% else %}
+    <p><i>Favorites are private.</i></p>
+    {% endif %}
+</fieldset>
+{% endif %}
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

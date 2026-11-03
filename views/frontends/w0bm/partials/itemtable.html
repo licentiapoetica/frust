@@ -1,0 +1,28 @@
+{#- index.blade.php: the table view (?view=index); hovering a row shows the thumbnail -#}
+<table class="table table-hover table-condensed">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Title</th>
+        <th>User</th>
+        <th class="hidden-xs">Type</th>
+        <th>Rating</th>
+        <th class="hidden-xs">Uploaded</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in items %}
+    <tr data-thumb="{{ (item.thumb or ("/t/" ~ item.id ~ ".webp")) }}" class="indexedit" data-vid="{{ item.id }}">
+        <td><span class="w0bm-rowthumb"><img src="{{ (item.thumb or ("/t/" ~ item.id ~ ".webp")) }}" alt="" loading="lazy"></span><span class="vinfo vid"><a href="{{ link.main }}{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}">{{ item.id }}</a></span></td>
+        <td><span class="vinfo vvideotitle">{{ (item.title or "") }}</span></td>
+        <td><span class="vinfo vinterpret">{% if not is_anonymized %}<a href="/user/{{ (item.username or "")|lower }}">{{ (item.display_name or item.username) }}</a>{% else %}anonymous{% endif %}</span></td>
+        <td class="hidden-xs"><span class="vinfo vsongtitle">{{ (((item.mime or "").split("/"))[1] or item.mime).replace("x-shockwave-flash", "flash", 1) }}</span></td>
+        <td><span class="vinfo vcategory"><a href="/tag/{{ (item.rating_class or "untagged") }}" class="w0bm-tag-{{ (item.rating_class or "untagged") }}">{{ (item.rating_label or item.tag or "?") }}</a></span></td>
+        <td class="hidden-xs">{% if item.stamp %}<time class="timeago" datetime="{{ (item.stamp * 1000)|iso_date }}" title="{{ (item.stamp * 1000)|iso_date }}">{{ (item.stamp * 1000)|time_ago }}</time>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    {% if (not items or not (items|length)) %}
+    <tr><td colspan="6">Nothing found :(</td></tr>
+    {% endif %}
+    </tbody>
+</table>

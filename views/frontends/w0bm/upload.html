@@ -1,0 +1,79 @@
+{#- upload.blade.php -> POST /api/v2/upload (multipart, sent by w0bm.js with the CSRF header) -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
+{% block title %}Upload - {{ domain }}{% endblock %}
+{% block content %}
+<div class="uploadheader">
+    <h3 id="upheader">Upload</h3>
+</div>
+<div class="wrapper">
+    <form class="ulcontainer w0bm-uploadform" id="w0bm-upload" method="post" action="/api/v2/upload" enctype="multipart/form-data" data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ (min_tags or 0) }}">
+        {% if enable_item_title %}
+        <div class="form-group">
+            <input id="videotitle" class="form-control" placeholder="Title" name="title" type="text" maxlength="500" autocomplete="off">
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <textarea id="ulcomment" class="form-control" placeholder="First comment (optional)" name="comment" rows="2"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+        </div>
+        {% if web_url_upload %}
+        <div class="form-group">
+            <input id="ulurl" class="form-control" placeholder="… or paste a URL{% if enable_youtube_upload %} (YouTube too){% endif %}" name="url" type="url" autocomplete="off">
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <div class="blah w0bm-ratings">
+                <span class="w0bm-label-inline">Rating:</span>
+                <input type="radio" name="rating" value="sfw" id="rating-sfw" required> <label for="rating-sfw" class="w0bm-tag-sfw">SFW</label>
+                <input type="radio" name="rating" value="nsfw" id="nsfw"> <label id="nsfw-label" for="nsfw" class="w0bm-tag-nsfw">NSFW?</label>
+                {% if enable_nsfl %}<input type="radio" name="rating" value="nsfl" id="rating-nsfl"> <label for="rating-nsfl" class="w0bm-tag-nsfl">NSFL</label>{% endif %}
+                {% if enable_oc %}<span class="w0bm-sep">|</span> <input type="checkbox" name="is_oc" value="true" id="is_oc"> <label for="is_oc">OC</label>{% endif %}
+            </div>
+        </div>
+        {% if (enable_private_uploads != false and allow_user_upload_visibility != false) %}
+        {% set vis = (session.default_upload_visibility if (session and session.default_upload_visibility is not none and session.default_upload_visibility is defined) else (default_upload_visibility or 0)) %}
+        <div class="form-group">
+            <div class="blah w0bm-ratings">
+                <span class="w0bm-label-inline">Visibility:</span>
+                <input type="radio" name="visibility" value="0" id="vis0"{% if vis == 0 %} checked{% endif %}> <label for="vis0"><i class="fa fa-globe"></i> public</label>
+                <input type="radio" name="visibility" value="1" id="vis1"{% if vis == 1 %} checked{% endif %}> <label for="vis1"><i class="fa fa-link"></i> unlisted</label>
+                <input type="radio" name="visibility" value="2" id="vis2"{% if vis == 2 %} checked{% endif %}> <label for="vis2"><i class="fa fa-lock"></i> private</label>
+            </div>
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <div class="ultags">
+                <input id="tags_upload" class="form-control" placeholder="Input tags..." name="tags" data-role="tagsinput" type="text" autocomplete="off">
+            </div>
+        </div>
+        <div class="form-group">
+            {% include "frontends/w0bm/partials/flash.html" %}
+            <br>
+            <div id="dragndrop" class="form-group col-md-3">
+                <label id="dragndrop-link" for="w0bm-file">
+                    <span class="w0bm-dnd-table">
+                        <span id="dragndrop-text">
+                            <i class="fa fa-cloud-upload"></i><br>
+                            Drop or select a file!
+                        </span>
+                    </span>
+                </label>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-md-12">
+                <div class="progress progress-striped w0bm-hidden" id="w0bm-progress"><div class="progress-bar progress-bar-custom" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div></div>
+                <span class="upload-info"><span id="upload-stats"></span></span>
+                <button id="btn-upload" type="submit" class="btn btn-primary btn-sm w0bm-btn-upload"><span class="laz0r">Fire the laz0r</span>
+                    <span class="" id="laz0r-fire"></span>
+                    <span class="hidden-xs" id="shoop-laz0r"></span>
+                </button>
+                <p class="w0bm-ulnote">Before you fire the laz0r make sure you have read the <a href="/rules">Rules</a>! <br><i>With great power comes great responsibility</i></p>
+                <p class="w0bm-ulnote">{% if uploads_remaining is none %}<span id="big">Unlimited</span> uploads{% else %}<span id="big">{{ uploads_remaining }}</span> uploads left <span id="big">for the next 12 hours.</span>{% endif %} – Maximum filesize: <span id="big">{{ max_file_size }}.</span>{% if min_tags %} – At least <span id="big">{{ min_tags }} tags</span>.{% endif %}</p>
+            </div>
+        </div>
+        <input id="w0bm-file" name="file" type="file" class="hidden" accept="{{ allowed_mimes }}">
+    </form>
+</div>
+{% endblock %}

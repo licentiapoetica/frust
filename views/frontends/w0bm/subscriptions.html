@@ -1,0 +1,30 @@
+{#- Comment subscriptions (f0ckm) as a w0bm panel list -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
+{% block title %}Subscriptions - {{ domain }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h3>Subscriptions <small>uploads whose comments you follow</small></h3>
+</div>
+<div class="w0bm-subs">
+    {% if not (items and (items|length)) %}
+    <div class="panel panel-default"><div class="panel-body">{{ t("subscriptions.empty") }}</div></div>
+    {% else %}
+    <div class="items">
+        {% for item in items %}
+        <div class="main-item w0bm-subrow">
+            <a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" title="#{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }} by {{ item.user }}">
+                <img src="{{ (item.thumb or ("/t/" ~ item.id ~ ".webp")) }}" alt="{{ item.id }}" loading="lazy">
+            </a>
+            <form method="post" action="/api/subscriptions/{{ item.id }}/delete" class="w0bm-unsub">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-primary btn-xs btn-block">unsubscribe</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

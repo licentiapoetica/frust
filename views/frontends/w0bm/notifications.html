@@ -1,0 +1,44 @@
+{#- messages.blade.php: f0ckm notifications (direct messages live at /messages) -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
+{% block title %}Messages - {{ domain }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h3>Messages</h3>
+</div>
+<ul class="nav nav-tabs w0bm-tabs">
+    {% if enable_comments %}
+    <li{% if activeTab == "user" %} class="active"{% endif %}><a href="/notifications?tab=user">{{ t("nav.notif_tab_user") }}</a></li>
+    {% endif %}
+    <li{% if (activeTab == "system" or not enable_comments) %} class="active"{% endif %}><a href="/notifications?tab=system">{{ t("nav.notif_tab_system") }}</a></li>
+    {% if (session and session.admin) %}
+    <li{% if activeTab == "admin" %} class="active"{% endif %}><a href="/notifications?tab=admin">Admin</a></li>
+    {% endif %}
+    {% if (private_messages and not session.is_anon) %}
+    <li><a href="/messages"><i class="fa fa-comments"></i> Direct messages</a></li>
+    {% endif %}
+    {% if enable_comments %}
+    <li><a href="/subscriptions"><i class="fa fa-bell"></i> Subscriptions</a></li>
+    {% endif %}
+</ul>
+<div class="w0bm-notif">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Messages</h3> <button class="btn btn-primary pull-right readall w0bm-js-only" id="w0bm-readall" data-tab="{{ activeTab }}">Read all</button>
+        </div>
+        <div class="list-group" id="listitems">
+            {% include "frontends/w0bm/snippets/notifications-list.html" %}
+            {% if not (notifications and (notifications|length)) %}
+            <div class="list-group-item">No messages</div>
+            {% endif %}
+        </div>
+        {% if hasMore %}
+        <div class="panel-footer" id="pagination">
+            <a href="#" id="w0bm-more-notifs" class="w0bm-js-only" data-next="2" data-tab="{{ activeTab }}">older messages …</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

@@ -1,0 +1,5 @@
+{#- The search box of index/main.blade.php -#}
+<form method="get" action="/search" class="w0bm-searchform"{% if not session %} data-guest="1"{% endif %}>
+    <button type="submit" class="suchbutton"><i class="fa fa-search w0bm-white"></i></button>
+    <input class="suchleiste" placeholder="Search {{ domain }}" name="tag" type="text" value="{{ (searchstring or (tmp.tag if (tmp and tmp.tag) else "")) }}">
+</form>

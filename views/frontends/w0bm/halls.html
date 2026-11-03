@@ -1,0 +1,28 @@
+{#- categories.blade.php: f0ckm halls -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block title %}Categories - {{ domain }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h3>Categories</h3>
+</div>
+<div class="extraction_point w0bm-hallgrid" id="categories">
+    {% for hall in hallsList %}
+    <div id="new_category_box_{{ hall.slug }}" class="col-sm-6 col-md-4 category">
+        <div class="thumbnail">
+            <a href="/h/{{ hall.slug }}"><div class="holocene" style="--hall-image: url('/hall_image/{{ hall.slug }}?m={{ mode }}')"></div></a>
+            <div class="caption">
+                <h3>{{ hall.name }} <small>{{ hall.total_items }}</small>{% if hall.rating == "nsfw" %} <span class="label label-danger">NSFW</span>{% elif hall.rating == "nsfl" %} <span class="label label-danger">NSFL</span>{% endif %}</h3>
+                <p>{{ (hall.description or "") }}</p>
+                <p><a href="/h/{{ hall.slug }}" class="btn btn-primary" role="button">View</a></p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% if not (hallsList and (hallsList|length)) %}<p><i>No categories yet …</i></p>{% endif %}
+</div>
+<div class="clearfix"></div>
+<div class="page w0bm-page-bottom">
+    {% include "frontends/w0bm/partials/pagination.html" %}
+</div>
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

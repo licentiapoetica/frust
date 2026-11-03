@@ -1,0 +1,78 @@
+{#- w0bm (layout1) frontend: base page (port of layout.blade.php / profilelayout.blade.php).
+    Blocks: title, bodyclass, modals, aside (sidebar), content, scripts. Profile-style pages
+    (profilelayout.blade.php) override mainclass with "w0bm-main-profile" and innerclass with
+    "fucklaravel". -#}
+{%- set loggedin = session and session.user -%}
+{%- set is_mod = loggedin and (session.admin or session.is_moderator) -%}
+<!DOCTYPE html>
+<html lang="{{ (lang or "en") }}" class="w0bm-nojs">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="theme-color" content="#161618">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="keywords" content="Random WebMs, WebMs, Internet Videos">
+    <meta name="robots" content="noindex">
+    <meta property="og:site_name" content="{{ domain }}" />
+    {% if item is defined and item and item.id %}
+    <meta property="og:title" content="{{ (item.title or (item.slug if (enable_item_slugs and item.slug) else item.id)) }}">
+    <meta property="og:url" content="https://{{ domain }}/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}">
+    <meta property="og:image" content="https://{{ domain }}{{ item.og_thumbnail }}">
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://{{ domain }}{{ item.og_thumbnail }}">
+    {% else %}
+    <meta property="og:title" content="{% if (page_meta is defined and page_meta.title) %}{{ page_meta.title }} - {% endif %}{{ domain }}">
+    {% endif %}
+    <meta name="description" content="{% if (page_meta is defined and page_meta.description) %}{{ page_meta.description }}{% else %}{{ site_description }}{% endif %}">
+    <link rel="icon" href="{% if (custom_favicon and (custom_favicon|length > 0)) %}{{ custom_favicon }}{% else %}/s/fe/w0bm/img/favicon.png{% endif %}">
+    <title>{% block title %}{% if item is defined and item and item.id %}{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }} - {% elif (page_meta is defined and page_meta.title) %}{{ page_meta.title }} - {% endif %}{{ domain }}{% endblock %}</title>
+    <script src="/s/fe/w0bm/js/early.js?v={{ mtime("/public/s/fe/w0bm/js/early.js") }}"></script>
+    <link rel="stylesheet" href="/s/fe/w0bm/css/style.css?v={{ mtime("/public/s/fe/w0bm/css/style.css") }}">
+    <link rel="stylesheet" href="/s/fe/w0bm/css/w0bmfonts.css?v={{ mtime("/public/s/fe/w0bm/css/w0bmfonts.css") }}">
+    <link rel="stylesheet" href="/s/fe/w0bm/css/font-awesome.min.css?v={{ mtime("/public/s/fe/w0bm/css/font-awesome.min.css") }}">
+    <link rel="stylesheet" href="/s/fe/w0bm/css/bootstrap-tagsinput.css?v={{ mtime("/public/s/fe/w0bm/css/bootstrap-tagsinput.css") }}">
+    <link rel="stylesheet" href="/s/fe/w0bm/css/video-js.min.css?v={{ mtime("/public/s/fe/w0bm/css/video-js.min.css") }}">
+    <link rel="stylesheet" href="/s/fe/w0bm/css/vjsnew.css?v={{ mtime("/public/s/fe/w0bm/css/vjsnew.css") }}">
+    <link rel="stylesheet" href="/s/fe/w0bm/css/w0bmcustom.css?v={{ mtime("/public/s/fe/w0bm/css/w0bmcustom.css") }}">
+    <link rel="stylesheet" href="/s/fe/w0bm/css/w0bm-fe.css?v={{ mtime("/public/s/fe/w0bm/css/w0bm-fe.css") }}">
+    <link rel="alternate stylesheet" disabled href="/s/fe/w0bm/css/w0bm_override.css?v={{ mtime("/public/s/fe/w0bm/css/w0bm_override.css") }}" title="DARK">
+    <link rel="alternate stylesheet" disabled href="/s/fe/w0bm/css/chilledblue.css?v={{ mtime("/public/s/fe/w0bm/css/chilledblue.css") }}" title="Chilledblue">
+    <link rel="alternate stylesheet" disabled href="/s/fe/w0bm/css/xayd.css?v={{ mtime("/public/s/fe/w0bm/css/xayd.css") }}" title="Xayd">
+    <link rel="alternate stylesheet" disabled href="/s/fe/w0bm/css/glitch.css?v={{ mtime("/public/s/fe/w0bm/css/glitch.css") }}" title="Glitch">
+    <link rel="alternate stylesheet" disabled href="/s/fe/w0bm/css/epilepsie.css?v={{ mtime("/public/s/fe/w0bm/css/epilepsie.css") }}" title="Epilepsie">
+    {% if enable_swf %}<script src="/s/js/flash-embed.js?v={{ mtime("/public/s/js/flash-embed.js") }}"></script>{% endif %}
+</head>
+<body class="{% block bodyclass %}{% endblock %}{% if not loggedin %} w0bm-guest{% endif %}">
+<script type="application/json" id="w0bm-data">{{ {
+    "user": (session.user if loggedin else none),
+    "csrf": (csrf_token or ""),
+    "is_mod": (is_mod and true or false),
+    "comment_max_length": (comment_max_length or none),
+    "allow_comment_deletion": (allow_comment_deletion and true or false),
+    "frontend": frontend
+}|tojson }}</script>
+<script type="application/json" id="w0bm-images">{{ (allowed_comment_images_json or "[]")|safe }}</script>
+{% if loggedin %}
+    {% include "frontends/w0bm/partials/filterselect.html" %}
+{% endif %}
+{% block modals %}{% endblock %}
+<canvas class="hidden-xs" id="bg"></canvas>
+
+{% include "frontends/w0bm/partials/navigation.html" %}
+
+<div class="wrapper">
+    {% block aside %}{% endblock %}
+    <div class="w0bm-main {% block mainclass %}LooLOut{% endblock %}">
+        <div class="no-js-mode">nojs</div>
+        <div class="{% block innerclass %} container{% endblock %}">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+<div id="w0bm-flash" class="flashcontainer w0bm-flash-global"><div class="flash-inner"></div></div>
+<script src="/s/fe/w0bm/js/w0bm.js?v={{ mtime("/public/s/fe/w0bm/js/w0bm.js") }}"></script>
+{% include "snippets/cap-gate.html" %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

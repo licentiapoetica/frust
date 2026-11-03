@@ -1,0 +1,36 @@
+{#- comments.blade.php + comlist.php: a user's comments (server-rendered, w0bm.js formats them) -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
+{% block title %}Comments of {{ user.user }} - {{ domain }}{% endblock %}
+{% block content %}
+{% set page = ((url.qs.page|int) if (url and url.qs and url.qs.page) else 1) %}
+<div class="page-header">
+    {% if user.avatar_file %}<img class="w0bm-avatar" src="/a/{{ user.avatar_file }}" alt="">{% elif (user.avatar and (user.avatar > 0)) %}<img class="w0bm-avatar" src="/t/{{ user.avatar }}.webp" alt="">{% endif %}
+    <h3{% if user.username_color %} class="w0bm-usercolor" style="--user-color: {{ user.username_color }}"{% endif %}>{{ user.user }} <small><a href="/user/{{ user.user|lower }}">back to profile</a></small></h3>
+</div>
+<h3>Comments</h3>
+<div class="row jkh">
+    <div class="col-md" id="list">
+        {% for c in comments %}
+        <div class="panel panel-default">
+            <div class="panel-body w0bm-cmd" data-id="{{ c.id }}">{{ c.content }}</div>
+            <div class="panel-footer">Upload: <a href="/{{ (c.item_slug or c.item_id) }}#c{{ c.id }}">/{{ (c.item_slug or c.item_id) }}</a> | <time class="timeago" data-toggle="tooltip" datetime="{{ c.created_at }}" title="{{ c.created_at }}">{{ c.created_at|time_ago }}</time></div>
+        </div>
+        {% endfor %}
+        {% if not (comments and (comments|length)) %}
+        <div class="list-group-item">No comments</div>
+        {% endif %}
+    </div>
+</div>
+{% if (page > 1 or (comments and (comments|length >= 20))) %}
+<nav class="mitte">
+    <ul class="pagination">
+        {% if page > 1 %}<li><a href="?page={{ page - 1 }}">&laquo;</a></li>{% else %}<li class="disabled"><span>&laquo;</span></li>{% endif %}
+        <li class="active"><span>{{ page }}</span></li>
+        {% if (comments and (comments|length >= 20)) %}<li><a href="?page={{ page + 1 }}">&raquo;</a></li>{% else %}<li class="disabled"><span>&raquo;</span></li>{% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% include "frontends/w0bm/partials/footer.html" %}
+{% endblock %}

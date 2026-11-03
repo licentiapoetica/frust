@@ -1,0 +1,43 @@
+{#- partials/report.blade.php -> POST /api/v2/report -#}
+<form id="webmreport" method="POST" action="/api/v2/report" class="w0bm-ajaxform" data-success="Report sent. Thanks!">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="item_id" value="{{ item.id }}">
+    <div class="modal fade" id="webmreportmodal" tabindex="-1" role="dialog" aria-labelledby="Report">
+        <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="reportModalTitle">Report {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</h4>
+                </div>
+                <div class="modal-body-report webmreportmodal">
+                    So you want to report this upload? Tell us why:<br>
+                    <br>
+                    <div class="form-group">
+                        <label for="reportReasons">
+                            Reason(s)<br>
+                            <em>(hold ctrl to select multiple)</em>
+                        </label>
+                        <select multiple class="form-control" id="reportReasons" name="categories[]">
+                            <option value="wrong_rating">Wrong rating (sfw/nsfw)</option>
+                            <option value="spam">Shitpost / spam</option>
+                            <option value="duplicate">Duplicate</option>
+                            <option value="copyright">Copyright</option>
+                            <option value="illegal">Breaks a rule / illegal</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <label for="reportText">Please explain a bit more detailed why you want to report this upload</label>
+                    <textarea class="form-control" id="reportText" name="reason" rows="3"></textarea>
+                    {% if captcha_enabled %}
+                    <cap-widget class="cap-dark w0bm-cap" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+                    {% endif %}
+                    <p>Abuse of this form will be awarded with a permanent ban!</p>
+                </div>
+                <div class="modal-footer">
+                    <a href="#_" class="btn btn-primary" data-dismiss="modal">Close</a>
+                    <button type="submit" class="btn btn-primary">Send Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

@@ -1,0 +1,2 @@
+{#- Private society: guests get f0ckm's gate page; everyone else the w0bm index -#}
+{% if (private_society and not session) %}{% include "index.html" %}{% else %}{% include "frontends/w0bm/index-main.html" %}{% endif %}

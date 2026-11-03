@@ -1,0 +1,264 @@
+/* Scrollbar */
+::-webkit-scrollbar-track-piece {
+    background-color: #1a1f22!important;
+}
+
+/* /Scrollbar */
+
+body {
+    background-color: #171d21;
+}
+
+.navbar-inverse {
+    background-color: rgba(33, 41, 47, 0.74);
+}
+
+.comments {
+    background: rgba(33, 41, 47, 0.71);
+}
+
+.panel.panel-default {
+    border: 1px solid #131619;
+    background: #21292f;
+}
+
+.onclick-menu-content {
+    border: 1px solid #131619;
+}
+
+.tagtest {
+    background: rgba(33, 41, 47, 0.71);
+}
+
+div#tag-display {
+    background: rgba(33, 41, 47, 0.71);
+}
+
+.label-default {
+    background-color: #21292f;
+    border: 1px solid #1fb2b0;
+}
+
+.modal-content {
+    background-color: #21292f;
+}
+
+.login_wrapper {
+    background: #1c2125;
+}
+
+select.form-control, input.form-control {
+    background-color: #21292f;
+    border: 1px solid #131619;
+}
+
+.btn-primary {
+    background-color: #21292f;
+}
+
+.btn-primary:hover {
+    background-color: #142121;
+}
+
+span.addtagsy>a:hover {
+    background: #33414c;
+}
+
+.popover {
+    background-color: #21292f;
+    border: 1px solid #131619;
+    padding: 0;
+}
+
+.popover.top>.arrow:after {
+    border-top-color: #131619;
+}
+
+.popover-title {
+    margin: 0;
+    padding: 8px 15px;
+    font-size: 14px;
+    background-color: #131619;
+    border-bottom: 1px solid #0b0b0b;
+    border-radius: 0;
+}
+
+.video-js .vjs-control-bar {
+    background-color: rgba(33, 41, 47, 0.93) !important;
+}
+
+.thumbnail {
+    background-color: #21292f;
+    border: 1px solid #131619;
+    border-radius: 0;
+}
+
+.caption small {
+    background: #142121;
+    color: #d000ff;
+    font-family: VCR;
+    text-shadow: 0px 0px 5px #d000ff;
+    border: 1px solid #1fb2b0;
+}
+
+.box {
+    background: rgba(33,41,47,.74);
+    border: 2px solid #131619;
+}
+
+.navbar-fixed-bottom {
+    background: #21292f;
+}
+
+.bootstrap-tagsinput {
+    background: #21292f none repeat scroll 0 0;
+    border: 1px solid #717375;
+}
+
+.panel-default>.panel-heading {
+    background-color: #21292f;
+    border-color: #131619;
+}
+
+.list-group-item {
+    background-color: #131619;
+    border: 1px solid #21292f;
+}
+
+.pagination>.disabled>span, .pagination>.disabled>span:hover, .pagination>.disabled>span:focus, .pagination>.disabled>a, .pagination>.disabled>a:hover, .pagination>.disabled>a:focus {
+    background-color: #131619;
+    border-color: #282828;
+}
+
+.pagination>.active>a, .pagination>.active>span, .pagination>.active>a:hover, .pagination>.active>span:hover, .pagination>.active>a:focus, .pagination>.active>span:focus {
+    background-color: #142121;
+    border-color: #1fb2b0;
+    color: #1fb;
+}
+
+.pagination>li>a, .pagination>li>span {
+    background-color: #131619;
+}
+
+.blah {
+    background: #21292f;
+    border: 1px solid #131619;
+}
+
+#dragndrop {
+    background-color: #21292f !important;
+}
+
+.profilheader {
+    background: #21292f;
+}
+
+table {
+    background-color: #131619;
+}
+
+.table-hover>tbody>tr:hover {
+    background-color: #21292f;
+}
+
+a.list-group-item-info, button.list-group-item-info {
+    color: #fff;
+    background: #ff005d;
+}
+
+a.list-group-item-info:hover, button.list-group-item-info:hover, a.list-group-item-info:focus, button.list-group-item-info:focus {
+    color: #fff;
+    background-color: #2f3f4b;
+}
+
+.dropdown-menu {
+    border: 1px solid #131619!important;
+    padding: 5px!important;
+    margin: -15px 15px 0!important;
+    border-radius: 0px!important;
+    background-color: #21292f;
+    min-width: 100px;
+}
+
+button.w0bmcustom-css {
+    width: 100%;
+    padding-bottom: 5px;
+    background: #232222;
+    padding: 5px;
+    border: 1px solid black;
+    margin-bottom: 5px;
+    color: #adadad;
+}
+
+button.w0bmcustom-css:hover {
+    background: rgba(84, 84, 84, 0.5);
+}
+
+button.chilledblue-css {
+    width: 100%;
+    padding-bottom: 5px;
+    background: #142121;
+    border: 1px solid #131916;
+    margin-bottom: 5px;
+    color: #adadad;
+}
+button.chilledblue-css:hover {
+    background: #183333b8;
+}
+
+.suchleiste {
+    background: #21292f none;
+}
+
+button.epilepsie-css {
+    width: 100%;
+    padding-bottom: 5px;
+    background: #ff0000;
+    padding: 5px;
+    border: 1px solid black;
+    margin-bottom: 5px;
+    color: #ffffff;
+    font-weight: bold;
+    text-transform: uppercase;
+    border: 1px dashed yellow;
+}
+
+button.epilepsie-css:hover {
+    background: rgba(84, 84, 84, 0.5);
+}
+
+.toggo {
+    background-color: #21292f;
+}
+
+span.videoinfo {
+    background: #21292f;
+}
+
+.commbordersoos {
+    background: #171d21;
+}
+
+#commentForm textarea {
+    background: rgb(29, 38, 43) none repeat scroll 0 0;
+}
+
+button#submittags:hover {
+    background: #171d21;
+}
+
+#submittags {
+    background-color: #21292f;
+}
+
+#parent {
+    background: #171d21;
+}
+
+.w0bm_emoji_anchor {
+    background: #3e494f;
+}
+
+.tags {
+    background: rgb(33, 41, 47);
+  }

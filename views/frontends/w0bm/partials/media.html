@@ -1,0 +1,42 @@
+{#- The item's media (mirrors snippets/item-media.html). Videos and audio get the video.js-style
+    controls from w0bm.js; without JavaScript the native controls show. -#}
+{% if ((item.is_album and item.album) and (item.album|length > 1)) %}
+<div class="w0bm-album" data-album-id="{{ item.id }}">
+    <div class="w0bm-album-stage">
+        <a href="{{ item.dest }}" target="_blank" class="w0bm-album-link"><img class="w0bm-album-image" src="{{ item.dest }}" alt="" decoding="async"></a>
+    </div>
+    <div class="w0bm-album-strip">
+        {% for img in item.album %}
+        <a href="{{ img.src }}" class="w0bm-album-thumb{% if img.is_first %} active{% endif %}" data-src="{{ img.src }}" data-mime="{{ img.mime }}" target="_blank" title="{{ img.display_index }}/{{ item.album|length }}">
+            {% if (img.is_audio and not img.has_coverart) %}<i class="fa fa-music"></i>{% else %}<img src="{{ (img.thumb or img.src) }}" loading="lazy" alt="">{% endif %}
+            {% if img.is_video %}<span class="w0bm-album-badge"><i class="fa fa-play"></i></span>{% elif img.is_audio %}<span class="w0bm-album-badge"><i class="fa fa-music"></i></span>{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% elif item.mime == "video/youtube" %}
+<iframe id="yt-embed" class="embed-responsive-item" width="640" height="360" src="https://www.youtube.com/embed/{{ item.dest.replace("yt:", "", 1) }}?enablejsapi=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+{% elif item.mime.startswith("video") %}
+<video id="video" class="embed-responsive-item" loop controls preload="auto" playsinline {% if (not session or session.disable_autoplay != true) %}autoplay{% endif %} src="{{ item.dest }}"></video>
+{% elif item.mime.startswith("audio") %}
+<div class="w0bm-audio-cover{% if item.coverart %} has-cover{% endif %}"{% if item.coverart %} style="--cover: url('{{ item.coverart }}')"{% endif %}>
+    {% if not item.coverart %}<i class="fa fa-music"></i>{% endif %}
+</div>
+<audio id="video" class="embed-responsive-item w0bm-audio" loop controls preload="auto" {% if (not session or session.disable_autoplay != true) %}autoplay{% endif %} src="{{ item.dest }}"></audio>
+{% elif item.mime.startswith("image") %}
+<div class="w0bm-image">
+    <a href="{{ item.dest }}" target="_blank"><img id="w0bm-image" src="{{ item.dest }}" alt="" decoding="async" {% if item.width %}width="{{ item.width }}"{% endif %} {% if item.height %}height="{{ item.height }}"{% endif %}></a>
+</div>
+{% elif ((item.mime == "application/x-shockwave-flash" or item.mime == "application/vnd.adobe.flash.movie") and enable_swf) %}
+<div id="w0bm-flash" class="embed-responsive-item w0bm-flash-stage" data-swf="{{ item.dest }}">
+    <a class="w0bm-flash-fallback" href="{{ item.dest }}" download><i class="fa fa-download"></i> {{ (item.original_filename or "Download SWF") }}</a>
+</div>
+{% elif (item.mime == "application/pdf" and enable_pdf) %}
+<iframe class="embed-responsive-item" src="{{ item.dest }}#toolbar=0" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe>
+{% else %}
+<div class="w0bm-download-stage">
+    <i class="fa fa-file-archive-o"></i>
+    <div>{{ (item.original_filename or (item.dest.split("/")).pop()) }} ({{ item.size }})</div>
+    <a class="btn btn-primary" href="{{ item.dest }}" download><i class="fa fa-download"></i> Download</a>
+</div>
+{% endif %}

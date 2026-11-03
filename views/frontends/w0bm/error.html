@@ -1,0 +1,19 @@
+{#- errors/404.blade.php -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block title %}{{ (message or "404") }} - {{ domain }}{% endblock %}
+{% block bodyclass %}w0bm-error-page{% endblock %}
+{% block content %}
+<div class="notfound">
+    <h1>{% if message %}{{ message }}{% else %}404 - NOT FOUND{% endif %}</h1>
+    <a href="/random"><img id="notfound-img" src="/s/fe/w0bm/img/404.gif" alt="ZOMG"></a>
+    {% if (error_filter_hint is defined and error_filter_hint) %}
+    <div class="w0bm-error-hint">
+        <p>{{ error_filter_hint|safe }}</p>
+        {% if session %}<a href="#filterselectmodal" data-toggle="modal" data-target="#filterselectmodal" class="btn btn-primary">{{ error_filter_hint_link }}</a>{% endif %}
+        {% if error_see_anyways %}
+        <a href="{{ (url.pathname if url else ("/" ~ (item_slug or item_id))) }}?bypass=1" class="btn btn-primary"><i class="fa fa-eye"></i> {{ error_see_anyways }}</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

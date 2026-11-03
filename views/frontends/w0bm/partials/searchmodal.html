@@ -1,0 +1,23 @@
+{#- partials/searchmodal.blade.php. Members search tags at /search; guests jump to /tag/<q> (JS) -#}
+<div class="modal fade" id="searchmodal" tabindex="-1" role="dialog" aria-labelledby="Search">
+    <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                <div class="random_blah">
+                    <h4 class="modal-title w0bm-random-title" id="searchModalTitle" data-titles="{{ ["We have the 👀", "😂 We have funny videos", "💎 We got gemmies", "🤔 We dont even know man", "🤮 we got this too", "😎 we got the cool"]|tojson }}">We have the 👀</h4>
+                </div>
+            </div>
+            <div class="searchbar">
+                <form method="get" action="/search" class="w0bm-searchform"{% if not session %} data-guest="1"{% endif %}>
+                    <input class="suchleiste_video" placeholder="Search {{ domain }}" name="tag" type="text" value="{{ (searchstring or "") }}">
+                    <button type="submit" class="suchbutton_video"><i class="fa fa-search w0bm-white"></i></button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <i>&amp; find some… </i>
+            </div>
+        </div>
+    </div>
+</div>

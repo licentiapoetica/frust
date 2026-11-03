@@ -1,0 +1,35 @@
+{#- partials/registermodal.blade.php as a page (/register) -#}
+{% extends "frontends/w0bm/layout.html" %}
+{% block title %}Register - {{ domain }}{% endblock %}
+{% block content %}
+<div class="centered">
+    <div class="modal-content col-md-6 w0bm-pagebox">
+        <div class="modal-header">
+            <h4 class="modal-title" id="registerTitle">Register</h4>
+        </div>
+        {% if error is defined %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="alert alert-success">{{ success }}</div>
+        {% else %}
+        {% if error is undefined %}
+        <div class="advantages">
+            <p>Registering on {{ domain }} has some advantages...</p>
+            <p>With an account you can comment, favor uploads, upload, tag, filter out unwanted tags and watch NSFW!</p>
+        </div>
+        {% endif %}
+        <div class="reg_wrapper">
+            <div class="register">
+                <div class="col-md-10">
+                    {% include "frontends/w0bm/partials/registerform.html" %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="modal-footer">
+            <p>Back to <a href="/?login=1">Login?</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

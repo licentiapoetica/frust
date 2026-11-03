@@ -1,0 +1,38 @@
+{#- partials/frontendedit.blade.php: title (PATCH /api/v2/items/:id/title) and rating
+    (PUT /api/v2/tags/:id/cycle-rating). JavaScript sends it. -#}
+<form id="webmedit" method="POST" action="/api/v2/items/{{ item.id }}/title" data-item-id="{{ item.id }}">
+    <div class="modal fade" id="webmeditmodal" tabindex="-1" role="dialog" aria-labelledby="Edit">
+        <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                    <h4 class="modal-title" id="editModalTitle">Edit {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</h4>
+                </div>
+                <div class="modal-body frontendeditmodal">
+                    {% if enable_item_title %}
+                    <div class="form-group">
+                        <label for="videotitleedit">Title</label>
+                        <input class="form-control" type="text" name="title" id="videotitleedit" value="{{ (item.title or "") }}" placeholder="Title" maxlength="500">
+                    </div>
+                    {% endif %}
+                    {% if can_rate_item %}
+                    <div class="form-group">
+                        <label for="ratingselect">Rating</label>
+                        <select class="form-control" name="rating" id="ratingselect">
+                            <option value="sfw"{% if item.is_sfw %} selected{% endif %}>SFW</option>
+                            <option value="nsfw"{% if item.is_nsfw %} selected{% endif %}>NSFW</option>
+                            {% if enable_nsfl %}<option value="nsfl"{% if item.is_nsfl %} selected{% endif %}>NSFL</option>{% endif %}
+                            {% if not (item.is_sfw or item.is_nsfw or item.is_nsfl) %}<option value="" selected>untagged</option>{% endif %}
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <a href="#_" class="btn btn-primary" data-dismiss="modal">Close</a>
+                    <input type="submit" class="btn btn-primary w0bm-js-only" value="Save">
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

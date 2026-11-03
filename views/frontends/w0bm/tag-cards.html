@@ -1,0 +1,12 @@
+{#- Tag tiles (also rendered for /api/tags?ajax=1 → "Load more") -#}
+{% for toptag in toptags %}
+<div class="col-sm-6 col-md-4 col-lg-3 category">
+    <div class="thumbnail">
+        <a href="/tag/{{ toptag.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}"><div class="holocene" style="--hall-image: url('/tag_image/{{ toptag.encoded_tag }}?m={{ mode }}')"></div></a>
+        <div class="caption">
+            <h3>#{{ toptag.tag }} <small>{{ toptag.total_items }}</small></h3>
+            <p><a href="/tag/{{ toptag.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}" class="btn btn-primary" role="button">View</a></p>
+        </div>
+    </div>
+</div>
+{% endfor %}

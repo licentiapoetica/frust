@@ -1,0 +1,7 @@
+{#- What a feed shows: tag, user uploads/favs, hall … -#}
+{% if (tmp and tmp.tag) %}Tag: {{ tmp.tag }}
+{% elif (tmp and tmp.user and tmp.view_mode == "favs") %}Favorites of {{ tmp.user }}
+{% elif (tmp and tmp.user) %}Uploads by {{ tmp.user }}
+{% elif (tmp and tmp.hall) %}{{ (tmp.hall.name if tmp.hall is mapping else tmp.hall) }}
+{% elif (tmp and tmp.userHall) %}{{ (tmp.userHall.name if tmp.userHall is mapping else tmp.userHall) }}{% if tmp.userHallOwner %} by {{ tmp.userHallOwner }}{% endif %}
+{% else %}Index{% endif %}
