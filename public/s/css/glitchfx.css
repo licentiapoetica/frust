@@ -1,0 +1,52 @@
+/*
+ * glitchfx.css: companion of /s/js/glitchfx.js (datamosh glitch for any element).
+ * The script builds one SVG filter per glitching element (#glitchfx-0 … #glitchfx-31) and
+ * toggles the matching class below.
+ */
+
+/* Hidden holder of the filters */
+.glitchfx-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Own layer, so the filter doesn't repaint the page around it */
+.glitchfx {
+  isolation: isolate;
+}
+
+.glitchfx-0 { filter: url(#glitchfx-0); }
+.glitchfx-1 { filter: url(#glitchfx-1); }
+.glitchfx-2 { filter: url(#glitchfx-2); }
+.glitchfx-3 { filter: url(#glitchfx-3); }
+.glitchfx-4 { filter: url(#glitchfx-4); }
+.glitchfx-5 { filter: url(#glitchfx-5); }
+.glitchfx-6 { filter: url(#glitchfx-6); }
+.glitchfx-7 { filter: url(#glitchfx-7); }
+.glitchfx-8 { filter: url(#glitchfx-8); }
+.glitchfx-9 { filter: url(#glitchfx-9); }
+.glitchfx-10 { filter: url(#glitchfx-10); }
+.glitchfx-11 { filter: url(#glitchfx-11); }
+.glitchfx-12 { filter: url(#glitchfx-12); }
+.glitchfx-13 { filter: url(#glitchfx-13); }
+.glitchfx-14 { filter: url(#glitchfx-14); }
+.glitchfx-15 { filter: url(#glitchfx-15); }
+.glitchfx-16 { filter: url(#glitchfx-16); }
+.glitchfx-17 { filter: url(#glitchfx-17); }
+.glitchfx-18 { filter: url(#glitchfx-18); }
+.glitchfx-19 { filter: url(#glitchfx-19); }
+.glitchfx-20 { filter: url(#glitchfx-20); }
+.glitchfx-21 { filter: url(#glitchfx-21); }
+.glitchfx-22 { filter: url(#glitchfx-22); }
+.glitchfx-23 { filter: url(#glitchfx-23); }
+.glitchfx-24 { filter: url(#glitchfx-24); }
+.glitchfx-25 { filter: url(#glitchfx-25); }
+.glitchfx-26 { filter: url(#glitchfx-26); }
+.glitchfx-27 { filter: url(#glitchfx-27); }
+.glitchfx-28 { filter: url(#glitchfx-28); }
+.glitchfx-29 { filter: url(#glitchfx-29); }
+.glitchfx-30 { filter: url(#glitchfx-30); }
+.glitchfx-31 { filter: url(#glitchfx-31); }
