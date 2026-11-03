@@ -1,4 +1,7 @@
 <form class="form-horizontal" method="post" action="/register">
+    <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+    {#- Without JavaScript the answer comes back to this page with the modal open (routes/register.rs) #}
+    {% if (url and not (url.pathname == "/register")) %}<input type="hidden" name="return_to" value="{{ url.pathname }}{{ url.search }}">{% endif %}
     <div class="form-group">
         <div class="reg_username">
             <input class="form-control" placeholder="Username" name="username" type="text" autocomplete="username" required>
@@ -17,7 +20,7 @@
     {% if not registration_open %}
     <div class="form-group">
         <div class="reg_username">
-            <input class="form-control" placeholder="Invite token" name="token" type="text" value="{{ (token if token is defined else "") }}" autocomplete="off" required>
+            <input class="form-control" placeholder="Invite token" name="token" type="text" value="{% if (token is defined and token) %}{{ token }}{% elif (url and url.qs and url.qs.invite) %}{{ url.qs.invite }}{% endif %}" autocomplete="off" required>
         </div>
     </div>
     {% elif registration_require_mail_andor_token %}
@@ -31,7 +34,8 @@
     {% if captcha_enabled %}
     <div class="form-group">
         <div class="recaptcha">
-            <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+            <cap-widget class="cap-dark w0bm-js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+            {% include "frontends/w0bm/partials/capimage.html" %}
         </div>
     </div>
     {% endif %}

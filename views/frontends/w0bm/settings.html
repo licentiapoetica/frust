@@ -21,7 +21,7 @@
     </div>
     {% endif %}
 
-    <h4>Theme</h4>
+    <h4 class="w0bm-js-only">Theme</h4>
     <div class="box w0bm-js-only">
         <h5>w0bm themes (saved in this browser)</h5>
         <div id="switcher" class="w0bm-switcher-inline">
@@ -35,8 +35,8 @@
     </div>
 
     {% if not session.is_anon %}
-    <h4>Profile</h4>
-    <div class="box">
+    <h4 class="w0bm-js-only">Profile</h4>
+    <div class="box w0bm-js-only">
         <form class="w0bm-setting form-inline" method="post" action="/api/v2/settings/display_name" data-method="PUT" data-json="1">
             <div class="form-group">
                 <label for="set-display-name">Display name</label>
@@ -61,47 +61,44 @@
     </div>
     {% endif %}
 
-    <h4>Preferences</h4>
+    <h4 id="preferences">Preferences</h4>
     <div class="box">
-        <form class="w0bm-setting" method="post" action="/api/v2/settings/autoplay" data-method="PUT" data-json="1">
-            <label><input type="checkbox" name="disable_autoplay" data-autosave{% if session.disable_autoplay %} checked{% endif %}> Don't autoplay videos</label><span class="w0bm-status"></span>
-        </form>
-        <form class="w0bm-setting" method="post" action="/api/v2/settings/favorites_private" data-method="PUT" data-json="1">
-            <label><input type="checkbox" name="favorites_private" data-autosave{% if session.favorites_private %} checked{% endif %}> Keep my favorites private</label><span class="w0bm-status"></span>
-        </form>
-        <form class="w0bm-setting" method="post" action="/api/v2/settings/hide_fav_badge" data-method="PUT" data-json="1">
-            <label><input type="checkbox" name="hide_fav_badge" data-autosave{% if session.hide_fav_badge %} checked{% endif %}> Hide me in the favorites of uploads</label><span class="w0bm-status"></span>
-        </form>
-        {% if allow_language_change %}
-        <form class="w0bm-setting form-inline" method="post" action="/api/v2/settings/language" data-method="PUT" data-json="1" data-reload="1">
-            <div class="form-group">
+        {#- One plain form (POST /settings, routes/settings.rs), with or without JavaScript. Checkboxes
+            send a hidden "0" plus "1" when ticked. -#}
+        <form method="post" action="/settings" class="w0bm-prefs-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            {% if (url and url.qs and url.qs.saved) %}<div class="alert alert-success w0bm-form-msg">Saved.</div>{% endif %}
+            {% for p in [["disable_autoplay", "Don't autoplay videos", session.disable_autoplay == true], ["favorites_private", "Keep my favorites private", session.favorites_private == true], ["hide_fav_badge", "Hide me in the favorites of uploads", session.hide_fav_badge == true], ["show_background", "Blurred background", session.show_background != false], ["embed_youtube_in_comments", "Embed YouTube links in comments", session.embed_youtube_in_comments != false], ["receive_user_notifications", "Notify me about replies and mentions", session.receive_user_notifications != false], ["receive_system_notifications", "System notifications", session.receive_system_notifications != false], ["do_not_disturb", "Do not disturb", session.do_not_disturb == true]] %}
+            <label class="checkbox-row"><input type="hidden" name="{{ p[0] }}" value="0"><input type="checkbox" name="{{ p[0] }}" value="1"{% if p[2] %} checked{% endif %}> {{ p[1] }}</label>
+            {% endfor %}
+            {% if allow_language_change %}
+            <div class="form-group form-inline">
                 <label for="set-lang">Language</label>
-                <select class="form-control" id="set-lang" name="language" data-autosave>
+                <select class="form-control" id="set-lang" name="language">
                     <option value=""{% if not session.language %} selected{% endif %}>site default</option>
                     {% for l in [["en", "English"], ["de", "Deutsch"], ["nl", "Nederlands"], ["zange", "Zange"]] %}
                     <option value="{{ l[0] }}"{% if session.language == l[0] %} selected{% endif %}>{{ l[1] }}</option>
                     {% endfor %}
                 </select>
-            </div><span class="w0bm-status"></span>
-        </form>
-        {% endif %}
-        {% if (enable_private_uploads != false and allow_user_upload_visibility != false and not session.is_anon) %}
-        <form class="w0bm-setting form-inline" method="post" action="/api/v2/settings/default_upload_visibility" data-method="PUT" data-json="1" data-int="default_upload_visibility">
-            <div class="form-group">
+            </div>
+            {% endif %}
+            {% if (enable_private_uploads != false and allow_user_upload_visibility != false and not session.is_anon) %}
+            <div class="form-group form-inline">
                 <label for="set-vis">Default upload visibility</label>
-                <select class="form-control" id="set-vis" name="default_upload_visibility" data-autosave>
+                <select class="form-control" id="set-vis" name="default_upload_visibility">
                     <option value="0"{% if not session.default_upload_visibility %} selected{% endif %}>public</option>
                     <option value="1"{% if session.default_upload_visibility == 1 %} selected{% endif %}>unlisted</option>
                     <option value="2"{% if session.default_upload_visibility == 2 %} selected{% endif %}>private</option>
                 </select>
-            </div><span class="w0bm-status"></span>
+            </div>
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-sm">Save preferences</button>
         </form>
-        {% endif %}
     </div>
 
     {% if not session.is_anon %}
-    <h4>Password</h4>
-    <div class="box">
+    <h4 class="w0bm-js-only">Password</h4>
+    <div class="box w0bm-js-only">
         <form class="w0bm-setting" method="post" action="/api/v2/settings/password" data-method="PUT" data-json="1">
             <div class="form-group"><input class="form-control" type="password" name="current_password" placeholder="Current password" autocomplete="current-password"></div>
             <div class="form-group"><input class="form-control" type="password" name="new_password" placeholder="New password (min. 20 characters)" minlength="20" autocomplete="new-password" required></div>

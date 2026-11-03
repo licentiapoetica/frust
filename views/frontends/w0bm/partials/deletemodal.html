@@ -1,0 +1,26 @@
+{#- [del] for mods: POST /api/v2/admin/deletepost (plain form without JavaScript; w0bm.js asks for
+    the reason with a prompt instead) -#}
+<form method="post" action="/api/v2/admin/deletepost" id="w0bm-delform">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="postid" value="{{ item.id }}">
+    <input type="hidden" name="back" value="{% if pagination.prev %}{{ link.main }}{{ pagination.prev }}{{ link.suffix }}{% elif pagination.next %}{{ link.main }}{{ pagination.next }}{{ link.suffix }}{% else %}/{% endif %}">
+    <div class="modal fade" id="w0bm-delmodal" tabindex="-1" role="dialog" aria-labelledby="Delete">
+        <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                    <h4 class="modal-title">Delete {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</h4>
+                </div>
+                <div class="modal-body w0bm-modal-body-col">
+                    <label for="delreason">Reason</label>
+                    <input class="form-control" type="text" name="reason" id="delreason" placeholder="Reason">
+                </div>
+                <div class="modal-footer">
+                    <a href="#_" class="btn btn-primary" data-dismiss="modal">Close</a>
+                    <input type="submit" class="btn btn-danger" value="Delete">
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

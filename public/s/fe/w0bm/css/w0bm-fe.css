@@ -1007,3 +1007,62 @@ label.w0bm-strict {
     font-weight: normal;
     color: #888;
 }
+
+/* ── No-JavaScript forms (server/src/nojs.rs) ──────────────────────────────────────────── */
+html:not(.w0bm-nojs) .w0bm-nojs-only {
+    display: none !important;
+}
+.w0bm-imgcap {
+    margin: 5px 0;
+    max-width: 340px;
+}
+.w0bm-imgcap-frame {
+    display: block;
+    width: 100%;
+    aspect-ratio: 340 / 100;
+    border: 1px solid #1fb2b0;
+    margin-bottom: 5px;
+}
+#commentForm .w0bm-imgcap {
+    margin: 5px;
+}
+.w0bm-form-msg {
+    margin: 5px;
+    padding: 5px 10px;
+}
+.w0bm-nojs-flash {
+    animation: w0bm-flash-out 0.5s ease 6s forwards;
+}
+@keyframes w0bm-flash-out {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+.w0bm-static-body {
+    white-space: pre-line;
+}
+.commentwrapper .sidebar-comment-img {
+    max-width: 100%;
+    max-height: 300px;
+}
+.commentwrapper .external-link-icon {
+    display: none;
+}
+.commentwrapper a.mention,
+.commentwrapper .w0bm-backlinks a {
+    color: #1fb2b0;
+}
+.w0bm-excl-form {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
+.w0bm-excl-form input[type="text"] {
+    flex: 1 1 auto;
+}
+.w0bm-prefs-form .checkbox-row {
+    display: block;
+    margin: 3px 0;
+    font-weight: normal;
+}

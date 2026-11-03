@@ -18,6 +18,7 @@
         <div id="tag-add">
             <form class="input-group tag-input-open w0bm-tagform" method="post" action="/api/v2/tags/{{ item.id }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {% include "frontends/w0bm/partials/back.html" %}
                 <input id="tags" type="text" class="" placeholder="Add new tag" name="tagname" data-role="tagsinput" autocomplete="off">
                 <button id="submittags" type="submit" class="">Submit</button>
             </form>

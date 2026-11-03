@@ -1,0 +1,9 @@
+{#- Image captcha for visitors without JavaScript (server/src/cap_image.rs; Cap needs JavaScript).
+    w0bm.js removes it when it runs. A click on the picture loads new characters. -#}
+{% if nojs_captcha_id %}
+<div class="w0bm-imgcap w0bm-nojs-only">
+    <iframe src="/api/cap/image/{{ nojs_captcha_id }}/frame" class="w0bm-imgcap-frame" title="{{ t("auth.captcha_image_alt") }}" loading="lazy"></iframe>
+    <input type="hidden" name="cap-image-id" value="{{ nojs_captcha_id }}">
+    <input class="form-control" type="text" name="cap-image-answer" placeholder="{{ t("auth.captcha_image_placeholder") }}" autocomplete="off" autocapitalize="characters" spellcheck="false">
+</div>
+{% endif %}

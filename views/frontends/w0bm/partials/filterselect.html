@@ -11,7 +11,14 @@
             </div>
             <div class="modal-body">
                 {% if _canExclude %}
-                <input id="filter" type="text" class="form-control" placeholder="Input tags…" name="filter" data-role="tagsinput" data-load="/api/v2/settings/excluded_tags">
+                <input id="filter" type="text" class="form-control w0bm-js-only" placeholder="Input tags…" name="filter" data-role="tagsinput" data-load="/api/v2/settings/excluded_tags">
+                {#- Without JavaScript: add one tag at a time (removing needs JavaScript: the API only takes DELETE) #}
+                <form method="post" action="/api/v2/settings/excluded_tags" class="w0bm-excl-form w0bm-nojs-only">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    {% include "frontends/w0bm/partials/back.html" %}
+                    <input type="text" class="form-control" name="tagname" placeholder="Tag to filter out" autocomplete="off" required>
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </form>
                 {% endif %}
                 <div class="w0bm-modes">
                     <h5>Mode</h5>

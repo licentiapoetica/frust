@@ -25,7 +25,11 @@
 <div class="w0bm-notif">
     <div class="panel panel-default">
         <div class="panel-heading">
-            <h3 class="panel-title">Messages</h3> <button class="btn btn-primary pull-right readall w0bm-js-only" id="w0bm-readall" data-tab="{{ activeTab }}">Read all</button>
+            <h3 class="panel-title">Messages</h3> <form method="post" action="/api/notifications/read?tab={{ activeTab }}" class="pull-right w0bm-inline-form" id="w0bm-readall-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {% include "frontends/w0bm/partials/back.html" %}
+                <button type="submit" class="btn btn-primary readall" id="w0bm-readall" data-tab="{{ activeTab }}">Read all</button>
+            </form>
         </div>
         <div class="list-group" id="listitems">
             {% include "frontends/w0bm/snippets/notifications-list.html" %}

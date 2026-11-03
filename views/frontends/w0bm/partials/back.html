@@ -1,0 +1,2 @@
+{#- `back` of a plain form post to a JSON API (server/src/nojs.rs redirects there); `back_anchor` optional -#}
+<input type="hidden" name="back" value="{% if url %}{{ url.pathname }}{{ url.search }}{% else %}/{% endif %}{% if back_anchor %}#{{ back_anchor }}{% endif %}">

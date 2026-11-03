@@ -1,8 +1,16 @@
+{#- Login form (modal and page). Without JavaScript it posts normally; `return_to` brings the visitor
+    back with the modal open and ?login_error=… / ?login_captcha=1 (routes/register.rs). -#}
 <form action="/login" method="post" class="navbar-form w0bm-loginform">
+    <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+    {% if url %}<input type="hidden" name="return_to" value="{{ url.pathname }}{{ url.search }}">{% endif %}
+    {% if login_error_msg %}<div class="alert alert-danger w0bm-form-msg">{{ login_error_msg }}</div>{% endif %}
+    {% if login_done_msg %}<div class="alert alert-success w0bm-form-msg">{{ login_done_msg }}</div>{% endif %}
+    {% if (error is defined and error) %}<div class="alert alert-danger w0bm-form-msg">{{ error }}</div>{% endif %}
     <input type="text" name="username" placeholder="Username" class="form-control usernamelogin" autocomplete="username" required><br>
     <input type="password" name="password" placeholder="Password" class="form-control passwordlogin" autocomplete="current-password" required><br>
-    {% if (captcha or captcha_enabled) %}
+    {% if (captcha_enabled or captcha) %}
     <template class="w0bm-cap-template"><cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget></template>
+    {% if (login_captcha or captcha) %}{% include "frontends/w0bm/partials/capimage.html" %}{% endif %}
     {% endif %}
     <div class="w0bm-login-error alert alert-danger" hidden></div>
     <button type="submit" class="btn btn-primary">Login</button> <input id="rememberme" checked type="checkbox" name="kmsi"> <label for="rememberme" id="rember">Remember me?</label>

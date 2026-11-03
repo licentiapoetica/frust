@@ -18,6 +18,8 @@
     try { return JSON.parse(el.textContent); } catch { return null; }
   };
   const DATA = readJSON('w0bm-data') || {};
+  // Stand-ins for visitors without JavaScript (image captcha, plain forms): not needed now
+  $$('.w0bm-nojs-only').forEach((el) => el.remove());
   const ITEM = readJSON('w0bm-item-data');
   const csrf = () => DATA.csrf || $('meta[name="csrf-token"]')?.content || '';
   const store = {
@@ -100,16 +102,17 @@
     if (!$('.modal.w0bm-modal-open')) document.body.classList.remove('modal-open');
     if (location.hash === '#' + m.id) history.replaceState(null, '', location.pathname + location.search);
     // /?login=1 opened the login modal: drop the parameter once it is closed
-    if (m.id === 'loginmodal' && /[?&]login=/.test(location.search)) {
+    // /?login=1 or a no-JS form answer (?login_error=…) opened it: drop those parameters
+    if (/[?&](login|login_error|login_done|login_captcha|register_error|register_done)=/.test(location.search)) {
       const u = new URL(location.href);
-      u.searchParams.delete('login');
+      ['login', 'login_error', 'login_done', 'login_captcha', 'register_error', 'register_done'].forEach((k) => u.searchParams.delete(k));
       history.replaceState(null, '', u.pathname + u.search + u.hash);
     }
   }
   // /register redirects to /#register, /#register:<token> or /#register:error|success:<message>
   const regHash = decodeURIComponent(location.hash.slice(1));
-  if (/^register(:|$)/.test(regHash) && $('#register')) {
-    const m = $('#register');
+  if (/^register(-modal)?(:|$)/.test(regHash) && $('#register-modal')) {
+    const m = $('#register-modal');
     const parts = regHash.split(':');
     const box = m.querySelector('.w0bm-register-msg');
     if ((parts[1] === 'error' || parts[1] === 'success') && box) {
@@ -889,14 +892,17 @@
   });
 
   // ── Subscribe to comments ─────────────────────────────────────────────────────────────
-  const subBtn = $('#w0bm-subscribe');
-  subBtn?.addEventListener('click', async (e) => {
+  const subForm = $('#w0bm-sub-form');
+  subForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const r = await api('/api/subscribe/' + ITEM.id);
+    const want = subForm.querySelector('input[name="subscribed"]');
+    const r = await api(subForm.action, { body: new FormData(subForm) });
     if (!r.ok) { flash('error', r.msg || 'Error'); return; }
     const on = !!r.data.subscribed;
-    subBtn.querySelector('i').className = 'fa ' + (on ? 'fa-bell' : 'fa-bell-o');
-    subBtn.title = on ? 'Unsubscribe' : 'Subscribe to comments';
+    want.value = on ? '0' : '1';
+    const btn = subForm.querySelector('button');
+    btn.querySelector('i').className = 'fa ' + (on ? 'fa-bell' : 'fa-bell-o');
+    btn.title = on ? 'Unsubscribe' : 'Subscribe to comments';
     flash('success', on ? 'Subscribed to comments' : 'Unsubscribed');
   });
 

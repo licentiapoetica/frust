@@ -10,6 +10,7 @@
 <form action="/api/comments" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="item_id" value="{{ item.id }}">
+    {% with back_anchor = "comment_container_scrollable" %}{% include "frontends/w0bm/partials/back.html" %}{% endwith %}
     <div class="sees panel panel-default">
         <div class="fickfackfoo panel-body">
             <textarea name="content" placeholder="Write something" id="cinput" class="form-control" required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
@@ -27,6 +28,7 @@
                 </div>
             </div>
         </div>
+        {% if "comment" in captcha_scopes %}{% include "frontends/w0bm/partials/capimage.html" %}{% endif %}
         <div id="parent" class="emojis-box w0bm-hidden">
             <div id="child" class="emojis"></div>
         </div>
@@ -34,13 +36,30 @@
 </form>
 </div>
 {% endif %}
+{% else %}
+<div class="panel panel-default w0bm-locked"><div class="panel-body"><a href="#login-modal" data-toggle="modal" data-target="#login-modal">Log in</a> to comment.</div></div>
 {% endif %}
+{#- The comments come with the page (static_comments, routes/comments.rs), so they show without
+    JavaScript too; w0bm.js loads them again from /api/comments and replaces the list. -#}
+{%- macro wcomment(c, parent) -%}
+<div class="panel panel-default{% if c.is_pinned %} w0bm-pinned{% endif %}" id="c{{ c.id }}" data-id="{{ c.id }}">
+    <div class="panel-body w0bm-static-body">{% if parent %}<div class="w0bm-reply-to">↳ <a href="#c{{ parent }}">&gt;&gt;{{ parent }}</a></div>{% endif %}{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+    <div class="panel-footer">by {% if c.username %}<a href="/user/{{ c.username|lower }}"{% if c.username_color %} class="w0bm-usercolor" style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<span>{{ (c.name or "anonymous") }}</span>{% endif %} <small><time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ c.iso }}" title="{{ c.iso }}">{{ c.timeago }}</time></small>{% if c.is_pinned %} <i class="fa fa-thumb-tack" title="pinned"></i>{% endif %}{% if c.backlinks %} <small class="w0bm-backlinks">{% for b in c.backlinks %}<a href="#c{{ b }}">&gt;&gt;{{ b }}</a> {% endfor %}</small>{% endif %}</div>
+</div>
+{%- endmacro -%}
 <div id="comment_container_scrollable" class="comments hidden-xs">
     <div class="commentwrapper" id="w0bm-comments" data-item-id="{{ item.id }}">
-        <div class="panel panel-default nocomments w0bm-js-only">
+        {% if static_comments %}
+        {% for c in static_comments|sort(attribute="id") %}
+        {{ wcomment(c, none) }}
+        {% for r in (c.replies or []) %}{{ wcomment(r, c.id) }}{% endfor %}
+        {% endfor %}
+        {% else %}
+        <div class="panel panel-default nocomments">
             <div class="panel-body">
                 No comments yet …<br />
             </div>
         </div>
+        {% endif %}
     </div>
 </div>

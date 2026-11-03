@@ -70,7 +70,7 @@
         </div>
     </div>
 </div>
-<div id="w0bm-flash" class="flashcontainer w0bm-flash-global"><div class="flash-inner"></div></div>
+<div id="w0bm-flash" class="flashcontainer w0bm-flash-global"><div class="flash-inner">{% if nojs_flash %}<div class="alert alert-{{ ("success" if nojs_flash.kind == "success" else "danger") }} alert-dismissable w0bm-nojs-flash" role="alert"><a href="#_" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></a>{{ nojs_flash.text }}</div>{% endif %}</div></div>
 <script src="/s/fe/w0bm/js/w0bm.js?v={{ mtime("/public/s/fe/w0bm/js/w0bm.js") }}"></script>
 {% include "snippets/cap-gate.html" %}
 {% block scripts %}{% endblock %}

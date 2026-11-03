@@ -1,13 +1,15 @@
-{#- partials/registermodal.blade.php. GET /register redirects to /#register (:target opens it;
-    w0bm.js also reads /#register:<token> and /#register:error|success:<message>). -#}
-<div class="modal fade" id="register" tabindex="-1" role="dialog" aria-labelledby="Register">
-    <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+{#- partials/registermodal.blade.php. GET /register redirects to /#register-modal (:target opens it);
+    a plain form post comes back with ?register_error=… / ?register_done=… -#}
+<div class="modal fade{% if (register_error_msg or register_done_msg) %} w0bm-modal-open{% endif %}" id="register-modal" tabindex="-1" role="dialog" aria-labelledby="Register">
+    <a href="{% if (register_error_msg or register_done_msg) %}{{ url.pathname }}{% else %}#_{% endif %}" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                <a href="{% if (register_error_msg or register_done_msg) %}{{ url.pathname }}{% else %}#_{% endif %}" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
                 <h4 class="modal-title" id="registerModalTitle">Register</h4>
             </div>
+            {% if register_error_msg %}<div class="alert alert-danger w0bm-form-msg">{{ register_error_msg }}</div>{% endif %}
+            {% if register_done_msg %}<div class="alert alert-success w0bm-form-msg">{{ register_done_msg }}</div>{% endif %}
             <div class="w0bm-register-msg alert" hidden></div>
             <div class="advantages">
                 <p>Registering on {{ domain }} has some advantages...</p>
@@ -21,7 +23,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <p>Back to <a href="#loginmodal" data-toggle="modal" data-target="#loginmodal">Login?</a></p>
+                <p>Back to <a href="#login-modal" data-toggle="modal" data-target="#login-modal">Login?</a></p>
             </div>
         </div>
     </div>

@@ -2,6 +2,7 @@
 <form id="webmreport" method="POST" action="/api/v2/report" class="w0bm-ajaxform" data-success="Report sent. Thanks!">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="item_id" value="{{ item.id }}">
+    {% include "frontends/w0bm/partials/back.html" %}
     <div class="modal fade" id="webmreportmodal" tabindex="-1" role="dialog" aria-labelledby="Report">
         <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
         <div class="modal-dialog" role="document">
@@ -29,7 +30,8 @@
                     <label for="reportText">Please explain a bit more detailed why you want to report this upload</label>
                     <textarea class="form-control" id="reportText" name="reason" rows="3"></textarea>
                     {% if captcha_enabled %}
-                    <cap-widget class="cap-dark w0bm-cap" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+                    <cap-widget class="cap-dark w0bm-cap w0bm-js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+                    {% include "frontends/w0bm/partials/capimage.html" %}
                     {% endif %}
                     <p>Abuse of this form will be awarded with a permanent ban!</p>
                 </div>

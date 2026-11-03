@@ -8,6 +8,9 @@
 {% if (can_manage_item or is_mod_or_admin) %}
 {% include "frontends/w0bm/partials/frontendedit.html" %}
 {% endif %}
+{% if is_mod_or_admin %}
+{% include "frontends/w0bm/partials/deletemodal.html" %}
+{% endif %}
 {% endblock %}
 
 {% block aside %}
@@ -85,14 +88,20 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="postid" value="{{ item.id }}">
                         <input type="hidden" name="action" value="{{ ("remove" if user_has_favorited else "add") }}">
+                        {% include "frontends/w0bm/partials/back.html" %}
                         <button id="fav" type="submit" class="w0bm-favbtn" title="Favorite" data-faved="{{ ("1" if user_has_favorited else "0") }}"><i class="fa {{ ("fa-heart" if user_has_favorited else "fa-heart-o") }} w0bm-pink"></i></button>
                     </form>
                 {% else %}
-                    <a href="#loginmodal" data-toggle="modal" data-target="#loginmodal" title="Login to favorite"><i class="fa fa-heart-o"></i></a>
+                    <a href="#login-modal" data-toggle="modal" data-target="#login-modal" title="Login to favorite"><i class="fa fa-heart-o"></i></a>
                 {% endif %}
                 </div>
                 {% if (session and enable_comments) %}
-                <button class="w0bm-iconbtn w0bm-js-only" id="w0bm-subscribe" title="{{ ("Unsubscribe" if isSubscribed else "Subscribe to comments") }}" data-subscribed="{{ ("1" if isSubscribed else "0") }}"><i class="fa {{ ("fa-bell" if isSubscribed else "fa-bell-o") }}"></i></button>
+                <form method="post" action="/api/subscribe/{{ item.id }}" class="w0bm-inline-form" id="w0bm-sub-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="subscribed" value="{{ ("0" if isSubscribed else "1") }}">
+                    {% include "frontends/w0bm/partials/back.html" %}
+                    <button type="submit" class="w0bm-iconbtn" id="w0bm-subscribe" title="{{ ("Unsubscribe" if isSubscribed else "Subscribe to comments") }}"><i class="fa {{ ("fa-bell" if isSubscribed else "fa-bell-o") }}"></i></button>
+                </form>
                 {% endif %}
                 <a class="fa fa-info-circle w0bm-popover-btn" id="infobox" href="#w0bm-info" data-toggle="popover" data-placement="top" title="Information" data-popover="#w0bm-info-popover"></a>
                 <template id="w0bm-info-popover">{% include "frontends/w0bm/partials/iteminfo.html" %}</template>
@@ -100,7 +109,7 @@
                 {% if item.is_oc %}<span class="w0bm-oc" title="Original Content">OC</span>{% endif %}
                 <time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ item.timestamp.timefull }}" title="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time>
                 {% if (can_manage_item or is_mod_or_admin) %} <a class="edit_video" href="#webmeditmodal" data-toggle="modal" data-target="#webmeditmodal">[edit]</a>{% endif %}
-                {% if is_mod_or_admin %} <a class="delete_video w0bm-js-only" href="#" data-id="{{ item.id }}">[del]</a>{% endif %}
+                {% if is_mod_or_admin %} <a class="delete_video" href="#w0bm-delmodal" data-id="{{ item.id }}">[del]</a>{% endif %}
             </span>
         </div>
         {% include "frontends/w0bm/partials/infobox-nojs.html" %}
