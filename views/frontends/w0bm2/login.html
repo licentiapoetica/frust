@@ -2,10 +2,6 @@
 {%- set w2_noflash = true -%}
 {%- extends "frontends/w0bm2/base.html" -%}
 {% block title %}Login - {{ domain }}{% endblock %}
-{% block head %}{% if captcha %}
-    <script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
-    <script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
-{% endif %}{% endblock %}
 {% block page %}
 <div class="flash-inline">
     {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
@@ -14,9 +10,9 @@
         <input type="text" name="username" placeholder="Username" class="form-control" autocomplete="username" autocapitalize="off" required>
         <input type="password" name="password" placeholder="Password" class="form-control" autocomplete="current-password" required>
         <input type="checkbox" name="kmsi" id="w2-kmsi"> <label for="w2-kmsi">Remember me</label><br>
-        {% if captcha %}<cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% endif %}
+        {% if captcha %}<div class="w2-captcha"><cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% if nojs_captcha_id %}{% include "snippets/cap-image.html" %}{% endif %}</div>{% endif %}
         <button type="submit" class="btn btn-dark">Login</button>
-        <a href="/#register" class="btn btn-success">Register</a>
+        <a href="/#register-modal" class="btn btn-success">Register</a>
         {% if smtp_enabled %}<a href="/forgot-password">Forgot password?</a>{% endif %}
   </form>
 {% endblock %}

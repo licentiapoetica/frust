@@ -10,7 +10,7 @@
                 </div>
                 <div class="modal-body frontendeditmodal">
                     {% if (enable_item_title and can_manage_item) %}
-                    <form id="webmedit" method="POST" action="/api/v2/items/{{ item.id }}/title" data-method="PATCH">
+                    <form id="webmedit" method="POST" action="/api/v2/items/{{ item.id }}/title" data-method="PATCH" class="w2-js-only">
                         <div class="form-group">
                             <label for="videotitleedit">Video Title</label>
                             <input class="form-control" type="text" name="title" id="videotitleedit" value="{{ (item.title or "") }}" placeholder="Video Title" maxlength="500">
@@ -24,12 +24,21 @@
                         </div>
                     </div>
                     <div class="deleteit">
-                        {% if is_mod_or_admin %}<a class="delete_video" href="#" id="w2-delete-video"><i class="fa fa-trash fa-lg"></i> Remove upload</a>{% endif %}
+                        {% if is_mod_or_admin %}
+                        <a class="delete_video w2-js-only" href="#" id="w2-delete-video"><i class="fa fa-trash fa-lg"></i> Remove upload</a>
+                        <form method="post" action="/api/v2/admin/deletepost" class="w2-nojs-only w2-delete-form">
+                            <input type="hidden" name="csrf_token" value="{{ (csrf_token or session.csrf_token or "") }}">
+                            <input type="hidden" name="postid" value="{{ item.id }}">
+                            <input type="hidden" name="back" value="/">
+                            <input type="text" name="reason" class="form-control" placeholder="Reason for removing this upload" required>
+                            <button type="submit" class="btn btn-dark btn-sm"><i class="fa fa-trash fa-lg"></i> Remove upload</button>
+                        </form>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="modal-footer">
                     <a href="#_" class="btn btn-dark">Close</a>
-                    {% if (enable_item_title and can_manage_item) %}<button type="submit" form="webmedit" class="btn btn-dark">Save changes</button>{% endif %}
+                    {% if (enable_item_title and can_manage_item) %}<button type="submit" form="webmedit" class="btn btn-dark w2-js-only">Save changes</button>{% endif %}
                 </div>
             </div>
         </div>

@@ -17,7 +17,7 @@
     <link rel="stylesheet" type="text/css" href="/s/fe/w0bm2/css/bootstrap-dark.css?v={{ mtime("/public/s/fe/w0bm2/css/bootstrap-dark.css") }}">
     <link rel="stylesheet" type="text/css" href="/s/fe/w0bm2/css/cstms.css?v={{ mtime("/public/s/fe/w0bm2/css/cstms.css") }}">
     <link rel="stylesheet" type="text/css" href="/s/fe/w0bm2/css/w0bm2.css?v={{ mtime("/public/s/fe/w0bm2/css/w0bm2.css") }}">
-    {% if (not session and captcha_enabled) %}
+    {% if captcha_enabled %}
     <script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
     <script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
     {% endif %}

@@ -47,7 +47,7 @@
       </li>
         {% else %}
       <li class="nav-link">
-        <a id="nav-user" class="btn btn-dark nav-link bg-toggle w2-login-btn" href="#loginmodal"><span><span class="nomsg">|</span> Login</span></a>
+        <a id="nav-user" class="btn btn-dark nav-link bg-toggle w2-login-btn" href="#login-modal"><span><span class="nomsg">|</span> Login</span></a>
       </li>
         {% endif %}
       <li class="nav-item dropdown">
@@ -66,8 +66,8 @@
           <a class="dropdown-item" href="/terms">Terms</a>
           <a class="dropdown-item" href="/privacy">Privacy</a>
           {% if not session %}
-          <a class="dropdown-item" href="#loginmodal">Login</a>
-          <a class="dropdown-item" href="#register">Register</a>
+          <a class="dropdown-item" href="#login-modal">Login</a>
+          <a class="dropdown-item" href="#register-modal">Register</a>
           {% endif %}
         </div>
       </li>

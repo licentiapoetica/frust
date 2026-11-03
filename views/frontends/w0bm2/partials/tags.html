@@ -5,6 +5,7 @@
     <div id="tag-add">
         <form method="post" action="/api/v2/tags/{{ item.id }}" id="w2-tag-form">
         <input type="hidden" name="csrf_token" value="{{ (csrf_token or session.csrf_token or "") }}">
+        <input type="hidden" name="back" value="{{ url.pathname if url else ("/" ~ item.id) }}{{ url.search if url else "" }}#webmeditmodal">
         <div class="row">
             <div class="col tag-col">
                 <div class="input-group">

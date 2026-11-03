@@ -15,6 +15,7 @@
   <form action="/api/v2/togglefav" method="post" id="w2-fav-form">
     <input type="hidden" name="postid" value="{{ item.id }}">
     <input type="hidden" name="action" value="{{ "remove" if user_has_favorited else "add" }}">
+    <input type="hidden" name="back" value="{{ url.pathname if url else ("/" ~ item.id) }}{{ url.search if url else "" }}">
     <input type="hidden" name="csrf_token" value="{{ (csrf_token or session.csrf_token or "") }}">
     <button type="submit" id="fav" class="btn btn-dark{% if not user_has_favorited %} bg-toggle{% endif %}" title="Favorite" aria-pressed="{{ "true" if user_has_favorited else "false" }}"><i class="fa {{ "fa-heart" if user_has_favorited else "fa-heart-o" }} fa-lg"></i></button>
   </form>
@@ -75,6 +76,8 @@
   <li class="legacy-item">
   <form action="/api/subscribe/{{ item.id }}" method="post" id="w2-sub-form">
     <input type="hidden" name="csrf_token" value="{{ (csrf_token or session.csrf_token or "") }}">
+    <input type="hidden" name="subscribed" value="{{ "0" if isSubscribed else "1" }}">
+    <input type="hidden" name="back" value="{{ url.pathname if url else ("/" ~ item.id) }}{{ url.search if url else "" }}">
     <button type="submit" id="w2-subscribe" class="btn btn-dark" title="{{ "Unsubscribe from the comments" if isSubscribed else "Subscribe to the comments" }}" aria-pressed="{{ "true" if isSubscribed else "false" }}"><i class="fa {{ "fa-bell" if isSubscribed else "fa-bell-o" }} fa-lg"></i></button>
   </form>
   </li>

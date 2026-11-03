@@ -1,6 +1,9 @@
 {#- partials/flash.blade.php. JS appends its messages to .flash-inner. -#}
 <div class="flashcontainer">
     <div class="flash-inner" id="w2-flash" aria-live="polite">
+        {% if nojs_flash %}
+        <div class="alert alert-{{ "success" if nojs_flash.kind == "success" else "danger" }} alert-dismissable w2-nojs-flash" role="alert">{{ nojs_flash.text }}</div>
+        {% endif %}
         {% if (error is defined and error and error is string and not w2_noflash) %}
         <div class="alert alert-danger alert-dismissable" role="alert">{{ error }}</div>
         {% endif %}

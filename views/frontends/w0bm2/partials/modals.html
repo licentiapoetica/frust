@@ -3,7 +3,7 @@
 {% if not session %}
 {%- set w2_login_open = (url and url.qs and url.qs.login) -%}
 {%- set w2_login_close = ((url.pathname or "/") if w2_login_open else "#_") -%}
-<div class="modal fade w2-modal{% if w2_login_open %} w2-open{% endif %}" id="loginmodal" tabindex="-1" role="dialog" aria-labelledby="w2-login-title">
+<div class="modal fade w2-modal{% if w2_login_open %} w2-open{% endif %}" id="login-modal" tabindex="-1" role="dialog" aria-labelledby="w2-login-title">
     <a href="{{ w2_login_close }}" class="w2-modal-backdrop" aria-label="Close" tabindex="-1"></a>
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -14,22 +14,28 @@
 
             <div class="login_wrapper">
             	<div class="col-md-9">
+					{% if login_error_msg %}<div class="alert alert-danger" role="alert">{{ login_error_msg }}</div>{% endif %}
+					{% if (login_done_msg or register_done_msg) %}<div class="alert alert-success" role="alert">{{ (login_done_msg or register_done_msg) }}</div>{% endif %}
 					<form action="/login" method="post" class="navbar-form">
+                	     <input type="hidden" name="return_to" value="{{ url.pathname if url else "/" }}{{ url.search if url else "" }}">
                 	     <input type="text" name="username" placeholder="Username" class="form-control usernamelogin" autocomplete="username" autocapitalize="off" spellcheck="false" required><br>
                 	     <input type="password" name="password" placeholder="Password" class="form-control passwordlogin" autocomplete="current-password" required><br>
+                	     {% if (captcha_enabled and login_captcha) %}
+                	     <div class="w2-captcha"><cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% include "snippets/cap-image.html" %}</div>
+                	     {% endif %}
                 	     <button type="submit" class="btn btn-primary">Login</button> <input id="rememberme" type="checkbox" name="kmsi"> <label for="rememberme" id="rember">Remember me?</label>
 					</form>
 				</div>
 	   		</div>
 
 		<div class="modal-footer">
-			<p>No account yet? <a href="#register">Register</a>{% if smtp_enabled %} &middot; <a href="/forgot-password">Forgot password?</a>{% endif %}</p>
+			<p>No account yet? <a href="#register-modal">Register</a>{% if smtp_enabled %} &middot; <a href="/forgot-password">Forgot password?</a>{% endif %}</p>
         	</div>
         </div>
     </div>
 </div>
 
-<div class="modal fade w2-modal" id="register" tabindex="-1" role="dialog" aria-labelledby="w2-register-title">
+<div class="modal fade w2-modal" id="register-modal" tabindex="-1" role="dialog" aria-labelledby="w2-register-title">
     <a href="#_" class="w2-modal-backdrop" aria-label="Close" tabindex="-1"></a>
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -46,7 +52,10 @@
             <div class="reg_wrapper">
 	   		        <div class="register">
                   <div class="col-md-10">
+                    {% if register_error_msg %}<div class="alert alert-danger" role="alert">{{ register_error_msg }}</div>{% endif %}
+                    {% if register_done_msg %}<div class="alert alert-success" role="alert">{{ register_done_msg }}</div>{% endif %}
                     <form class="form-horizontal" method="post" action="/register">
+                        <input type="hidden" name="return_to" value="{{ url.pathname if url else "/" }}{{ url.search if url else "" }}">
                         <div class="form-group">
                           <div class="reg_username">
                             <input type="text" name="username" class="form-control" placeholder="Username" autocomplete="username" autocapitalize="off" spellcheck="false" required>
@@ -68,7 +77,7 @@
                         {% if not registration_open %}
                         <div class="form-group">
                           <div class="reg_username">
-                            <input type="text" name="token" class="form-control" placeholder="Invite token" autocomplete="off" required>
+                            <input type="text" name="token" class="form-control" placeholder="Invite token" autocomplete="off" value="{{ (url.qs.invite if (url and url.qs and url.qs.invite) else "") }}" required>
                           </div>
                         </div>
                         {% elif registration_require_mail_andor_token %}
@@ -84,6 +93,7 @@
                         <div class="form-group">
                           <div class="recaptcha">
                             <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+                            {% include "snippets/cap-image.html" %}
                           </div>
                         </div>
                         {% endif %}
@@ -103,7 +113,7 @@
             </div>
 
             <div class="modal-footer">
-              <p>Back to <a href="#loginmodal">Login?</a></p>
+              <p>Back to <a href="#login-modal">Login?</a></p>
             </div>
     </div>
 </div>
@@ -121,6 +131,7 @@
             <div class="modal-body">
                 <form method="post" action="/api/v2/settings/excluded_tags" id="w2-filter-form">
                     <input type="hidden" name="csrf_token" value="{{ (csrf_token or session.csrf_token or "") }}">
+                    <input type="hidden" name="back" value="{{ url.pathname if url else "/" }}{{ url.search if url else "" }}#filterselectmodal">
                     <input id="filter" type="text" class="form-control" placeholder="Input tags…" name="tagname" data-role="tagsinput" data-load="/api/v2/settings/excluded_tags" autocomplete="off">
                 </form>
                 <div class="w2-modes">

@@ -36,6 +36,7 @@
             {% if captcha_enabled %}
             <div class="form-group recaptcha">
                 <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+                {% include "snippets/cap-image.html" %}
             </div>
             {% endif %}
 	    <div class="form-group terms">
@@ -44,12 +45,12 @@
 		</div>
 		<div>
                     <button type="submit" class="btn btn-primary">Register</button>
-                    <a href="#loginmodal" class="btn btn-dark">Login</a>
+                    <a href="#login-modal" class="btn btn-dark">Login</a>
                 </div>
             </div>
         </form>
     </div>
     {% else %}
-    <div class="box"><a href="#loginmodal" class="btn btn-dark">Login</a></div>
+    <div class="box"><a href="#login-modal" class="btn btn-dark">Login</a></div>
     {% endif %}
 {% endblock %}

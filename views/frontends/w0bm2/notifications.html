@@ -6,6 +6,7 @@
     <h3>Notifications</h3>
     <form method="post" action="/api/notifications/read" id="w2-readall" class="readall">
         <input type="hidden" name="csrf_token" value="{{ (csrf_token or (session and session.csrf_token) or "") }}">
+        <input type="hidden" name="back" value="/notifications{% if activeTab %}?tab={{ activeTab }}{% endif %}">
         <button type="submit" class="btn btn-dark btn-sm">Mark all as read</button>
     </form>
 </div>

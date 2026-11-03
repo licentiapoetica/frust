@@ -365,3 +365,37 @@ button#w2-subscribe { background: #28282800; color: white; border: 0; margin: 0;
 button#w2-subscribe:hover { color: #007053; text-shadow: 1px 1px 0px #000; }
 .w2-unsub { position: absolute; top: 0; right: 0; margin: 0; }
 .w2-unsub .btn { padding: 0 .35rem; }
+
+/* ── forms without JavaScript (server/src/nojs.rs) ───────────────────── */
+/* the comments open when a link or a redirect targets them (#collapseComments, #c123) */
+#collapseComments:target, #collapseComments:has(:target) { display: block; }
+.w2-inline-form { display: inline; margin: 0; }
+.w2-link-btn { background: none; border: 0; padding: 0; color: #fff; cursor: pointer; font: inherit; }
+.w2-link-btn:hover { color: #007053; text-shadow: 1px 1px 1px black; }
+.w2-delete-form { display: flex; gap: .5rem; align-items: center; }
+.w2-delete-form .form-control { flex: 1 1 auto; }
+.w2-static-body .greentext { color: #789922; }
+/* messages of a form post: they fade out by themselves without JavaScript */
+html.no-js .flash-inner .alert { animation: w2-flash-out .5s ease 6s forwards; }
+@keyframes w2-flash-out { to { opacity: 0; visibility: hidden; } }
+.modal-body .alert, .login_wrapper .alert, .register .alert { margin-bottom: .5rem; }
+
+/* captcha: Cap (cap-widget) needs JavaScript; without it the image captcha (snippets/cap-image.html) */
+html.no-js cap-widget { display: none !important; }
+html:not(.no-js):not(.w2-nocap) .lm-imgcap { display: none !important; }
+html.w2-nocap cap-widget { display: none !important; }
+.lm-imgcap { margin: .5rem 0; }
+.lm-imgcap-frame { display: block; width: 100%; max-width: 340px; height: 100px; min-height: 0; border: 1px solid #000; background: #000; }
+.lm-imgcap .lm-field { display: block; margin: .25rem 0 0; }
+.lm-imgcap .lm-field-icon { display: none; }
+.lm-imgcap .lm-input {
+    display: block;
+    width: 100%;
+    max-width: 340px;
+    padding: .375rem .75rem;
+    background: rgb(18, 18, 20);
+    color: #999;
+    border: 1px solid #444;
+    border-radius: .25rem;
+    text-transform: uppercase;
+}

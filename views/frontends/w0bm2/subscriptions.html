@@ -13,6 +13,8 @@
         <a href="/{{ it_key }}" title="#{{ it_key }} by {{ it.user }}"><img src="{{ (it.thumb or ("/t/" ~ it.id ~ ".webp")) }}" alt="" loading="lazy"></a>
         <form method="post" action="/api/subscribe/{{ it.id }}" class="w2-unsub">
             <input type="hidden" name="csrf_token" value="{{ (csrf_token or (session and session.csrf_token) or "") }}">
+            <input type="hidden" name="subscribed" value="0">
+            <input type="hidden" name="back" value="/subscriptions">
             <button type="submit" class="btn btn-dark btn-sm" title="Unsubscribe"><i class="fa fa-bell-slash"></i></button>
         </form>
     </div>

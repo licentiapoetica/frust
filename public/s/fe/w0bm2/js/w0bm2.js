@@ -50,6 +50,19 @@
       return { success: false, msg: 'Network error' };
     }
   }
+  /** The captcha answer of a form: Cap's token, or the image captcha when Cap isn't available. */
+  function capFields(form, target) {
+    if (!form) return;
+    ['cap-token', 'cap-image-id', 'cap-image-answer'].forEach((n) => {
+      const el = form.querySelector(`input[name="${n}"]`);
+      if (!el || !el.value) return;
+      if (target instanceof URLSearchParams) target.set(n, el.value); else target[n] = el.value;
+    });
+  }
+  // Cap's widget script missing or blocked: fall back to the image captcha
+  window.addEventListener('load', () => setTimeout(() => {
+    if ($('cap-widget') && !(window.customElements && customElements.get('cap-widget'))) document.documentElement.classList.add('w2-nocap');
+  }, 1000));
   const msgOf = (r, fallback) => (r && (r.msg || r.message || (typeof r.error === 'string' && r.error))) || fallback;
 
   // ── flash messages (partials/flash.blade.php + newscript.js flash()/alertrm()) ──
@@ -524,9 +537,11 @@
     const subForm = $('#w2-sub-form');
     if (subForm) subForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const r = await api('POST', `/api/subscribe/${itemId}`, {});
+      const wanted = subForm.elements.subscribed.value;
+      const r = await api('POST', `/api/subscribe/${itemId}`, { subscribed: wanted });
       if (!r.success) { flash('error', msgOf(r, 'Error')); return; }
-      const on = !!r.subscribed;
+      const on = r.subscribed !== undefined ? !!r.subscribed : wanted === '1';
+      subForm.elements.subscribed.value = on ? '0' : '1';
       const btn = $('#w2-subscribe');
       const icon = btn.querySelector('i');
       icon.classList.toggle('fa-bell', on);
@@ -565,8 +580,7 @@
       if (!reason && !cats.length) { flash('error', 'Please select at least one reason or provide a description.'); return; }
       if (cats.length) body.set('categories', cats.join(','));
       if (reason) body.set('reason', reason);
-      const cap = reportForm.querySelector('input[name="cap-token"]');
-      if (cap && cap.value) body.set('cap-token', cap.value);
+      capFields(reportForm, body);
       const r = await api('POST', '/api/v2/report', body);
       if (r.success) {
         flash('success', 'Report sent. Thanks!');
@@ -843,6 +857,7 @@
         if (content === last) { flash('info', "nope. just don't. seriously... don't."); return; }
         const body = { item_id: itemId, content };
         if (form.dataset.parent && content.includes(`>>${form.dataset.parent}`)) body.parent_id = form.dataset.parent;
+        capFields(form, body);
         const r = await api('POST', '/api/comments', body);
         if (!r.success) { flash('error', msgOf(r, 'Error saving comment')); return; }
         last = content;
@@ -870,7 +885,7 @@
   // subscriptions page: unsubscribe
   $$('.w2-unsub').forEach((f) => f.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const r = await api('POST', f.action, {});
+    const r = await api('POST', f.action, { subscribed: '0' });
     if (r.success && !r.subscribed) f.closest('.main-item').remove();
     else if (!r.success) flash('error', msgOf(r, 'Error'));
   }));
