@@ -88,6 +88,7 @@ pub fn build() -> Router {
     chat_preview::register(&mut r);
     comment_upload::register(&mut r);
     crate::cap::register(&mut r);
+    crate::cap_image::register(&mut r);
     crate::csp::register(&mut r);
     r.finalize();
     r

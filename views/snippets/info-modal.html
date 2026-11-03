@@ -1,4 +1,7 @@
 <div id="info-modal" class="modal-overlay info-modal-hidden">
+    {#- Without JavaScript the modal opens through :target (#info-modal); the backdrop and the
+        close links go to #_ to close it. Hidden when JavaScript runs. #}
+    <a href="#_" class="lm-nojs-backdrop" tabindex="-1" aria-hidden="true"></a>
     <div class="modal-content infobox-modal-content">
         <!-- Header -->
         <div class="infobox-modal-header">
@@ -13,6 +16,7 @@
             <button type="button" class="infobox-close-icon-btn" id="info-modal-close-icon" title="{{ (t("common.close") or "Close") }}">
                 <i class="fa-solid fa-xmark"></i>
             </button>
+            <a href="#_" class="infobox-close-icon-btn nojs-close-link" title="{{ (t("common.close") or "Close") }}"><i class="fa-solid fa-xmark"></i></a>
         </div>
 
         <!-- Body -->
@@ -175,6 +179,7 @@
             {% endif %}
             {% endif %}
             <button type="button" class="btn-infobox-close" id="info-modal-close">{{ (t("common.close") or "Close") }}</button>
+            <a href="#_" class="btn-infobox-close nojs-close-link">{{ (t("common.close") or "Close") }}</a>
         </div>
     </div>
 </div>

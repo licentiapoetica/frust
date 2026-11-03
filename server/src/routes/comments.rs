@@ -364,6 +364,13 @@ async fn post_comment(st: AppState, mut req: Req) -> Res {
     if is_anon_session(Some(&session)) && !can_anon_do(&cfg, "comment") {
         return j(json!({ "success": false, "message": "Anonymous commenting is disabled" }), 403);
     }
+    // No JavaScript: the image captcha in the comment form stands in for the Cap popup (cap_image.rs)
+    if let Some(id) = req.post_str("cap-image-id").await {
+        let answer = req.post_str("cap-image-answer").await;
+        if matches!(crate::cap_image::check(Some(&id), answer.as_deref(), false), crate::cap::Captcha::Ok) {
+            crate::cap::grant(&cfg, &session, crate::cap::Scope::Comment);
+        }
+    }
     if !crate::cap::take(&cfg, &req, &session, crate::cap::Scope::Comment) {
         return j(json!({ "success": false, "message": "Please complete the captcha.", "captcha_required": "comment" }), 403);
     }
@@ -681,7 +688,14 @@ async fn post_comment_inner(
 
 // ── POST /api/subscribe/:itemid ─────────────────────────────────────────────
 
-async fn subscribe_toggle(st: AppState, req: Req) -> Res {
+async fn subscribe_toggle(st: AppState, mut req: Req) -> Res {
+    // `subscribed` ("1" / "0"): set that state instead of toggling (the form without JavaScript,
+    // where a repeated post must not undo the first)
+    let wanted = match req.post_str("subscribed").await.as_deref() {
+        Some("1") => Some(true),
+        Some("0") => Some(false),
+        _ => None,
+    };
     let Some(s) = req.session() else { return unauthorized() };
     let Some(item_id) = param_i32(&req, "itemid") else { return j(json!({ "success": false }), 500) };
     let me = s.id as i32;
@@ -689,13 +703,14 @@ async fn subscribe_toggle(st: AppState, req: Req) -> Res {
         let existing = sql!("SELECT is_subscribed FROM comment_subscriptions WHERE user_id = ", me, " AND item_id = ", item_id).fetch_optional(&st.db).await?;
         Ok(match existing {
             Some(e) => {
-                let subscribed = !e.bool("is_subscribed");
+                let subscribed = wanted.unwrap_or(!e.bool("is_subscribed"));
                 sql!("UPDATE comment_subscriptions SET is_subscribed = ", subscribed, " WHERE user_id = ", me, " AND item_id = ", item_id).execute(&st.db).await?;
                 subscribed
             }
             None => {
-                sql!("INSERT INTO comment_subscriptions (user_id, item_id, is_subscribed) VALUES (", me, ", ", item_id, ", true)").execute(&st.db).await?;
-                true
+                let subscribed = wanted.unwrap_or(true);
+                sql!("INSERT INTO comment_subscriptions (user_id, item_id, is_subscribed) VALUES (", me, ", ", item_id, ", ", subscribed, ")").execute(&st.db).await?;
+                subscribed
             }
         })
     }
@@ -1106,7 +1121,254 @@ async fn activity_inner(st: &AppState, req: &Req) -> anyhow::Result<axum::respon
         hm.insert(header::EXPIRES, HeaderValue::from_static("0"));
         return Ok(r);
     }
-    Ok(html_code("Page not found", 404))
+
+    // Plain HTML: the sidebar of visitors without JavaScript (the <noscript> iframe in
+    // snippets/footer.html). With JavaScript the sidebar uses the JSON above and never loads this.
+    let tr = st.i18n.translator(&crate::routes::index::req_lang(st, req));
+    let now = chrono::Utc::now();
+    let comments: Vec<Value> = processed
+        .into_iter()
+        .map(|mut c| {
+            let ago = c["created_at"]
+                .as_str()
+                .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
+                .map(|t| crate::util::time_ago(&tr, (now - t.with_timezone(&chrono::Utc)).num_seconds().max(0)))
+                .unwrap_or_default();
+            c["timeago"] = json!(ago);
+            let item_key = match &c["item_slug"] {
+                Value::String(s) if !s.is_empty() => s.clone(),
+                _ => c["item_id"].as_i64().map(|i| i.to_string()).unwrap_or_default(),
+            };
+            let content = c["content"].as_str().unwrap_or("").to_string();
+            let files = c["files"].as_array().cloned().unwrap_or_default();
+            c["content_html"] = json!(frame_comment_html(&content, &format!("/{item_key}")) + &frame_attachments_html(&files, &content));
+            c
+        })
+        .collect();
+    let mut r = html(crate::tpl::render(st, Some(req), "activity-frame", json!({ "comments": comments, "anonymized": anonymized })));
+    r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok(r)
+}
+
+/// Comment text as HTML for the no-JavaScript sidebar frame: a small server-side version of
+/// renderCommentContent in sidebar-activity.js (greentext, >>id links, links, @mentions,
+/// same-site images and #gif videos, [spoiler]/[blur]). Markdown and custom emoji stay plain text.
+/// Everything is escaped; only the tags built here are HTML.
+fn frame_comment_html(content: &str, link_base: &str) -> String {
+    use crate::util::escape_html as esc;
+    let html = content
+        .split('\n')
+        .map(|line| {
+            let line = line.trim_end_matches('\r');
+            let t = line.trim_start();
+            let ctx = t.strip_prefix(">>").is_some_and(|r| r.starts_with(|c: char| c.is_ascii_digit()));
+            if t.starts_with('>') && !ctx {
+                return format!("<span class=\"greentext\">{}</span>", esc(t));
+            }
+            if t.is_empty() {
+                return "&nbsp;".to_string();
+            }
+            let mut out = String::new();
+            let mut rest = line;
+            while !rest.is_empty() {
+                let split = rest.find(char::is_whitespace).unwrap_or(rest.len());
+                let (word, after) = rest.split_at(split);
+                let ws = after.len() - after.trim_start().len();
+                frame_word_html(word, link_base, &mut out);
+                out.push_str(&after[..ws]);
+                rest = &after[ws..];
+            }
+            out
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    frame_wrap_tags(&frame_wrap_tags(&html, "spoiler", "spoiler"), "blur", "blur-text")
+}
+
+fn frame_word_html(word: &str, link_base: &str, out: &mut String) {
+    use crate::util::escape_html as esc;
+    if word.is_empty() {
+        return;
+    }
+    // >>123 (comment on the same item), possibly followed by more text
+    if let Some(r) = word.strip_prefix(">>") {
+        let digits = r.len() - r.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+        if digits > 0 {
+            let id = &r[..digits];
+            out.push_str(&format!("<a href=\"{}#c{id}\" class=\"comment-context-link\">&gt;&gt;{id}</a>", esc(link_base)));
+            return frame_word_html(&r[digits..], link_base, out);
+        }
+    }
+    let external = word.starts_with("http://") || word.starts_with("https://");
+    let relative = word.starts_with('/') && word[1..].starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+    if external || relative {
+        let gif = word.ends_with("#gif");
+        let url = word.trim_end_matches("#gif");
+        let path = url.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();
+        let ext = path.rsplit_once('.').map(|(_, e)| e).unwrap_or("");
+        let u = esc(url);
+        if relative && matches!(ext, "jpg" | "jpeg" | "png" | "gif" | "webp") {
+            out.push_str(&format!("<img class=\"sidebar-comment-img\" src=\"{u}\" alt=\"image\" loading=\"lazy\">"));
+        } else if relative && gif && matches!(ext, "mp4" | "webm" | "ogv" | "mov") {
+            out.push_str(&format!("<span class=\"video-embed-wrap\"><video src=\"{u}\" class=\"sidebar-comment-img autoplay-gif\" autoplay loop muted playsinline preload=\"auto\"></video></span>"));
+        } else if external {
+            out.push_str(&format!("<a href=\"{u}\" target=\"_blank\" rel=\"noopener noreferrer\">{u}<i class=\"fa-solid fa-arrow-up-right-from-square external-link-icon\"></i></a>"));
+        } else {
+            out.push_str(&format!("<a href=\"{u}\">{u}</a>"));
+        }
+        return;
+    }
+    if let Some(name) = word.strip_prefix('@') {
+        let len = name.len() - name.trim_start_matches(|c: char| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.')).len();
+        if len > 0 {
+            let user = &name[..len];
+            out.push_str(&format!("<a href=\"/user/{}\" class=\"mention\">@{}</a>", crate::util::encode_uri_component(user), esc(user)));
+            out.push_str(&esc(&name[len..]));
+            return;
+        }
+    }
+    out.push_str(&esc(word));
+}
+
+/// An item's comments as template data for visitors without JavaScript (snippets/comments-static.html,
+/// in a <noscript> inside #comments-container; comments.js replaces that box when it runs). Same
+/// order and threading as comments.js render(): newest first (oldest first in the legacy layout or
+/// linear mode), pinned on top, replies one level deep under their root, oldest first.
+pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Session>, real_session: Option<&Session>, item_id: i64, lang: &str) -> Value {
+    let cfg = st.cfg();
+    let legacy = match page_session {
+        Some(s) => !s.use_new_layout.unwrap_or(false),
+        None => st.settings.default_layout() == "legacy",
+    };
+    let linear = page_session.and_then(|s| s.comment_display_mode).or_else(|| crate::config::as_int(cfg.get("websrv.default_comment_display_mode"))) == Some(1);
+    let sort = if legacy || linear { sc::Sort::Old } else { sc::Sort::New };
+    let rows = sc::get_comments(st, &item_id.to_string(), sort, false).await;
+    let anonymized = is_anonymize_session(&cfg, real_session);
+    let tr = st.i18n.translator(lang);
+    let now = chrono::Utc::now();
+
+    // >>id quotes → backlinks on the quoted comment (buildBacklinkMap)
+    let mut backlinks: HashMap<i64, Vec<i64>> = HashMap::new();
+    for c in &rows {
+        let (Some(id), Some(text)) = (c.i64("id"), c.str("content")) else { continue };
+        for part in text.split(">>").skip(1) {
+            let digits: String = part.chars().take_while(|ch| ch.is_ascii_digit()).collect();
+            if let Ok(target) = digits.parse::<i64>() {
+                let list = backlinks.entry(target).or_default();
+                if target != id && !list.contains(&id) {
+                    list.push(id);
+                }
+            }
+        }
+    }
+
+    let view = |c: &Row| -> Value {
+        let content = c.str("content").unwrap_or("").to_string();
+        let files = c.get("files").and_then(Value::as_array).cloned().unwrap_or_default();
+        let anon = anonymized || c.get("is_anon").map(crate::config::truthy).unwrap_or(false) || c.str("username").is_some_and(|u| u == "anonymous" || u.starts_with("anon_"));
+        let created = c.str("created_at").and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok());
+        let avatar = if anonymized {
+            "/a/default.png".to_string()
+        } else if let Some(f) = c.str("avatar_file").filter(|f| !f.is_empty()) {
+            format!("/a/{f}")
+        } else if let Some(a) = c.get("avatar").and_then(|a| crate::config::as_int(a)) {
+            format!("/t/{a}.webp")
+        } else {
+            "/a/default.png".to_string()
+        };
+        let banner = c.str("banner_file").filter(|b| !b.is_empty() && *b != "null" && !anonymized);
+        let pos = c.str("banner_position").filter(|p| !p.is_empty() && *p != "center").unwrap_or("center top");
+        let size = c.str("banner_size").filter(|p| !p.is_empty() && *p != "cover").unwrap_or("100% auto");
+        json!({
+            "id": c.i64("id"),
+            "is_pinned": c.get("is_pinned").map(crate::config::truthy).unwrap_or(false),
+            "is_anon": anon,
+            "username": if anon { Value::Null } else { c.get("username").cloned().unwrap_or(Value::Null) },
+            "name": if anon { json!("anonymous") } else { json!(c.str("display_name").filter(|d| !d.is_empty()).or(c.str("username")).unwrap_or("")) },
+            "username_color": if anon { Value::Null } else { c.get("username_color").cloned().unwrap_or(Value::Null) },
+            "avatar_src": avatar,
+            "banner": banner.map(|b| json!({ "file": b, "position": pos, "size": size })),
+            "content_html": frame_comment_html(&content, ""),
+            "attachments_html": frame_attachments_html(&files, &content),
+            "timeago": created.map(|t| crate::util::time_ago(&tr, (now - t.with_timezone(&chrono::Utc)).num_seconds().max(0))).unwrap_or_default(),
+            "iso": c.str("created_at").unwrap_or(""),
+            "backlinks": c.i64("id").and_then(|id| backlinks.get(&id)).cloned().unwrap_or_default(),
+            "replies": [],
+        })
+    };
+
+    if linear {
+        return Value::Array(rows.iter().map(view).collect());
+    }
+    let by_id: HashMap<i64, &Row> = rows.iter().filter_map(|c| Some((c.i64("id")?, c))).collect();
+    let root_of = |c: &Row| -> Option<i64> {
+        let mut cur = c;
+        let mut hops = 0;
+        while let Some(p) = cur.i64("parent_id").filter(|p| *p != 0).and_then(|p| by_id.get(&p)) {
+            cur = p;
+            hops += 1;
+            if hops > 1000 {
+                break;
+            }
+        }
+        cur.i64("id").filter(|r| Some(*r) != c.i64("id"))
+    };
+    let mut roots: Vec<Value> = Vec::new();
+    let mut replies: HashMap<i64, Vec<(String, Value)>> = HashMap::new();
+    for c in &rows {
+        match root_of(c) {
+            Some(root) => replies.entry(root).or_default().push((c.str("created_at").unwrap_or("").to_string(), view(c))),
+            None => roots.push(view(c)),
+        }
+    }
+    for r in roots.iter_mut() {
+        if let Some(mut list) = r["id"].as_i64().and_then(|id| replies.remove(&id)) {
+            list.sort_by(|a, b| a.0.cmp(&b.0));
+            r["replies"] = Value::Array(list.into_iter().map(|(_, v)| v).collect());
+        }
+    }
+    Value::Array(roots)
+}
+
+/// [tag]…[/tag] → <span class="…">…</span>, innermost pair first (so nesting works); unmatched
+/// tags stay as text.
+fn frame_wrap_tags(html: &str, tag: &str, class: &str) -> String {
+    let (open, close) = (format!("[{tag}]"), format!("[/{tag}]"));
+    let mut s = html.to_string();
+    for _ in 0..10 {
+        let lower = s.to_ascii_lowercase();
+        let Some(c) = lower.find(&close) else { break };
+        let Some(o) = lower[..c].rfind(&open) else { break };
+        s = format!("{}<span class=\"{class}\">{}</span>{}", &s[..o], &s[o + open.len()..c], &s[c + close.len()..]);
+    }
+    s
+}
+
+/// Attached files not already shown inline in the text (as renderCommentAttachments).
+fn frame_attachments_html(files: &[Value], content: &str) -> String {
+    use crate::util::escape_html as esc;
+    let items: String = files
+        .iter()
+        .filter_map(|f| {
+            let dest = f["dest"].as_str()?;
+            let url = format!("/c/{dest}");
+            if content.contains(&url) {
+                return None;
+            }
+            let (mime, u) = (f["mime"].as_str().unwrap_or(""), esc(&url));
+            let name = esc(f["original_filename"].as_str().unwrap_or("image"));
+            Some(if mime.starts_with("image/") {
+                format!("<a href=\"{u}\" class=\"cf-attachment cf-image\"><img src=\"{u}\" class=\"sidebar-comment-img\" alt=\"{name}\" loading=\"lazy\"></a>")
+            } else if mime.starts_with("video/") {
+                format!("<div class=\"cf-attachment cf-video\"><video src=\"{u}\" class=\"sidebar-comment-img\" controls preload=\"metadata\"></video></div>")
+            } else if mime.starts_with("audio/") {
+                format!("<div class=\"cf-attachment cf-audio\"><audio src=\"{u}\" controls preload=\"metadata\"></audio></div>")
+            } else {
+                format!("<a href=\"{u}\" class=\"cf-attachment\">{name}</a>")
+            })
+        })
+        .collect();
+    if items.is_empty() { items } else { format!("<div class=\"comment-attachments\">{items}</div>") }
 }
 
 // ── POST /api/v2/user/subscribe-all-uploads ─────────────────────────────────
@@ -1376,5 +1638,36 @@ async fn poll_delete(st: AppState, req: Req) -> Res {
             tracing::error!("[POLLS] delete error: {e:#}");
             j(json!({ "success": false }), 500)
         }
+    }
+}
+
+#[cfg(test)]
+mod frame_tests {
+    use super::*;
+
+    #[test]
+    fn greentext_quotes_and_context_links() {
+        let h = frame_comment_html(">>7 \n>x\n>foobar", "/10");
+        assert_eq!(h, "<a href=\"/10#c7\" class=\"comment-context-link\">&gt;&gt;7</a> \n<span class=\"greentext\">&gt;x</span>\n<span class=\"greentext\">&gt;foobar</span>");
+    }
+
+    #[test]
+    fn site_images_links_and_escaping() {
+        let h = frame_comment_html("/c/ab.webp#gif hi <b> https://x.org/a?b=1&c @bob, [spoiler]s[/spoiler]", "/3");
+        assert!(h.starts_with("<img class=\"sidebar-comment-img\" src=\"/c/ab.webp\""));
+        assert!(h.contains("hi &lt;b&gt; "));
+        assert!(h.contains("<a href=\"https://x.org/a?b=1&amp;c\" target=\"_blank\""));
+        assert!(h.contains("<a href=\"/user/bob\" class=\"mention\">@bob</a>,"));
+        assert!(h.ends_with("<span class=\"spoiler\">s</span>"));
+        assert!(!frame_comment_html("//evil.com/x.png javascript:alert(1)", "1").contains("<img"));
+        assert_eq!(frame_comment_html("a\n\nb", "1"), "a\n&nbsp;\nb");
+    }
+
+    #[test]
+    fn attachments_skip_inline_files() {
+        let files = vec![json!({"dest": "ab.webp", "mime": "image/webp"}), json!({"dest": "x.mp4", "mime": "video/mp4"})];
+        let h = frame_attachments_html(&files, "/c/ab.webp#gif");
+        assert!(!h.contains("ab.webp"));
+        assert!(h.contains("/c/x.mp4"));
     }
 }

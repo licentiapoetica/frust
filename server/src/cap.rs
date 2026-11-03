@@ -84,6 +84,16 @@ pub fn verify_hard(token: Option<&str>) -> Captcha {
     check(token, true)
 }
 
+/// A login / register form's captcha: its Cap token (`cap-token`) or, from visitors without
+/// JavaScript, the image captcha (`cap-image-id` + `cap-image-answer`, cap_image.rs). `hard` as in
+/// [`verify_hard`].
+pub fn verify_form(token: Option<&str>, image_id: Option<&str>, image_answer: Option<&str>, hard: bool) -> Captcha {
+    if token.is_some_and(|t| !t.trim().is_empty()) {
+        return check(token, hard);
+    }
+    crate::cap_image::check(image_id, image_answer, hard)
+}
+
 fn check(token: Option<&str>, need_hard: bool) -> Captcha {
     let Some(token) = token.map(str::trim).filter(|t| !t.is_empty()) else { return Captcha::Missing };
     let mut parts = token.split(':');
@@ -209,6 +219,14 @@ fn pass_ms(cfg: &Config, session: &crate::session::Session) -> i64 {
         0 => SINGLE_PASS_MS,
         m => m * 60_000,
     }
+}
+
+/// Give the account its pass for `scope`, as a solved captcha does (POST /api/cap/pass); for the
+/// image captcha in the no-JavaScript comment form.
+pub fn grant(cfg: &Config, session: &crate::session::Session, scope: Scope) {
+    let now = crate::util::now_ms();
+    sweep(now);
+    PASSES.insert((session.id, scope), now + pass_ms(cfg, session));
 }
 
 /// GET /api/cap/pass?scope=upload → { required }: whether the client must show the captcha first.

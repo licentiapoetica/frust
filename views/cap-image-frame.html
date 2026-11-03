@@ -1,0 +1,14 @@
+<!doctype html>
+{#- GET /api/cap/image/<id>/frame: the image captcha inside the login / register modals for visitors
+    without JavaScript (snippets/cap-image.html). Clicking the picture reloads this frame with new
+    characters (server/src/cap_image.rs). #}
+<html lang="{{ (lang or "en") }}">
+<head>
+  <meta charset="utf-8">
+  <title>captcha</title>
+  <link rel="stylesheet" href="/s/css/cap-image-frame.css?v={{ mtime("/public/s/css/cap-image-frame.css") }}">
+</head>
+<body>
+  <a href="/api/cap/image/{{ id }}/frame?new={{ v }}" class="cap-image-new" title="{{ t("auth.captcha_new") }}"><img src="/api/cap/image/{{ id }}?v={{ v }}" width="340" height="100" alt="{{ t("auth.captcha_image_alt") }}"><span class="cap-image-new-mark" aria-hidden="true">&#x21bb;</span></a>
+</body>
+</html>

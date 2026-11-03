@@ -30968,12 +30968,12 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   #report-modal .modal-actions {
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   }
-  #report-modal .modal-actions button {
+  #report-modal .modal-actions :is(button, a) {
     flex: 1;
   }
 }
 
-#report-modal .modal-actions button {
+#report-modal .modal-actions :is(button, a) {
   height: 40px;
   margin: 0;
   padding: 0 18px;
@@ -30987,20 +30987,20 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   transition: background 0.18s, color 0.18s, border-color 0.18s;
 }
 
-#report-modal #report-cancel {
+#report-modal :is(#report-cancel, a.nojs-close-link) {
   background: transparent;
   border: 1px solid var(--rm-border);
   color: var(--rm-muted);
   font-weight: 600;
 }
 
-#report-modal #report-cancel:hover {
+#report-modal :is(#report-cancel, a.nojs-close-link):hover {
   color: var(--rm-text);
   border-color: rgba(255, 255, 255, 0.25);
   background: var(--rm-surface);
 }
 
-#report-modal #report-submit {
+#report-modal :is(#report-submit, .report-nojs-submit) {
   background: var(--rm-accent);
   border: 1px solid var(--rm-accent);
   color: #000;
@@ -31009,12 +31009,12 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   letter-spacing: 0.08em;
 }
 
-#report-modal #report-submit:hover:not(:disabled) {
+#report-modal :is(#report-submit, .report-nojs-submit):hover:not(:disabled) {
   background: transparent;
   color: var(--rm-accent);
 }
 
-#report-modal #report-submit:disabled {
+#report-modal :is(#report-submit, .report-nojs-submit):disabled {
   opacity: 0.6;
   cursor: progress;
 }
@@ -31454,6 +31454,8 @@ body:has(#force-password-modal) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* fields as wide as the button (.login-form centres its children) */
+  align-items: stretch;
   padding: 0;
   margin: 0;
   background: none;
@@ -31481,6 +31483,8 @@ body:has(#force-password-modal) {
 
 :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) input.lm-input {
   width: 100%;
+  /* .login-form input caps it at 300px */
+  max-width: none;
   box-sizing: border-box;
   height: 46px;
   margin: 0;
@@ -36309,6 +36313,415 @@ html[theme] #settings-quicknav a.active {
 }
 
 /* ---- settings.html: hidden until script shows it (inline display: none before) ---- */
+/* ─── No JavaScript ─────────────────────────────────────────────────────────────────
+   <html> is rendered with .no-js and header.early.js removes it before any stylesheet
+   loads, so these rules (and the thumbnail downloads they cause) never apply when
+   JavaScript runs. */
+
+/* Grid: the lazy loader never runs, so paint each tile from its inline --thumb-bg */
+html.no-js div.posts>a.lazy-thumb:not(.loaded) {
+  background-image: var(--thumb-bg);
+  /* the placeholder's "background" shorthand above reset these */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Fixed sidebars sit at top: var(--navbar-h), which f0ckm.js measures. Without it, pin their top
+   to the navbar's real bottom edge (anchor positioning); older browsers get an estimate. */
+html.no-js {
+  --navbar-h: 43px;
+}
+
+html.no-js:has(#motd-container:not(.navbar-hidden):not(.motd-pref-off)) {
+  --navbar-h: calc(53px + 1.2rem);
+}
+
+html.no-js body>nav.navbar {
+  anchor-name: --site-navbar;
+}
+
+@supports (anchor-name: --site-navbar) {
+  html.no-js .global-sidebar-right,
+  html.no-js .item-sidebar-right,
+  html.no-js .index-sidebar-right {
+    top: anchor(--site-navbar bottom) !important;
+  }
+}
+
+/* MOTD: plain text from the server (f0ckm.js replaces it with the rendered Markdown) */
+html.no-js .motd-container.motd-pref-off {
+  display: none;
+}
+
+/* Account / visitor menus open on hover or focus instead of a click handler */
+html.no-js .nav-user-dropdown:hover>.nav-user-menu,
+html.no-js .nav-user-dropdown:focus-within>.nav-user-menu {
+  display: block;
+}
+
+/* Mobile: the hamburger opens the nav links while it (or a link in them) is hovered or focused */
+@media (max-width: 800px) {
+  html.no-js .navbar:has(.navbar-toggler:hover, .navbar-toggler:focus, .nav-collapse:hover, .nav-collapse:focus-within) .nav-collapse {
+    display: flex;
+  }
+}
+
+/* Controls that only work through JavaScript */
+html.no-js .navbar a[href="#"],
+html.no-js #nav-upload-link,
+html.no-js #a_addtag,
+html.no-js .tag-exclude-btn,
+html.no-js .removetag,
+html.no-js .image-modal-btn,
+html.no-js .album-controls-overlay,
+html.no-js .album-thumbnails-strip,
+html.no-js .mobile-scroll-to-top,
+html.no-js .info-title-save-btn,
+html.no-js button.chan-rehost-action-btn,
+html.no-js .chan-rehost-edit-btn,
+html.no-js #help-button,
+html.no-js .sidebar-tabs,
+html.no-js .sidebar-tab-content {
+  display: none !important;
+}
+
+/* Right sidebar: recent comments come from the <noscript> iframe (GET /activity, views/activity-frame.html).
+   Absolutely positioned over the whole sidebar body so it doesn't depend on its wrapper: script
+   blockers (uBlock, NoScript) swap the <noscript> for a plain <span> to show its content. */
+html.no-js .sidebar-activity {
+  position: relative;
+}
+
+.sidebar-activity-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Inside that iframe */
+body.activity-frame {
+  margin: 0;
+  background: var(--nav-bg);
+}
+
+body.activity-frame .sidebar-activity {
+  height: 100vh;
+}
+
+/* Full text: "read more" needs JavaScript */
+body.activity-frame .comment-content-inner {
+  max-height: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+body.activity-frame .comment-time {
+  font-size: 0.75em;
+}
+
+body.activity-frame .item-preview a img.activity-frame-thumb {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+/* Username in its user's colour (server-rendered: activity frame, no-JS item comments) */
+.user-color-text {
+  color: var(--user-color);
+}
+
+.activity-frame-view {
+  font-size: 0.8em;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.activity-frame-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--gray);
+}
+
+/* Login / register modals: the navbar links point at #login-modal / #register-modal, so :target
+   opens the same modals f0ckm.js opens (!important beats their inline display: none). The backdrop
+   and the × link to #_ to close them. The forms post normally and come back with the modal open
+   and a message (routes/register.rs). */
+html.no-js #login-modal:target,
+html.no-js #register-modal:target {
+  display: flex !important;
+}
+
+html.no-js:has(#login-modal:target, #register-modal:target) body {
+  overflow: hidden;
+}
+
+.lm-nojs-backdrop {
+  position: absolute;
+  inset: 0;
+  cursor: default;
+}
+
+/* After the backdrop in the markup, so it paints above it */
+html.no-js :is(#login-modal, #register-modal) .login-modal-content {
+  position: relative;
+}
+
+.lm-nojs-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  color: var(--white);
+  font-size: 1.5rem;
+  line-height: 1;
+  text-decoration: none;
+  opacity: 0.7;
+}
+
+.lm-nojs-close:hover,
+.lm-nojs-close:focus-visible {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* Need JavaScript: tab switch (passkeys), show password, forgot password, anonymous login, and the
+   Cap widget (its proof of work runs in the browser; .lm-imgcap stands in for it) */
+html.no-js #login-modal-close,
+html.no-js #register-modal-close,
+html.no-js #login-modal #login-tabs,
+html.no-js :is(#login-modal, #register-modal) .lm-reveal,
+html.no-js #login-modal #modal-forgot-btn,
+html.no-js #login-modal .lm-anon,
+html.no-js :is(#login-modal, #register-modal) cap-widget,
+html.no-js #register-modal .lm-form-done {
+  display: none !important;
+}
+
+/* Show-password buttons are gone, so the fields need no room for them */
+html.no-js :is(#login-modal #modal-login-view, #register-modal #modal-register-view) input.lm-input {
+  padding-right: 12px;
+}
+
+/* Image captcha (snippets/cap-image.html) */
+.lm-imgcap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* The frame shows views/cap-image-frame.html (styles: cap-image-frame.css), 340x100 like the picture */
+.lm-imgcap-frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 340 / 100;
+  border: 1px solid var(--nav-border-color);
+}
+
+/* Guest comment box: one link over the whole box opens the login modal */
+html.no-js .comment-input.is-guest {
+  position: relative;
+}
+
+.comment-guest-login-nojs {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* ── Forms without JavaScript (server/src/nojs.rs): favourite, comment, settings ── */
+/* The script-driven versions need JavaScript: hide them without it */
+html.no-js #a_favo,
+html.no-js .comment-input.main-input:not(.is-guest),
+html.no-js .settings-js-only {
+  display: none !important;
+}
+
+/* Settings: a section whose every row is script-only */
+html.no-js .preferences-settings-wrapper fieldset:not(:has(.setting-item:not(.settings-js-only))) {
+  display: none;
+}
+
+/* Favourite: the button submits a hidden form (snippets/fav-nojs.html) */
+.fav-nojs-form {
+  display: none;
+}
+
+.fav-nojs-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
+/* Not favourited: the outline heart. The action row's "font-weight: bold" (meant for its
+   buttons) would draw the solid glyph; the 400 rules there only cover i.iconset */
+.gapRight .fav-nojs-btn.fa-regular,
+.gapRight .fav-nojs-btn.fa-regular::before {
+  font-weight: 400 !important;
+}
+
+/* Favourited: the pink of #a_favo.fa-solid */
+.gapRight .fav-nojs-btn.fa-solid {
+  color: #ff6b9d !important;
+}
+
+html[theme='light'] .gapRight .fav-nojs-btn.fa-solid,
+html[theme='paper'] .gapRight .fav-nojs-btn.fa-solid {
+  color: #e11d48 !important;
+}
+
+/* Comment form (snippets/comment-input.html) */
+.comment-form-nojs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comment-form-nojs .lm-imgcap {
+  max-width: 340px;
+}
+
+:is(.comment-form-nojs, #report-modal) .lm-field-icon {
+  display: none;
+}
+
+:is(.comment-form-nojs, #report-modal) .lm-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: var(--bg);
+  color: var(--white);
+  border: 1px solid var(--nav-border-color);
+  font: inherit;
+}
+
+/* Settings: one Save button for the whole preferences form, kept in view while scrolling */
+.settings-nojs-save {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 0;
+  background: var(--bg);
+  border-top: 1px solid var(--nav-border-color);
+}
+
+.settings-nojs-apply {
+  margin-left: 8px;
+}
+
+.settings-nojs-saved {
+  color: var(--accent);
+}
+
+/* Info and report modals: the item's info / report links point at them, :target opens them
+   (!important beats .info-modal-hidden / .footer-hidden), links to #_ close them */
+html.no-js #info-modal:target,
+html.no-js #report-modal:target {
+  display: flex !important;
+}
+
+html.no-js:has(#info-modal:target, #report-modal:target) body {
+  overflow: hidden;
+}
+
+/* Above the backdrop link */
+html.no-js :is(#info-modal, #report-modal) > .modal-content {
+  position: relative;
+}
+
+/* The report form wraps the modal's parts without changing its layout */
+.report-form {
+  display: contents;
+}
+
+#report-modal .lm-imgcap {
+  margin-top: 10px;
+}
+
+#report-modal .modal-actions a {
+  text-decoration: none;
+}
+
+/* Script-driven buttons in the item action row and in these modals: no JavaScript, no use */
+html.no-js #a_info,
+html.no-js #subscribe-btn,
+html.no-js .report-item-btn,
+html.no-js #info-modal-close-icon,
+html.no-js #info-modal-close,
+html.no-js #info-modal :is(.infobox-action-btn, .info-expiry-edit-controls, .copy-hash-btn, #info-rethumb-btn, #a_metadata),
+html.no-js #report-modal button.modal-x,
+html.no-js #report-cancel,
+html.no-js #report-submit,
+html.no-js #report-modal cap-widget {
+  display: none !important;
+}
+
+/* Message of a failed post, shown once and faded out */
+.nojs-flash {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 600px;
+  box-sizing: border-box;
+  z-index: 100200;
+  padding: 15px 20px;
+  background: var(--bg);
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  animation: nojs-flash-out 0.4s ease 8s forwards;
+}
+
+.nojs-flash.nojs-flash-success {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@keyframes nojs-flash-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* Server-rendered stand-ins, only for visitors without JavaScript */
+html:not(.no-js) .comments-static,
+html:not(.no-js) .motd-nojs,
+html:not(.no-js) .lm-nojs-backdrop,
+html:not(.no-js) .lm-nojs-close,
+html:not(.no-js) .lm-imgcap,
+html:not(.no-js) .comment-guest-login-nojs {
+  display: none;
+}
+
+html:not(.no-js) .nojs-modal-link,
+html:not(.no-js) .nojs-close-link,
+html:not(.no-js) .report-nojs-submit,
+html:not(.no-js) .fav-nojs-btn,
+html:not(.no-js) .comment-form-nojs,
+html:not(.no-js) .settings-nojs-save,
+html:not(.no-js) .settings-nojs-apply,
+html:not(.no-js) .settings-nojs-saved,
+html:not(.no-js) .nojs-flash {
+  display: none !important;
+}
+
+/* With JavaScript, the item player's native controls (kept in the markup for visitors
+   without it) stay hidden until v0ck removes them. Chromium/Safari only; kept as its own
+   rule because other browsers drop the whole rule over the unknown pseudo-element. */
+html:not(.no-js) #my-video::-webkit-media-controls {
+  display: none !important;
+}
+
 /* Kept last: has to win over ".settings .button { display: inline-flex }" above */
 .settings .settings-hidden,
 .settings .button.settings-hidden {

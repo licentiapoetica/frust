@@ -10,6 +10,7 @@ pub fn register(r: &mut Router) {
     // router.group(/^\/settings/, g => { g.get(/$/, …); g.get('/export-data', …) })
     let mut g = Group::new(r, r"^\/settings");
     g.get("$", page);
+    g.post("$", save);
     g.get(r"\/export-data", export_data);
 }
 
@@ -86,6 +87,124 @@ fn guest_page(st: &AppState, req: &Req) -> axum::response::Response {
     no_store(html(crate::tpl::render(st, Some(req), "settings", data)))
 }
 
+// ── Saving without JavaScript ───────────────────────────────────────────────
+// With JavaScript every control saves itself (settings.js → /api/v2/settings/*, cookies,
+// localStorage). Without it the preferences are one form (settings.html) posted here: only the
+// fields it carried are saved, with the same rules as those endpoints. Checkboxes come as a hidden
+// "0" plus the box's "1", joined to "0,1" when ticked (http::parse_body), so an unticked box still
+// says it was there.
+
+/// Account preferences that are plain booleans in user_options (column = form field)
+const BOOL_PREFS: [&str; 16] = [
+    "show_background",
+    "show_motd",
+    "use_new_layout",
+    "use_alternative_infobox",
+    "use_alternative_steuerung",
+    "hide_koepfe",
+    "disable_autoplay",
+    "disable_swiping",
+    "quote_emojis",
+    "embed_youtube_in_comments",
+    "favorites_private",
+    "hide_fav_badge",
+    "receive_system_notifications",
+    "receive_user_notifications",
+    "do_not_disturb",
+    "ruffle_background",
+];
+
+const LANGUAGES: [&str; 4] = ["en", "de", "nl", "zange"];
+
+fn form_bool(v: &str) -> bool {
+    v.split(',').any(|p| p == "1")
+}
+
+async fn save(st: AppState, mut req: Req) -> Res {
+    let cfg = st.cfg();
+    let form = req.post_value().await;
+    let field = |k: &str| form.get(k).and_then(Value::as_str).map(str::to_string);
+    let long = || crate::http::CookieExpiry::MaxAge(360 * 24 * 3600);
+
+    // Theme: a cookie for everyone (theme.js does the same)
+    if let Some(theme) = field("theme") {
+        let themes = cfg.get("websrv.themes");
+        let known = match themes {
+            Value::Array(a) => a.iter().any(|t| t.as_str() == Some(theme.as_str())),
+            _ => ["amoled", "atmos", "f0ck", "f0ck95d", "iced", "orange", "p1nk", "4d"].contains(&theme.as_str()),
+        };
+        if known {
+            req.set_cookie(format!("theme={}; {}", crate::util::encode_uri_component(&theme), crate::http::cookie_options(&cfg, long(), false)));
+        }
+    }
+
+    // Language: cookie for everyone, and the account's choice
+    let language = if cfg.is_false("websrv.allow_language_change") {
+        None
+    } else {
+        field("language").map(|l| if LANGUAGES.contains(&l.as_str()) { l } else { String::new() })
+    };
+    if let Some(l) = &language {
+        let cookie = if l.is_empty() {
+            format!("language=; {}", crate::http::cookie_options(&cfg, crate::http::CookieExpiry::Expires(crate::http::EXPIRED), false))
+        } else {
+            format!("language={l}; {}", crate::http::cookie_options(&cfg, long(), false))
+        };
+        req.set_cookie(cookie);
+    }
+
+    // Browser-side preferences (blur, ...): only the ones on the form change
+    let mut prefs: Vec<&str> = crate::nojs::prefs(&req);
+    for (key, _) in crate::nojs::PREF_CLASSES {
+        if let Some(v) = field(key) {
+            prefs.retain(|p| *p != key);
+            if form_bool(&v) {
+                prefs.push(key);
+            }
+        }
+    }
+    req.set_cookie(format!("{}={}; {}", crate::nojs::PREFS_COOKIE, prefs.join("."), crate::http::cookie_options(&cfg, long(), true)));
+
+    if let Some(s) = req.session().cloned() {
+        let uid = s.id as i32;
+        let mut q = sql!("update user_options set user_id = user_id");
+        for col in BOOL_PREFS {
+            if let Some(v) = field(col) {
+                // `col` is one of the literals above
+                q.push(", ").push(col).push(" = ").bind(form_bool(&v));
+            }
+        }
+        if let Some(font) = field("font") {
+            let font = Some(font).filter(|f| !f.is_empty() && crate::fonts::exists(&cfg, f));
+            q.push(", font = ").bind(font);
+        }
+        if let Some(l) = &language {
+            q.push(", language = ").bind(Some(l.clone()).filter(|l| !l.is_empty()));
+        }
+        if let Some(mode) = field("comment_display_mode").and_then(|m| m.parse::<i32>().ok()).filter(|m| *m == 0 || *m == 1) {
+            if s.force_comment_display_mode.unwrap_or(0) == 0 {
+                q.push(", comment_display_mode = ").bind(mode);
+            }
+        }
+        let vis_allowed = cfg.get("allow_user_upload_visibility") != &Value::Bool(false) && cfg.get("websrv.allow_user_upload_visibility") != &Value::Bool(false);
+        if let Some(vis) = field("default_upload_visibility").and_then(|v| v.parse::<i16>().ok()).filter(|v| (0..=2).contains(v)) {
+            if vis_allowed && !s.is_anon {
+                q.push(", default_upload_visibility = ").bind(vis);
+            }
+        }
+        q.push(" where user_id = ").bind(uid);
+        q.execute(&st.db).await?;
+        if let Some(c) = req.cookie("session") {
+            st.invalidate_session_cache(&crate::util::sha256(c));
+        }
+    }
+
+    let mut r = axum::response::Response::new(axum::body::Body::empty());
+    *r.status_mut() = axum::http::StatusCode::SEE_OTHER;
+    r.headers_mut().insert(axum::http::header::LOCATION, axum::http::HeaderValue::from_static("/settings?saved=1#preferences"));
+    Ok(r)
+}
+
 fn no_store(mut r: axum::response::Response) -> axum::response::Response {
     let h = r.headers_mut();
     h.insert("cache-control", axum::http::HeaderValue::from_static("no-store, no-cache, must-revalidate, proxy-revalidate"));
@@ -115,4 +234,14 @@ async fn export_data(st: AppState, req: Req) -> Res {
         "favorites": favorites.into_iter().map(Value::Object).collect::<Vec<_>>(),
     });
     Ok(reply(200, "application/json", serde_json::to_string(&v)?))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn checkbox_values() {
+        assert!(super::form_bool("0,1"));
+        assert!(!super::form_bool("0"));
+        assert!(super::form_bool("1"));
+    }
 }

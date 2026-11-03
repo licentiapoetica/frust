@@ -71,7 +71,9 @@ async fn submit(st: AppState, mut req: Req) -> Res {
     let ip = req.real_ip();
     if crate::cap::required(&cfg, &req) {
         let token = js_str(body.get("cap-token"));
-        match crate::cap::verify(token.as_deref()) {
+        // Without JavaScript: the image captcha (cap_image.rs)
+        let (image_id, image_answer) = (js_str(body.get("cap-image-id")), js_str(body.get("cap-image-answer")));
+        match crate::cap::verify_form(token.as_deref(), image_id.as_deref(), image_answer.as_deref(), false) {
             Captcha::Ok => {}
             Captcha::Missing => return j(json!({ "success": false, "msg": "Please complete the captcha." }), 400),
             Captcha::Failed => return j(json!({ "success": false, "msg": "Captcha expired or invalid. Please try again." }), 400),

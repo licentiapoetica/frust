@@ -1,0 +1,12 @@
+{#- Image captcha for visitors without JavaScript (server/src/cap_image.rs), in the login and register
+    modals. Hidden when JavaScript runs (Cap does the job then), and the lazy frame isn't fetched
+    while hidden. The picture is in a frame so a click on it loads new characters without
+    reloading the page (and losing what was typed). #}
+<div class="lm-imgcap">
+  <iframe src="/api/cap/image/{{ nojs_captcha_id }}/frame" class="lm-imgcap-frame" title="{{ t("auth.captcha_image_alt") }}" loading="lazy"></iframe>
+  <input type="hidden" name="cap-image-id" value="{{ nojs_captcha_id }}" />
+  <label class="lm-field">
+    <i class="fa-solid fa-shield-halved lm-field-icon"></i>
+    <input class="lm-input" type="text" name="cap-image-answer" placeholder="{{ t("auth.captcha_image_placeholder") }}" aria-label="{{ t("auth.captcha_image_placeholder") }}" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+  </label>
+</div>

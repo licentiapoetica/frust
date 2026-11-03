@@ -1,0 +1,9 @@
+{#- Subscribe button without JavaScript (#subscribe-btn needs it and is hidden then; this is hidden
+    when it runs). Same pattern as snippets/fav-nojs.html: the button submits the hidden form, the
+    endpoint redirects back to `back` (server/src/nojs.rs). Sends the wanted state, not a toggle. #}
+<form method="post" action="/api/subscribe/{{ item.id }}" id="sub-nojs-form-{{ sub_slot }}" class="fav-nojs-form">
+  <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+  <input type="hidden" name="subscribed" value="{% if isSubscribed %}0{% else %}1{% endif %}">
+  <input type="hidden" name="back" value="{% if url is defined %}{{ url.pathname }}{{ url.search }}{% else %}/{{ item.id }}{% endif %}">
+</form>
+<button type="submit" form="sub-nojs-form-{{ sub_slot }}" class="iconset {{ ("fa-solid active" if isSubscribed else "fa-regular") }} fa-bell fav-nojs-btn" title="{{ ("Subscribed" if isSubscribed else "Subscribe") }}"></button>

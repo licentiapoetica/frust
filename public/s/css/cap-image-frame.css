@@ -1,0 +1,36 @@
+/* views/cap-image-frame.html: the image captcha frame in the login / register modals (no site CSS) */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #121212;
+}
+
+.cap-image-new {
+  position: relative;
+  display: block;
+  height: 100%;
+  cursor: pointer;
+}
+
+.cap-image-new img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Corner hint that a click gives new characters */
+.cap-image-new-mark {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  color: #fff;
+  font: 16px/1 sans-serif;
+  opacity: 0.6;
+}
+
+.cap-image-new:hover .cap-image-new-mark,
+.cap-image-new:focus-visible .cap-image-new-mark {
+  opacity: 1;
+}

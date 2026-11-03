@@ -26,6 +26,7 @@
             {% else %}
             {% include "snippets/comment-input.html" %}
             {% endif %}
+            {% include "snippets/comments-static.html" %}
         </div>
         {% endif %}
 
@@ -172,13 +173,17 @@
                 {% else %}
                 <i class="iconset fa-regular fa-heart" id="a_favo" data-item-id="{{ (item.local_id or item.id) }}" {% if item.is_chan %} data-is-chan="true" data-local-id="{{ (item.local_id or "") }}" data-chan-url="{{ item.external_media_url }}" data-chan-board="{{ item.external_board }}" data-chan-tid="{{ item.external_tid }}" data-chan-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" {% endif %} title="Favorite"></i>
                 {% endif %}
+                {% with fav_slot = "m" %}{% include "snippets/fav-nojs.html" %}{% endwith %}
                 {% endif %}
                 {% if session %}
                 <i class="iconset fa-solid fa-circle-info" id="a_info" data-item-id="{{ item.id }}" title="{{ (t("info_modal.button_title") or "Post & File Info") }}"></i>
+                <a href="#info-modal" class="iconset fa-solid fa-circle-info nojs-modal-link" title="{{ (t("info_modal.button_title") or "Post & File Info") }}"></a>
                 {% if enable_comments %}
                 <i class="iconset {{ ("fa-solid active" if isSubscribed else "fa-regular") }} fa-bell" id="subscribe-btn" data-item-id="{{ item.id }}" title="{{ ("Subscribed" if isSubscribed else "Subscribe") }}"></i>
+                {% with sub_slot = "m1" %}{% include "snippets/subscribe-nojs.html" %}{% endwith %}
                 {% endif %}
                 <i class="iconset fa-solid fa-triangle-exclamation report-item-btn" data-item-id="{{ item.id }}" title="Report this post"></i>
+                <a href="#report-modal" class="iconset fa-solid fa-triangle-exclamation nojs-modal-link" title="Report this post"></a>
                 {% if can_manage_item %}
                 {% if enable_oc %}
                 <i class="iconset {{ ("fa-solid" if item.is_oc else "fa-regular") }} fa-star" id="a_oc" data-item-id="{{ item.id }}" data-is-oc="{{ item.is_oc }}" title="{{ ("Remove OC status" if item.is_oc else "Mark as OC") }}"></i>
@@ -197,7 +202,9 @@
                 {% endif %}
                 {% else %}
                 <i class="iconset fa-solid fa-circle-info" id="a_info" data-item-id="{{ item.id }}" title="{{ (t("info_modal.button_title") or "Post & File Info") }}"></i>
+                <a href="#info-modal" class="iconset fa-solid fa-circle-info nojs-modal-link" title="{{ (t("info_modal.button_title") or "Post & File Info") }}"></a>
                 <i class="iconset fa-solid fa-triangle-exclamation report-item-btn" data-item-id="{{ item.id }}" title="Report this post"></i>
+                <a href="#report-modal" class="iconset fa-solid fa-triangle-exclamation nojs-modal-link" title="Report this post"></a>
                 {% endif %}
             </div>
                 <span id="favs" class="item-modern-favs" {% if not (item.favorites|length) %} hidden{% endif %}>

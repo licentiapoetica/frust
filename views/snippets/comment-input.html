@@ -12,8 +12,23 @@
         <button class="submit-comment"><span class="submit-label">{{ t("comments.post") }}</span><i class="fa-solid fa-spinner fa-spin submit-spinner"></i></button>
     </div>
 </div>
+{#- Without JavaScript (the box above needs it and is hidden then): a plain form to the same endpoint,
+    which redirects back to the new comment (server/src/nojs.rs). No .main-input: comments.js finds
+    its box by that class. #}
+<form method="post" action="/api/comments" class="comment-input comment-form-nojs">
+    <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+    <input type="hidden" name="item_id" value="{{ item.id }}">
+    <input type="hidden" name="back" value="{% if url is defined %}{{ url.pathname }}{{ url.search }}{% else %}/{{ item.id }}{% endif %}#comments-container">
+    <textarea name="content" placeholder="{{ t("comments.write_comment") }}"{% if (comment_max_length != none and comment_max_length != none) %} maxlength="{{ comment_max_length }}"{% endif %} required></textarea>
+    {% if "comment" in captcha_scopes %}{% include "snippets/cap-image.html" %}{% endif %}
+    <div class="input-actions">
+        <button type="submit" class="submit-comment"><span class="submit-label">{{ t("comments.post") }}</span></button>
+    </div>
+</form>
 {% else %}
 <div class="comment-input main-input is-guest" aria-disabled="true" title="Log in to comment" data-on="click:comments-guest-login">
+    {#- Without JavaScript the whole box links to the login modal (opened by :target, f0ckm.css) #}
+    <a href="#login-modal" class="comment-guest-login-nojs" aria-label="Log in to comment"></a>
     <textarea placeholder="Log in to comment" readonly tabindex="-1" aria-disabled="true"></textarea>
     <div class="comment-file-preview"></div>
     <div class="input-actions">

@@ -701,6 +701,10 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     ctx.insert("lang".into(), json!(lang));
     ctx.insert("__date_lang".into(), Value::Null);
     ctx.insert("captcha_enabled".into(), json!(captcha));
+    // Image captcha in the login / register modals for visitors without JavaScript (cap_image.rs)
+    if captcha {
+        ctx.insert("nojs_captcha_id".into(), json!(crate::cap_image::new_id()));
+    }
     // Actions this visitor must solve a captcha for (cap.uploads / cap.comments): loads the popup
     ctx.insert("captcha_scopes".into(), json!(req.map(|r| crate::cap::scopes_needed(&cfg, r)).unwrap_or_default()));
     ctx.insert("csp_nonce".into(), json!(req.map(|r| r.csp_nonce.as_str()).unwrap_or("")));
@@ -752,6 +756,21 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
                     }),
                 );
             }
+            // Messages of the login / register modals after a form post without JavaScript (routes/register.rs)
+            for key in crate::routes::register::auth_query_keys() {
+                let msg = r.query(key).and_then(|code| crate::routes::register::auth_message(key, code));
+                ctx.insert(format!("{key}_msg"), json!(msg));
+            }
+            ctx.insert("login_captcha".into(), json!(r.query("login_captcha") == Some("1")));
+            // No-JavaScript forms (crate::nojs): the message of a failed post, and the preferences
+            // that live in a cookie instead of localStorage
+            if let Some(flash) = crate::nojs::take_flash(&cfg, r) {
+                ctx.insert("nojs_flash".into(), flash);
+            }
+            let prefs = crate::nojs::prefs(r);
+            ctx.insert("nojs_pref_classes".into(), json!(crate::nojs::pref_classes(&prefs)));
+            ctx.insert("nojs_prefs".into(), json!(prefs));
+            ctx.insert("language_cookie".into(), json!(r.cookie("language").filter(|l| !l.is_empty())));
             ctx.insert("user_strict_bool".into(), json!(session.and_then(|s| s.strict_mode).unwrap_or(false)));
             ctx.insert("user_logged_in_bool".into(), json!(session.is_some()));
             let csrf = session
@@ -795,6 +814,125 @@ mod tests {
         assert_eq!(locale_number(1234.5), "1,234.5");
         assert_eq!(js_to_string(&JValue::from(3.0)), "3");
         assert_eq!(js_to_string(&JValue::from(vec![1, 2])), "1,2");
+    }
+
+    /// snippets/comments-static.html (no-JavaScript item comments) renders the thread markup.
+    #[test]
+    fn static_comments_snippet_renders() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let reply = serde_json::json!({ "id": 3, "is_anon": false, "username": "Bob", "name": "bob", "username_color": "#f00", "avatar_src": "/a/default.png",
+            "banner": null, "content_html": "<span class=\"greentext\">&gt;hi</span>", "attachments_html": "", "timeago": "1 day ago", "iso": "x", "backlinks": [], "replies": [] });
+        let root_c = serde_json::json!({ "id": 2, "is_pinned": true, "is_anon": false, "username": "Al", "name": "Al", "username_color": null, "avatar_src": "/t/5.webp",
+            "banner": { "file": "b.png", "position": "center top", "size": "100% auto" }, "content_html": "x &lt;b&gt;", "attachments_html": "", "timeago": "2 days ago", "iso": "y",
+            "backlinks": [3], "replies": [reply] });
+        let ctx = serde_json::json!({ "static_comments": [root_c], "comment_banner_enabled": true });
+        let html = env.get_template("snippets/comments-static.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(html.contains("<div class=\"comments-list comments-static\">"));
+        assert!(html.contains("<div class=\"comment pinned\" id=\"c2\" style=\"--author-banner: url(&#x27;/a/b.png&#x27;)") || html.contains("id=\"c2\" style=\"--author-banner"));
+        assert!(html.contains("<div class=\"comment-replies\"><div class=\"comment reply\" id=\"c3\""));
+        assert!(html.contains("class=\"comment-author user-color-text\" style=\"--user-color: #f00\">bob</a>"));
+        assert!(html.contains("<a href=\"#c3\" class=\"comment-context-link\">&gt;&gt;3</a>"));
+        assert!(html.contains("<div class=\"comment-content\">x &lt;b&gt;</div>"));
+        assert!(html.contains("<a href=\"/user/al\""));
+        let empty = env.get_template("snippets/comments-static.html").unwrap().render(to_jvalue(&serde_json::json!({ "static_comments": [] }))).unwrap();
+        assert!(!empty.contains("comments-static"));
+    }
+
+    #[test]
+    fn login_modal_works_without_js() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let ctx = serde_json::json!({ "csrf_token": "tok", "domain": "f0ck.test", "registration_open": false, "captcha_enabled": false,
+            "login_error_msg": "user doesn't exist or wrong password", "register_error_msg": "Passwords do not match.",
+            "url": { "pathname": "/3", "search": "?login_error=wrong", "qs": { "login_error": "wrong", "invite": "abc\"x" } } });
+        let html = env.get_template("snippets/navbar.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        if let Ok(out) = std::env::var("F0CKM_DUMP_NAVBAR") {
+            std::fs::write(out, &html).unwrap();
+        }
+        assert!(html.contains("<a href=\"#login-modal\" id=\"nav-login-btn\">"));
+        assert!(html.contains("<a href=\"#_\" class=\"lm-nojs-backdrop\""));
+        assert!(html.contains("<input type=\"hidden\" name=\"csrf_token\" value=\"tok\" />"));
+        assert!(html.contains("<input type=\"hidden\" name=\"return_to\" value=\"/3?login_error=wrong\" />"));
+        assert!(html.contains("<div class=\"flash-error\">user doesn&#39;t exist or wrong password</div>"));
+        // register modal
+        assert!(html.contains("<a href=\"#register-modal\" id=\"nav-register-btn\">"));
+        assert!(html.contains("<a href=\"#login-modal\" id=\"register-to-login\""));
+        assert!(html.contains("<div class=\"flash-error\">Passwords do not match.</div>"));
+        assert!(html.contains("value=\"abc&quot;x\" />"));
+        assert!(!html.contains("lm-imgcap"));
+        assert!(!html.contains("style=\"display: none !important;\""));
+        // with Cap on: the image captcha in the register form, in the login form only when asked for
+        let mut ctx = ctx;
+        ctx["captcha_enabled"] = serde_json::json!(true);
+        ctx["nojs_captcha_id"] = serde_json::json!("0123456789abcdef");
+        let html = env.get_template("snippets/navbar.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert_eq!(html.matches("<iframe src=\"/api/cap/image/0123456789abcdef/frame\"").count(), 1);
+        assert!(html.contains("<input type=\"hidden\" name=\"cap-image-id\" value=\"0123456789abcdef\" />"));
+        ctx["login_captcha"] = serde_json::json!(true);
+        let html = env.get_template("snippets/navbar.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        if let Ok(out) = std::env::var("F0CKM_DUMP_NAVBAR") {
+            std::fs::write(out, &html).unwrap();
+        }
+        assert_eq!(html.matches("name=\"cap-image-answer\"").count(), 2);
+    }
+
+    #[test]
+    fn captcha_frame_links_to_new_characters() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let ctx = serde_json::json!({ "id": "0123456789abcdef", "v": "beef" });
+        let html = env.get_template("cap-image-frame.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        if let Ok(out) = std::env::var("F0CKM_DUMP_CAPFRAME") {
+            std::fs::write(out, &html).unwrap();
+        }
+        assert!(html.contains("<a href=\"/api/cap/image/0123456789abcdef/frame?new=beef\" class=\"cap-image-new\""));
+        assert!(html.contains("<img src=\"/api/cap/image/0123456789abcdef?v=beef\""));
+        assert!(!html.contains("style="));
+    }
+
+    #[test]
+    fn nojs_forms_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let url = serde_json::json!({ "pathname": "/7", "search": "", "qs": {} });
+        // favourite: add when not favourited, remove when it is
+        let ctx = serde_json::json!({ "item": { "id": 7 }, "csrf_token": "tok", "url": url, "fav_slot": "a", "user_has_favorited": false });
+        let html = env.get_template("snippets/fav-nojs.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(html.contains("<form method=\"post\" action=\"/api/v2/togglefav\" id=\"fav-nojs-form-a\""));
+        assert!(html.contains("name=\"action\" value=\"add\""));
+        assert!(html.contains("<button type=\"submit\" form=\"fav-nojs-form-a\" class=\"iconset fa-regular fa-heart fav-nojs-btn\""));
+        let mut ctx = ctx;
+        ctx["user_has_favorited"] = serde_json::json!(true);
+        let html = env.get_template("snippets/fav-nojs.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(html.contains("name=\"action\" value=\"remove\""));
+        assert!(html.contains("class=\"iconset fa-solid fa-heart fav-nojs-btn\""));
+
+        // comment form for a logged-in user
+        let ctx = serde_json::json!({ "item": { "id": 7 }, "csrf_token": "tok", "url": url, "session": { "user": "bob" }, "captcha_scopes": [] });
+        let html = env.get_template("snippets/comment-input.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(html.contains("<form method=\"post\" action=\"/api/comments\" class=\"comment-input comment-form-nojs\">"));
+        assert!(html.contains("name=\"back\" value=\"/7#comments-container\""));
+        assert!(html.contains("<textarea name=\"content\""));
+        assert!(!html.contains("cap-image-answer"));
+        let mut ctx = ctx;
+        ctx["captcha_scopes"] = serde_json::json!(["comment"]);
+        ctx["nojs_captcha_id"] = serde_json::json!("0123456789abcdef");
+        let html = env.get_template("snippets/comment-input.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(html.contains("name=\"cap-image-answer\""));
+    }
+
+    #[test]
+    fn settings_form_names_its_controls() {
+        let s = std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../views/settings.html")).unwrap();
+        assert!(s.contains("<form method=\"post\" action=\"/settings\" class=\"settings-prefs-form\">"));
+        for name in ["theme", "font", "language", "comment_display_mode", "default_upload_visibility"] {
+            assert!(s.contains(&format!("name=\"{name}\"")), "{name}");
+        }
+        // every boolean the server saves has its hidden "0" and the box's "1"
+        for col in ["show_motd", "use_new_layout", "disable_autoplay", "quote_emojis", "favorites_private", "do_not_disturb", "blur_nsfw", "hide_infobox"] {
+            assert!(s.contains(&format!("<input type=\"hidden\" name=\"{col}\" value=\"0\">")), "{col}");
+        }
     }
 
     #[test]

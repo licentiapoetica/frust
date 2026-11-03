@@ -74,9 +74,18 @@
 {% endif %}
 {% if (not private_society or session) %}
 <div id="report-modal" class="modal-overlay footer-hidden">
+  {#- Without JavaScript: opens through :target (#report-modal, the report link on item pages) and
+      posts as a plain form to /api/v2/report, which redirects back (server/src/nojs.rs). With
+      JavaScript f0ckm.js fills and sends it; its buttons are type="button" so the form never submits. #}
+  <a href="#_" class="lm-nojs-backdrop" tabindex="-1" aria-hidden="true"></a>
   <div class="modal-content report-modal-content">
+  <form method="post" action="/api/v2/report" class="report-form">
+    <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+    <input type="hidden" name="back" value="{% if url is defined %}{{ url.pathname }}{{ url.search }}{% else %}/{% endif %}">
+    {% if (item is defined and item and item.id) %}<input type="hidden" name="item_id" value="{{ item.id }}" class="report-nojs-field">{% endif %}
     <div class="rm-header">
       <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="report-cancel">&times;</button>
+      <a href="#_" class="modal-x nojs-close-link" aria-label="Close" title="Close">&times;</a>
       <h3>{{ t("report.title") }}</h3>
       <p>Select one or more reasons and optionally add details below.</p>
     </div>
@@ -86,46 +95,50 @@
     <input type="hidden" id="report-user-id">
     <div id="report-categories">
       <label class="report-category-option">
-        <input type="checkbox" name="report_category" value="wrong_rating" class="report-cat-check">
+        <input type="checkbox" name="categories" value="wrong_rating" class="report-cat-check">
         <span class="rm-check"><i class="fa-solid fa-check"></i></span>
         <span class="rm-text"><strong>Wrong Rating</strong><span>Content is marked SFW but should be NSFW, or vice versa.</span></span>
       </label>
       <label class="report-category-option">
-        <input type="checkbox" name="report_category" value="spam" class="report-cat-check">
+        <input type="checkbox" name="categories" value="spam" class="report-cat-check">
         <span class="rm-check"><i class="fa-solid fa-check"></i></span>
         <span class="rm-text"><strong>Spam</strong><span>Repeated, unwanted, or promotional content.</span></span>
       </label>
       <label class="report-category-option">
-        <input type="checkbox" name="report_category" value="duplicate" class="report-cat-check">
+        <input type="checkbox" name="categories" value="duplicate" class="report-cat-check">
         <span class="rm-check"><i class="fa-solid fa-check"></i></span>
         <span class="rm-text"><strong>Duplicate</strong><span>This content has already been posted before.</span></span>
       </label>
       <label class="report-category-option">
-        <input type="checkbox" name="report_category" value="copyright" class="report-cat-check">
+        <input type="checkbox" name="categories" value="copyright" class="report-cat-check">
         <span class="rm-check"><i class="fa-solid fa-check"></i></span>
         <span class="rm-text"><strong>Copyright</strong><span>Content infringes on intellectual property rights.</span></span>
       </label>
       <label class="report-category-option rm-danger">
-        <input type="checkbox" name="report_category" value="illegal" class="report-cat-check">
+        <input type="checkbox" name="categories" value="illegal" class="report-cat-check">
         <span class="rm-check"><i class="fa-solid fa-check"></i></span>
         <span class="rm-text"><strong>Illegal Content</strong><span>Content that may violate laws or platform rules.</span></span>
       </label>
       <label class="report-category-option">
-        <input type="checkbox" name="report_category" value="other" class="report-cat-check">
+        <input type="checkbox" name="categories" value="other" class="report-cat-check">
         <span class="rm-check"><i class="fa-solid fa-check"></i></span>
         <span class="rm-text"><strong>Other</strong><span>Something else not listed above.</span></span>
       </label>
     </div>
-    <textarea id="report-reason" class="mod-reason" placeholder="{{ t("report.placeholder") }}"></textarea>
+    <textarea id="report-reason" name="reason" class="mod-reason" placeholder="{{ t("report.placeholder") }}"></textarea>
     {% if captcha_enabled %}
     <cap-widget id="modal-report-captcha" class="cap-dark footer-report-captcha" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+    {% include "snippets/cap-image.html" %}
     {% endif %}
     <div id="report-error" class="error-msg"></div>
     </div>
     <div class="modal-actions">
-      <button id="report-cancel" class="btn-secondary">{{ t("common.cancel") }}</button>
-      <button id="report-submit" class="">{{ t("report.submit") }}</button>
+      <button type="button" id="report-cancel" class="btn-secondary">{{ t("common.cancel") }}</button>
+      <button type="button" id="report-submit" class="">{{ t("report.submit") }}</button>
+      <a href="#_" class="btn-secondary nojs-close-link">{{ t("common.cancel") }}</a>
+      <button type="submit" class="report-nojs-submit">{{ t("report.submit") }}</button>
     </div>
+  </form>
   </div>
 </div>
 
@@ -188,6 +201,8 @@
       </button>
     </div>
     {% if enable_comments %}
+    {#- Without JavaScript: the same feed as server-rendered HTML (GET /activity). Inert when JavaScript runs. #}
+    <noscript><iframe class="sidebar-activity-frame" src="/activity?limit=20" title="{{ t("sidebar.recent_comments") }}"></iframe></noscript>
     <div id="sidebar-activity-container" class="sidebar-comments-list sidebar-tab-content active" data-tab-content="comments">
       <div class="sidebar-loading-state">
         <i class="fa-solid fa-circle-notch fa-spin"></i>

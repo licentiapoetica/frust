@@ -101,12 +101,27 @@ pub async fn dispatch(st: &AppState, mut req: Req) -> Res {
         return Ok(not_found_route(&req.method, &req.path));
     };
     req.params = m.params;
-    if let Some(g) = m.endpoint.guard {
-        if let Some(r) = check_guard(st, &mut req, g).await {
-            return Ok(r);
+    // A plain form post (no JavaScript) with `back`: answer with a redirect back (crate::nojs)
+    let back = crate::nojs::form_back(&mut req).await;
+    let resp = async {
+        if let Some(g) = m.endpoint.guard {
+            if let Some(r) = check_guard(st, &mut req, g).await {
+                return Ok(r);
+            }
         }
+        (m.endpoint.handler)(st.clone(), req).await
     }
-    (m.endpoint.handler)(st.clone(), req).await
+    .await;
+    match back {
+        Some(back) => {
+            let resp = match resp {
+                Ok(r) => r,
+                Err(e) => e.into_response_for(true),
+            };
+            Ok(crate::nojs::finish(&crate::nojs::flash_cookie_attrs(&st.cfg()), &back, resp).await)
+        }
+        None => resp,
+    }
 }
 
 // ── Middleware steps ────────────────────────────────────────────────────────

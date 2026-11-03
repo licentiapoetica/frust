@@ -1,0 +1,19 @@
+{#- The item's comments for visitors without JavaScript, from static_comments (routes/comments.rs
+    static_item_comments). Same markup as comments.js renderComment() minus the action buttons; with
+    JavaScript it is hidden (html:not(.no-js), f0ckm.css) and comments.js replaces the box. Plain
+    elements, not a <noscript>: script blockers rewrite <noscript> content in their own ways. -#}
+{%- macro one(c, reply, banners) -%}
+<div class="comment{% if reply %} reply{% endif %}{% if c.is_pinned %} pinned{% endif %}" id="c{{ c.id }}"{% if (banners and c.banner) %} style="--author-banner: url('/a/{{ c.banner.file }}'); --author-banner-position: {{ c.banner.position }}; --author-banner-size: {{ c.banner.size }}"{% endif %}>
+<div class="comment-avatar">{% if c.username %}<a href="/user/{{ c.username|lower }}"><img src="{{ c.avatar_src }}" alt="" loading="lazy"></a>{% else %}<img src="{{ c.avatar_src }}" alt="" loading="lazy">{% endif %}</div>
+<div class="comment-body"><div class="comment-header"><div class="comment-header-left">{% if c.is_pinned %}<span class="pinned-badge" title="Pinned"><i class="fa-solid fa-thumbtack"></i></span>{% endif %}{% if c.is_anon %}<span class="comment-author name-short">anonymous</span>{% elif c.username %}<a href="/user/{{ c.username|lower }}" class="comment-author{% if c.name|short_letters %} name-short{% endif %}{% if c.username_color %} user-color-text{% endif %}"{% if c.username_color %} style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<span class="comment-author">System</span>{% endif %}{% if c.backlinks %}<span class="comment-backlinks">{% for k, b in c.backlinks|entries %}<a href="#c{{ b }}" class="comment-context-link">&gt;&gt;{{ b }}</a>{% if not loop.last %} {% endif %}{% endfor %}</span>{% endif %}</div><a href="#c{{ c.id }}" class="comment-time timeago" title="{{ c.iso }}">{{ c.timeago }}</a></div>
+<div class="comment-content">{{ c.content_html|safe }}</div>{{ c.attachments_html|safe }}</div>
+<a href="#c{{ c.id }}" class="comment-permalink" title="Permalink">#{{ c.id }}</a></div>
+{%- endmacro -%}
+{% if static_comments %}
+<div class="comments-list comments-static">
+{%- for key, c in static_comments|entries %}
+{{ one(c, false, comment_banner_enabled) }}
+{%- if c.replies %}<div class="comment-replies">{% for rkey, r in c.replies|entries %}{{ one(r, true, comment_banner_enabled) }}{% endfor %}</div>{% endif %}
+{%- endfor %}
+</div>
+{% endif %}

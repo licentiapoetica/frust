@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ (lang or "en") }}" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}" res="{% if fullscreen is defined %}{{ ("fullscreen" if fullscreen == 1 else "") }}{% endif %}" data-thumb-size="{{ (default_thumb_size or "m") }}"{% if (session and session.font) %} class="header-font-user"{% elif ((default_font is defined and default_font) and (default_font|length > 0)) %} class="header-font-site"{% endif %}>
+<html lang="{{ (lang or "en") }}" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}" res="{% if fullscreen is defined %}{{ ("fullscreen" if fullscreen == 1 else "") }}{% endif %}" data-thumb-size="{{ (default_thumb_size or "m") }}" class="no-js{% if nojs_pref_classes %} {{ nojs_pref_classes }}{% endif %}{% if (session and session.font) %} header-font-user{% elif ((default_font is defined and default_font) and (default_font|length > 0)) %} header-font-site{% endif %}">
 
 <head>
   {% if (page_meta is defined and page_meta.title) %}<title>{{ domain }} - {{ page_meta.title }}</title>{% elif item is defined %}<title>{{ domain }} - {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</title>{% else %}<title>{{ domain }}</title>{% endif %}
@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="{{ domain }}">
   <meta name="csrf-token" content="{{ csrf_token }}">
+  {% if (not session and url is defined and url.qs.login == "1") %}<noscript><meta http-equiv="refresh" content="0; url=/#login-modal"></noscript>{% endif %}
   <script src="/s/js/views/snippets/header.early.js?v={{ mtime("/public/s/js/views/snippets/header.early.js") }}"></script>
   {# Only what has to be inline: values from config/session (fonts, favicon, comment banner) and the
      html background/colour, which must apply before any stylesheet loads and on the private-society

@@ -40,9 +40,14 @@ fn json_msg(success: bool, msg: &str, code: u16) -> Response {
 
 // ── Login / logout ──────────────────────────────────────────────────────────
 
-async fn login_page(_st: AppState, req: Req) -> Res {
+async fn login_page(st: AppState, req: Req) -> Res {
     if req.session().is_some() {
         return Ok(location(302, "/?already_logged_in=1"));
+    }
+    // ?form: the plain login page (no JavaScript needed). Everyone else gets the login modal, which
+    // also opens without JavaScript (/#login-modal, see the <noscript> refresh on /?login=1).
+    if req.query("form").is_some() {
+        return Ok(html(crate::tpl::render(&st, Some(&req), "login", json!({ "theme": req.theme, "captcha": false }))));
     }
     Ok(redirect("/?login=1"))
 }
@@ -57,7 +62,11 @@ async fn login(st: AppState, mut req: Req) -> Res {
     let password = req.post_str("password").await;
     let kmsi = req.post().await?.get("kmsi").is_some();
     let captcha_token = req.post_str("cap-token").await;
+    let cap_image_id = req.post_str("cap-image-id").await;
+    let cap_image_answer = req.post_str("cap-image-answer").await;
     let ajax = is_ajax(&req);
+    // The navbar modal posted as a plain form (no JavaScript): answer with a redirect back to that page
+    let return_to = if ajax { None } else { req.post_str("return_to").await.and_then(|p| modal_return_path(&p)) };
     let captcha_on = crate::cap::required(&cfg, &req);
 
     // After repeated failures from this IP a (hard) captcha is needed, much later a lockout
@@ -78,7 +87,12 @@ async fn login(st: AppState, mut req: Req) -> Res {
         if ajax {
             return json_raw(&json!({ "success": false, "msg": msg, "captcha": captcha }), 200);
         }
-        html(crate::tpl::render(&st, None, "login", json!({ "error": msg, "theme": req.theme, "captcha": captcha })))
+        // Back to the page with the modal open; `login_captcha` makes it show the image captcha
+        if let (Some(path), Some(code)) = (return_to.as_deref(), auth_code(AUTH_ERRORS, msg)) {
+            let code = if captcha { format!("{code}&login_captcha=1") } else { code.to_string() };
+            return back_to_modal(path, "login_error", &code, "login-modal");
+        }
+        html(crate::tpl::render(&st, Some(&req), "login", json!({ "error": msg, "theme": req.theme, "captcha": captcha })))
     };
 
     macro_rules! fail {
@@ -97,7 +111,7 @@ async fn login(st: AppState, mut req: Req) -> Res {
     // Checked before the password, so guesses without a solved captcha learn nothing. A missing or
     // wrong captcha isn't counted as a failed login (it would only push the lockout closer).
     if captcha_needed {
-        match crate::cap::verify_hard(captcha_token.as_deref()) {
+        match crate::cap::verify_form(captcha_token.as_deref(), cap_image_id.as_deref(), cap_image_answer.as_deref(), true) {
             Captcha::Ok => {}
             Captcha::Missing => return Ok(respond("Too many failed logins, please complete the captcha.", true)),
             Captcha::Failed => return Ok(respond("Captcha expired or invalid. Please try again.", true)),
@@ -163,13 +177,90 @@ async fn login(st: AppState, mut req: Req) -> Res {
     let s = crate::auth::insert_session(&st, &req, SessionSpec { user_id, kmsi, last_action: "/login", passkey_credential_id: None, csrf_bytes: 32 }).await?;
     crate::security::log_user_ip(&st, user_id, &ip).await;
 
-    let mut r = location(301, "/");
+    let mut r = match return_to.as_deref() {
+        Some(path) => location(303, path),
+        None => location(301, "/"),
+    };
     let h = r.headers_mut();
     h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache, public"));
     if let Ok(v) = HeaderValue::from_str(&crate::auth::session_cookie(&cfg, &s.session, kmsi)) {
         h.insert(header::SET_COOKIE, v);
     }
     Ok(r)
+}
+
+// ── Login / register modals without JavaScript ──────────────────────────────
+// Their forms post normally with `return_to` (the page they were opened on). The answer redirects
+// back there with the modal open (`#login-modal` / `#register-modal`, opened by :target in
+// f0ckm.css) and a code in the query; tpl.rs turns the code into the message. Only codes travel,
+// so a link can't put its own words into the modals.
+
+/// `?login_error=` / `?register_error=`
+const AUTH_ERRORS: &[(&str, &str)] = &[
+    ("invalid", "Invalid username or password."),
+    ("wrong", "user doesn't exist or wrong password"),
+    ("inactive", "This account is not activated. Please check your email."),
+    ("name_required", "Username is required."),
+    ("name_chars", "Username contains invalid characters. Only A-Z, 0-9, _, -, and . are allowed."),
+    ("name_taken", "Username taken"),
+    ("pw_short", "Password must be at least 20 characters long."),
+    ("pw_mismatch", "Passwords do not match."),
+    ("token_required", "Invite token is required for registration."),
+    ("token_invalid", "Invalid or used invite token"),
+    ("email_required", "A valid email is required for registration."),
+    ("email_taken", "Email already registered"),
+    ("locked", "Too many attempts."),
+    ("failed", "An unexpected error occurred. Please try again later."),
+    ("captcha_needed", "Too many failed logins, please complete the captcha."),
+    ("captcha_missing", "Please complete the captcha."),
+    ("captcha_invalid", "Captcha expired or invalid. Please try again."),
+];
+
+/// `?login_done=` / `?register_done=`
+const AUTH_DONE: &[(&str, &str)] = &[
+    ("registered", "Registration successful! You can now login."),
+    ("activate", "Registration successful! Please check your email to activate your account."),
+];
+
+/// Query keys of the modal messages, so `return_to` drops the ones of an earlier try
+const AUTH_QUERY_KEYS: [&str; 4] = ["login_error", "login_done", "register_error", "register_done"];
+/// `?login_captcha=1`: the login modal shows the image captcha (cap_image.rs)
+const LOGIN_CAPTCHA_KEY: &str = "login_captcha";
+
+fn auth_code(table: &[(&'static str, &str)], msg: &str) -> Option<&'static str> {
+    table.iter().find(|(_, m)| *m == msg).map(|(c, _)| *c)
+}
+
+/// The message for a modal's query parameter (`key` one of [`AUTH_QUERY_KEYS`]), for tpl.rs.
+pub(crate) fn auth_message(key: &str, code: &str) -> Option<&'static str> {
+    let table = if key.ends_with("_done") { AUTH_DONE } else { AUTH_ERRORS };
+    table.iter().find(|(c, _)| *c == code).map(|(_, m)| *m)
+}
+
+pub(crate) fn auth_query_keys() -> &'static [&'static str] {
+    &AUTH_QUERY_KEYS
+}
+
+/// `return_to` of a modal form: a local path (no other host), without the messages of an earlier try.
+fn modal_return_path(p: &str) -> Option<String> {
+    let p = p.split('#').next().unwrap_or("");
+    if !p.starts_with('/') || p.starts_with("//") || p.starts_with("/\\") || p.chars().any(char::is_control) {
+        return None;
+    }
+    let (path, query) = p.split_once('?').unwrap_or((p, ""));
+    let query: Vec<&str> = query
+        .split('&')
+        .filter(|kv| {
+            let key = kv.split('=').next().unwrap_or("");
+            !kv.is_empty() && *kv != "login=1" && key != LOGIN_CAPTCHA_KEY && !AUTH_QUERY_KEYS.contains(&key)
+        })
+        .collect();
+    Some(if query.is_empty() { path.to_string() } else { format!("{path}?{}", query.join("&")) })
+}
+
+fn back_to_modal(path: &str, key: &str, code: &str, modal: &str) -> Response {
+    let sep = if path.contains('?') { '&' } else { '?' };
+    location(303, &format!("{path}{sep}{key}={code}#{modal}"))
 }
 
 async fn logout(st: AppState, req: Req) -> Res {
@@ -303,11 +394,12 @@ async fn register_page(_st: AppState, req: Req) -> Res {
     if req.session().is_some() {
         return Ok(location(302, "/?already_logged_in=1"));
     }
-    let mut url = "/#register".to_string();
-    if let Some(t) = req.query("token").filter(|t| !t.is_empty()) {
-        url.push(':');
-        url.push_str(t);
-    }
+    // #register-modal: f0ckm.js opens the modal on it, and without JavaScript :target does. The
+    // invite token goes in the query, so the template can fill it in for both.
+    let url = match req.query("token").filter(|t| !t.is_empty()) {
+        Some(t) => format!("/?invite={}#register-modal", crate::util::encode_uri_component(t)),
+        None => "/#register-modal".to_string(),
+    };
     Ok(location(302, &url))
 }
 
@@ -340,6 +432,8 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
     let ip = req.real_ip();
     let ajax = is_ajax(&req);
+    // The navbar modal posted as a plain form (no JavaScript): answer with a redirect back to that page
+    let return_to = if ajax { None } else { req.post_str("return_to").await.and_then(|p| modal_return_path(&p)) };
     let username = req.post_str("username").await.map(|u| u.trim().to_string());
     let email = req.post_str("email").await.filter(|e| !e.is_empty());
     let password = req.post_str("password").await.filter(|p| !p.is_empty());
@@ -347,6 +441,8 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
     let token = req.post_str("token").await.filter(|t| !t.is_empty());
     let honeypot = req.post_str("email_confirm_field").await.filter(|h| !h.is_empty());
     let captcha = req.post_str("cap-token").await;
+    let cap_image_id = req.post_str("cap-image-id").await;
+    let cap_image_answer = req.post_str("cap-image-answer").await;
     let theme = req.cookie("theme").map(str::to_string).unwrap_or_else(|| cfg.str("websrv.theme").filter(|t| !t.is_empty()).unwrap_or("f0ck").to_string());
     let registration_open = st.settings.registration_open(&cfg);
 
@@ -355,7 +451,15 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
         return Ok(json_msg(false, "Spam detected.", 200));
     }
 
-    let page = |key: &str, msg: &str| html(crate::tpl::render(&st, Some(&req), "register", json!({ "theme": theme, key: msg, "registration_open": registration_open })));
+    let page = |key: &str, msg: &str| {
+        if let Some(path) = return_to.as_deref() {
+            let (qkey, table) = if key == "success" { ("register_done", AUTH_DONE) } else { ("register_error", AUTH_ERRORS) };
+            if let Some(code) = auth_code(table, msg) {
+                return back_to_modal(path, qkey, code, "register-modal");
+            }
+        }
+        html(crate::tpl::render(&st, Some(&req), "register", json!({ "theme": theme, key: msg, "registration_open": registration_open })))
+    };
 
     // Register always needs the captcha (when on); after repeated failures from this IP a hard one
     let captcha_on = crate::cap::required(&cfg, &req);
@@ -394,7 +498,7 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
     }
 
     if captcha_on {
-        let checked = if hard_captcha { crate::cap::verify_hard(captcha.as_deref()) } else { crate::cap::verify(captcha.as_deref()) };
+        let checked = crate::cap::verify_form(captcha.as_deref(), cap_image_id.as_deref(), cap_image_answer.as_deref(), hard_captcha);
         match checked {
             Captcha::Ok => {}
             Captcha::Missing => render_error!("Please complete the captcha."),
@@ -539,5 +643,39 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
     if ajax {
         return Ok(json_raw(&json!({ "success": true, "msg": msg, "upgraded": upgrade_id.is_some() }), 200));
     }
+    if let (Some(path), None) = (return_to.as_deref(), upgrade_id) {
+        return Ok(back_to_modal(path, "login_done", "registered", "login-modal"));
+    }
     Ok(location(302, if upgrade_id.is_some() { "/settings" } else { "/?login=success" }))
+}
+
+#[cfg(test)]
+mod modal_return_tests {
+    use super::{AUTH_DONE, AUTH_ERRORS, auth_code, auth_message, modal_return_path};
+
+    #[test]
+    fn return_path_stays_local() {
+        assert_eq!(modal_return_path("/3").as_deref(), Some("/3"));
+        assert_eq!(modal_return_path("/user/x?page=2&login_error=wrong#c5").as_deref(), Some("/user/x?page=2"));
+        assert_eq!(modal_return_path("/?login=1&login_error=invalid").as_deref(), Some("/"));
+        assert_eq!(modal_return_path("/?invite=abc&register_error=pw_short&register_done=activate").as_deref(), Some("/?invite=abc"));
+        assert_eq!(modal_return_path("/?login_error=captcha_needed&login_captcha=1").as_deref(), Some("/"));
+        assert_eq!(modal_return_path("//evil.example/"), None);
+        assert_eq!(modal_return_path("/\\evil.example/"), None);
+        assert_eq!(modal_return_path("https://evil.example/"), None);
+        assert_eq!(modal_return_path("/a\r\nSet-Cookie: x=1"), None);
+    }
+
+    #[test]
+    fn messages_travel_as_codes() {
+        assert_eq!(auth_code(AUTH_ERRORS, "user doesn't exist or wrong password"), Some("wrong"));
+        assert_eq!(auth_code(AUTH_ERRORS, "Captcha expired or invalid. Please try again."), Some("captcha_invalid"));
+        assert_eq!(auth_code(AUTH_ERRORS, "Spam detected."), None);
+        assert_eq!(auth_code(AUTH_DONE, "Registration successful! You can now login."), Some("registered"));
+        assert_eq!(auth_message("register_error", "pw_mismatch"), Some("Passwords do not match."));
+        // a success code is no error and the other way round
+        assert_eq!(auth_message("login_error", "registered"), None);
+        assert_eq!(auth_message("login_done", "wrong"), None);
+        assert_eq!(auth_message("login_error", "<b>made up</b>"), None);
+    }
 }

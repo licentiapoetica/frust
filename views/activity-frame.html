@@ -1,0 +1,49 @@
+<!doctype html>
+{#- GET /activity as plain HTML: the recent-comments sidebar for visitors without JavaScript,
+    loaded by the <noscript> iframe in snippets/footer.html. Uses the sidebar classes so it
+    looks like the list sidebar-activity.js draws; links open in the parent page (<base target>). -#}
+<html lang="{{ (lang or "en") }}" theme="{{ (theme or "f0ck") }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>activity</title>
+  <base target="_top">
+  <link rel="stylesheet" href="/s/fa/all.min.css">
+  <link rel="stylesheet" href="/s/css/f0ckm.css?v={{ mtime("/public/s/css/f0ckm.css") }}">
+</head>
+<body class="activity-frame">
+  <div class="sidebar-activity">
+    <div id="sidebar-activity-container" class="sidebar-comments-list">
+      {% if not comments %}
+      <div class="activity-frame-empty">{{ t("sidebar.no_activity") }}</div>
+      {% endif %}
+      {% for key, c in comments|entries %}
+      <div class="comment" id="sc{{ c.id }}">
+        <div class="comment-body">
+          <div class="comment-header">
+            <div class="comment-header-left">
+              {% if anonymized %}
+              <span class="sidebar-avatar-link"><img src="/a/default.png" class="sidebar-avatar loaded" alt=""></span>
+              <span class="comment-author name-short">anonymous</span>
+              {% else %}
+              <a href="/user/{{ c.username|lower }}" class="sidebar-avatar-link"><img src="{% if c.avatar_file %}/a/{{ c.avatar_file }}{% elif c.avatar %}/t/{{ c.avatar }}.webp{% else %}/a/default.png{% endif %}" class="sidebar-avatar loaded" alt=""></a>
+              <a href="/user/{{ c.username|lower }}" class="comment-author{% if c.username_color %} user-color-text{% endif %}"{% if c.username_color %} style="--user-color: {{ c.username_color }}"{% endif %}>{{ (c.display_name or c.username) }}</a>
+              {% endif %}
+            </div>
+            <span class="comment-time">{{ c.timeago }}</span>
+          </div>
+          {#- One line: .comment-content is white-space: pre-wrap, so whitespace between the tags shows #}
+          <div class="comment-content"><div class="comment-content-inner">{{ c.content_html|safe }}</div></div>
+          {% if c.item_id %}
+          <div class="item-preview">
+            <a href="/{{ (c.item_slug or c.item_id) }}" class="sidebar-thumb-link" data-mode="{{ c.item_rating_class }}">{% if ((c.mime and c.mime.startswith("audio")) and not c.has_coverart) %}<div class="sidebar-media-placeholder audio"><i class="fa-solid fa-music"></i></div>{% else %}<img src="/t/{{ c.item_id }}.webp" class="activity-frame-thumb" loading="lazy" alt="">{% endif %}</a>
+            <a href="/{{ (c.item_slug or c.item_id) }}#c{{ c.id }}" class="activity-frame-view">{{ t("sidebar.view") }} &raquo;</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</body>
+</html>

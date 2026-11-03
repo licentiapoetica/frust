@@ -14,6 +14,7 @@
 </head>
 <body class="login-page">
   <form class="login-form" method="post" action="/login" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}" />
     <h2>{{ t("auth.login_title") }}</h2>
     {% if error %}
     <div class="flash-error">{{ error }}</div>

@@ -59,7 +59,7 @@
 </div>
 {% elif item.mime.startswith("video") %}
 <div class="embed-responsive embed-responsive-16by9">
-    <video id="my-video" class="embed-responsive-item" width="{{ (item.width or 640) }}" height="{{ (item.height or 360) }}" src="{{ item.dest }}" preload="auto" data-size="{{ item.size }}" loop playsinline {% if (not session or session.disable_autoplay != true) %} autoplay {% endif %}></video>
+    <video id="my-video" class="embed-responsive-item" width="{{ (item.width or 640) }}" height="{{ (item.height or 360) }}" src="{{ item.dest }}" preload="auto" data-size="{{ item.size }}" loop playsinline controls {% if (not session or session.disable_autoplay != true) %} autoplay {% endif %}></video>
 </div>
 {% elif item.mime.startswith("audio") %}
 <div class="embed-responsive embed-responsive-16by9 item-media-audio-stage">
@@ -75,7 +75,7 @@
             <i class="fa-solid fa-music"></i>
         </div>
     </div>
-    <audio id="my-video" class="embed-responsive-item" preload="auto" loop crossorigin="anonymous" src="{{ item.dest }}" data-setup="{}" data-size="{{ item.size }}" {% if item.coverart %}poster="{{ item.coverart }}"{% endif %} type="{{ item.mime }}" {% if (not session or session.disable_autoplay != true) %} autoplay {% endif %}></audio>
+    <audio id="my-video" class="embed-responsive-item" preload="auto" loop controls crossorigin="anonymous" src="{{ item.dest }}" data-setup="{}" data-size="{{ item.size }}" {% if item.coverart %}poster="{{ item.coverart }}"{% endif %} type="{{ item.mime }}" {% if (not session or session.disable_autoplay != true) %} autoplay {% endif %}></audio>
     <img id="f0ck-audio-cover" {% if item.coverart %}src="{{ item.coverart }}"{% endif %} class="item-media-hidden">
 </div>
 {% elif item.mime.startswith("image") %}

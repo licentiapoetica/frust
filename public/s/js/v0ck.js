@@ -105,6 +105,8 @@ class v0ck {
   constructor(elem) {
     const tagName = elem.tagName.toLowerCase();
     if (["video", "audio"].includes(tagName)) {
+      // Templates ship native controls for visitors without JavaScript; v0ck draws its own.
+      elem.removeAttribute('controls');
       const parent = elem.parentElement;
       if (parent.querySelector('.v0ck_player_controls')) {
         window.f0ckDebug("[v0ck] Player controls already exist, skipping injection and init");

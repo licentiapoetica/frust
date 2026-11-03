@@ -562,6 +562,12 @@ async fn generic(st: AppState, req: Req) -> Res {
 
     if is_item && data["item"].is_object() {
         item_template_flags(&cfg, &mut data, page_session, req.session());
+        // Comments for visitors without JavaScript (full page loads only; the SPA uses /api/comments)
+        if !req.is_xhr() && cfg.enabled("enable_comments") && (sref.is_some() || !cfg.truthy("main.hide_comments_from_public")) {
+            if let Some(item_id) = data["item"]["id"].as_i64() {
+                data["static_comments"] = crate::routes::comments::static_item_comments(&st, page_session, req.session(), item_id, &req_lang(&st, &req)).await;
+            }
+        }
     }
 
     let tpl_req = req_with_session(&req, session.clone());

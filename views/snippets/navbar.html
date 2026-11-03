@@ -37,7 +37,7 @@
         {% if abyss_enabled %}
         <a href="/abyss" title="{{ t("nav.abyss") }}"><i class="fa-solid fa-dice-d6"></i></a>
         {% endif %}
-        <a href="#" id="nav-search-btn" title="{{ t("nav.search") }}"><i class="fa-solid fa-magnifying-glass"></i></a>
+        <a href="/search" id="nav-search-btn" title="{{ t("nav.search") }}"><i class="fa-solid fa-magnifying-glass"></i></a>
       </div>
     </div>
 
@@ -81,7 +81,7 @@
 
       <!-- Notification bell -->
       <div id="nav-notifications" class="nav-item-rel">
-        <a href="#" id="nav-notif-btn" title="Notifications">
+        <a href="/notifications" id="nav-notif-btn" title="Notifications">
           <i class="fa-solid fa-bell"></i>
           <span class="notif-count navbar-hidden">0</span>
         </a>
@@ -166,8 +166,8 @@
   </div><!-- /.nav-right-group -->
 
   <!-- MOTD: below the nav row -->
-  <div class="motd-container{% if (motd is undefined or motd == "") %} navbar-hidden{% endif %}" id="motd-container">
-    <span class="motd-content" id="motd-display"></span>
+  <div class="motd-container{% if (motd is undefined or motd == "") %} navbar-hidden{% endif %}{% if (session and session.show_motd == false) %} motd-pref-off{% endif %}" id="motd-container">
+    <span class="motd-content" id="motd-display">{% if motd is defined %}<span class="motd-nojs">{{ motd }}</span>{% endif %}</span>
     <div id="motd-data" class="navbar-hidden">{% if motd is defined %}{{ motd }}{% endif %}</div>
     <div id="user-pref-show-motd" class="navbar-hidden">{% if session.show_motd != false %}true{% else %} false {% endif %}</div>
   </div>
@@ -300,9 +300,10 @@
         {% endif %}
         {# Guests too: /settings shows them the preferences kept in this browser #}
         <a href="/settings" class="mobile-only" data-page-modal title="{{ t("nav.settings") }}">{{ t("nav.settings") }}</a>
-        <a href="#" id="nav-login-btn">{{ t("nav.login") }}</a>
+        {# #login-modal: without JavaScript the modal opens through :target (f0ckm.css) #}
+        <a href="#login-modal" id="nav-login-btn">{{ t("nav.login") }}</a>
         {# Always shown: with registration closed the register modal asks for an invite token #}
-        <a href="#" id="nav-register-btn">{{ t("nav.register") }}</a>
+        <a href="#register-modal" id="nav-register-btn">{{ t("nav.register") }}</a>
         {% if enable_anonymous_access %}
         <div class="nav-user-divider" id="nav-anon-divider" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}></div>
         <a href="#" id="nav-anon-logout-btn" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}><i class="fa-solid fa-right-from-bracket"></i> Logout (Guest)</a>
@@ -327,7 +328,7 @@
   </div>
 
   <div class="motd-container{% if (motd is undefined or motd == "") %} navbar-hidden{% endif %}" id="motd-container">
-    <span class="motd-content" id="motd-display"></span>
+    <span class="motd-content" id="motd-display">{% if motd is defined %}<span class="motd-nojs">{{ motd }}</span>{% endif %}</span>
     <div id="motd-data" class="navbar-hidden">{% if motd is defined %}{{ motd }}{% endif %}</div>
   </div>
 
@@ -339,9 +340,16 @@
 
 <script src="/s/js/views/snippets/navbar.js?v={{ mtime("/public/s/js/views/snippets/navbar.js") }}"></script>
 
+{#- Message of a failed form post without JavaScript (server/src/nojs.rs); fades out by itself #}
+{% if nojs_flash %}<div class="nojs-flash nojs-flash-{{ nojs_flash.kind }}" role="alert">{{ nojs_flash.text }}</div>{% endif %}
+
 <div id="login-modal" style="display: none;">
+  {#- Without JavaScript: the backdrop and the × are links to #_ (no such id, so the page doesn't
+      jump), which ends the :target that opened the modal. Hidden when JavaScript runs. #}
+  <a href="#_" class="lm-nojs-backdrop" tabindex="-1" aria-hidden="true"></a>
   <div class="login-modal-content">
     <button id="login-modal-close">&times;</button>
+    <a href="#_" class="lm-nojs-close" aria-label="Close">&times;</a>
     
     <!-- Login View -->
     <div id="modal-login-view">
@@ -363,6 +371,11 @@
       <!-- Tab: Credentials -->
       <div id="login-panel-creds" class="lm-panel">
         <form class="login-form lm-form" method="post" action="/login" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}" />
+          {#- Plain form posts (no JavaScript) come back to this page with the modal open and a message (routes/register.rs) #}
+          {% if url is defined %}<input type="hidden" name="return_to" value="{{ url.pathname }}{{ url.search }}" />{% endif %}
+          {% if login_error_msg %}<div class="flash-error">{{ login_error_msg }}</div>{% endif %}
+          {% if login_done_msg %}<div class="flash-success">{{ login_done_msg }}</div>{% endif %}
           <label class="lm-field">
             <i class="fa-solid fa-user lm-field-icon"></i>
             <input class="lm-input" type="text" name="username" placeholder="{{ t("auth.username_or_email") }}" aria-label="{{ t("auth.username_or_email") }}" autocomplete="username" autocapitalize="off" spellcheck="false" required />
@@ -389,6 +402,8 @@
           {% if captcha_enabled %}
           {# Inserted by f0ckCapShow once the server asks for it (after repeated failed logins) #}
           <template class="cap-on-demand"><cap-widget class="cap-dark lm-captcha" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget></template>
+          {#- Without JavaScript: the server asked for it (?login_captcha) #}
+          {% if login_captcha %}{% include "snippets/cap-image.html" %}{% endif %}
           {% endif %}
 
           <button type="submit" class="lm-btn lm-btn-primary">
@@ -419,7 +434,7 @@
       {% endif %}
 
       <p class="lm-footer">
-        {{ t("auth.no_account") }} <a href="#" id="login-to-register" class="lm-link">{{ t("auth.register_now") }}</a>
+        {{ t("auth.no_account") }} <a href="#register-modal" id="login-to-register" class="lm-link">{{ t("auth.register_now") }}</a>
       </p>
     </div>
 
@@ -597,16 +612,23 @@
 
 <!-- Register Modal -->
 <div id="register-modal" style="display: none;">
+  {#- Without JavaScript it opens through :target like the login modal (see there) #}
+  <a href="#_" class="lm-nojs-backdrop" tabindex="-1" aria-hidden="true"></a>
   <div class="login-modal-content">
     <button id="register-modal-close">&times;</button>
+    <a href="#_" class="lm-nojs-close" aria-label="Close">&times;</a>
     <div id="modal-register-view">
       <div class="lm-header">
         <h2 class="lm-title">{{ t("auth.register_title") }}</h2>
         <div class="lm-subtitle">{{ domain }}</div>
       </div>
 
-      <form class="login-form lm-form" id="modal-register-form" method="post" action="/register" novalidate>
+      {% if register_done_msg %}<div class="flash-success">{{ register_done_msg }}</div>{% endif %}
+      <form class="login-form lm-form{% if register_done_msg %} lm-form-done{% endif %}" id="modal-register-form" method="post" action="/register" novalidate>
         <div id="register-status"></div>
+        <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}" />
+        {% if url is defined %}<input type="hidden" name="return_to" value="{{ url.pathname }}{{ url.search }}" />{% endif %}
+        {% if register_error_msg %}<div class="flash-error">{{ register_error_msg }}</div>{% endif %}
         <label class="lm-field">
           <i class="fa-solid fa-user lm-field-icon"></i>
           <input class="lm-input" type="text" name="username" placeholder="{{ t("auth.username_placeholder") }}" aria-label="{{ t("auth.username_placeholder") }}" autocomplete="username" autocapitalize="off" spellcheck="false" required />
@@ -629,7 +651,7 @@
         {% if not registration_open %}
         <label class="lm-field">
           <i class="fa-solid fa-ticket lm-field-icon"></i>
-          <input class="lm-input" type="text" name="token" placeholder="{{ t("auth.invite_token") }}" aria-label="{{ t("auth.invite_token") }}" autocomplete="off" spellcheck="false" required />
+          <input class="lm-input" type="text" name="token" placeholder="{{ t("auth.invite_token") }}" aria-label="{{ t("auth.invite_token") }}" autocomplete="off" spellcheck="false" required{% if (url is defined and url.qs and url.qs.invite) %} value="{{ url.qs.invite }}"{% endif %} />
         </label>
         {% elif registration_require_mail_andor_token %}
         <label class="lm-field">
@@ -637,7 +659,7 @@
           <input class="lm-input" type="email" name="email" placeholder="{{ t("auth.email_placeholder") }}" aria-label="{{ t("auth.email_placeholder") }}" autocomplete="email" required />
         </label>
         {% endif %}
-        <input type="text" name="email_confirm_field" style="display: none !important;" tabindex="-1" autocomplete="off" />
+        <input type="text" name="email_confirm_field" class="register-honeypot" tabindex="-1" autocomplete="off" />
 
         <div class="lm-row">
           <label class="lm-check lm-check-multiline" for="tos-modal">
@@ -649,13 +671,14 @@
 
         {% if captcha_enabled %}
         <cap-widget class="cap-dark lm-captcha" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+        {% include "snippets/cap-image.html" %}
         {% endif %}
 
         <button type="submit" class="lm-btn lm-btn-primary">{{ t("auth.create_account") }}</button>
       </form>
 
       <p class="lm-footer">
-        <a href="#" id="register-to-login" class="lm-link">{{ t("auth.back_to_login") }}</a>
+        <a href="#login-modal" id="register-to-login" class="lm-link">{{ t("auth.back_to_login") }}</a>
       </p>
     </div>
   </div>

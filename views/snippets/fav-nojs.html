@@ -1,0 +1,13 @@
+{#- Favourite button without JavaScript (#a_favo needs it and is hidden then; this is hidden when it
+    runs). The button sits in the action row like #a_favo and submits the hidden form through its
+    form attribute; the API endpoint redirects back to `back` (server/src/nojs.rs). `fav_slot`
+    keeps the form id unique where a page has two action rows. Sends add/remove, not a toggle, so
+    a repeated post doesn't undo it. #}
+<form method="post" action="/api/v2/togglefav" id="fav-nojs-form-{{ fav_slot }}" class="fav-nojs-form">
+  <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+  <input type="hidden" name="postid" value="{{ (item.local_id or item.id) }}">
+  {% if item.is_chan %}<input type="hidden" name="chan_url" value="{{ item.external_media_url }}">{% endif %}
+  <input type="hidden" name="action" value="{% if user_has_favorited %}remove{% else %}add{% endif %}">
+  <input type="hidden" name="back" value="{% if url is defined %}{{ url.pathname }}{{ url.search }}{% else %}/{{ item.id }}{% endif %}">
+</form>
+<button type="submit" form="fav-nojs-form-{{ fav_slot }}" class="iconset fa-{% if user_has_favorited %}solid{% else %}regular{% endif %} fa-heart fav-nojs-btn" title="Favorite"></button>
