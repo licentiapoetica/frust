@@ -71,14 +71,6 @@
   }
   // </notifications>
 
-  // notifications page: mark all read
-  document.getElementById('v2-readall')?.addEventListener('click', async e => {
-    e.preventDefault();
-    const tab = new URLSearchParams(location.search).get('tab') || '';
-    await post('/api/notifications/read?tab=' + encodeURIComponent(tab), {});
-    location.reload();
-  });
-
   // <item>
   const container = document.querySelector('.container[data-item-id]');
   if(!container) return;
@@ -236,8 +228,9 @@
   const subform = document.querySelector('form#f_subscribe');
   if(subform) subform.addEventListener('submit', async e => {
     e.preventDefault();
-    const res = await post(subform.getAttribute('action'), {});
+    const res = await post(subform.getAttribute('action'), { subscribed: subform.subscribed.value });
     if(!res.success) return;
+    subform.subscribed.value = res.subscribed ? '0' : '1';
     const btn = subform.querySelector('button');
     btn.classList.toggle('active', res.subscribed);
     btn.innerHTML = res.subscribed ? '&#128276;' : '&#128277;';

@@ -6,7 +6,7 @@
       <span>notifications</span>
       <span class="v2-tabs">
         {% if enable_comments %}<a href="/notifications?tab=user"{% if activeTab == "user" %} class="active"{% endif %}>user</a> / {% endif %}<a href="/notifications?tab=system"{% if activeTab == "system" %} class="active"{% endif %}>system</a>{% if session and session.admin %} / <a href="/notifications?tab=admin"{% if activeTab == "admin" %} class="active"{% endif %}>admin</a>{% endif %}
-        <span class="js-only"> - <a href="#" id="v2-readall">mark all read</a></span>
+ - <form method="post" action="/api/notifications/read?tab={{ (activeTab or "")|encode_uri_component }}" class="v2-inline-form"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="/notifications?tab={{ (activeTab or "")|encode_uri_component }}"><button type="submit" class="v2-linkbtn">mark all read</button></form>
       </span>
     </div>
     <table class="table v2-notif-table">

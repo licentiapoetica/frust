@@ -1,19 +1,56 @@
-{#- Comments under an item, in f0ckv2's metadata look. The list is loaded by
-    public/s/fe/f0ckv2/js/comments.js from /api/comments/<id>. -#}
+{#- Comments under an item, in f0ckv2's metadata look. The server sends them as static_comments
+    (routes/comments.rs static_item_comments), so they show without JavaScript;
+    public/s/fe/f0ckv2/js/comments.js replaces the list from /api/comments/<id> when it runs.
+    Without JavaScript, "reply" is a link (?reply=<id>) that fills the form's parent_id. -#}
+{%- set here = ((url.pathname ~ url.search) if (url and url.pathname) else ("/" ~ item.id)) -%}
+{%- set here_path = (url.pathname if (url and url.pathname) else ("/" ~ item.id)) -%}
+{%- set reply_to = (parse_int(url.qs.reply) if (url and url.qs and url.qs.reply) else none) -%}
+{%- set me = ((session.user or "")|lower if session else "") -%}
+{%- macro one(c, reply) -%}
+<div class="v2-comment{% if reply %} reply{% endif %}{% if c.is_pinned %} pinned{% endif %}{% if reply_to == c.id %} v2-flash{% endif %}" id="c{{ c.id }}">
+  <div class="v2-comment-head">
+    {% if c.username %}<a href="/user/{{ c.username|lower|encode_uri_component }}"><img class="v2-comment-ava" src="{{ c.avatar_src }}" alt="" loading="lazy"></a><a class="v2-comment-name{% if c.username_color %} v2-namecolor{% endif %}" href="/user/{{ c.username|lower|encode_uri_component }}"{% if c.username_color %} style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<img class="v2-comment-ava" src="/s/fe/f0ckv2/img/default.png" alt=""><span class="v2-comment-name">{{ (c.name or "anonymous") }}</span>{% endif %}
+    <a href="#c{{ c.id }}" class="v2-comment-id">#{{ c.id }}</a>
+    <time class="v2-comment-time" tooltip="{{ c.iso }}">{{ c.timeago }}</time>
+    {% if c.is_pinned %}<span class="badge badge-light">pinned</span>{% endif %}
+    {% for b in (c.backlinks or []) %}<a href="#c{{ b }}" class="v2-quote">&gt;&gt;{{ b }}</a> {% endfor %}
+    <span class="v2-comment-actions">
+      {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form">reply</a>{% endif %}
+      {% if session and (is_mod_or_admin or (allow_comment_deletion and c.username and (c.username|lower) == me)) %}
+      <form method="post" action="/api/comments/{{ c.id }}/delete" class="v2-inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}#comments">
+        <button type="submit" class="v2-linkbtn">delete</button>
+      </form>
+      {% endif %}
+    </span>
+  </div>
+  <div class="v2-comment-body v2-comment-html">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+</div>
+{%- endmacro -%}
 <div class="v2-comments" id="comments" data-item-id="{{ item.id }}" data-locked="{{ ("1" if item.is_comments_locked else "0") }}" data-me="{{ (session.user if session else "") }}" data-mod="{{ ("1" if is_mod_or_admin else "0") }}" data-can-delete="{{ ("1" if allow_comment_deletion else "0") }}">
   <div class="f0cks-header">
     <span>comments <span id="comment-count"></span>{% if item.is_comments_locked %} &#128274; locked{% endif %}</span>
     <span class="js-only v2-comment-sort">sort: <a href="#" data-sort="new" class="active">new</a> / <a href="#" data-sort="old">old</a></span>
   </div>
-  <div id="comment-list" class="v2-comment-list"></div>
+  <div id="comment-list" class="v2-comment-list">
+    {% for c in (static_comments or []) %}
+    {{ one(c, false) }}
+    {% if c.replies %}<div class="v2-comment-replies">{% for r in c.replies %}{{ one(r, true) }}{% endfor %}</div>{% endif %}
+    {% else %}
+    <p class="v2-empty">no comments yet</p>
+    {% endfor %}
+  </div>
   {% if session and not item.is_comments_locked %}
   <form method="post" action="/api/comments" class="v2-comment-form" id="comment-form">
     <input type="hidden" name="item_id" value="{{ item.id }}">
-    <input type="hidden" name="parent_id" value="">
+    <input type="hidden" name="parent_id" value="{{ (reply_to or "") }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <div class="v2-reply-to js-only" hidden>replying to <span></span> <a href="#" class="v2-reply-cancel">&#215;</a></div>
+    <input type="hidden" name="back" value="{{ here_path }}#comments">
+    <div class="v2-reply-to"{% if not reply_to %} hidden{% endif %}>replying to <span>#{{ reply_to }}</span> <a href="{{ here_path }}#comments" class="v2-reply-cancel">&#215;</a></div>
     <textarea name="content" rows="3" placeholder="say something f0cked..." required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
     <button type="submit">post</button>
+    {% if "comment" in (captcha_scopes or []) %}{% include "frontends/f0ckv2/snippets/cap-image.html" %}{% endif %}
   </form>
   {% elif not session %}
   <div class="v2-comment-login"><a href="/?login=1">login</a> to comment</div>

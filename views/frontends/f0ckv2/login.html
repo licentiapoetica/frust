@@ -16,6 +16,7 @@
     {% endif %}
   </head>
   <body type="login">
+    {% include "frontends/f0ckv2/snippets/flash.html" %}
     <form class="login-form" method="post" action="/login">
       <p><a href="/"><img class="v2-login-logo" src="{{ (custom_brand_image if (custom_brand_image and custom_brand_image is string) else "/s/fe/f0ckv2/img/f0ck_small.png") }}" alt="{{ domain }}" /></a></p>
       {% if error is string and error %}<div class="v2-flash-error">{{ error }}</div>{% endif %}
@@ -23,7 +24,8 @@
       <input type="password" name="password" placeholder="password" autocomplete="current-password" required />
       <p><input type="checkbox" id="kmsi" name="kmsi" /> <label for="kmsi">stay signed in</label></p>
       {% if captcha %}
-      <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+      <cap-widget class="cap-dark js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+      {% include "frontends/f0ckv2/snippets/cap-image.html" %}
       {% endif %}
       <button type="submit">Login</button>
       <p class="v2-login-links">

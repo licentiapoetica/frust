@@ -62,6 +62,23 @@
     if(!res.success) cb.checked = !cb.checked;
   }));
 
+  // prefs that only the /settings form saves (notifications): post the form in the background
+  const prefsForm = document.getElementById('v2-prefs-form');
+  prefsForm?.querySelectorAll('input.v2-nojs-pref').forEach(cb => cb.addEventListener('change', async () => {
+    try {
+      const res = await fetch('/settings', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRF-Token': csrf() },
+        body: new URLSearchParams(new FormData(prefsForm))
+      });
+      say(res.ok ? 'saved' : 'error', res.ok);
+    } catch {
+      say('network error', false);
+    }
+  }));
+  prefsForm?.addEventListener('submit', e => e.preventDefault());
+
   // language
   root.querySelectorAll('select[data-select]').forEach(sel => sel.addEventListener('change', async () => {
     const res = await api('PUT', `/api/v2/settings/${sel.dataset.select}`, { [sel.dataset.select]: sel.value });

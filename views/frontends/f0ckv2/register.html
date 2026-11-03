@@ -16,6 +16,7 @@
     {% endif %}
   </head>
   <body type="login">
+    {% include "frontends/f0ckv2/snippets/flash.html" %}
     <form class="login-form" method="post" action="/register">
       <p><a href="/"><img class="v2-login-logo" src="{{ (custom_brand_image if (custom_brand_image and custom_brand_image is string) else "/s/fe/f0ckv2/img/f0ck_small.png") }}" alt="{{ domain }}" /></a></p>
       {% if error is string and error %}<div class="v2-flash-error">{{ error }}</div>{% endif %}
@@ -32,7 +33,8 @@
       <input type="text" name="email_confirm_field" class="register-honeypot" tabindex="-1" autocomplete="off" aria-hidden="true" />
       <p class="v2-tos"><input type="checkbox" id="tos" name="tos" required /> <label for="tos">{% if private_society %}I accept the terms{% else %}I accept the <a href="/terms" target="_blank">terms</a> and <a href="/rules" target="_blank">rules</a> and I am 18+{% endif %}</label></p>
       {% if captcha_enabled %}
-      <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+      <cap-widget class="cap-dark js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+      {% include "frontends/f0ckv2/snippets/cap-image.html" %}
       {% endif %}
       <button type="submit">Register</button>
       {% endif %}

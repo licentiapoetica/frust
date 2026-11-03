@@ -4,6 +4,7 @@
 {% else %}
 {% include "frontends/f0ckv2/snippets/header.html" %}
 {%- set item_ref = (item.slug if (enable_item_slugs and item.slug) else item.id) -%}
+{%- set here = ((url.pathname ~ url.search) if (url and url.pathname) else ("/" ~ item_ref)) -%}
 {%- set uploader = ("anonymous" if is_anonymized else (item.username or user.name or "")) -%}
 <canvas class="hidden-xs" id="bg"></canvas>
 <div class="wrapper">
@@ -22,17 +23,20 @@
             <input type="hidden" name="postid" value="{{ item.id }}">
             <input type="hidden" name="action" value="{{ ("remove" if user_has_favorited else "add") }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ here }}">
             <button type="submit" title="{{ ("unfav" if user_has_favorited else "fav") }}"><svg class="iconset" id="a_favo"><use href="/s/fe/f0ckv2/img/iconset.svg#heart_{{ ("solid" if user_has_favorited else "regular") }}"></use></svg></button>
           </form>
           {% if enable_comments %}
           <form method="post" action="/api/subscribe/{{ item.id }}" class="v2-iconform" id="f_subscribe">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="subscribed" value="{{ ("0" if isSubscribed else "1") }}">
+            <input type="hidden" name="back" value="{{ here }}">
             <button type="submit" class="v2-textbtn{% if isSubscribed %} active{% endif %}" title="{{ ("unsubscribe from comments" if isSubscribed else "subscribe to comments") }}">{{ ("&#128276;"|safe if isSubscribed else "&#128277;"|safe) }}</button>
           </form>
           {% endif %}
           {% endif %}
           <a href="/tfull/" class="v2-iconlink" id="a_tfull" title="fullscreen"><svg class="iconset"><use href="/s/fe/f0ckv2/img/iconset.svg#window-{{ ("minimize" if (session and session.fullscreen == 1) else "maximize") }}"></use></svg></a>
-          {% if is_mod_or_admin %}<svg class="iconset js-only" id="a_delete"><title>delete</title><use href="/s/fe/f0ckv2/img/iconset.svg#cross"></use></svg>{% endif %}
+          {% if is_mod_or_admin %}<svg class="iconset js-only" id="a_delete"><title>delete</title><use href="/s/fe/f0ckv2/img/iconset.svg#cross"></use></svg><a href="#delete" class="v2-iconlink nojs-only" title="delete"><svg class="iconset" id="a_delete_nojs"><use href="/s/fe/f0ckv2/img/iconset.svg#cross"></use></svg></a>{% endif %}
         </div>
       </div>
       <div class="content">
@@ -138,6 +142,7 @@
           {% if session %}
           <form method="post" action="/api/v2/tags/{{ item.id }}" class="v2-addtag nojs-only">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ here }}#tags">
             <input type="text" name="tagname" size="10" placeholder="tag" required maxlength="85"> <button type="submit">add tag</button>
           </form>
           <span class="js-only"><a href="#" id="a_addtag">add tag</a>{% if is_mod_or_admin %}&nbsp;-&nbsp;<a href="#" id="a_toggle">toggle</a>{% endif %}</span>
@@ -158,6 +163,7 @@
           <div class="f0cks-header"><span>report f0ck {{ item.id }}</span><a href="#_">&#215;</a></div>
           <input type="hidden" name="item_id" value="{{ item.id }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="back" value="{{ here }}">
           <div class="v2-report-cats">
             <label><input type="checkbox" name="categories[]" value="wrong_rating"> wrong rating</label>
             <label><input type="checkbox" name="categories[]" value="spam"> spam</label>
@@ -167,10 +173,23 @@
             <label><input type="checkbox" name="categories[]" value="other"> other</label>
           </div>
           <textarea name="reason" class="v2-input" rows="3" maxlength="1000" placeholder="what's wrong?"></textarea>
-          {% if captcha_enabled %}<cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% endif %}
+          {% if captcha_enabled %}<cap-widget class="cap-dark js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% include "frontends/f0ckv2/snippets/cap-image.html" %}{% endif %}
           <div><button type="submit">send report</button> <span class="v2-report-msg" role="status"></span></div>
         </form>
       </div>
+      {% if is_mod_or_admin %}
+      <div id="delete" class="v2-modal">
+        <a href="#_" class="v2-modal-bg" aria-label="close"></a>
+        <form method="post" action="/api/v2/admin/deletepost" class="v2-modal-box v2-form">
+          <div class="f0cks-header"><span>delete f0ck {{ item.id }}</span><a href="#_">&#215;</a></div>
+          <input type="hidden" name="postid" value="{{ item.id }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="back" value="{{ (link.main ~ pagination.next ~ link.suffix) if pagination.next else ((link.main ~ pagination.prev ~ link.suffix) if pagination.prev else "/") }}">
+          <input type="text" name="reason" class="v2-input" maxlength="500" placeholder="reason">
+          <div><button type="submit">delete</button></div>
+        </form>
+      </div>
+      {% endif %}
       {% if enable_comments and (session or not hide_comments_from_public) %}
       {% include "frontends/f0ckv2/snippets/comments.html" %}
       {% endif %}

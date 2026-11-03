@@ -46,19 +46,31 @@
     </tbody>
   </table>
 
-  <h2>Preferences</h2>
-  <table class="table js-only">
+  <h2 id="preferences">Preferences</h2>
+  {% if (url and url.qs and url.qs.saved == "1") %}<p class="v2-dim">saved</p>{% endif %}
+  {#- Without JavaScript this is one form (POST /settings, routes/settings.rs: the hidden "0" plus the
+      checkbox's "1"); with it every control saves itself (settings.js) and Save stays hidden -#}
+  <form method="post" action="/settings" id="v2-prefs-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <table class="table">
     <tbody>
-      <tr><td>show motd</td><td><input type="checkbox" data-pref="motd" data-key="show"{% if session.show_motd != false %} checked{% endif %}></td></tr>
-      <tr><td>disable autoplay</td><td><input type="checkbox" data-pref="autoplay" data-key="disable_autoplay"{% if session.disable_autoplay %} checked{% endif %}></td></tr>
-      <tr><td>private favorites</td><td><input type="checkbox" data-pref="favorites_private" data-key="favorites_private"{% if session.favorites_private %} checked{% endif %}></td></tr>
-      <tr><td>hide my fav badge</td><td><input type="checkbox" data-pref="hide_fav_badge" data-key="hide_fav_badge"{% if session.hide_fav_badge %} checked{% endif %}></td></tr>
-      {% if enable_xd_score %}<tr><td>min xD score</td><td><input type="number" class="v2-input v2-input-small" name="min_xd_score" min="0" max="999" value="{{ (session.min_xd_score or 0) }}"> <button type="button" class="v2-btn" data-save="min_xd_score">save</button></td></tr>{% endif %}
+      <tr><td>show motd</td><td><input type="hidden" name="show_motd" value="0"><input type="checkbox" name="show_motd" value="1" data-pref="motd" data-key="show"{% if session.show_motd != false %} checked{% endif %}></td></tr>
+      <tr><td>disable autoplay</td><td><input type="hidden" name="disable_autoplay" value="0"><input type="checkbox" name="disable_autoplay" value="1" data-pref="autoplay" data-key="disable_autoplay"{% if session.disable_autoplay %} checked{% endif %}></td></tr>
+      <tr><td>private favorites</td><td><input type="hidden" name="favorites_private" value="0"><input type="checkbox" name="favorites_private" value="1" data-pref="favorites_private" data-key="favorites_private"{% if session.favorites_private %} checked{% endif %}></td></tr>
+      <tr><td>hide my fav badge</td><td><input type="hidden" name="hide_fav_badge" value="0"><input type="checkbox" name="hide_fav_badge" value="1" data-pref="hide_fav_badge" data-key="hide_fav_badge"{% if session.hide_fav_badge %} checked{% endif %}></td></tr>
+      <tr><td>notifications</td><td>
+        <label><input type="hidden" name="receive_user_notifications" value="0"><input type="checkbox" name="receive_user_notifications" value="1" class="v2-nojs-pref"{% if session.receive_user_notifications != false %} checked{% endif %}> from users</label>
+        <label><input type="hidden" name="receive_system_notifications" value="0"><input type="checkbox" name="receive_system_notifications" value="1" class="v2-nojs-pref"{% if session.receive_system_notifications != false %} checked{% endif %}> system</label>
+        <label><input type="hidden" name="do_not_disturb" value="0"><input type="checkbox" name="do_not_disturb" value="1" class="v2-nojs-pref"{% if session.do_not_disturb %} checked{% endif %}> do not disturb</label>
+      </td></tr>
+      {% if enable_xd_score %}<tr class="js-only"><td>min xD score</td><td><input type="number" class="v2-input v2-input-small" name="min_xd_score" min="0" max="999" value="{{ (session.min_xd_score or 0) }}" form="v2-none"> <button type="button" class="v2-btn" data-save="min_xd_score">save</button></td></tr>{% endif %}
       {% if allow_language_change %}
       <tr><td>language</td><td><select class="v2-input" name="language" data-select="language">{% for l in ["en", "de", "nl", "zange"] %}<option value="{{ l }}"{% if l == lang %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></td></tr>
       {% endif %}
+      <tr class="nojs-only"><td colspan="2"><button type="submit" class="v2-btn">save</button></td></tr>
     </tbody>
   </table>
+  </form>
   <table class="table">
     <tbody>
       <tr><td>theme</td><td>{% for t in (themes or []) %}{% if t in ["f0ck", "p1nk", "orange", "amoled", "paper", "atmos", "term", "iced", "f0ck95", "f0ck95d"] %}<a href="/theme/{{ t }}" class="v2-chip{% if t == theme %} active{% endif %}">{{ t }}</a> {% endif %}{% endfor %}</td></tr>
@@ -79,6 +91,7 @@
   </table>
   <form method="post" action="/api/v2/settings/excluded_tags" class="v2-form" id="v2-exclude-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="back" value="/settings#v2-excluded">
     <input type="text" class="v2-input" name="tagname" placeholder="tag" required> <button type="submit">exclude</button>
   </form>
 

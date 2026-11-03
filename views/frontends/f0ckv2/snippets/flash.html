@@ -1,0 +1,2 @@
+{#- Message of a form post without JavaScript (server/src/nojs.rs), f0ckv2's toast look -#}
+{% if nojs_flash %}<div id="flash" class="v2-flash {{ ("success" if nojs_flash.kind == "success" else "error") }}" role="alert">{{ nojs_flash.text }}</div>{% endif %}

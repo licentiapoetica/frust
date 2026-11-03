@@ -1,0 +1,10 @@
+{#- Image captcha for visitors without JavaScript (server/src/cap_image.rs), in f0ckv2's look; the
+    Cap widget does the job when JavaScript runs, so this is .nojs-only (and the lazy frame isn't
+    fetched while hidden). Click the picture for new characters. -#}
+{% if nojs_captcha_id %}
+<div class="v2-imgcap nojs-only">
+  <iframe src="/api/cap/image/{{ nojs_captcha_id }}/frame" class="v2-imgcap-frame" title="captcha" loading="lazy"></iframe>
+  <input type="hidden" name="cap-image-id" value="{{ nojs_captcha_id }}" />
+  <input type="text" class="v2-input" name="cap-image-answer" placeholder="characters in the picture" aria-label="characters in the picture" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+</div>
+{% endif %}
