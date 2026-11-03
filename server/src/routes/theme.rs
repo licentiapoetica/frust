@@ -1,6 +1,6 @@
 //! Theme, fullscreen and frontend toggles (port of src/inc/routes/theme.mjs).
 
-use crate::http::{CookieExpiry, Req, Res, Router, cookie_options, raw, redirect};
+use crate::http::{CookieExpiry, Req, Res, Router, cookie_options, raw, redirect_code};
 use crate::state::AppState;
 use axum::http::{HeaderValue, header};
 
@@ -41,20 +41,16 @@ async fn tfull(st: AppState, req: Req) -> Res {
     Ok(redirect_301(req.header("referer").unwrap_or("/"), &cookie))
 }
 
-/// `/frontend/<name>`: remember the visitor's frontend in a cookie (see `tpl::frontend_for`).
-/// The default frontend clears the cookie, so the site's `websrv.frontend` applies again.
+/// `/frontend/<name>`: remember the visitor's frontend in a cookie (see `tpl::frontend_cookie`)
+/// and go back. 303, so browsers don't cache the switch.
 async fn frontend(st: AppState, req: Req) -> Res {
     let cfg = st.cfg();
-    let name = req.param("name").unwrap_or_default().to_string();
-    let back = req.header("referer").unwrap_or("/").to_string();
-    if !crate::tpl::frontend_switch_enabled(&cfg) || !crate::tpl::frontend_names(&st).contains(&name) {
-        return Ok(redirect(&back));
+    let name = req.param("name").unwrap_or_default();
+    let back = req.header("referer").unwrap_or("/");
+    let mut r = redirect_code(back, 303);
+    if let Some(v) = crate::tpl::frontend_cookie(&st, &cfg, name).and_then(|c| HeaderValue::from_str(&c).ok()) {
+        r.headers_mut().insert(header::SET_COOKIE, v);
     }
-    let site_default = crate::tpl::frontend_for(&st, &cfg, None);
-    let cookie = if name == site_default {
-        format!("frontend=; {}", cookie_options(&cfg, CookieExpiry::Expires(crate::http::EXPIRED), false))
-    } else {
-        format!("frontend={name}; {}", cookie_options(&cfg, CookieExpiry::MaxAge(365 * 24 * 3600), false))
-    };
-    Ok(redirect_301(&back, &cookie))
+    r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok(r)
 }

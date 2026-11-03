@@ -29,7 +29,7 @@ How:
 
 ## Alternative frontends
 
-Besides the default f0ckm templates in `views/`, the site can render an old frontend: `views/frontends/<name>/` (templates with the same view names, e.g. `index.html`, `item.html`) and `public/s/fe/<name>/` (their CSS/JS/assets). `websrv.frontend` picks the site default; visitors switch with `/frontend/<name>` (cookie) when `websrv.frontend_switch` is on; `?frontend=<name>` previews one page. A view a frontend has no template for falls back to the default one (see `tpl::frontend_for` / `tpl::render`). Current ones: `w0bm` (w0bm.com layout1), `w0bm2` (w0bm.com layout2, "njum") and `f0ckv2`.
+Besides the default f0ckm templates in `views/`, the site can render an old frontend: `views/frontends/<name>/` (templates with the same view names, e.g. `index.html`, `item.html`) and `public/s/fe/<name>/` (their CSS/JS/assets). `websrv.frontend` picks the site default; visitors switch with `/frontend/<name>` or `?frontend=<name>` on any page (kept in a cookie) when `websrv.frontend_switch` is on. A view a frontend has no template for falls back to the default one (see `tpl::frontend_for` / `tpl::render`). Current ones: `w0bm` (w0bm.com layout1), `w0bm2` (w0bm.com layout2, "njum") and `f0ckv2`.
 
 - These are frontend-only ports: no backend changes for them; they use the same route data and API endpoints as the default frontend.
 - They keep the original look 1:1 (their own CSS, rounded corners allowed there). All other rules above (no inline scripts, CSS in files, no-JS support) apply to them too.

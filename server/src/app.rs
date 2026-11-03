@@ -92,6 +92,9 @@ async fn pipeline(st: &AppState, mut req: Req) -> Res {
     if let Some(r) = csrf_middleware(st, &mut req).await? {
         return Ok(r);
     }
+    if req.method == axum::http::Method::GET {
+        crate::tpl::remember_frontend_query(st, &req);
+    }
     dispatch(st, req).await
 }
 

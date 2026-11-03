@@ -434,8 +434,34 @@ pub fn frontend_switch_enabled(cfg: &Config) -> bool {
     !cfg.is_false("websrv.frontend_switch")
 }
 
-/// The frontend of this request: `?frontend=<name>` (a one-page preview) or the visitor's
-/// `frontend` cookie when switching is allowed, else `websrv.frontend`, else the default one.
+/// The `Set-Cookie` value that makes `name` the visitor's frontend, or None when `name` isn't a
+/// frontend or switching is off. The site's own default clears the cookie, so a later change of
+/// `websrv.frontend` applies again.
+pub fn frontend_cookie(st: &AppState, cfg: &Config, name: &str) -> Option<String> {
+    use crate::http::{CookieExpiry, EXPIRED, cookie_options};
+    if !frontend_switch_enabled(cfg) || !frontend_names(st).iter().any(|n| n == name) {
+        return None;
+    }
+    Some(if name == frontend_for(st, cfg, None) {
+        format!("frontend=; {}", cookie_options(cfg, CookieExpiry::Expires(EXPIRED), false))
+    } else {
+        format!("frontend={name}; {}", cookie_options(cfg, CookieExpiry::MaxAge(365 * 24 * 3600), false))
+    })
+}
+
+/// `?frontend=<name>` on a page: remember it like `/frontend/<name>` does.
+pub fn remember_frontend_query(st: &AppState, req: &Req) {
+    let Some(name) = req.query("frontend") else { return };
+    if req.cookie("frontend") == Some(name) {
+        return;
+    }
+    if let Some(c) = frontend_cookie(st, &st.cfg(), name) {
+        req.set_cookie(c);
+    }
+}
+
+/// The frontend of this request: `?frontend=<name>` or the visitor's `frontend` cookie when
+/// switching is allowed, else `websrv.frontend`, else the default one.
 pub fn frontend_for(st: &AppState, cfg: &Config, req: Option<&Req>) -> String {
     let names = frontend_names(st);
     let valid = |n: &str| names.iter().any(|x| x == n);
