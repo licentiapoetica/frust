@@ -1,0 +1,8 @@
+{#- tag list for /tags and /user/x/tags. Expects toptags. -#}
+<div class="w2-tagcloud">
+    {% for tt in toptags %}
+    <a class="badge badge-secondary" href="/tag/{{ tt.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}">{{ tt.tag }} <small>{{ tt.total_items }}</small></a>
+    {% else %}
+    <span>No tags yet ...</span>
+    {% endfor %}
+</div>

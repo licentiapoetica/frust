@@ -1,0 +1,24 @@
+{#- index.blade.php / profile.blade.php table. Expects w2_items and w2_link. -#}
+            <table class="table table-hover table-condensed w2-table">
+                <thead>
+                <tr>
+		    <th>ID</th>
+		    <th>Title</th>
+                    <th class="hidden-xs">Type</th>
+                    <th>Rating</th>
+                    <th>Added</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for it in w2_items %}
+                {%- set it_key = (it.slug if (enable_item_slugs and it.slug) else it.id) -%}
+                    <tr>
+			<td><div class="relativebla"><span class="vinfo vid"><a href="{{ w2_link.main }}{{ it_key }}">{{ it.id }}</a></span><a href="{{ w2_link.main }}{{ it_key }}"><img id="indexthumb" class="w2-thumb" src="{{ (it.thumb or ("/t/" ~ it.id ~ ".webp")) }}" alt="" loading="lazy"></a></div></td>
+			<td>{{ (it.title or "") }}</td>
+                        <td class="hidden-xs">{{ (it.mime.split("/")[1] if "/" in it.mime else it.mime)|replace("x-shockwave-flash", "flash")|replace("youtube", "yt") }}</td>
+                        <td>{% if it.tag_id %}<a href="/tag/{{ (it.rating_class or it.tag)|lower }}">{{ it.rating_label or it.tag }}</a>{% endif %}</td>
+                        <td>{% if it.stamp %}<time class="timeago" datetime="{{ (it.stamp * 1000)|iso_date }}">{{ (it.stamp * 1000)|time_ago }}</time>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>

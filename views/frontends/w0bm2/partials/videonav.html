@@ -1,0 +1,28 @@
+{#- video-partials/legacy-videonav.blade.php: first / prev | context | next / last -#}
+{%- set w2_lm = (link.main if (link is defined and link and link.main) else "/") -%}
+{%- set w2_ls = (link.suffix if (link is defined and link and link.suffix) else "") -%}
+<div class="row videonavigation">
+{% if (pagination is defined and pagination and pagination.prev) %}
+						<div class="col- first-video"><a class="first" href="{{ w2_lm }}{{ pagination.start }}{{ w2_ls }}"><i class="fa  fa-arrow-left"></i> first</a></div>
+						<div class="col video-navigation"><a id="prev" href="{{ w2_lm }}{{ pagination.prev }}{{ w2_ls }}"><i class="fa  fa-arrow-left"></i> prev</a> |
+{% else %}
+						<div class="col- first-video"><a class="first w2-hidden-nav" href="#" tabindex="-1" aria-hidden="true"><i class="fa  fa-arrow-left"></i> first</a></div>
+						<div class="col video-navigation"><a id="prev" class="w2-hidden-nav" href="#" tabindex="-1" aria-hidden="true"><i class="fa  fa-arrow-left"></i> prev</a> |
+{% endif %}
+{% if (tmp and tmp.tag) %}
+					<a id="w2-context" href="/tag/{{ tmp.tag|encode_uri_component }}">#{{ tmp.tag }}</a>
+{% elif (tmp and tmp.user) %}
+					<a id="w2-context" href="{{ w2_lm }}">{{ tmp.user }}</a>
+{% elif (tmp and tmp.hall) %}
+					<a id="w2-context" href="{{ w2_lm }}">{{ tmp.hall.name if tmp.hall.name is defined else tmp.hall }}</a>
+{% else %}
+					<a id="w2-context" href="/random">random</a>
+{% endif %}
+{% if (pagination is defined and pagination and pagination.next) %}
+						| <a id="next" href="{{ w2_lm }}{{ pagination.next }}{{ w2_ls }}">next <i class="fa  fa-arrow-right"></i></a></div>
+						<div class="col- latest-video"><a class="last" href="{{ w2_lm }}{{ pagination.end }}{{ w2_ls }}">last <i class="fa  fa-arrow-right"></i></a></div>
+{% else %}
+						| <a id="next" class="w2-hidden-nav" href="#" tabindex="-1" aria-hidden="true">next <i class="fa  fa-arrow-right"></i></a></div>
+						<div class="col- latest-video"><a class="last w2-hidden-nav" href="#" tabindex="-1" aria-hidden="true">last <i class="fa  fa-arrow-right"></i></a></div>
+{% endif %}
+</div>

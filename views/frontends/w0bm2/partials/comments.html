@@ -1,0 +1,62 @@
+{#- partials/comments.blade.php + commentform.blade.php. The list is loaded by JS from
+    /api/comments/<id> (this branch renders no comments on the server). -#}
+{% if (enable_comments and (session or not hide_comments_from_public)) %}
+<div class="w2-comments-section w2-js-only">
+<input type="checkbox" id="w2-comments-toggle" class="w2-toggle w2-collapse-toggle" aria-hidden="true" tabindex="-1">
+<div class="commentOpener">
+    <label for="w2-comments-toggle" class="commentOpenButton" role="button" tabindex="0" aria-controls="collapseComments">
+    See <span id="w2-comment-count">all</span> comments
+  </label>
+</div>
+<div class="collapse" id="collapseComments">
+  <div class=" commentwrapper comments" id="w2-comments" data-item-id="{{ item.id }}" data-mod="{{ "1" if is_mod_or_admin else "0" }}" data-user="{{ (session.user if session else "") }}">
+        <div class="panel panel-default nocomments">
+                <div class="panel-body">
+                    No comments yet! Be the first one to comment!<br />
+                </div>
+            </div>
+  </div>
+  {% if (item.is_comments_locked and not is_mod_or_admin) %}
+  <div class="panel panel-default nocomments"><div class="panel-body">🔒 This thread is closed.</div></div>
+  {% elif not session %}
+  <div class="panel panel-default nocomments"><div class="panel-body"><a href="#loginmodal">Log in</a> to comment.</div></div>
+  {% elif (session.is_anon and not anon_permissions.comment) %}
+  <div class="panel panel-default nocomments"><div class="panel-body">🔒 Anonymous comments are disabled.</div></div>
+  {% else %}
+<div id="sticky">
+    <div id="commentForm">
+        <form action="/api/comments" method="post">
+            <input type="hidden" name="item_id" value="{{ item.id }}">
+            <input type="hidden" name="csrf_token" value="{{ (csrf_token or session.csrf_token or "") }}">
+                <div class="comment-panel panel-default">
+                    <div class="comment-panel panel-body">
+                        <textarea name="content" placeholder="Write something..." id="cinput" class="form-control text-light comment-entry-textarea" required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+                    </div>
+
+                    <div class="commentButton">
+                        <div id="comment_tools" class="commentform-panel-footer">
+                            <div class="commentToolsWrapper">
+                                <button type="submit" class="btn btn-dark btn-sm">Post</button>
+                                <label for="w2-emoji-toggle" class="emojiCollapser btn btn-dark btn-sm" role="button" aria-controls="collapseEmojis">🦦 Emoji Picker</label>
+                                <div class="textModifiers btn btn-dark btn-sm">
+                                    <a class="spoiler" href="#" data-format="spoiler">[spoiler]</a>
+                                </div>
+                                <a href="#w2-bottom" class="btn btn-dark btn-sm w2-bottom-arrow" title="To the bottom"><i class="fa fa-arrow-down" aria-hidden="true"></i></a>
+                                <a href="#" class="scrollToTop btn btn-dark btn-sm" title="To the top"><i class="fa fa-arrow-up" aria-hidden="true"></i></a>
+                            </div>
+                            <input type="checkbox" id="w2-emoji-toggle" class="w2-toggle w2-collapse-toggle" aria-hidden="true" tabindex="-1">
+                            <div class="collapse" id="collapseEmojis">
+                                <div class="emojiWrapper emojis" id="w2-emojis">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </form>
+    </div>
+</div>
+  {% endif %}
+</div>
+</div>
+{% endif %}
+<span id="w2-bottom"></span>

@@ -1,0 +1,76 @@
+{#- video.blade.php (section floatvid) + partials/comments inside layout.blade.php -#}
+{%- set w2_layout = "video" -%}
+{%- extends "frontends/w0bm2/base.html" -%}
+{%- set w2_key = (item.slug if (enable_item_slugs and item.slug) else item.id) -%}
+{%- set w2_name = ("anonymous" if is_anonymized else ((item.author_display_name or item.username) or "unknown")) -%}
+{%- set w2_kind = ("youtube" if item.mime == "video/youtube" else ("video" if item.mime.startswith("video") else ("audio" if item.mime.startswith("audio") else ("image" if item.mime.startswith("image") else ("flash" if (is_flash_item and enable_swf) else ("pdf" if (item.mime == "application/pdf" and enable_pdf) else ("archive" if is_archive_item else "other"))))))) -%}
+{%- set w2_album = (item.is_album and item.album and (item.album|length > 1)) -%}
+{%- set w2_rating = ("nsfl" if item.is_nsfl else ("nsfw" if item.is_nsfw else ("sfw" if item.is_sfw else "untagged"))) -%}
+{% block title %}{{ w2_key }} - {{ domain }}{% endblock %}
+{% block head %}
+    <link rel="canonical" href="https://{{ domain }}/{{ w2_key }}">
+    <meta property="og:site_name" content="{{ domain }}">
+    <meta property="og:title" content="{{ (item.title or w2_key) }}">
+    <meta property="og:url" content="https://{{ domain }}/{{ w2_key }}">
+    <meta property="og:image" content="https://{{ domain }}{{ item.og_thumbnail }}">
+    <meta property="og:description" content="{{ (item.og_description or site_description) }}">
+    {% if w2_kind == "flash" %}<script src="/s/js/flash-embed.js?v={{ mtime("/public/s/js/flash-embed.js") }}"></script>{% endif %}
+{% endblock %}
+
+{% block modals %}
+{% include "frontends/w0bm2/partials/report.html" %}
+{% if session %}{% include "frontends/w0bm2/partials/frontendedit.html" %}{% endif %}
+{% endblock %}
+
+{% block page %}
+<div id="w2-item" data-item-id="{{ item.id }}" data-item-key="{{ w2_key }}" data-kind="{{ w2_kind }}" data-uploader="{{ w2_name }}" data-show-bg="{{ "0" if (session and session.show_background == false) else "1" }}">
+		<div class="video-titlebar">
+		{% if item.title %}
+		<b>{{ item.title }}</b>
+			{% else %} <b><u>No Title</u></b>
+		{% endif %}
+		uploaded by <small>{% if is_anonymized %}anonymous{% else %}<a href="/user/{{ item_username_lower }}" class="w2-uploader{% if item.author_color %} w2-colored{% endif %}"{% if item.author_color %} style="--user-color: {{ item.author_color }}"{% endif %}>{{ w2_name }}</a>{% endif %}</small>
+		</div>
+        <div class="video-wrap embed-responsive embed-responsive-16by9 w2-kind-{{ w2_kind }}" id="sticky-container">
+            {% if w2_album %}
+            <div class="w2-album" id="w2-album">
+                <a href="{{ item.dest }}" target="_blank" rel="noopener" class="w2-album-stage" id="w2-album-stage"><img class="video scrollable w2-image" id="w2-image" src="{{ item.dest }}" alt="{{ w2_key }}"></a>
+                <div class="w2-album-strip">
+                    {% for img in item.album %}
+                    <a class="w2-album-thumb{% if img.is_first %} active{% endif %}" href="{{ img.src }}" target="_blank" rel="noopener" data-src="{{ img.src }}" data-mime="{{ img.mime }}" title="{{ img.display_index }}/{{ item.album|length }}"><img src="{{ (img.thumb or img.src) }}" loading="lazy" alt=""></a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% elif w2_kind == "youtube" %}
+            <iframe class="w2-yt" src="https://www.youtube.com/embed/{{ item.dest.replace("yt:", "", 1) }}" title="YouTube" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            {% elif w2_kind == "video" %}
+            <video class="video scrollable" loop id="video" controls playsinline preload="auto" src="{{ item.dest }}"{% if (not session or session.disable_autoplay != true) %} autoplay{% endif %}></video>
+            {% elif w2_kind == "audio" %}
+            <div class="w2-audio{% if item.coverart %} has-cover{% endif %}"{% if item.coverart %} style="--cover: url('{{ item.coverart }}')"{% endif %}>
+                <i class="fa fa-music w2-audio-icon" aria-hidden="true"></i>
+                <audio class="scrollable" loop id="video" controls preload="auto" src="{{ item.dest }}"{% if (not session or session.disable_autoplay != true) %} autoplay{% endif %}></audio>
+            </div>
+            {% elif w2_kind == "image" %}
+            <a href="{{ item.dest }}" target="_blank" rel="noopener" class="w2-image-link"><img class="video scrollable w2-image" id="w2-image" src="{{ item.dest }}" alt="{{ w2_key }}"></a>
+            {% elif w2_kind == "flash" %}
+            <div class="video scrollable w2-flash" id="w2-flash-stage" data-swf="{{ item.dest }}">
+                <a class="w2-flash-start" href="{{ item.dest }}" download><i class="fa fa-download"></i> {{ (item.original_filename or "movie.swf") }} ({{ item.size }})</a>
+            </div>
+            {% elif w2_kind == "pdf" %}
+            <iframe class="w2-pdf" src="{{ item.dest }}#toolbar=0" sandbox="allow-scripts allow-same-origin" title="PDF"></iframe>
+            {% elif w2_kind == "archive" %}
+            <div class="w2-archive">
+                <i class="fa fa-file-archive-o" aria-hidden="true"></i>
+                <div>{{ (item.original_filename or w2_key) }}</div>
+                <div>{{ item.size }}</div>
+                <a class="btn btn-dark" href="{{ item.dest }}" download><i class="fa fa-download"></i> Download</a>
+            </div>
+            {% else %}
+            <div class="w2-archive"><b>404 - not found</b></div>
+            {% endif %}
+        </div>
+        {% include "frontends/w0bm2/partials/videonav.html" %}
+        {% include "frontends/w0bm2/partials/metadata.html" %}
+</div>
+{% include "frontends/w0bm2/partials/comments.html" %}
+{% endblock %}

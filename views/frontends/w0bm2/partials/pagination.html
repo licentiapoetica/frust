@@ -1,0 +1,20 @@
+{#- Laravel's paginator ($videos->render()) markup. Expects w2_pag and w2_link. -#}
+{% if (w2_pag and w2_link and (w2_pag.prev or w2_pag.next)) %}
+{%- set pl = w2_link.main ~ (w2_link.path or "") -%}
+{%- set ps = (w2_link.suffix or "") -%}
+<ul class="pagination">
+    {% if w2_pag.prev %}<li><a href="{{ pl }}{{ w2_pag.prev }}{{ ps }}" rel="prev">&laquo;</a></li>{% else %}<li class="disabled"><span>&laquo;</span></li>{% endif %}
+    {% if (w2_pag.cheat and w2_pag.start and w2_pag.start not in w2_pag.cheat) %}
+    <li><a href="{{ pl }}{{ w2_pag.start }}{{ ps }}">{{ w2_pag.start }}</a></li>
+    <li class="disabled"><span>...</span></li>
+    {% endif %}
+    {% for i in (w2_pag.cheat or []) %}
+    {% if i == w2_pag.page %}<li class="active"><span>{{ i }}</span></li>{% else %}<li><a href="{{ pl }}{{ i }}{{ ps }}">{{ i }}</a></li>{% endif %}
+    {% endfor %}
+    {% if (w2_pag.cheat and w2_pag.end and w2_pag.end not in w2_pag.cheat) %}
+    <li class="disabled"><span>...</span></li>
+    <li><a href="{{ pl }}{{ w2_pag.end }}{{ ps }}">{{ w2_pag.end }}</a></li>
+    {% endif %}
+    {% if w2_pag.next %}<li><a href="{{ pl }}{{ w2_pag.next }}{{ ps }}" rel="next">&raquo;</a></li>{% else %}<li class="disabled"><span>&raquo;</span></li>{% endif %}
+</ul>
+{% endif %}

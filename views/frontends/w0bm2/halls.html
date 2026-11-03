@@ -1,0 +1,25 @@
+{#- categories.blade.php: f0ckm halls -#}
+{%- extends "frontends/w0bm2/base.html" -%}
+{% block title %}Categories - {{ domain }}{% endblock %}
+{% block page %}
+    <div class="page-header p-2">
+        <h3>Categories</h3>
+    </div>
+    <div class="dark-bg">
+    <div class="p-2" id="categories">
+        {% for hall in (hallsList or []) %}
+            <div id="category_box_{{ hall.slug }}" class="category-box">
+                <div class="thumbnail">
+                   	<a href="/h/{{ hall.slug }}"><img src="/hall_image/{{ hall.slug }}?m={{ (session.mode if session else 0) }}" alt="{{ hall.name }}" loading="lazy"></a>
+                    <div class="caption">
+                        <h5>{{ hall.name }} <small><b>{{ hall.total_items }}</b></small>{% if hall.rating in ["nsfw", "nsfl"] %} <span class="badge badge-danger">{{ hall.rating|upper }}</span>{% endif %}</h5>
+                        {% if hall.description %}<span class="cat-desc"><i>{{ hall.description }}</i></span>{% endif %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+        <p>No categories yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

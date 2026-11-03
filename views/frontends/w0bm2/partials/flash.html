@@ -1,0 +1,14 @@
+{#- partials/flash.blade.php. JS appends its messages to .flash-inner. -#}
+<div class="flashcontainer">
+    <div class="flash-inner" id="w2-flash" aria-live="polite">
+        {% if (error is defined and error and error is string and not w2_noflash) %}
+        <div class="alert alert-danger alert-dismissable" role="alert">{{ error }}</div>
+        {% endif %}
+        {% if (success is defined and success and success is string and not w2_noflash) %}
+        <div class="alert alert-success alert-dismissable" role="alert">{{ success }}</div>
+        {% endif %}
+        {% if (url and url.qs and url.qs.already_logged_in) %}
+        <div class="alert alert-info alert-dismissable" role="alert">You are already logged in.</div>
+        {% endif %}
+    </div>
+</div>

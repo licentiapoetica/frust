@@ -1,0 +1,23 @@
+{#- messages.blade.php look for f0ckm notifications -#}
+{%- extends "frontends/w0bm2/base.html" -%}
+{% block title %}Notifications - {{ domain }}{% endblock %}
+{% block page %}
+<div class="page-header p-2 panel-heading-messages">
+    <h3>Notifications</h3>
+    <form method="post" action="/api/notifications/read" id="w2-readall" class="readall">
+        <input type="hidden" name="csrf_token" value="{{ (csrf_token or (session and session.csrf_token) or "") }}">
+        <button type="submit" class="btn btn-dark btn-sm">Mark all as read</button>
+    </form>
+</div>
+<ul class="nav nav-tabs w2-notif-tabs">
+    {% if enable_comments %}
+    <li class="nav-item"><a class="nav-link{% if activeTab == "user" %} active{% endif %}" href="/notifications?tab=user">Users</a></li>
+    {% endif %}
+    <li class="nav-item"><a class="nav-link{% if activeTab == "system" %} active{% endif %}" href="/notifications?tab=system">System</a></li>
+    {% if (session and session.admin) %}<li class="nav-item"><a class="nav-link{% if activeTab == "admin" %} active{% endif %}" href="/notifications?tab=admin">Admin</a></li>{% endif %}
+</ul>
+<div class="dark-bg w2-notifs">
+    {% include "snippets/notifications-list.html" %}
+    {% if not notifications %}<h4 class="p-3 text-center">No notifications</h4>{% endif %}
+</div>
+{% endblock %}

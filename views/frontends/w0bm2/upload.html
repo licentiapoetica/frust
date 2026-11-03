@@ -1,0 +1,75 @@
+{#- upload.blade.php -> POST /api/v2/upload -#}
+{%- extends "frontends/w0bm2/base.html" -%}
+{%- set up_vis = (session.default_upload_visibility if (session and session.default_upload_visibility != none) else default_upload_visibility) -%}
+{% block title %}Upload - {{ domain }}{% endblock %}
+{% block page %}
+<div class="page-header p-2">
+    <h3>Upload</h3>
+</div>
+
+<div class="container p-2 dark-bg">
+    {% if session %}
+    <form id="w2-upload-form" method="post" enctype="multipart/form-data" action="/api/v2/upload?csrf_token={{ (csrf_token or session.csrf_token or "")|urlencode }}" data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ (min_tags or 0) }}">
+        <ul class="list-group">
+            <li class="list-group-item">
+                <div id="dragndrop" class="form-group col-md-3">
+                    <input type="file" name="file" id="w2-upload-file" accept="{{ allowed_mimes }}" required aria-label="File">
+                        <span id="dragndrop-text-inner">
+                            <span id="dragndrop-text">
+                                <i class="fa fa-cloud-upload"></i>
+                                    Drop or select a file!
+                            </span>
+                        </span>
+                </div>
+            </li>
+
+            {% if enable_item_title %}<li class="list-group-item"><input type="text" name="title" id="videotitle" class="form-control" placeholder="Video Title" maxlength="500" autocomplete="off"></li>{% endif %}
+            <li class="list-group-item w2-upload-rating">
+                <input type="radio" name="rating" value="sfw" id="w2-rate-sfw" class="w2-radio" required> <label for="w2-rate-sfw" class="badge badge-success">SFW</label>
+                <input type="radio" name="rating" value="nsfw" id="w2-rate-nsfw" class="w2-radio"> <label for="w2-rate-nsfw" class="badge badge-danger">NSFW</label>
+                {% if enable_nsfl %}<input type="radio" name="rating" value="nsfl" id="w2-rate-nsfl" class="w2-radio"> <label for="w2-rate-nsfl" class="badge badge-dark">NSFL</label>{% endif %}
+                <input type="text" name="tags" id="tags_upload" class="row" placeholder="Input tags..." data-role="tagsinput" autocomplete="off">
+                {% if min_tags %}<small class="w2-sub">At least {{ min_tags }} tags.</small>{% endif %}
+            </li>
+            {% if (enable_private_uploads != false and allow_user_upload_visibility != false) %}
+            <li class="list-group-item">
+                <select name="visibility" class="form-control" aria-label="Visibility">
+                    <option value="0"{% if up_vis == 0 %} selected{% endif %}>Public</option>
+                    <option value="1"{% if up_vis == 1 %} selected{% endif %}>Unlisted (only with the link)</option>
+                    <option value="2"{% if up_vis == 2 %} selected{% endif %}>Private (only you)</option>
+                </select>
+            </li>
+            {% endif %}
+            {% if enable_expiring_uploads != false %}
+            <li class="list-group-item">
+                <select name="expiry" class="form-control" aria-label="Expiration">
+                    <option value="permanent" selected>Permanent (never expires)</option>
+                    <option value="30minutes">Self-destruct after 30 minutes</option>
+                    <option value="1hour">Self-destruct after 1 hour</option>
+                    <option value="24hours">Self-destruct after 24 hours</option>
+                    <option value="1week">Self-destruct after 1 week</option>
+                    <option value="1month">Self-destruct after 1 month</option>
+                </select>
+            </li>
+            {% endif %}
+            <li class="list-group-item">
+                <textarea name="comment" class="form-control" placeholder="First comment (optional)" rows="2"></textarea>
+            </li>
+            <li class="list-group-item">
+                <div class="uploadButton">
+                    <button id="btn-upload" type="submit" class="btn btn-dark btn-sm"><span class="laz0r">Fire the laz0r</span>
+                        <span class="" id="laz0r-fire"></span>
+                        <span class="hidden-xs" id="shoop-laz0r"></span>
+                    </button>
+                    <p>Before you fire the laz0r make sure you have read the <a href="/rules">Rules</a>! <br><i>With great power comes great responsibility</i></p>
+		            <p>{% if uploads_remaining == none %}<b>Unlimited</b> uploads{% else %}<b>{{ uploads_remaining }}</b> of <b>{{ upload_limit }}</b> uploads left{% endif %} – Maximum filesize: <b>{{ max_file_size }}</b> – Videos, images, audio{% if enable_swf %}, Flash{% endif %}{% if enable_archive %}, archives{% endif %}.</p>
+                </div>
+            </li>
+        </ul>
+    </form>
+    {% else %}
+    <div class="w2-empty"><a href="#loginmodal">Log in</a> to upload.</div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="/s/fe/w0bm2/js/upload.js?v={{ mtime("/public/s/fe/w0bm2/js/upload.js") }}" defer></script>{% endblock %}
