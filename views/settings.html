@@ -70,6 +70,18 @@
             </div>
           </div>
 
+          {% if frontend_switch and frontends|length > 1 %}
+          <div class="setting-item settings-row-spaced">
+            <span class="settings-field-label">{{ t("settings.frontend") }}</span>
+            <div class="settings-frontend-list">
+              {% for fe in frontends %}
+              <a href="/frontend/{{ fe }}" class="settings-frontend-link{% if fe == frontend %} active{% endif %}">{{ fe }}</a>
+              {% endfor %}
+            </div>
+            <p class="settings-muted">{{ t("settings.frontend_hint") }}</p>
+          </div>
+          {% endif %}
+
           {% if not guest %}
           <div class="setting-item settings-row-spaced">
             <label for="website_font_select" class="settings-field-label">{{ t("settings.website_font") }}</label>

@@ -120,6 +120,11 @@ websrv:
   themes:
     - amoled
   theme: amoled
+  # Site frontend: f0ckm (default), or an alternative one from views/frontends/ (w0bm, w0bm2, f0ckv2).
+  # Pages a frontend has no template for use the f0ckm one.
+  frontend: f0ckm
+  # Let visitors pick their own frontend with /frontend/<name> (kept in a cookie)
+  frontend_switch: true
   default_font: Manrope-Regular.woff2   # font file (built-in: public/s/fonts-builtin; add your own to the fonts dir)
   default_layout: legacy
   custom_favicon: /s/img/favicon.gif

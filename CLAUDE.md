@@ -13,7 +13,7 @@ How:
 
 ## Design rules (non-negotiable)
 
-- **Never use rounded borders.** No `border-radius` anywhere: not in CSS files, not in JS, not in templates. Corners stay square.
+- **Never use rounded borders.** No `border-radius` anywhere: not in CSS files, not in JS, not in templates. Corners stay square. (Exception: the ported old frontends below keep their original CSS 1:1, rounded corners included.)
 - **Never use inline CSS.** No `style="..."` attributes in templates or generated HTML, no `<style>` blocks in views, and no setting styles from JS (`el.style.x = ...`, `cssText`). To change looks from JS, toggle a class.
 - **Always put CSS in the CSS files** in [public/s/css/](public/s/css/): `f0ckm.css` / `v0ck.css` for site-wide styles, or the page's own file (`upload.css`, `dm.css`, `meme-creator.css`). Use the theme variables in `:root` where they fit. Pages that don't load the site CSS have their own file: `gate.css` (private-society gate pages), `scroller.css` (standalone scroller), `flash-frame.css` (Flash iframe), `cap-gate.css` (captcha popup, used on both kinds of page).
 - **Only allowed inline styles:** (1) a value that comes from the database/config at render time (user colour, banner URL), kept to that one value, ideally a custom property (`style="--user-color: {{ … }}"`) used by a class; (2) the dynamic `<style>` in `snippets/header.html` (fonts/config variables + the anti-flash `html` background); (3) the initial `display:none` on modals in navbar/footer/page-modal that also render on pages with no site CSS (private-society gate), where JS reads or resets the inline value. Everything else goes in a CSS file.
@@ -26,3 +26,10 @@ How:
   - Don't rely on `<noscript>` wrappers (script blockers rewrite them); use plain elements hidden by the CSS above.
   - Check new UI in a browser with JavaScript off.
 - **Never edit `bundle.css` by hand.** It is built from `f0ckm.css` + `v0ck.css` by `f0ckm build-css` (also at server start). Edit the source files instead.
+
+## Alternative frontends
+
+Besides the default f0ckm templates in `views/`, the site can render an old frontend: `views/frontends/<name>/` (templates with the same view names, e.g. `index.html`, `item.html`) and `public/s/fe/<name>/` (their CSS/JS/assets). `websrv.frontend` picks the site default; visitors switch with `/frontend/<name>` (cookie) when `websrv.frontend_switch` is on; `?frontend=<name>` previews one page. A view a frontend has no template for falls back to the default one (see `tpl::frontend_for` / `tpl::render`). Current ones: `w0bm` (w0bm.com layout1), `w0bm2` (w0bm.com layout2, "njum") and `f0ckv2`.
+
+- These are frontend-only ports: no backend changes for them; they use the same route data and API endpoints as the default frontend.
+- They keep the original look 1:1 (their own CSS, rounded corners allowed there). All other rules above (no inline scripts, CSS in files, no-JS support) apply to them too.

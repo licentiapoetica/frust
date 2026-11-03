@@ -35799,6 +35799,26 @@ html[theme] #settings-quicknav a.active {
   gap: 10px;
 }
 
+/* Frontend switch (links to /frontend/<name>) */
+.settings .settings-frontend-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings .settings-frontend-link {
+  padding: 4px 12px;
+  border: 1px solid var(--accent);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.settings .settings-frontend-link:hover,
+.settings .settings-frontend-link.active {
+  background: var(--accent);
+  color: #000;
+}
+
 .settings .settings-select {
   max-width: 300px;
 }

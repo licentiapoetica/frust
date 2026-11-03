@@ -222,6 +222,8 @@
     "website_font": "Website-Schrift",
     "font_default": "Standard",
     "theme": "Thema",
+    "frontend": "Frontend",
+    "frontend_hint": "Das Layout der ganzen Seite. w0bm, w0bm2 und f0ckv2 sind die alten Layouts.",
     "flash_section": "Flash",
     "flash_bg": "Flash im Hintergrund abspielen",
     "flash_bg_hint": "Verhindert, dass Ruffle pausiert, wenn der Tab verlassen wird",

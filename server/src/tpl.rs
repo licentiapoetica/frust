@@ -26,6 +26,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 pub struct Templates {
     env: RwLock<Environment<'static>>,
+    views: PathBuf,
     dirty: Arc<AtomicBool>,
     _watcher: Option<notify::RecommendedWatcher>,
 }
@@ -358,7 +359,28 @@ impl Templates {
                 }
             }
         };
-        Templates { env: RwLock::new(build_env(views, i18n)), dirty, _watcher: watcher }
+        Templates { env: RwLock::new(build_env(views.clone(), i18n)), views, dirty, _watcher: watcher }
+    }
+
+    /// Whether `views/<name>.html` exists.
+    pub fn has(&self, name: &str) -> bool {
+        let file = if name.ends_with(".html") { name.to_string() } else { format!("{name}.html") };
+        self.views.join(file).is_file()
+    }
+
+    /// Installed alternative frontends: the directories in `views/frontends/` (sorted).
+    pub fn frontends(&self) -> Vec<String> {
+        let mut v: Vec<String> = std::fs::read_dir(self.views.join(FRONTENDS_DIR))
+            .map(|rd| {
+                rd.filter_map(|e| e.ok())
+                    .filter(|e| e.path().is_dir())
+                    .map(|e| e.file_name().to_string_lossy().into_owned())
+                    .filter(|n| valid_frontend_name(n))
+                    .collect()
+            })
+            .unwrap_or_default();
+        v.sort();
+        v
     }
 
     /// Render `views/<name>.html`. Errors are logged and rendered as a short message.
@@ -383,6 +405,48 @@ impl Templates {
             }
         }
     }
+}
+
+// ── Frontends ───────────────────────────────────────────────────────────────
+//
+// The default frontend is the templates in views/. An alternative frontend is a directory
+// views/frontends/<name>/ with its own templates (same view names: index.html, item.html, …)
+// and its assets in public/s/fe/<name>/. A page the frontend has no template for renders with
+// the default one.
+
+/// Name of the built-in frontend (the templates directly in views/).
+pub const DEFAULT_FRONTEND: &str = "f0ckm";
+const FRONTENDS_DIR: &str = "frontends";
+
+fn valid_frontend_name(n: &str) -> bool {
+    !n.is_empty() && n.len() <= 32 && n.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
+/// Every selectable frontend: the default one first, then the installed ones.
+pub fn frontend_names(st: &AppState) -> Vec<String> {
+    let mut v = vec![DEFAULT_FRONTEND.to_string()];
+    v.extend(st.tpl.frontends().into_iter().filter(|n| n != DEFAULT_FRONTEND));
+    v
+}
+
+/// Whether visitors may pick their own frontend (`websrv.frontend_switch`, default on).
+pub fn frontend_switch_enabled(cfg: &Config) -> bool {
+    !cfg.is_false("websrv.frontend_switch")
+}
+
+/// The frontend of this request: `?frontend=<name>` (a one-page preview) or the visitor's
+/// `frontend` cookie when switching is allowed, else `websrv.frontend`, else the default one.
+pub fn frontend_for(st: &AppState, cfg: &Config, req: Option<&Req>) -> String {
+    let names = frontend_names(st);
+    let valid = |n: &str| names.iter().any(|x| x == n);
+    if frontend_switch_enabled(cfg) {
+        if let Some(r) = req {
+            if let Some(f) = r.query("frontend").or_else(|| r.cookie("frontend")).filter(|f| valid(f)) {
+                return f.to_string();
+            }
+        }
+    }
+    cfg.str("websrv.frontend").filter(|f| valid(f)).map(str::to_string).unwrap_or_else(|| DEFAULT_FRONTEND.to_string())
 }
 
 /// flummpress: `.replace(/\n\s*\n/g, "\n")`
@@ -800,6 +864,14 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     if !ctx.contains_key("onara_item_html") {
         ctx.insert("onara_item_html".into(), json!(""));
     }
+
+    // Alternative frontend: its own template for this view, if it has one
+    let frontend = frontend_for(st, &cfg, req);
+    let fe_view = format!("{FRONTENDS_DIR}/{frontend}/{}", view.trim_end_matches(".html"));
+    let view = if frontend != DEFAULT_FRONTEND && st.tpl.has(&fe_view) { fe_view.as_str() } else { view };
+    ctx.insert("frontend".into(), json!(frontend));
+    ctx.insert("frontends".into(), json!(frontend_names(st)));
+    ctx.insert("frontend_switch".into(), json!(frontend_switch_enabled(&cfg)));
 
     st.tpl.render(view, &Value::Object(ctx))
 }
