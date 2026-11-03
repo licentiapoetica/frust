@@ -1,0 +1,14 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+<div id="main">
+  <div class="index-container">
+    <h2>halls</h2>
+    <div class="posts v2-cards">
+      {% for h in (hallsList or []) %}
+      <a href="/h/{{ h.slug }}" data-mime="{{ h.name }}{% if h.rating and h.rating != "sfw" %} [{{ h.rating }}]{% endif %}" style="--thumb: url('/hall_image/{{ h.slug }}?m={{ ((session.mode if session else 0) or 0) }}')"><p></p><span class="v2-card-sub">{{ h.total_items }} f0cks{% if h.description %} - {{ h.description }}{% endif %}</span></a>
+      {% else %}
+      <p class="v2-empty">no halls</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

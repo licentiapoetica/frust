@@ -1,0 +1,46 @@
+      {% if nav_themes %}
+      <li class="nav-item dropdown" id="themes">
+        <a class="nav-link ddcontent" href="/theme/{{ nav_themes[0] }}" content="{{ v2_theme }}" data-toggle="dropdown">Themes</a>
+        <ul class="dropdown-menu">
+          {% for t in nav_themes %}
+          <li><a href="/theme/{{ t }}" data-theme="{{ t }}">{{ t }}</a></li>
+          {% endfor %}
+        </ul>
+      </li>
+      {% endif %}
+      <li class="nav-item dropdown">
+        <a class="nav-link{% if tmp and tmp.mime %} ddcontent{% endif %}" href="{{ filter_base }}"{% if tmp and tmp.mime %} content="{{ tmp.mime }}"{% endif %} data-toggle="dropdown">Filter</a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="{{ filter_base }}">All</a></li>
+          <li><a class="dropdown-item" href="{{ filter_base }}audio">Audio</a></li>
+          <li><a class="dropdown-item" href="{{ filter_base }}video">Video</a></li>
+          <li><a class="dropdown-item" href="{{ filter_base }}image">Image</a></li>
+        </ul>
+      </li>
+      {% if session and modes %}
+      <li class="nav-item dropdown">
+        <a class="nav-link ddcontent" href="/mode/{{ (mode or 0) }}" content="{{ (modes[mode] if (mode is number and modes[mode]) else "sfw") }}" data-toggle="dropdown">Mode</a>
+        <ul class="dropdown-menu">
+          {% for m in modes %}
+          {% if m != "nsfl" or enable_nsfl %}
+          <li><a class="dropdown-item" href="/mode/{{ loop.index0 }}">{{ m }}</a></li>
+          {% endif %}
+          {% endfor %}
+        </ul>
+      </li>
+      {% endif %}
+      {% if frontend_switch and frontends and frontends|length > 1 %}
+      <li class="nav-item dropdown" id="frontends">
+        <a class="nav-link ddcontent" href="/frontend/{{ frontend }}" content="{{ frontend }}" data-toggle="dropdown">Frontend</a>
+        <ul class="dropdown-menu">
+          {% for f in frontends %}
+          <li><a class="dropdown-item" href="/frontend/{{ f }}">{{ f }}</a></li>
+          {% endfor %}
+        </ul>
+      </li>
+      {% endif %}
+      <li class="nav-item">
+        <a id="random" class="nav-link" href="/random">
+          <span class="nav-link-identifier">Random</span>
+        </a>
+      </li>

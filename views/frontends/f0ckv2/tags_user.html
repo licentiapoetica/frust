@@ -1,0 +1,23 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+{%- set uname = (user.user or "") -%}
+<div id="main">
+  <div class="profile_head">
+    <div class="profile_head_avatar">
+      <img class="v2-profile-ava" src="{% if user.avatar_file %}/a/{{ user.avatar_file }}{% elif user.avatar %}/t/{{ user.avatar }}.webp{% else %}/s/fe/f0ckv2/img/default.png{% endif %}" alt="" />
+    </div>
+    <div class="layersoffear">
+      <div class="profile_head_username"><span>tags by {{ (user.display_name or uname) }}</span></div>
+      <div class="profile_head_user_stats"><a href="/user/{{ uname|lower|encode_uri_component }}">back to profile</a></div>
+    </div>
+  </div>
+  <div class="index-container">
+    <div class="posts v2-cards">
+      {% for tt in (toptags or []) %}
+      <a href="/tag/{{ tt.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}" data-mime="#{{ tt.tag }}" style="--thumb: url('/tag_image/{{ tt.encoded_tag }}?m={{ ((session.mode if session else 0) or 0) }}')"><p></p><span class="v2-card-sub">{{ tt.total_items }} f0cks</span></a>
+      {% else %}
+      <p class="v2-empty">no tags</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

@@ -1,0 +1,31 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+<div id="main">
+  <div class="container">
+    <div class="_error_wrapper">
+      <div class="err">
+        <div class="_error_topbar">
+          <span>x.x</span>
+        </div>
+        <div class="_error_content">
+          <a href="/random"><img src="/s/fe/f0ckv2/img/favicon.gif" alt="f0ck?!"></a>
+          <div class="_error_message">
+            <span>Error</span>
+            <code>{{ message }}</code>
+            {% if (error_filter_hint is defined and error_filter_hint) %}
+            <span class="v2-error-hint">{{ error_filter_hint|safe }}</span>
+            {% if session %}
+            <span class="v2-error-hint">switch the mode: {% for m in modes %}{% if m != "nsfl" or enable_nsfl %}<a href="/mode/{{ loop.index0 }}">{{ m }}</a> {% endif %}{% endfor %}</span>
+            {% else %}
+            <span class="v2-error-hint"><a href="/?login=1">login</a> to see more</span>
+            {% endif %}
+            {% if (error_see_anyways and (item_id or item_slug)) %}
+            <span class="v2-error-hint"><a href="/{{ (item_slug or item_id) }}?see_anyways=1">{{ error_see_anyways }}</a></span>
+            {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

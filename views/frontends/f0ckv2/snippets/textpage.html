@@ -1,0 +1,10 @@
+{#- Admin-edited Markdown page (about / rules / terms) in f0ckv2's .about box. Without JavaScript the
+    raw text shows as is; /s/js/views/dynamic-page.js renders the Markdown. -#}
+<div id="main">
+  <div class="about v2-textpage">
+    <div class="dynamic-page-content v2-md" id="{{ tp_page }}-dynamic-content">{{ tp_text }}</div>
+    <script id="{{ tp_page }}-raw-data" type="application/json">{{ tp_b64|safe }}</script>
+  </div>
+</div>
+<script src="/s/js/marked.min.js?v={{ mtime("/public/s/js/marked.min.js") }}"></script>
+<script src="/s/js/views/dynamic-page.js?v={{ mtime("/public/s/js/views/dynamic-page.js") }}" data-page="{{ tp_page }}"></script>

@@ -1,0 +1,36 @@
+{#- f0ckv2 login page. Shown on /?login=1 (GET /login redirects there) and when POST /login fails. -#}
+{%- set v2_themes = ["f0ck", "p1nk", "orange", "amoled", "paper", "atmos", "term", "iced", "f0ck95", "f0ck95d"] -%}
+<!doctype html>
+<html lang="{{ (lang or "en") }}" class="no-js" theme="{{ (theme if theme in v2_themes else "f0ck") }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{{ domain }} login</title>
+    <link rel="icon" type="image/gif" href="{{ (custom_favicon or "/s/fe/f0ckv2/img/favicon.gif") }}" />
+    <link href="/s/fe/f0ckv2/css/f0ck.css?v={{ mtime("/public/s/fe/f0ckv2/css/f0ck.css") }}" rel="stylesheet" />
+    <link href="/s/fe/f0ckv2/css/f0ckv2.css?v={{ mtime("/public/s/fe/f0ckv2/css/f0ckv2.css") }}" rel="stylesheet" />
+    <script src="/s/fe/f0ckv2/js/early.js?v={{ mtime("/public/s/fe/f0ckv2/js/early.js") }}"></script>
+    {% if captcha %}
+    <script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
+    <script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
+    {% endif %}
+  </head>
+  <body type="login">
+    <form class="login-form" method="post" action="/login">
+      <p><a href="/"><img class="v2-login-logo" src="{{ (custom_brand_image if (custom_brand_image and custom_brand_image is string) else "/s/fe/f0ckv2/img/f0ck_small.png") }}" alt="{{ domain }}" /></a></p>
+      {% if error is string and error %}<div class="v2-flash-error">{{ error }}</div>{% endif %}
+      <input type="text" name="username" placeholder="username" autocomplete="username" autofocus required />
+      <input type="password" name="password" placeholder="password" autocomplete="current-password" required />
+      <p><input type="checkbox" id="kmsi" name="kmsi" /> <label for="kmsi">stay signed in</label></p>
+      {% if captcha %}
+      <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+      {% endif %}
+      <button type="submit">Login</button>
+      <p class="v2-login-links">
+        <a href="/?register=1">register</a>
+        {% if smtp_enabled %}<a href="/forgot-password">forgot password?</a>{% endif %}
+        <a href="/">back</a>
+      </p>
+    </form>
+  </body>
+</html>

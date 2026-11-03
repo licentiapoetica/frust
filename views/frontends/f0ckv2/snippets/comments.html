@@ -1,0 +1,21 @@
+{#- Comments under an item, in f0ckv2's metadata look. The list is loaded by
+    public/s/fe/f0ckv2/js/comments.js from /api/comments/<id>. -#}
+<div class="v2-comments" id="comments" data-item-id="{{ item.id }}" data-locked="{{ ("1" if item.is_comments_locked else "0") }}" data-me="{{ (session.user if session else "") }}" data-mod="{{ ("1" if is_mod_or_admin else "0") }}" data-can-delete="{{ ("1" if allow_comment_deletion else "0") }}">
+  <div class="f0cks-header">
+    <span>comments <span id="comment-count"></span>{% if item.is_comments_locked %} &#128274; locked{% endif %}</span>
+    <span class="js-only v2-comment-sort">sort: <a href="#" data-sort="new" class="active">new</a> / <a href="#" data-sort="old">old</a></span>
+  </div>
+  <div id="comment-list" class="v2-comment-list"></div>
+  {% if session and not item.is_comments_locked %}
+  <form method="post" action="/api/comments" class="v2-comment-form" id="comment-form">
+    <input type="hidden" name="item_id" value="{{ item.id }}">
+    <input type="hidden" name="parent_id" value="">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="v2-reply-to js-only" hidden>replying to <span></span> <a href="#" class="v2-reply-cancel">&#215;</a></div>
+    <textarea name="content" rows="3" placeholder="say something f0cked..." required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+    <button type="submit">post</button>
+  </form>
+  {% elif not session %}
+  <div class="v2-comment-login"><a href="/?login=1">login</a> to comment</div>
+  {% endif %}
+</div>

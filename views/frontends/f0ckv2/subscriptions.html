@@ -1,0 +1,14 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+<div id="main">
+  <div class="index-container">
+    <h2>subscriptions</h2>
+    <p class="v2-dim">f0cks whose comments you follow</p>
+    <div class="posts">
+      {% for it in (items or []) %}
+      <a href="/{{ (it.slug if (enable_item_slugs and it.slug) else it.id) }}" data-mime="#{{ (it.slug if (enable_item_slugs and it.slug) else it.id) }} by {{ it.user }}" style="--thumb: url('{{ (it.thumb or ("/t/" ~ it.id ~ ".webp")) }}')"><p></p></a>
+      {% endfor %}
+    </div>
+    {% if not items %}<p class="v2-empty">no subscriptions</p>{% endif %}
+  </div>
+</div>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

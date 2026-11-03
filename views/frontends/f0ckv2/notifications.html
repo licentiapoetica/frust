@@ -1,0 +1,46 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+{#- Notification history in f0ckv2's table look (server-rendered; tabs are links). -#}
+<div id="main">
+  <div class="v2-comments v2-comments-page v2-notifs-page">
+    <div class="f0cks-header">
+      <span>notifications</span>
+      <span class="v2-tabs">
+        {% if enable_comments %}<a href="/notifications?tab=user"{% if activeTab == "user" %} class="active"{% endif %}>user</a> / {% endif %}<a href="/notifications?tab=system"{% if activeTab == "system" %} class="active"{% endif %}>system</a>{% if session and session.admin %} / <a href="/notifications?tab=admin"{% if activeTab == "admin" %} class="active"{% endif %}>admin</a>{% endif %}
+        <span class="js-only"> - <a href="#" id="v2-readall">mark all read</a></span>
+      </span>
+    </div>
+    <table class="table v2-notif-table">
+      <tbody>
+      {% for n in (notifications or []) %}
+        {% set ref = (n.item_slug or n.item_id) %}
+        {% set is_comment = n.type in ["comment", "comment_reply", "mention", "subscription", "upload_comment"] %}
+        <tr class="{{ ("" if n.is_read else "v2-unread") }}">
+          <td class="v2-notif-thumb">{% if n.item_id %}<a href="/{{ ref }}{% if is_comment and n.reference_id %}#c{{ n.reference_id }}{% endif %}"><img src="/t/{{ n.item_id }}.webp" alt="" loading="lazy"></a>{% endif %}</td>
+          <td class="v2-notif-text">
+            {% if is_comment %}
+              <a href="/user/{{ (n.from_user or "")|lower|encode_uri_component }}">{{ (n.from_display_name or n.from_user) }}</a>
+              {% if n.type == "comment_reply" %}replied to your comment{% elif n.type == "mention" %}mentioned you{% elif n.type == "upload_comment" %}commented on your upload{% else %}commented{% endif %}
+              {% if n.item_id %}on <a href="/{{ ref }}#c{{ n.reference_id }}">#{{ ref }}</a>{% endif %}
+            {% elif n.type == "approve" %}your upload <a href="/{{ ref }}">#{{ ref }}</a> was approved
+            {% elif n.type == "deny" %}your upload #{{ ref }} was denied: {{ n.reason }}
+            {% elif n.type == "item_deleted" %}your upload #{{ ref }} was deleted: {{ n.reason }}
+            {% elif n.type == "upload_success" %}upload <a href="/{{ ref }}">#{{ ref }}</a> is done
+            {% elif n.type == "upload_error" %}upload failed: {{ n.reason }}
+            {% elif n.type == "admin_pending" %}new upload waiting for <a href="/mod/approve">approval</a>
+            {% elif n.type == "report" %}new <a href="/mod/reports">report</a> #{{ n.reference_id }}
+            {% elif n.type == "warning" %}you got a warning: {{ n.reason }}
+            {% elif n.type == "invite_request" %}new <a href="/admin">invite request</a>
+            {% elif n.type == "invite_approved" %}your invite request was approved
+            {% elif n.type == "invite_denied" %}your invite request was denied
+            {% else %}{{ n.type }}{% endif %}
+          </td>
+          <td class="v2-notif-time"><time tooltip="{{ n.created_at|locale_string }}">{{ n.created_at|time_ago }}</time></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3">nothing here</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

@@ -1,0 +1,15 @@
+{% if (pagination is defined and pagination and link is defined and link and pagination.start) %}
+<nav class="pagination">
+  <a href="{{ link.main }}{{ link.path }}{{ pagination.start }}{{ link.suffix }}" class="page-item-1 btn start{% if not pagination.prev %} disabled{% endif %}">&laquo;</a>
+  <a href="{{ link.main }}{{ link.path }}{{ pagination.prev }}{{ link.suffix }}" class="page-item-2 btn prev{% if not pagination.prev %} disabled{% endif %}">&lsaquo;</a>
+  {% for i in (pagination.cheat or []) %}
+    {% if i == pagination.page or (item is defined and item and i == item.id) %}
+      <span class="btn disabled">{{ i }}</span>
+    {% else %}
+      <a href="{{ link.main }}{{ link.path }}{{ i }}{{ link.suffix }}" class="pagination-int-item btn">{{ i }}</a>
+    {% endif %}
+  {% endfor %}
+  <a href="{{ link.main }}{{ link.path }}{{ pagination.next }}{{ link.suffix }}" class="page-item-3 btn next{% if not pagination.next %} disabled{% endif %}">&rsaquo;</a>
+  <a href="{{ link.main }}{{ link.path }}{{ pagination.end }}{{ link.suffix }}" class="page-item-4 btn start{% if not pagination.next %} disabled{% endif %}">&raquo;</a>
+</nav>
+{% endif %}

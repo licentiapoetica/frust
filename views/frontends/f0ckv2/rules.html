@@ -1,0 +1,17 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+{% if rules_text %}
+{% set tp_page = "rules" %}{% set tp_text = rules_text %}{% set tp_b64 = rules_text_b64 %}
+{% include "frontends/f0ckv2/snippets/textpage.html" %}
+{% else %}
+<div id="main">
+  <div class="about">
+    <h5>{{ domain }} Rules</h5>
+    <ul>
+      <li>You must be 18 years or older to visit or post</li>
+      <li>You shall not post animal cruelty, we like our animals alive and well, living a happy life until they are ready for our Schnitzel!</li>
+      <li>You shall not post under <b>ANY</b> circumstances: Snuff, Beastiality, Rape, Terrorist stuff (Beheadings, First person shootings, warcrimes), Politics, News, Childporn, Childmodeling</li>
+    </ul>
+  </div>
+</div>
+{% endif %}
+{% include "frontends/f0ckv2/snippets/footer.html" %}

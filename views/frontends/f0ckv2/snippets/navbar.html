@@ -1,0 +1,81 @@
+{#- f0ckv2 navbar. Dropdowns open on :hover / :focus-within (no JavaScript needed). -#}
+{%- set v2_themes = ["f0ck", "p1nk", "orange", "amoled", "paper", "atmos", "term", "iced", "f0ck95", "f0ck95d"] -%}
+{%- set nav_themes = (themes or [])|select("in", v2_themes)|list -%}
+{%- if tmp and tmp.user -%}
+  {%- set filter_base = "/user/" ~ (tmp.user|lower|encode_uri_component) ~ "/" ~ (tmp.view_mode or "uploads") ~ "/" -%}
+{%- elif tmp and tmp.tag -%}
+  {%- set filter_base = "/tag/" ~ (tmp.tag|encode_uri_component) ~ "/" -%}
+{%- elif tmp and tmp.hall -%}
+  {%- set filter_base = "/h/" ~ ((tmp.hall.slug if tmp.hall.slug else tmp.hall)|encode_uri_component) ~ "/" -%}
+{%- else -%}
+  {%- set filter_base = "/" -%}
+{%- endif -%}
+{%- set me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
+<nav class="navbar navbar-expand-lg">
+  <a class="navbar-brand" href="/"><span class="f0ck">{{ (custom_navbar_brand_text or "F0CK")|upper }}</span></a>
+  {% if session %}
+  <div class="navigation-links">
+    <ul class="navbar-nav">
+      <li class="nav-item dropdown">
+        <a class="nav-link user" href="/user/{{ me|encode_uri_component }}" data-toggle="dropdown">
+          {% if session.avatar_file %}<img src="/a/{{ session.avatar_file }}" class="avatar" alt="" data-on="error:img-fallback" data-fallback="/s/fe/f0ckv2/img/default.png">{% elif session.avatar %}<img src="/t/{{ session.avatar }}.webp" class="avatar" alt="">{% else %}<img src="/s/fe/f0ckv2/img/default.png" class="avatar" alt="">{% endif %}<span class="navUserName">{% if session.admin %}&#11088;&nbsp;{% endif %}{{ (session.display_name or session.user) }}</span>
+        </a>
+        <ul class="dropdown-menu">
+          <li><a href="/user/{{ me|encode_uri_component }}">my profile</a></li>
+          <li><a href="/user/{{ me|encode_uri_component }}/uploads">my f0cks</a></li>
+          <li><a href="/user/{{ me|encode_uri_component }}/favs">my favs</a></li>
+          {% if enable_comments %}<li><a href="/user/{{ me|encode_uri_component }}/comments">my comments</a></li>{% endif %}
+          <li><a href="/user/{{ me|encode_uri_component }}/tags">my tags</a></li>
+          {% if userhalls_enabled %}<li><a href="/user/{{ me|encode_uri_component }}/halls">my halls</a></li>{% endif %}
+          {% if not session.is_anon %}<li><a href="/upload">upload</a></li>{% endif %}
+          {% if session.own_pending_count %}<li><a href="/pending">pending ({{ session.own_pending_count }})</a></li>{% endif %}
+          {% if private_messages and not session.is_anon %}<li><a href="/messages">messages</a></li>{% endif %}
+          <li><a href="/search">search</a></li>
+          <li><a href="/tags">tags</a></li>
+          {% if halls_enabled %}<li><a href="/halls">halls</a></li>{% endif %}
+          <li><a href="/ranking">ranking</a></li>
+          {% if session.admin %}<li><a href="/admin">Admin</a></li>{% endif %}
+          {% if (session.admin or session.is_moderator) %}<li><a href="/mod">Mod</a></li>{% endif %}
+          <li><a href="/about">About</a></li>
+          <li><a href="/settings">settings</a></li>
+          <li><a href="/logout">logout</a></li>
+        </ul>
+      </li>
+      <li class="nav-item dropdown" id="notifs">
+        <a class="nav-link" id="nav-notifs" href="/notifications" data-toggle="dropdown">Notifs</a>
+        <ul class="dropdown-menu">
+          <li class="notif-preview-empty"><a href="/notifications">all notifications</a></li>
+          {% if enable_comments %}<li><a href="/subscriptions">subscriptions</a></li>{% endif %}
+        </ul>
+      </li>
+      {% include "frontends/f0ckv2/snippets/nav-common.html" %}
+    </ul>
+  </div>
+  {% else %}
+  <div class="navigation-links-guest">
+    <ul class="navbar-nav-guests">
+      <li class="nav-item dropdown">
+        <a class="nav-link" href="/about" data-toggle="dropdown">About</a>
+        <ul class="dropdown-menu">
+          <li><a href="/?login=1">login</a></li>
+          <li><a href="/?register=1">register</a></li>
+          <li><a href="/about">about</a></li>
+          <li><a href="/rules">rules</a></li>
+          <li><a href="/terms">terms</a></li>
+          <li><a href="/privacy">privacy</a></li>
+          <li><a href="/tags">tags</a></li>
+          {% if halls_enabled %}<li><a href="/halls">halls</a></li>{% endif %}
+        </ul>
+      </li>
+      {% include "frontends/f0ckv2/snippets/nav-common.html" %}
+    </ul>
+  </div>
+  {% endif %}
+  <div class="collapse navbar-collapse show" id="navbarSupportedContent">
+    <div class="pagination-container-fluid">
+      <div class="pagination-wrapper">
+        {% include "frontends/f0ckv2/snippets/pagination.html" %}
+      </div>
+    </div>
+  </div>
+</nav>

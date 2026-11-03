@@ -1,0 +1,65 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+{%- set uname = (user.user or "") -%}
+{%- set ulink = "/user/" ~ (uname|lower|encode_uri_component) -%}
+{%- set is_me = (session and ((session.user|lower) == (uname|lower) or (session.login and (session.login|lower) == (uname|lower)))) -%}
+<div id="main">
+  <div class="profile_head{% if (user_banner_enabled and user.banner_file) %} v2-has-banner{% endif %}"{% if (user_banner_enabled and user.banner_file) %} style="--banner: url('/a/{{ user.banner_file }}')"{% endif %}>
+    <div class="profile_head_avatar">
+      <img class="v2-profile-ava" src="{% if user.avatar_file %}/a/{{ user.avatar_file }}{% elif user.avatar %}/t/{{ user.avatar }}.webp{% else %}/s/fe/f0ckv2/img/default.png{% endif %}" alt="" />
+    </div>
+    <div class="layersoffear">
+      <div class="profile_head_username">
+        <span{% if user.username_color %} class="v2-namecolor" style="--user-color: {{ user.username_color }}"{% endif %}>{% if user.admin %}&#11088;&nbsp;{% endif %}{{ (user.display_name or uname) }}</span>{% if user.display_name and user.display_name != uname %} <span class="v2-dim">@{{ uname }}</span>{% endif %}
+        {% if user.is_moderator and not user.admin %}<span class="badge badge-light">mod</span>{% endif %}
+        {% if user.is_ghost %}<span class="badge badge-light" tooltip="uploads from before accounts existed">legacy</span>{% endif %}
+        {% if user.banned %}<span class="badge badge-danger" tooltip="{{ user.ban_duration }}">banned</span>{% endif %}
+      </div>
+      <div class="profile_head_user_stats">
+        {% if user.user_id or user.id %}ID: {{ (user.user_id or user.id) }} – {% endif %}Joined: <time class="timeago" tooltip="{{ user.timestamp.timefull }}" data-full="{{ user.timestamp.timefull }}">{{ (user.created_at|locale_date if user.created_at else "") }}</time> ({{ user.timestamp.timeago }})
+      </div>
+      {% if (enable_profile_description and user.description) %}
+      <div class="profile_head_user_stats v2-profile-desc">{{ user.description }}</div>
+      {% endif %}
+      <div class="v2-profile-links">
+        <a class="badge badge-dark" href="{{ ulink }}/uploads">f0cks: {{ (count.f0cks or 0) }}</a>
+        {% if not user.is_ghost %}
+        <a class="badge badge-dark" href="{{ ulink }}/favs">favs: {{ (count.favs or 0) }}</a>
+        {% if enable_comments %}<a class="badge badge-dark" href="{{ ulink }}/comments">comments: {{ (count.comments or 0) }}</a>{% endif %}
+        <a class="badge badge-dark" href="{{ ulink }}/tags">tags: {{ (count.tags or 0) }}</a>
+        {% if userhalls_enabled %}<a class="badge badge-dark" href="{{ ulink }}/halls">halls: {{ (count.halls or 0) }}</a>{% endif %}
+        {% if (session and private_messages and not is_me and not session.is_anon) %}<a class="badge badge-dark" href="/messages/{{ uname|encode_uri_component }}">message</a>{% endif %}
+        {% if is_me %}<a class="badge badge-dark" href="/settings">settings</a>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="user_content_wrapper{% if user.is_ghost %} v2-single{% endif %}">
+    <div class="f0cks">
+      <div class="f0cks-header">
+        <span>f0ck{{ ("" if count.f0cks == 1 else "s") }}: {{ (count.f0cks or 0) }}</span> <a href="{{ (f0cks.link.main if (f0cks and f0cks.link) else ulink ~ "/uploads") }}">view all</a>
+      </div>
+      {% if (count.f0cks and f0cks and f0cks.items) %}
+      {% set posts = f0cks.items %}{% set posts_link = f0cks.link.main %}
+      {% include "frontends/f0ckv2/snippets/posts.html" %}
+      {% else %}
+        no f0cks given
+      {% endif %}
+    </div>
+    {% if not user.is_ghost %}
+    <div class="favs">
+      <div class="favs-header">
+        <span>fav{{ ("" if count.favs == 1 else "s") }}: {{ (count.favs or 0) }}</span> <a href="{{ (favs.link.main if (favs and favs.link) else ulink ~ "/favs") }}">view all</a>
+      </div>
+      {% if (count.favs and favs and favs.items) %}
+      {% set posts = favs.items %}{% set posts_link = favs.link.main %}
+      {% include "frontends/f0ckv2/snippets/posts.html" %}
+      {% elif user.favorites_private and not is_me %}
+        favorites are private
+      {% else %}
+        no favorites
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

@@ -1,0 +1,111 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+{#- f0ckv2 settings: the basics in f0ckv2's table look, saved by public/s/fe/f0ckv2/js/settings.js
+    through f0ckm's /api/v2/settings/* (PUT) endpoints. Everything else (passkeys, API keys,
+    invites, banner, fonts, ...) stays on f0ckm's settings page. -#}
+<div class="settings v2-settings" id="v2-settings">
+  <h1>Settings</h1>
+  {% if not session %}
+  <h2>Browser</h2>
+  <table class="table">
+    <tbody>
+      <tr><td>theme</td><td>{% for t in (themes or []) %}{% if t in ["f0ck", "p1nk", "orange", "amoled", "paper", "atmos", "term", "iced", "f0ck95", "f0ck95d"] %}<a href="/theme/{{ t }}" class="v2-chip{% if t == theme %} active{% endif %}">{{ t }}</a> {% endif %}{% endfor %}</td></tr>
+      {% if frontend_switch %}<tr><td>frontend</td><td>{% for f in frontends %}<a href="/frontend/{{ f }}" class="v2-chip{% if f == frontend %} active{% endif %}">{{ f }}</a> {% endfor %}</td></tr>{% endif %}
+      <tr><td colspan="2"><a href="/?login=1">login</a> for more settings</td></tr>
+    </tbody>
+  </table>
+  {% else %}
+  <h2>Account</h2>
+  <table class="table">
+    <tbody>
+      <tr><td>UserID</td><td>{{ session.id }}</td></tr>
+      <tr><td>admin</td><td>{{ ("true" if session.admin else "false") }}</td></tr>
+      {% if session.is_moderator %}<tr><td>moderator</td><td>true</td></tr>{% endif %}
+      <tr><td>username</td><td>{{ session.user }}</td></tr>
+      {% if joined %}<tr><td>joined</td><td>{{ joined|locale_string }}</td></tr>{% endif %}
+      {% if not session.is_anon %}
+      <tr>
+        <td>{% if session.avatar %}<a href="/{{ session.avatar }}"><img id="img_avatar" src="/t/{{ session.avatar }}.webp" alt=""></a>{% else %}avatar (f0ck id){% endif %}</td>
+        <td class="js-only"><input type="text" class="input" name="i_avatar" value="{{ (session.avatar or "") }}" inputmode="numeric"> <input type="submit" id="s_avatar" value="save"></td>
+        <td class="nojs-only">{{ (session.avatar or "-") }}</td>
+      </tr>
+      <tr>
+        <td>display name</td>
+        <td><span class="js-only"><input type="text" class="v2-input" name="display_name" maxlength="32" value="{{ (session.display_name or "") }}"> <button type="button" class="v2-btn" data-save="display_name">save</button></span><span class="nojs-only">{{ (session.display_name or "-") }}</span></td>
+      </tr>
+      {% if enable_profile_description %}
+      <tr>
+        <td>description</td>
+        <td><span class="js-only"><textarea class="v2-input" name="description" maxlength="2000" rows="3">{{ (session.description or "") }}</textarea> <button type="button" class="v2-btn" data-save="description">save</button></span><span class="nojs-only">{{ (session.description or "-") }}</span></td>
+      </tr>
+      {% endif %}
+      <tr>
+        <td>mail</td>
+        <td><span class="js-only"><input type="email" class="v2-input" name="email" value="{{ (email or "") }}" placeholder="not set"> <button type="button" class="v2-btn" data-save="email">save</button></span><span class="nojs-only">{{ (email or "not set") }}</span></td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <h2>Preferences</h2>
+  <table class="table js-only">
+    <tbody>
+      <tr><td>show motd</td><td><input type="checkbox" data-pref="motd" data-key="show"{% if session.show_motd != false %} checked{% endif %}></td></tr>
+      <tr><td>disable autoplay</td><td><input type="checkbox" data-pref="autoplay" data-key="disable_autoplay"{% if session.disable_autoplay %} checked{% endif %}></td></tr>
+      <tr><td>private favorites</td><td><input type="checkbox" data-pref="favorites_private" data-key="favorites_private"{% if session.favorites_private %} checked{% endif %}></td></tr>
+      <tr><td>hide my fav badge</td><td><input type="checkbox" data-pref="hide_fav_badge" data-key="hide_fav_badge"{% if session.hide_fav_badge %} checked{% endif %}></td></tr>
+      {% if enable_xd_score %}<tr><td>min xD score</td><td><input type="number" class="v2-input v2-input-small" name="min_xd_score" min="0" max="999" value="{{ (session.min_xd_score or 0) }}"> <button type="button" class="v2-btn" data-save="min_xd_score">save</button></td></tr>{% endif %}
+      {% if allow_language_change %}
+      <tr><td>language</td><td><select class="v2-input" name="language" data-select="language">{% for l in ["en", "de", "nl", "zange"] %}<option value="{{ l }}"{% if l == lang %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+  <table class="table">
+    <tbody>
+      <tr><td>theme</td><td>{% for t in (themes or []) %}{% if t in ["f0ck", "p1nk", "orange", "amoled", "paper", "atmos", "term", "iced", "f0ck95", "f0ck95d"] %}<a href="/theme/{{ t }}" class="v2-chip{% if t == theme %} active{% endif %}">{{ t }}</a> {% endif %}{% endfor %}</td></tr>
+      <tr><td>mode</td><td>{% for m in modes %}{% if m != "nsfl" or enable_nsfl %}<a href="/mode/{{ loop.index0 }}" class="v2-chip{% if loop.index0 == mode %} active{% endif %}">{{ m }}</a> {% endif %}{% endfor %}</td></tr>
+      {% if frontend_switch %}<tr><td>frontend</td><td>{% for f in frontends %}<a href="/frontend/{{ f }}" class="v2-chip{% if f == frontend %} active{% endif %}">{{ f }}</a> {% endfor %}</td></tr>{% endif %}
+    </tbody>
+  </table>
+
+  <h2>Excluded tags</h2>
+  <table class="table">
+    <tbody id="v2-excluded">
+      {% for t in (excluded_tags or []) %}
+      <tr data-tag="{{ t.normalized or t.tag }}"><td><a href="/tag/{{ (t.normalized or t.tag)|encode_uri_component }}">{{ t.tag }}</a></td><td class="js-only"><a href="#" data-unexclude="{{ (t.normalized or t.tag) }}">remove</a></td></tr>
+      {% else %}
+      <tr class="v2-none"><td colspan="2">none</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" action="/api/v2/settings/excluded_tags" class="v2-form" id="v2-exclude-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="text" class="v2-input" name="tagname" placeholder="tag" required> <button type="submit">exclude</button>
+  </form>
+
+  {% if not session.is_anon %}
+  <h2>Password</h2>
+  <form class="v2-form js-only" id="v2-password-form">
+    <table class="table">
+      <tbody>
+        {% if not password_disabled %}<tr><td>current</td><td><input type="password" class="v2-input" name="current_password" autocomplete="current-password" required></td></tr>{% endif %}
+        <tr><td>new (min. 20)</td><td><input type="password" class="v2-input" name="new_password" minlength="20" autocomplete="new-password" required></td></tr>
+        <tr><td>confirm</td><td><input type="password" class="v2-input" name="new_password_confirm" minlength="20" autocomplete="new-password" required></td></tr>
+        <tr><td colspan="2"><button type="submit">change password</button></td></tr>
+      </tbody>
+    </table>
+  </form>
+  {% endif %}
+
+  <h2>More</h2>
+  <table class="table">
+    <tbody>
+      <tr><td colspan="2">passkeys, API keys, invites, banner, fonts and the rest: <a href="/frontend/f0ckm">open the f0ckm settings</a></td></tr>
+      {% if enable_data_export %}<tr><td colspan="2"><a href="/settings/export-data">export my data</a></td></tr>{% endif %}
+      <tr><td colspan="2"><a href="/logout">logout</a></td></tr>
+    </tbody>
+  </table>
+  <div id="v2-settings-msg" class="v2-settings-msg" role="status"></div>
+  {% endif %}
+</div>
+<script src="/s/fe/f0ckv2/js/settings.js?v={{ mtime("/public/s/fe/f0ckv2/js/settings.js") }}"></script>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

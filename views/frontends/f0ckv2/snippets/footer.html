@@ -1,0 +1,20 @@
+  <script type="application/json" id="f0ckv2-data">{{ {
+    "user": ((session.user if session else "") or ""),
+    "admin": (true if (session and session.admin) else false),
+    "mod": (true if (session and (session.admin or session.is_moderator)) else false),
+    "loggedIn": (true if session else false),
+    "themes": (themes or []),
+    "itemId": ((item.id if (item is defined and item and item.id) else none)),
+    "enableComments": (true if enable_comments else false),
+    "privateMessages": (true if private_messages else false),
+    "commentMax": (comment_max_length or none),
+    "lang": (lang or "en")
+  }|tojson }}</script>
+  <script src="/s/fe/f0ckv2/js/v0ck.js?v={{ mtime("/public/s/fe/f0ckv2/js/v0ck.js") }}"></script>
+  <script src="/s/fe/f0ckv2/js/f0ck.js?v={{ mtime("/public/s/fe/f0ckv2/js/f0ck.js") }}"></script>
+  {% if session %}
+  {% include "snippets/cap-gate.html" %}
+  <script src="/s/fe/f0ckv2/js/user.js?v={{ mtime("/public/s/fe/f0ckv2/js/user.js") }}"></script>
+  {% endif %}
+</body>
+</html>

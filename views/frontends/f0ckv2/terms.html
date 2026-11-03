@@ -1,0 +1,13 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+{% if terms_text %}
+{% set tp_page = "terms" %}{% set tp_text = terms_text %}{% set tp_b64 = terms_text_b64 %}
+{% include "frontends/f0ckv2/snippets/textpage.html" %}
+{% else %}
+<div id="main">
+  <div class="about">
+    <h5>Terms</h5>
+    <p>No terms have been written for {{ domain }} yet. See the <a href="/rules">rules</a> and the <a href="/privacy">privacy</a> page.</p>
+  </div>
+</div>
+{% endif %}
+{% include "frontends/f0ckv2/snippets/footer.html" %}

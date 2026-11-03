@@ -1,0 +1,42 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+{%- set uname = (user.user or "") -%}
+{%- set page = (parse_int(url.qs.page) if (url and url.qs and url.qs.page) else 1) -%}
+{%- set page = (page if page > 0 else 1) -%}
+<div id="main">
+  <div class="profile_head">
+    <div class="profile_head_avatar">
+      <img class="v2-profile-ava" src="{% if user.avatar_file %}/a/{{ user.avatar_file }}{% elif user.avatar %}/t/{{ user.avatar }}.webp{% else %}/s/fe/f0ckv2/img/default.png{% endif %}" alt="" />
+    </div>
+    <div class="layersoffear">
+      <div class="profile_head_username"><span>comments by {{ (user.display_name or uname) }}</span></div>
+      <div class="profile_head_user_stats"><a href="/user/{{ uname|lower|encode_uri_component }}">back to profile</a></div>
+    </div>
+  </div>
+  <div class="v2-comments v2-comments-page">
+    <div class="f0cks-header">
+      <span>comments (page {{ page }})</span>
+      <span>{% if page > 1 %}<a href="?page={{ page - 1 }}">&lsaquo; newer</a>{% endif %}{% if comments|length >= 20 %} <a href="?page={{ page + 1 }}">older &rsaquo;</a>{% endif %}</span>
+    </div>
+    <div class="v2-comment-list">
+      {% for c in comments %}
+      {% set ref = (c.item_slug or c.item_id) %}
+      <div class="v2-comment v2-comment-withthumb" id="c{{ c.id }}">
+        <a class="v2-comment-thumb" href="/{{ ref }}#c{{ c.id }}"><img src="/t/{{ c.item_id }}.webp" alt="" loading="lazy"></a>
+        <div>
+          <div class="v2-comment-head">
+            <a href="/{{ ref }}#c{{ c.id }}" class="v2-comment-id">#{{ c.id }} on {{ ref }}</a>
+            <time class="v2-comment-time timeago" tooltip="{{ c.created_at|locale_string }}">{{ c.created_at|time_ago }}</time>
+            {% if c.is_pinned %}<span class="badge badge-light">pinned</span>{% endif %}
+          </div>
+          <div class="v2-comment-body v2-pre"{% if not c.is_deleted %} data-raw="{{ c.content }}"{% endif %}>{% if c.is_deleted %}<i>[deleted]</i>{% else %}{{ c.content }}{% endif %}</div>
+          {% if c.files %}<div class="v2-comment-files">{% for f in c.files %}{% if f.dest not in (c.content or "") %}<a class="badge badge-dark" href="/c/{{ f.dest }}" target="_blank">{{ (f.original_filename or f.dest) }}</a> {% endif %}{% endfor %}</div>{% endif %}
+        </div>
+      </div>
+      {% else %}
+      <p class="v2-empty">no comments</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<script src="/s/fe/f0ckv2/js/comments.js?v={{ mtime("/public/s/fe/f0ckv2/js/comments.js") }}"></script>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

@@ -1,0 +1,50 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+<div id="main">
+  <div class="f0ckgle">
+    <div class="search-title">
+        <span class="g-blue">f</span>
+        <span class="g-red">0</span>
+        <span class="g-yellow">c</span>
+        <span class="g-blue">k</span>
+        <span class="g-green">g</span>
+        <span class="g-red">l</span>
+        <span class="g-blue">e</span>
+    </div>
+    <form action="/search" class="admin-search v2-search-form">
+      <input type="text" name="tag" value="{{ (searchstring or "") }}" placeholder="tag1, tag2..." /><button type="submit">&#128269;</button>
+      <label class="v2-search-opts"><input type="checkbox" name="mode" value="strict"{% if search_mode == "strict" %} checked{% endif %}> strict (all tags must match)</label>
+    </form>
+    <div class="results">
+      {% if result %}
+      <h2>{{ count }} f0cks given (page {{ pagination.page }} of {{ pagination.end }}):</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Thumbnail</th>
+            <th>ID</th>
+            <th>Tag</th>
+            <th>Mime</th>
+            <th>Username</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for line in result %}
+          <tr>
+            <td class="v2-search-thumb"><a href="/tag/{{ line.tag|encode_uri_component }}/{{ line.id }}" target="_blank"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy" /></a></td>
+            <td><span class="mview_desc">ID:</span><a href="/tag/{{ line.tag|encode_uri_component }}/{{ line.id }}" target="_blank">{{ line.id }}</a></td>
+            <td><span class="mview_desc">Tag:</span><a href="/tag/{{ line.tag|encode_uri_component }}">{{ line.tag }}</a></td>
+            <td><span class="mview_desc">Mime:</span>{{ line.mime }}</td>
+            <td><span class="mview_desc">User:</span><a href="/user/{{ line.username|lower|encode_uri_component }}/uploads/{{ line.id }}">{{ line.username }}</a></td>
+            <td><span class="mview_desc">Score:</span>{% if line.score is number %}{{ line.score|fixed(2) }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% elif searchstring %}
+      <h2>no f0cks given for "{{ searchstring }}"</h2>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

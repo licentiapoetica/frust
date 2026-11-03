@@ -1,0 +1,32 @@
+{% include "frontends/f0ckv2/snippets/header.html" %}
+{% if about_text %}
+{% set tp_page = "about" %}{% set tp_text = about_text %}{% set tp_b64 = about_text_b64 %}
+{% include "frontends/f0ckv2/snippets/textpage.html" %}
+{% else %}
+<div id="main">
+  <div class="about">
+    <h5>About {{ domain }}</h5>
+    <p>{{ domain }} is your friendly shitposting gallery: it catches urls that are passed to it and displays the content of passed urls on a simple and accessible web gallery reachable at <a href="/">{{ domain }}</a></p>
+    <h5>WTF is a f0ck?</h5>
+    <p>A f0ck is basically giving a fuck about some internet bullshit, like stupid images, videos and so on, but also for great things like good music taste and shit, it's basically "a f0ck was given" and f0ck and it's users gave a lot of f0cks over the past years, it's not hard to finally start giving a damn f0ck about something, just f0ck it dood!</p>
+    <h5>Where to f0ck?</h5>
+    <p>Upload on the <a href="/upload">upload page</a>{% if matrix_enabled or telegram_enabled %}, or f0ck links with the bot{% endif %}. f0ck supports a variety of websites, in fact all websites supported by <code>yt-dlp</code> are supported by f0ck aswell!</p>
+    <h5>f0ck Rules</h5>
+    <p>See the <a href="/rules">rules</a>.</p>
+    <h5>f0cked up?</h5>
+    <p>To have something removed in case you accidentally f0cked something that actually shouldn't be f0cked you can always report it or contact the admins.</p>
+    <h5>Keyboard</h5>
+    <ul>
+      <li><code>a</code> / <code>&larr;</code> and <code>d</code> / <code>&rarr;</code>: previous / next f0ck</li>
+      <li><code>r</code>: random, <code>t</code>: next theme, <code>space</code>: play / pause</li>
+      <li><code>f</code>: fav, <code>i</code>: add tag{% if session and (session.admin or session.is_moderator) %}, <code>p</code>: toggle sfw/nsfw, <code>x</code>: delete{% endif %}</li>
+    </ul>
+    <h5>Compatibility</h5>
+    <p>f0ck is developed and tested for Firefox and Chromium in their latest versions</p>
+    <p>If you encounter bugs please report them so we can fix them.</p>
+    <h5>f0ck Privacy?</h5>
+    <p>See the <a href="/privacy">privacy page</a> for what is stored and for how long.</p>
+  </div>
+</div>
+{% endif %}
+{% include "frontends/f0ckv2/snippets/footer.html" %}

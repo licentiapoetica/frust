@@ -1,0 +1,28 @@
+{% if (private_society and not session) %}
+{% include "index.html" %}
+{% elif (not session and url and url.qs and url.qs.login) %}
+{% include "frontends/f0ckv2/login.html" %}
+{% elif (not session and url and url.qs and url.qs.register) %}
+{% set token = (url.qs.token or "") %}
+{% include "frontends/f0ckv2/register.html" %}
+{% else %}
+{% include "frontends/f0ckv2/snippets/header.html" %}
+<div class="pagewrapper">
+  <div id="main">
+    <div class="index-container">
+      {% if tmp and tmp.user %}<h2>user: <a href="/user/{{ tmp.user|lower|encode_uri_component }}">{{ tmp.user|lower }}</a>{% if tmp.view_mode == "favs" %} / favs{% endif %}{% if tmp.mime %} ({{ tmp.mime }}s){% else %} (all){% endif %}</h2>{% endif %}
+      {% if tmp and tmp.tag %}<h2>tag: {% if session %}<a href="/search?tag={{ tmp.tag|lower|encode_uri_component }}">{{ tmp.tag|lower }}</a>{% else %}{{ tmp.tag|lower }}{% endif %}{% if tmp.mime %} ({{ tmp.mime }}s){% else %} (all){% endif %}</h2>{% endif %}
+      {% if tmp and tmp.hall %}<h2>hall: <a href="/halls">{{ (tmp.hall.name if tmp.hall.name else tmp.hall) }}</a>{% if tmp.mime %} ({{ tmp.mime }}s){% else %} (all){% endif %}</h2>{% if tmp.hall.description %}<p class="v2-hall-desc">{{ tmp.hall.description }}</p>{% endif %}{% endif %}
+      {% if tmp and tmp.userHall %}<h2>hall: {{ (tmp.userHall.name if tmp.userHall.name else tmp.userHall) }}{% if tmp.userHallOwner %} by <a href="/user/{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner)|lower|encode_uri_component }}/halls">{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner) }}</a>{% endif %}</h2>{% endif %}
+      {% if (session and session.show_motd != false and motd) %}<div class="v2-motd badge badge-dark">{{ motd }}</div>{% endif %}
+      {% set posts = (items or []) %}{% set posts_link = link.main %}
+      {% include "frontends/f0ckv2/snippets/posts.html" %}
+      {% if not posts %}<p class="v2-empty">no f0cks given</p>{% endif %}
+      <div id="footbar">
+        &#9660;
+      </div>
+    </div>
+  </div>
+</div>
+{% include "frontends/f0ckv2/snippets/footer.html" %}
+{% endif %}
