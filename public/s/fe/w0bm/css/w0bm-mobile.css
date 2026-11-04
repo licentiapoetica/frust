@@ -134,6 +134,12 @@ html.w0bm-nojs .navbar-collapse .navbar-nav > li.w0bm-dropdown:focus-within {
     padding: 8px 10px;
 }
 
+/* ── Page headers: close under the navbar (Bootstrap's .page-header has 40px above, 20px below) */
+.page-header {
+    margin: 8px 0;
+    padding-bottom: 8px;
+}
+
 /* ── Grid pages ──────────────────────────────────────────────────────────────────────────── */
 /* The search box first, full width; the page numbers under the grid (.w0bm-phone-pager, without
    JavaScript; with it the grid loads on endlessly). The top pagination stays in the page hidden:
