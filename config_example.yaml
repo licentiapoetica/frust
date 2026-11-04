@@ -265,23 +265,25 @@ websrv:
     coverarts: /ca
     emojis: /emojis
     memes: /memes
-# PWA web app manifest served at /manifest.json. Any Web App Manifest key works here and
-# replaces the default; set a key to null to drop it. Defaults: name/short_name = main.url.domain,
-# description = websrv.description, icons = 192x192 + 512x512 PNGs made from the favicon
-# (admin upload or websrv.custom_favicon, needs ImageMagick; remade when it changes, stored in
-# public/s/img/manifest/) plus the favicon itself. Setting icons here turns that off.
-# theme_color is also used for <meta name="theme-color">.
+# PWA web app manifest served at /manifest.json. Works as it is: nothing here needs to be set.
+# Every key below is optional and replaces the default shown next to it; any other Web App Manifest
+# key works too, and a key set to null is dropped from the manifest.
 manifest:
-  # name: f0ckm
-  # short_name: f0ckm
-  # description: ""
+  # name: f0ckm                 # default: main.url.domain
+  # short_name: f0ckm           # default: main.url.domain
+  # description: ""             # default: websrv.description
   # display: standalone
   # background_color: "#000000"
-  # theme_color: "#0096ff"
+  # theme_color: "#0096ff"      # also used for <meta name="theme-color">
+  # categories: [entertainment, social, memes]
+  #
+  # icons: leave unset. By default the 192x192 and 512x512 PNGs that installing the app needs are
+  # made automatically from the site's favicon (admin panel upload or websrv.custom_favicon;
+  # needs ImageMagick) into public/s/img/manifest/, and remade when the favicon changes.
+  # Only set icons to use your own image files instead; that turns the automatic icons off:
   # icons:
   #   - { src: /s/img/my-icon-192.png, sizes: 192x192, type: image/png, purpose: any }
   #   - { src: /s/img/my-icon-512.png, sizes: 512x512, type: image/png, purpose: any }
-  # categories: [entertainment, social, memes]
 clients:
   - type: tg
     enabled: false
