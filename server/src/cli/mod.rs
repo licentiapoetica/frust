@@ -26,9 +26,6 @@ Setup:
   users create <user> [<password>] [--admin] [--mod]
   users passwd <user> [<password>]          Set a new password
   hash-password [<password>]                Print an Argon2id hash
-  chat-upload-key create <name> [<max_mb>]  Upload-only API key for POST /api/chat/upload (shown once)
-  chat-upload-key list
-  chat-upload-key revoke <id>
 
 Media:
   import [options]                          Bulk import files from f0ckm-data/import (`import --help`)
@@ -97,7 +94,7 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
 
     // Everything else needs the config and the database.
     let known = [
-        "seed", "create-admin", "users", "chat-upload-key", "import", "regen", "rehash", "find-duplicates", "autotag", "clean",
+        "seed", "create-admin", "users", "import", "regen", "rehash", "find-duplicates", "autotag", "clean",
     ];
     if !known.contains(&cmd) {
         eprintln!("Unknown command: {cmd}\n\n{HELP}");
@@ -118,7 +115,6 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
         "seed" => users::seed(&st).await,
         "create-admin" => users::create_admin(&st, &Args::parse(args, &[], &[])?).await,
         "users" => users::users(&st, args).await,
-        "chat-upload-key" => users::chat_upload_key(&st, &Args::parse(args, &[], &[])?).await,
         "import" => import::run(&st, args).await,
         "regen" => regen::run(&st, &Args::parse(args, &["--all", "--audio", "--pdf", "--youtube", "--blur", "--missing", "--resume"], &["--from"])?).await,
         "rehash" => maintenance::rehash(&st, &Args::parse(args, &["--phash", "--dry-run"], &[])?).await,

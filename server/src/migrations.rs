@@ -40,28 +40,9 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     )"#,
     r#"CREATE INDEX IF NOT EXISTS idx_album_items_tags_assign_tag_id ON album_items_tags_assign(tag_id)"#,
     r#"CREATE INDEX IF NOT EXISTS idx_album_items_tags_assign_album_item_id ON album_items_tags_assign(album_item_id)"#,
-    r#"CREATE TABLE IF NOT EXISTS upload_api_keys (
-      id serial PRIMARY KEY,
-      name text NOT NULL,
-      key_hash text NOT NULL UNIQUE,
-      max_bytes bigint DEFAULT NULL,
-      revoked boolean DEFAULT false NOT NULL,
-      created_at timestamp with time zone DEFAULT now() NOT NULL,
-      last_used_at timestamp with time zone
-    )"#,
-    r#"CREATE TABLE IF NOT EXISTS chat_uploads (
-      id bigserial PRIMARY KEY,
-      slug text NOT NULL UNIQUE,
-      key_id integer REFERENCES upload_api_keys(id) ON DELETE SET NULL,
-      original_name text DEFAULT '' NOT NULL,
-      mime text NOT NULL,
-      mime_hint text DEFAULT '' NOT NULL,
-      size_bytes bigint DEFAULT 0 NOT NULL,
-      delete_token_hash text NOT NULL,
-      created_at timestamp with time zone DEFAULT now() NOT NULL,
-      expires_at timestamp with time zone NOT NULL
-    )"#,
-    r#"CREATE INDEX IF NOT EXISTS idx_chat_uploads_expires_at ON chat_uploads(expires_at)"#,
+    // chat uploads for external clients were removed
+    r#"DROP TABLE IF EXISTS chat_uploads"#,
+    r#"DROP TABLE IF EXISTS upload_api_keys"#,
     // migrations/rust_webauthn.sql
     r#"CREATE TABLE IF NOT EXISTS webauthn_credentials (
       id serial PRIMARY KEY,

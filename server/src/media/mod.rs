@@ -185,7 +185,7 @@ pub fn test_cfg(yaml: &str) -> Config {
     let p = |s: &str| d.join(s);
     let paths = crate::config::Paths {
         a: p("a"), b: p("b"), c: p("c"), t: p("t"), ca: p("ca"), s: p("s"), emojis: p("emojis"), koepfe: p("koepfe"),
-        fonts: p("fonts"), memes: p("memes"), e: p("e"), cu: p("cu"), pending: p("pending"), deleted: p("deleted"),
+        fonts: p("fonts"), memes: p("memes"), e: p("e"), pending: p("pending"), deleted: p("deleted"),
         logs: p("logs"), tmp: p("tmp"), import: p("import"),
     };
     Config { raw, paths, base: d }

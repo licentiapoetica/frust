@@ -104,7 +104,6 @@ server does.
 | `f0ckm create-admin <user> [<password>]` | Create the admin (or reset an existing one) |
 | `f0ckm users list` / `create <user> [--admin] [--mod]` / `passwd <user>` | Accounts |
 | `f0ckm hash-password` | Print an Argon2id hash |
-| `f0ckm chat-upload-key create <name> [max_mb]` / `list` / `revoke <id>` | Keys for `POST /api/chat/upload` |
 | `f0ckm import [--user u] [--rating r] [--tags a,b] [--dir d] [--keep] …` | Bulk import from `f0ckm-data/import` (`import --help`) |
 | `f0ckm regen <ids> \| --all \| --audio \| --pdf \| --youtube [--blur] [--missing] [--from id] [--resume]` | Regenerate thumbnails, cover art, blurred thumbnails |
 | `f0ckm rehash [--phash] [--dry-run]` | Recompute checksums/sizes, or fill in missing perceptual hashes |

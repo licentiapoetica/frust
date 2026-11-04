@@ -440,7 +440,6 @@ pub(crate) mod tests {
             fonts: p.clone(),
             memes: p.clone(),
             e: p.clone(),
-            cu: p.clone(),
             pending: p.clone(),
             deleted: p.clone(),
             logs: p.clone(),

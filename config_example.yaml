@@ -140,19 +140,6 @@ websrv:
   dm_attachments: true
   dm_unencrypted: false
   dm_attachment_expiry_days: 90
-  # Temporary chat file hosting for external clients, keys via `f0ckm chat-upload-key create`
-  chat_uploads: true
-  chat_upload_max_bytes: 104857600
-  chat_upload_expiry_days: 30
-  chat_upload_max_expiry_days: 30
-  chat_upload_rate_per_minute: 30
-  # Link previews for chat clients, fetched by this server (needs a chat upload key)
-  chat_link_previews: true
-  # Optional: allowed types for chat uploads, same format as allowedMimes (defaults to allowedMimes)
-  # chat_upload_mimes:
-  #   - image
-  #   - video
-  #   - audio
   halls_enabled: true
   userhalls_enabled: true
   enable_userhall_image_upload: true

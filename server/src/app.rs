@@ -201,7 +201,7 @@ fn cors(st: &AppState, req: &Req) -> Option<Response> {
         req.set_header("access-control-allow-methods", "GET, POST, PUT, DELETE, OPTIONS");
         req.set_header(
             "access-control-allow-headers",
-            "Content-Type, X-Requested-With, X-CSRF-Token, Authorization, X-API-Key, X-Filename, X-Upload-Expiry, X-Delete-Token",
+            "Content-Type, X-Requested-With, X-CSRF-Token, Authorization, X-API-Key, X-Upload-Expiry",
         );
         req.set_header("vary", "Origin");
     }
@@ -628,7 +628,7 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
     // Private society: login required for everything else
     if cfg.truthy("websrv.private_society") && req.session.is_none() {
         static PUBLIC: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
-            regex::Regex::new(r"^/(s|login|logout|register|api/cap|api/csp-report|flash-frame|activate|forgot-password|reset-password|banned|api/v2/auth|api/v2/upload|api/chat/upload|api/chat/preview|cu|manifest\.json|sw\.js|robots\.txt|favicon\.(ico|png|gif)|s/img/duck-icon-(192|512)\.png)(/.*)?$").unwrap()
+            regex::Regex::new(r"^/(s|login|logout|register|api/cap|api/csp-report|flash-frame|activate|forgot-password|reset-password|banned|api/v2/auth|api/v2/upload|manifest\.json|sw\.js|robots\.txt|favicon\.(ico|png|gif)|s/img/duck-icon-(192|512)\.png)(/.*)?$").unwrap()
         });
         if !PUBLIC.is_match(&path) {
             if req.is_xhr() {
@@ -789,7 +789,7 @@ async fn csrf_middleware(st: &AppState, req: &mut Req) -> Result<Option<Response
         return Ok(None);
     }
     static SKIP: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
-        regex::Regex::new(r"^(/api/chat/upload(/|$)|/api/dm/attachment/upload/)").unwrap()
+        regex::Regex::new(r"^/api/dm/attachment/upload/").unwrap()
     });
     if SKIP.is_match(p) {
         return Ok(None);

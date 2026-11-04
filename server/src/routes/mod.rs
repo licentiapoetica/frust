@@ -37,8 +37,6 @@ pub mod chan;
 pub mod external;
 pub mod messages;
 pub mod chat;
-pub mod chat_upload;
-pub mod chat_preview;
 pub mod comment_upload;
 
 pub fn build() -> Router {
@@ -84,8 +82,6 @@ pub fn build() -> Router {
     external::register(&mut r);
     messages::register(&mut r);
     chat::register(&mut r);
-    chat_upload::register(&mut r);
-    chat_preview::register(&mut r);
     comment_upload::register(&mut r);
     crate::cap::register(&mut r);
     crate::cap_image::register(&mut r);

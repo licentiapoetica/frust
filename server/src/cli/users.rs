@@ -1,5 +1,5 @@
 //! Accounts and keys: `seed` (scripts/seed.mjs), `create-admin` (scripts/create-admin.mjs),
-//! `users` + `hash-password` (debug/user-admin.mjs), `chat-upload-key` (scripts/chat-upload-key.mjs).
+//! `users` + `hash-password` (debug/user-admin.mjs).
 
 use super::{Args, read_line};
 use crate::db::RowExt;
@@ -233,73 +233,6 @@ pub async fn users(st: &AppState, raw: &[String]) -> Result<i32> {
         }
         _ => {
             eprintln!("{USERS_USAGE}");
-            Ok(1)
-        }
-    }
-}
-
-const KEY_USAGE: &str = "\
-Usage:
-  f0ckm chat-upload-key create <name> [max_mb]
-  f0ckm chat-upload-key list
-  f0ckm chat-upload-key revoke <id>";
-
-/// Upload-only API keys for chat uploads (POST /api/chat/upload). The plain key is shown once;
-/// only its SHA-256 is stored.
-pub async fn chat_upload_key(st: &AppState, args: &Args) -> Result<i32> {
-    let (cmd, arg, max_mb) = (args.pos.first().map(String::as_str), args.pos.get(1), args.pos.get(2));
-    match (cmd, arg) {
-        (Some("create"), Some(name)) => {
-            use base64::Engine;
-            let key = format!("cu_{}", base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(crate::util::random_bytes(24)));
-            let max_mb: Option<i64> = match max_mb {
-                Some(m) => Some(m.parse().ok().filter(|n: &i64| *n > 0).ok_or_else(|| anyhow::anyhow!("max_mb must be a positive number"))?),
-                None => None,
-            };
-            let max_bytes = max_mb.map(|m| m * 1024 * 1024);
-            let id = sql!("INSERT INTO upload_api_keys (name, key_hash, max_bytes) VALUES (", name.clone(), ", ", crate::util::sha256(&key), ", ", max_bytes, ") RETURNING id")
-                .fetch_scalar::<i32, _>(&st.db)
-                .await?
-                .unwrap_or(0);
-            let limit = max_mb.map(|m| format!(" (max {m} MB)")).unwrap_or_default();
-            println!("Created key #{id} \"{name}\"{limit}");
-            println!("Key (shown once): {key}");
-            Ok(0)
-        }
-        (Some("list"), None) => {
-            let rows = sql!(
-                "SELECT k.id, k.name, k.max_bytes, k.revoked, k.last_used_at, count(c.id)::int AS files, coalesce(sum(c.size_bytes), 0)::bigint AS bytes \
-                 FROM upload_api_keys k LEFT JOIN chat_uploads c ON c.key_id = k.id GROUP BY k.id ORDER BY k.id"
-            )
-            .fetch_all(&st.db)
-            .await?;
-            println!("{:>4}  {:<24} {:<7} {:>7} {:>6} {:>9}  last used", "id", "name", "revoked", "max_mb", "files", "used_mb");
-            for r in rows {
-                let mb = |v: Option<f64>| v.map(|b| b / 1048576.0);
-                println!(
-                    "{:>4}  {:<24} {:<7} {:>7} {:>6} {:>9.1}  {}",
-                    r.string("id"),
-                    r.string("name"),
-                    r.bool("revoked"),
-                    mb(r.f64("max_bytes")).map(|m| format!("{m}")).unwrap_or_else(|| "-".into()),
-                    r.string("files"),
-                    mb(r.f64("bytes")).unwrap_or(0.0),
-                    r.str("last_used_at").unwrap_or("-")
-                );
-            }
-            Ok(0)
-        }
-        (Some("revoke"), Some(id)) => {
-            let Ok(id) = id.parse::<i32>() else {
-                eprintln!("{KEY_USAGE}");
-                return Ok(1);
-            };
-            let n = sql!("UPDATE upload_api_keys SET revoked = true WHERE id = ", id).execute(&st.db).await?;
-            println!("{}", if n > 0 { format!("Revoked key #{id}") } else { format!("No key #{id}") });
-            Ok(0)
-        }
-        _ => {
-            eprintln!("{KEY_USAGE}");
             Ok(1)
         }
     }

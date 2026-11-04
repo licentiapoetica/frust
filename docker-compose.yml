@@ -19,7 +19,6 @@ services:
       - ./f0ckm-data/b/:/opt/f0ckm/public/b/:Z
       - ./f0ckm-data/c/:/opt/f0ckm/public/c/:Z
       - ./f0ckm-data/e/:/opt/f0ckm/public/e/:Z
-      - ./f0ckm-data/cu/:/opt/f0ckm/public/cu/:Z
       - ./f0ckm-data/t/:/opt/f0ckm/public/t/:Z
       - ./f0ckm-data/deleted/:/opt/f0ckm/deleted/:Z
       - ./f0ckm-data/pending/:/opt/f0ckm/pending/:Z
@@ -77,7 +76,7 @@ services:
     command:
       - |
         cd /opt/f0ckm
-        for d in public/a public/b public/c public/e public/cu public/t deleted pending \
+        for d in public/a public/b public/c public/e public/t deleted pending \
                  public/s/emojis public/memes public/ca tmp logs public/tag_cache public/s/fonts \
                  public/hall_cache public/hall_custom public/s/koepfe f0ckm-data/import public/s/img/navbar; do
           if [ "$$(stat -c %u:%g "$$d")" != "$$OWNER" ]; then
