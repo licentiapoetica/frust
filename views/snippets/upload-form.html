@@ -1,14 +1,16 @@
-<form id="upload-form" class="upload-form {{ ("shitpost-mode-active" if shitpost_mode else "") }}" enctype="multipart/form-data" data-mimes='{{ mimes_json }}' data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ min_tags }}" data-comment-max-length="{{ comment_max_length }}" data-enable-swf="{{ ("1" if enable_swf else "0") }}" data-enable-archive="{{ ("1" if enable_archive else "0") }}">
+<form id="upload-form" class="upload-form {{ ("shitpost-mode-active" if shitpost_mode else "") }}" enctype="multipart/form-data" data-mimes='{{ mimes_json }}' data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ min_tags }}" data-comment-max-length="{{ comment_max_length }}" data-enable-swf="{{ ("1" if enable_swf else "0") }}" data-enable-archive="{{ ("1" if enable_archive else "0") }}" data-albums="{{ ("1" if albums_enabled else "0") }}">
     <div class="form-section">
         <div class="upload-mode-tabs">
             <button type="button" class="upload-mode-tab active" data-mode="file">
                 <i class="fa-solid fa-upload"></i>
                 {{ t("upload.file_tab") }}
             </button>
+            {% if albums_enabled %}
             <button type="button" class="upload-mode-tab" data-mode="album">
                 <i class="fa-solid fa-images"></i>
                 {{ (t("album.title") or "Album") }}
             </button>
+            {% endif %}
             {% if web_url_upload %}
             <button type="button" class="upload-mode-tab" data-mode="url">
                 <i class="fa-solid fa-link"></i>
@@ -27,7 +29,7 @@
         <!-- File input area -->
         <div class="upload-mode-content" id="mode-file">
             <div class="drop-zone" id="upload-form-drop-zone">
-                <input type="file" class="file-input" name="file" accept="{{ allowed_mimes }}" multiple>
+                <input type="file" class="file-input" name="file" accept="{{ allowed_mimes }}"{% if albums_enabled or shitpost_mode %} multiple{% endif %}>
                 <div class="drop-zone-prompt">
                     <p class="drop-zone-title upload-form-drop-title">{{ t("upload.drop_here") }} <span class="drop-zone-max upload-form-drop-max">(max {{ max_file_size }})</span>{% if session.admin %} <span class="upload-form-drop-boost">{{ t("upload.admin_boost") }}</span>{% endif %}</p>
                 </div>
@@ -38,6 +40,7 @@
             </div>
         </div>
 
+        {% if albums_enabled %}
         <!-- Album / Batch Mode Switcher (displayed when multiple files are chosen) -->
         <div class="album-choice-container upload-form-hidden" id="album-choice-container">
             <div class="album-choice-title">
@@ -54,6 +57,7 @@
                 {% endif %}
             </div>
         </div>
+        {% endif %}
 
         {% if web_url_upload %}
         <!-- URL input area -->

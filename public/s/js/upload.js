@@ -526,9 +526,12 @@ window.initUploadForm = (selector) => {
 
     // Album mode state and helpers
     const albumChoiceContainer = form.querySelector('#album-choice-container');
-    let albumChoiceMode = 'album'; // 'album' | 'batch'
+    // websrv.albums_enabled: false -> no album tab, several files only in shitpost mode (as separate posts)
+    const albumsEnabled = form.getAttribute('data-albums') !== '0';
+    let albumChoiceMode = albumsEnabled ? 'album' : 'batch'; // 'album' | 'batch'
 
     const isAlbumModeActive = () => {
+        if (!albumsEnabled) return false;
         if (activeMode === 'album') {
             return selectedFiles.length > 0;
         }
@@ -1468,9 +1471,10 @@ window.initUploadForm = (selector) => {
         
         // If files were provided, process them (append or replace)
         if (files && files.length > 0) {
-            const isMultiAllowed = isShitpost || activeMode === 'album' || files.length > 1 || selectedFiles.length > 0;
+            const multiPossible = isShitpost || albumsEnabled;
+            const isMultiAllowed = multiPossible && (isShitpost || activeMode === 'album' || files.length > 1 || selectedFiles.length > 0);
             const filesToProcess = isMultiAllowed ? Array.from(files) : [files[0]];
-            if (!isMultiAllowed && selectedFiles.length === 0) {
+            if (!isMultiAllowed && (selectedFiles.length === 0 || !multiPossible)) {
                 selectedFiles = []; // Reset for normal mode single non-image file
                 if (filePreview) filePreview.innerHTML = '';
             }
@@ -1574,7 +1578,7 @@ window.initUploadForm = (selector) => {
         if (activeMode === 'album') {
             albumChoiceMode = 'album';
         }
-        const isAlbumCandidate = activeMode === 'file' && selectedFiles.length > 1;
+        const isAlbumCandidate = albumsEnabled && activeMode === 'file' && selectedFiles.length > 1;
         if (albumChoiceContainer) {
             albumChoiceContainer.style.display = isAlbumCandidate ? 'flex' : 'none';
         }

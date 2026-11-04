@@ -199,6 +199,9 @@ async fn process(st: &AppState, req: &Req, cfg: &Config, session: Session, form:
         .collect();
     let total_album_items = raw_files.len() + album_urls.len();
     let album_requested = form.flag("is_album") || (total_album_items > 1 && !form.truthy("is_shitpost"));
+    if album_requested && !cfg.enabled("websrv.albums_enabled") {
+        return fail(403, "Albums are disabled");
+    }
     let is_album = album_requested && total_album_items > 1;
     let is_shitpost = !is_album && (form.flag("is_shitpost") || cfg.get("websrv.shitpost_mode") == &Value::Bool(true));
 
