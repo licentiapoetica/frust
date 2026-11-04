@@ -486,11 +486,16 @@ async fn cycle_rating(st: AppState, mut req: Req) -> Res {
     }
 
     let nsfl = nsfl_id(&st).await;
-    let cycle = [1, 2, nsfl];
+    // NSFL only when it's enabled and its tag exists: inserting a missing tag id fails the whole cycle
+    let nsfl_on = cfg.enable_nsfl() && sql!("SELECT id FROM tags WHERE id = ", nsfl, " LIMIT 1").fetch_optional(&st.db).await?.is_some();
+    let cycle: Vec<i32> = if nsfl_on { vec![1, 2, nsfl] } else { vec![1, 2] };
     let body = req.post().await?.clone();
     let pick = |k: &str| first_truthy(&body, &[k]).and_then(|v| js_str(Some(&v))).or_else(|| req.query(k).filter(|v| !v.is_empty()).map(str::to_string));
     let sub = pick("subf0ck_id");
     let req_rating = pick("rating");
+    if req_rating.as_deref() == Some("nsfl") && !nsfl_on {
+        return j(json!({ "success": false, "msg": "NSFL is disabled" }), 400);
+    }
     let uid = session_id(&req);
 
     let next_for = |current: i32| -> i32 {
@@ -500,7 +505,7 @@ async fn cycle_rating(st: AppState, mut req: Req) -> Res {
             Some("nsfl") => nsfl,
             _ => {
                 let idx = cycle.iter().position(|&c| c == current).map(|i| i as i64).unwrap_or(-1);
-                cycle[((idx + 1) % 3) as usize]
+                cycle[((idx + 1) % cycle.len() as i64) as usize]
             }
         }
     };
