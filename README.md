@@ -133,6 +133,9 @@ The built-in website fonts (Manrope, SIL OFL 1.1; Hack, MIT + Bitstream Vera Lic
 `public/s/fonts-builtin/` together with their license texts and credits (`README.md` there).
 Font Awesome Free 6.7.2 (`public/s/fa/`) carries its license in the stylesheet header. The VCR OSD Mono
 font (`public/s/vcr.ttf`) is by Riciery Leal (MrManet), free per https://www.dafont.com/vcr-osd-mono.font.
+UnifrakturCook (`public/s/fonts/UnifrakturCook.woff2`, the `[reich]` comment effect) is by j. 'mach' wust
+and Peter Wiegel, under the SIL Open Font License 1.1; the license text is in
+`public/s/fonts/LICENSE-UnifrakturCook-OFL.txt` (source: https://fonts.google.com/specimen/UnifrakturCook/license).
 
 ### Browser security
 

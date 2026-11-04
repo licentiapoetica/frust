@@ -26,6 +26,7 @@
  * split (max RGB split in px, auto), corrupt (colour corruption, true), reducedMotion
  * ("respect": still when the visitor prefers reduced motion; "ignore").
  *
+ * Elements with data-glitch added to the page later start by themselves (MutationObserver).
  * Inline elements: give them display:inline-block (the filter works on the element's box).
  * Up to 32 elements glitch at the same time (CSS slots .glitchfx-0 … .glitchfx-31).
  */
@@ -86,7 +87,11 @@
       "color-interpolation-filters": "sRGB"
     }, getDefs());
     var n = {};
-    n.map = svgEl("feImage", { x: 0, y: 0, width: 1, height: 1, preserveAspectRatio: "none", "image-rendering": "optimizeSpeed", result: "map" }, f);
+    n.map = svgEl("feImage", { x: 0, y: 0, width: 1, height: 1, preserveAspectRatio: "none", "image-rendering": "optimizeSpeed", result: "raw" }, f);
+    // The map over neutral grey: while a new map image is still decoding the feImage is
+    // transparent, which would read as "full shift" and draw a displaced ghost of the element.
+    svgEl("feFlood", { "flood-color": "rgb(128,128,0)", "flood-opacity": 1, result: "neutral" }, f);
+    svgEl("feComposite", { "in": "raw", in2: "neutral", operator: "over", result: "map" }, f);
     n.disp = svgEl("feDisplacementMap", { "in": "SourceGraphic", in2: "map", scale: 0, xChannelSelector: "R", yChannelSelector: "G", result: "d" }, f);
     n.corrupt = svgEl("feColorMatrix", { "in": "d", type: "matrix", values: CORRUPT[0], result: "c" }, f);
     svgEl("feColorMatrix", { "in": "map", type: "matrix", values: ALPHA_FROM_BLUE, result: "mask" }, f);
@@ -400,7 +405,34 @@
     if (mq.addEventListener) mq.addEventListener("change", onMq);
   }
 
+  // [data-glitch] elements added later (comments, AJAX navigation) start by themselves; removed ones
+  // are destroyed, so their slot is free again
+  function watch() {
+    if (!global.MutationObserver) return;
+    var queued = false;
+    var flush = function () {
+      queued = false;
+      instances.forEach(function (g, el) { if (!el.isConnected) g.destroy(); });
+      GlitchFX.scan();
+    };
+    new MutationObserver(function (records) {
+      if (queued) return;
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i], j, n;
+        for (j = 0; j < r.addedNodes.length; j++) {
+          n = r.addedNodes[j];
+          if (n.nodeType === 1 && (n.hasAttribute("data-glitch") || n.querySelector("[data-glitch]"))) { queued = true; break; }
+        }
+        if (!queued && instances.size) {
+          for (j = 0; j < r.removedNodes.length; j++) if (r.removedNodes[j].nodeType === 1) { queued = true; break; }
+        }
+        if (queued) break;
+      }
+      if (queued) requestAnimationFrame(flush);
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
+
   global.GlitchFX = GlitchFX;
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { GlitchFX.scan(); });
-  else GlitchFX.scan();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { GlitchFX.scan(); watch(); });
+  else { GlitchFX.scan(); watch(); }
 })(window);

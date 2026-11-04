@@ -1182,7 +1182,20 @@ fn frame_comment_html(content: &str, link_base: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n");
-    frame_wrap_tags(&frame_wrap_tags(&html, "spoiler", "spoiler"), "blur", "blur-text")
+    comment_fx(&frame_wrap_tags(&frame_wrap_tags(&html, "spoiler", "spoiler"), "blur", "blur-text"))
+}
+
+/// The comment text effects [rb] [reich] [krebs] [glitch], the same in every frontend: server copy
+/// of `f0ckCommentFx` (public/s/js/f0ck-core.js); styles in public/s/css/comment-fx.css.
+const COMMENT_FX: [(&str, &str); 4] = [
+    ("rb", "class=\"cfx-rb\""),
+    ("reich", "class=\"cfx-reich\""),
+    ("krebs", "class=\"cfx-krebs\""),
+    ("glitch", "class=\"cfx-glitch\" data-glitch=\"0.5\""),
+];
+
+fn comment_fx(html: &str) -> String {
+    COMMENT_FX.iter().fold(html.to_string(), |s, (tag, attrs)| wrap_tags_with(&s, tag, attrs))
 }
 
 fn frame_word_html(word: &str, link_base: &str, out: &mut String) {
@@ -1333,13 +1346,18 @@ pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Se
 /// [tag]…[/tag] → <span class="…">…</span>, innermost pair first (so nesting works); unmatched
 /// tags stay as text.
 fn frame_wrap_tags(html: &str, tag: &str, class: &str) -> String {
+    wrap_tags_with(html, tag, &format!("class=\"{class}\""))
+}
+
+/// `[tag]…[/tag]` → `<span attrs>…</span>`, innermost first (up to 10).
+fn wrap_tags_with(html: &str, tag: &str, attrs: &str) -> String {
     let (open, close) = (format!("[{tag}]"), format!("[/{tag}]"));
     let mut s = html.to_string();
     for _ in 0..10 {
         let lower = s.to_ascii_lowercase();
         let Some(c) = lower.find(&close) else { break };
         let Some(o) = lower[..c].rfind(&open) else { break };
-        s = format!("{}<span class=\"{class}\">{}</span>{}", &s[..o], &s[o + open.len()..c], &s[c + close.len()..]);
+        s = format!("{}<span {attrs}>{}</span>{}", &s[..o], &s[o + open.len()..c], &s[c + close.len()..]);
     }
     s
 }
@@ -1661,6 +1679,12 @@ mod frame_tests {
         assert!(h.ends_with("<span class=\"spoiler\">s</span>"));
         assert!(!frame_comment_html("//evil.com/x.png javascript:alert(1)", "1").contains("<img"));
         assert_eq!(frame_comment_html("a\n\nb", "1"), "a\n&nbsp;\nb");
+    }
+
+    #[test]
+    fn comment_effects() {
+        let h = frame_comment_html("[rb]a [glitch]b[/glitch][/rb] [REICH]c[/reich] [krebs]d", "1");
+        assert_eq!(h, "<span class=\"cfx-rb\">a <span class=\"cfx-glitch\" data-glitch=\"0.5\">b</span></span> <span class=\"cfx-reich\">c</span> [krebs]d");
     }
 
     #[test]

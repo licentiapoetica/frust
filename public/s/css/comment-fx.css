@@ -1,0 +1,65 @@
+/*
+ * comment-fx.css: the comment text effects [rb] [reich] [krebs] [glitch] (w0bm's text modifiers),
+ * the same in every frontend. Markup: window.f0ckCommentFx in /s/js/f0ck-core.js, and its server
+ * copy for the no-JavaScript comments (comment_fx in server/src/routes/comments.rs).
+ * [glitch] is animated by /s/js/glitchfx.js (data-glitch on the span).
+ * Loaded by snippets/header.html (f0ckm), the f0ckv2 and w0bm heads, and activity-frame.html.
+ */
+
+@font-face {
+  font-family: 'UnifrakturCook';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('UnifrakturCook'), local('UnifrakturCook-Bold'), url(/s/fonts/UnifrakturCook.woff2) format('woff2');
+}
+
+/* [rb]: rainbow with a trailing colour smear */
+.cfx-rb {
+  animation: cfx-rainbow 1s linear infinite;
+  color: red;
+  font-size: 1.5em;
+  letter-spacing: 0.33em;
+  text-shadow: -1px 0 orange, -2px 0 yellow, -3px 0 green, -4px 0 blue, -5px 0 indigo, -6px 0 violet;
+}
+
+@keyframes cfx-rainbow {
+  0%, 100% { color: red;    text-shadow: -1px 0 orange, -2px 0 yellow, -3px 0 green, -4px 0 blue, -5px 0 indigo, -6px 0 violet; }
+  14%      { color: orange; text-shadow: -1px 0 yellow, -2px 0 green, -3px 0 blue, -4px 0 indigo, -5px 0 violet, -6px 0 red; }
+  28%      { color: yellow; text-shadow: -1px 0 green, -2px 0 blue, -3px 0 indigo, -4px 0 violet, -5px 0 red, -6px 0 orange; }
+  43%      { color: green;  text-shadow: -1px 0 blue, -2px 0 indigo, -3px 0 violet, -4px 0 red, -5px 0 orange, -6px 0 yellow; }
+  57%      { color: blue;   text-shadow: -1px 0 indigo, -2px 0 violet, -3px 0 red, -4px 0 orange, -5px 0 yellow, -6px 0 green; }
+  71%      { color: indigo; text-shadow: -1px 0 violet, -2px 0 red, -3px 0 orange, -4px 0 yellow, -5px 0 green, -6px 0 blue; }
+  85%      { color: violet; text-shadow: -1px 0 red, -2px 0 orange, -3px 0 yellow, -4px 0 green, -5px 0 blue, -6px 0 indigo; }
+}
+
+/* [reich]: blackletter */
+.cfx-reich {
+  font-family: 'UnifrakturCook', 'Old English Text MT', serif;
+  font-weight: 700;
+  font-size: 1.25em;
+}
+
+/* [krebs]: flickering colours */
+.cfx-krebs {
+  animation: cfx-krebs 0.6s linear infinite;
+}
+
+@keyframes cfx-krebs {
+  0%, 100% { color: red; }
+  25%      { color: yellow; }
+  50%      { color: #1fb2b0; }
+  75%      { color: #23dd06; }
+}
+
+/* [glitch]: GlitchFX filters the element's box, so it needs one */
+.cfx-glitch {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cfx-rb,
+  .cfx-krebs {
+    animation: none;
+  }
+}

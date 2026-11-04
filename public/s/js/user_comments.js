@@ -398,6 +398,9 @@ if (!window.UserCommentSystem) {
                 iterations++;
             } while (html !== prevMd && iterations < 10);
 
+            // [rb] [reich] [krebs] [glitch] (shared with every frontend: f0ck-core.js)
+            if (window.f0ckCommentFx) html = window.f0ckCommentFx(html);
+
             if (window.Sanitizer && typeof Sanitizer.clean === 'function') {
                 html = Sanitizer.clean(html);
             }

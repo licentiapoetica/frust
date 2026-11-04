@@ -449,6 +449,9 @@
                 iterations++;
             } while (md !== prevMd && iterations < 10);
 
+            // [rb] [reich] [krebs] [glitch] (shared with every frontend: f0ck-core.js)
+            if (window.f0ckCommentFx) md = window.f0ckCommentFx(md);
+
             // Restore protected code blocks
             md = md.replace(/BLOCKPORTALX(\d+)X/g, (match, index) => {
                 return codeBlocks[index] || '';
