@@ -15,14 +15,123 @@
 .navbar-collapse.in {
     display: block !important;
     height: auto !important;
-    overflow: visible !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
 }
-/* The opened menu is a stacked list. w0bmcustom.css centres the desktop bar as a flex row, and
-   Bootstrap's -15px side margins expect a padded .container-fluid, which w0bm's isn't. */
+/* The opened menu lies over the page under the navbar instead of pushing it down; it scrolls itself
+   when an opened dropdown makes it taller than the screen. Its colour is the navbar's (per theme,
+   w0bm-fe.css), handed down through the container. */
+nav.navbar > .container-fluid,
+nav.navbar .navbar-collapse {
+    background-color: inherit;
+}
+nav.navbar .navbar-collapse {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1031;
+    max-height: calc(100vh - 51px);
+    max-height: calc(100dvh - 51px);
+    border-bottom: 1px solid #1fb2b0;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+/* The opened menu: a panel of tiles (icon over label), three to a row, in two groups: the site
+   (Tags, Index, Theme, Layout, Find shit) and the account (notifications, filter, upload, favs,
+   user, logout). An opened dropdown (Theme, Layout, the user menu) takes the panel's whole width.
+   w0bmcustom.css centres the desktop bar as a flex row and Bootstrap's -15px side margins expect a
+   padded .container-fluid, which w0bm's isn't; both are replaced here. */
+.navbar-collapse {
+    border-top: 1px solid #353434;
+}
 .navbar-collapse ul.nav.navbar-nav {
-    display: block;
-    margin-left: 0;
-    margin-right: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    float: none;
+    margin: 0;
+    padding: 8px;
+}
+/* Bootstrap's clearfix pseudo-elements would be grid cells */
+.navbar-collapse ul.nav.navbar-nav::before,
+.navbar-collapse ul.nav.navbar-nav::after {
+    display: none;
+}
+.navbar-collapse ul.nav.navbar-nav + ul.nav.navbar-nav {
+    border-top: 1px solid #353434;
+}
+.navbar-collapse .navbar-nav > li {
+    float: none;
+    min-width: 0;
+}
+.navbar-collapse .navbar-nav > li > a {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 60px;
+    padding: 8px 2px !important;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #353434;
+}
+.navbar-collapse .navbar-nav > li > a > .fa,
+.navbar-collapse .navbar-nav > li.w0bm-dropdown > a::before {
+    font-size: 18px;
+    line-height: 1;
+}
+.navbar-collapse .navbar-nav > li > a > span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* the bell and the heart have no text: their title is the label */
+.navbar-collapse .navbar-nav > li > a[title]::after {
+    content: attr(title);
+}
+/* counts in the tile's corner */
+.navbar-collapse .navbar-nav > li > a > .badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+}
+/* Theme and Layout: an icon like the other tiles instead of the caret */
+.navbar-collapse .navbar-nav > li.w0bm-dropdown > a > .caret {
+    display: none;
+}
+.navbar-collapse .navbar-nav > li.w0bm-dropdown:has(> .w0bm-theme-menu) > a::before {
+    font-family: FontAwesome;
+    content: "\f1fc";
+}
+.navbar-collapse .navbar-nav > li#layoutSwitcher > a::before {
+    font-family: FontAwesome;
+    content: "\f0db";
+}
+/* an opened dropdown: the whole width, its entries under the tile */
+.navbar-collapse .navbar-nav > li.w0bm-dropdown.open,
+html.w0bm-nojs .navbar-collapse .navbar-nav > li.w0bm-dropdown:focus-within {
+    grid-column: 1 / -1;
+}
+/* important: the themes place dropdown menus absolutely, with !important */
+.navbar-collapse .navbar-nav > li.w0bm-dropdown > .dropdown-menu {
+    position: static !important;
+    float: none;
+    width: auto;
+    margin: 4px 0 0 !important;
+    padding: 4px !important;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid #353434 !important;
+    box-shadow: none;
+}
+.navbar-collapse .navbar-nav > li.w0bm-dropdown > .dropdown-menu > li > a {
+    padding: 8px 10px;
 }
 
 /* ── Grid pages ──────────────────────────────────────────────────────────────────────────── */
@@ -354,3 +463,47 @@ html.w0bm-comments-off body.w0bm-item-page #sidebar > .tags {
 .w0bm-profilehead > .w0bm-userdesc {
     grid-column: 1 / -1;
 }
+
+/* ── Messages (notifications.html, snippets/notifications-list.html) ─────────────────────────
+   Each message a row: the icon on the left, the subject, its time on its own line under it.
+   (The time floated right wrapped under long subjects and the next row was drawn over it.) */
+.w0bm-notif a.list-group-item,
+.w0bm-notif details.w0bm-msg > summary {
+    position: relative;
+    padding: 10px 12px 10px 36px;
+    overflow-wrap: anywhere;
+}
+.w0bm-notif a.list-group-item > .fa,
+.w0bm-notif details.w0bm-msg > summary > .fa {
+    position: absolute;
+    left: 12px;
+    top: 13px;
+}
+.w0bm-notif .list-group-item small {
+    display: block;
+    float: none;
+    margin-top: 2px;
+}
+.w0bm-notif .w0bm-msg-body {
+    padding: 8px 12px 10px 36px;
+}
+/* the tabs one row, scrolling sideways when they don't fit */
+.w0bm-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.w0bm-tabs::before,
+.w0bm-tabs::after {
+    display: none;
+}
+.w0bm-tabs > li {
+    float: none;
+    flex: none;
+}
+.w0bm-tabs > li > a {
+    padding: 8px 12px;
+    white-space: nowrap;
+}
+
