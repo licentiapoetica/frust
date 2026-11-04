@@ -1,0 +1,320 @@
+/* f0ckv2 frontend: the shared pages (settings, messages, admin, mod, pending, banned) and the user
+   halls in f0ckv2's shell (shell/header.html). /s/css/f0ck-shell.css maps the --fe-* palette onto
+   f0ckm's theme variables on html.f0ck-shell, and f0ckv2's chrome uses variables of the same names,
+   so each f0ckv2 theme's values are set again here (more specific than html.f0ck-shell; copied from
+   the theme blocks of f0ck.css, which doesn't change). The palette is then taken from them. */
+
+html.f0ck-shell[theme="f0ck"] {
+  --accent: #9f0;
+  --bg: #000000;
+  --black: #000;
+  --white: #fff;
+  --gray: #262626;
+  --nav-bg: #2b2b2b;
+  --nav-border-color: rgba(255, 255, 255, .05);
+  --nav-link-hover-bg: #333;
+  --dropdown-bg: #232323;
+  --dropdown-item-hover: #0d0d0d;
+  --metadata-bg: #2b2b2b;
+  --badge-bg: #171717;
+  --badge-tag: #090909;
+  --scrollbar-color: #2b2b2b;
+  --font: monospace;
+  --img-border-color: #363636;
+  --fe-accent-rgb: 153, 255, 0;
+}
+
+html.f0ck-shell[theme="p1nk"] {
+  --accent: #ff00d0;
+  --bg: #171717;
+  --black: #000;
+  --white: #fff;
+  --gray: #262626;
+  --nav-bg: #2b2b2b;
+  --nav-link-hover-bg: #333;
+  --dropdown-bg: #232323;
+  --dropdown-item-hover: #0d0d0d;
+  --metadata-bg: #2b2b2b;
+  --badge-bg: #171717;
+  --badge-tag: #090909;
+  --scrollbar-color: #2b2b2b;
+  --font: monospace;
+  --img-border-color: #363636;
+  --fe-accent-rgb: 255, 0, 255;
+}
+
+html.f0ck-shell[theme="orange"] {
+  --accent: #ff6f00;
+  --bg: #171717;
+  --black: #000;
+  --white: #fff;
+  --gray: #262626;
+  --nav-bg: #2b2b2b;
+  --nav-link-hover-bg: #333;
+  --dropdown-bg: #232323;
+  --dropdown-item-hover: #0d0d0d;
+  --metadata-bg: #2b2b2b;
+  --badge-bg: #151515;
+  --badge-tag: #090909;
+  --scrollbar-color: #2b2b2b;
+  --font: monospace;
+  --img-border-color: #363636;
+  --fe-accent-rgb: 255, 165, 0;
+}
+
+html.f0ck-shell[theme="amoled"] {
+  --accent: #fff;
+  --bg: #000;
+  --black: #000;
+  --white: #fff;
+  --gray: #2f2d2d;
+  --nav-bg: #000;
+  --nav-border-color: rgba(255, 255, 255, .05);
+  --nav-link-hover-bg: #6a6a6a70;
+  --dropdown-bg: #232323;
+  --dropdown-item-hover: #0d0d0d;
+  --metadata-bg: #000;
+  --badge-bg: #000;
+  --badge-tag: #1a1a1a;
+  --scrollbar-color: #1d1c1c;
+  --font: monospace;
+  --img-border-color: #363636;
+  --fe-accent-rgb: 255, 255, 255;
+}
+
+html.f0ck-shell[theme="paper"] {
+  --accent: #000;
+  --bg: #fff;
+  --black: #000;
+  --white: #fff;
+  --gray: #262626;
+  --nav-bg: #fff;
+  --nav-border-color: rgba(255, 255, 255, .05);
+  --nav-link-hover-bg: #3939354a;
+  --dropdown-bg: #fff;
+  --dropdown-item-hover: #3939354a;
+  --metadata-bg: #fff;
+  --badge-bg: #fff;
+  --badge-tag: #000000;
+  --scrollbar-color: #6c6c6c;
+  --font: monospace;
+  --img-border-color: #363636;
+  --fe-accent-rgb: 0, 0, 0;
+}
+
+html.f0ck-shell[theme="atmos"] {
+  --accent: #1fb2b0;
+  --bg: #161618;
+  --black: #000;
+  --white: #fff;
+  --gray: #262626;
+  --nav-bg: rgb(32, 32, 32);
+  --nav-border-color: rgba(255, 255, 255, .05);
+  --nav-link-hover-bg: #333;
+  --dropdown-bg: #232323;
+  --dropdown-item-hover: #0d0d0d;
+  --metadata-bg: rgba(34, 34, 34, 0.8);
+  --badge-bg: #131313;
+  --badge-tag: #090909;
+  --scrollbar-color: #2b2b2b;
+  --font: monospace;
+  --img-border-color: #363636;
+  --fe-accent-rgb: 26, 188, 156;
+}
+
+html.f0ck-shell[theme="term"] {
+  --accent: #00DF00;
+  --bg: #000;
+  --black: #000;
+  --white: #fff;
+  --gray: #262626;
+  --nav-bg: #040404;
+  --nav-border-color: rgba(255, 255, 255, .05);
+  --nav-link-hover-bg: #282828;
+  --dropdown-bg: #040404;
+  --dropdown-item-hover: #282828;
+  --metadata-bg: #000;
+  --badge-bg: #060606;
+  --badge-tag: #131212;
+  --tooltip-bg: #131212;
+  --scrollbar-color: #2b2b2b;
+  --font: monospace;
+  --img-border-color: #363636;
+  --fe-accent-rgb: 0, 255, 0;
+}
+
+html.f0ck-shell[theme="iced"] {
+  --accent: #0084ff;
+  --bg: #031c35;
+  --black: #000;
+  --white: #fff;
+  --gray: #bd2828;
+  --nav-bg: #111d37;
+  --nav-border-color: rgba(255, 255, 255, .05);
+  --nav-link-hover-bg: #0a3f53;
+  --dropdown-bg: #111d37;
+  --dropdown-item-hover: #0a3f53;
+  --metadata-bg: #000e1a;
+  --badge-bg: #091f39;
+  --badge-tag: #22083c;
+  --tooltip-bg: #0a3f53;
+  --scrollbar-color: #2b2b2b;
+  --font: monospace;
+  --img-border-color: #363636;
+  --fe-accent-rgb: 0, 191, 255;
+}
+
+html.f0ck-shell[theme="f0ck95"] {
+  --accent: silver;
+  --bg: teal;
+  --black: #000;
+  --white: #fff;
+  --gray: silver;
+  --nav-bg: silver;
+  --nav-border-color: #282727;
+  --nav-link-hover-bg: #8a8989;
+  --dropdown-bg: silver;
+  --dropdown-item-hover: #8a8989;
+  --metadata-bg: silver;
+  --badge-bg: #a8a5a5;
+  --badge-tag: #959393;
+  --scrollbar-color: #2b2b2b;
+  --font: monospace;
+  --img-border-color: #808080;
+  --fe-accent-rgb: 0, 0, 128;
+}
+
+html.f0ck-shell[theme="f0ck95d"] {
+  --accent: #fff;
+  --bg: #0e0f0f;
+  --black: #000;
+  --white: #fff;
+  --gray: silver;
+  --nav-bg: #0b0a0a;
+  --nav-border-color: #282727;
+  --nav-link-hover-bg: #333131;
+  --dropdown-bg: #333131;
+  --dropdown-item-hover: #444242;
+  --metadata-bg: #0b0a0a;
+  --badge-bg: #0f0e0e;
+  --badge-tag: #2f2f2f;
+  --scrollbar-color: #2b2b2b;
+  --font: monospace;
+  --img-border-color: #808080;
+  --fe-accent-rgb: 0, 0, 128;
+}
+
+html.f0ck-shell {
+  --fe-navbar-h: 41px;
+  --fe-accent: var(--accent);
+  --fe-bg: var(--bg);
+  --fe-surface: var(--metadata-bg);
+  --fe-surface-2: var(--nav-bg);
+  --fe-border: var(--img-border-color, #363636);
+  --fe-text: var(--white);
+  --fe-muted: #8a8f98;
+  --fe-link: var(--accent);
+  --fe-font: var(--font);
+  --fe-heading-font: var(--font);
+  --fe-input-bg: var(--badge-tag);
+  --fe-radius: 3px;
+}
+
+html.f0ck-shell[theme="paper"] {
+  --fe-muted: #555;
+}
+
+/* ── f0ckv2 fixes on the shared pages ───────────────────────────────────────── */
+.f0ck-shell-page {
+  padding: 0 5px;
+}
+
+/* ── f0ckv2's navbar against f0ckm.css ──────────────────────────────────────────
+   f0ckm grew out of f0ckv2 and still styles .navbar, .navbar-brand, .nav-link and .pagination,
+   some of it with !important. An important declaration of the f0ckm layer beats f0ckv2's (unlayered)
+   CSS and f0ck-shell.css' chrome reset, so f0ckv2's values are set again here, important, in the
+   f0ck-shell-important layer (declared before the f0ckm layer, so it wins). */
+@layer f0ck-shell-important {
+  html.f0ck-shell nav.navbar.f0ck-shell-chrome {
+    display: grid !important;
+    align-items: normal !important;
+    min-height: 0 !important;
+    z-index: 3 !important;
+  }
+
+  html.f0ck-shell .f0ck-shell-chrome .navbar-brand {
+    display: inline-block !important;
+    height: auto !important;
+    align-items: normal !important;
+  }
+
+  html.f0ck-shell .f0ck-shell-chrome .pagination {
+    justify-content: space-around !important;
+  }
+
+  @media (min-width: 1241px) {
+    html.f0ck-shell .f0ck-shell-chrome .nav-link[data-toggle="dropdown"].ddcontent::after {
+      content: "\00a0(" attr(content) ")\00a0\25bc" !important;
+    }
+
+    html.f0ck-shell .f0ck-shell-chrome .nav-link[data-toggle="dropdown"]:not(.ddcontent)::after {
+      content: "\00a0\25bc" !important;
+    }
+  }
+
+  @media (max-width: 1056px) {
+    html.f0ck-shell .f0ck-shell-chrome .navbar-brand {
+      grid-area: f0ck !important;
+    }
+
+    html.f0ck-shell .f0ck-shell-chrome .pagination {
+      justify-content: flex-end !important;
+    }
+  }
+
+  @media (max-width: 799px) {
+    html.f0ck-shell .f0ck-shell-chrome .pagination {
+      justify-content: center !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    html.f0ck-shell nav.navbar.f0ck-shell-chrome {
+      top: auto !important;
+    }
+
+    html.f0ck-shell .f0ck-shell-chrome .navbar-brand {
+      grid-area: unset !important;
+    }
+  }
+}
+
+/* f0ckm.css also sets the page background and hides scrollbars with !important */
+@layer f0ck-shell-important {
+  html.f0ck-shell,
+  html.f0ck-shell body {
+    background: var(--bg-gradient) !important;
+    background-color: var(--bg) !important;
+    scrollbar-width: thin !important;
+  }
+}
+
+/* On phones f0ckv2's body is a grid with the navbar in a bottom row. The shared pages are longer
+   and wider than f0ckv2's own (settings: wide form rows), which squeezed the navbar row to nothing
+   and widened the column: size the rows by content (the navbar stays sticky at the bottom) and keep
+   the column inside the viewport. */
+@media (max-width: 768px) {
+  html.f0ck-shell body {
+    grid-template-rows: auto auto;
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 100%;
+  }
+}
+
+/* phones: the navbar sits at the bottom, sticky page parts go to the very top */
+@media (max-width: 768px) {
+  html.f0ck-shell {
+    --fe-navbar-h: 0px;
+  }
+}

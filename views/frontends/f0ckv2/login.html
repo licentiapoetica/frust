@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>{{ domain }} login</title>
-    <link rel="icon" type="image/gif" href="{{ (custom_favicon or "/s/fe/f0ckv2/img/favicon.gif") }}" />
+    <link rel="icon" {% if custom_favicon %}href="{{ custom_favicon }}"{% else %}type="image/gif" href="/s/fe/f0ckv2/img/favicon.gif"{% endif %} />
     <link href="/s/fe/f0ckv2/css/f0ck.css?v={{ mtime("/public/s/fe/f0ckv2/css/f0ck.css") }}" rel="stylesheet" />
     <link href="/s/fe/f0ckv2/css/f0ckv2.css?v={{ mtime("/public/s/fe/f0ckv2/css/f0ckv2.css") }}" rel="stylesheet" />
     <script src="/s/fe/f0ckv2/js/early.js?v={{ mtime("/public/s/fe/f0ckv2/js/early.js") }}"></script>
@@ -28,11 +28,22 @@
       {% include "frontends/f0ckv2/snippets/cap-image.html" %}
       {% endif %}
       <button type="submit">Login</button>
+      {#- passkey login: WebAuthn needs JavaScript (f0ckPasskeyLogin in f0ck-core.js, js/login.js) -#}
+      <button type="button" class="v2-passkey-btn js-only">login with passkey</button>
+      {% if enable_anonymous_access %}<button type="button" class="v2-passkey-btn js-only trigger-login-anon">login as anonymous</button>{% endif %}
+      <div class="v2-flash-error v2-passkey-error" hidden></div>
       <p class="v2-login-links">
         <a href="/?register=1">register</a>
         {% if smtp_enabled %}<a href="/forgot-password">forgot password?</a>{% endif %}
         <a href="/">back</a>
       </p>
     </form>
+    <script src="/s/js/f0ck-core.js?v={{ mtime("/public/s/js/f0ck-core.js") }}"></script>
+    {% if enable_anonymous_access %}
+    {#- "login as anonymous" (passkey.js, shared dialog) -#}
+    {% include "snippets/anon-login.html" %}
+    <script src="/s/js/passkey.js?v={{ mtime("/public/s/js/passkey.js") }}"></script>
+    {% endif %}
+    <script src="/s/fe/f0ckv2/js/login.js?v={{ mtime("/public/s/fe/f0ckv2/js/login.js") }}"></script>
   </body>
 </html>

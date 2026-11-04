@@ -31,7 +31,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="subscribed" value="{{ ("0" if isSubscribed else "1") }}">
             <input type="hidden" name="back" value="{{ here }}">
-            <button type="submit" class="v2-textbtn{% if isSubscribed %} active{% endif %}" title="{{ ("unsubscribe from comments" if isSubscribed else "subscribe to comments") }}">{{ ("&#128276;"|safe if isSubscribed else "&#128277;"|safe) }}</button>
+            <button type="submit" title="{{ ("unsubscribe from comments" if isSubscribed else "subscribe to comments") }}"><svg class="iconset" id="a_subscribe"><use href="/s/fe/f0ckv2/img/iconset.svg#bell_{{ ("solid" if isSubscribed else "regular") }}"></use></svg></button>
           </form>
           {% endif %}
           {% endif %}
@@ -134,6 +134,8 @@
         </span>
         {% endif %}
         <span class="badge badge-dark" id="tags">
+          {%- set v2_rating = (item.tags or [])|selectattr("normalized", "in", ["sfw", "nsfw", "nsfl"])|list %}
+          {% if not v2_rating %}<span class="badge badge-untagged mr-2" data-rating="untagged" tooltip="unrated">?</span>{% endif %}
           {% for tag in (item.tags or []) %}
           <span{% if (session and tag.user) %} tooltip="{{ tag.user }}"{% endif %} class="badge {{ tag.badge }} mr-2" data-tag="{{ tag.tag }}">
             <a href="/tag/{{ tag.normalized|encode_uri_component }}">{{ tag.tag }}</a>{% if is_mod_or_admin %}&nbsp;<a class="removetag js-only" href="#" title="remove tag">&#215;</a>{% endif %}
@@ -145,7 +147,7 @@
             <input type="hidden" name="back" value="{{ here }}#tags">
             <input type="text" name="tagname" size="10" placeholder="tag" required maxlength="85"> <button type="submit">add tag</button>
           </form>
-          <span class="js-only"><a href="#" id="a_addtag">add tag</a>{% if is_mod_or_admin %}&nbsp;-&nbsp;<a href="#" id="a_toggle">toggle</a>{% endif %}</span>
+          <span class="js-only"><a href="#" id="a_addtag">add tag</a>{% if can_rate_item %}&nbsp;-&nbsp;<a href="#" id="a_toggle" title="change rating (p)">toggle</a>{% endif %}</span>
           <datalist id="testlist"></datalist>
           {% endif %}
         </span>

@@ -1,0 +1,6 @@
+{#- f0ckv2 chrome around the shared pages (settings, messages, admin, mod, pending, banned):
+    f0ckv2's head and navbar (snippets/header.html, with f0ck-shell on <html> and
+    snippets/shell-head.html in <head>), then the page content. Contract: views/frontends/README.md -#}
+{%- set v2_shell_head = "snippets/shell-head.html" -%}
+{% include "frontends/f0ckv2/snippets/header.html" %}
+<div class="f0ck-shell-page">

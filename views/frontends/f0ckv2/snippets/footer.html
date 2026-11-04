@@ -1,7 +1,11 @@
+{#- f0ckv2 frontend: page data + scripts, end of <body>. Own pages: followed by the shared client
+    (snippets/frontend-scripts.html); the shared pages use it through shell/footer.html. -#}
   <script type="application/json" id="f0ckv2-data">{{ {
     "user": ((session.user if session else "") or ""),
     "admin": (true if (session and session.admin) else false),
     "mod": (true if (session and (session.admin or session.is_moderator)) else false),
+    "canRate": (true if can_rate_item else false),
+    "nsfl": (true if enable_nsfl else false),
     "loggedIn": (true if session else false),
     "themes": (themes or []),
     "itemId": ((item.id if (item is defined and item and item.id) else none)),
@@ -10,11 +14,16 @@
     "commentMax": (comment_max_length or none),
     "lang": (lang or "en")
   }|tojson }}</script>
+  <script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>
   <script src="/s/fe/f0ckv2/js/v0ck.js?v={{ mtime("/public/s/fe/f0ckv2/js/v0ck.js") }}"></script>
   <script src="/s/fe/f0ckv2/js/f0ck.js?v={{ mtime("/public/s/fe/f0ckv2/js/f0ck.js") }}"></script>
   {% if session %}
   {% include "snippets/cap-gate.html" %}
   <script src="/s/fe/f0ckv2/js/user.js?v={{ mtime("/public/s/fe/f0ckv2/js/user.js") }}"></script>
   {% endif %}
+{%- if not (v2_shell_foot is defined and v2_shell_foot) %}
+  {#- the shared client (page data, f0ck-core.js, DM keys, live events); shell/footer.html adds it itself -#}
+  {% include "snippets/frontend-scripts.html" %}
 </body>
 </html>
+{%- endif %}

@@ -80,6 +80,23 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   // <themes>
   const themelinks = [...document.querySelectorAll("li#themes > ul.dropdown-menu > li > a")];
   const themes = themelinks.map(t => t.dataset.theme);
+  // Switch in place: every theme is in the loaded f0ck.css (html[theme=...]). The cookie is the one
+  // /theme/<name> sets, so the server renders the next page in it (and saves it for the user).
+  const setTheme = t => {
+    if(!t) return;
+    document.documentElement.setAttribute("theme", t);
+    document.cookie = `theme=${encodeURIComponent(t)}; Path=/; Max-Age=31536000; SameSite=Lax${window.isSecureContext ? "; Secure" : ""}`;
+    document.querySelectorAll("li#themes > a.ddcontent").forEach(a => a.setAttribute("content", t));
+    document.querySelectorAll('a.v2-chip[href^="/theme/"]').forEach(a => a.classList.toggle("active", a.getAttribute("href") === "/theme/" + t));
+  };
+  // The /theme/<name> links stay the no-JS fallback
+  document.addEventListener("click", e => {
+    const a = e.target.closest('a[href^="/theme/"]:not([data-toggle])');
+    if(!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    e.preventDefault();
+    setTheme(a.dataset.theme || decodeURIComponent(a.getAttribute("href").slice(7)));
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  });
   // </themes>
 
   // <keybindings>
@@ -95,7 +112,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
       if(!themes.length) return;
       let i = themes.indexOf(document.documentElement.getAttribute("theme"));
       if(++i >= themes.length) i = 0;
-      location.href = "/theme/" + encodeURIComponent(themes[i]);
+      setTheme(themes[i]);
     }
   };
   document.addEventListener("keydown", e => {
@@ -372,6 +389,49 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     });
   }
   // </report>
+
+  // <frontend hooks> for the shared client (f0ck-core.js / f0ck-frontend.js, views/frontends/README.md)
+  const fe = window.f0ckFrontend = window.f0ckFrontend || {};
+  const itemBox = document.querySelector('.container[data-item-id]');
+  if(itemBox) fe.itemId = itemBox.dataset.itemId;
+  // toasts in f0ckv2's #flash colours (showFlash / flashMessage of the shared scripts end up here)
+  fe.flash = (message, type) => {
+    let box = document.getElementById('v2-toasts');
+    if(!box) {
+      box = document.createElement('div');
+      box.id = 'v2-toasts';
+      box.className = 'v2-toasts f0ck-shell-chrome';
+      document.body.appendChild(box);
+    }
+    const el = document.createElement('div');
+    const kind = ({ success: 'success', error: 'error', warning: 'warn', warn: 'warn' })[type] || 'info';
+    el.className = 'v2-toast v2-toast-' + kind;
+    const text = message == null ? '' : String(message);
+    if(text.includes('<a ') && window.Sanitizer?.clean) el.innerHTML = Sanitizer.clean(text);
+    else el.textContent = text;
+    el.addEventListener('click', ev => { if(ev.target.tagName !== 'A') el.remove(); });
+    box.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('v2-toast-in'));
+    setTimeout(() => {
+      el.classList.remove('v2-toast-in');
+      setTimeout(() => el.remove(), 300);
+    }, kind === 'error' ? 6000 : 3500);
+  };
+  // the MOTD box on the index page
+  fe.motd = (text) => {
+    const box = document.querySelector('.v2-motd');
+    if(box) {
+      box.textContent = text || '';
+      box.hidden = !text;
+    }
+  };
+  // the shared settings page lists every site theme: keep the ones f0ckv2's CSS has
+  const themeSelect = document.getElementById('website_theme_select');
+  if(themeSelect && themes.length) {
+    [...themeSelect.options].forEach(o => { if(!themes.includes(o.value)) o.remove(); });
+    themeSelect.value = document.documentElement.getAttribute('theme');
+  }
+  // </frontend hooks>
 
   // <timeago> click toggles relative / full date
   document.querySelectorAll("time.timeago[data-full]").forEach(t => {

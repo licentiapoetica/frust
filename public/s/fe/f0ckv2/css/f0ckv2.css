@@ -154,33 +154,6 @@ a.v2-iconlink {
   line-height: 1;
 }
 
-form.v2-iconform>button.v2-textbtn {
-  height: 22px;
-  width: 25px;
-  justify-content: center;
-  align-items: center;
-  background: #312c2c;
-  margin: 1px;
-  border: 1px outset #221d1d;
-  position: relative;
-  right: 2px;
-  font-size: 12px;
-  filter: grayscale(1);
-}
-
-form.v2-iconform>button.v2-textbtn:hover {
-  background: #7b7b77;
-}
-
-form.v2-iconform>button.v2-textbtn.active {
-  filter: none;
-}
-
-html[theme="paper"] form.v2-iconform>button.v2-textbtn,
-html[theme="iced"] form.v2-iconform>button.v2-textbtn {
-  background: transparent;
-}
-
 .v2-item-title {
   color: var(--white);
   font-weight: bold;
@@ -1003,3 +976,282 @@ button.v2-linkbtn:hover {
   justify-items: start;
 }
 .v2-imgcap input.v2-input { width: 340px; max-width: 100%; min-width: 0; text-align: center; }
+
+/* unread direct messages (user menu): messages.js fills #dm-badge and shows it */
+.v2-dm-badge {
+  display: none;
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.v2-dm-badge.v2-dm-on {
+  display: inline;
+}
+
+.v2-dm-badge::before {
+  content: "(";
+}
+
+.v2-dm-badge::after {
+  content: ")";
+}
+
+/* toasts (f0ckFrontend.flash: showFlash / flashMessage of the shared scripts), f0ckv2's #flash colours */
+.v2-toasts {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  z-index: 100200;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 6px;
+  pointer-events: none;
+  max-width: calc(100vw - 20px);
+}
+
+.v2-toast {
+  pointer-events: auto;
+  padding: 4px 12px;
+  font-family: var(--font);
+  font-weight: bold;
+  border-radius: 3px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .3s, transform .3s;
+  background-color: var(--nav-bg);
+  color: var(--white);
+  border-bottom: 2px solid var(--accent);
+  cursor: pointer;
+}
+
+.v2-toast.v2-toast-in {
+  opacity: 1;
+  transform: none;
+}
+
+.v2-toast-error {
+  background-color: #fddfdf;
+  border-bottom-color: #f1a899;
+  color: #5f3f3f;
+}
+
+.v2-toast-success {
+  background-color: #4caf50;
+  border-bottom-color: #006018;
+  color: #001c07;
+}
+
+.v2-toast-warn {
+  background-color: #fffa90;
+  border-bottom-color: #dad55e;
+  color: #777620;
+}
+
+@media (max-width: 768px) {
+  .v2-toasts {
+    top: 10px;
+    bottom: auto;
+  }
+}
+
+/* comment subscription bell: coloured like the fav heart in every theme */
+.iconset#a_subscribe {
+  fill: var(--accent);
+}
+
+html[theme="paper"] .iconset#a_subscribe {
+  fill: var(--white);
+}
+
+html[theme="f0ck95"] .iconset#a_subscribe {
+  fill: var(--black);
+}
+
+/* unrated item: "?" in front of the tags */
+.badge-untagged {
+  color: var(--white);
+  background-color: #555;
+  padding: 1.5px 5px;
+  border-radius: 3px;
+  text-shadow: 1px 1px var(--black);
+}
+
+/* login page: passkey login, styled like the login button */
+.login-form button.v2-passkey-btn {
+  width: 100%;
+  margin: 0 0 9px 0;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  color: var(--white);
+  opacity: 0.6;
+  padding: 8px 20px;
+  border-radius: 0;
+}
+
+.login-form button.v2-passkey-btn:hover {
+  cursor: pointer;
+  opacity: 1;
+}
+
+html[theme="paper"] .login-form button.v2-passkey-btn {
+  color: black;
+}
+
+.login-form .v2-passkey-error {
+  max-width: 260px;
+}
+
+/* "login as anonymous" dialogs (snippets/anon-login.html, shared; passkey.js shows them with
+   display: flex), in the f0ckv2 look. Their Font Awesome 6 icons are not loaded here: hidden. */
+#anon-setup-modal,
+#privacy-consent-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+#privacy-consent-modal {
+  z-index: 1070;
+}
+
+#anon-setup-modal i[class*="fa-solid"],
+#privacy-consent-modal i[class*="fa-solid"] {
+  display: none;
+}
+
+#anon-setup-modal .navbar-anon-modal-box,
+#privacy-consent-modal .pc-content {
+  position: relative;
+  width: min(380px, 92vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  color: var(--white);
+}
+
+#privacy-consent-modal .pc-content {
+  width: min(620px, 94vw);
+  padding: 0;
+}
+
+#anon-setup-modal .navbar-anon-modal-close,
+#privacy-consent-modal .pc-close {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  background: none;
+  border: 0;
+  color: var(--white);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+#anon-setup-modal .lm-title,
+#privacy-consent-modal .pc-header h3 {
+  margin: 0 0 12px;
+  font-size: 1em;
+  text-transform: lowercase;
+  color: var(--accent);
+}
+
+#anon-setup-modal .lm-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+#anon-setup-modal .lm-check-box {
+  display: none;
+}
+
+#anon-setup-modal .lm-link,
+#privacy-consent-modal a {
+  color: var(--accent);
+}
+
+#anon-setup-modal .lm-btn,
+#privacy-consent-modal .pc-accept {
+  width: 100%;
+  padding: 8px 20px;
+  background: var(--bg);
+  border: 1px solid var(--black);
+  border-radius: 0;
+  color: var(--white);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+#anon-setup-modal .lm-btn:hover:not(:disabled),
+#privacy-consent-modal .pc-accept:hover:not(:disabled) {
+  opacity: 1;
+}
+
+#anon-setup-modal .lm-btn:disabled,
+#privacy-consent-modal .pc-accept:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+#anon-setup-modal .lm-error {
+  margin-top: 10px;
+  padding: 6px 8px;
+  background: #b32121;
+  color: var(--white);
+}
+
+#anon-setup-modal .lm-footer {
+  margin: 12px 0 0;
+  text-align: center;
+}
+
+#anon-setup-modal .lm-textbtn {
+  background: none;
+  border: 0;
+  color: var(--white);
+  opacity: 0.7;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#privacy-consent-modal .pc-header {
+  padding: 15px 20px 0;
+}
+
+#privacy-consent-modal .pc-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 20px;
+}
+
+#privacy-consent-modal .pc-footer {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 20px;
+}
+
+#privacy-consent-modal .pc-hint {
+  flex: 1;
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+#privacy-consent-modal .pc-accept {
+  width: auto;
+}
+
+html[theme="paper"] #anon-setup-modal .navbar-anon-modal-box,
+html[theme="paper"] #privacy-consent-modal .pc-content {
+  background: white;
+  color: black;
+}

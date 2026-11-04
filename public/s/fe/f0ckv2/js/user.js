@@ -19,6 +19,9 @@
   const get  = (url, body) => queryapi(url, body, 'GET');
   const post = (url, body) => queryapi(url, body || {}, 'POST');
 
+  // hooks for the shared live events (f0ck-frontend.js, views/frontends/README.md)
+  const fe = window.f0ckFrontend = window.f0ckFrontend || {};
+
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // <notifications> unread count on the navbar, newest few in its dropdown
@@ -67,9 +70,42 @@
       if(a) post(`/api/notifications/${a.dataset.notif}/read`, {});
     });
     refresh();
-    setInterval(() => { if(!document.hidden) refresh(); }, 60000);
+    fe.notify = () => refresh();
+    // live events update it; this only catches a dropped connection
+    setInterval(() => { if(!document.hidden) refresh(); }, 300000);
   }
   // </notifications>
+
+  // unread direct messages: messages.js keeps #dm-badge (next to "messages" in the user menu) up to
+  // date; without it (DMs off) the live event lands here
+  fe.dmBadge = async () => {
+    const badge = document.getElementById('dm-badge');
+    const res = badge ? await get('/api/dm/unread').catch(() => null) : null;
+    if(!res || !res.success) return;
+    badge.textContent = res.count > 99 ? '99+' : String(res.count);
+    badge.classList.toggle('v2-dm-on', res.count > 0);
+  };
+  fe.reconnected = () => {
+    fe.notify?.();
+    window.DMSystem?.refreshDmBadge?.();
+    fe.comments?.({ item_id: fe.itemId });
+  };
+
+  // live events f0ck-frontend.js leaves to the frontend: new uploads on the first grid page, warnings
+  // (F0ckLive is the shared socket from f0ck-core.js, loaded after this file)
+  let newShown = false;
+  document.addEventListener('DOMContentLoaded', () => window.F0ckLive?.onMessage(msg => {
+    if(msg.type === 'new_item') {
+      const grid = document.querySelector('.index-container div.posts');
+      const firstPage = !document.querySelector('.pagination > .prev:not(.disabled)');
+      if(!grid || !firstPage || newShown) return;
+      newShown = true;
+      window.flashMessage?.('<a href="' + esc(location.pathname + location.search) + '">new f0cks, click to reload</a>', 15000, 'info');
+    }
+    else if(msg.type === 'warning') {
+      window.flashMessage?.(`Warning from the moderators: ${msg.data?.reason || ''}`, 10000, 'error');
+    }
+  }));
 
   // <item>
   const container = document.querySelector('.container[data-item-id]');
@@ -89,9 +125,20 @@
     renderTags(res.tags);
   };
 
+  const RATINGS = ['sfw', 'nsfw', 'nsfl'];
+  const ratingOf = _tags => (_tags.find(t => RATINGS.includes(String(t.normalized ?? t.tag).toLowerCase())) || {}).normalized || 'untagged';
   const renderTags = _tags => {
-    [...document.querySelectorAll('#tags > .badge[data-tag]')].forEach(tag => tag.remove());
+    [...document.querySelectorAll('#tags > .badge[data-tag], #tags > .badge[data-rating="untagged"]')].forEach(tag => tag.remove());
     const anchor = document.querySelector('#tags > form, #tags > .js-only');
+    // unrated items show "?" in front of the tags
+    if(ratingOf(_tags) === 'untagged') {
+      const q = document.createElement('span');
+      q.className = 'badge badge-untagged mr-2';
+      q.dataset.rating = 'untagged';
+      q.setAttribute('tooltip', 'unrated');
+      q.textContent = '?';
+      document.querySelector('#tags').insertBefore(q, document.querySelector('#tags > .badge[data-tag]') || anchor);
+    }
     _tags.forEach(tag => {
       const span = document.createElement('span');
       span.classList.add('badge', 'mr-2', ...String(tag.badge || 'badge-light').split(' ').filter(Boolean));
@@ -185,13 +232,23 @@
     });
   };
 
+  // rating: unrated -> sfw -> nsfw -> nsfl (if enabled) -> sfw, like f0ckm (POST /api/v2/item/:id/rating)
+  let ratingBusy = false;
   const toggleEvent = async (e = false) => {
     if(e)
       e.preventDefault();
-    if(!data.mod) return;
-    const res = await queryapi(`/api/v2/tags/${postid}/toggle`, {}, 'PUT');
+    if(!data.canRate || !postid || ratingBusy) return;
+    const current = document.querySelector('#tags > .badge[data-tag="sfw"]') ? 'sfw'
+      : document.querySelector('#tags > .badge[data-tag="nsfw"]') ? 'nsfw'
+      : document.querySelector('#tags > .badge[data-tag="nsfl"]') ? 'nsfl' : 'untagged';
+    const next = current === 'sfw' ? 'nsfw' : (current === 'nsfw' && data.nsfl) ? 'nsfl' : 'sfw';
+    ratingBusy = true;
+    const res = await post(`/api/v2/item/${postid}/rating`, { rating: next }).finally(() => { ratingBusy = false; });
+    if(!res.success)
+      return window.showFlash ? window.showFlash(res.msg || 'could not change the rating', 'error') : alert(res.msg || 'could not change the rating');
     if(res.tags)
       renderTags(res.tags);
+    if(window.showFlash) window.showFlash(`rating: ${res.rating || next}`, 'success');
   };
 
   // fav (the heart is a real form; without JavaScript it posts to the API directly)
@@ -232,8 +289,8 @@
     if(!res.success) return;
     subform.subscribed.value = res.subscribed ? '0' : '1';
     const btn = subform.querySelector('button');
-    btn.classList.toggle('active', res.subscribed);
-    btn.innerHTML = res.subscribed ? '&#128276;' : '&#128277;';
+    const icon = subform.querySelector('svg#a_subscribe > use');
+    if(icon) icon.setAttribute('href', '/s/fe/f0ckv2/img/iconset.svg#bell_' + (res.subscribed ? 'solid' : 'regular'));
     btn.title = res.subscribed ? 'unsubscribe from comments' : 'subscribe to comments';
   });
 

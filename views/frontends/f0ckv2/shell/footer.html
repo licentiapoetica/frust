@@ -1,0 +1,9 @@
+{#- Closes a shared page in f0ckv2's chrome: f0ckv2's scripts (snippets/footer.html), then the shared
+    client and the shared pages' extras. Contract: views/frontends/README.md -#}
+</div>
+{%- set v2_shell_foot = true %}
+{% include "frontends/f0ckv2/snippets/footer.html" %}
+{% include "snippets/frontend-scripts.html" %}
+{% include "snippets/shell-foot.html" %}
+</body>
+</html>

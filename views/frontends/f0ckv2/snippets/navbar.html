@@ -11,7 +11,7 @@
   {%- set filter_base = "/" -%}
 {%- endif -%}
 {%- set me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
-<nav class="navbar navbar-expand-lg">
+<nav class="navbar navbar-expand-lg f0ck-shell-chrome">
   <a class="navbar-brand" href="/"><span class="f0ck">{{ (custom_navbar_brand_text or "F0CK")|upper }}</span></a>
   {% if session %}
   <div class="navigation-links">
@@ -28,14 +28,14 @@
           <li><a href="/user/{{ me|encode_uri_component }}/tags">my tags</a></li>
           {% if userhalls_enabled %}<li><a href="/user/{{ me|encode_uri_component }}/halls">my halls</a></li>{% endif %}
           {% if not session.is_anon %}<li><a href="/upload">upload</a></li>{% endif %}
-          {% if session.own_pending_count %}<li><a href="/pending">pending ({{ session.own_pending_count }})</a></li>{% endif %}
-          {% if private_messages and not session.is_anon %}<li><a href="/messages">messages</a></li>{% endif %}
+          {% if not session.is_anon %}<li><a href="/pending">pending{% if session.own_pending_count %} ({{ session.own_pending_count }}){% endif %}</a></li>{% endif %}
+          {% if private_messages and not session.is_anon %}<li><a href="/messages">messages <span id="dm-badge" class="v2-dm-badge">0</span></a></li>{% endif %}
           <li><a href="/search">search</a></li>
           <li><a href="/tags">tags</a></li>
           {% if halls_enabled %}<li><a href="/halls">halls</a></li>{% endif %}
           <li><a href="/ranking">ranking</a></li>
           {% if session.admin %}<li><a href="/admin">Admin</a></li>{% endif %}
-          {% if (session.admin or session.is_moderator) %}<li><a href="/mod">Mod</a></li>{% endif %}
+          {% if (session.admin or session.is_moderator) %}<li><a href="/mod">Mod</a></li><li><a href="/mod/reports">Reports</a></li>{% if manual_approval %}<li><a href="/mod/approve">Approve{% if session.pending_count %} ({{ session.pending_count }}){% endif %}</a></li>{% endif %}{% endif %}
           <li><a href="/about">About</a></li>
           <li><a href="/settings">settings</a></li>
           <li><a href="/logout">logout</a></li>

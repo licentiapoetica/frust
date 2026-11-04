@@ -2,8 +2,10 @@
 (() => {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  // escaped text -> links, >>quotes, >greentext, @mentions, line breaks
-  const format = raw => esc(raw).split('\n').map(line => {
+  // escaped text -> links, >>quotes, >greentext, @mentions, line breaks, and the comment effects
+  // [rb] [reich] [krebs] [glitch] shared with every frontend (f0ck-core.js, /s/css/comment-fx.css)
+  const fx = html => (window.f0ckCommentFx ? window.f0ckCommentFx(html) : html);
+  const format = raw => fx(esc(raw).split('\n').map(line => {
     let l = line
       .replace(/(^|\s)(\/c\/[\w.-]+\.(?:png|jpe?g|gif|webp|avif))(#gif)?(?=\s|$)/g, (m, pre, u) => `${pre}<a href="${u}" target="_blank"><img class="v2-comment-img" src="${u}" alt="" loading="lazy"></a>`)
       .replace(/(https?:\/\/[^\s<]+)/g, u => `<a href="${u}" target="_blank" rel="noopener noreferrer nofollow">${u}</a>`)
@@ -11,12 +13,15 @@
       .replace(/(^|\s)@([A-Za-z0-9_-]{2,32})/g, (m, pre, u) => `${pre}<a href="/user/${encodeURIComponent(u.toLowerCase())}">@${u}</a>`);
     if(/^&gt;(?!&gt;)/.test(line)) l = `<span class="v2-greentext">${l}</span>`;
     return l;
-  }).join('<br>');
+  }).join('<br>'));
 
   // server-rendered comment texts (user comment pages): format them the same way
-  document.querySelectorAll('.v2-comment-body[data-raw]').forEach(el => {
+  // (once the page is parsed: f0ck-core.js, with the comment effects, loads after this file)
+  const formatRaw = () => document.querySelectorAll('.v2-comment-body[data-raw]').forEach(el => {
     el.innerHTML = format(el.dataset.raw);
   });
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', formatRaw);
+  else formatRaw();
 
   const box = document.getElementById('comments');
   if(!box) return;
@@ -180,6 +185,15 @@
       btn.disabled = false;
     });
   }
+
+  // live event (f0ck-frontend.js): a comment was posted, edited or deleted somewhere; reload if it's
+  // this item's (not while a reply is being typed)
+  const fe = window.f0ckFrontend = window.f0ckFrontend || {};
+  fe.comments = (data) => {
+    if(String(data?.item_id) !== String(itemId)) return;
+    if(form && form.content === document.activeElement && form.content.value.trim()) return;
+    load();
+  };
 
   load();
 })();
