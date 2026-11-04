@@ -420,7 +420,8 @@ fn new_item_payload(cfg: &Config, ctx: &Ctx, item_id: i64, dest: &str, mime: &st
         "display_name": ctx.display_name(),
         "tag_id": rating_tag_id(cfg, ctx.rating.as_deref()),
         "is_oc": ctx.is_oc,
-        "slug": ctx.slug,
+        // the item's address only uses the slug when slugs are enabled (item_slugs)
+        "slug": if crate::settings::enable_item_slugs(cfg) { json!(ctx.slug) } else { Value::Null },
         "visibility": ctx.visibility,
         "is_album": ctx.is_album,
         "album_count": if ctx.is_album { ctx.total_album_items } else { 0 },
@@ -436,13 +437,15 @@ async fn notify_new_item(st: &AppState, payload: &Value) {
 #[allow(clippy::too_many_arguments)]
 fn success(cfg: &Config, ctx: &Ctx, item_id: i64, dest: &str, mime: &str, file_url: Value) -> Res {
     let base = cfg.url_full();
-    let route = format!("/{}", ctx.slug);
+    // the new item's address: its slug when slugs are enabled, else its id (like every item link)
+    let slugs = crate::settings::enable_item_slugs(cfg);
+    let route = if slugs { format!("/{}", ctx.slug) } else { format!("/{item_id}") };
     let msg = if ctx.manual { "Upload successful! Your upload is pending admin approval." } else { "Upload successful! Your upload is now live." };
     let mut v = json!({
         "success": true,
         "msg": msg,
         "itemid": item_id,
-        "slug": ctx.slug,
+        "slug": if slugs { json!(ctx.slug) } else { Value::Null },
         "visibility": ctx.visibility,
         "manual_approval": ctx.manual,
         "redirect": if ctx.manual { Value::Null } else { Value::String(route.clone()) },

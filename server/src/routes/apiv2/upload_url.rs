@@ -448,7 +448,9 @@ async fn finish_item(st: &AppState, cfg: &Config, job: &UrlJob, item_id: i64, de
         crate::f0cklib::clear_count_cache(st);
         let payload = json!({
             "id": item_id, "dest": dest, "mime": mime, "username": job.owner, "display_name": job.display_name,
-            "tag_id": rating_id.unwrap_or(0), "is_oc": job.is_oc, "slug": job.slug, "visibility": job.visibility,
+            "tag_id": rating_id.unwrap_or(0), "is_oc": job.is_oc,
+            "slug": if crate::settings::enable_item_slugs(&st.cfg()) { json!(job.slug) } else { Value::Null },
+            "visibility": job.visibility,
             "is_album": false, "album_count": 0,
         });
         crate::social::helpers::notify(st, "new_item", &payload).await;
