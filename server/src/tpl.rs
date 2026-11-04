@@ -182,7 +182,7 @@ fn opt_lang(state: &State, lang: Option<String>) -> Option<String> {
     lang.or_else(|| state.lookup("__date_lang").and_then(|v| v.as_str().map(str::to_string)))
 }
 
-fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static> {
+pub(crate) fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static> {
     let mut env = Environment::new();
     env.set_loader(minijinja::path_loader(views));
     env.set_undefined_behavior(UndefinedBehavior::Chainable);

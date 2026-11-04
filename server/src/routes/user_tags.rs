@@ -11,7 +11,38 @@ use serde_json::{Value, json};
 
 pub fn register(r: &mut Router) {
     r.get(r"^\/api\/user\/(?<user>[^\/]+)\/tags$", api_user_tags);
-    r.get(r"^\/user\/(?<user>[^\/]+)\/tags$", user_tags_page);
+    r.get(r"^\/user\/(?<user>[^\/]+)\/tags(?:\/p\/(?<page>\d+))?\/?$", user_tags_page);
+}
+
+/// Page from `/p/N` (what the infinite scroll writes into the address bar) or `?page=N`.
+fn tags_page_param(req: &Req) -> i64 {
+    match req.param("page").and_then(|p| p.parse::<i64>().ok()) {
+        Some(p) => p.clamp(1, 1_000_000_000),
+        None => page_param(req),
+    }
+}
+
+/// Pagination + link in the shape the pagination snippets of every frontend expect. The total is
+/// not counted, so the last page known is the next one.
+fn tags_pagination(user_name: &str, page: i64, has_more: bool) -> (Value, Value) {
+    let prev = (page > 1).then_some(page - 1);
+    let next = has_more.then_some(page + 1);
+    let cheat: Vec<i64> = prev.into_iter().chain([page]).chain(next).collect();
+    let pagination = json!({
+        "start": 1,
+        "end": next.unwrap_or(page),
+        "page": page,
+        "current": page,
+        "prev": prev,
+        "next": next,
+        "cheat": cheat,
+    });
+    let link = json!({
+        "main": format!("/user/{}/tags/", crate::util::encode_uri_component(user_name)),
+        "path": "p/",
+        "suffix": "",
+    });
+    (pagination, link)
 }
 
 fn user_param(req: &Req) -> String {
@@ -44,21 +75,8 @@ async fn api_user_tags(st: AppState, req: Req) -> Res {
     let tags = process_tags(tags_query(&st, Some(uid), req.mode, offset, TAGS_PER_PAGE, req.session(), strict_param(&req)).await?);
     let has_more = tags.len() as i64 == TAGS_PER_PAGE;
     if req.is_xhr() || req.query("ajax").map(|v| !v.is_empty()).unwrap_or(false) {
-        let link = format!("/user/{}/tags", crate::util::encode_uri_component(&user_name));
-        let pagination = crate::tpl::render(
-            &st,
-            Some(&req),
-            "snippets/pagination",
-            json!({
-                "pagination": {
-                    "page": page,
-                    "prev": if page > 1 { json!(page - 1) } else { Value::Null },
-                    "next": if has_more { json!(page + 1) } else { Value::Null },
-                    "cheat": [1],
-                },
-                "link": link,
-            }),
-        );
+        let (pagination, link) = tags_pagination(&user_name, page, has_more);
+        let pagination = crate::tpl::render(&st, Some(&req), "snippets/pagination", json!({ "pagination": pagination, "link": link }));
         let html = crate::tpl::render(
             &st,
             Some(&req),
@@ -94,8 +112,11 @@ async fn user_tags_page(st: AppState, req: Req) -> Res {
     };
     let uid = user_row.i64("id").unwrap_or(0) as i32;
     let user_name = user_row.string("user");
-    let toptags = process_tags(tags_query(&st, Some(uid), req.mode, 0, TAGS_PER_PAGE, req.session(), strict_param(&req)).await?);
+    let page = tags_page_param(&req);
+    let offset = (page - 1) * TAGS_PER_PAGE;
+    let toptags = process_tags(tags_query(&st, Some(uid), req.mode, offset, TAGS_PER_PAGE, req.session(), strict_param(&req)).await?);
     let n = toptags.len() as i64;
+    let (pagination, link) = tags_pagination(&user_name, page, n == TAGS_PER_PAGE);
     let enc = crate::util::encode_uri_component(&user_name);
     let data = json!({
         "user": Value::Object(user_row),
@@ -103,13 +124,8 @@ async fn user_tags_page(st: AppState, req: Req) -> Res {
         "toptags": toptags,
         "tmp": null,
         "hidePagination": false,
-        "pagination": {
-            "page": 1,
-            "prev": null,
-            "next": if n == TAGS_PER_PAGE { json!(2) } else { Value::Null },
-            "cheat": [1],
-        },
-        "link": format!("/user/{enc}/tags"),
+        "pagination": pagination,
+        "link": link,
         "session": member_session(&req),
         "page_meta": {
             "title": format!("{user_name}'s Tags"),
@@ -119,4 +135,32 @@ async fn user_tags_page(st: AppState, req: Req) -> Res {
     });
     let view = if req.is_xhr() { "tags_user-partial" } else { "tags_user" };
     Ok(no_store(html(crate::tpl::render(&st, Some(&req), view, data))))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tags_pagination;
+    use crate::i18n::I18n;
+    use std::{path::PathBuf, sync::Arc};
+
+    /// Every frontend's pagination partial renders the user-tags pagination (w0bm used to fail on
+    /// the missing `start`/`end`) and links to `/user/<name>/tags/p/N`.
+    #[test]
+    fn pagination_renders_in_every_frontend() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = crate::tpl::build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        for (page, has_more) in [(1, false), (1, true), (2, true), (5, false)] {
+            let (pagination, link) = tags_pagination("w0bm", page, has_more);
+            let ctx = crate::tpl::to_jvalue(&serde_json::json!({ "pagination": pagination, "link": link }));
+            for tpl in ["snippets/pagination.html", "frontends/w0bm/partials/pagination.html", "frontends/f0ckv2/snippets/pagination.html"] {
+                let html = env.get_template(tpl).unwrap().render(&ctx).unwrap_or_else(|e| panic!("{tpl} page {page}: {e:#}"));
+                if has_more {
+                    assert!(html.contains(&format!("href=\"/user/w0bm/tags/p/{}\"", page + 1)), "{tpl} page {page}: {html}");
+                }
+                if page > 1 {
+                    assert!(html.contains(&format!("href=\"/user/w0bm/tags/p/{}\"", page - 1)), "{tpl} page {page}: {html}");
+                }
+            }
+        }
+    }
 }
