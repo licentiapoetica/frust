@@ -475,6 +475,18 @@ pub fn frontend_for(st: &AppState, cfg: &Config, req: Option<&Req>) -> String {
     cfg.str("websrv.frontend").filter(|f| valid(f)).map(str::to_string).unwrap_or_else(|| DEFAULT_FRONTEND.to_string())
 }
 
+/// Whether this request's frontend can show the Onara viewer (an item over its grid page). The default
+/// frontend can; an alternative one when it has its own `ajax-item.html`, the item box that
+/// routes/index.rs renders into its index page (views/frontends/README.md). Without it, items open
+/// on their own page.
+pub fn frontend_has_onara(st: &AppState, req: Option<&Req>) -> bool {
+    frontend_name_has_onara(st, &frontend_for(st, &st.cfg(), req))
+}
+
+fn frontend_name_has_onara(st: &AppState, fe: &str) -> bool {
+    fe == DEFAULT_FRONTEND || st.tpl.has(&format!("{FRONTENDS_DIR}/{fe}/ajax-item"))
+}
+
 /// Shared pages: default views that render inside the frontend's shell (they include
 /// `shell_header`). Paths relative to views/, e.g. "admin/users.html".
 pub fn shared_views(views: &std::path::Path) -> Vec<String> {
@@ -1010,6 +1022,8 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
         let shell = if frontend != DEFAULT_FRONTEND && st.tpl.has(&fe_part) { format!("{fe_part}.html") } else { format!("snippets/{part}.html") };
         ctx.insert(format!("shell_{part}"), json!(shell));
     }
+    // the settings page offers the Onara viewer only where the frontend has it
+    ctx.insert("frontend_onara".into(), json!(frontend_name_has_onara(st, &frontend)));
     ctx.insert("frontend".into(), json!(frontend));
     ctx.insert("frontends".into(), json!(frontend_names(st)));
     ctx.insert("frontend_switch".into(), json!(frontend_switch_enabled(&cfg)));

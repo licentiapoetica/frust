@@ -69,6 +69,17 @@ class names restores its own values with `!important` in its shell CSS, inside
 `@layer f0ck-shell-important { … }`. That layer is declared before f0ckm, so its important
 declarations win. Examples: `public/s/fe/w0bm/css/w0bm-shell.css` and `public/s/fe/f0ckv2/css/f0ckv2-shell.css`.
 
+**Onara viewer (optional).** With Onara on (settings, `f0ck_onara` cookie, `onara` config), an item
+URL renders the grid page that contains the item, with the item over it (`routes/index.rs`
+`onara_page`). A frontend opts in by having its own `ajax-item.html`, the item box on its own:
+- `index.html` gets `is_onara_item`, `onara_item_html` (that box, rendered with the item's data) and
+  the grid of the page it is on (`is_onara_active` on the item's thumbnail);
+- it shows the box over the grid, with a close link to the grid page; prev / next / random stay the
+  item's own links (f0ckv2: `index.html`, `snippets/item-body.html`, `.v2-onara` in f0ckv2.css).
+
+Without `ajax-item.html` (w0bm), items always open on their own page and the settings page hides the
+Onara toggle (`frontend_onara`, `tpl::frontend_has_onara`).
+
 **Hooks.** Set them in the frontend's main script; all are optional:
 
 ```js

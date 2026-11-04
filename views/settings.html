@@ -119,6 +119,8 @@
             <small class="text-muted settings-hint">{{ t("settings.enable_bg_blur_hint") }}</small>
           </div>
 
+          {#- only frontends that have the Onara viewer (tpl::frontend_has_onara; not w0bm) -#}
+          {% if frontend_onara %}
           <div class="setting-item settings-row settings-js-only">
             <label for="onara_enabled_toggle" class="settings-check{% if (onara_cfg != none and onara_cfg != none) %} settings-check-locked{% endif %}">
               <input type="checkbox" id="onara_enabled_toggle" {% if (onara_cfg != none and onara_cfg != none) %} disabled {% if onara_cfg %} checked {% endif %} {% endif %}>
@@ -132,6 +134,7 @@
               {% endif %}
             </small>
           </div>
+          {% endif %}
 
           {% if not guest %}
           <div class="setting-item settings-row">

@@ -6,7 +6,7 @@
 {%- set v2_theme = (theme if theme in v2_themes else "f0ck") -%}
 {%- set item_ref = ((item.slug if (enable_item_slugs and item.slug) else item.id) if (item is defined and item) else "") -%}
 <!doctype html>
-<html lang="{{ (lang or "en") }}" class="no-js{% if v2_shell %} f0ck-shell{% endif %}" theme="{{ v2_theme }}" res="{{ ("fullscreen" if (session and session.fullscreen == 1) else "") }}">
+<html lang="{{ (lang or "en") }}" class="no-js{% if v2_shell %} f0ck-shell{% endif %}{% if (is_onara_item is defined and is_onara_item) %} v2-onara-open{% endif %}" theme="{{ v2_theme }}" res="{{ ("fullscreen" if (session and session.fullscreen == 1) else "") }}">
 <head>
   <meta charset="utf-8" />
   {% if (page_meta is defined and page_meta.title) %}<title>{{ domain }} - {{ page_meta.title }}</title>{% elif (item is defined and item) %}<title>{{ domain }} - {{ item_ref }}</title>{% else %}<title>{{ domain }}</title>{% endif %}

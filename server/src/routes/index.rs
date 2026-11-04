@@ -576,7 +576,7 @@ async fn generic(st: AppState, req: Req) -> Res {
     }
 
     let onara = s::is_onara_enabled_for(&cfg, &req.cookies, sref, false);
-    if is_item && onara {
+    if is_item && onara && crate::tpl::frontend_has_onara(&st, Some(&req)) {
         return Ok(no_store(onara_page(&st, &req, &tpl_req, &opts, data).await?));
     }
     let view = if is_item { "item" } else { "index" };
@@ -792,6 +792,8 @@ async fn onara_page(st: &AppState, req: &Req, tpl_req: &Req, opts: &FeedOpts<'_>
     grid["onara"] = json!(true);
     grid["onara_item_html"] = json!(item_html);
     grid["item"] = data["item"].clone();
+    // page data of the item on screen (f0ckv2's footer: the rating toggle)
+    grid["can_rate_item"] = data["can_rate_item"].clone();
     grid["hidePagination"] = json!(false);
     Ok(html(crate::tpl::render(st, Some(tpl_req), "index", grid)))
 }

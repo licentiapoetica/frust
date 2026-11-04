@@ -1714,3 +1714,82 @@ nav.navbar.navbar-expand-lg {
 .media-object > .embed-responsive:has(> iframe) {
   position: relative;
 }
+
+
+/* ── Onara viewer: the item over its grid page (index.html, is_onara_item) ──────────────────────────
+   The grid stays behind, dimmed and blurred like f0ckm's Onara; the navbar stays on top. The page
+   itself doesn't scroll, the overlay does. The backdrop and the x are links to the grid page. */
+html.v2-onara-open,
+html.v2-onara-open body {
+  overflow: hidden;
+}
+.v2-onara {
+  position: fixed;
+  inset: 0;
+  z-index: 1020;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px) saturate(130%);
+  -webkit-backdrop-filter: blur(5px) saturate(130%);
+  scrollbar-color: var(--scrollbar-color) transparent;
+  scrollbar-width: thin;
+}
+.v2-onara-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  cursor: pointer;
+}
+.v2-onara #bg {
+  pointer-events: none;
+}
+.v2-onara-main {
+  position: relative;
+  z-index: 1;
+  height: auto;
+  min-height: 0;
+  padding-top: 41px;
+  padding-bottom: 40px;
+  pointer-events: none;
+}
+/* only the item box takes clicks: the space around it is the backdrop (closes) */
+.v2-onara-main > .container {
+  pointer-events: auto;
+}
+.v2-onara-close {
+  position: fixed;
+  top: 51px;
+  right: 20px;
+  z-index: 2;
+  display: block;
+  padding: 0 10px;
+  font-size: 28px;
+  line-height: 36px;
+  color: var(--white);
+  background: var(--metadata-bg);
+  border: 1px solid var(--img-border-color);
+  text-decoration: none;
+}
+.v2-onara-close:hover,
+.v2-onara-close:focus-visible {
+  color: var(--accent);
+}
+/* the item on screen in the grid behind */
+div.posts > a.v2-onara-active {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+@media (max-width: 768px) {
+  .v2-onara-main {
+    padding-top: 0;
+  }
+  /* bottom corner: at the top it would cover the item's own icons */
+  .v2-onara-close {
+    top: auto;
+    bottom: 10px;
+    right: 10px;
+  }
+}

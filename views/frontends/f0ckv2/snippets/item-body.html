@@ -1,0 +1,199 @@
+{#- f0ckv2 item: the item box (player, metadata, report/delete modals, comments) and its scripts. Used by
+    item.html (the item page) and ajax-item.html (the Onara viewer: index.html shows it over the grid). -#}
+{%- set item_ref = (item.slug if (enable_item_slugs and item.slug) else item.id) -%}
+{%- set here = ((url.pathname ~ url.search) if (url and url.pathname) else ("/" ~ item_ref)) -%}
+{%- set uploader = ("anonymous" if is_anonymized else (item.username or user.name or "")) -%}
+<div class="container" data-item-id="{{ item.id }}">
+  <div class="_204863">
+    <div class="imageDoor" style="--hover-image: url('{{ (item.thumbnail or ("/t/" ~ item.id ~ ".webp")) }}')">
+      <img src="{{ (item.thumbnail or ("/t/" ~ item.id ~ ".webp")) }}" alt="" />
+    </div>
+    <div class="gapLeft">
+      <span class="populateME">{{ item_ref }}{% if (enable_item_title and item.title) %} - <span class="v2-item-title">{{ item.title }}</span>{% endif %}</span>
+    </div>
+    <div class="gapRight">
+      <a href="#report" class="v2-iconlink" id="a_report" title="report this f0ck"><svg class="iconset"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#warning"></use></svg></a>
+      {% if session %}
+      <form method="post" action="/api/v2/togglefav" class="v2-iconform" id="f_favo">
+        <input type="hidden" name="postid" value="{{ item.id }}">
+        <input type="hidden" name="action" value="{{ ("remove" if user_has_favorited else "add") }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}">
+        <button type="submit" title="{{ ("unfav" if user_has_favorited else "fav") }}"><svg class="iconset" id="a_favo"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#heart_{{ ("solid" if user_has_favorited else "regular") }}"></use></svg></button>
+      </form>
+      {% if enable_comments %}
+      <form method="post" action="/api/subscribe/{{ item.id }}" class="v2-iconform" id="f_subscribe">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="subscribed" value="{{ ("0" if isSubscribed else "1") }}">
+        <input type="hidden" name="back" value="{{ here }}">
+        <button type="submit" title="{{ ("unsubscribe from comments" if isSubscribed else "subscribe to comments") }}"><svg class="iconset" id="a_subscribe"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#bell_{{ ("solid" if isSubscribed else "regular") }}"></use></svg></button>
+      </form>
+      {% endif %}
+      {% endif %}
+      <a href="/tfull/" class="v2-iconlink" id="a_tfull" title="fullscreen"><svg class="iconset"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#window-{{ ("minimize" if (session and session.fullscreen == 1) else "maximize") }}"></use></svg></a>
+      {% if is_mod_or_admin %}<svg class="iconset js-only" id="a_delete"><title>delete</title><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#cross"></use></svg><a href="#delete" class="v2-iconlink nojs-only" title="delete"><svg class="iconset" id="a_delete_nojs"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#cross"></use></svg></a>{% endif %}
+    </div>
+  </div>
+  <div class="content">
+    <div class="next-post">
+      <div class="arrow-next">
+        {% if pagination.prev %}
+        <a id="next" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}"></a>
+        {% else %}
+        <a id="next" class="v2-arrow-off" href="#"></a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="media-object">
+      {% if item.mime == "video/youtube" %}
+      <div class="embed-responsive embed-responsive-16by9">
+        <iframe class="embed-responsive-item" width="640" height="360" src="https://www.youtube-nocookie.com/embed/{{ item.dest.replace("yt:", "", 1) }}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      </div>
+      {% elif item.mime.startswith("video") %}
+      <div class="embed-responsive embed-responsive-16by9">
+        <video id="my-video" class="embed-responsive-item" width="640" height="360" src="{{ item.dest }}" data-size="{{ item.size }}" preload="auto"{% if not (session and session.disable_autoplay) %} autoplay{% endif %} data-autoplay="{{ ("0" if (session and session.disable_autoplay) else "1") }}" controls loop playsinline></video>
+      </div>
+      {% elif item.mime.startswith("audio") %}
+      <div class="embed-responsive embed-responsive-16by9 v2-audio-stage" style="--cover: url('{{ (item.coverart or "/s/fe/f0ckv2/img/200.gif") }}')">
+        <audio id="my-video" class="embed-responsive-item" data-size="{{ item.size }}"{% if not (session and session.disable_autoplay) %} autoplay{% endif %} data-autoplay="{{ ("0" if (session and session.disable_autoplay) else "1") }}" controls loop src="{{ item.dest }}" poster="{{ (item.coverart or "/s/fe/f0ckv2/img/200.gif") }}"></audio>
+      </div>
+      {% elif item.mime.startswith("image") %}
+      <div class="embed-responsive embed-responsive-16by9">
+        <div class="embed-responsive-image" id="image-scroll">
+          <a href="{{ item.dest }}" id="elfe" target="_blank"><img id="f0ck-image" class="img-fluid" src="{{ item.dest }}" alt="" decoding="async"/></a>
+        </div>
+      </div>
+      {% elif (item.mime == "application/pdf" and enable_pdf) %}
+      <div class="embed-responsive embed-responsive-16by9">
+        <iframe class="embed-responsive-item" src="{{ item.dest }}#toolbar=0" sandbox="allow-scripts allow-same-origin" loading="lazy"></iframe>
+      </div>
+      {% elif ("flash" in item.mime and enable_swf) %}
+      <div class="embed-responsive embed-responsive-16by9">
+        <div id="ruffle-container" class="embed-responsive-item" data-swf="{{ item.dest }}">
+          <div class="v2-download-inner nojs-only"><span>flash needs JavaScript</span><a class="badge badge-dark" href="{{ item.dest }}" download>download swf</a></div>
+        </div>
+      </div>
+      <script src="/s/js/flash-embed.js?v={{ mtime("/public/s/js/flash-embed.js") }}"></script>
+      {% elif item.dest %}
+      <div class="embed-responsive embed-responsive-16by9 v2-download">
+        <div class="embed-responsive-item v2-download-inner">
+          <span>{{ (item.original_filename or item.dest.split("/")|last) }}</span>
+          <span>{{ item.mime }} / {{ item.size }}</span>
+          <a class="badge badge-dark" href="{{ item.dest }}" download>download</a>
+        </div>
+      </div>
+      {% else %}
+      <h1>404 - Not f0cked</h1>
+      {% endif %}
+    </div>
+    <div class="previous-post">
+      <div class="arrow-prev">
+        {% if pagination.next %}
+        <a id="prev" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}"></a>
+        {% else %}
+        <a id="prev" class="v2-arrow-off" href="#"></a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% if (item.is_album and item.album and item.album|length > 1) %}
+  <div class="album-strip">
+    {% for a in item.album %}
+    <a href="{{ a.src }}" target="_blank" class="badge badge-dark{% if a.is_first %} active{% endif %}" title="{{ a.mime }}"><img src="{{ (a.thumb or a.src) }}" alt="{{ loop.index }}" loading="lazy"></a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {#- MOTD between the player and the metadata (f0ck.js fe.motd keeps it live; hidden while empty) -#}
+  {% if not (session and session.show_motd == false) %}<div class="v2-motd v2-motd-item badge badge-dark"{% if not ((motd or "")|trim) %} hidden{% endif %}>{{ (motd or "") }}</div>{% endif %}
+  <div class="metadata">
+    <span class="badge badge-dark">
+      <a href="/{{ item_ref }}" class="id-link">{{ item_ref }}</a>
+      {% if uploader %}(<a id="a_username" href="/user/{{ uploader|lower|encode_uri_component }}/uploads{% if tmp and tmp.mime %}/{{ tmp.mime }}{% endif %}">{{ (item.author_display_name or uploader) if not is_anonymized else uploader }}</a>){% endif %}
+    </span>
+    {% if user and (user.network or user.channel) %}<span class="badge badge-dark">{{ user.network }} / {{ user.channel }}</span>{% endif %}
+    <span class="badge badge-dark image-source">
+      {% if (item.src and item.src.long) %}
+      <a href="{{ item.src.long }}" target="_blank" rel="noopener noreferrer">{{ item.src.short }}</a>
+      {% else %}
+      hidden
+      {% endif %}
+    </span>
+    <span class="badge badge-dark"><a class="dest-link" href="{{ item.dest }}" target="_blank">{{ item.mime }}</a> / {{ item.size }}</span>
+    <span class="badge badge-dark"><time class="timeago" tooltip="{{ item.timestamp.timefull }}" data-full="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></span>
+    <span class="badge badge-dark">{{ phrase }}</span>
+    {% if item.is_oc or (halls_enabled and item.primaryHall) or item.expires_in or (item.visibility and item.visibility > 0) %}
+    <span class="badge badge-dark v2-extra">
+      {% if item.is_oc %}<span class="badge badge-light" tooltip="Original Content">OC</span>{% endif %}
+      {% if (halls_enabled and item.primaryHall) %}<a class="badge badge-light" href="/h/{{ item.primaryHall.slug }}">hall: {{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %} <a class="badge badge-light" href="/h/{{ h.slug }}">{{ h.name }}</a>{% endfor %}{% endif %}
+      {% if item.expires_in %}<span class="badge badge-light" tooltip="{{ item.expires_at }}">expires {{ item.expires_in }}</span>{% endif %}
+      {% if (item.visibility and item.visibility > 0) %}<span class="badge badge-light">private</span>{% endif %}
+    </span>
+    {% endif %}
+    <span class="badge badge-dark" id="tags">
+      {%- set v2_rating = (item.tags or [])|selectattr("normalized", "in", ["sfw", "nsfw", "nsfl"])|list %}
+      {% if not v2_rating %}<span class="badge badge-untagged mr-2" data-rating="untagged" tooltip="unrated">?</span>{% endif %}
+      {% for tag in (item.tags or []) %}
+      <span{% if (session and tag.user) %} tooltip="{{ tag.user }}"{% endif %} class="badge {{ tag.badge }} mr-2" data-tag="{{ tag.tag }}">
+        <a href="/tag/{{ tag.normalized|encode_uri_component }}">{{ tag.tag }}</a>{% if is_mod_or_admin %}&nbsp;<a class="removetag js-only" href="#" title="remove tag">&#215;</a>{% endif %}
+      </span>
+      {% endfor %}
+      {% if session %}
+      <form method="post" action="/api/v2/tags/{{ item.id }}" class="v2-addtag nojs-only">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}#tags">
+        <input type="text" name="tagname" size="10" placeholder="tag" required maxlength="85"> <button type="submit">add tag</button>
+      </form>
+      <span class="js-only"><a href="#" id="a_addtag">add tag</a>{% if can_rate_item %}&nbsp;-&nbsp;<a href="#" id="a_toggle" title="change rating (p)">toggle</a>{% endif %}</span>
+      <datalist id="testlist"></datalist>
+      {% endif %}
+    </span>
+    <span class="badge" id="favs"{% if not item.favorites %} hidden{% endif %}>
+      {% for fav in (item.favorites or []) %}
+      {% if not fav.hide_fav_badge %}
+      <a href="/user/{{ (fav.login or fav.user)|lower|encode_uri_component }}/favs" tooltip="{{ (fav.display_name or fav.user) }}" flow="up"><img src="{% if fav.avatar_file and fav.avatar_file != "default.png" %}/a/{{ fav.avatar_file }}{% elif fav.avatar %}/t/{{ fav.avatar }}.webp{% else %}/s/fe/f0ckv2/img/default.png{% endif %}" alt="" class="v2-favava" /></a>
+      {% endif %}
+      {% endfor %}
+    </span>
+  </div>
+  <div id="report" class="v2-modal">
+    <a href="#_" class="v2-modal-bg" aria-label="close"></a>
+    <form method="post" action="/api/v2/report" class="v2-modal-box v2-form" id="v2-report-form">
+      <div class="f0cks-header"><span>report f0ck {{ item_ref }}</span><a href="#_">&#215;</a></div>
+      <input type="hidden" name="item_id" value="{{ item.id }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ here }}">
+      <div class="v2-report-cats">
+        <label><input type="checkbox" name="categories[]" value="wrong_rating"> wrong rating</label>
+        <label><input type="checkbox" name="categories[]" value="spam"> spam</label>
+        <label><input type="checkbox" name="categories[]" value="duplicate"> duplicate</label>
+        <label><input type="checkbox" name="categories[]" value="copyright"> copyright</label>
+        <label><input type="checkbox" name="categories[]" value="illegal"> illegal</label>
+        <label><input type="checkbox" name="categories[]" value="other"> other</label>
+      </div>
+      <textarea name="reason" class="v2-input" rows="3" maxlength="1000" placeholder="what's wrong?"></textarea>
+      {% if captcha_enabled %}<cap-widget class="cap-dark js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% include "frontends/f0ckv2/snippets/cap-image.html" %}{% endif %}
+      <div><button type="submit">send report</button> <span class="v2-report-msg" role="status"></span></div>
+    </form>
+  </div>
+  {% if is_mod_or_admin %}
+  <div id="delete" class="v2-modal">
+    <a href="#_" class="v2-modal-bg" aria-label="close"></a>
+    <form method="post" action="/api/v2/admin/deletepost" class="v2-modal-box v2-form">
+      <div class="f0cks-header"><span>delete f0ck {{ item_ref }}</span><a href="#_">&#215;</a></div>
+      <input type="hidden" name="postid" value="{{ item.id }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ (link.main ~ pagination.next ~ link.suffix) if pagination.next else ((link.main ~ pagination.prev ~ link.suffix) if pagination.prev else "/") }}">
+      <input type="text" name="reason" class="v2-input" maxlength="500" placeholder="reason">
+      <div><button type="submit">delete</button></div>
+    </form>
+  </div>
+  {% endif %}
+  {% if enable_comments and (session or not hide_comments_from_public) %}
+  {% include "frontends/f0ckv2/snippets/comments.html" %}
+  {% endif %}
+</div>
+{% if captcha_enabled %}<script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
+<script src="/s/cap/cap.min.js?v=0.1.58" defer></script>{% endif %}
+{#- danmaku (comments flying over the video, f0ckm's), fed by comments.js -#}
+<script src="/s/js/danmaku.js?v={{ mtime("/public/s/js/danmaku.js") }}"></script>
+<script src="/s/fe/f0ckv2/js/comments.js?v={{ mtime("/public/s/fe/f0ckv2/js/comments.js") }}"></script>

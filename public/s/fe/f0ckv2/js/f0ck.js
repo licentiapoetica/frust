@@ -27,6 +27,8 @@ const Cookie = {
 const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName) || e.target.isContentEditable;
 
 (() => {
+  // Onara viewer: the item over its grid page (index.html), closed by a link to that page
+  const onara = document.getElementById('v2-onara');
   let video;
   let elem = document.querySelector("#my-video");
   if(elem) {
@@ -219,7 +221,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   // (see <wheeler>); otherwise the grid scrolls like any page and the page numbers turn it.
   if([...document.querySelectorAll("div.posts")].length === 1 && footbar) {
     document.addEventListener("wheel", e => {
-      if(!wheelNavOn()) return;
+      if(!wheelNavOn() || onara) return;
       const main = document.querySelector('#main');
       if(main && Math.ceil(window.innerHeight + window.scrollY) >= main.offsetHeight && e.deltaY > 0) { // down
         const el = document.querySelector(".pagination > .next:not(.disabled)");
@@ -279,7 +281,10 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     let el;
     if(Math.abs(swipeRT.xDiff) > Math.abs(swipeRT.yDiff)) {
       if(Math.abs(swipeRT.xDiff) > swipeOpt.treshold && timeDiff < swipeOpt.timeout) {
-        if(swipeRT.xDiff > 0) // left
+        // in the Onara viewer the navbar pagination is the grid's: swipe through the items instead
+        if(onara)
+          el = document.querySelector(swipeRT.xDiff > 0 ? "a#prev:not([href='#'])" : "a#next:not([href='#'])");
+        else if(swipeRT.xDiff > 0) // left
           el = document.querySelector(".pagination > .next:not(.disabled)");
         else // right
           el = document.querySelector(".pagination > .prev:not(.disabled)");
@@ -450,7 +455,8 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     const onListing = !!document.querySelector('.pagewrapper > #main');
     const doc = await fetchDoc(url);
     if(!onListing || !doc.querySelector('.pagewrapper > #main')) { location.href = url; return; }
-    softSwap(doc, ['.pagewrapper > #main', '.pagination-wrapper', '#view-settings']);
+    // (a#prev / a#next: the item of the Onara viewer, over the listing)
+    softSwap(doc, ['.pagewrapper > #main', '.pagination-wrapper', '#view-settings', 'a#prev', 'a#next']);
     document.title = doc.title;
     if(push) {
       // the entry we came from has to reload in place too when going back
@@ -528,6 +534,20 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     themeSelect.value = document.documentElement.getAttribute('theme');
   }
   // </frontend hooks>
+
+  // <onara> Escape closes the viewer (an open report / delete box first); the item's thumbnail
+  // behind it is scrolled into view
+  if(onara) {
+    const active = document.querySelector('div.posts > a.v2-onara-active');
+    if(active) active.scrollIntoView({ block: 'center' });
+    document.addEventListener('keydown', e => {
+      if(e.key !== 'Escape' || isTyping(e) || e.defaultPrevented) return;
+      if(location.hash && location.hash !== '#_' && document.querySelector(`.v2-modal#${CSS.escape(location.hash.slice(1))}`)) return;
+      e.preventDefault();
+      location.href = onara.dataset.close || '/';
+    });
+  }
+  // </onara>
 
   // <timeago> click toggles relative / full date
   document.querySelectorAll("time.timeago[data-full]").forEach(t => {

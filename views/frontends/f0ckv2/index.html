@@ -23,5 +23,18 @@
     </div>
   </div>
 </div>
+{% if is_onara_item %}
+{#- Onara viewer: the item over its grid page (routes/index.rs). Closing (the backdrop, the x, Escape)
+    goes to that grid page; prev / next / random are the item's own links and open the next item here. -#}
+{%- set onara_close = link.main ~ ((link.path ~ pagination.page) if (pagination and pagination.page and pagination.page > 1) else "") ~ (link.suffix or "") -%}
+<div class="v2-onara" id="v2-onara" data-close="{{ onara_close }}">
+  <a href="{{ onara_close }}" class="v2-onara-bg" aria-label="close" tabindex="-1"></a>
+  <canvas class="hidden-xs" id="bg"></canvas>
+  <a href="{{ onara_close }}" class="v2-onara-close" title="close (esc)">&#215;</a>
+  <div class="wrapper v2-onara-main">
+    {{ onara_item_html|safe }}
+  </div>
+</div>
+{% endif %}
 {% include "frontends/f0ckv2/snippets/footer.html" %}
 {% endif %}

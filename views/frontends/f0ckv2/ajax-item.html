@@ -1,0 +1,7 @@
+{#- The item box on its own (the Onara viewer: routes/index.rs renders it into index.html, which shows it
+    over the grid). 4chan proxy items keep f0ckm's layout, as on item.html. -#}
+{% if (item.is_chan or not item) %}
+{% include "item-partial.html" %}
+{% else %}
+{% include "frontends/f0ckv2/snippets/item-body.html" %}
+{% endif %}
