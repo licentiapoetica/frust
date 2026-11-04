@@ -71,7 +71,7 @@
                 <button title="Toggle comments" class="hidden-xs toggle-comments w0bm-js-only" id="toggle"><i class="fa fa-comments"></i> <span id="commentAmount">0</span></button>
                 {% endif %}
                 <button title="Toggle Background" class="hidden-xs bg-toggle w0bm-js-only" id="togglebg"><i class="fa fa-adjust w0bm-yellow"></i></button>
-                <button class="copylink w0bm-js-only" data-clipboard-text="https://{{ domain }}/{{ iid }}" title="Copy URL!"><i class="fa fa-link"></i></button>
+                <button class="copylink w0bm-js-only" data-clipboard-text="https://{{ domain }}{{ (url.pathname if (url and url.pathname) else ("/" ~ iid)) }}" title="Copy URL!"><i class="fa fa-link"></i></button>
                 <div class="dropdown">
                     <a class="fa fa-download w0bm-popover-btn" id="dlbutton" href="{% if item.mime == "video/youtube" %}{{ item.src.long }}{% else %}{{ item.dest }}{% endif %}" {% if item.mime != "video/youtube" %}download{% endif %} data-toggle="popover" data-placement="top" title="Download" data-popover="#w0bm-dl-popover"></a>
                     <template id="w0bm-dl-popover">
