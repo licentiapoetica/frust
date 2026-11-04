@@ -29,6 +29,7 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/(rules)$", rules);
     r.get(r"^\/mode\/(\d)", mode);
     r.get(r"^\/strict\/(0|1)$", strict);
+    r.get(r"^\/mime\/?$", mime_pick);
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ pub fn req_lang(st: &AppState, req: &Req) -> String {
         .or_else(|| req.cookie("language").map(str::trim).filter(|l| !l.is_empty()))
         .map(str::to_string)
         .unwrap_or_else(|| dflt.clone());
-    if crate::i18n::VALID_LANGS.contains(&raw.as_str()) { raw } else { dflt }
+    if crate::i18n::is_selectable(&cfg, &raw) || raw == dflt { raw } else { dflt }
 }
 
 /// `createI18n(req.session?.language || req.lang || 'en')` — note: no cookie / config fallback.
@@ -81,15 +82,6 @@ fn feed_mime(req: &Req) -> Option<String> {
     req.query("mime").filter(|m| !m.is_empty()).or_else(|| req.param("mime").filter(|m| !m.is_empty())).map(str::to_string)
 }
 
-fn min_xd(req: &Req, session: Option<&Session>) -> f64 {
-    match req.query("min_xd") {
-        Some(v) => {
-            let t = v.trim();
-            if t.is_empty() { 0.0 } else { t.parse::<f64>().unwrap_or(f64::NAN) }
-        }
-        None => session.map(|s| s.min_xd_score as f64).unwrap_or(0.0),
-    }
-}
 
 fn error_page(st: &AppState, req: &Req, code: u16, data: Value) -> Response {
     html_code(crate::tpl::render(st, Some(req), "error", data), code)
@@ -412,7 +404,7 @@ async fn generic(st: AppState, req: Req) -> Res {
         exclude: sref.map(|s| s.excluded_tags.clone()).unwrap_or_default(),
         strict,
         random,
-        min_xd_score: if is_item { 0.0 } else { min_xd(&req, sref) },
+
         lang: Some(lang),
         tagger: req.query("tagger").filter(|t| !t.is_empty()).map(str::to_string),
         subf0ck: req.query("subf0ck").filter(|t| !t.is_empty()).map(str::to_string),
@@ -539,16 +531,8 @@ async fn generic(st: AppState, req: Req) -> Res {
                 Some(s) => subscription_status(&st, s.id, item_id).await,
                 None => false,
             });
-            let score = f0cklib::item_xd_score(&st, item_id).await;
-            let (tier, label) = f0cklib::xd_score_meta(score as f64);
-            data["item"]["xd_score"] = json!(score);
-            data["item"]["xd_tier"] = json!(tier);
-            data["item"]["xd_label"] = json!(label);
         } else {
             data["isSubscribed"] = json!(false);
-            data["item"]["xd_score"] = json!(0);
-            data["item"]["xd_tier"] = json!(0);
-            data["item"]["xd_label"] = json!("");
         }
         data["commentsJSON"] = Value::Null;
         data["comments"] = json!([]);
@@ -734,7 +718,6 @@ async fn onara_page(st: &AppState, req: &Req, tpl_req: &Req, opts: &FeedOpts<'_>
         let o = FeedOpts {
             target_item_id: Some(crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["item"]["id"]))),
             target_item_pinned: Some(crate::config::truthy(&data["item"]["is_pinned"])),
-            min_xd_score: min_xd(req, opts.session),
             itemid: None,
             ..opts.clone()
         };
@@ -746,7 +729,7 @@ async fn onara_page(st: &AppState, req: &Req, tpl_req: &Req, opts: &FeedOpts<'_>
             }
         };
     }
-    let o = FeedOpts { page: Some(item_page), itemid: None, random: is_random, min_xd_score: min_xd(req, opts.session), ..opts.clone() };
+    let o = FeedOpts { page: Some(item_page), itemid: None, random: is_random, ..opts.clone() };
     let mut grid = f0cklib::getf0cks(st, &o).await?;
     if !grid["success"].as_bool().unwrap_or(false) {
         grid = json!({
@@ -915,6 +898,7 @@ async fn privacy(st: AppState, req: Req) -> Res {
         "https": cfg.str_or("main.url.full", "").starts_with("https"),
         "ip_secret_env": crate::security::ip_hash_secrets(&cfg).source.starts_with("env"),
         "domain": cfg.str_or("main.url.domain", ""),
+        "frontend_switch": crate::tpl::frontend_switch_enabled(&cfg),
         "ret": ret,
         "ret_on": ret_on,
     });
@@ -1015,3 +999,24 @@ async fn strict(st: AppState, req: Req) -> Res {
     }
     Ok(reply(200, "application/json", json!({ "success": true, "strict": on }).to_string()))
 }
+
+/// `GET /mime?video=1&audio=1&image=1&flash=1&back=/path`: the media filter as a plain form (the
+/// mime picker without JavaScript; f0ckm.js and w0bm.js set the same `mime` cookie themselves).
+/// Nothing ticked clears the filter. Redirects back to `back` (a local path) or the front page.
+async fn mime_pick(st: AppState, req: Req) -> Res {
+    let cfg = st.cfg();
+    let picked: Vec<&str> = ["video", "audio", "image", "flash"].into_iter().filter(|m| req.query(m) == Some("1")).collect();
+    let back = req.query("back").and_then(crate::nojs::safe_back).unwrap_or_else(|| "/".to_string());
+    let mut r = redirect(&back);
+    r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    let cookie = if picked.is_empty() {
+        format!("mime=; {}", cookie_options(&cfg, CookieExpiry::MaxAge(0), false))
+    } else {
+        format!("mime={}; {}", picked.join(","), cookie_options(&cfg, CookieExpiry::MaxAge(31536000), false))
+    };
+    if let Ok(v) = HeaderValue::from_str(&cookie) {
+        r.headers_mut().insert(header::SET_COOKIE, v);
+    }
+    Ok(r)
+}
+

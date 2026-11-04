@@ -1,0 +1,39 @@
+{#- f0ckm's quick upload: the drop overlay and the upload dropdown (navbar "Upload", the "u" key, a
+    file dropped anywhere). Styles: /s/css/upload-modal.css (+ upload.css for the form); script:
+    /s/js/f0ck_upload_init.js with /s/js/upload.js. Included by snippets/navbar.html and, in the
+    alternative frontends, by snippets/upload-modal-frontend.html. -#}
+{% if session %}
+<!-- Global Drop Overlay -->
+<div id="drop-overlay">
+  <div class="overlay-content">
+    <i class="fa-solid fa-cloud-arrow-up navbar-drop-icon"></i>
+    <h2>{{ t("upload.drop_anywhere") }}</h2>
+  </div>
+</div>
+
+<!-- Upload Drag Modal -->
+<div id="upload-drag-modal">
+  <div class="modal-content">
+    <button class="modal-close" id="drag-modal-close" title="Cancel Upload">&times;</button>
+    <div class="modal-body">
+      <div class="upload-container navbar-upload-container">
+          <div class="upload-title">
+          <span class="upload-title-text">{{ t("upload.title") }}</span>
+          <div class="upload-limit-info">
+              {% if session.uploads_remaining == none %}
+              <span class="limit-unlimited"><i class="fa-solid fa-infinity"></i> {{ t("upload.unlimited") }}</span>
+              {% elif session.uploads_remaining == 0 %}
+              <span class="limit-exhausted"><i class="fa-solid fa-triangle-exclamation"></i> {{ t("upload.limit_reached") }} (0/{{ upload_limit }})</span>
+              {% else %}
+              <span class="limit-remaining"><i class="fa-solid fa-upload"></i> {{ session.uploads_remaining }}/{{ upload_limit }} {{ t("upload.remaining") }}</span>
+              {% endif %}
+          </div>
+          </div>
+
+          {% include "snippets/upload-form.html" %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}

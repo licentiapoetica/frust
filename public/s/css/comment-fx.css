@@ -63,3 +63,10 @@
     animation: none;
   }
 }
+
+/* custom emojis :name: in the frontends' comments (f0ckEmojify in f0ck-core.js) */
+.f0ck-emoji {
+  max-height: 2em;
+  max-width: 4em;
+  vertical-align: middle;
+}

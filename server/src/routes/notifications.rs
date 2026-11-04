@@ -67,6 +67,7 @@ fn select_head(nsfl: i32) -> crate::db::Sql {
                COALESCE(uo.display_name, '') as from_display_name,
                COALESCE(u.id, 0) as from_user_id,
                uo.username_color,
+               CASE WHEN c.is_deleted THEN NULL ELSE c.content END as comment_content,
                i.dest, i.mime,
                CASE (SELECT ta.tag_id FROM tags_assign ta WHERE ta.item_id = n.item_id AND ta.tag_id IN (1, 2, "#,
         nsfl,

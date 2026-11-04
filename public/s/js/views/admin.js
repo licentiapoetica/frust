@@ -1,3 +1,9 @@
+// The admin page's no-JavaScript stand-ins (the Upload / Save buttons next to "Choose image",
+// "Choose icon" and the glitch checkboxes) do nothing here: picking a file uploads it and the
+// checkboxes save on change. CSS hides them too (html:not(.no-js) .adm-nojs-only); removed here
+// as well, so no frontend's CSS can bring them back.
+document.querySelectorAll('.adm .adm-nojs-only').forEach((el) => el.remove());
+
 F0ckActions.define({
   saveAdminSettings: () => saveAdminSettings(),
   saveBrandText: (form) => saveBrandText(form),

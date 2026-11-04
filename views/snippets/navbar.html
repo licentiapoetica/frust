@@ -8,8 +8,7 @@
   <!-- Brand: always visible, flush left -->
   <a class="navbar-brand" href="/">
     {#- image and text from the admin panel (both, either, or the site name); f0ck-core.js updates them live -#}
-    <img id="navbar-logo" class="navbar-logo-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}" data-on="load:sync-navbar"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}>
-    <span class="f0ck" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="{{ domain }}"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else domain)) }}</span>
+    <img id="navbar-logo" class="navbar-logo-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}" data-on="load:sync-navbar"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="f0ck" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="{{ domain }}"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else domain)) }}</span>
   </a>
 
   <!-- Nav links: desktop always-on, mobile hidden until toggled -->
@@ -66,7 +65,9 @@
           <a href="/user/{{ session.user|lower }}/halls">{{ t("nav.my_halls") }}</a>
           {% endif %}
           {% endif %}
+          {% if manual_approval %}
           <a href="/pending" class="nav-menu-pending">Pending{% if session.own_pending_count is number %}<span class="nav-menu-count {% if session.own_pending_count == 0 %}is-zero{% endif %}" title="{{ session.own_pending_count }} upload(s) awaiting approval">{{ session.own_pending_count }}</span>{% endif %}</a>
+          {% endif %}
           {% if (enable_anonymous_access and session.is_anon) %}
           <a href="#" id="nav-user-anon-identity-btn" class="navbar-anon-identity-link" data-on="click:prevent,openAnonPasskey">Passkey Identity</a>
           {% endif %}
@@ -247,8 +248,7 @@
 
   <a class="navbar-brand" href="/">
     {#- image and text from the admin panel (both, either, or the site name); f0ck-core.js updates them live -#}
-    <img id="navbar-logo" class="navbar-logo-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}" data-on="load:sync-navbar"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}>
-    <span class="f0ck" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="{{ domain }}"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else domain)) }}</span>
+    <img id="navbar-logo" class="navbar-logo-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}" data-on="load:sync-navbar"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="f0ck" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="{{ domain }}"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else domain)) }}</span>
   </a>
 
   <div class="nav-collapse nav-collapse-guest" id="navbarContent">
@@ -625,42 +625,7 @@
   </div>
 </div>
 
-<!-- Global Drag & Drop Feature for Logged-in Users -->
-{% if session %}
-<!-- Global Drop Overlay -->
-<div id="drop-overlay">
-  <div class="overlay-content">
-    <i class="fa-solid fa-cloud-arrow-up navbar-drop-icon"></i>
-    <h2>{{ t("upload.drop_anywhere") }}</h2>
-  </div>
-</div>
-
-<!-- Upload Drag Modal -->
-<div id="upload-drag-modal">
-  <div class="modal-content">
-    <button class="modal-close" id="drag-modal-close" title="Cancel Upload">&times;</button>
-    <div class="modal-body">
-      <div class="upload-container navbar-upload-container">
-          <div class="upload-title">
-          <span class="upload-title-text">{{ t("upload.title") }}</span>
-          <div class="upload-limit-info">
-              {% if session.uploads_remaining == none %}
-              <span class="limit-unlimited"><i class="fa-solid fa-infinity"></i> {{ t("upload.unlimited") }}</span>
-              {% elif session.uploads_remaining == 0 %}
-              <span class="limit-exhausted"><i class="fa-solid fa-triangle-exclamation"></i> {{ t("upload.limit_reached") }} (0/{{ upload_limit }})</span>
-              {% else %}
-              <span class="limit-remaining"><i class="fa-solid fa-upload"></i> {{ session.uploads_remaining }}/{{ upload_limit }} {{ t("upload.remaining") }}</span>
-              {% endif %}
-          </div>
-          </div>
-
-          {% include "snippets/upload-form.html" %}
-      </div>
-    </div>
-  </div>
-</div>
-
-{% endif %}
+{% include "snippets/upload-modal.html" %}
 
 {% if captcha_enabled %}
 {# Cap captcha for the register modal, the login modal (after repeated failures) and the report modal in footer.html (reports need it for everyone) #}

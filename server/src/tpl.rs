@@ -720,6 +720,7 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("private_society_gate_location", json!(cfg.str_or("websrv.private_society_gate_location", "Frankfurt")));
     put("show_content_warning", json!(cfg.enabled("websrv.show_content_warning")));
     put("web_url_upload", json!(cfg.truthy("websrv.web_url_upload")));
+    put("albums_enabled", json!(cfg.enabled("websrv.albums_enabled")));
     put("enable_youtube_upload", json!(cfg.enabled("websrv.enable_youtube_upload")));
     put("upload_limit", if cfg.get("main.upload_limit").is_null() { json!(69) } else { cfg.get("main.upload_limit").clone() });
     put("meme_creator", json!(cfg.truthy("websrv.meme_creator")));
@@ -772,7 +773,8 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("show_koepfe", json!(cfg.truthy("websrv.show_koepfe")));
     put("hide_sidebar_default", json!(cfg.truthy("websrv.hide_sidebar_default")));
     put("allow_language_change", json!(cfg.enabled("websrv.allow_language_change")));
-    put("enable_xd_score", json!(cfg.truthy("websrv.enable_xd_score")));
+    put("languages", json!(crate::i18n::selectable_langs(cfg)));
+
     put("enable_dynamic_thumbs", json!(cfg.truthy("websrv.enable_dynamic_thumbs")));
     put("default_thumb_size", json!(if ["s", "m", "l", "xl"].contains(&thumb.as_str()) { thumb.as_str() } else { "m" }));
     put("comment_max_length", cfg.get("main.comment_max_length").clone());
@@ -826,7 +828,7 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
                 .or_else(|| r.cookie("language").map(str::trim).filter(|l| !l.is_empty()))
                 .map(str::to_string)
                 .unwrap_or_else(|| cfg.str_or("websrv.language", "en").to_string());
-            if crate::i18n::VALID_LANGS.contains(&raw.as_str()) { raw } else { cfg.str_or("websrv.language", "en").to_string() }
+            if crate::i18n::is_selectable(&cfg, &raw) || raw == cfg.str_or("websrv.language", "en") { raw } else { cfg.str_or("websrv.language", "en").to_string() }
         }
         None => data.get("lang").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| cfg.str_or("websrv.language", "en").to_string()),
     };
@@ -1011,6 +1013,11 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     ctx.insert("frontend".into(), json!(frontend));
     ctx.insert("frontends".into(), json!(frontend_names(st)));
     ctx.insert("frontend_switch".into(), json!(frontend_switch_enabled(&cfg)));
+    // the media filter (mime picker): the "mime" cookie, e.g. "video,audio" (empty: everything)
+    if !ctx.contains_key("mime_filter") {
+        let mime = req.and_then(|r| r.cookie("mime")).map(crate::util::decode_lossy).unwrap_or_default();
+        ctx.insert("mime_filter".into(), json!(mime));
+    }
 
     st.tpl.render(view, &Value::Object(ctx))
 }

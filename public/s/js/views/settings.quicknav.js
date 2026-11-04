@@ -69,15 +69,6 @@
           if (header) nav.style.top = Math.round(header.getBoundingClientRect().bottom) + 'px';
           var bottom = Math.ceil(nav.getBoundingClientRect().bottom);
           root.style.setProperty('--settings-qn-bottom', bottom + 'px');
-          // Enough tail space that even the last section can scroll up to sit right under the quicknav
-          var heads = root.querySelectorAll(':scope > h2[id]');
-          var last = heads[heads.length - 1];
-          if (last) {
-            var lastTop = last.getBoundingClientRect().top;
-            var contentEnd = root.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(root).paddingBottom) || 0);
-            var need = viewBottom() - bottom - GAP - (contentEnd - lastTop);
-            root.style.setProperty('--settings-tail', Math.max(40, Math.ceil(need)) + 'px');
-          }
         }
 
         function targetY(el) {

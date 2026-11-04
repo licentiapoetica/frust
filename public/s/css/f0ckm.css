@@ -4159,16 +4159,6 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   opacity: 0.85;
 }
 
-.sidebar-video-xd {
-  font-size: 0.8em;
-  font-weight: bold;
-  padding: 0 4px;
-  border-radius: 2px;
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--accent);
-}
-
 .sidebar-personalized-pill {
   display: inline-flex;
   align-items: center;
@@ -9658,8 +9648,8 @@ html.hide-infobox-active .blahlol > .blahlol-meta + .gapRight {
    border it gets when comments are hidden) is left as a stray line. Drop it when nothing visible is
    left in it and no comment box follows (comments hidden with "c", or comments disabled); with
    comments showing, its top border is the comment box's top edge, so it stays. */
-html.hide-infobox-active body.layout-legacy.comments-hidden:not(.comments-sliding) .blahlol:not(:has(> #favs:not([hidden]), > .xd-score-wrapper, > .item-legacy-chan-badge, > #hall-badge-container > *)),
-html.hide-infobox-active body.layout-legacy:not(:has(#comments-container)) .blahlol:not(:has(> #favs:not([hidden]), > .xd-score-wrapper, > .item-legacy-chan-badge, > #hall-badge-container > *)) {
+html.hide-infobox-active body.layout-legacy.comments-hidden:not(.comments-sliding) .blahlol:not(:has(> #favs:not([hidden]), > .item-legacy-chan-badge, > #hall-badge-container > *)),
+html.hide-infobox-active body.layout-legacy:not(:has(#comments-container)) .blahlol:not(:has(> #favs:not([hidden]), > .item-legacy-chan-badge, > #hall-badge-container > *)) {
   display: none !important;
 }
 
@@ -14818,149 +14808,6 @@ div.posts>a::after {
   background: #333;
 }
 
-/* Video Player Settings Menu: style guide (square, flat, theme colours, no glow) */
-.v0ck_settings_container {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.v0ck_settings_menu {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  margin-bottom: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  min-width: 190px;
-  padding: 4px 0;
-  box-sizing: border-box;
-  background: var(--bg, #111);
-  border: 1px solid var(--accent);
-  border-radius: 0;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-  z-index: 20;
-}
-
-.v0ck_settings_menu.v0ck_hidden {
-  display: none;
-}
-
-.v0ck_settings_menu,
-.v0ck_settings_menu * {
-  border-radius: 0 !important;
-}
-
-/* Rows: label left, control right; one flat hover surface */
-.v0ck_menu_item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 8px 12px;
-  background: transparent;
-  border: 0;
-  color: var(--text-color, #fff);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
-  text-transform: uppercase;
-  text-align: left;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.v0ck_menu_item:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.v0ck_bg_row {
-  cursor: default;
-}
-
-/* Plain action rows (Download): accent on hover, separated from the toggles above */
-button.v0ck_menu_item {
-  margin-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-button.v0ck_menu_item:hover {
-  color: var(--accent);
-}
-
-.v0ck_switch_label {
-  margin: 0;
-  font-size: inherit;
-  color: inherit;
-}
-
-/* Square switch: accent track with black knob when on */
-.v0ck_cool_switch {
-  position: relative;
-  flex-shrink: 0;
-  width: 32px;
-  height: 16px;
-  box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.v0ck_cool_switch::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  background: #fff;
-  transition: transform 0.15s;
-}
-
-.v0ck_cool_switch.active {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.v0ck_cool_switch.active::after {
-  background: #000;
-  transform: translateX(16px);
-}
-
-.v0ck_cool_switch:hover {
-  border-color: var(--accent);
-}
-
-/* Fix hover effect for settings button (viewBox scaling issue) */
-.v0ck_settings_btn svg:hover {
-  stroke-width: 2px !important;
-  /* Override the default 30px which is for large viewBoxes */
-}
-
-/* Ensure SVG is vertically centered */
-.v0ck_settings_btn svg {
-  vertical-align: middle;
-}
-
-/* Mobile Optimized Player Controls */
-@media screen and (max-width: 600px) {
-
-  .v0ck_volume:hover+input[type="range"][name="volume"],
-  .v0ck_player_controls>input[type="range"][name="volume"]:hover {
-    min-width: 40px !important;
-    /* Smaller expansion on mobile */
-    max-width: 40px !important;
-  }
-}
-
 body.layout-modern .navbar-header,
 body.layout-legacy .navbar-header {
   background: transparent;
@@ -15684,198 +15531,6 @@ body.layout-modern .tag-ac-input {
   background: rgba(0, 0, 0, 0.2);
 }
 
-/* Global Drag & Drop Overlay */
-#drop-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(var(--accent-rgb), 0.15);
-  backdrop-filter: blur(8px);
-  z-index: 10000;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  border: 4px dashed var(--accent);
-  margin: 10px;
-  width: calc(100% - 20px);
-  height: calc(100% - 20px);
-  border-radius: 20px;
-}
-
-#drop-overlay.active {
-  display: flex;
-  pointer-events: auto;
-}
-
-#drop-overlay .overlay-content {
-  background: var(--shade1, #111);
-  padding: 40px;
-  border-radius: 20px;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 1);
-  border: 1px solid var(--shade3, #333);
-}
-
-#drop-overlay h2 {
-  margin: 15px 0 0 0;
-  font-size: 2rem;
-  color: var(--white);
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-#drop-overlay svg {
-  color: var(--accent);
-  filter: drop-shadow(0 0 15px var(--accent));
-}
-
-/* Upload modal: a dropdown right under the navbar "Upload" link (f0ck_upload_init.js positions it),
-   style guide (square, flat, theme colours). The rest of the page stays visible: no dim, no blur,
-   the full-screen layer lets clicks through, only the panel takes them. */
-#upload-drag-modal {
-  position: fixed;
-  inset: 0;
-  /* Above the sticky navbar (10070) and so its MOTD row; below the mobile nav menu (10075) */
-  z-index: 10072;
-  display: none;
-  background: none;
-  pointer-events: none;
-}
-
-#upload-drag-modal.show {
-  display: block;
-}
-
-#upload-drag-modal .modal-content {
-  position: fixed;
-  top: calc(var(--navbar-h, 50px) + 6px);
-  left: 8px;
-  width: min(760px, calc(100vw - 16px));
-  max-width: none;
-  max-height: calc(100vh - var(--navbar-h, 50px) - 18px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 0;
-  box-sizing: border-box;
-  background: var(--bg, #111);
-  border: 1px solid var(--accent);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-  pointer-events: auto;
-  scrollbar-width: none;
-  animation: upload-dropdown-in 0.16s ease-out;
-}
-
-#upload-drag-modal .modal-content::-webkit-scrollbar {
-  display: none;
-}
-
-@keyframes upload-dropdown-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #upload-drag-modal .modal-content { animation: none; }
-}
-
-#upload-drag-modal .modal-content,
-#upload-drag-modal .modal-content *,
-#upload-drag-modal .modal-content *::before,
-#upload-drag-modal .modal-content *::after {
-  border-radius: 0 !important;
-}
-
-#upload-drag-modal .modal-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: none;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: var(--text-color, var(--white, #fff));
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-#upload-drag-modal .modal-close:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-/* Header / scrolling body / footer: the panel itself doesn't scroll (so the close button stays put),
-   .modal-body does; the title sticks to its top, the upload button + progress + status to its bottom */
-#upload-drag-modal .modal-content {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-#upload-drag-modal .modal-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-}
-
-#upload-drag-modal .modal-body::-webkit-scrollbar {
-  display: none;
-}
-
-#upload-drag-modal .upload-title {
-  position: sticky;
-  top: 0;
-  /* Above everything the form layers inside the panel (badges 5-100, tag input 9998, emoji picker 10000);
-     all of it lives in the panel's own stacking context, so these numbers don't leak outside */
-  z-index: 10001;
-  padding: 16px 62px 12px 18px;
-  background: var(--bg, #111);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 1.05em;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  text-align: left;
-}
-
-#upload-drag-modal .modal-close {
-  z-index: 10002;
-}
-
-#upload-drag-modal .upload-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 10001;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 4px -1rem -1rem;
-  padding: 12px 1rem 14px;
-  background: var(--bg, #111);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-#upload-drag-modal .upload-footer .upload-status {
-  padding: 0;
-}
-
-#upload-drag-modal .upload-container {
-  max-width: 100%;
-  width: 100%;
-  box-shadow: none;
-}
 
 /* Private Society Gate */
 .private-gate {
@@ -18513,177 +18168,6 @@ body.layout-modern .user-infobox-block .gapRight > #a_favo.fa-regular::before {
   gap: 10px;
 }
 
-/* =============================================
-   xD Score Badge
-   ============================================= */
-
-.xd-score-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-family: var(--font, monospace);
-  font-size: 0.82em;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-  cursor: default;
-  user-select: none;
-  border: 1px solid transparent;
-  transition: filter 0.2s ease;
-}
-
-.xd-score-badge:hover {
-  filter: brightness(1.15);
-}
-
-/* xD num */
-.xd-score-num {
-  font-size: 0.85em;
-  opacity: 0.75;
-  font-weight: normal;
-}
-
-/* Tier 1: 1–4 pts — muted lime */
-.xd-tier-1 {
-  background: #1a2e10;
-  color: #7ec850;
-  border-color: #3a5a20;
-}
-
-/* Tier 2: 5–14 pts — yellow-green */
-.xd-tier-2 {
-  background: #2a2d00;
-  color: #c8d830;
-  border-color: #5a6400;
-}
-
-/* Tier 3: 15–29 pts — orange */
-.xd-tier-3 {
-  background: #2d1800;
-  color: #e08030;
-  border-color: #6a3800;
-}
-
-/* Tier 4: 30–59 pts — red-orange */
-.xd-tier-4 {
-  background: #2d0a00;
-  color: #e84020;
-  border-color: #7a2010;
-}
-
-/* Tier 5: 60+ pts — neon, pulsing glow */
-.xd-tier-5 {
-  background: #1a0000;
-  color: #ff5500;
-  border-color: #ff3300;
-  box-shadow: 0 0 6px rgba(255, 80, 0, 0.5);
-  animation: xd-pulse 1.8s ease-in-out infinite;
-}
-
-/* ─── xD score filter in filter modal ─────────────────────────────── */
-.nav-xd-filter {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.nav-xd-label {
-  display: block;
-  font-size: 0.8em;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #888;
-  margin-bottom: 6px;
-}
-
-.nav-xd-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-body.layout-modern .xd-score-wrapper {
-  margin: 0;
-  padding: 0px 5px 0px 5px;
-  background: var(--bg);
-}
-
-@keyframes xd-pulse {
-
-  0%,
-  100% {
-    box-shadow: 0 0 5px rgba(255, 80, 0, 0.4), 0 0 12px rgba(255, 50, 0, 0.2);
-  }
-
-  50% {
-    box-shadow: 0 0 10px rgba(255, 100, 0, 0.8), 0 0 22px rgba(255, 60, 0, 0.4);
-  }
-}
-
-/* ─── xD Score Slider ──────────────────────────────────────────────── */
-.xd-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  flex: 1;
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(to right,
-      var(--xd-fill, #4caf50) 0%,
-      var(--xd-fill, #4caf50) var(--xd-pct, 0%),
-      rgba(255, 255, 255, 0.12) var(--xd-pct, 0%));
-  outline: none;
-  cursor: pointer;
-  min-width: 120px;
-}
-
-/* Custom mobile-friendly slider that replaces the native range input */
-.nav-xd-custom-slider {
-  flex: 1;
-  min-width: 120px;
-}
-
-.xd-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  border: 2px solid var(--xd-fill, #4caf50);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
-  cursor: pointer;
-  transition: border-color 0.2s, transform 0.1s;
-}
-
-.xd-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-.xd-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  border: 2px solid var(--xd-fill, #4caf50);
-  cursor: pointer;
-}
-
-.xd-slider-val {
-  display: inline-block;
-  min-width: 28px;
-  text-align: center;
-  font-family: monospace;
-  font-size: 0.9em;
-  font-weight: bold;
-  color: var(--xd-fill, #4caf50);
-  padding: 1px 5px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.2);
-}
-
 /* ─── Grid mode / thumbnail size picker (filter modal) ────────────── */
 .nav-grid-mode {
   margin-top: 14px;
@@ -18730,61 +18214,6 @@ body.layout-modern .xd-score-wrapper {
   border-color: var(--accent);
   color: #000;
 }
-
-/* ─── xD score wrapper ─────────────────────────────────────────────── */
-.xd-score-wrapper {
-    text-align: right;
-    padding-bottom: 5px;
-    padding-left: 5px;
-    background: var(--bg);
-    padding-right: 5px;
-    border-left: 1px solid var(--nav-border-color);
-    border-right: 1px solid var(--nav-border-color);
-}
-
-
-
-/* ─── xD score thumbnail indicator (position fix) ─────────────────── */
-.thumb-xd-indicator {
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 0.65em;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  line-height: 1.4;
-  pointer-events: none;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  z-index: 10;
-}
-
-.thumb-xd-indicator.xd-tier-1 {
-  color: #a8e6a3;
-  border-color: #a8e6a3;
-}
-
-.thumb-xd-indicator.xd-tier-2 {
-  color: #ffe066;
-  border-color: #ffe066;
-}
-
-.thumb-xd-indicator.xd-tier-3 {
-  color: #ffa94d;
-  border-color: #ffa94d;
-}
-
-.thumb-xd-indicator.xd-tier-4 {
-  color: #ff6b6b;
-  border-color: #ff6b6b;
-}
-
-.thumb-xd-indicator.xd-tier-5 {
-  color: #ff3cac;
-  border-color: #ff3cac;
-}
-
 
 /* Performance & Utility */
 .desktop-only {
@@ -24737,6 +24166,13 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   padding: 30px 15px 60px;
 }
 
+/* the reports page is narrower than the other admin pages: the back bar above lines up with it */
+#main:has(> .container.rp-page) > .adm-back {
+  max-width: 900px;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
 .rp-header {
   margin-bottom: 28px;
 }
@@ -25507,12 +24943,13 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 
 /* The file inputs open from their "Choose …" label (also without JavaScript) */
 :where(.adm) .adm-file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  overflow: hidden;
-  pointer-events: none;
+  /* important: frontends' own input[type=file] rules must not show the bare input again */
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
 }
 
 :where(.adm) label.adm-btn:has(+ .adm-file-input:focus-visible) {
@@ -30501,24 +29938,6 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   opacity: 0.7;
 }
 
-/* ID selector: f0ckm.js overwrites this badge's className with the tier class */
-#nav_xd_tier_label {
-  display: none;
-  font-size: 0.75em;
-}
-
-.mode-btn.excluded-tags-xd-save {
-  margin-top: 6px;
-  width: 100%;
-}
-
-.excluded-tags-xd-status {
-  font-size: 0.8em;
-  color: #9f0;
-  min-height: 1em;
-  margin-top: 3px;
-}
-
 .excluded-tags-grid-icon {
   margin-right: 5px;
 }
@@ -31439,16 +30858,6 @@ body:has(#force-password-modal) {
   line-height: 1;
 }
 
-/* Drag & drop overlay icon and the upload dropdown's container */
-.navbar-drop-icon {
-  font-size: 5rem;
-}
-
-#upload-drag-modal .upload-container.navbar-upload-container {
-  padding: 0;
-  animation: none;
-  opacity: 1;
-}
 
 /* Login / register / anon modals (was a <style> block) */
 :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) {
@@ -34799,7 +34208,8 @@ body.chan-denied {
   --st-gap: 12px; /* space between quicknav and the section it scrolled to */
   /* --settings-qn-bottom is measured by JS: bottom edge of the fixed quicknav */
   padding-top: calc(var(--settings-qn-bottom, 100px) - var(--navbar-h, 50px) + 16px);
-  padding-bottom: var(--settings-tail, 40px);
+  /* the page ends after the last section (no extra space to scroll it up under the quicknav) */
+  padding-bottom: 40px;
   text-align: left;
 }
 

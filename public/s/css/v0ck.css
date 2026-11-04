@@ -859,3 +859,148 @@
 .v0ck.v0ck_hover .v0ck_volume_group input[type="range"][name="volume"]::-moz-range-track {
   cursor: pointer !important;
 }
+
+
+/* ── Settings menu (moved from f0ckm.css, so every frontend using v0ck gets it) ─────────── */
+/* Video Player Settings Menu: style guide (square, flat, theme colours, no glow) */
+.v0ck_settings_container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.v0ck_settings_menu {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 190px;
+  padding: 4px 0;
+  box-sizing: border-box;
+  background: var(--bg, #111);
+  border: 1px solid var(--accent);
+  border-radius: 0;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
+
+.v0ck_settings_menu.v0ck_hidden {
+  display: none;
+}
+
+.v0ck_settings_menu,
+.v0ck_settings_menu * {
+  border-radius: 0 !important;
+}
+
+/* Rows: label left, control right; one flat hover surface */
+.v0ck_menu_item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  color: var(--text-color, #fff);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.v0ck_menu_item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.v0ck_bg_row {
+  cursor: default;
+}
+
+/* Plain action rows (Download): accent on hover, separated from the toggles above */
+button.v0ck_menu_item {
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+button.v0ck_menu_item:hover {
+  color: var(--accent);
+}
+
+.v0ck_switch_label {
+  margin: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Square switch: accent track with black knob when on */
+.v0ck_cool_switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 16px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.v0ck_cool_switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.v0ck_cool_switch.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.v0ck_cool_switch.active::after {
+  background: #000;
+  transform: translateX(16px);
+}
+
+.v0ck_cool_switch:hover {
+  border-color: var(--accent);
+}
+
+/* Fix hover effect for settings button (viewBox scaling issue) */
+.v0ck_settings_btn svg:hover {
+  stroke-width: 2px !important;
+  /* Override the default 30px which is for large viewBoxes */
+}
+
+/* Ensure SVG is vertically centered */
+.v0ck_settings_btn svg {
+  vertical-align: middle;
+}
+
+/* Mobile Optimized Player Controls */
+@media screen and (max-width: 600px) {
+
+  .v0ck_volume:hover+input[type="range"][name="volume"],
+  .v0ck_player_controls>input[type="range"][name="volume"]:hover {
+    min-width: 40px !important;
+    /* Smaller expansion on mobile */
+    max-width: 40px !important;
+  }
+}

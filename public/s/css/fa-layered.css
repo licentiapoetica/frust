@@ -1,0 +1,7 @@
+/*
+ * fa-layered.css: Font Awesome 6 (f0ckm's icons) for shared parts shown inside the alternative
+ * frontends (the quick upload). In the cascade layer "fa", so a frontend's own icon CSS (w0bm's
+ * Font Awesome 4: .fa, .fa-heart, ...) keeps winning for its own icons; f0ckm's markup uses the
+ * FA6-only classes (fa-solid, fa-regular, ...).
+ */
+@import url("/s/fa/all.min.css") layer(fa);

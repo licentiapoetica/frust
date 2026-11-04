@@ -173,6 +173,14 @@ html.f0ck-shell .f0ck-shell-page {
 .f0ck-shell-page .adm-back {
   padding: 0;
   margin: 0 0 .5rem;
+  /* as wide as the page under it: shared pages fill the frontend's column */
+  max-width: none;
+}
+
+/* frontend grids (bootstrap's .container { width: 1170px }) must not size the shared pages: they fill
+   the frontend's column like the back bar above them (w0bm's reports list sat narrower and centred) */
+.f0ck-shell-page #main > .container {
+  width: auto;
 }
 
 /* frontend CSS like bootstrap's a:hover { underline } is more specific than the revert above;

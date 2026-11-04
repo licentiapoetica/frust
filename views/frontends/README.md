@@ -107,6 +107,11 @@ with neither, the site name shows.
     `/s/js/glitchfx.js` for `[glitch]`. GlitchFX picks up comments added later by itself.
   - A new effect goes into all three places: `F0CK_COMMENT_FX`, `COMMENT_FX` and comment-fx.css.
   - w0bm keeps its own classes for the first three (its theme CSS); `[glitch]` is shared.
+- **Quick upload** ("u", a file dropped anywhere) is f0ckm's upload dropdown in every frontend:
+  `snippets/upload-modal-frontend.html` (from frontend-scripts.html) with upload.css,
+  upload-modal.css and Font Awesome 6 in a layer (fa-layered.css). The frontend's CSS gives
+  `#upload-drag-modal, #drop-overlay` f0ckm's colour variables (`--accent`, `--accent-rgb`, `--bg`,
+  `--bg-form`, `--white`, `--text`, `--navbar-h`, ...), see w0bm-fe.css / f0ckv2.css.
 - **Changing a shared page** (`views/settings.html`, `views/admin/*`, …) needs nothing per
   frontend: it renders in every shell.
   - Keep its markup working without f0ckm.js: no f0ckm.js-only globals unless `f0ck-core.js`

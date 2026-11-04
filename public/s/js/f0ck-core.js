@@ -10,6 +10,7 @@
  *   F0ckLive (the live WebSocket /api/notifications/ws: tab id, reconnect, active pings)
  *
  * f0ckCommentFx (comment text effects [rb] [reich] [krebs] [glitch], see the end of the file),
+ * f0ckLoadEmojis / f0ckEmojify (custom emojis :name: in comments, for the frontends' renderers),
  * updateBrandImage / updateBrandText / applyBrandEvent (the navbar brand, see below),
  * and fallbacks for what f0ckm.js provides on the default frontend (showFlash, flashMessage,
  * loadPageAjax, updateMotdUI). A fallback is only set when nothing defined the
@@ -514,3 +515,31 @@ window.f0ckCommentFx = (html) => {
   }
   return s;
 };
+
+// ── Custom emojis ───────────────────────────────────────────────────────────────────────────
+// :name: in comments, for the alternative frontends' comment renderers (f0ckm.js has its own).
+// f0ckLoadEmojis() loads /api/v2/emojis once and resolves to { name: url }; it reloads after the
+// live event emojis_updated. f0ckEmojify(html, map) swaps known names in escaped HTML for <img>.
+(() => {
+  let loading = null;
+  window.f0ckLoadEmojis = () => {
+    if (!loading) {
+      loading = fetch('/api/v2/emojis', { credentials: 'same-origin' })
+        .then((r) => r.json())
+        .then((d) => {
+          const map = {};
+          (d.emojis || []).forEach((e) => { if (e.name && e.url) map[e.name] = e.url; });
+          return map;
+        })
+        .catch(() => { loading = null; return {}; });
+    }
+    return loading;
+  };
+  window.addEventListener('f0ck:emojis_updated', () => { loading = null; });
+  window.f0ckEmojify = (html, map) => {
+    if (!map) return html;
+    return String(html ?? '').replace(/:([a-z0-9_\-]+):/g, (m, n) => (map[n]
+      ? `<img class="f0ck-emoji" src="${window.escHTML(map[n]).replace(/"/g, '&quot;')}" alt=":${n}:" title=":${n}:" loading="lazy">`
+      : m));
+  };
+})();

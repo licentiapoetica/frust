@@ -104,7 +104,9 @@ async fn random(st: AppState, req: Req) -> Res {
         id,
         link["suffix"].as_str().unwrap_or("")
     );
-    Ok(redirect(&format!("{target}?random=1")))
+    // no ?random=1 marker in the address bar: the frontends' "r" and the /random link land on the
+    // plain item URL, like f0ckm.js's own random does
+    Ok(redirect(&target))
 }
 
 #[cfg(test)]
