@@ -567,7 +567,7 @@ impl Irc {
                 let Some(m) = self.reply(msg) else { return };
                 if text == "\u{1}VERSION\u{1}" {
                     self.emit(Event::CtcpVersion(m));
-                } else if text.len() > 6 && text[..6].eq_ignore_ascii_case("\u{1}PING ") && text.ends_with('\u{1}') {
+                } else if text.len() > 6 && text.as_bytes()[..6].eq_ignore_ascii_case(b"\x01PING ") && text.ends_with('\u{1}') {
                     self.emit(Event::CtcpPing(m));
                 } else {
                     self.emit(Event::Message(m));
