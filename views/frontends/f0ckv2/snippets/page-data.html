@@ -1,0 +1,17 @@
+{#- f0ckv2's page data for its scripts (f0ck.js, user.js, comments.js). First thing after the page
+    content, before snippets/frontend-scripts.html: pages change without reloading (f0ck.js
+    <navigation>) and swap everything before #footer-data, this included. -#}
+  <script type="application/json" id="f0ckv2-data">{{ {
+    "user": ((session.user if session else "") or ""),
+    "admin": (true if (session and session.admin) else false),
+    "mod": (true if (session and (session.admin or session.is_moderator)) else false),
+    "canRate": (true if can_rate_item else false),
+    "nsfl": (true if enable_nsfl else false),
+    "loggedIn": (true if session else false),
+    "themes": (themes or []),
+    "itemId": ((item.id if (item is defined and item and item.id) else none)),
+    "enableComments": (true if enable_comments else false),
+    "privateMessages": (true if private_messages else false),
+    "commentMax": (comment_max_length or none),
+    "lang": (lang or "en")
+  }|tojson }}</script>

@@ -2348,20 +2348,20 @@
   // ════════════════════════════════════════════════════════════════════════════════════
   // Navigation without reloading (like f0ckm)
   // ════════════════════════════════════════════════════════════════════════════════════
-  // Links and GET forms to w0bm's own pages fetch the page and swap the page part of <body>
-  // (everything before #w0bm-flash), then boot() sets it up. A full load instead when: the page is
-  // a shared page in the w0bm shell (settings, messages, admin, ...: other CSS and scripts), another
+  // Links and GET forms fetch the page and swap the page part of <body> (everything before
+  // #w0bm-flash), then boot() sets it up. That covers w0bm's own pages and the shared pages in the
+  // w0bm shell (settings, messages, admin, mod, ...): their stylesheets, page scripts and footer
+  // extras come and go with them (F0ckPageSwap, f0ck-core.js). A full load instead when: another
   // frontend, someone else logged in (login, logout: the footer data changes), not HTML, or the
   // request fails. Without JavaScript all of this is plain links and forms.
-  const isShellPage = () => document.documentElement.classList.contains('f0ck-shell');
   // Pages that never load in place: session changes, frontend switch, files, the upload page (its
-  // own form instead of the quick upload), the shared pages of the shell
-  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|settings|messages|admin|mod(?:\/|$)|mod_reports|pending|banned|privacy|mime(?:\/|$))/;
+  // own form instead of the quick upload)
+  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|mime(?:\/|$))/;
   const pathKey = (href) => { const u = new URL(href, location.href); return u.pathname + u.search; };
   let shownPath = pathKey(location.href);
 
   function navigable(a) {
-    if (!a || !a.href || isShellPage()) return false;
+    if (!a || !a.href) return false;
     if (a.target && a.target !== '_self') return false;
     if (a.hasAttribute('download') || a.closest('[data-no-ajax]')) return false;
     const raw = a.getAttribute('href') || '';
@@ -2437,8 +2437,8 @@
     else bar.hidden = true;
   };
 
+  // one of w0bm's pages (its own or a shared one in its shell), for the same visitor
   function isOwnPage(doc) {
-    if (doc.documentElement.classList.contains('f0ck-shell')) return false;
     const next = readJSON('w0bm-data', doc);
     const cur = readJSON('w0bm-data') || {};
     return !!(next && doc.getElementById('w0bm-flash') && next.frontend === cur.frontend && (next.user || null) === (cur.user || null));
@@ -2456,8 +2456,10 @@
     }));
     const frag = document.createDocumentFragment();
     for (const n of Array.from(doc.body.childNodes)) { if (n === nextAnchor) break; frag.appendChild(document.adoptNode(n)); }
+    const scripts = Array.from(frag.querySelectorAll('script'));
     old.forEach((n) => n.remove());
     anchor.before(frag);
+    document.documentElement.classList.toggle('f0ck-shell', doc.documentElement.classList.contains('f0ck-shell'));
     // flash messages of the new page join the box
     const box = anchor.querySelector('.flash-inner');
     nextAnchor.querySelectorAll('.flash-inner > .alert').forEach((a) => box?.appendChild(document.adoptNode(a)));
@@ -2465,6 +2467,7 @@
     document.title = doc.title;
     const desc = doc.querySelector('meta[name="description"]');
     if (desc) document.querySelector('meta[name="description"]')?.setAttribute('content', desc.getAttribute('content') || '');
+    return scripts;
   }
 
   let navSeq = 0;
@@ -2472,7 +2475,8 @@
   // opts: replace (no new history entry), pop (back/forward: no entry, scroll restored),
   // keepScroll (the same page again)
   async function navigate(url, opts = {}) {
-    if (isShellPage()) { location.assign(url); return; }
+    const swap = window.F0ckPageSwap;
+    if (!swap) { location.assign(url); return; }
     const target = new URL(url, location.href);
     const seq = ++navSeq;
     navAbort?.abort();
@@ -2490,6 +2494,9 @@
     loading(false);
     const doc = page && new DOMParser().parseFromString(page.html, 'text/html');
     if (!doc || !isOwnPage(doc)) { location.assign(page ? page.url : target.href); return; }
+    // the new page's stylesheets first (a shared page: f0ck-shell.css, w0bm-shell.css)
+    const dropStyles = await swap.styles(doc);
+    if (seq !== navSeq) return;
 
     // where the page we leave was scrolled to, for "back"
     if (!opts.pop) {
@@ -2499,11 +2506,16 @@
     const final = new URL(page.url);
     if (!final.hash && target.hash) final.hash = target.hash;
     leavePage();
-    swapBody(doc);
+    const scripts = swapBody(doc);
+    dropStyles();
     if (opts.replace) history.replaceState({ w0bm: 1 }, '', final.href);
     else if (!opts.pop) history.pushState({ w0bm: 1 }, '', final.href);
     shownPath = pathKey(location.href);
+    // the same order as a full load: the page's own scripts, then w0bm.js, then the footer
+    await swap.scripts(scripts);
     boot();
+    await swap.tail(doc, 'w0bm-flash');
+    swap.shown();
     // a prefetched item page didn't mark its notifications read (the server skips that for prefetches)
     const item = readJSON('w0bm-item-data');
     if (page.prefetched && item && item.id && (readJSON('w0bm-data') || {}).user) {
@@ -2528,7 +2540,7 @@
   });
   window.addEventListener('submit', (e) => {
     const f = e.target;
-    if (e.defaultPrevented || isShellPage() || !(f instanceof HTMLFormElement)) return;
+    if (e.defaultPrevented || !(f instanceof HTMLFormElement)) return;
     if ((f.getAttribute('method') || 'get').toLowerCase() !== 'get' || (f.target && f.target !== '_self')) return;
     const u = new URL(f.action || location.href, location.href);
     if (u.origin !== location.origin || FULL_LOAD.test(u.pathname)) return;
@@ -2539,7 +2551,6 @@
     navigate(u.href);
   });
   window.addEventListener('popstate', () => {
-    if (isShellPage()) return;
     // only the #hash changed: the page stays
     if (pathKey(location.href) === shownPath) return;
     navigate(location.href, { pop: true });

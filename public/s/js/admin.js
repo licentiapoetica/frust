@@ -758,8 +758,14 @@
     return false;
   };
 
+  // Only where admin.js belongs: f0ckm's pages and the shared pages in a frontend's shell. The
+  // alternative frontends change pages without reloading, so after a shared page it stays loaded on
+  // their own pages too, which have their own tools on the same ids (#a_delete, #a_addtag, "x").
+  const adminHere = () => !window.f0ckFrontend || document.documentElement.classList.contains('f0ck-shell');
+
   // Event Delegation
   document.addEventListener("click", e => {
+    if (!adminHere()) return;
     const target = e.target.nodeType === 3 ? e.target.parentElement : e.target;
 
     if (target.closest("a#a_addtag")) {
@@ -884,6 +890,7 @@
   };
 
   document.addEventListener("keyup", e => {
+    if (!adminHere()) return;
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
     const ctx = getContext();
     if (!ctx) return;

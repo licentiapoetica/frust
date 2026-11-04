@@ -543,3 +543,127 @@ window.f0ckCommentFx = (html) => {
       : m));
   };
 })();
+
+// ── Page swaps of the alternative frontends ─────────────────────────────────────────────────────
+// w0bm.js and f0ckv2's f0ck.js change pages without reloading: they fetch the next page, swap the
+// page part of <body> (everything before their anchor: #w0bm-flash / #footer-data) and use these for
+// what differs between their own pages and the shared pages in their shell (views/frontends/README.md):
+//   styles(doc)       the stylesheets of <head>: adds the new page's (f0ck-shell.css and the shell's
+//                     CSS on a shared page), waits for them; returns a function that removes the ones
+//                     the new page doesn't have, and what tail() added that it doesn't have (call it
+//                     after the swap: no unstyled moment)
+//   scripts(list)     runs the scripts of the swapped-in part in order: page scripts every time
+//                     (/s/js/views/*, data-v2-page, anything inside a shared page, like f0ckm.js does
+//                     with #main), libraries only the first time
+//   tail(doc, anchor) what the new page has after the anchor and this one lacks (a shared page's mod
+//                     dialog, admin.js, mention_autocomplete.js, ...): elements added (and removed
+//                     again on a page without them, see styles), scripts run once
+//   shown()           the shared scripts' re-init after a swap, as after f0ckm's AJAX loads
+//                     (initMessagesPage, f0ck:contentLoaded)
+window.F0ckPageSwap = (() => {
+  const loaded = new Set([...document.scripts].filter(s => s.src).map(s => s.src));
+  // elements tail() added: they go again on a page that doesn't have them
+  let extras = [];
+  const sheetKey = (l) => { try { return new URL(l.getAttribute('href'), location.href).pathname; } catch { return l.getAttribute('href') || ''; } };
+  const sheets = (root) => [...root.querySelectorAll('link[rel~="stylesheet"][href]')];
+  const waitSheet = (l) => new Promise((res) => {
+    l.addEventListener('load', res, { once: true });
+    l.addEventListener('error', res, { once: true });
+    setTimeout(res, 2500);
+  });
+
+  const styles = async (doc) => {
+    const want = sheets(doc.head);
+    const have = sheets(document.head);
+    const haveKeys = new Set(have.map(sheetKey));
+    const wantKeys = new Set(want.map(sheetKey));
+    const waits = [];
+    want.forEach((l) => {
+      if (haveKeys.has(sheetKey(l))) return;
+      const n = document.createElement('link');
+      [...l.attributes].forEach((a) => n.setAttribute(a.name, a.value));
+      document.head.appendChild(n);
+      if (!n.disabled && !/alternate/i.test(n.rel)) waits.push(waitSheet(n));
+    });
+    await Promise.all(waits);
+    return () => {
+      have.forEach((l) => { if (!wantKeys.has(sheetKey(l))) l.remove(); });
+      const docSheets = new Set(sheets(doc).map(sheetKey));
+      extras = extras.filter((el) => {
+        const keep = el.tagName === 'LINK' ? docSheets.has(sheetKey(el)) : !!(el.id && doc.getElementById(el.id));
+        if (!keep) el.remove();
+        return keep;
+      });
+    };
+  };
+
+  const executable = (s) => {
+    const type = (s.getAttribute('type') || '').trim().toLowerCase();
+    return !type || ['text/javascript', 'application/javascript', 'module'].includes(type);
+  };
+  const isPageScript = (s) => s.hasAttribute('data-v2-page') || !!s.closest?.('.f0ck-shell-page')
+    || /^\/s\/js\/views\//.test(new URL(s.src, location.href).pathname);
+  const run = (old) => new Promise((res) => {
+    const s = document.createElement('script');
+    [...old.attributes].forEach((a) => { if (a.name !== 'nonce') s.setAttribute(a.name, a.value); });
+    s.async = false;
+    s.addEventListener('load', res, { once: true });
+    s.addEventListener('error', res, { once: true });
+    old.replaceWith(s);
+    loaded.add(s.src);
+  });
+  // (only scripts with a src: the templates have no inline scripts)
+  const scripts = async (list) => {
+    for (const old of list) {
+      if (!old.isConnected || !executable(old) || !old.src) continue;
+      const page = isPageScript(old);
+      if (loaded.has(old.src) && !page) { old.remove(); continue; }
+      await run(old);
+    }
+  };
+
+  const tail = async (doc, anchorId) => {
+    const anchor = doc.getElementById(anchorId);
+    if (!anchor) return;
+    const after = [];
+    for (let n = anchor.nextSibling; n; n = n.nextSibling) after.push(n);
+    const haveSheets = new Set(sheets(document).map(sheetKey));
+    const todo = [];
+    after.forEach((n) => {
+      if (n.nodeType !== 1) return;
+      if (n.tagName === 'SCRIPT') {
+        if (executable(n) && n.src && !loaded.has(n.src)) {
+          const s = document.importNode(n, false);
+          document.body.appendChild(s);
+          todo.push(s);
+        }
+        return;
+      }
+      if (n.tagName === 'LINK') {
+        if (/stylesheet/i.test(n.rel) && !haveSheets.has(sheetKey(n))) {
+          const el = document.importNode(n, true);
+          document.body.appendChild(el);
+          extras.push(el);
+        }
+        return;
+      }
+      if (n.id && !document.getElementById(n.id)) {
+        const el = document.importNode(n, true);
+        el.querySelectorAll('script').forEach((x) => x.remove());
+        document.body.appendChild(el);
+        extras.push(el);
+      }
+    });
+    for (const s of todo) await run(s);
+  };
+
+  const shown = () => {
+    if ((document.getElementById('dm-inbox-list') || document.getElementById('dm-thread')) && typeof window.initMessagesPage === 'function') {
+      try { window.initMessagesPage(); } catch (e) { console.error('[F0ckPageSwap] initMessagesPage', e); }
+    }
+    window.F0ckActions?.scan?.(document);
+    document.dispatchEvent(new Event('f0ck:contentLoaded'));
+  };
+
+  return { styles, scripts, tail, shown, loaded };
+})();

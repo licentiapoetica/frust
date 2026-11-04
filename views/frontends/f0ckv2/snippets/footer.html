@@ -1,23 +1,10 @@
-{#- f0ckv2 frontend: page data + scripts, end of <body>. Own pages: the shared client
-    (snippets/frontend-scripts.html) comes first; the shared pages use it through shell/footer.html. -#}
-  <script type="application/json" id="f0ckv2-data">{{ {
-    "user": ((session.user if session else "") or ""),
-    "admin": (true if (session and session.admin) else false),
-    "mod": (true if (session and (session.admin or session.is_moderator)) else false),
-    "canRate": (true if can_rate_item else false),
-    "nsfl": (true if enable_nsfl else false),
-    "loggedIn": (true if session else false),
-    "themes": (themes or []),
-    "itemId": ((item.id if (item is defined and item and item.id) else none)),
-    "enableComments": (true if enable_comments else false),
-    "privateMessages": (true if private_messages else false),
-    "commentMax": (comment_max_length or none),
-    "lang": (lang or "en")
-  }|tojson }}</script>
+{#- f0ckv2 frontend: page data + scripts, end of <body>. Own pages: the page data, then the shared
+    client (snippets/frontend-scripts.html); shell/footer.html puts those two first itself, in the
+    same order, then includes this with v2_shell_foot for the scripts. -#}
 {%- if not (v2_shell_foot is defined and v2_shell_foot) %}
+  {% include "frontends/f0ckv2/snippets/page-data.html" %}
   {#- the shared client first (page data, f0ck-core.js, DM keys, live events, quick upload): f0ckm's
-      player (v0ck.js) reads window.f0ckSession and f0ckDebug when f0ck.js starts it. The shared pages
-      get it through shell/footer.html. -#}
+      player (v0ck.js) reads window.f0ckSession and f0ckDebug when f0ck.js starts it. -#}
   {% include "snippets/frontend-scripts.html" %}
 {%- endif %}
   <script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>

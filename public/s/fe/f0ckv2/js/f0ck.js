@@ -561,19 +561,19 @@ window.v2Page.onPage(() => {
   }
 });
 
-// <navigation> pages change without reloading, like f0ckm: links and GET forms to f0ckv2's own pages
-// fetch the page and swap the page part of <body> (everything before #footer-data: navbar, content,
-// the page data #f0ckv2-data). Then the setups of the scripts that stay (v2Page.onPage) run again,
-// and the page's own scripts: libraries (Cap, danmaku, flash-embed) load once, scripts marked
-// data-v2-page (comments.js, dynamic-page.js) run for every page.
-// A full load instead for: the shared pages in the f0ckv2 shell (settings, messages, admin, ...:
-// other CSS and scripts), login / logout / register (the session changes), another frontend,
+// <navigation> pages change without reloading, like f0ckm: links and GET forms fetch the page and swap
+// the page part of <body> (everything before #footer-data: navbar, content, the page data
+// #f0ckv2-data), for f0ckv2's own pages and the shared pages in its shell (settings, messages,
+// admin, mod, ...). The page's own scripts run first (libraries like Cap, danmaku, flash-embed once;
+// data-v2-page scripts, /s/js/views/* and everything of a shared page every time), then the setups
+// of the scripts that stay (v2Page.onPage), then the footer extras of a shared page. Stylesheets of
+// <head> follow the page (f0ck-shell.css, f0ckv2-shell.css): F0ckPageSwap, f0ck-core.js.
+// A full load instead for: login / logout / register (the session changes), another frontend,
 // files, the upload page, a page that isn't f0ckv2's or a failed request.
 // Without JavaScript all of this is plain links and forms.
 (() => {
   const html = document.documentElement;
-  const isShellPage = () => html.classList.contains('f0ck-shell');
-  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|theme\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|settings|messages|admin|mod(?:\/|$)|mod_reports|pending|banned|privacy|mime(?:\/|$))/;
+  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|theme\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|mime(?:\/|$))/;
   const pathKey = href => { const u = new URL(href, location.href); return u.pathname + u.search; };
   let shownPath = pathKey(location.href);
   const readData = (doc = document) => {
@@ -581,7 +581,7 @@ window.v2Page.onPage(() => {
   };
 
   const navigable = a => {
-    if(!a || !a.href || isShellPage()) return false;
+    if(!a || !a.href) return false;
     if(a.target && a.target !== '_self') return false;
     if(a.hasAttribute('download') || a.closest('[data-no-ajax]')) return false;
     const raw = a.getAttribute('href') || '';
@@ -654,31 +654,10 @@ window.v2Page.onPage(() => {
     else document.querySelector('nav.navbar')?.classList.remove('pbwork');
   };
 
+  // one of f0ckv2's pages (its own or a shared one in its shell), for the same visitor
   const isOwnPage = doc => {
-    if(doc.documentElement.classList.contains('f0ck-shell')) return false;
     const next = readData(doc), cur = readData() || {};
     return !!(next && doc.getElementById('footer-data') && (next.user || '') === (cur.user || ''));
-  };
-
-  // scripts already run once (libraries load only once)
-  const loaded = new Set([...document.scripts].filter(s => s.src).map(s => s.src));
-  const runScripts = async scripts => {
-    for(const old of scripts) {
-      const type = (old.getAttribute('type') || '').trim().toLowerCase();
-      if(type && !['text/javascript', 'module', 'application/javascript'].includes(type)) continue;
-      const src = old.src;
-      if(!src) continue; // no inline scripts (CSP)
-      if(loaded.has(src) && !old.hasAttribute('data-v2-page')) { old.remove(); continue; }
-      const s = document.createElement('script');
-      [...old.attributes].forEach(a => s.setAttribute(a.name, a.value));
-      s.async = false;
-      await new Promise(res => {
-        s.addEventListener('load', res, { once: true });
-        s.addEventListener('error', res, { once: true });
-        old.replaceWith(s);
-      });
-      loaded.add(src);
-    }
   };
 
   // the page part of <body>: the nodes before #footer-data
@@ -698,7 +677,7 @@ window.v2Page.onPage(() => {
     anchor.before(frag);
     [...document.body.attributes].forEach(a => document.body.removeAttribute(a.name));
     [...doc.body.attributes].forEach(a => document.body.setAttribute(a.name, a.value));
-    html.classList.toggle('v2-onara-open', doc.documentElement.classList.contains('v2-onara-open'));
+    ['v2-onara-open', 'f0ck-shell'].forEach(c => html.classList.toggle(c, doc.documentElement.classList.contains(c)));
     document.title = doc.title;
     const desc = doc.querySelector('meta[name="description"]');
     if(desc) document.querySelector('meta[name="description"]')?.setAttribute('content', desc.getAttribute('content') || '');
@@ -709,7 +688,8 @@ window.v2Page.onPage(() => {
   let abort = null;
   // opts: replace (no new history entry), pop (back / forward: scroll restored), keepScroll
   const go = async (url, opts = {}) => {
-    if(isShellPage()) { location.assign(url); return; }
+    const swap = window.F0ckPageSwap;
+    if(!swap) { location.assign(url); return; }
     const target = new URL(url, location.href);
     const mine = ++seq;
     abort?.abort();
@@ -727,6 +707,9 @@ window.v2Page.onPage(() => {
     loading(false);
     const doc = page && new DOMParser().parseFromString(page.html, 'text/html');
     if(!doc || !isOwnPage(doc)) { location.assign(page ? page.url : target.href); return; }
+    // the new page's stylesheets first (a shared page: f0ck-shell.css, f0ckv2-shell.css)
+    const dropStyles = await swap.styles(doc);
+    if(mine !== seq) return;
 
     if(!opts.pop) {
       try { history.replaceState({ ...(history.state || {}), v2Scroll: window.scrollY }, ''); } catch { /* ignore */ }
@@ -736,13 +719,16 @@ window.v2Page.onPage(() => {
     if(!final.hash && target.hash) final.hash = target.hash;
     window.v2Page.leave();
     const scripts = swapBody(doc);
+    dropStyles();
     if(opts.replace) history.replaceState({ v2: 1 }, '', final.href);
     else if(!opts.pop) history.pushState({ v2: 1 }, '', final.href);
     shownPath = pathKey(location.href);
     // the same order as a full load: the page's scripts (flash-embed.js, danmaku, comments.js) first,
     // then the setups of the scripts at the end of the page (f0ck.js starts the player, the Flash frame)
-    await runScripts(scripts);
+    await swap.scripts(scripts);
     window.v2Page.show();
+    await swap.tail(doc, 'footer-data');
+    swap.shown();
     // a prefetched item page didn't mark its notifications read (the server skips that for prefetches)
     const data = readData() || {};
     if(page.prefetched && data.itemId && data.loggedIn) {
@@ -768,7 +754,7 @@ window.v2Page.onPage(() => {
   });
   window.addEventListener('submit', e => {
     const f = e.target;
-    if(e.defaultPrevented || isShellPage() || !(f instanceof HTMLFormElement)) return;
+    if(e.defaultPrevented || !(f instanceof HTMLFormElement)) return;
     if((f.getAttribute('method') || 'get').toLowerCase() !== 'get' || (f.target && f.target !== '_self')) return;
     const u = new URL(f.action || location.href, location.href);
     if(u.origin !== location.origin || FULL_LOAD.test(u.pathname)) return;
@@ -779,7 +765,6 @@ window.v2Page.onPage(() => {
     go(u.href);
   });
   window.addEventListener('popstate', () => {
-    if(isShellPage()) return;
     if(pathKey(location.href) === shownPath) return; // only the #hash changed
     go(location.href, { pop: true });
   });
