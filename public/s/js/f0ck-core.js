@@ -569,10 +569,13 @@ window.f0ckCommentFx = (html) => {
 // w0bm.js and f0ckv2's f0ck.js change pages without reloading: they fetch the next page, swap the
 // page part of <body> (everything before their anchor: #w0bm-flash / #footer-data) and use these for
 // what differs between their own pages and the shared pages in their shell (views/frontends/README.md):
-//   styles(doc)       the stylesheets of <head>: adds the new page's (f0ck-shell.css and the shell's
-//                     CSS on a shared page), waits for them; returns a function that removes the ones
-//                     the new page doesn't have, and what tail() added that it doesn't have (call it
-//                     after the swap: no unstyled moment)
+//   styles(doc, anchor) the stylesheets of <head>: adds the new page's (f0ck-shell.css and the
+//                     shell's CSS on a shared page), waits for them; returns a function that removes
+//                     the ones the new page doesn't have, and the tail elements it doesn't have (call
+//                     it after the swap: no unstyled moment). Tail elements: what tail() added, and
+//                     the [data-swap-tail] ones the page loaded first has after the anchor (a shared
+//                     page loaded first brings the mod dialog; it mustn't stay, unstyled, on the
+//                     frontend's own pages). Not the rest: scripts add their own elements there.
 //   scripts(list)     runs the scripts of the swapped-in part in order: page scripts every time
 //                     (/s/js/views/*, data-v2-page, anything inside a shared page, like f0ckm.js does
 //                     with #main), libraries only the first time
@@ -590,8 +593,19 @@ window.F0ckPageSwap = (() => {
   const known = () => { for (const s of document.scripts) if (s.src) loaded.add(srcKey(s.src)); };
   known();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', known, { once: true });
-  // elements tail() added: they go again on a page that doesn't have them
+  // elements tail() added (and the first page's tail, see styles): they go again on a page that
+  // doesn't have them
   let extras = [];
+  let adopted = false;
+  const adoptTail = (anchorId) => {
+    if (adopted || !anchorId) return;
+    const anchor = document.getElementById(anchorId);
+    if (!anchor) return;
+    adopted = true;
+    for (let n = anchor.nextElementSibling; n; n = n.nextElementSibling) {
+      if (n.id && n.hasAttribute('data-swap-tail')) extras.push(n);
+    }
+  };
   const sheetKey = (l) => { try { return new URL(l.getAttribute('href'), location.href).pathname; } catch { return l.getAttribute('href') || ''; } };
   const sheets = (root) => [...root.querySelectorAll('link[rel~="stylesheet"][href]')];
   const waitSheet = (l) => new Promise((res) => {
@@ -600,7 +614,8 @@ window.F0ckPageSwap = (() => {
     setTimeout(res, 2500);
   });
 
-  const styles = async (doc) => {
+  const styles = async (doc, anchorId) => {
+    adoptTail(anchorId);
     const want = sheets(doc.head);
     const have = sheets(document.head);
     const haveKeys = new Set(have.map(sheetKey));

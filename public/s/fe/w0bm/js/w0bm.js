@@ -2621,7 +2621,7 @@
     const doc = page && new DOMParser().parseFromString(page.html, 'text/html');
     if (!doc || !isOwnPage(doc)) { location.assign(page ? page.url : target.href); return; }
     // the new page's stylesheets first (a shared page: f0ck-shell.css, w0bm-shell.css)
-    const dropStyles = await swap.styles(doc);
+    const dropStyles = await swap.styles(doc, 'w0bm-flash');
     if (seq !== navSeq) return;
 
     // where the page we leave was scrolled to, for "back"

@@ -708,7 +708,7 @@ window.v2Page.onPage(() => {
     const doc = page && new DOMParser().parseFromString(page.html, 'text/html');
     if(!doc || !isOwnPage(doc)) { location.assign(page ? page.url : target.href); return; }
     // the new page's stylesheets first (a shared page: f0ck-shell.css, f0ckv2-shell.css)
-    const dropStyles = await swap.styles(doc);
+    const dropStyles = await swap.styles(doc, 'footer-data');
     if(mine !== seq) return;
 
     if(!opts.pop) {

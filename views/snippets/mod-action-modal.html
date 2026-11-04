@@ -1,6 +1,7 @@
-{#- Confirm/reason dialog of ModAction (f0ck-core.js). Used by snippets/footer.html and every frontend's shell. -#}
+{#- Confirm/reason dialog of ModAction (f0ck-core.js). Used by snippets/footer.html and every frontend's shell.
+    data-swap-tail: a frontend's in-place navigation removes it on its own pages (F0ckPageSwap). -#}
 {% if session %}
-<div id="mod-action-modal" class="modal-overlay footer-hidden">
+<div id="mod-action-modal" class="modal-overlay footer-hidden" data-swap-tail>
   <div class="modal-content ma-modal-content">
     <div class="ma-header">
       <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="mod-action-cancel">&times;</button>
