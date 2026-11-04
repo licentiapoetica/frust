@@ -111,6 +111,8 @@ img.w2-image { max-width: 100%; max-height: 100%; object-fit: contain; }
 .w2-flash, .w2-archive { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; text-align: center; }
 .w2-archive .fa { font-size: 5rem; }
 .w2-flash > f0ck-flash { position: absolute; inset: 0; }
+/* cstms.css gives every iframe min-height: 750px; Ruffle's frame must fit the stage */
+.w2-flash > f0ck-flash > iframe { min-height: 0; }
 .w2-flash.is-loaded .w2-flash-start { display: none; }
 .video-titlebar { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .w2-uploader.w2-colored { color: var(--user-color); }
