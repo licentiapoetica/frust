@@ -361,15 +361,8 @@ async fn hall_item(st: AppState, req: Req) -> Res {
                 None => false,
             };
             data.insert("isSubscribed".into(), json!(subscribed));
-            let (score, tier, label) = sc::item_xd_score(&st, &item_id).await;
-            item.insert("xd_score".into(), json!(score));
-            item.insert("xd_tier".into(), json!(tier));
-            item.insert("xd_label".into(), json!(label));
         } else {
             data.insert("isSubscribed".into(), json!(false));
-            item.insert("xd_score".into(), json!(0));
-            item.insert("xd_tier".into(), json!(0));
-            item.insert("xd_label".into(), json!(""));
         }
         data.insert("commentsJSON".into(), Value::Null);
         data.insert("comments".into(), json!([]));
