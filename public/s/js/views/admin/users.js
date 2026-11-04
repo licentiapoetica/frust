@@ -399,13 +399,21 @@
             });
         }
 
-        // Infinite Scroll
+        // Infinite Scroll: the next page loads once the end of the list is near (400px ahead), and
+        // again right away while it still is (a page that doesn't fill the screen, a tall window), so
+        // scrolling down reaches every user in every frontend's shell.
+        var triggerNear = false;
+        function loadMoreIfNear() {
+            if (!triggerNear || !hasMore || isLoading) return;
+            currentPage++;
+            fetchUsers(currentPage, searchQuery, true).then(function() {
+                setTimeout(loadMoreIfNear, 50);
+            });
+        }
         var observer = new IntersectionObserver(function(entries) {
-            if (entries[0].isIntersecting && hasMore && !isLoading) {
-                currentPage++;
-                fetchUsers(currentPage, searchQuery, true);
-            }
-        }, { threshold: 0.1 });
+            triggerNear = entries[entries.length - 1].isIntersecting;
+            loadMoreIfNear();
+        }, { rootMargin: '0px 0px 400px 0px' });
         observer.observe(loadingTrigger);
 
         // --- Create User Modal ---
