@@ -1589,3 +1589,9 @@ nav.navbar.navbar-expand-lg {
   z-index: 1030;
 }
 
+
+/* YouTube (and other iframes): the box is the iframe's anchor, so it stays inside the frame's borders
+   (videos get that from the player, v0ck) */
+.media-object > .embed-responsive:has(> iframe) {
+  position: relative;
+}
