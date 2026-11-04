@@ -5411,6 +5411,12 @@ body.layout-modern .comments-list {
   background: var(--bg);
 }
 
+/* the list scrolls, its comments keep their full height: a flex item with overflow: hidden
+   (.comment) may otherwise shrink below its content, squashing every comment to fit */
+body.layout-modern .comments-list > * {
+  flex-shrink: 0;
+}
+
 body.layout-legacy .comments-list {
   position: relative;
   display: flex;
