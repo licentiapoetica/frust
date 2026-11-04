@@ -409,6 +409,10 @@ a.w0bm-iconbtn {
     width: 100%;
     height: 100%;
 }
+/* F with "F is for Fullscreen" on (w0bm.js toggleItemFullscreen) */
+.w0bm-flash-stage:fullscreen {
+    background: #000;
+}
 .w0bm-download-stage {
     position: absolute;
     top: 0;

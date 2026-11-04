@@ -1000,7 +1000,7 @@
       box.remove();
     });
     if (!isAudio && document.fullscreenElement === host) { intoHost(); showFs(); }
-    p.toggleFullscreen = toggleFs;
+    if (!isAudio) p.toggleFullscreen = toggleFs;
 
     // user activity (inactivityTimeout: 1000); a mouse resting on the control bar keeps it shown
     let idle, overBar = false;
@@ -1254,10 +1254,28 @@
   const visible = (el) => el && !el.classList.contains('w0bm-invisible');
   const goNext = () => { const n = $('#next'); if (visible(n)) n.click(); };
   const goPrev = () => { const p = $('#prev'); if (visible(p)) p.click(); };
+  // "F is for Fullscreen" (settings page, localStorage like f0ckm): F toggles fullscreen of the video
+  // or Flash movie, Shift+F favorites. Images and audio have no fullscreen: F favorites there.
+  const fForFullscreen = () => store.get('fForFullscreen') === 'true';
+  const toggleItemFullscreen = () => {
+    if (player?.toggleFullscreen) { player.toggleFullscreen(); return true; }
+    // Flash: the stage (frame, volume strip and HUD) goes fullscreen
+    const stage = flashPlayer?.closest('#w0bm-swf');
+    if (stage?.requestFullscreen) {
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      else stage.requestFullscreen().catch(() => {});
+      return true;
+    }
+    return false;
+  };
   if (ITEM) {
     on(document, 'keydown', (e) => {
-      if (e.defaultPrevented || /^(input|textarea|select)$/i.test(e.target.nodeName) || e.target.isContentEditable || e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return;
+      if (e.defaultPrevented || /^(input|textarea|select)$/i.test(e.target.nodeName) || e.target.isContentEditable || e.ctrlKey || e.altKey || e.metaKey) return;
       if ($('.modal.w0bm-modal-open')) return;
+      if (e.shiftKey) {
+        if (e.keyCode === 70 && fForFullscreen() && !e.repeat) { e.preventDefault(); $('#fav')?.click(); } // Shift+F
+        return;
+      }
       // 0-9 (top row or numpad): jump to 0 %, 10 %, ... 90 % of the video / audio
       if (/^[0-9]$/.test(e.key)) {
         const d = player && player.duration();
@@ -1268,7 +1286,7 @@
         case 39: case 68: case 76: goNext(); break; // → d l
         case 37: case 65: case 72: goPrev(); break; // ← a h
         case 82: $('#w0bm-context')?.click(); break; // r
-        case 70: $('#fav')?.click(); break; // f
+        case 70: if (e.repeat) break; if (!(fForFullscreen() && toggleItemFullscreen())) $('#fav')?.click(); break; // f
         case 80: cycleRating(); break; // p
         case 73: if (openTagInput()) e.preventDefault(); break; // i (no "i" typed into the field)
         case 67: if (typeof toggleComments === 'function') toggleComments(); break; // c
