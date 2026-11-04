@@ -94,6 +94,11 @@ html.w0bm-nojs .w0bm-dropdown:focus-within > .dropdown-menu {
     border-color: #1fb2b0;
     color: #1fb2b0;
 }
+/* Layout and Theme dropdowns: the same space under the last button as above the first */
+.layoutblah .layoutbutton:last-child,
+#switcher > button:last-of-type {
+    margin-bottom: 0;
+}
 #switcher button.active {
     outline: 1px solid #1fb2b0;
 }
@@ -2353,4 +2358,93 @@ html[data-w0bm-theme="DARK"] .w0bm-mode-group > .btn.active {
     .w0bm-flash-volstrip {
         display: none;
     }
+}
+
+/* ── Edit modal tools (partials/frontendedit.html) ────────────────────────────────────────── */
+.modal-body.w0bm-edit-body {
+    display: block;
+}
+.w0bm-edit-tools {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #353434;
+}
+.w0bm-edit-tools > h5 {
+    margin: 0 0 8px;
+    font-family: Oswald, sans-serif;
+    color: #1fb2b0;
+}
+.w0bm-edit-tool {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    margin: 0 0 8px;
+}
+.w0bm-edit-tool > .btn {
+    flex: 0 0 auto;
+    min-width: 190px;
+    text-align: left;
+}
+.w0bm-edit-hint {
+    color: #888;
+    font-size: 0.9em;
+}
+.w0bm-meta-results {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 0 0 10px;
+    color: #888;
+}
+.w0bm-meta-results[hidden] {
+    display: none;
+}
+.w0bm-meta-chip {
+    padding: 3px 9px;
+    border: 1px solid #353434;
+    background: transparent;
+    color: #c8c8c8;
+    cursor: pointer;
+}
+.w0bm-meta-chip::before {
+    content: "+ ";
+    color: #1fb2b0;
+}
+.w0bm-meta-chip:hover {
+    border-color: #1fb2b0;
+}
+.w0bm-meta-chip.w0bm-meta-added {
+    border-color: #1fb2b0;
+    color: #1fb2b0;
+    cursor: default;
+}
+.w0bm-meta-chip.w0bm-meta-added::before {
+    content: "\2713  ";
+}
+html[data-w0bm-theme="DARK"] :is(.w0bm-edit-tools, .w0bm-meta-chip:not(.w0bm-meta-added)) {
+    border-color: #1c1c1c;
+}
+
+/* ── The bell's counts (navigation.html, w0bm.js setBadge) ──────────────────────────────────
+   w0bmcustom.css hides every badge in the right navbar (visibility: hidden): shown here whenever
+   there is a count. Notifications on the bell's top right corner, unread DMs on its bottom right, so
+   the two don't cover each other. */
+ul.navbar-right > li > a > span.badge.message-badge.w0bm-has-count {
+    visibility: visible;
+}
+ul.navbar-right > li > a > span.badge.message-badge {
+    /* only placed on the bell's corner (the link has 15px side padding, the bell is ~13px wide);
+       the look stays the w0bm badge (accent, dark text, .navbar-nav .badge above) */
+    position: absolute;
+    top: 4px;
+    left: 24px;
+    right: auto;
+    bottom: auto;
+    margin: 0;
+    pointer-events: none;
+}
+ul.navbar-right > li > a > span.badge.message-badge.w0bm-dm-badge {
+    top: auto;
+    bottom: 4px;
 }

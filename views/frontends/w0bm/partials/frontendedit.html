@@ -1,15 +1,20 @@
 {#- partials/frontendedit.blade.php: title (PATCH /api/v2/items/:id/title) and rating
-    (PUT /api/v2/tags/:id/cycle-rating). JavaScript sends it. -#}
-<form id="webmedit" method="POST" action="/api/v2/items/{{ item.id }}/title" data-item-id="{{ item.id }}">
-    <div class="modal fade" id="webmeditmodal" tabindex="-1" role="dialog" aria-labelledby="Edit">
-        <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
-                    <h4 class="modal-title" id="editModalTitle">Edit {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</h4>
-                </div>
-                <div class="modal-body frontendeditmodal">
+    (PUT /api/v2/tags/:id/cycle-rating), sent by JavaScript; plus, like f0ckm's item tools:
+    - a new thumbnail (POST /api/v2/items/:id/rethumb; a plain form without JavaScript),
+    - metadata suggestions from the file (GET /api/v2/meta/extract/item/:id; a click adds one as a tag),
+    - for staff: unavailable (451) on/off (POST /api/v2/item/visibility; a plain form).
+    The forms sit side by side in the modal (forms can't nest); Save belongs to #webmedit. -#}
+{%- set w0bm_unavailable = (item.visibility == 3) -%}
+<div class="modal fade" id="webmeditmodal" tabindex="-1" role="dialog" aria-labelledby="editModalTitle">
+    <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                <h4 class="modal-title" id="editModalTitle">Edit {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</h4>
+            </div>
+            <div class="modal-body frontendeditmodal w0bm-edit-body">
+                <form id="webmedit" method="POST" action="/api/v2/items/{{ item.id }}/title" data-item-id="{{ item.id }}">
                     {% if enable_item_title %}
                     <div class="form-group">
                         <label for="videotitleedit">Title</label>
@@ -27,12 +32,39 @@
                         </select>
                     </div>
                     {% endif %}
+                </form>
+
+                <div class="w0bm-edit-tools">
+                    <h5>Tools</h5>
+                    <form method="post" action="/api/v2/items/{{ item.id }}/rethumb" class="w0bm-edit-tool" id="w0bm-rethumb-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        {% include "frontends/w0bm/partials/back.html" %}
+                        <button type="submit" class="btn btn-primary"><i class="fa fa-refresh"></i> New thumbnail</button>
+                        <span class="w0bm-edit-hint">Generate the thumbnail again from the file.</span>
+                    </form>
+                    {% if can_extract_meta %}
+                    <div class="w0bm-edit-tool w0bm-js-only">
+                        <button type="button" class="btn btn-primary" id="w0bm-meta-btn"><i class="fa fa-magic"></i> Metadata suggestions</button>
+                    </div>
+                    <div class="w0bm-meta-results" id="w0bm-meta-results" hidden></div>
+                    {% endif %}
+                    {% if is_mod_or_admin %}
+                    <form method="post" action="/api/v2/item/visibility" class="w0bm-edit-tool" id="w0bm-451-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="postid" value="{{ item.id }}">
+                        <input type="hidden" name="id" value="{{ item.id }}">
+                        <input type="hidden" name="visibility" value="{{ ("0" if w0bm_unavailable else "3") }}">
+                        {% include "frontends/w0bm/partials/back.html" %}
+                        <button type="submit" class="btn {{ ("btn-primary" if w0bm_unavailable else "btn-danger") }}"><i class="fa fa-ban"></i> {{ ("Make available again" if w0bm_unavailable else "Make unavailable (451)") }}</button>
+                        <span class="w0bm-edit-hint">{{ ("Unavailable for legal reasons (451) right now." if w0bm_unavailable else "Hide it behind a 451 Unavailable For Legal Reasons page.") }}</span>
+                    </form>
+                    {% endif %}
                 </div>
-                <div class="modal-footer">
-                    <a href="#_" class="btn btn-primary" data-dismiss="modal">Close</a>
-                    <input type="submit" class="btn btn-primary w0bm-js-only" value="Save">
-                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#_" class="btn btn-primary" data-dismiss="modal">Close</a>
+                <input type="submit" form="webmedit" class="btn btn-primary w0bm-js-only" value="Save">
             </div>
         </div>
     </div>
-</form>
+</div>

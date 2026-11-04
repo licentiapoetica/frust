@@ -55,8 +55,6 @@
                         {% if (userhalls_enabled and not session.is_anon) %}
                         <li><a href="/user/{{ session.user|lower }}/halls"><i class="fa fa-clone"></i> My Halls</a></li>
                         {% endif %}
-                        <li><a href="/ranking"><i class="fa fa-trophy"></i> Ranking</a></li>
-                        <li><a href="/tags"><i class="fa fa-tags"></i> Tags</a></li>
                         {% if (session.admin or session.is_moderator) %}
                         <li role="separator" class="divider"></li>
                         <li><a href="/mod"><i class="fa fa-gavel"></i> Mod</a></li>

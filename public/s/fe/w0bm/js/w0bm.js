@@ -1271,6 +1271,76 @@
     else flash('success', 'Upload successfully updated');
     closeModal($('#webmeditmodal'));
   });
+  // Edit modal tools (partials/frontendedit.html), sent with fetch; plain forms without JavaScript
+  const editItemId = editForm?.dataset.itemId;
+  const rethumbForm = $('#w0bm-rethumb-form');
+  rethumbForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = rethumbForm.querySelector('button');
+    btn.disabled = true;
+    const r = await api(rethumbForm.action, { body: new FormData(rethumbForm) });
+    btn.disabled = false;
+    if (!r.ok) { flash('error', r.msg || 'Thumbnail regeneration failed'); return; }
+    flash('success', 'Thumbnail regenerated');
+    const bust = Date.now();
+    $$('img[src*="/t/' + editItemId + '.webp"]').forEach((img) => {
+      const u = new URL(img.src, location.origin);
+      u.searchParams.set('t', bust);
+      img.src = u.toString();
+    });
+  });
+  const metaBtn = $('#w0bm-meta-btn');
+  const metaBox = $('#w0bm-meta-results');
+  metaBtn?.addEventListener('click', async () => {
+    metaBtn.disabled = true;
+    metaBox.hidden = false;
+    metaBox.textContent = 'reading the file …';
+    const r = await api('/api/v2/meta/extract/item/' + editItemId, { method: 'GET' });
+    metaBtn.disabled = false;
+    const fields = (r.ok && r.data && Array.isArray(r.data.fields)) ? r.data.fields : [];
+    metaBox.textContent = '';
+    if (!fields.length) {
+      metaBox.textContent = r.ok ? 'No metadata found in this file.' : (r.msg || 'Could not read the metadata');
+      return;
+    }
+    const have = new Set($$('#tag-display .label').map((l) => String(l.dataset.tag || l.textContent).trim().toLowerCase()));
+    fields.forEach((field) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'w0bm-meta-chip';
+      chip.textContent = field;
+      if (have.has(String(field).toLowerCase())) chip.classList.add('w0bm-meta-added');
+      chip.addEventListener('click', async () => {
+        if (chip.classList.contains('w0bm-meta-added')) return;
+        chip.disabled = true;
+        const t = await api('/api/v2/tags/' + editItemId, { json: { tagname: field } });
+        chip.disabled = false;
+        if (!t.ok) { flash('error', t.msg || 'Error adding tag'); return; }
+        chip.classList.add('w0bm-meta-added');
+        if (t.data && t.data.tags) renderTags(t.data.tags); else reloadTags();
+        flash('success', 'Tag "' + field + '" added');
+      });
+      metaBox.appendChild(chip);
+    });
+  });
+  const unavailForm = $('#w0bm-451-form');
+  unavailForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = unavailForm.querySelector('button');
+    btn.disabled = true;
+    const r = await api(unavailForm.action, { body: new FormData(unavailForm) });
+    btn.disabled = false;
+    if (!r.ok) { flash('error', r.msg || 'Failed to change visibility'); return; }
+    // flip the form in place: the next click does the opposite
+    const off = +r.data.visibility === 3;
+    flash('success', off ? 'Item is unavailable now (451)' : 'Item is available again');
+    unavailForm.querySelector('input[name="visibility"]').value = off ? '0' : '3';
+    btn.classList.toggle('btn-primary', off);
+    btn.classList.toggle('btn-danger', !off);
+    btn.innerHTML = '<i class="fa fa-ban"></i> ' + (off ? 'Make available again' : 'Make unavailable (451)');
+    const hint = unavailForm.querySelector('.w0bm-edit-hint');
+    if (hint) hint.textContent = off ? 'Unavailable for legal reasons (451) right now.' : 'Hide it behind a 451 Unavailable For Legal Reasons page.';
+  });
   // [del] / "x": the delete modal (partials/deletemodal.html), sent with fetch
   const delForm = $('#w0bm-delform');
   delForm?.addEventListener('submit', async (e) => {
