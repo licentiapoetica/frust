@@ -365,6 +365,51 @@
     img.src = '/s/fe/w0bm/img/small_404.gif';
   };
   document.addEventListener('error', (e) => thumbFallback(e.target), true);
+
+  // ── Endless grid (index-main.html: front page, tags, users, halls) ─────────────────────
+  // Near the end of the grid the next page is fetched and its thumbnails appended (skipping ones
+  // already shown, e.g. live uploads); the page links and the address follow. Without JavaScript
+  // the page links stay as they are.
+  const endlessGrid = $('.w0bm-index-page .items');
+  const pagerNext = (root) => root.querySelector('.page-header .pagination a[rel="next"]');
+  if (endlessGrid && pagerNext(document) && 'IntersectionObserver' in window) {
+    let next = pagerNext(document).href;
+    let loading = false;
+    const sentinel = document.createElement('div');
+    sentinel.className = 'w0bm-more';
+    endlessGrid.after(sentinel);
+    const io = new IntersectionObserver(async (entries) => {
+      if (!entries.some((en) => en.isIntersecting) || loading || !next) return;
+      loading = true;
+      sentinel.classList.add('w0bm-more-loading');
+      const url = next;
+      try {
+        const res = await fetch(url, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error(res.status);
+        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        const seen = new Set($$('.main-item > a', endlessGrid).map((x) => x.getAttribute('href')));
+        doc.querySelectorAll('.items > .main-item').forEach((item) => {
+          const href = item.querySelector('a')?.getAttribute('href');
+          if (href && seen.has(href)) return;
+          endlessGrid.appendChild(document.importNode(item, true));
+        });
+        const pager = doc.querySelector('.page-header .pagination');
+        const curPager = $('.page-header .pagination');
+        if (pager && curPager) curPager.replaceWith(document.importNode(pager, true));
+        next = pagerNext(doc)?.href || null;
+        history.replaceState(history.state, '', url);
+      } catch (err) {
+        next = null;
+      }
+      loading = false;
+      sentinel.classList.toggle('w0bm-more-loading', false);
+      if (!next) {
+        io.disconnect();
+        sentinel.hidden = true;
+      }
+    }, { rootMargin: '0px 0px 600px 0px' });
+    io.observe(sentinel);
+  }
   $$('.main-item img, .w0bm-thumbs img').forEach((img) => { if (img.complete && !img.naturalWidth) thumbFallback(img); });
   document.addEventListener('error', (e) => {
     const img = e.target;

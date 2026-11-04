@@ -694,9 +694,25 @@ a.w0bm-tag-nsfl {
     top: auto;
     bottom: 3px;
 }
+/* empty grid: the 404 picture with the message under it, centred */
 .w0bm-noresults {
+    clear: both;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 0;
     text-align: center;
-    padding: 30px 0;
+}
+.w0bm-noresults > img.nothumb {
+    width: 128px;
+    height: 128px;
+    image-rendering: pixelated;
+}
+.w0bm-noresults-text {
+    margin: 0;
+    font-family: Oswald, sans-serif;
+    font-size: 1.4em;
     color: #888;
 }
 .w0bm-feed-title {
@@ -2215,4 +2231,54 @@ details.w0bm-msg[open] > summary {
         width: auto;
         height: auto;
     }
+}
+
+/* endless grid: the spot under the grid that loads the next page (w0bm.js) */
+.w0bm-more {
+    clear: both;
+    height: 40px;
+}
+.w0bm-more[hidden] {
+    display: none;
+}
+.w0bm-more.w0bm-more-loading::after {
+    content: "loading …";
+    display: block;
+    text-align: center;
+    font-family: Oswald, sans-serif;
+    color: #888;
+    line-height: 40px;
+}
+
+/* ── DARK theme: modals in DARK's black palette ───────────────────────────────────────────
+   w0bm_override.css (DARK) paints the page, navbar and panels black but leaves modals grey
+   (#221f1f), and the dialog parts above use the default theme's #353434 lines. Default and the
+   other themes keep their own modal colours. */
+html[data-w0bm-theme="DARK"] .modal-content {
+    background-color: #0a0a0a !important;
+    border-color: #1c1c1c !important;
+}
+html[data-w0bm-theme="DARK"] .modal-header,
+html[data-w0bm-theme="DARK"] .modal-footer {
+    border-color: #1c1c1c !important;
+}
+html[data-w0bm-theme="DARK"] .modal .form-control {
+    background-color: #000;
+    border-color: #1c1c1c;
+}
+html[data-w0bm-theme="DARK"] .modal .form-control:focus {
+    border-color: #1fb2b0;
+}
+html[data-w0bm-theme="DARK"] :is(.w0bm-report-cat, .w0bm-mime) {
+    border-color: #1c1c1c;
+}
+html[data-w0bm-theme="DARK"] :is(.w0bm-report-cat, .w0bm-mime):hover,
+html[data-w0bm-theme="DARK"] :is(.w0bm-report-cat, .w0bm-mime):has(input:checked) {
+    border-color: #1fb2b0;
+}
+html[data-w0bm-theme="DARK"] .w0bm-hallform + .w0bm-hallform {
+    border-top-color: #1c1c1c;
+}
+html[data-w0bm-theme="DARK"] .w0bm-mode-group > .btn {
+    background-color: #000;
 }
