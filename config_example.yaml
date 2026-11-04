@@ -175,7 +175,10 @@ websrv:
   meme_creator: false
   enable_cleanup: false
   enable_data_export: true
-  inactivity_ban_days: 60
+  # Ban accounts (not admins/mods) that haven't logged in for this many days; checked every 6 hours.
+  # 0 = off. On a database with old accounts this bans most of them at once; lift those bans with
+  # `f0ckm users unban-inactive`.
+  inactivity_ban_days: 0
   enable_user_api_keys: false
   enable_user_invites: true
   user_invite_slots: 2

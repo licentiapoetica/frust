@@ -25,6 +25,7 @@ Setup:
   users list                                List accounts
   users create <user> [<password>] [--admin] [--mod]
   users passwd <user> [<password>]          Set a new password
+  users unban-inactive [--dry-run]          Lift the bans of the inactivity ban (websrv.inactivity_ban_days)
   hash-password [<password>]                Print an Argon2id hash
 
 Media:

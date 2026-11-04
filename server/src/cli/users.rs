@@ -149,7 +149,9 @@ Usage:
   f0ckm users list
   f0ckm users create <user> ['<password>'] [--admin] [--mod]
   f0ckm users passwd <user> ['<password>']
-Passwords left out are read from stdin. Delete accounts from the admin panel (it reassigns their
+  f0ckm users unban-inactive [--dry-run]
+Passwords left out are read from stdin. unban-inactive lifts the bans of the inactivity ban
+(websrv.inactivity_ban_days) and nothing else; turn that setting off first, or they come back. Delete accounts from the admin panel (it reassigns their
 content to deleted_user).";
 
 pub async fn users(st: &AppState, raw: &[String]) -> Result<i32> {
@@ -205,6 +207,32 @@ pub async fn users(st: &AppState, raw: &[String]) -> Result<i32> {
             insert_user_options(st, id, &mut tx).await?;
             tx.commit().await?;
             println!("Successfully created user '{username}' (ID: {id})");
+            Ok(0)
+        }
+        "unban-inactive" => {
+            // Bans set by the inactivity ban (main.rs ban_inactive_users): their reason starts with
+            // "Inactivity (no login for". Moderator bans keep any other reason and stay.
+            let args = Args::parse(&raw[1..], &["--dry-run"], &[])?;
+            let rows = sql!(r#"select id, login from "user" where banned = true and ban_reason like 'Inactivity (no login for%' order by id asc"#)
+                .fetch_all(&st.db)
+                .await?;
+            if rows.is_empty() {
+                println!("No accounts banned for inactivity.");
+                return Ok(0);
+            }
+            let names: Vec<String> = rows.iter().map(|r| r.string("login")).collect();
+            if args.flag(&["--dry-run"]) {
+                println!("Would unban {} account(s): {}", rows.len(), names.join(", "));
+                return Ok(0);
+            }
+            let ids: Vec<i32> = rows.iter().filter_map(|r| r.i64("id")).map(|i| i as i32).collect();
+            sql!(r#"update "user" set banned = false, ban_reason = null, ban_expires = null where id = ANY("#, ids, ")")
+                .execute(&st.db)
+                .await?;
+            println!("Unbanned {} account(s): {}", rows.len(), names.join(", "));
+            if st.cfg().int("websrv.inactivity_ban_days").unwrap_or(0) > 0 {
+                println!("Note: websrv.inactivity_ban_days is still on; accounts still inactive that long are banned again within 6 hours.");
+            }
             Ok(0)
         }
         "passwd" => {
