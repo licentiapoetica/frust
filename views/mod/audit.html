@@ -143,7 +143,7 @@
                     </div>
                     {% endif %}
 
-                    {% if ((entry.old_content != none or entry.new_content != none) or entry.details_json) %}
+                    {% if entry.old_content or entry.new_content or entry.details_json %}
                     <div class="audit-card-row mod-audit-changes">
                         <span class="audit-label">Changes:</span>
                         <div class="audit-diff">

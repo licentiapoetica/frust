@@ -491,6 +491,7 @@ async fn text_page(st: AppState, req: Req, page: PageText) -> Res {
 
 async fn text_save(st: AppState, mut req: Req, page: PageText) -> Res {
     let text = body_str(req.post().await?, page.key()).unwrap_or_default();
+    let old = setting_value(&st, page.key()).await.unwrap_or_default();
     let r = save_setting(&st, page.key(), &text).await;
     Ok(match r {
         Ok(()) => {
@@ -499,7 +500,7 @@ async fn text_save(st: AppState, mut req: Req, page: PageText) -> Res {
                 PageText::Rules => s.rules_text = text.clone(),
                 PageText::Terms => s.terms_text = text.clone(),
             });
-            crate::audit::log(&st, sid(&req), &format!("update_{}", page.key()), "system", None, json!({})).await;
+            crate::audit::log(&st, sid(&req), &format!("update_{}", page.key()), "system", None, json!({ "old_content": old, "new_content": text })).await;
             saved(&req, json!({ "success": true }), &format!("/admin/{}", page.name()))
         }
         Err(e) => {
