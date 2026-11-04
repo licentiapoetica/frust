@@ -1,5 +1,5 @@
-{#- f0ckv2 frontend: page data + scripts, end of <body>. Own pages: followed by the shared client
-    (snippets/frontend-scripts.html); the shared pages use it through shell/footer.html. -#}
+{#- f0ckv2 frontend: page data + scripts, end of <body>. Own pages: the shared client
+    (snippets/frontend-scripts.html) comes first; the shared pages use it through shell/footer.html. -#}
   <script type="application/json" id="f0ckv2-data">{{ {
     "user": ((session.user if session else "") or ""),
     "admin": (true if (session and session.admin) else false),
@@ -14,16 +14,21 @@
     "commentMax": (comment_max_length or none),
     "lang": (lang or "en")
   }|tojson }}</script>
+{%- if not (v2_shell_foot is defined and v2_shell_foot) %}
+  {#- the shared client first (page data, f0ck-core.js, DM keys, live events, quick upload): f0ckm's
+      player (v0ck.js) reads window.f0ckSession and f0ckDebug when f0ck.js starts it. The shared pages
+      get it through shell/footer.html. -#}
+  {% include "snippets/frontend-scripts.html" %}
+{%- endif %}
   <script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>
-  <script src="/s/fe/f0ckv2/js/v0ck.js?v={{ mtime("/public/s/fe/f0ckv2/js/v0ck.js") }}"></script>
+  {#- f0ckm's video player (the newer v0ck), styles in /s/css/v0ck.css -#}
+  <script src="/s/js/v0ck.js?v={{ mtime("/public/s/js/v0ck.js") }}"></script>
   <script src="/s/fe/f0ckv2/js/f0ck.js?v={{ mtime("/public/s/fe/f0ckv2/js/f0ck.js") }}"></script>
   {% if session %}
   {% include "snippets/cap-gate.html" %}
   <script src="/s/fe/f0ckv2/js/user.js?v={{ mtime("/public/s/fe/f0ckv2/js/user.js") }}"></script>
   {% endif %}
 {%- if not (v2_shell_foot is defined and v2_shell_foot) %}
-  {#- the shared client (page data, f0ck-core.js, DM keys, live events); shell/footer.html adds it itself -#}
-  {% include "snippets/frontend-scripts.html" %}
 </body>
 </html>
 {%- endif %}

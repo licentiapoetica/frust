@@ -27,7 +27,8 @@
   {% endif %}
   <link rel="icon" {% if custom_favicon %}href="{{ custom_favicon }}"{% else %}type="image/gif" href="/s/fe/f0ckv2/img/favicon.gif"{% endif %} />
   <link rel="stylesheet" href="/s/fe/f0ckv2/css/f0ck.css?v={{ mtime("/public/s/fe/f0ckv2/css/f0ck.css") }}">
-  <link rel="stylesheet" href="/s/fe/f0ckv2/css/v0ck.css?v={{ mtime("/public/s/fe/f0ckv2/css/v0ck.css") }}">
+  {#- f0ckm's video player (the newer v0ck) -#}
+  <link rel="stylesheet" href="/s/css/v0ck.css?v={{ mtime("/public/s/css/v0ck.css") }}">
   <link rel="stylesheet" href="/s/fe/f0ckv2/css/f0ckv2.css?v={{ mtime("/public/s/fe/f0ckv2/css/f0ckv2.css") }}">
   {#- comment effects [rb] [reich] [krebs] [glitch], shared with the other frontends -#}
   <link rel="stylesheet" href="/s/css/comment-fx.css?v={{ mtime("/public/s/css/comment-fx.css") }}">

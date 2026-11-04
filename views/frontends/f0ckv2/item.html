@@ -15,28 +15,29 @@
           <img src="{{ (item.thumbnail or ("/t/" ~ item.id ~ ".webp")) }}" alt="" />
         </div>
         <div class="gapLeft">
-          <span class="populateME"><b>f0ck</b> - {{ item.id }}{% if (enable_item_title and item.title) %} - <span class="v2-item-title">{{ item.title }}</span>{% endif %}</span>
+          <span class="populateME">{{ item_ref }}{% if (enable_item_title and item.title) %} - <span class="v2-item-title">{{ item.title }}</span>{% endif %}</span>
         </div>
         <div class="gapRight">
+          <a href="#report" class="v2-iconlink" id="a_report" title="report this f0ck"><svg class="iconset"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#warning"></use></svg></a>
           {% if session %}
           <form method="post" action="/api/v2/togglefav" class="v2-iconform" id="f_favo">
             <input type="hidden" name="postid" value="{{ item.id }}">
             <input type="hidden" name="action" value="{{ ("remove" if user_has_favorited else "add") }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="back" value="{{ here }}">
-            <button type="submit" title="{{ ("unfav" if user_has_favorited else "fav") }}"><svg class="iconset" id="a_favo"><use href="/s/fe/f0ckv2/img/iconset.svg#heart_{{ ("solid" if user_has_favorited else "regular") }}"></use></svg></button>
+            <button type="submit" title="{{ ("unfav" if user_has_favorited else "fav") }}"><svg class="iconset" id="a_favo"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#heart_{{ ("solid" if user_has_favorited else "regular") }}"></use></svg></button>
           </form>
           {% if enable_comments %}
           <form method="post" action="/api/subscribe/{{ item.id }}" class="v2-iconform" id="f_subscribe">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="subscribed" value="{{ ("0" if isSubscribed else "1") }}">
             <input type="hidden" name="back" value="{{ here }}">
-            <button type="submit" title="{{ ("unsubscribe from comments" if isSubscribed else "subscribe to comments") }}"><svg class="iconset" id="a_subscribe"><use href="/s/fe/f0ckv2/img/iconset.svg#bell_{{ ("solid" if isSubscribed else "regular") }}"></use></svg></button>
+            <button type="submit" title="{{ ("unsubscribe from comments" if isSubscribed else "subscribe to comments") }}"><svg class="iconset" id="a_subscribe"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#bell_{{ ("solid" if isSubscribed else "regular") }}"></use></svg></button>
           </form>
           {% endif %}
           {% endif %}
-          <a href="/tfull/" class="v2-iconlink" id="a_tfull" title="fullscreen"><svg class="iconset"><use href="/s/fe/f0ckv2/img/iconset.svg#window-{{ ("minimize" if (session and session.fullscreen == 1) else "maximize") }}"></use></svg></a>
-          {% if is_mod_or_admin %}<svg class="iconset js-only" id="a_delete"><title>delete</title><use href="/s/fe/f0ckv2/img/iconset.svg#cross"></use></svg><a href="#delete" class="v2-iconlink nojs-only" title="delete"><svg class="iconset" id="a_delete_nojs"><use href="/s/fe/f0ckv2/img/iconset.svg#cross"></use></svg></a>{% endif %}
+          <a href="/tfull/" class="v2-iconlink" id="a_tfull" title="fullscreen"><svg class="iconset"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#window-{{ ("minimize" if (session and session.fullscreen == 1) else "maximize") }}"></use></svg></a>
+          {% if is_mod_or_admin %}<svg class="iconset js-only" id="a_delete"><title>delete</title><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#cross"></use></svg><a href="#delete" class="v2-iconlink nojs-only" title="delete"><svg class="iconset" id="a_delete_nojs"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#cross"></use></svg></a>{% endif %}
         </div>
       </div>
       <div class="content">
@@ -56,11 +57,11 @@
           </div>
           {% elif item.mime.startswith("video") %}
           <div class="embed-responsive embed-responsive-16by9">
-            <video id="my-video" class="embed-responsive-item" width="640" height="360" src="{{ item.dest }}" preload="auto"{% if not (session and session.disable_autoplay) %} autoplay{% endif %} data-autoplay="{{ ("0" if (session and session.disable_autoplay) else "1") }}" controls loop playsinline></video>
+            <video id="my-video" class="embed-responsive-item" width="640" height="360" src="{{ item.dest }}" data-size="{{ item.size }}" preload="auto"{% if not (session and session.disable_autoplay) %} autoplay{% endif %} data-autoplay="{{ ("0" if (session and session.disable_autoplay) else "1") }}" controls loop playsinline></video>
           </div>
           {% elif item.mime.startswith("audio") %}
           <div class="embed-responsive embed-responsive-16by9 v2-audio-stage" style="--cover: url('{{ (item.coverart or "/s/fe/f0ckv2/img/200.gif") }}')">
-            <audio id="my-video" class="embed-responsive-item"{% if not (session and session.disable_autoplay) %} autoplay{% endif %} data-autoplay="{{ ("0" if (session and session.disable_autoplay) else "1") }}" controls loop src="{{ item.dest }}" poster="{{ (item.coverart or "/s/fe/f0ckv2/img/200.gif") }}"></audio>
+            <audio id="my-video" class="embed-responsive-item" data-size="{{ item.size }}"{% if not (session and session.disable_autoplay) %} autoplay{% endif %} data-autoplay="{{ ("0" if (session and session.disable_autoplay) else "1") }}" controls loop src="{{ item.dest }}" poster="{{ (item.coverart or "/s/fe/f0ckv2/img/200.gif") }}"></audio>
           </div>
           {% elif item.mime.startswith("image") %}
           <div class="embed-responsive embed-responsive-16by9">
@@ -108,9 +109,11 @@
         {% endfor %}
       </div>
       {% endif %}
+      {#- MOTD between the player and the metadata (f0ck.js fe.motd keeps it live; hidden while empty) -#}
+      {% if not (session and session.show_motd == false) %}<div class="v2-motd v2-motd-item badge badge-dark"{% if not ((motd or "")|trim) %} hidden{% endif %}>{{ (motd or "") }}</div>{% endif %}
       <div class="metadata">
         <span class="badge badge-dark">
-          <a href="/{{ item_ref }}" class="id-link">{{ item.id }}</a>
+          <a href="/{{ item_ref }}" class="id-link">{{ item_ref }}</a>
           {% if uploader %}(<a id="a_username" href="/user/{{ uploader|lower|encode_uri_component }}/uploads{% if tmp and tmp.mime %}/{{ tmp.mime }}{% endif %}">{{ (item.author_display_name or uploader) if not is_anonymized else uploader }}</a>){% endif %}
         </span>
         {% if user and (user.network or user.channel) %}<span class="badge badge-dark">{{ user.network }} / {{ user.channel }}</span>{% endif %}
@@ -123,11 +126,10 @@
         </span>
         <span class="badge badge-dark"><a class="dest-link" href="{{ item.dest }}" target="_blank">{{ item.mime }}</a> / {{ item.size }}</span>
         <span class="badge badge-dark"><time class="timeago" tooltip="{{ item.timestamp.timefull }}" data-full="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></span>
-        <span class="badge badge-dark">{{ phrase }}<a href="#report" class="v2-report-link" title="report this f0ck">&#9888;</a></span>
-        {% if (enable_xd_score and item.xd_score and item.xd_score > 0) or item.is_oc or (halls_enabled and item.primaryHall) or item.expires_in or (item.visibility and item.visibility > 0) %}
+        <span class="badge badge-dark">{{ phrase }}</span>
+        {% if item.is_oc or (halls_enabled and item.primaryHall) or item.expires_in or (item.visibility and item.visibility > 0) %}
         <span class="badge badge-dark v2-extra">
           {% if item.is_oc %}<span class="badge badge-light" tooltip="Original Content">OC</span>{% endif %}
-          {% if (enable_xd_score and item.xd_score and item.xd_score > 0) %}<span class="badge badge-light xd-tier-{{ item.xd_tier }}" tooltip="xD score: {{ item.xd_score }} pts">{{ item.xd_label }} {{ item.xd_score }}</span>{% endif %}
           {% if (halls_enabled and item.primaryHall) %}<a class="badge badge-light" href="/h/{{ item.primaryHall.slug }}">hall: {{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %} <a class="badge badge-light" href="/h/{{ h.slug }}">{{ h.name }}</a>{% endfor %}{% endif %}
           {% if item.expires_in %}<span class="badge badge-light" tooltip="{{ item.expires_at }}">expires {{ item.expires_in }}</span>{% endif %}
           {% if (item.visibility and item.visibility > 0) %}<span class="badge badge-light">private</span>{% endif %}
@@ -162,7 +164,7 @@
       <div id="report" class="v2-modal">
         <a href="#_" class="v2-modal-bg" aria-label="close"></a>
         <form method="post" action="/api/v2/report" class="v2-modal-box v2-form" id="v2-report-form">
-          <div class="f0cks-header"><span>report f0ck {{ item.id }}</span><a href="#_">&#215;</a></div>
+          <div class="f0cks-header"><span>report f0ck {{ item_ref }}</span><a href="#_">&#215;</a></div>
           <input type="hidden" name="item_id" value="{{ item.id }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="back" value="{{ here }}">
@@ -183,7 +185,7 @@
       <div id="delete" class="v2-modal">
         <a href="#_" class="v2-modal-bg" aria-label="close"></a>
         <form method="post" action="/api/v2/admin/deletepost" class="v2-modal-box v2-form">
-          <div class="f0cks-header"><span>delete f0ck {{ item.id }}</span><a href="#_">&#215;</a></div>
+          <div class="f0cks-header"><span>delete f0ck {{ item_ref }}</span><a href="#_">&#215;</a></div>
           <input type="hidden" name="postid" value="{{ item.id }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="back" value="{{ (link.main ~ pagination.next ~ link.suffix) if pagination.next else ((link.main ~ pagination.prev ~ link.suffix) if pagination.prev else "/") }}">
@@ -200,6 +202,8 @@
 </div>
 {% if captcha_enabled %}<script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
 <script src="/s/cap/cap.min.js?v=0.1.58" defer></script>{% endif %}
+{#- danmaku (comments flying over the video, f0ckm's), fed by comments.js -#}
+<script src="/s/js/danmaku.js?v={{ mtime("/public/s/js/danmaku.js") }}"></script>
 <script src="/s/fe/f0ckv2/js/comments.js?v={{ mtime("/public/s/fe/f0ckv2/js/comments.js") }}"></script>
 {% include "frontends/f0ckv2/snippets/footer.html" %}
 {% endif %}

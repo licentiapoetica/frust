@@ -10,17 +10,18 @@
 <div class="v2-comment{% if reply %} reply{% endif %}{% if c.is_pinned %} pinned{% endif %}{% if reply_to == c.id %} v2-flash{% endif %}" id="c{{ c.id }}">
   <div class="v2-comment-head">
     {% if c.username %}<a href="/user/{{ c.username|lower|encode_uri_component }}"><img class="v2-comment-ava" src="{{ c.avatar_src }}" alt="" loading="lazy"></a><a class="v2-comment-name{% if c.username_color %} v2-namecolor{% endif %}" href="/user/{{ c.username|lower|encode_uri_component }}"{% if c.username_color %} style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<img class="v2-comment-ava" src="/s/fe/f0ckv2/img/default.png" alt=""><span class="v2-comment-name">{{ (c.name or "anonymous") }}</span>{% endif %}
-    <a href="#c{{ c.id }}" class="v2-comment-id">#{{ c.id }}</a>
+    {#- the id replies to the comment, like [re] -#}
+    {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" class="v2-comment-id" title="reply">#{{ c.id }}</a>{% else %}<a href="#c{{ c.id }}" class="v2-comment-id">#{{ c.id }}</a>{% endif %}
     <time class="v2-comment-time" tooltip="{{ c.iso }}">{{ c.timeago }}</time>
     {% if c.is_pinned %}<span class="badge badge-light">pinned</span>{% endif %}
     {% for b in (c.backlinks or []) %}<a href="#c{{ b }}" class="v2-quote">&gt;&gt;{{ b }}</a> {% endfor %}
     <span class="v2-comment-actions">
-      {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form">reply</a>{% endif %}
+      {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" title="reply">[re]</a>{% endif %}
       {% if session and (is_mod_or_admin or (allow_comment_deletion and c.username and (c.username|lower) == me)) %}
       <form method="post" action="/api/comments/{{ c.id }}/delete" class="v2-inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="back" value="{{ here }}#comments">
-        <button type="submit" class="v2-linkbtn">delete</button>
+        <input type="hidden" name="back" value="{{ here_path }}?comments=1#comments">
+        <button type="submit" class="v2-linkbtn" title="delete">[del]</button>
       </form>
       {% endif %}
     </span>
@@ -28,11 +29,15 @@
   <div class="v2-comment-body v2-comment-html">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
 </div>
 {%- endmacro -%}
-<div class="v2-comments" id="comments" data-item-id="{{ item.id }}" data-locked="{{ ("1" if item.is_comments_locked else "0") }}" data-me="{{ (session.user if session else "") }}" data-mod="{{ ("1" if is_mod_or_admin else "0") }}" data-can-delete="{{ ("1" if allow_comment_deletion else "0") }}">
-  <div class="f0cks-header">
-    <span>comments <span id="comment-count"></span>{% if item.is_comments_locked %} &#128274; locked{% endif %}</span>
+{#- Collapsed until the header is clicked (<details>, no JavaScript needed); open when replying
+    or coming back from a posted comment / a comment link (comments.js opens it for #c<id>). -#}
+{%- set sc = (static_comments or []) -%}
+{%- set comment_total = (sc|length) + (sc|selectattr("replies")|map(attribute="replies")|map("length")|sum) -%}
+<details class="v2-comments" id="comments"{% if (reply_to or (url and url.qs and url.qs.comments) or (nojs_flash is defined and nojs_flash)) %} open{% endif %} data-item-id="{{ item.id }}" data-locked="{{ ("1" if item.is_comments_locked else "0") }}" data-me="{{ (session.user if session else "") }}" data-mod="{{ ("1" if is_mod_or_admin else "0") }}" data-can-delete="{{ ("1" if allow_comment_deletion else "0") }}">
+  <summary class="f0cks-header">
+    <span>comments <span id="comment-count">({{ comment_total }})</span>{% if item.is_comments_locked %} &#128274; locked{% endif %}</span>
     <span class="js-only v2-comment-sort">sort: <a href="#" data-sort="new" class="active">new</a> / <a href="#" data-sort="old">old</a></span>
-  </div>
+  </summary>
   <div id="comment-list" class="v2-comment-list">
     {% for c in (static_comments or []) %}
     {{ one(c, false) }}
@@ -46,8 +51,8 @@
     <input type="hidden" name="item_id" value="{{ item.id }}">
     <input type="hidden" name="parent_id" value="{{ (reply_to or "") }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="back" value="{{ here_path }}#comments">
-    <div class="v2-reply-to"{% if not reply_to %} hidden{% endif %}>replying to <span>#{{ reply_to }}</span> <a href="{{ here_path }}#comments" class="v2-reply-cancel">&#215;</a></div>
+    <input type="hidden" name="back" value="{{ here_path }}?comments=1#comments">
+    <div class="v2-reply-to"{% if not reply_to %} hidden{% endif %}>replying to <span>#{{ reply_to }}</span> <a href="{{ here_path }}?comments=1#comments" class="v2-reply-cancel">&#215;</a></div>
     <textarea name="content" rows="3" placeholder="say something f0cked..." required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
     <button type="submit">post</button>
     {% if "comment" in (captcha_scopes or []) %}{% include "frontends/f0ckv2/snippets/cap-image.html" %}{% endif %}
@@ -55,4 +60,4 @@
   {% elif not session %}
   <div class="v2-comment-login"><a href="/?login=1">login</a> to comment</div>
   {% endif %}
-</div>
+</details>

@@ -75,6 +75,32 @@ div.posts>a:hover .thumb-flags {
   white-space: pre-wrap;
 }
 
+/* on the item page: between the player and the metadata, full width; no frame of its own (its
+   lines doubled up with the player's and the metadata's) */
+html .container .v2-motd.v2-motd-item.badge {
+  margin: 0;
+  white-space: pre-wrap;
+  border-top: 0;
+  border-bottom: 0;
+  /* the themes' .badge-dark drop shadow drew a second line along the right edge (more specific
+     than html[theme=...] .badge.badge-dark in f0ck.css) */
+  box-shadow: none;
+}
+/* MOTD and metadata continue the frame of the title bar, player and comments (1px sides; more
+   specific than the themes' "border: none" in f0ck.css; the f0ck95 themes keep their 3D borders) */
+html:not([theme^="f0ck95"]) .container .v2-motd.v2-motd-item,
+html:not([theme^="f0ck95"]) .container .metadata {
+  border-left: 1px solid var(--img-border-color);
+  border-right: 1px solid var(--img-border-color);
+}
+/* the comments header sits right under the metadata: no line between them */
+.container:has(#comments) .metadata {
+  border-bottom: 0;
+}
+.v2-motd[hidden] {
+  display: none;
+}
+
 .v2-hall-desc {
   margin-top: -10px;
   opacity: .8;
@@ -93,22 +119,6 @@ a#prev.v2-arrow-off {
 
 .v2-audio-stage {
   background: var(--cover) no-repeat center / contain black;
-}
-
-.v0ck.v0ck_has_cover {
-  background-image: var(--cover);
-}
-
-.v0ck_progress_filled {
-  flex-basis: var(--v0ck-progress, 0%) !important;
-}
-
-.v0ck_player_button.v0ck_tplay>svg {
-  height: 20px;
-}
-
-.v0ck_spacer {
-  flex: 30;
 }
 
 .v2-visualizer {
@@ -173,12 +183,6 @@ a.v2-iconlink {
     grid-column: 1/3;
   }
 }
-
-.xd-tier-1 { color: #ffd54f !important; }
-.xd-tier-2 { color: #ffb300 !important; }
-.xd-tier-3 { color: #ff7043 !important; }
-.xd-tier-4 { color: #e040fb !important; }
-.xd-tier-5 { color: #00e5ff !important; }
 
 .badge-nsfl {
   color: var(--white);
@@ -269,10 +273,52 @@ form.v2-addtag button:hover,
 
 /* ── comments ──────────────────────────────────────────────────────────────── */
 .v2-comments {
-  margin-top: 5px;
+  /* right under the metadata box */
+  margin-top: 0;
   background: var(--metadata-bg);
   border: 1px solid #363636;
+  border-top: 0;
   text-align: left;
+}
+
+/* collapsed until the header is clicked (<details>) */
+.v2-comments > summary.f0cks-header {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.v2-comments > summary.f0cks-header::-webkit-details-marker {
+  display: none;
+}
+.v2-comments > summary.f0cks-header > span:first-child::before {
+  content: "\25b8\00a0";
+}
+.v2-comments[open] > summary.f0cks-header > span:first-child::before {
+  content: "\25be\00a0";
+}
+/* the header bar looks like the item's title bar (._204863 in f0ck.css), in every theme */
+.v2-comments > summary.f0cks-header {
+  background: linear-gradient(to right, #131313, #4f4a4f);
+  line-height: 1.7;
+}
+html[theme="iced"] .v2-comments > summary.f0cks-header {
+  background: linear-gradient(to right, #102c5e, #111d37);
+}
+html[theme="f0ck95"] .v2-comments > summary.f0cks-header {
+  background: linear-gradient(to right, #08216b, #a5cef7);
+  color: white;
+}
+html[theme="f0ck95d"] .v2-comments > summary.f0cks-header {
+  background: linear-gradient(to right, #0e111a, #073c71);
+  color: white;
+}
+
+/* sorting only matters with the list open */
+.v2-comments:not([open]) > summary .v2-comment-sort {
+  display: none !important;
+}
+.v2-comments > summary.f0cks-header:hover {
+  filter: brightness(1.15);
 }
 
 .v2-comments .f0cks-header a.active {
@@ -353,6 +399,12 @@ img.v2-comment-ava {
   grid-template-columns: 1fr auto;
   gap: 5px;
   padding: 5px;
+}
+
+/* post: a normal-sized button next to the bottom of the text box, not stretched to its height */
+.v2-comment-form > button[type="submit"] {
+  align-self: end;
+  padding: 0 14px;
 }
 
 .v2-comment-form textarea {
@@ -733,15 +785,6 @@ tr.v2-unread td:first-child {
 .v2-tos { max-width: 280px; font-size: 12px; line-height: 1.4; }
 
 /* ── report box (opens with :target, works without JavaScript) ─────────────── */
-a.v2-report-link {
-  margin-left: 6px;
-  opacity: .5;
-}
-
-a.v2-report-link:hover {
-  opacity: 1;
-}
-
 .v2-modal {
   display: none;
 }
@@ -1054,16 +1097,19 @@ button.v2-linkbtn:hover {
   }
 }
 
-/* comment subscription bell: coloured like the fav heart in every theme */
-.iconset#a_subscribe {
+/* comment subscription bell and report: coloured like the fav heart in every theme */
+.iconset#a_subscribe,
+#a_report > .iconset {
   fill: var(--accent);
 }
 
-html[theme="paper"] .iconset#a_subscribe {
+html[theme="paper"] .iconset#a_subscribe,
+html[theme="paper"] #a_report > .iconset {
   fill: var(--white);
 }
 
-html[theme="f0ck95"] .iconset#a_subscribe {
+html[theme="f0ck95"] .iconset#a_subscribe,
+html[theme="f0ck95"] #a_report > .iconset {
   fill: var(--black);
 }
 
@@ -1255,3 +1301,291 @@ html[theme="paper"] #privacy-consent-modal .pc-content {
   background: white;
   color: black;
 }
+
+/* Navbar brand: image and/or text from the admin panel (f0ck-core.js toggles [hidden]) */
+.navbar-brand.v2-brand > [hidden] {
+  display: none !important;
+}
+.navbar-brand.v2-brand > .v2-brand-img {
+  display: inline-block;
+  vertical-align: middle;
+  max-height: 30px;
+  max-width: 180px;
+  width: auto;
+}
+.navbar-brand.v2-brand > .v2-brand-img + span.f0ck:not([hidden]) {
+  margin-left: 6px;
+}
+.navbar-brand.v2-brand > span.f0ck {
+  display: inline-block;
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+
+/* ── quick upload and the upload page (f0ckm's upload form: snippets/upload-modal-frontend.html,
+   upload.html) ─ f0ckv2's theme variables share f0ckm's names; the few f0ckm-only ones are set here. */
+#upload-drag-modal,
+#drop-overlay,
+.v2-upload-page {
+  --accent-rgb: 153, 255, 0;
+  --bg-form: var(--badge-tag);
+  --text: var(--white);
+  --text-color: var(--white);
+  --navbar-h: 41px;
+  --upload-opt-color: var(--white);
+  --badge-nsfl: #660000;
+  font-family: var(--font);
+}
+html[theme="p1nk"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page) { --accent-rgb: 255, 0, 255; }
+html[theme="orange"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page) { --accent-rgb: 255, 165, 0; }
+html[theme="amoled"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page) { --accent-rgb: 255, 255, 255; }
+html[theme="paper"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page) { --accent-rgb: 0, 0, 0; }
+html[theme="atmos"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page) { --accent-rgb: 26, 188, 156; }
+html[theme="term"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page) { --accent-rgb: 0, 255, 0; }
+html[theme="iced"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page) { --accent-rgb: 0, 191, 255; }
+html[theme="f0ck95"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page),
+html[theme="f0ck95d"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page) { --accent-rgb: 0, 0, 128; }
+@media (max-width: 768px) {
+  #upload-drag-modal {
+    --navbar-h: 0px;
+  }
+}
+
+/* ── navbar: icon buttons, the view settings dropdown, separators ───────────────────────── */
+.v2-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.v2-nav-icon {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+  vertical-align: -2px;
+}
+/* the bell's unread count: "(3)" from .ddcontent, without the dropdown arrow text getting long */
+.nav-link.v2-nav-iconlink {
+  white-space: nowrap;
+  align-items: center;
+}
+/* random has no dropdown arrow text: an empty line box gives it the same height as the others */
+#random.v2-nav-iconlink::after {
+  content: "\200b";
+}
+/* theme / filter / mode / frontend side by side */
+.navbar .nav-item:hover > .dropdown-menu.v2-megamenu,
+.navbar .nav-item:focus-within > .dropdown-menu.v2-megamenu {
+  display: grid;
+}
+.dropdown-menu.v2-megamenu {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(90px, auto);
+  width: max-content;
+  min-width: 0;
+  text-align: left;
+}
+.dropdown-menu.v2-megamenu > li.v2-mm-col {
+  padding: 4px 0;
+}
+.dropdown-menu.v2-megamenu > li.v2-mm-col:hover {
+  background: none;
+}
+.dropdown-menu.v2-megamenu > li.v2-mm-col + li.v2-mm-col {
+  border-left: 1px solid var(--nav-border-color);
+}
+.v2-mm-head {
+  display: block;
+  padding: 0 10px 2px;
+  font-size: .8em;
+  opacity: .6;
+  text-transform: uppercase;
+}
+.v2-megamenu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.v2-megamenu ul > li:hover {
+  background: var(--dropdown-item-hover);
+}
+.v2-megamenu ul a {
+  display: block;
+  padding: 0 10px;
+}
+.v2-megamenu ul a.active {
+  color: var(--white);
+  background: var(--nav-link-hover-bg);
+}
+.v2-megamenu ul a.active::before {
+  content: "\25b8\00a0";
+}
+/* user dropdown: the staff links between two lines */
+.dropdown-menu > li.v2-dd-sep {
+  height: 0;
+  margin: 3px 0;
+  border-top: 1px solid var(--nav-border-color);
+  pointer-events: none;
+}
+@media (max-width: 768px) {
+  /* phones: the navbar sits at the bottom and dropdowns open upwards; two columns, kept in view */
+  .dropdown-menu.v2-megamenu {
+    grid-auto-flow: row;
+    grid-template-columns: 1fr 1fr;
+    left: auto;
+    right: 0;
+  }
+  .dropdown-menu.v2-megamenu > li.v2-mm-col + li.v2-mm-col {
+    border-left: 0;
+  }
+}
+
+
+/* ── phones: the navbar on top, compact ─────────────────────────────────────────────────────
+   f0ck.css put it in a sticky bottom row with a 5-column grid of buttons. Here: one row with the
+   brand on the left and square icon buttons on the right, the page numbers underneath; dropdowns
+   open downwards (and on tap, f0ck.js). */
+@media (max-width: 768px) {
+  body {
+    display: block !important;
+    height: auto !important;
+  }
+  .navbar.navbar-expand-lg {
+    position: sticky;
+    top: 0;
+    bottom: auto;
+    z-index: 1030;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    grid-template-areas: "brand nav" "pages pages" !important;
+    align-items: center;
+    gap: 4px 6px;
+    padding: 4px 6px;
+  }
+  .navbar.navbar-expand-lg > .navbar-brand {
+    grid-area: brand !important;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: 30px;
+  }
+  .navbar.navbar-expand-lg > .navbar-brand > .v2-brand-img {
+    max-height: 26px;
+    max-width: 110px;
+  }
+  .navbar.navbar-expand-lg > .navbar-brand > span.f0ck {
+    font-size: 16px;
+  }
+  .navbar.navbar-expand-lg > .navigation-links,
+  .navbar.navbar-expand-lg > .navigation-links-guest {
+    grid-area: nav !important;
+    display: flex;
+    justify-content: flex-end;
+    width: auto;
+  }
+  .navbar.navbar-expand-lg > #navbarSupportedContent {
+    grid-area: pages !important;
+  }
+  .navbar.navbar-expand-lg .navbar-nav,
+  .navbar.navbar-expand-lg ul.navbar-nav-guests {
+    display: flex !important;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    width: auto;
+  }
+  .navbar.navbar-expand-lg .navbar-nav > .nav-item,
+  .navbar.navbar-expand-lg ul.navbar-nav-guests > li.nav-item {
+    margin: 0;
+  }
+  /* every button the same size: a 34x30 square (text buttons only as wide as their text) */
+  .navbar.navbar-expand-lg .nav-link {
+    height: 30px;
+    min-width: 34px;
+    padding: 0 7px;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+  }
+  .navbar.navbar-expand-lg .nav-link.user {
+    padding: 0;
+    overflow: hidden;
+    width: 34px;
+    min-width: 34px;
+  }
+  .navbar.navbar-expand-lg .nav-link.user > .navUserName {
+    display: none;
+  }
+  .navbar.navbar-expand-lg .nav-link.user > img.avatar {
+    height: 28px;
+    width: 28px;
+    margin: 0;
+  }
+  /* no ▼ on phones (no room); the notification count stays */
+  .navbar.navbar-expand-lg .nav-link[data-toggle="dropdown"]:not(.ddcontent)::after {
+    content: none;
+  }
+  .navbar.navbar-expand-lg #nav-notifs.ddcontent::after {
+    content: "\00a0" attr(content);
+  }
+  /* dropdowns open downwards, right-aligned so they stay in the window */
+  .navbar .dropdown-menu {
+    top: 100% !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: 0;
+    min-width: 170px;
+    width: max-content;
+    max-width: calc(100vw - 12px);
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+  .navbar .nav-item.v2-open > .dropdown-menu {
+    display: block;
+  }
+  .navbar .nav-item.v2-open > .dropdown-menu.v2-megamenu {
+    display: grid;
+  }
+  .pagination-container-fluid,
+  .pagination-wrapper {
+    width: 100%;
+  }
+  .container {
+    padding-bottom: 15px;
+  }
+  /* f0ck.css left 45px under the metadata for the bottom navbar */
+  .metadata {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* the upload page: f0ckm's form as a centred box, like the quick upload dropdown */
+.v2-upload-page {
+  max-width: 760px;
+  margin: 20px auto;
+  padding: 0 10px;
+}
+.v2-upload-page .upload-container {
+  background: var(--metadata-bg);
+  border: 1px solid var(--img-border-color);
+  padding: 12px;
+}
+
+
+/* the player box is black around the video, as with f0ckv2's old player (f0ckm's v0ck leaves it
+   transparent for f0ckm's blurred backdrop); audio keeps its cover art background */
+.media-object > .embed-responsive:not(.v2-audio-stage) {
+  background-color: #000;
+}
+
+/* the navbar (and its dropdowns) stays above the page's own layers (player overlays, danmaku) */
+nav.navbar.navbar-expand-lg {
+  z-index: 1030;
+}
+

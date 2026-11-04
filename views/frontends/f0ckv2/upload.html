@@ -1,58 +1,35 @@
 {% include "frontends/f0ckv2/snippets/header.html" %}
-{#- f0ckv2-style upload: one file (or a link) with tags and rating, sent by
-    public/s/fe/f0ckv2/js/upload.js to /api/v2/upload (needs the X-CSRF-Token header, so JavaScript). -#}
-<div id="main">
-  <div class="about v2-upload">
-    <h5>upload</h5>
-    {% if not session %}
-    <p><a href="/?login=1">login</a> to upload.</p>
+{#- f0ckm's upload form (snippets/upload-form.html, the same as the quick upload dropdown "u"), in
+    f0ckv2's colours (f0ckv2.css .v2-upload-page). /s/js/upload.js sends it to /api/v2/upload with the
+    CSRF header, so it needs JavaScript, as in f0ckm. -#}
+<link rel="stylesheet" href="/s/css/fa-layered.css?v={{ mtime("/public/s/css/fa-layered.css") }}">
+<link rel="stylesheet" href="/s/css/upload.css?v={{ mtime("/public/s/css/upload.css") }}">
+<div id="main" class="v2-upload-page">
+  <div class="upload-container" data-mimes='{{ mimes_json }}'>
+    <div class="upload-title">
+      <span class="upload-title-text">{{ t("upload.title") }}</span>
+      <div class="upload-limit-info">
+        {% if uploads_remaining == none %}
+        <span class="limit-unlimited"><i class="fa-solid fa-infinity"></i> {{ t("upload_page.limit_unlimited") }}</span>
+        {% elif uploads_remaining == 0 %}
+        <span class="limit-exhausted"><i class="fa-solid fa-triangle-exclamation"></i> {{ (t("upload_page.limit_reached")).replace("{limit}", upload_limit, 1) }}</span>
+        {% else %}
+        <span class="limit-remaining"><i class="fa-solid fa-upload"></i> {{ ((t("upload_page.limit_remaining")).replace("{remaining}", uploads_remaining, 1)).replace("{limit}", upload_limit, 1) }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if session %}
+    {% include "snippets/upload-form.html" %}
+    <p class="nojs-only v2-dim">uploading needs JavaScript{% if matrix_enabled or telegram_enabled %}; without it, post your links to the bot{% endif %}.</p>
     {% else %}
-    <p class="v2-dim">
-      max {{ max_file_size }}{% if min_tags %}, at least {{ min_tags }} tag{{ ("" if min_tags == 1 else "s") }}{% endif %}{% if uploads_remaining is number %}, {{ uploads_remaining }} upload{{ ("" if uploads_remaining == 1 else "s") }} left today{% endif %}{% if manual_approval and not (session.admin or session.is_moderator) %}, uploads are reviewed before they go live{% endif %}
-    </p>
-    {% if uploads_remaining == 0 %}
-    <p>upload limit reached, come back later.</p>
-    {% else %}
-    <form class="v2-form v2-upload-form js-only" id="v2-upload-form" enctype="multipart/form-data">
-      <table class="table">
-        <tbody>
-          <tr><td>file</td><td><input type="file" name="file" accept="{{ allowed_mimes }}"></td></tr>
-          {% if web_url_upload or enable_youtube_upload %}
-          <tr><td>or link</td><td><input type="url" class="v2-input" name="url" placeholder="https://..."></td></tr>
-          {% endif %}
-          <tr>
-            <td>rating</td>
-            <td>
-              <label><input type="radio" name="rating" value="sfw" checked> sfw</label>
-              <label><input type="radio" name="rating" value="nsfw"> nsfw</label>
-              {% if enable_nsfl %}<label><input type="radio" name="rating" value="nsfl"> nsfl</label>{% endif %}
-            </td>
-          </tr>
-          <tr><td>tags</td><td><input type="text" class="v2-input" name="tags" placeholder="tag1, tag2, ..." autocomplete="off" list="v2-upload-tags"><datalist id="v2-upload-tags"></datalist></td></tr>
-          {% if enable_item_title %}<tr><td>title</td><td><input type="text" class="v2-input" name="title" maxlength="500"></td></tr>{% endif %}
-          {% if enable_comments %}<tr><td>comment</td><td><textarea class="v2-input" name="comment" rows="2"></textarea></td></tr>{% endif %}
-          {% if enable_oc %}<tr><td>OC</td><td><label><input type="checkbox" name="is_oc" value="true"> original content</label></td></tr>{% endif %}
-          {% if enable_private_uploads and allow_user_upload_visibility %}
-          <tr>
-            <td>visibility</td>
-            <td>
-              <select class="v2-input" name="visibility">
-                <option value="0"{% if (session.default_upload_visibility or default_upload_visibility or 0) == 0 %} selected{% endif %}>public</option>
-                <option value="1"{% if (session.default_upload_visibility or default_upload_visibility) == 1 %} selected{% endif %}>unlisted</option>
-                <option value="2"{% if (session.default_upload_visibility or default_upload_visibility) == 2 %} selected{% endif %}>private</option>
-              </select>
-            </td>
-          </tr>
-          {% endif %}
-          <tr><td colspan="2"><button type="submit">f0ck it!</button> <span class="v2-upload-progress" id="v2-upload-progress"></span></td></tr>
-        </tbody>
-      </table>
-    </form>
-    {% if matrix_enabled or telegram_enabled %}<p class="nojs-only">without JavaScript, post your links to the bot.</p>{% endif %}
-    <div id="v2-upload-result" class="v2-upload-result"></div>
-    {% endif %}
+    <div class="login-required">
+      <h3>{{ t("upload_page.auth_required_title") }}</h3>
+      <p>{{ t("upload_page.auth_required_text") }}</p>
+      <a href="/?login=1" class="btn-login">{{ t("upload_page.login_btn") }}</a>
+    </div>
     {% endif %}
   </div>
 </div>
-<script src="/s/fe/f0ckv2/js/upload.js?v={{ mtime("/public/s/fe/f0ckv2/js/upload.js") }}"></script>
+{% include "snippets/header-data.html" %}
+<script src="/s/js/upload.js?v={{ mtime("/public/s/js/upload.js") }}"></script>
 {% include "frontends/f0ckv2/snippets/footer.html" %}

@@ -55,17 +55,28 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
       window.requestAnimFrame(animationLoop);
     };
 
-    const togglebg = document.getElementById('togglebg');
-    if(togglebg) togglebg.addEventListener('click', e => {
-      e.preventDefault();
+    // The player's settings menu (f0ckm's v0ck) has the background and autonext switches; it calls
+    // these when they exist (f0ckm.js has its own). State in localStorage, as before.
+    const syncSwitches = () => {
+      document.querySelectorAll('#togglebg').forEach(el => el.classList.toggle('active', background));
+      const autonext = localStorage.getItem('autoplay') === 'true';
+      document.querySelectorAll('#toggleautoplay').forEach(el => el.classList.toggle('active', autonext));
+    };
+    window.toggleBackground = () => {
       background = !background;
       localStorage.setItem('background', background.toString());
       if(canvas) {
         canvas.classList.toggle('fader-in', background);
         canvas.classList.toggle('fader-out', !background);
       }
+      syncSwitches();
       animationLoop();
-    });
+    };
+    window.toggleAutoplay = () => {
+      localStorage.setItem('autoplay', (localStorage.getItem('autoplay') !== 'true').toString());
+      syncSwitches();
+    };
+    syncSwitches();
 
     elem.addEventListener('play', animationLoop);
   }
@@ -78,7 +89,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   };
 
   // <themes>
-  const themelinks = [...document.querySelectorAll("li#themes > ul.dropdown-menu > li > a")];
+  const themelinks = [...document.querySelectorAll("nav li#themes a[data-theme]")];
   const themes = themelinks.map(t => t.dataset.theme);
   // Switch in place: every theme is in the loaded f0ck.css (html[theme=...]). The cookie is the one
   // /theme/<name> sets, so the server renders the next page in it (and saves it for the user).
@@ -86,7 +97,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     if(!t) return;
     document.documentElement.setAttribute("theme", t);
     document.cookie = `theme=${encodeURIComponent(t)}; Path=/; Max-Age=31536000; SameSite=Lax${window.isSecureContext ? "; Secure" : ""}`;
-    document.querySelectorAll("li#themes > a.ddcontent").forEach(a => a.setAttribute("content", t));
+    themelinks.forEach(a => a.classList.toggle("active", a.dataset.theme === t));
     document.querySelectorAll('a.v2-chip[href^="/theme/"]').forEach(a => a.classList.toggle("active", a.getAttribute("href") === "/theme/" + t));
   };
   // The /theme/<name> links stay the no-JS fallback
@@ -136,7 +147,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
       Cookie.set('fullscreen', full ? 0 : 1, { path: '/', days: 360 });
       document.documentElement.setAttribute('res', full ? '' : 'fullscreen');
       const use = tfull.querySelector('use');
-      if(use) use.setAttribute('href', '/s/fe/f0ckv2/img/iconset.svg#window-' + (full ? 'maximize' : 'minimize'));
+      if(use) use.setAttribute('href', use.getAttribute('href').replace(/#.*$/, '#window-' + (full ? 'maximize' : 'minimize')));
     });
   }
   // </fullscreen>
@@ -151,14 +162,25 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   });
 
   // <wheeler>
+  // Same rules as f0ckm (f0ckm.js <wheeler>): Shift+wheel anywhere, the wheel over the prev/next
+  // arrows, or over the media only with "Scroll wheel navigation on items" on in the settings
+  // (localStorage wheelNavEnabled, shared with f0ckm).
+  const wheelNavOn = () => { try { return localStorage.getItem('wheelNavEnabled') === 'true'; } catch(e) { return false; } };
+  let lastWheelNav = 0;
   const wheelEventListener = function(event) {
-    if(event.target.closest('.media-object') && !event.target.closest('.album-strip')) {
-      const el = document.getElementById(event.deltaY < 0 ? 'next' : 'prev');
-      if(event.deltaY !== 0 && el && el.getAttribute('href') !== '#') {
-        event.preventDefault();
-        el.click();
-      }
-    }
+    if(event.target.closest('input, textarea, [contenteditable="true"], .album-strip')) return;
+    const shift = event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey;
+    const onArrow = !!event.target.closest('a#next, a#prev');
+    const onMedia = !!event.target.closest('.media-object');
+    if(!shift && !onArrow && !(onMedia && wheelNavOn())) return;
+    const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+    const el = document.getElementById(delta < 0 ? 'next' : 'prev');
+    if(delta === 0 || !el || el.getAttribute('href') === '#') return;
+    event.preventDefault();
+    const now = Date.now();
+    if(now - lastWheelNav < 250) return;
+    lastWheelNav = now;
+    el.click();
   };
   window.addEventListener('wheel', wheelEventListener, { passive: false });
   // </wheeler>
@@ -193,8 +215,11 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   const scroll_treshold = 1;
   const footbar = document.querySelector("div#footbar");
   const navbar = document.querySelector("nav.navbar");
+  // Wheel past the bottom / top of a grid turns the page: only with the wheel navigation setting on
+  // (see <wheeler>); otherwise the grid scrolls like any page and the page numbers turn it.
   if([...document.querySelectorAll("div.posts")].length === 1 && footbar) {
     document.addEventListener("wheel", e => {
+      if(!wheelNavOn()) return;
       const main = document.querySelector('#main');
       if(main && Math.ceil(window.innerHeight + window.scrollY) >= main.offsetHeight && e.deltaY > 0) { // down
         const el = document.querySelector(".pagination > .next:not(.disabled)");
@@ -390,6 +415,78 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   }
   // </report>
 
+  // <touch dropdowns> no hover on touch screens: the first tap on a navbar dropdown opens it
+  // (.v2-open), a second tap follows its link; a tap anywhere else closes it
+  const touch = window.matchMedia ? window.matchMedia('(hover: none)') : { matches: false };
+  document.addEventListener('click', e => {
+    const open = [...document.querySelectorAll('.navbar .nav-item.v2-open')];
+    const t = e.target.closest('.navbar .nav-item.dropdown > [data-toggle="dropdown"]');
+    if(!t || !touch.matches) {
+      if(!e.target.closest('.navbar .nav-item.v2-open')) open.forEach(li => li.classList.remove('v2-open'));
+      return;
+    }
+    const li = t.parentElement;
+    if(li.classList.contains('v2-open')) return;
+    e.preventDefault();
+    open.forEach(o => o.classList.remove('v2-open'));
+    li.classList.add('v2-open');
+  });
+  // </touch dropdowns>
+
+  // <soft view switch> filter and mode change the listing in place, without reloading the page.
+  // Listings swap #main (and the navbar's pagination and view menu) with the fetched page; on an item
+  // page a mode change only refreshes prev/next and the pagination (the player keeps playing).
+  // The links stay plain links without JavaScript (/mode/<n> redirects, the filter is a listing URL).
+  const softSwap = (doc, sels) => sels.forEach(sel => {
+    const cur = document.querySelector(sel), next = doc.querySelector(sel);
+    if(cur && next) cur.replaceWith(next);
+  });
+  const fetchDoc = async url => {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if(!res.ok) throw new Error(res.status);
+    return new DOMParser().parseFromString(await res.text(), 'text/html');
+  };
+  const softLoad = async (url, push) => {
+    const onListing = !!document.querySelector('.pagewrapper > #main');
+    const doc = await fetchDoc(url);
+    if(!onListing || !doc.querySelector('.pagewrapper > #main')) { location.href = url; return; }
+    softSwap(doc, ['.pagewrapper > #main', '.pagination-wrapper', '#view-settings']);
+    document.title = doc.title;
+    if(push) {
+      // the entry we came from has to reload in place too when going back
+      if(!(history.state && history.state.v2soft)) history.replaceState({ v2soft: true }, '', location.href);
+      history.pushState({ v2soft: true }, '', url);
+    }
+    window.scrollTo(0, 0);
+  };
+  window.addEventListener('popstate', e => {
+    if(e.state && e.state.v2soft) softLoad(location.href, false).catch(() => location.reload());
+  });
+  document.addEventListener('click', async e => {
+    const a = e.target.closest('#view-settings a[href]');
+    if(!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || a.dataset.theme) return;
+    const href = a.getAttribute('href');
+    const isMode = /^\/mode\/\d$/.test(href);
+    const isFilter = !isMode && a.closest('.v2-mm-col') && a.closest('.v2-mm-col').querySelector('.v2-mm-head')?.textContent.trim() === 'filter';
+    if(!isMode && !isFilter) return;
+    e.preventDefault();
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    try {
+      if(isMode) {
+        const res = await fetch(href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' } });
+        const data = await res.json().catch(() => ({}));
+        if(!res.ok || data.success === false) { fe.flash?.(data.msg || 'mode not allowed', 'error'); return; }
+        if(document.querySelector('.pagewrapper > #main')) await softLoad(location.href, false);
+        else softSwap(await fetchDoc(location.href), ['.pagination-wrapper', '#view-settings', 'a#prev', 'a#next']);
+      } else {
+        await softLoad(href, true);
+      }
+    } catch(err) {
+      location.href = href;
+    }
+  });
+  // </soft view switch>
+
   // <frontend hooks> for the shared client (f0ck-core.js / f0ck-frontend.js, views/frontends/README.md)
   const fe = window.f0ckFrontend = window.f0ckFrontend || {};
   const itemBox = document.querySelector('.container[data-item-id]');
@@ -417,13 +514,12 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
       setTimeout(() => el.remove(), 300);
     }, kind === 'error' ? 6000 : 3500);
   };
-  // the MOTD box on the index page
+  // the MOTD box (item page, between the player and the metadata)
   fe.motd = (text) => {
-    const box = document.querySelector('.v2-motd');
-    if(box) {
+    document.querySelectorAll('.v2-motd').forEach(box => {
       box.textContent = text || '';
-      box.hidden = !text;
-    }
+      box.hidden = !String(text || '').trim();
+    });
   };
   // the shared settings page lists every site theme: keep the ones f0ckv2's CSS has
   const themeSelect = document.getElementById('website_theme_select');

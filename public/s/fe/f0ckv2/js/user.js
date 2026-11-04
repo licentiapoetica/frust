@@ -260,7 +260,7 @@
     if(!res.success)
       return alert(res.msg || 'could not fav');
     favform.action.value = res.favorited ? 'remove' : 'add';
-    document.querySelector('svg#a_favo > use').setAttribute('href', '/s/fe/f0ckv2/img/iconset.svg#heart_' + (res.favorited ? 'solid' : 'regular'));
+    { const u = document.querySelector('svg#a_favo > use'); u.setAttribute('href', u.getAttribute('href').replace(/#.*$/, '#heart_' + (res.favorited ? 'solid' : 'regular'))); }
     const favcontainer = document.querySelector('span#favs');
     favcontainer.innerHTML = '';
     const visible = (res.favs || []).filter(f => !f.hide_fav_badge);
@@ -290,7 +290,7 @@
     subform.subscribed.value = res.subscribed ? '0' : '1';
     const btn = subform.querySelector('button');
     const icon = subform.querySelector('svg#a_subscribe > use');
-    if(icon) icon.setAttribute('href', '/s/fe/f0ckv2/img/iconset.svg#bell_' + (res.subscribed ? 'solid' : 'regular'));
+    if(icon) icon.setAttribute('href', icon.getAttribute('href').replace(/#.*$/, '#bell_' + (res.subscribed ? 'solid' : 'regular')));
     btn.title = res.subscribed ? 'unsubscribe from comments' : 'subscribe to comments';
   });
 

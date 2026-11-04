@@ -12,7 +12,10 @@
 {%- endif -%}
 {%- set me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
 <nav class="navbar navbar-expand-lg f0ck-shell-chrome">
-  <a class="navbar-brand" href="/"><span class="f0ck">{{ (custom_navbar_brand_text or "F0CK")|upper }}</span></a>
+  {#- image and text from the admin panel (both, either, or "F0CK"); f0ck-core.js updates them live -#}
+  <a class="navbar-brand v2-brand" href="/">
+    <img class="v2-brand-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="f0ck" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="F0CK"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else "F0CK")) }}</span>
+  </a>
   {% if session %}
   <div class="navigation-links">
     <ul class="navbar-nav">
@@ -20,32 +23,41 @@
         <a class="nav-link user" href="/user/{{ me|encode_uri_component }}" data-toggle="dropdown">
           {% if session.avatar_file and session.avatar_file != "default.png" %}<img src="/a/{{ session.avatar_file }}" class="avatar" alt="" data-on="error:img-fallback" data-fallback="/s/fe/f0ckv2/img/default.png">{% elif session.avatar %}<img src="/t/{{ session.avatar }}.webp" class="avatar" alt="">{% else %}<img src="/s/fe/f0ckv2/img/default.png" class="avatar" alt="">{% endif %}<span class="navUserName">{% if session.admin %}&#11088;&nbsp;{% endif %}{{ (session.display_name or session.user) }}</span>
         </a>
+        {#- only what is yours; your comments, tags and halls are linked from your profile -#}
         <ul class="dropdown-menu">
           <li><a href="/user/{{ me|encode_uri_component }}">my profile</a></li>
           <li><a href="/user/{{ me|encode_uri_component }}/uploads">my f0cks</a></li>
           <li><a href="/user/{{ me|encode_uri_component }}/favs">my favs</a></li>
-          {% if enable_comments %}<li><a href="/user/{{ me|encode_uri_component }}/comments">my comments</a></li>{% endif %}
-          <li><a href="/user/{{ me|encode_uri_component }}/tags">my tags</a></li>
-          {% if userhalls_enabled %}<li><a href="/user/{{ me|encode_uri_component }}/halls">my halls</a></li>{% endif %}
           {% if not session.is_anon %}<li><a href="/upload">upload</a></li>{% endif %}
-          {% if not session.is_anon %}<li><a href="/pending">pending{% if session.own_pending_count %} ({{ session.own_pending_count }}){% endif %}</a></li>{% endif %}
+          {% if (manual_approval and not session.is_anon) %}<li><a href="/pending">pending{% if session.own_pending_count %} ({{ session.own_pending_count }}){% endif %}</a></li>{% endif %}
           {% if private_messages and not session.is_anon %}<li><a href="/messages">messages <span id="dm-badge" class="v2-dm-badge">0</span></a></li>{% endif %}
-          <li><a href="/search">search</a></li>
-          <li><a href="/tags">tags</a></li>
-          {% if halls_enabled %}<li><a href="/halls">halls</a></li>{% endif %}
-          <li><a href="/ranking">ranking</a></li>
-          {% if session.admin %}<li><a href="/admin">Admin</a></li>{% endif %}
-          {% if (session.admin or session.is_moderator) %}<li><a href="/mod">Mod</a></li><li><a href="/mod/reports">Reports</a></li>{% if manual_approval %}<li><a href="/mod/approve">Approve{% if session.pending_count %} ({{ session.pending_count }}){% endif %}</a></li>{% endif %}{% endif %}
-          <li><a href="/about">About</a></li>
           <li><a href="/settings">settings</a></li>
+          {% if (session.admin or session.is_moderator) %}
+          <li class="v2-dd-sep" role="separator"></li>
+          {% if session.admin %}<li><a href="/admin">admin</a></li>{% endif %}
+          <li><a href="/mod">mod</a></li>
+          <li><a href="/mod/reports">reports</a></li>
+          {% if manual_approval %}<li><a href="/mod/approve">approve{% if session.pending_count %} ({{ session.pending_count }}){% endif %}</a></li>{% endif %}
+          <li class="v2-dd-sep" role="separator"></li>
+          {% endif %}
           <li><a href="/logout">logout</a></li>
         </ul>
       </li>
       <li class="nav-item dropdown" id="notifs">
-        <a class="nav-link" id="nav-notifs" href="/notifications" data-toggle="dropdown">Notifs</a>
+        <a class="nav-link v2-nav-iconlink" id="nav-notifs" href="/notifications" data-toggle="dropdown" title="notifications"><svg class="v2-nav-icon" aria-hidden="true"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#bell_solid"></use></svg><span class="v2-sr">notifications</span></a>
         <ul class="dropdown-menu">
           <li class="notif-preview-empty"><a href="/notifications">all notifications</a></li>
           {% if enable_comments %}<li><a href="/subscriptions">subscriptions</a></li>{% endif %}
+        </ul>
+      </li>
+      <li class="nav-item dropdown" id="browse">
+        <a class="nav-link" href="/tags" data-toggle="dropdown">Browse</a>
+        <ul class="dropdown-menu">
+          <li><a href="/search">search</a></li>
+          <li><a href="/tags">tags</a></li>
+          {% if halls_enabled %}<li><a href="/halls">halls</a></li>{% endif %}
+          <li><a href="/ranking">ranking</a></li>
+          <li><a href="/about">about</a></li>
         </ul>
       </li>
       {% include "frontends/f0ckv2/snippets/nav-common.html" %}

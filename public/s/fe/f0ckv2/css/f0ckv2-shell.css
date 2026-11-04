@@ -236,10 +236,11 @@ html.f0ck-shell[theme="paper"] {
    f0ck-shell-important layer (declared before the f0ckm layer, so it wins). */
 @layer f0ck-shell-important {
   html.f0ck-shell nav.navbar.f0ck-shell-chrome {
+    /* above the shared pages' sticky parts (settings quick-nav, title bars), so its dropdowns too */
+    z-index: 1030 !important;
     display: grid !important;
     align-items: normal !important;
     min-height: 0 !important;
-    z-index: 3 !important;
   }
 
   html.f0ck-shell .f0ck-shell-chrome .navbar-brand {
@@ -279,8 +280,20 @@ html.f0ck-shell[theme="paper"] {
   }
 
   @media (max-width: 768px) {
+    /* phones: the navbar is on top here too (f0ckv2.css) */
     html.f0ck-shell nav.navbar.f0ck-shell-chrome {
-      top: auto !important;
+      top: 0 !important;
+    }
+
+    /* f0ckm.css makes the button lists a grid (important): one row of buttons, as in f0ckv2.css */
+    html.f0ck-shell .f0ck-shell-chrome ul.navbar-nav-guests,
+    html.f0ck-shell .f0ck-shell-chrome ul.navbar-nav {
+      display: flex !important;
+      flex-direction: row !important;
+      justify-content: flex-end !important;
+      gap: 4px !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
 
     html.f0ck-shell .f0ck-shell-chrome .navbar-brand {
@@ -289,32 +302,34 @@ html.f0ck-shell[theme="paper"] {
   }
 }
 
-/* f0ckm.css also sets the page background and hides scrollbars with !important */
+/* f0ckm.css also sets the page background and hides scrollbars with !important.
+   The gradient is painted once over the window (fixed), on a body at least as tall as the window:
+   on <html> it tiled down short pages (empty messages list) as bands. */
 @layer f0ck-shell-important {
-  html.f0ck-shell,
-  html.f0ck-shell body {
-    background: var(--bg-gradient) !important;
-    background-color: var(--bg) !important;
+  html.f0ck-shell {
+    background: var(--bg) !important;
     scrollbar-width: thin !important;
   }
-}
-
-/* On phones f0ckv2's body is a grid with the navbar in a bottom row. The shared pages are longer
-   and wider than f0ckv2's own (settings: wide form rows), which squeezed the navbar row to nothing
-   and widened the column: size the rows by content (the navbar stays sticky at the bottom) and keep
-   the column inside the viewport. */
-@media (max-width: 768px) {
   html.f0ck-shell body {
-    grid-template-rows: auto auto;
-    grid-template-columns: minmax(0, 1fr);
-    height: auto;
-    min-height: 100%;
+    background: var(--bg-gradient) fixed !important;
+    background-color: var(--bg) !important;
+    min-height: 100vh;
+    scrollbar-width: thin !important;
+    /* the navbar's last dropdown poked a few px past the window: no sideways scrollbar for that */
+    overflow-x: clip;
+  }
+
+  /* messages (inbox and conversation): a centred column, not the whole window width */
+  html.f0ck-shell .f0ck-shell-page #main.messages-page,
+  html.f0ck-shell .f0ck-shell-page #main.messages-convo-page {
+    max-width: 960px !important;
+    margin: 15px auto 0 !important;
   }
 }
 
-/* phones: the navbar sits at the bottom, sticky page parts go to the very top */
+/* phones: the navbar is on top (f0ckv2.css); sticky page parts go right under it */
 @media (max-width: 768px) {
   html.f0ck-shell {
-    --fe-navbar-h: 0px;
+    --fe-navbar-h: var(--v2-nav-h-phone, 76px);
   }
 }
