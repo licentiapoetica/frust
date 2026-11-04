@@ -1,5 +1,5 @@
 //! Admin dashboard, site settings, page texts, cleanup, sessions, invite tokens/requests, Köpfe,
-//! the halls/chat pages and the config editor API (src/inc/routes/admin.mjs).
+//! and the halls/chat pages (src/inc/routes/admin.mjs).
 
 use super::{body_id, body_str, body_truthy, err_msg, fail_json, save_setting, totals};
 use crate::db::{Row, RowExt};
@@ -9,7 +9,6 @@ use crate::state::AppState;
 use axum::http::{HeaderValue, header};
 use axum::response::Response;
 use serde_json::{Value, json};
-use std::sync::Arc;
 
 pub fn register(r: &mut Router) {
     r.get_g(r"^\/admin(\/)?$", Guard::Auth, dashboard);
@@ -31,8 +30,6 @@ pub fn register(r: &mut Router) {
     r.get_g(r"^\/admin\/motd\/?$", Guard::Auth, motd_page);
     r.post_g(r"^\/admin\/motd\/?$", Guard::Auth, motd_save);
     r.post_g(r"^\/admin\/settings\/?$", Guard::Auth, settings_save);
-    r.get(r"^\/api\/v2\/admin\/config\/?$", config_get);
-    r.post(r"^\/api\/v2\/admin\/config\/?$", config_save);
     r.get_g(r"^\/admin\/cleanup\/?$", Guard::Auth, cleanup_page);
     r.post_g(r"^\/admin\/cleanup\/?$", Guard::Auth, cleanup_save);
     r.post_g(r"^\/admin\/cleanup\/run\/?$", Guard::Auth, cleanup_run);
@@ -113,6 +110,11 @@ async fn dashboard(st: AppState, req: Req) -> Res {
         "shitpost_mode": crate::settings::shitpost_mode(&cfg),
         "enable_cleanup_config": cfg.enabled("websrv.enable_cleanup"),
         "current_brand_image": s.brand_image_url,
+        "brand_glitch_text": s.brand_glitch_text,
+        "brand_glitch_image": s.brand_glitch_image,
+        "current_favicon": s.favicon_url,
+        // an upload of the admin panel (Remove goes back to the config favicon)
+        "favicon_uploaded": s.favicon_url.starts_with("/s/img/navbar/favicon."),
         "tmp": null,
     });
     render(&st, &req, "admin", data)
@@ -507,86 +509,6 @@ async fn text_save(st: AppState, mut req: Req, page: PageText) -> Res {
     })
 }
 
-// ── Config editor API ───────────────────────────────────────────────────────
-//
-// The old handlers also set `Access-Control-Allow-Origin: <request Origin>` with
-// `Access-Control-Allow-Credentials: true` themselves; that per-route reflection is dropped here.
-// NOTE: the global `/api/` CORS middleware (`app::cors`, from index.mjs) still reflects any origin.
-
-fn config_unauthorized(req: &Req) -> Option<Response> {
-    (!req.session().map(|s| s.admin).unwrap_or(false)).then(|| json_raw(&json!({ "success": false, "msg": "Unauthorized" }), 401))
-}
-
-async fn config_get(st: AppState, req: Req) -> Res {
-    if let Some(r) = config_unauthorized(&req) {
-        return Ok(r);
-    }
-    let path = st.cfg().base.join("config.yaml");
-    let r = async {
-        let text = tokio::fs::read_to_string(&path).await?;
-        crate::config_write::parse_yaml(&text)
-    }
-    .await;
-    Ok(match r {
-        Ok(config) => json_resp(&json!({ "success": true, "config": config }), 200),
-        Err(e) => json_resp(&json!({ "success": false, "msg": err_msg(&e) }), 500),
-    })
-}
-
-/// The posted config: `{ config: {...} }`, `{ config: "<json>" }` or the object itself.
-fn config_payload(body: &Value) -> anyhow::Result<Value> {
-    let mut cfg = match body.get("config") {
-        Some(c) if crate::config::truthy(c) => c.clone(),
-        _ => body.clone(),
-    };
-    if let Value::String(s) = &cfg {
-        cfg = serde_json::from_str(s).map_err(|e| anyhow::anyhow!("Invalid JSON: {e}"))?;
-    }
-    let Value::Object(map) = &mut cfg else { anyhow::bail!("Invalid configuration payload") };
-    // A form/JSON body may carry the CSRF token next to the config keys.
-    map.remove("csrf_token");
-    // Replacing the whole file with a partial object would delete every missing section.
-    for section in ["main", "websrv", "sql"] {
-        if !map.get(section).map(Value::is_object).unwrap_or(false) {
-            anyhow::bail!("Invalid configuration payload: missing \"{section}\" section");
-        }
-    }
-    Ok(cfg)
-}
-
-async fn config_save(st: AppState, mut req: Req) -> Res {
-    if let Some(r) = config_unauthorized(&req) {
-        return Ok(r);
-    }
-    let body = req.post().await?.clone();
-    let r: anyhow::Result<Value> = async {
-        let new_config = config_payload(&body)?;
-        let base = st.cfg().base.clone();
-        let nc = new_config.clone();
-        // Saved to config.yaml with its comments kept, then applied to the running config
-        tokio::task::spawn_blocking(move || crate::config_write::write_config_file(&base, &nc)).await??;
-        let reloaded = st.cfg().reload()?;
-        st.cfg.store(Arc::new(reloaded));
-        if crate::settings::enable_item_slugs(&st.cfg()) {
-            let s = st.clone();
-            tokio::spawn(async move { crate::backfill_slugs(&s).await });
-        }
-        Ok(new_config)
-    }
-    .await;
-    match r {
-        Ok(cfg) => {
-            let keys: Vec<&String> = cfg.as_object().map(|m| m.keys().collect()).unwrap_or_default();
-            crate::audit::log(&st, sid(&req), "update_config_file", "system", "0".to_string(), json!({ "updatedKeys": keys })).await;
-            Ok(json_resp(&json!({ "success": true, "message": "Configuration saved to config.yaml" }), 200))
-        }
-        Err(e) => {
-            tracing::error!("[ADMIN] Config Save Error: {e:#}");
-            Ok(json_resp(&fail_json(&e), 400))
-        }
-    }
-}
-
 // ── Cleanup ─────────────────────────────────────────────────────────────────
 
 fn cleanup_data(st: &AppState, req: &Req) -> Value {
@@ -832,19 +754,6 @@ async fn koepfe_delete(st: AppState, mut req: Req) -> Res {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn config_payload_shapes() {
-        let full = json!({ "main": {}, "websrv": {}, "sql": {} });
-        assert_eq!(config_payload(&json!({ "config": full.clone() })).unwrap(), full);
-        assert_eq!(config_payload(&json!({ "config": full.to_string() })).unwrap(), full);
-        let mut with_token = full.clone();
-        with_token["csrf_token"] = json!("x");
-        assert_eq!(config_payload(&with_token).unwrap(), full);
-        assert!(config_payload(&json!({ "main": {} })).is_err());
-        assert!(config_payload(&json!({ "config": "[1]" })).is_err());
-        assert!(config_payload(&json!({ "config": "{bad" })).is_err());
-    }
 
     #[test]
     fn dates_and_prefixes() {

@@ -2,7 +2,7 @@
 //! which live in `routes/register.rs`), plus the upload page (src/inc/routes/upload.mjs).
 //!
 //! * `dashboard` — /admin, site settings, MOTD and page texts, cleanup, sessions, tokens and
-//!   invite requests, Köpfe list, halls/chat pages, the config editor API
+//!   invite requests, Köpfe list, halls/chat pages
 //! * `bans` — ban lists and (un)ban APIs, per-user IP history
 //! * `users` — user management and admin impersonation
 //! * `upload_page` — GET /upload
