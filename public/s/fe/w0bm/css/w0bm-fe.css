@@ -54,6 +54,14 @@ html.w0bm-nojs .w0bm-js-only {
 #bg.w0bm-bg-off {
     display: none;
 }
+/* Flash: the backdrop waits until the movie is loaded (Ruffle's picture is white until then), then
+   fades in */
+#bg {
+    transition: opacity 0.6s ease;
+}
+#bg.w0bm-bg-wait {
+    opacity: 0;
+}
 
 /* ── Navbar without JavaScript: hamburger checkbox, dropdowns on focus ──────────────────── */
 @media (max-width: 767px) {

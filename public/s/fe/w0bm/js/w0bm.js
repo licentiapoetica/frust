@@ -1029,6 +1029,8 @@
   // Flash (sandboxed Ruffle frame from /s/js/flash-embed.js)
   const swf = $('#w0bm-swf[data-swf]');
   let flashPlayer = null;
+  // resolves once the movie is loaded (true) or failed (false): the backdrop waits for it
+  let flashLoaded = Promise.resolve(false);
   const savedVolume = () => {
     const v = parseFloat(store.get('volume'));
     return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.5;
@@ -1039,10 +1041,11 @@
     swf.classList.add('w0bm-flash-js');
     swf.appendChild(el);
     flashPlayer = el;
-    el.load({ url: swf.dataset.swf, volume: savedVolume() }).catch(() => {
+    flashLoaded = el.load({ url: swf.dataset.swf, volume: savedVolume() }).then(() => true, () => {
       el.remove();
       flashPlayer = null;
       swf.classList.remove('w0bm-flash-js');
+      return false;
     });
 
     // Volume: drag up/down on the right edge of the stage (a strip over the frame, which swallows
@@ -1144,13 +1147,25 @@
       };
       if (source.tagName === 'VIDEO') source.addEventListener('play', loop);
       on(window, 'resize', () => { size(); if (source.tagName === 'IMG' || source.paused) drawOnce(); });
-      loop();
+      if (source.tagName === 'CANVAS') {
+        // Flash: while Ruffle loads, its picture is blank white; the backdrop fades in with the
+        // movie (a moment after it is loaded, once real frames have arrived)
+        canvas.classList.add('w0bm-bg-wait');
+        flashLoaded.then((ok) => {
+          if (!ok || !canvas.isConnected) return;
+          setTimeout(() => {
+            if (!canvas.isConnected) return;
+            canvas.classList.remove('w0bm-bg-wait');
+            loop();
+          }, 400);
+        });
+      } else loop();
       $('#togglebg')?.addEventListener('click', (e) => {
         e.preventDefault();
         background = !background;
         store.set('background', String(background));
         canvas.classList.toggle('w0bm-bg-off', !background);
-        if (background) { size(); drawOnce(); loop(); }
+        if (background && !canvas.classList.contains('w0bm-bg-wait')) { size(); drawOnce(); loop(); }
       });
     }
   }
