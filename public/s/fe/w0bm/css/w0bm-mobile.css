@@ -1,0 +1,213 @@
+/*
+ * w0bm frontend on phones: the whole phone layout, in one place.
+ *
+ * Loaded with media="(max-width: 767px)" after every other w0bm stylesheet, the themes included
+ * (partials/head-assets.html), so nothing here needs a media query or a specificity race with the
+ * theme files. The original w0bm CSS stays as it was; where it has phone rules of its own (an
+ * absolutely positioned sidebar with a hand-tuned `top` per screen width, tags fixed to the bottom
+ * of the screen, comment padding guessed to clear them) this file sets the parts up so those rules
+ * don't come into play, instead of correcting them one by one.
+ */
+
+/* ── Navbar ──────────────────────────────────────────────────────────────────────────────── */
+/* No JavaScript: the hamburger is a checkbox label (partials/navigation.html) */
+#w0bm-navtoggle:checked ~ .navbar-collapse,
+.navbar-collapse.in {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+/* The opened menu is a stacked list. w0bmcustom.css centres the desktop bar as a flex row, and
+   Bootstrap's -15px side margins expect a padded .container-fluid, which w0bm's isn't. */
+.navbar-collapse ul.nav.navbar-nav {
+    display: block;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* ── Grid pages ──────────────────────────────────────────────────────────────────────────── */
+/* The search box first, full width; the page numbers under the grid (.w0bm-phone-pager, without
+   JavaScript; with it the grid loads on endlessly). The top pagination stays in the page hidden:
+   w0bm.js reads the next page from it. */
+.w0bm-index-page .page-header .page > .pagination {
+    display: none;
+}
+.w0bm-phone-pager {
+    display: block;
+}
+.page-header .pagination {
+    margin-bottom: 10px;
+}
+.w0bm-searchform {
+    display: flex;
+    flex-direction: row-reverse;
+}
+.w0bm-searchform .suchleiste {
+    flex: 1;
+    min-width: 0;
+}
+/* w0bmcustom.css floats the box right and pulls it 30px up beside the pagination */
+.w0bm-searchform .suchleiste,
+.w0bm-searchform .suchbutton {
+    float: none;
+    margin-top: 0;
+}
+
+/* ── Item page: one screen, nothing scrolls but the comments ─────────────────────────────────
+   Top to bottom: the item, the page links, the info bar, the comments (scrolling inside), the
+   comment box, the tags with the page links. The page is exactly the screen high: <body> is a
+   column (navbar, then .wrapper filling the rest), .wrapper a column of the parts. The sidebar
+   box itself is taken out (display: contents), so its parts are .wrapper's own items and its
+   desktop/phone positioning in w0bmcustom.css has nothing to act on. */
+body.w0bm-item-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+body.w0bm-item-page > nav.navbar {
+    flex: none;
+}
+body.w0bm-item-page > .wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+body.w0bm-item-page #sidebar.aside {
+    display: contents !important;
+}
+
+/* the item, page links and info bar: as tall as they are */
+body.w0bm-item-page > .wrapper > .w0bm-main {
+    flex: none;
+    order: 0;
+}
+body.w0bm-item-page .w0bm-main > .container {
+    padding: 0 8px;
+}
+body.w0bm-item-page .vertical-align {
+    min-height: 0;
+    padding: 8px 0 0;
+}
+.videotitle-div:has(> #w0bm-item-title:empty) {
+    display: none;
+}
+/* page links: one row, first and last included (w0bmcustom.css puts those two in tabs over the
+   top corners below 690px) */
+body.w0bm-item-page .w0bm-itemnav {
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 2px;
+    white-space: nowrap;
+}
+body.w0bm-item-page .w0bm-itemnav > a.first,
+body.w0bm-item-page .w0bm-itemnav > a.last {
+    position: static;
+    padding: 0;
+    background: none;
+    border: 0;
+}
+/* the info bar: favourite, download, report, info, uploader. A box like the comments under it,
+   in each theme's panel colours. */
+body.w0bm-item-page .vidinfo {
+    position: static;
+    padding: 5px;
+    background: rgba(34, 34, 34, 0.8);
+    border: 1px solid #383737;
+    border-radius: 0;
+}
+html[data-w0bm-theme="DARK"] body.w0bm-item-page .vidinfo {
+    background: rgba(0, 0, 0, 0.8);
+}
+html[data-w0bm-theme="Chilledblue"] body.w0bm-item-page .vidinfo {
+    background: #21292f;
+    border-color: #131619;
+}
+html[data-w0bm-theme="Glitch"] body.w0bm-item-page .vidinfo {
+    background: #21292f;
+    border-color: #000;
+}
+
+/* the comments: what's left of the screen, scrolling inside */
+/* right under the info bar, no gap (the flash box is empty unless a message is showing) */
+body.w0bm-item-page #sidebar > .flashcontainer,
+body.w0bm-item-page #sidebar > .w0bm-motd {
+    order: 2;
+    flex: none;
+    margin: 0 8px;
+}
+body.w0bm-item-page #sidebar > .w0bm-motd {
+    max-height: 5em;
+    overflow-y: auto;
+    border-top: 0;
+}
+body.w0bm-item-page #sidebar > #comment_container_scrollable {
+    order: 3;
+    flex: 1 1 0;
+    min-height: 5em;
+    width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 8px;
+    padding: 0 !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+/* the comment box (or "Log in to comment" / locked) under the list, like a chat */
+body.w0bm-item-page #sidebar > #commentForm,
+body.w0bm-item-page #sidebar > .w0bm-locked {
+    order: 4;
+    flex: none;
+    margin: 5px 8px 0;
+}
+body.w0bm-item-page #commentForm .panel {
+    margin-bottom: 0;
+}
+body.w0bm-item-page #cinput {
+    height: 2.6em;
+    min-height: 2.6em;
+    resize: none;
+}
+body.w0bm-item-page #cinput:focus {
+    height: 5em;
+}
+
+/* the tags and page links: the bottom of the screen */
+body.w0bm-item-page #sidebar > .tags {
+    order: 5;
+    flex: none;
+    position: static !important;
+    width: auto !important;
+    margin: 8px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: #161618;
+    border-top: 1px solid #1fb2b0;
+    border-bottom: 0;
+}
+body.w0bm-item-page #sidebar #tag-display {
+    width: auto;
+    height: auto;
+    padding: 4px 8px;
+}
+body.w0bm-item-page #sidebar > .tags .git {
+    padding: 2px 8px;
+    font-size: 10px;
+    line-height: 1.4;
+}
+/* no comments (guests where they are hidden): the tags still close the screen */
+body.w0bm-item-page #sidebar.w0bm-sidebar-nocomments > .tags {
+    margin-top: auto;
+}
+/* comments turned off with C / the comments button on a computer: only they go */
+html.w0bm-comments-off body.w0bm-item-page #sidebar.aside {
+    display: contents !important;
+}
+html.w0bm-comments-off body.w0bm-item-page #sidebar > :not(.tags, .flashcontainer) {
+    display: none !important;
+}
+html.w0bm-comments-off body.w0bm-item-page #sidebar > .tags {
+    margin-top: auto;
+}

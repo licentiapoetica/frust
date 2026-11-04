@@ -26,5 +26,10 @@
     {% endif %}
 </div>
 {% include "frontends/w0bm/partials/thumbgrid.html" %}
+{#- Phones (layout5, w0bm's mobile layout): the page numbers under the grid, not above it. With
+    JavaScript the grid loads on endlessly instead (w0bm.js removes this). -#}
+<div class="page w0bm-page-bottom w0bm-phone-pager w0bm-nojs-only">
+    {% include "frontends/w0bm/partials/pagination.html" %}
+</div>
 {% endif %}
 {% endblock %}
