@@ -185,7 +185,7 @@ fi
 
 # ── Build and start ──────────────────────────────────────────────────────────────
 say "Building and starting (the first build compiles the server and takes a few minutes)"
-export GIT_HASH="f0ckm-$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+export GIT_HASH="$(git rev-parse --short HEAD 2>/dev/null)"
 # Built here instead of `compose up --build`: docker-compose v1 and Docker without buildx use the classic
 # builder, which can't read the Dockerfile's cache mounts; scripts/docker-build.sh handles both
 IMAGE="$(sed -n 's/^F0CKM_IMAGE=//p' .env | tail -n 1)"; IMAGE=${IMAGE:-f0ckm}

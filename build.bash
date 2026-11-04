@@ -72,7 +72,7 @@ TAG="f0ckm-${TARGET}-${REV}"
 echo "Building image: ${IMAGE_NAME}:${TAG} for environment: ${TARGET} (Cache: ${CACHE_FLAG:-enabled})"
 
 # Build the image (BuildKit when available: the Dockerfile caches cargo downloads and build output)
-scripts/docker-build.sh $CACHE_FLAG --build-arg GIT_HASH=${TAG} -t ${IMAGE_NAME}:${TAG} || exit 1
+scripts/docker-build.sh $CACHE_FLAG --build-arg GIT_HASH=${REV} -t ${IMAGE_NAME}:${TAG} || exit 1
 
 # Also tag it as latest
 echo "Tagging as ${IMAGE_NAME}:latest"

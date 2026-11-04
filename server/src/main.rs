@@ -46,12 +46,14 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Version shown in the footer: `GIT_HASH` (baked into the Docker image), else the checkout's
-/// branch and commit. Empty when neither is known, so the footer link is left out.
+/// Version shown in the footer: the short commit hash from `GIT_HASH` (baked into the Docker
+/// image), else from the checkout. Only the hash, never the branch: older images carry
+/// `f0ckm-<target>-<hash>`, so the last `-` part is taken. Empty when unknown, so the footer link
+/// is left out.
 fn git_hash() -> String {
     if let Ok(h) = std::env::var("GIT_HASH") {
-        let h = h.trim();
-        if !h.is_empty() && h != "unknown" && !h.ends_with("-unknown") {
+        let h = h.trim().rsplit('-').next().unwrap_or("");
+        if !h.is_empty() && h != "unknown" {
             return h.to_string();
         }
     }
@@ -64,10 +66,7 @@ fn git_hash() -> String {
             .filter(|o| o.status.success())
             .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
     };
-    match (run(&["rev-parse", "--abbrev-ref", "HEAD"]), run(&["rev-parse", "--short", "HEAD"])) {
-        (Some(b), Some(h)) => format!("{b}-{h}"),
-        _ => String::new(),
-    }
+    run(&["rev-parse", "--short", "HEAD"]).unwrap_or_default()
 }
 
 async fn wait_for_db(st: &state::AppState) {
