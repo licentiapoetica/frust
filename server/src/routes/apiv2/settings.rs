@@ -49,7 +49,7 @@ pub fn register(r: &mut Router) {
     g.put_g(r"\/description", RegisteredUser, description);
     g.put_g(r"\/font", LoggedIn, font);
     g.get_g(r"\/me$", LoggedIn, me);
-    g.put_g(r"\/min_xd_score", LoggedIn, min_xd_score);
+
     g.put_g(r"\/background", LoggedIn, |st, req| bool_pref(st, req, "show_background", "show_background", "show_background", "Update background"));
     g.put_g(r"\/ruffle", LoggedIn, ruffle);
     g.put_g(r"\/quote_emojis", LoggedIn, |st, req| bool_pref(st, req, "quote_emojis", "quote_emojis", "quote_emojis", "Update quote_emojis"));
@@ -588,17 +588,6 @@ async fn me(st: AppState, req: Req) -> Res {
     j(json!({ "success": true, "login": row.val("login"), "user": row.val("user"), "display_name": display }), 200)
 }
 
-async fn min_xd_score(st: AppState, mut req: Req) -> Res {
-    let body = req.post_value().await;
-    let Some(v) = post_int(&body, "min_xd_score").filter(|v| (0..=999).contains(v)) else {
-        return fail("Invalid value: must be 0–999", 400);
-    };
-    if let Err(e) = sql!("update user_options set min_xd_score = ", v as i32, " where user_id = ", uid(&req)).execute(&st.db).await {
-        return logged_500("Update min_xd_score", e, "Error updating preference");
-    }
-    refresh_session(&st, &req);
-    j(json!({ "success": true, "min_xd_score": v }), 200)
-}
 
 async fn ruffle(st: AppState, mut req: Req) -> Res {
     let body = req.post_value().await;
@@ -655,7 +644,8 @@ async fn alternative_infobox(st: AppState, mut req: Req) -> Res {
 }
 
 async fn language(st: AppState, mut req: Req) -> Res {
-    if st.cfg().is_false("websrv.allow_language_change") {
+    let cfg = st.cfg();
+    if cfg.is_false("websrv.allow_language_change") {
         return fail("Language change is disabled by the site administrator", 403);
     }
     let body = req.post_value().await;
@@ -663,7 +653,7 @@ async fn language(st: AppState, mut req: Req) -> Res {
     let lang = match body.get("language") {
         None | Some(Value::Null) => None,
         Some(Value::String(s)) if s.is_empty() => None,
-        Some(Value::String(s)) if ["en", "de", "nl", "zange"].contains(&s.as_str()) => Some(s.clone()),
+        Some(Value::String(s)) if crate::i18n::is_selectable(&cfg, s) => Some(s.clone()),
         Some(_) => return fail("Unsupported language", 400),
     };
     if let Err(e) = sql!("update user_options set language = ", lang.clone(), " where user_id = ", uid(&req)).execute(&st.db).await {

@@ -1443,34 +1443,9 @@ class CommentSystem {
         }
 
 
-        // Save xd-score-wrapper before innerHTML wipe.
-        // On first load it lives as a previous sibling (server-rendered); afterwards inside.
-        let xdWrapperHtml = null;
-        const xdInside = this.container.querySelector('.xd-score-wrapper');
-        if (xdInside) {
-            xdWrapperHtml = xdInside.outerHTML;
-        } else {
-            const prev = this.container.previousElementSibling;
-            if (prev && prev.classList.contains('xd-score-wrapper')) {
-                xdWrapperHtml = prev.outerHTML;
-                prev.remove();
-            }
-        }
-
         const mediaState = this.saveMediaState();
         this.container.innerHTML = html;
         this.restoreMediaState(mediaState);
-
-        // Re-inject xd-score-wrapper between the comment input and the comments list
-        if (xdWrapperHtml) {
-            const commentsList = this.container.querySelector('.comments-list');
-            if (commentsList) {
-                const tmp = document.createElement('div');
-                tmp.innerHTML = xdWrapperHtml;
-                const xdEl = tmp.firstElementChild;
-                if (xdEl) this.container.insertBefore(xdEl, commentsList);
-            }
-        }
         this.syncSubscribeButton(isSubscribed);
         CommentSystem.autoplayConvertedGifs(this.container);
         CommentSystem.playEmojiVideos(this.container);
@@ -3890,12 +3865,6 @@ class CommentSystem {
                     if (json.is_new_subscription) {
                         if (window.flashMessage) window.flashMessage((window.f0ckI18n && window.f0ckI18n.subscribed_thread) || 'SUBSCRIBED TO THREAD');
                         this.syncSubscribeButton(true);
-                    }
-
-                    // Update xD score badge immediately from the POST response —
-                    // faster and more reliable than waiting for the SSE NOTIFY.
-                    if (typeof json.xd_score === 'number' && typeof window.updateXdBadgeFromScore === 'function') {
-                        window.updateXdBadgeFromScore(this.itemId, json.xd_score);
                     }
 
                     this._silentSync();

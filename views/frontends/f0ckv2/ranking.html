@@ -53,15 +53,6 @@
         {% endfor %}
       </table>
 
-      {% if (enable_xd_score and xdtop) %}
-      <h3>Top xD</h3>
-      <table class="table">
-        {% for x in xdtop %}
-        {% set ref = (x.slug if (enable_item_slugs and x.slug) else x.id) %}
-        <tr><td><a href="/{{ ref }}">{{ ref }}</a></td><td class="xd-tier-{{ x.xd_tier }}">{{ x.xd_label }} {{ x.xd_score }}</td></tr>
-        {% endfor %}
-      </table>
-      {% endif %}
     </div>
   </div>
 </div>

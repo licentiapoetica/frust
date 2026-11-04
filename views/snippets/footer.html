@@ -288,7 +288,6 @@
     "guest_anonymize": {% if guest_anonymize %} true {% else %} false {% endif %},
     "anon_anonymize": {% if anon_anonymize %} true {% else %} false {% endif %},
     "is_anonymized": {% if is_anonymized %} true {% else %} false {% endif %},
-    "enable_xd_score": {% if enable_xd_score %} true {% else %} false {% endif %},
     "default_theme": {{ default_theme|string|tojson }},
     "show_content_warning": {% if show_content_warning %} true {% else %} false {% endif %},
     "use_new_layout": {% if default_layout == "legacy" %}false {% else %} true {% endif %},

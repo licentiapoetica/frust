@@ -233,8 +233,6 @@
     "do_not_disturb": "Niet storen",
     "do_not_disturb_hint": "Onderdrukt gewoon alle meldingen en haptische feedback.",
     "content_filters": "Inhoudsfilters",
-    "min_xd_score": "Minimale xD-score",
-    "min_xd_score_hint": "Only show posts with at least this xD score. Set to 0 to disable.",
     "save": "Opslaan",
     "prefs_saved": "Instellingen opgeslagen.",
     "account": "Account",
@@ -289,8 +287,6 @@
     "tag_unexcluded_msg": "Tag '{tag}' verwijderd uit uitgesloten tags",
     "tag_placeholder": "Tag om uit te sluiten",
     "random_mode": "WILLEKEURIG",
-    "min_xd_score": "Min xD-score",
-    "apply_filter": "Filter Toepassen",
     "video": "Video",
     "audio": "Audio",
     "image": "Afbeelding",
@@ -538,8 +534,7 @@
     "stat_users": "Totaal Gebruikers",
     "stat_anon_users": "Anonieme gebruikers",
     "most_favorited": "Meest Gefavoriet",
-    "favs": "favorieten",
-    "top_xd": "Top xD-scores"
+    "favs": "favorieten"
   },
   "upload_page": {
     "title": "Inhoud Uploaden",

@@ -226,8 +226,6 @@
     "do_not_disturb": "Ich wünsche keine Störung",
     "do_not_disturb_hint": "Unterdrückt jegliche Hinweise und haptisches Beben.",
     "content_filters": "Inhaltsfilter",
-    "min_xd_score": "Minimaler xD-Punktestand",
-    "min_xd_score_hint": "Zeige nur Pfosten mit mindestens diesem xD-Punktestand an. Auf 0 setzen zum Deaktivieren.",
     "save": "Speichern",
     "account": "Konto",
     "user_id": "ID",
@@ -281,8 +279,6 @@
     "tag_unexcluded_msg": "Etikett '{tag}' aus ausgeschlossenen Etiketten entfernt",
     "tag_placeholder": "Auszuschließendes Etikett",
     "random_mode": "ZUFA",
-    "min_xd_score": "Min. xD-Punktestand",
-    "apply_filter": "Filter anwenden",
     "video": "Video",
     "audio": "Tondatei",
     "image": "Bild",
@@ -530,8 +526,7 @@
     "stat_users": "Gesamt Benutzer",
     "stat_anon_users": "Anonymer Alkoholiker",
     "most_favorited": "Am häufigsten favorisiert",
-    "favs": "Favoriten",
-    "top_xd": "Beste xD-Punktestände"
+    "favs": "Favoriten"
   },
   "upload_page": {
     "title": "Inhalt aufladieren",

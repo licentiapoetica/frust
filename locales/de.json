@@ -235,8 +235,6 @@
     "do_not_disturb": "Bitte nicht stören",
     "do_not_disturb_hint": "Unterdrückt einfach alle Benachrichtigungen und haptisches Feedback.",
     "content_filters": "Inhaltsfilter",
-    "min_xd_score": "Mindest-xD-Score",
-    "min_xd_score_hint": "Nur Beiträge mit mindestens diesem xD-Score anzeigen. Auf 0 setzen zum Deaktivieren.",
     "save": "Speichern",
     "prefs_saved": "Einstellungen gespeichert.",
     "account": "Konto",
@@ -291,8 +289,6 @@
     "tag_unexcluded_msg": "Tag '{tag}' aus ausgeschlossenen Tags entfernt",
     "tag_placeholder": "Tag ausschließen",
     "random_mode": "RAND",
-    "min_xd_score": "Min. xD-Score",
-    "apply_filter": "Filter anwenden",
     "video": "Video",
     "audio": "Audio",
     "image": "Bild",
@@ -540,8 +536,7 @@
     "stat_users": "Gesamt Benutzer",
     "stat_anon_users": "Anonyme Benutzer",
     "most_favorited": "Meiste Favs",
-    "favs": "Favs",
-    "top_xd": "Top xD-Score"
+    "favs": "Favs"
   },
   "upload_page": {
     "title": "Inhalt hochladen",

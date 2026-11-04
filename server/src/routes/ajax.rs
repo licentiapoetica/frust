@@ -165,15 +165,8 @@ async fn prepare_item(st: &AppState, req: &Req, data: &mut Value, itemid: &str, 
             Some(s) => crate::social::comments::get_subscription_status(st, s.id, itemid).await,
             None => false,
         });
-        let (score, tier, label) = crate::social::comments::item_xd_score(st, itemid).await;
-        data["item"]["xd_score"] = json!(score);
-        data["item"]["xd_tier"] = json!(tier);
-        data["item"]["xd_label"] = json!(label);
     } else {
         data["isSubscribed"] = json!(false);
-        data["item"]["xd_score"] = json!(0);
-        data["item"]["xd_tier"] = json!(0);
-        data["item"]["xd_label"] = json!("");
     }
     data["commentsJSON"] = Value::Null;
     data["comments"] = json!([]);
@@ -356,14 +349,9 @@ async fn item_random(st: AppState, req: Req) -> Res {
 
     let mut page = Value::Null;
     if s::is_onara_enabled_for(&cfg, &req.cookies, session, q(&req, "onara") == Some("1")) {
-        let min_xd = match req.query("min_xd") {
-            Some(v) => crate::social::helpers::js_number(v).unwrap_or(0.0),
-            None => session.map(|s| s.min_xd_score as f64).unwrap_or(0.0),
-        };
         let o = FeedOpts {
             target_item_id: Some(if crate::config::truthy(&data["item"]["id"]) { crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["item"]["id"])) } else { itemid.clone() }),
             target_item_pinned: Some(crate::config::truthy(&data["item"]["is_pinned"])),
-            min_xd_score: min_xd,
             tagger: q_nonempty(&req, "tagger"),
             ..base.clone()
         };
@@ -461,7 +449,6 @@ async fn item(st: AppState, req: Req) -> Res {
         let o = FeedOpts {
             target_item_id: Some(if crate::config::truthy(&data["item"]["id"]) { crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["item"]["id"])) } else { itemid.clone() }),
             target_item_pinned: Some(crate::config::truthy(&data["item"]["is_pinned"])),
-            min_xd_score: session.map(|s| s.min_xd_score as f64).unwrap_or(0.0),
             tagger: q_nonempty(&req, "tagger"),
             ..base.clone()
         };
@@ -513,7 +500,6 @@ async fn items(st: AppState, req: Req) -> Res {
         random,
         strict: explicit_strict || session.and_then(|s| s.strict_mode).unwrap_or(false),
         newer: newer.clone(),
-        min_xd_score: session.map(|s| s.min_xd_score as f64).unwrap_or(0.0),
         tagger: q_nonempty(&req, "tagger"),
         lang: Some(super::index::req_lang(&st, &req)),
         ..Default::default()

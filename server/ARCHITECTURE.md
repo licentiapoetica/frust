@@ -30,7 +30,7 @@ Already ported modules you should reuse (don't duplicate them):
 | Module | Contents |
 |---|---|
 | `f0cklib/` | feeds and item pages: `getf0cks`, `getf0ck`, `get_item_page`, `get_random(_pool)`, `FeedOpts`, `compute_base_mode`, `resolve_mime_sql`, search scoring |
-| `social/` | comments (`get_comments`, mentions/embeds, xD score), subscriptions, halls, user halls; `social::helpers` has audit log, word filter, anon activity log |
+| `social/` | comments (`get_comments`, mentions/embeds), subscriptions, halls, user halls; `social::helpers` has audit log, word filter, anon activity log |
 | `media/` | upload pipeline: `queue` (thumbnails, phash, repost checks, ffprobe), `delete` (`safe_delete_media_file`, `move_to_deleted`), `multipart` (streaming parser with limits), `mime`, `transcode`, `autotagger` |
 | `auth.rs`, `anon_auth.rs`, `webauthn.rs` | session create/destroy, reCAPTCHA, anonymous identities, passkeys (table `webauthn_credentials`; the old `passkey_credentials` is unused) |
 | `smtp.rs`, `gate.rs`, `bot/` | mail, private-society gate, chat bots (`st.bot`) |

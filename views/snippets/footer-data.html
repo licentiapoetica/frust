@@ -39,7 +39,6 @@
     "enable_swf": {% if enable_swf %} true {% else %} false {% endif %},
     "enable_danmaku": {% if enable_danmaku %} true {% else %} false {% endif %},
     "enable_global_chat": {% if enable_global_chat %} true {% else %} false {% endif %},
-    "enable_xd_score": {% if enable_xd_score %} true {% else %} false {% endif %},
     "ruffle_volume": {% if ((session and session.ruffle_volume != none) and session.ruffle_volume != none) %} {{ session.ruffle_volume|safe }} {% else %} 0.5 {% endif %},
     "ruffle_background": {% if (session and session.ruffle_background != false) %} true {% else %} false {% endif %},
     "quote_emojis": {% if (session and session.quote_emojis != false) %} true {% else %} false {% endif %},

@@ -607,7 +607,7 @@ async fn api_key_auth(st: &AppState, req: &mut Req) -> Option<Response> {
           uo.ruffle_background, uo.ruffle_volume, uo.quote_emojis,
           uo.embed_youtube_in_comments, uo.hide_koepfe,
           uo.use_alternative_infobox, uo.language, uo.comment_display_mode,
-          uo.force_comment_display_mode, uo.min_xd_score, uo.show_background,
+          uo.force_comment_display_mode, uo.show_background,
           uo.font, uo.receive_system_notifications, uo.receive_user_notifications,
           uo.do_not_disturb, uo.description
         FROM user_api_keys k

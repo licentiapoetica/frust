@@ -52,7 +52,6 @@ pub struct FeedOpts<'a> {
     pub random: bool,
     pub user_hall: Option<String>,
     pub user_hall_owner: Option<String>,
-    pub min_xd_score: f64,
     pub tagger: Option<String>,
     /// `ids` (array or comma list); `None` when not given.
     pub ids: Option<Vec<i64>>,
@@ -392,7 +391,6 @@ pub(crate) fn count_cache_key(f: &Filters, fav: bool, session: Option<&Session>)
         if session.is_some() && !is_anon_session(session) { 1 } else { 0 },
         excluded.join(","),
         f.newer_than.map(|n| n.to_string()).unwrap_or_default(),
-        f.min_xd,
         f.user_hall_obj.as_ref().map(|u| u.string("id")).unwrap_or_default(),
         f.tagger.clone().unwrap_or_default(),
     ])
@@ -465,8 +463,7 @@ pub(crate) struct Filters {
     pub mime_sql: Sql,
     pub excluded_tags: Vec<i64>,
     pub newer_than: Option<i64>,
-    pub min_xd: f64,
-    pub xd_filter: Sql,
+
     pub strict_params: Vec<String>,
     pub is_strict: bool,
     /// Escaped for ILIKE.
@@ -675,8 +672,7 @@ pub(crate) async fn build_feed_filters(st: &AppState, cfg: &Config, o: &FeedOpts
 
     let excluded_tags = if o.session.is_some() { o.exclude.clone() } else { vec![] };
     let newer_than = o.newer.as_deref().filter(|n| !n.is_empty()).and_then(parse_int).filter(|&n| n != 0);
-    let min_xd = if o.min_xd_score > 0.0 { o.min_xd_score } else { 0.0 };
-    let xd_filter = if min_xd > 0.0 { sql!("and items.xd_score >= ", min_xd) } else { Sql::empty() };
+
 
     let strict_params = strict_params(o.strict, tag.as_deref());
     let is_strict = !strict_params.is_empty();
@@ -724,8 +720,7 @@ pub(crate) async fn build_feed_filters(st: &AppState, cfg: &Config, o: &FeedOpts
         mime_sql,
         excluded_tags,
         newer_than,
-        min_xd,
-        xd_filter,
+
         strict_params,
         is_strict,
         tagger,
@@ -888,51 +883,4 @@ pub(crate) fn sub_matches_tag(tags: &[Value], terms: &[String], strict: &[String
         let slug = slugify(term);
         tags.iter().any(|t| norm(t).map(|n| !n.is_empty() && n.contains(&slug)).unwrap_or(false))
     })
-}
-
-// ── xD score helpers ────────────────────────────────────────────────────────
-// TODO(port): computeXdScore / xdScoreMeta belong to crate::social (ported by the comments agent);
-// switch to those once merged. Kept local and private so the branches merge without conflicts.
-
-/// `xdScoreMeta(score)` → (tier, label)
-pub(crate) fn xd_score_meta(score: f64) -> (i64, &'static str) {
-    if score.is_nan() || score < 1.0 {
-        // JS: NaN < 1 is false, so NaN fell through to the last tier
-        if score.is_nan() {
-            return (5, "xDDDDD+");
-        }
-        (0, "")
-    } else if score < 200.0 {
-        (1, "xD")
-    } else if score < 1000.0 {
-        (2, "xDD")
-    } else if score < 100000.0 {
-        (3, "xDDD")
-    } else if score < 20000000.0 {
-        (4, "xDDDD")
-    } else {
-        (5, "xDDDDD+")
-    }
-}
-
-/// `computeXdScore(comments)` over the item's non-deleted comments (what the item route computes
-/// from `getComments(id, 'old', false)`).
-pub(crate) async fn item_xd_score(st: &AppState, item_id: i64) -> i64 {
-    static RE: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"(?i)x(D+)").unwrap());
-    let rows: Vec<String> = match sql!(
-        r#"SELECT c.content FROM comments c JOIN "user" u ON c.user_id = u.id
-        WHERE c.item_id = "#,
-        item_id as i32,
-        " AND c.is_deleted = false AND c.content IS NOT NULL AND c.content != ''"
-    )
-    .fetch_scalar_list(&st.db)
-    .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            tracing::error!("[F0CKLIB] Error fetching comments: {e}");
-            return 0;
-        }
-    };
-    rows.iter().map(|c| RE.captures_iter(c).map(|m| m[1].len() as i64).sum::<i64>()).sum()
 }

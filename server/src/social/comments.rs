@@ -338,40 +338,6 @@ pub fn process_embeds(st: &AppState, comments: Vec<Row>) -> Vec<Row> {
         .collect()
 }
 
-static XD_RE: Lazy<regex::Regex> = Lazy::new(|| regex::Regex::new(r"(?i)x(D+)").expect("xd regex"));
-
-/// `computeXdScore(comments)` — total length of all `xD+` runs in non-deleted comments.
-pub fn compute_xd_score(comments: &[Row]) -> i64 {
-    let mut score = 0i64;
-    for c in comments {
-        if c.bool("is_deleted") {
-            continue;
-        }
-        let Some(content) = c.str("content").filter(|s| !s.is_empty()) else { continue };
-        for m in XD_RE.captures_iter(content) {
-            score += m.get(1).map(|d| d.as_str().chars().count() as i64).unwrap_or(0);
-        }
-    }
-    score
-}
-
-/// `xdScoreMeta(score)` → `(tier, label)`.
-pub fn xd_score_meta(score: i64) -> (i64, &'static str) {
-    match score {
-        s if s < 1 => (0, ""),
-        s if s < 200 => (1, "xD"),
-        s if s < 1000 => (2, "xDD"),
-        s if s < 100_000 => (3, "xDDD"),
-        s if s < 20_000_000 => (4, "xDDDD"),
-        _ => (5, "xDDDDD+"),
-    }
-}
-
-/// `xdScoreMeta` as the JSON object `{ tier, label }`.
-pub fn xd_score_meta_value(score: i64) -> Value {
-    let (tier, label) = xd_score_meta(score);
-    json!({ "tier": tier, "label": label })
-}
 
 /// `f0cklib.getSubscriptionStatus(userId, itemId)`
 pub async fn get_subscription_status(st: &AppState, user_id: i64, item: &str) -> bool {
@@ -409,14 +375,6 @@ pub async fn mark_notifications_read(st: &AppState, user_id: i64, item: &str) {
     }
 }
 
-/// Values the item page needs for its xD badge: `(xd_score, xd_tier, xd_label)` computed from the
-/// item's comments (the `commentsForScore` block in index.mjs / ajax.mjs / user_halls.mjs).
-pub async fn item_xd_score(st: &AppState, item: &str) -> (i64, i64, &'static str) {
-    let comments = get_comments(st, item, Sort::Old, false).await;
-    let score = compute_xd_score(&comments);
-    let (tier, label) = xd_score_meta(score);
-    (score, tier, label)
-}
 
 /// Anonymized copy of a comment row (`isAnonymizeSession`), as in GET /api/comments.
 pub fn anonymize(mut c: Row) -> Row {
@@ -437,23 +395,6 @@ pub fn empty_obj() -> Map<String, Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn row(content: &str, deleted: bool) -> Row {
-        let mut r = Row::new();
-        r.insert("content".into(), json!(content));
-        r.insert("is_deleted".into(), json!(deleted));
-        r
-    }
-
-    #[test]
-    fn xd_score() {
-        let rows = vec![row("xD xDDD xddd", false), row("xDDDDD", true), row("nothing", false)];
-        assert_eq!(compute_xd_score(&rows), 1 + 3 + 3);
-        assert_eq!(xd_score_meta(0), (0, ""));
-        assert_eq!(xd_score_meta(199), (1, "xD"));
-        assert_eq!(xd_score_meta(200), (2, "xDD"));
-        assert_eq!(xd_score_meta(20_000_000), (5, "xDDDDD+"));
-    }
 
     #[test]
     fn mention_regex_matches_js() {

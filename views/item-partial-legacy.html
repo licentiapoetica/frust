@@ -292,13 +292,6 @@
                     {% endif %}
                     {% endfor %}
                 </span>
-                {% if (enable_xd_score and (item.xd_score > 0)) %}
-                <div class="xd-score-wrapper">
-                <span class="xd-score-badge xd-tier-{{ item.xd_tier }}" tooltip="xD Score: {{ item.xd_score }} pts" flow="up">
-                    {{ item.xd_label }} <span class="xd-score-num">{{ item.xd_score }}</span>
-                </span>
-                </div>
-                {% endif %}
             </div>
         </div>
 

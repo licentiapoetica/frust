@@ -577,7 +577,6 @@ async fn post_comment_inner(
                     i.mime,
                     i.dest,
                     i.has_coverart,
-                    i.xd_score,
                     COALESCE(i.visibility, 0) as visibility,
                     (SELECT ta.tag_id FROM tags_assign ta
                      WHERE ta.item_id = i.id AND ta.tag_id = ANY("#,
@@ -609,7 +608,7 @@ async fn post_comment_inner(
     let display_name = if session.is_anon { json!("Anonymous") } else { session.display_name.clone().filter(|d| !d.is_empty()).map(Value::String).unwrap_or(Value::Null) };
     let fp = session.fingerprint.clone().filter(|f| !f.is_empty());
     let short_fp = fp.as_deref().map(|f| f.chars().skip(7).take(8).collect::<String>());
-    let xd_score = item_row.as_ref().map(|r| r.val("xd_score").clone()).unwrap_or(Value::Null);
+
     let opt = |v: &Option<String>| v.clone().map(Value::String).unwrap_or(Value::Null);
 
     let live = json!({
@@ -630,7 +629,6 @@ async fn post_comment_inner(
         "created_at": chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(),
         "username_color": opt(&session.username_color),
         "display_name": display_name,
-        "xd_score": xd_score,
         "video_time": new_comment.val("video_time"),
         "files": activity_files,
         "is_anon": session.is_anon,
@@ -683,7 +681,7 @@ async fn post_comment_inner(
     comment.insert("banner_position".into(), banner_position);
     comment.insert("banner_size".into(), banner_size);
     comment.insert("banner_repeat".into(), banner_repeat);
-    Ok(json_resp(&json!({ "success": true, "comment": comment, "xd_score": xd_score, "is_new_subscription": !sub.is_empty() }), 200))
+    Ok(json_resp(&json!({ "success": true, "comment": comment, "is_new_subscription": !sub.is_empty() }), 200))
 }
 
 // ── POST /api/subscribe/:itemid ─────────────────────────────────────────────

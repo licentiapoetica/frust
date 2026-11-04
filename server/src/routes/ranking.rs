@@ -180,25 +180,14 @@ async fn ranking(st: AppState, req: Req) -> Res {
     )
     .fetch_all(&st.db)
     .await?;
-    let mut xdtop: Vec<Value> = Vec::new();
-    if cfg.truthy("websrv.enable_xd_score") {
-        let rows = sql!("select id, slug, xd_score from items where active = true and is_deleted = false and xd_score > 0 order by xd_score desc limit 10")
-            .fetch_all(&st.db)
-            .await?;
-        for mut r in rows {
-            let (tier, label) = crate::social::comments::xd_score_meta(r.i64("xd_score").unwrap_or(0));
-            r.insert("xd_tier".into(), json!(tier));
-            r.insert("xd_label".into(), json!(label));
-            xdtop.push(Value::Object(r));
-        }
-    }
+
     let disk = disk_size().read().clone();
     let data = json!({
         "list": list,
         "stats": stats,
         "hoster": hoster,
         "favotop": favotop,
-        "xdtop": xdtop,
+
         "totalComments": total_comments,
         "totalFavs": total_favs,
         "totalUsers": total_users,

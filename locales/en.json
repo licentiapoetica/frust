@@ -235,8 +235,6 @@
     "do_not_disturb": "Do Not Disturb",
     "do_not_disturb_hint": "Simply suppresses all notifications and haptic feedback.",
     "content_filters": "Content Filters",
-    "min_xd_score": "Minimum xD Score",
-    "min_xd_score_hint": "Only show posts with at least this xD score. Set to 0 to disable.",
     "save": "Save",
     "prefs_saved": "Settings saved.",
     "account": "Account",
@@ -291,8 +289,6 @@
     "tag_unexcluded_msg": "Tag '{tag}' removed from excluded tags",
     "tag_placeholder": "Tag to exclude",
     "random_mode": "RAND",
-    "min_xd_score": "Min xD Score",
-    "apply_filter": "Apply Filter",
     "video": "Video",
     "audio": "Audio",
     "image": "Image",
@@ -541,8 +537,7 @@
     "stat_users": "Total Users",
     "stat_anon_users": "Anonymous Users",
     "most_favorited": "Most Favorited",
-    "favs": "favs",
-    "top_xd": "Top xD Scores"
+    "favs": "favs"
   },
   "upload_page": {
     "title": "Upload Content",

@@ -53,18 +53,6 @@
                 </tbody>
             </table>
         </div>
-        {% if (enable_xd_score and xdtop and (xdtop|length > 0)) %}
-        <h4 class="w0bm-section-title">Top xD</h4>
-        <div class="box">
-            <table class="table table-condensed w0bm-ranking">
-                <tbody>
-                {% for it in xdtop %}
-                <tr><td><a href="/{{ (it.slug if (enable_item_slugs and it.slug) else it.id) }}">/{{ (it.slug if (enable_item_slugs and it.slug) else it.id) }}</a></td><td>{{ it.xd_label }} {{ it.xd_score }}</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

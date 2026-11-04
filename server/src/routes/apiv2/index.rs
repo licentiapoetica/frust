@@ -146,13 +146,8 @@ async fn item_page(st: AppState, req: Req) -> Res {
     let Some(raw_id) = qs(&req, "id").or_else(|| qs(&req, "slug")).or_else(|| qs(&req, "item")).map(str::to_string) else {
         return j(json!({ "success": false, "page": 1 }), 200);
     };
-    let session = req.session();
     let mut o = feed_opts(&req, effective_mime(&req, None));
     o.target_item_id = Some(raw_id);
-    o.min_xd_score = match req.query("min_xd") {
-        Some(v) => js_number(v).unwrap_or(f64::NAN),
-        None => session.map(|s| s.min_xd_score as f64).unwrap_or(0.0),
-    };
     o.tagger = qs_string(&req, "tagger");
     match f0cklib::get_item_page(&st, &o).await {
         Ok(page) => j(json!({ "success": true, "page": page }), 200),
@@ -203,7 +198,7 @@ async fn random(st: AppState, req: Req) -> Res {
     let mut out: Row = item;
     out.shift_remove("username");
     out.shift_remove("src");
-    out.shift_remove("xd_score");
+
     out.insert("slug".into(), slug);
     out.insert("dest".into(), json!(relative));
     out.insert("url".into(), json!(direct));
@@ -301,8 +296,7 @@ async fn recommendations(st: AppState, req: Req) -> Res {
                 "username_color": if anon { Value::Null } else { g("username_color") },
                 "has_coverart": g("has_coverart"),
                 "rating_class": g("rating_class"),
-                "xd_score": g("xd_score"),
-                "xd_tier": g("xd_tier"),
+
                 "personalized": crate::config::truthy(&g("personalized")),
                 "tags": it.get("tags").cloned().unwrap_or(json!([])),
                 "score": g("score"),

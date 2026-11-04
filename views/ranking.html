@@ -97,25 +97,6 @@
         </table>
       </div>
 
-      {% if (enable_xd_score and (xdtop|length > 0)) %}
-      <div class="stats-box-simple" id="top-xd-scores">
-        <h3>{{ t("ranking.top_xd") }}</h3>
-        <table class="xd-scores-table clean-table">
-          <tbody>
-            {% for key, item in xdtop|entries %}
-            <tr>
-              <td><a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}">#{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</a></td>
-              <td>
-                <span class="xd-score-badge xd-tier-{{ item.xd_tier }}" tooltip="xD Score: {{ item.xd_score }} pts" flow="up">
-                  {{ item.xd_label }} <span class="xd-score-num">{{ item.xd_score }}</span>
-                </span>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endif %}
     </div>
   </div>
 </div>

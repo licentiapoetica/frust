@@ -72,20 +72,6 @@
         {% endif %}
       </div>
     {% endif %}
-    {% if (session and enable_xd_score) %}
-    <!-- xD score filter -->
-    <div class="nav-xd-filter">
-      <label class="nav-xd-label">{{ t("filter.min_xd_score") }}</label>
-      <div class="nav-xd-controls">
-        <input type="range" id="nav_min_xd_score" min="0" max="100" step="1" value="{{ (session.min_xd_score or 0) }}" class="xd-slider excluded-tags-hidden" aria-hidden="true">
-        <div id="nav_xd_slider_container" class="nav-xd-custom-slider"></div>
-        <span id="nav_xd_val" class="xd-slider-val">{{ (session.min_xd_score or 0) }}</span>
-        <span id="nav_xd_tier_label" class="xd-score-badge"></span>
-      </div>
-      <button id="nav_xd_save_btn" class="mode-btn excluded-tags-xd-save">{{ t("filter.apply_filter") }}</button>
-      <div id="nav_xd_status" class="excluded-tags-xd-status"></div>
-    </div>
-    {% endif %}
     <!-- grid mode / thumbnail size -->
     <div class="nav-grid-mode">
       <label class="nav-grid-mode-label"><i class="fa-solid fa-grip excluded-tags-grid-icon"></i>{{ (t("filter.grid_mode") or "Grid Mode") }}</label>

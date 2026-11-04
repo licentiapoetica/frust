@@ -29,7 +29,7 @@ fn feed_conditions(st: &AppState, cfg: &Config, f: &Filters, o: &FeedOpts<'_>, f
     if let Some(n) = f.newer_than {
         q.append(&sql!("and items.id > ", n)).push(" ");
     }
-    q.append(&f.xd_filter);
+
     q
 }
 
@@ -180,7 +180,7 @@ pub async fn getf0cks(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> 
     let uid = o.user_id();
     let mut q = Sql::new(
         "select items.id, items.title, items.slug, items.stamp, items.visibility, items.mime, items.dest, items.username as username, \
-         items.is_pinned, items.is_oc, items.xd_score, items.has_coverart, items.is_album, items.album_count, ",
+         items.is_pinned, items.is_oc, items.has_coverart, items.is_album, items.album_count, ",
     );
     match uid {
         Some(u) => {
@@ -222,9 +222,6 @@ pub async fn getf0cks(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> 
     rows.sort_by_key(|r| r.i64("id").and_then(|id| page_order.get(&id).copied()).unwrap_or(usize::MAX));
 
     for row in rows.iter_mut() {
-        let (tier, label) = xd_score_meta(row.f64("xd_score").unwrap_or(0.0));
-        row.insert("xd_tier".into(), json!(tier));
-        row.insert("xd_label".into(), json!(label));
         let is_audio = row.str("mime").map(|m| m.starts_with("audio/")).unwrap_or(false);
         row.insert("is_audio".into(), json!(is_audio));
         let t_id = row.i64("tag_id");

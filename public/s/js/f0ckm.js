@@ -2664,7 +2664,6 @@ window.cancelAnimFrame = (function () {
     '.rating-tag',
     '.rating-label',
     '.item-sidebar-left',
-    '.xd-score-wrapper',
     '.user-infobox-block',
     'a',
     'button',
@@ -16535,153 +16534,6 @@ window.cancelAnimFrame = (function () {
       }
     });
 
-    // ── xD Score filter ────────────────────────────────────────────────────
-    const navXdInput         = document.getElementById('nav_min_xd_score');
-    const navXdSaveBtn        = document.getElementById('nav_xd_save_btn');
-    const navXdTier           = document.getElementById('nav_xd_tier_label');
-    const navXdStatus         = document.getElementById('nav_xd_status');
-    const navXdVal            = document.getElementById('nav_xd_val');
-    const navXdSliderContainer = document.getElementById('nav_xd_slider_container');
-    let   navXdCustomFill     = null; // set during custom slider init below
-
-    const XD_TIERS_NAV = [null,
-      { cls: 'xd-tier-1', label: 'xD' },
-      { cls: 'xd-tier-2', label: 'xDD' },
-      { cls: 'xd-tier-3', label: 'xDDD' },
-      { cls: 'xd-tier-4', label: 'xDDDD' },
-      { cls: 'xd-tier-5', label: 'xDDDDD+' },
-    ];
-    const getNavXdTier = (s) => {
-      s = +s;
-      if (s < 1)           return 0;
-      if (s < 200)         return 1;
-      if (s < 1000)        return 2;
-      if (s < 100000)      return 3;
-      if (s < 200000000)   return 4;
-      return 5;
-    };
-    const XD_TIER_COLORS = ['#888', '#5a9e5a', '#8ac449', '#d4a017', '#e07b2a', '#ff5500'];
-    const updateNavXdUI = (score) => {
-      score = +score;
-      if (navXdVal) navXdVal.textContent = score;
-      const tier = getNavXdTier(score);
-      const color = XD_TIER_COLORS[tier];
-      // Update custom slider fill colour
-      if (navXdCustomFill) navXdCustomFill.style.background = color;
-      if (navXdVal) navXdVal.style.color = color;
-      // Keep hidden native input in sync (save button reads it)
-      if (navXdInput) navXdInput.value = score;
-      if (!navXdTier) return;
-      if (!tier || score <= 0) { navXdTier.style.display = 'none'; return; }
-      const t = XD_TIERS_NAV[tier];
-      navXdTier.className = `xd-score-badge ${t.cls}`;
-      navXdTier.textContent = `≥ ${score} · ${t.label}`;
-      navXdTier.style.display = 'inline-flex';
-    };
-
-    if (navXdInput) {
-      updateNavXdUI(+navXdInput.value);
-    }
-
-    // Custom mobile-friendly slider for xD score
-    if (navXdInput && navXdSliderContainer) {
-      const xdMin = 0, xdMax = +navXdInput.max || 100;
-      const xdContainer = navXdSliderContainer;
-      xdContainer.style.cssText = 'position:relative;height:28px;flex:1;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;';
-
-      const xdTrack = document.createElement('div');
-      xdTrack.style.cssText = 'position:absolute;left:8px;right:8px;height:4px;background:#333;border-radius:2px;top:50%;transform:translateY(-50%);';
-
-      const xdFill = document.createElement('div');
-      xdFill.style.cssText = 'position:absolute;left:0;height:100%;background:#888;border-radius:2px;pointer-events:none;';
-      navXdCustomFill = xdFill;
-
-      const xdThumb = document.createElement('div');
-      xdThumb.style.cssText = 'position:absolute;width:18px;height:18px;background:#888;border-radius:50%;top:50%;transform:translate(-50%,-50%);box-shadow:0 0 6px rgba(0,0,0,.6);pointer-events:none;transition:transform .1s;';
-
-      const xdSetRatio = (r) => {
-        xdFill.style.width  = (r * 100) + '%';
-        xdThumb.style.left  = `calc(8px + ${r} * (100% - 16px))`;
-      };
-      xdSetRatio((+navXdInput.value - xdMin) / (xdMax - xdMin));
-
-      xdTrack.appendChild(xdFill);
-      xdContainer.appendChild(xdTrack);
-      xdContainer.appendChild(xdThumb);
-
-      const xdValueFromClientX = (clientX) => {
-        const rect = xdTrack.getBoundingClientRect();
-        const r    = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        xdSetRatio(r);
-        return Math.round(xdMin + r * (xdMax - xdMin));
-      };
-
-      xdContainer.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        xdContainer.setPointerCapture(e.pointerId);
-        xdThumb.style.transform = 'translate(-50%,-50%) scale(1.25)';
-        updateNavXdUI(xdValueFromClientX(e.clientX));
-        // also tint thumb with current tier colour
-        xdThumb.style.background = XD_TIER_COLORS[getNavXdTier(+navXdInput.value)];
-      }, { passive: false });
-
-      xdContainer.addEventListener('pointermove', (e) => {
-        if (!xdContainer.hasPointerCapture(e.pointerId)) return;
-        const val = xdValueFromClientX(e.clientX);
-        xdThumb.style.background = XD_TIER_COLORS[getNavXdTier(val)];
-        updateNavXdUI(val);
-      });
-
-      const xdOnEnd = (e) => {
-        if (!xdContainer.hasPointerCapture(e.pointerId)) return;
-        xdContainer.releasePointerCapture(e.pointerId);
-        xdThumb.style.transform = 'translate(-50%,-50%) scale(1)';
-      };
-      xdContainer.addEventListener('pointerup',     xdOnEnd);
-      xdContainer.addEventListener('pointercancel', xdOnEnd);
-
-      // Sync thumb colour on init
-      updateNavXdUI(+navXdInput.value);
-      xdThumb.style.background = XD_TIER_COLORS[getNavXdTier(+navXdInput.value)];
-    }
-
-    if (navXdSaveBtn && navXdInput) {
-      navXdSaveBtn.addEventListener('click', async () => {
-        const min_xd_score = parseInt(navXdInput.value, 10) || 0;
-        navXdSaveBtn.disabled = true;
-        navXdSaveBtn.textContent = '...';
-        try {
-          const res = await fetch('/api/v2/settings/min_xd_score', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRF-Token': window.f0ckSession?.csrf_token
-            },
-            body: JSON.stringify({ min_xd_score })
-          });
-          const data = await res.json();
-          if (data.success) {
-            if (window.f0ckSession) window.f0ckSession.min_xd_score = min_xd_score;
-            if (navXdStatus) {
-              navXdStatus.textContent = min_xd_score > 0 ? `✓ Filter active — xD ≥ ${min_xd_score}` : '✓ Disabled';
-              setTimeout(() => { navXdStatus.textContent = ''; }, 3000);
-            }
-            // Reload grid to apply filter
-            toggleModal(false);
-            if (typeof loadPageAjax === 'function') loadPageAjax(window.location.pathname);
-            else window.location.reload();
-          } else {
-            window.flashMessage(data.msg || 'Error saving', 3000, 'error');
-          }
-        } catch (err) {
-          window.flashMessage('Failed to save xD filter', 3000, 'error');
-        } finally {
-          navXdSaveBtn.disabled = false;
-          navXdSaveBtn.textContent = 'Save';
-        }
-      });
-    }
-
     // ── Grid Mode / thumbnail size picker ────────────────────────────────
     const THUMB_SIZE_KEY = 'scroller_thumb_size';
     const THUMB_SIZES    = ['s', 'm', 'l', 'xl'];
@@ -16801,84 +16653,6 @@ window.cancelAnimFrame = (function () {
   // Initialize UI on startup
   updateRandomModeUI();
   // </random-mode>
-
-  // <xd-score-live-update>
-  // updateXdBadgeFromScore: called by the SSE handler with the server-authoritative xd_score.
-  // Updates:
-  //   1. The item-page badge (if the user is currently viewing that item)
-  //   2. Any grid thumbnail indicators for that item (on any page)
-  const XD_TIER_META = [
-    null,
-    { cls: 'xd-tier-1', label: 'xD',      min: 1         },
-    { cls: 'xd-tier-2', label: 'xDD',     min: 200       },
-    { cls: 'xd-tier-3', label: 'xDDD',    min: 1000      },
-    { cls: 'xd-tier-4', label: 'xDDDD',   min: 100000    },
-    { cls: 'xd-tier-5', label: 'xDDDDD+', min: 200000000 },
-  ];
-
-  const getXdTierFromScore = (score) => {
-    if (score < 1)           return 0;
-    if (score < 200)         return 1;
-    if (score < 1000)        return 2;
-    if (score < 100000)      return 3;
-    if (score < 200000000)   return 4;
-    return 5;
-  };
-
-  // Update the thumbnail grid indicator for a specific item
-  const updateThumbXdIndicator = (itemId, score) => {
-    const thumbs = document.querySelectorAll(`a.thumb[href$="/${itemId}"], a.lazy-thumb[href$="/${itemId}"]`);
-    thumbs.forEach(thumb => {
-      const indicators = thumb.querySelector('.thumb-indicators');
-      if (!indicators) return;
-
-      // Remove existing indicator
-      indicators.querySelectorAll('.thumb-xd-indicator').forEach(el => el.remove());
-
-      if (score <= 0) return;
-
-      const tier = getXdTierFromScore(score);
-      const span = document.createElement('span');
-      span.className = `thumb-xd-indicator xd-tier-${tier}`;
-      span.title = `xD Score: ${score}`;
-      span.textContent = 'xD';
-      indicators.appendChild(span);
-    });
-  };
-
-  // Update the item-view badge (only when viewing that item)
-  const updateItemPageXdBadge = (itemId, score) => {
-    const container = document.getElementById('comments-container');
-    if (!container) return;
-    const pageItemId = container.dataset.itemId;
-    if (pageItemId && String(pageItemId) !== String(itemId)) return;
-
-    document.querySelectorAll('.xd-score-wrapper').forEach(w => w.remove());
-
-    if (score <= 0) return;
-
-    const tier = getXdTierFromScore(score);
-    const meta = XD_TIER_META[tier];
-    const newWrapper = document.createElement('div');
-    newWrapper.className = 'xd-score-wrapper';
-    newWrapper.innerHTML = `<span class="xd-score-badge ${meta.cls}" tooltip="xD Score: ${score} pts" flow="up">${meta.label} <span class="xd-score-num">${score}</span></span>`;
-
-    // Insert inside container, before .comments-list — matching the position
-    // that comments.js uses after each render.
-    const commentsList = container.querySelector('.comments-list');
-    if (commentsList) {
-      container.insertBefore(newWrapper, commentsList);
-    } else {
-      container.parentNode.insertBefore(newWrapper, container);
-    }
-  };
-
-  window.updateXdBadgeFromScore = (itemId, score) => {
-    if (window.f0ckSession && window.f0ckSession.enable_xd_score === false) return;
-    updateItemPageXdBadge(itemId, score);
-    updateThumbXdIndicator(itemId, score);
-  };
-  // </xd-score-live-update>
 
   const swipeRT = {
     xDown: null,
@@ -18500,10 +18274,6 @@ class NotificationSystem {
           if (data.data.type === 'comment') {
             if (window.commentSystem && typeof window.commentSystem.handleLiveComment === 'function') {
               window.commentSystem.handleLiveComment(data.data);
-            }
-            // New comment posted — update xD badge from server-authoritative score
-            if (typeof data.data.xd_score === 'number') {
-              updateXdBadgeFromScore(data.data.item_id, data.data.xd_score);
             }
           } else if (data.data.type === 'delete') {
             if (window.commentSystem && typeof window.commentSystem.handleLiveDeletion === 'function') {

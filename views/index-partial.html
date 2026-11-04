@@ -16,9 +16,6 @@
                 {% if item.is_oc %}
                 <span class="oc-indicator anim">OC</span>
                 {% endif %}
-                {% if (enable_xd_score and (item.xd_tier > 0)) %}
-                <span class="thumb-xd-indicator xd-tier-{{ item.xd_tier }}" title="xD Score: {{ item.xd_score }}">xD</span>
-                {% endif %}
                 {% if (item.is_album and (item.album_count > 1)) %}
                 <span class="album-indicator" title="Album: {{ item.album_count }} images"><i class="fa-solid fa-images"></i> {{ item.album_count }}</span>
                 {% endif %}

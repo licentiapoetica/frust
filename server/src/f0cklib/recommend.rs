@@ -3,7 +3,7 @@
 //! `updateUserAffinity`, `updateUserTagAffinity`, `decayUserAffinities`,
 //! `getPersonalizedRecommendations`, `getTagFeedItems`).
 
-use super::{compute_base_mode, global_filter, resolve_mime_sql, resolve_numeric_item_id, xd_score_meta};
+use super::{compute_base_mode, global_filter, resolve_mime_sql, resolve_numeric_item_id};
 use crate::db::{Row, RowExt, Sql};
 use crate::session::Session;
 use crate::settings::is_anon_session;
@@ -91,7 +91,7 @@ impl Common {
     }
 }
 
-const ITEM_COLS: &str = "items.id, items.title, items.slug, items.mime, items.dest, items.username, items.stamp, items.xd_score, items.width, items.height, items.has_coverart";
+const ITEM_COLS: &str = "items.id, items.title, items.slug, items.mime, items.dest, items.username, items.stamp, items.width, items.height, items.has_coverart";
 
 /// The shared outer select: user options, rating tag, first 3 tags.
 fn decorate(cfg: &crate::config::Config, alias: &str) -> Sql {
@@ -117,8 +117,6 @@ fn or_null(v: &Value) -> Value {
 
 /// Row → the item object the recommendation functions return.
 fn map_item(r: &Row) -> Map<String, Value> {
-    let xd = r.val("xd_score");
-    let (tier, label) = xd_score_meta(xd.as_f64().unwrap_or(0.0));
     let tag_id = r.val("rating_tag_id");
     let rating_class = match tag_id.as_i64() {
         Some(1) => "sfw",
@@ -147,9 +145,7 @@ fn map_item(r: &Row) -> Map<String, Value> {
     m.insert("tags".into(), tags);
     m.insert("rating_tag_id".into(), tag_id.clone());
     m.insert("rating_class".into(), json!(rating_class));
-    m.insert("xd_score".into(), xd.clone());
-    m.insert("xd_tier".into(), json!(tier));
-    m.insert("xd_label".into(), json!(label));
+
     m.insert("width".into(), r.val("width").clone());
     m.insert("height".into(), r.val("height").clone());
     m.insert("has_coverart".into(), json!(r.bool("has_coverart")));
@@ -736,8 +732,7 @@ pub async fn get_tag_feed_items(st: &AppState, o: &TagFeedOpts<'_>) -> anyhow::R
                     _ => {}
                 }
             }
-            let xd = r.val("xd_score");
-            m.insert("score".into(), if crate::config::truthy(xd) { xd.clone() } else { json!(0) });
+            m.insert("score".into(), json!(0));
             m.insert("rank_score".into(), json!(0));
             Value::Object(m)
         })

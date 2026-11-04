@@ -1238,9 +1238,6 @@
             : '';
         const fullDate = video.stamp ? new Date(video.stamp * 1000).toLocaleString() : '';
 
-        const xdBadge = (video.xd_score && video.xd_score > 0) 
-            ? `<span class="sidebar-video-xd xd-tier-${video.xd_tier || 0}">xD ${video.xd_score}</span>` 
-            : '';
 
         const activeMime = video.matching_sub_mime || video.mime || '';
         const activeDest = video.matching_sub_dest || video.dest || '';
@@ -1276,14 +1273,14 @@
         const isDev = !!(window.f0ckSession && window.f0ckSession.development);
         const rawScore = (typeof video.score === 'number') 
             ? video.score 
-            : (typeof video.rank_score === 'number' ? video.rank_score : (video.xd_score || 0));
+            : (typeof video.rank_score === 'number' ? video.rank_score : 0);
         const formattedScore = (typeof rawScore === 'number')
             ? (Number.isInteger(rawScore) ? rawScore : +(rawScore.toFixed(1)))
             : rawScore;
 
         const devScoreAttr = isDev ? ` data-score="${escapeHtml(String(formattedScore))}"` : '';
         const devScoreBadge = isDev
-            ? `<span class="sidebar-video-score sidebar-dev-score" title="Development Score: ${formattedScore} (Algo: ${video.score ?? video.rank_score ?? 0}, xD: ${video.xd_score ?? 0})"><i class="fa-solid fa-code"></i> score: ${formattedScore}</span>`
+            ? `<span class="sidebar-video-score sidebar-dev-score" title="Development Score: ${formattedScore} (Algo: ${video.score ?? video.rank_score ?? 0})"><i class="fa-solid fa-code"></i> score: ${formattedScore}</span>`
             : '';
 
         const isTagFeed = options.isTagFeed || false;
@@ -1319,11 +1316,9 @@
                             </div>
                             <div class="sidebar-video-meta">
                                 ${timeStr ? `<span class="sidebar-video-time" title="${escapeHtml(fullDate)}">${escapeHtml(timeStr)}</span>` : ''}
-                                ${(timeStr && xdBadge) ? `&bull;` : ''}
-                                ${xdBadge}
-                                ${((timeStr || xdBadge) && forYouBadge) ? `&bull;` : ''}
+                                ${(timeStr && forYouBadge) ? `&bull;` : ''}
                                 ${forYouBadge}
-                                ${((timeStr || xdBadge || forYouBadge) && devScoreBadge) ? `&bull;` : ''}
+                                ${((timeStr || forYouBadge) && devScoreBadge) ? `&bull;` : ''}
                                 ${devScoreBadge}
                             </div>
                         </div>
