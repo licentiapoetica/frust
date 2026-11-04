@@ -25,7 +25,7 @@
     {% set _showFlash = enable_swf and (not _isAnonUser or "flash" in _allowedMimes) %}
     {% if _canExcludeTags %}
     <div class="excluded-tags-section-header">
-      <span class="excluded-tags-section-title"><i class="fa-solid fa-ban"></i> {{ (t("filter.excluded_tags") or "Excluded Tags") }}</span>
+      <span class="excluded-tags-section-title">{{ (t("filter.excluded_tags") or "Excluded Tags") }}</span>
       <span id="nav_excluded_tags_count" class="badge badge-danger excluded-tags-count-badge excluded-tags-hidden">0</span>
     </div>
     <div id="nav_excluded_tags_list"></div>
