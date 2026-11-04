@@ -1258,6 +1258,12 @@
     on(document, 'keydown', (e) => {
       if (e.defaultPrevented || /^(input|textarea|select)$/i.test(e.target.nodeName) || e.target.isContentEditable || e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return;
       if ($('.modal.w0bm-modal-open')) return;
+      // 0-9 (top row or numpad): jump to 0 %, 10 %, ... 90 % of the video / audio
+      if (/^[0-9]$/.test(e.key)) {
+        const d = player && player.duration();
+        if (d && isFinite(d)) { e.preventDefault(); player.currentTime(d * Number(e.key) / 10); }
+        return;
+      }
       switch (e.keyCode) {
         case 39: case 68: case 76: goNext(); break; // → d l
         case 37: case 65: case 72: goPrev(); break; // ← a h
