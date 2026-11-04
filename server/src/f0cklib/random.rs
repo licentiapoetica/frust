@@ -34,7 +34,7 @@ async fn prepare(st: &AppState, cfg: &Config, o: &FeedOpts<'_>, pool: bool) -> a
     let gf = global_filter_sql(st, cfg, session);
     let ex = exclude_sql(&excluded);
 
-    let cols = if pool { "items.id, items.slug" } else { "items.id" };
+    let cols = "items.id, items.slug";
     let tail = if pool { " ORDER BY items.id" } else { " ORDER BY random() LIMIT 1" };
     let vis = " AND items.active = true AND coalesce(items.visibility, 0) = 0 ";
 
@@ -111,7 +111,7 @@ async fn prepare(st: &AppState, cfg: &Config, o: &FeedOpts<'_>, pool: bool) -> a
     Ok(Prepared { user, tag, hall, query: q })
 }
 
-/// `getRandom({...})` → `{ success, link, itemid }`, or `null` for private favourites.
+/// `getRandom({...})` → `{ success, link, itemid, slug }`, or `null` for private favourites.
 pub async fn get_random(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     let cfg = st.cfg();
     if o.fav {
@@ -135,7 +135,7 @@ pub async fn get_random(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value
         strict: false,
         tagger: None,
     });
-    Ok(json!({ "success": true, "link": link, "itemid": row.val("id") }))
+    Ok(json!({ "success": true, "link": link, "itemid": row.val("id"), "slug": row.val("slug") }))
 }
 
 /// `getRandomPool({...})` → `{ items, id_map, total, sampled }` (ids/slugs for client-side random).

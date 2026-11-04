@@ -44,14 +44,16 @@
             <a class="first w0bm-invisible" href="#" aria-hidden="true" tabindex="-1">← first</a>
             <a id="prev" class="w0bm-invisible" href="#" aria-hidden="true" tabindex="-1">← prev</a> |
             {% endif %}
+            {#- the middle link (and "r"): a random item of the current context. /random keeps the tag,
+                user or hall of the page it is clicked on (Referer); the label names that context -#}
             {% if (tmp and tmp.tag) %}
-            <a id="w0bm-context" href="/tag/{{ tmp.tag|encode_uri_component }}">{{ tmp.tag }}</a>
+            <a id="w0bm-context" href="/random" title="random in {{ tmp.tag }}">{{ tmp.tag }}</a>
             {% elif (tmp and tmp.user) %}
-            <a id="w0bm-context" href="{{ link.main }}">{{ tmp.user }}</a>
+            <a id="w0bm-context" href="/random" title="random from {{ tmp.user }}">{{ tmp.user }}</a>
             {% elif (tmp and tmp.hall) %}
-            <a id="w0bm-context" href="/h/{{ (tmp.hall.slug if tmp.hall is mapping else tmp.hall) }}">{{ (tmp.hall.name if tmp.hall is mapping else tmp.hall) }}</a>
+            <a id="w0bm-context" href="/random" title="random in {{ (tmp.hall.name if tmp.hall is mapping else tmp.hall) }}">{{ (tmp.hall.name if tmp.hall is mapping else tmp.hall) }}</a>
             {% elif (tmp and tmp.userHall) %}
-            <a id="w0bm-context" href="{{ link.main }}">{{ (tmp.userHall.name if tmp.userHall is mapping else tmp.userHall) }}</a>
+            <a id="w0bm-context" href="/random" title="random">{{ (tmp.userHall.name if tmp.userHall is mapping else tmp.userHall) }}</a>
             {% else %}
             <a id="w0bm-context" href="/random">random</a>
             {% endif %}

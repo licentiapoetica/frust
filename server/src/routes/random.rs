@@ -95,7 +95,11 @@ async fn random(st: AppState, req: Req) -> Res {
         return Ok(html_code(body, 404));
     }
     let link = &data["link"];
-    let id = crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["itemid"]));
+    // the slug when the site uses slugs (websrv item slugs), else the id
+    let id = match data["slug"].as_str().filter(|s| !s.is_empty() && crate::settings::enable_item_slugs(&st.cfg())) {
+        Some(slug) => slug.to_string(),
+        None => crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["itemid"])),
+    };
     // link.main is already percent-encoded (the old code encoded it a second time)
     let target = format!(
         "{}{}{}{}",
