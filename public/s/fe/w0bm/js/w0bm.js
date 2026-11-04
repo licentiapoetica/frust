@@ -1313,22 +1313,26 @@
   }
 
   // ── Favorite ──────────────────────────────────────────────────────────────────────────
+  // The heart (and you in "Favorited by") changes at once; the request runs in the background.
+  // Clicks while one is on the way only change what is wanted: when it is back, one more request
+  // sends the latest state if it differs (explicit add / remove, so a repeat changes nothing).
+  // A failed request puts the heart back to what the server has.
   const favForm = $('#w0bm-fav-form');
-  favForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  if (favForm) {
     const action = favForm.querySelector('input[name="action"]');
-    const r = await api('/api/v2/togglefav', { body: new FormData(favForm) });
-    if (!r.ok) { flash('error', r.msg || 'Error'); return; }
-    const faved = action.value === 'add';
-    action.value = faved ? 'remove' : 'add';
     const icon = favForm.querySelector('i');
-    icon.classList.toggle('fa-heart', faved);
-    icon.classList.toggle('fa-heart-o', !faved);
-    // "Favorited by" popover on the heart (partials/favlist.html)
+    const favBtn = favForm.querySelector('#fav');
     const list = $('#w0bm-favlist');
-    if (list && Array.isArray(r.data?.favs)) {
+    const selfHref = DATA.user ? '/user/' + encodeURIComponent(String(DATA.user).toLowerCase()) : null;
+    let confirmed = action.value === 'remove'; // faved on the server
+    let wanted = confirmed;
+    let busy = false;
+    const showList = () => { if (list) list.closest('.w0bm-favpop').hidden = !list.textContent.trim(); };
+    // "Favorited by" popover on the heart (partials/favlist.html)
+    const renderList = (favs) => {
+      if (!list) return;
       list.textContent = '';
-      r.data.favs.forEach((f, i) => {
+      favs.forEach((f, i) => {
         if (i) list.append(', ');
         const self = DATA.user && f.user === DATA.user;
         if (f.is_anon || (f.hide_fav_badge && !self)) { list.append('?'); return; }
@@ -1337,9 +1341,58 @@
         a.textContent = f.display_name || f.user;
         list.append(a);
       });
-      list.closest('.w0bm-favpop').hidden = !r.data.favs.length;
-    }
-  });
+      showList();
+    };
+    // until the server's list arrives: add or take out the own name
+    const selfInList = (faved) => {
+      if (!list || !selfHref) return;
+      const own = [...list.querySelectorAll('a')].find((a) => a.getAttribute('href') === selfHref);
+      if (faved && !own) {
+        if (list.textContent.trim()) list.append(', ');
+        const a = document.createElement('a');
+        a.href = selfHref;
+        a.textContent = DATA.display_name || DATA.user;
+        list.append(a);
+      } else if (!faved && own) {
+        const sep = own.previousSibling?.nodeType === 3 ? own.previousSibling : own.nextSibling?.nodeType === 3 ? own.nextSibling : null;
+        sep?.remove();
+        own.remove();
+      }
+      showList();
+    };
+    const show = (faved) => {
+      action.value = faved ? 'remove' : 'add';
+      icon.classList.toggle('fa-heart', faved);
+      icon.classList.toggle('fa-heart-o', !faved);
+      if (favBtn) favBtn.dataset.faved = faved ? '1' : '0';
+      selfInList(faved);
+    };
+    const sync = async () => {
+      if (busy) return;
+      busy = true;
+      while (wanted !== confirmed) {
+        const target = wanted;
+        const body = new FormData(favForm);
+        body.set('action', target ? 'add' : 'remove');
+        const r = await api('/api/v2/togglefav', { body });
+        if (!r.ok) {
+          flash('error', r.msg || 'Error');
+          wanted = confirmed;
+          show(confirmed);
+          break;
+        }
+        confirmed = target;
+        if (wanted === confirmed && Array.isArray(r.data?.favs)) renderList(r.data.favs);
+      }
+      busy = false;
+    };
+    favForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      wanted = !wanted;
+      show(wanted);
+      sync();
+    });
+  }
 
   // ── Subscribe to comments ─────────────────────────────────────────────────────────────
   const subForm = $('#w0bm-sub-form');
@@ -1595,6 +1648,9 @@
   let wantedRating = null;
   let ratingTimer = null;
   let ratingSaving = Promise.resolve();
+  // the tags as the server has them, kept from the first press until a save answers: a failed
+  // save puts them back at once (then reloads them)
+  let savedTags = null;
   const shownRating = () => {
     const tag = tagDisplay && Array.from(tagDisplay.querySelectorAll('.w0bm-rating-tag')).find((s) => s.dataset.rating !== 'untagged');
     return tag ? String(tag.dataset.tag).toLowerCase() : 'untagged';
@@ -1632,6 +1688,7 @@
   function cycleRating() {
     if (!ITEM || !tagDisplay || tagDisplay.dataset.canRate !== '1') return;
     const cur = wantedRating || shownRating();
+    if (!savedTags) savedTags = [...tagDisplay.childNodes].map((n) => n.cloneNode(true));
     const next = cur === 'sfw' ? 'nsfw' : (cur === 'nsfw' && DATA.nsfl) ? 'nsfl' : 'sfw';
     wantedRating = next;
     showRating(next);
@@ -1646,12 +1703,15 @@
       const r = await api('/api/v2/item/' + ITEM.id + '/rating', { json: { rating, csrf_token: DATA.csrf || '' } });
       if (wantedRating !== rating) return; // pressed again meanwhile: the next save follows
       wantedRating = null;
+      const before = savedTags;
+      savedTags = null;
       if (r.ok) {
         // same message and colour as while pressing; only a failure turns it red
         flash('info', 'Rating: ' + String(r.data.rating || rating).toUpperCase(), 'rating');
         if (r.data.tags) renderTags(r.data.tags); else reloadTags();
       } else {
         flash('error', r.msg || 'Could not change the rating', 'rating');
+        if (before) { tagDisplay.replaceChildren(...before); markRatingTags(); }
         reloadTags();
       }
     });

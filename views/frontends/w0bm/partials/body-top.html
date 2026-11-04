@@ -3,6 +3,7 @@
 {%- set is_mod = loggedin and (session.admin or session.is_moderator) -%}
 <script type="application/json" id="w0bm-data">{{ {
     "user": (session.user if loggedin else none),
+    "display_name": ((session.display_name or session.user) if loggedin else none),
     "csrf": (csrf_token or ""),
     "is_mod": (is_mod and true or false),
     "comment_max_length": (comment_max_length or none),
