@@ -121,6 +121,7 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"CREATE INDEX IF NOT EXISTS idx_album_items_item_id ON album_items(item_id, order_index ASC)"#,
     r#"ALTER TABLE album_items ADD COLUMN IF NOT EXISTS slug character varying(60) DEFAULT NULL"#,
     r#"CREATE INDEX IF NOT EXISTS idx_album_items_slug ON album_items(slug)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_album_items_dest ON album_items(dest)"#,
     r#"CREATE TABLE IF NOT EXISTS album_items_tags_assign (
       album_item_id INTEGER NOT NULL REFERENCES album_items(id) ON DELETE CASCADE,
       tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
@@ -254,6 +255,8 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     END $$"#,
     r#"DROP INDEX IF EXISTS idx_user_halls_assign_item_id"#,
     r#"DROP INDEX IF EXISTS idx_user_halls_assign_user_id"#,
+    // /b/<dest> lookups (media_gate)
+    r#"CREATE INDEX IF NOT EXISTS idx_items_dest ON items(dest)"#,
 ];
 
 #[cfg(test)]

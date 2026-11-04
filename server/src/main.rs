@@ -21,6 +21,7 @@ mod hidden_items;
 mod http;
 mod i18n;
 mod media;
+mod media_gate;
 mod migrations;
 mod net_guard;
 mod nojs;

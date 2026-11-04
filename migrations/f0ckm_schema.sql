@@ -108,6 +108,7 @@ DROP INDEX IF EXISTS public.idx_items_pinned_id;
 DROP INDEX IF EXISTS public.idx_items_is_purged;
 DROP INDEX IF EXISTS public.idx_items_is_deleted;
 DROP INDEX IF EXISTS public.idx_items_expires_at;
+DROP INDEX IF EXISTS public.idx_items_dest;
 DROP INDEX IF EXISTS public.idx_items_active_id;
 DROP INDEX IF EXISTS public.idx_invite_tokens_used_at;
 DROP INDEX IF EXISTS public.idx_invite_tokens_created_by;
@@ -2529,6 +2530,13 @@ CREATE INDEX idx_items_active_id ON public.items USING btree (id) WHERE (active 
 
 
 --
+-- Name: idx_items_dest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_items_dest ON public.items USING btree (dest);
+
+
+--
 -- Name: idx_items_expires_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3332,6 +3340,7 @@ CREATE TABLE IF NOT EXISTS public.album_items (
 
 CREATE INDEX IF NOT EXISTS idx_album_items_item_id ON public.album_items(item_id, order_index ASC);
 CREATE INDEX IF NOT EXISTS idx_album_items_slug ON public.album_items(slug);
+CREATE INDEX IF NOT EXISTS idx_album_items_dest ON public.album_items(dest);
 
 CREATE TABLE IF NOT EXISTS public.album_items_tags_assign (
     album_item_id INTEGER NOT NULL REFERENCES public.album_items(id) ON DELETE CASCADE,

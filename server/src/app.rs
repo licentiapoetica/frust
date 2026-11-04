@@ -217,8 +217,10 @@ fn static_cache_headers(st: &AppState, req: &Req) {
     if st.settings.protect_files() || crate::private_items::is_private_path(st, p) {
         return;
     }
-    if starts(&["/t/", "/ca/", "/b/"]) {
+    if p.starts_with("/b/") {
         req.set_header("cache-control", "public, max-age=31536000, immutable");
+    } else if starts(&["/t/", "/ca/"]) {
+        req.set_header("cache-control", "public, max-age=3600");
     } else if p.starts_with("/s/") && !p.starts_with("/s/emojis/") && !p.starts_with("/s/koepfe/") {
         req.set_header("cache-control", "public, max-age=86400");
     } else if p.starts_with("/a/") {
@@ -228,15 +230,17 @@ fn static_cache_headers(st: &AppState, req: &Req) {
     }
 }
 
-/// Minimal session row for media gating (id, user, admin, mod, banned).
+/// Minimal session row for media gating (id, user, admin, mod, banned, anon fingerprint).
 async fn media_user(st: &AppState, session_cookie: &str) -> Option<Row> {
     let hash = crate::util::sha256(session_cookie);
     if let Some(r) = st.caches.session.get(&hash) {
         return Some(r);
     }
     let row = sql!(
-        r#"select "user".id, "user".user, "user".admin, "user".is_moderator, "user".banned, "user".ban_expires
+        r#"select "user".id, "user".user, "user".admin, "user".is_moderator, "user".banned, "user".ban_expires,
+        "anon_identities".fingerprint as anon_fingerprint
         from "user_sessions" left join "user" on "user".id = "user_sessions".user_id
+        left join "anon_identities" on "anon_identities".user_id = "user_sessions".user_id
         where "user_sessions".session = "#,
         hash.clone(),
         " limit 1"
@@ -247,6 +251,25 @@ async fn media_user(st: &AppState, session_cookie: &str) -> Option<Row> {
     .flatten()?;
     st.caches.session.set(&hash, row.clone());
     Some(row)
+}
+
+/// Who is asking for a media file: a session that doesn't resolve to a user, or a banned user,
+/// counts as a guest; anonymous-access sessions only while anonymous access is enabled.
+async fn media_viewer(st: &AppState, req: &Req) -> crate::media_gate::Viewer {
+    use crate::media_gate::Viewer;
+    let Some(cookie) = req.cookie("session") else { return Viewer::Guest };
+    let Some(u) = media_user(st, cookie).await else { return Viewer::Guest };
+    let name = u.string("user");
+    if u.i64("id").is_none() || name.is_empty() || u.bool("banned") {
+        return Viewer::Guest;
+    }
+    if u.str("anon_fingerprint").is_some() {
+        return if s::enable_anonymous_access(&st.cfg()) { Viewer::Anon } else { Viewer::Guest };
+    }
+    if name == "anonymous" || name.starts_with("anon_") {
+        return Viewer::Anon;
+    }
+    Viewer::Member
 }
 
 fn no_store(r: &Req) {
@@ -303,11 +326,32 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
             no_store(req);
             return Ok(None);
         }
-        if st.settings.protect_files() && req.cookie("session").is_none() {
-            if cfg.truthy("websrv.private_society") {
-                return Ok(Some(html_200(crate::gate::gate_or_nginx(st, req))));
+        // nsfw/nsfl/untagged item media: 502 for visitors who may not see that rating
+        let mut viewer = None;
+        match crate::media_gate::check(st, &path, || async {
+            let v = media_viewer(st, req).await;
+            viewer = Some(v);
+            v
+        })
+        .await
+        {
+            crate::media_gate::Decision::Deny => return Ok(Some(crate::private_items::render_502(st, req))),
+            // Never in a shared (CDN) cache, or guests would get it from there
+            crate::media_gate::Decision::Restricted => req.set_header("cache-control", "private, max-age=3600"),
+            crate::media_gate::Decision::Public => {}
+        }
+        if st.settings.protect_files() {
+            let v = match viewer {
+                Some(v) => v,
+                None => media_viewer(st, req).await,
+            };
+            if v == crate::media_gate::Viewer::Guest {
+                if cfg.truthy("websrv.private_society") {
+                    return Ok(Some(html_200(crate::gate::gate_or_nginx(st, req))));
+                }
+                return Ok(Some(raw(401, "Unauthorized")));
             }
-            return Ok(Some(raw(401, "Unauthorized")));
+            req.set_header("cache-control", "private, max-age=3600");
         }
         return Ok(None);
     }

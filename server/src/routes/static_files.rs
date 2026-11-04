@@ -65,10 +65,9 @@ async fn is_hidden_media(st: &AppState, file: &str) -> bool {
     }
 }
 
+/// Cache-Control comes from the middleware (public 1 h, or private for gated/protected files).
 async fn image(req: &Req, path: &std::path::Path, file: &str) -> Response {
-    let mut r = serve_file(req, path, Some(img_mime(file))).await;
-    r.headers_mut().insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static("public, max-age=3600"));
-    r
+    serve_file(req, path, Some(img_mime(file))).await
 }
 
 async fn cover(st: AppState, req: Req) -> Res {
