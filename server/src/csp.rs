@@ -64,8 +64,8 @@ fn comment_image_hosts(cfg: &Config) -> Vec<String> {
         .collect()
 }
 
-/// The site-wide policy for one response.
-pub fn policy(cfg: &Config, nonce: &str) -> String {
+/// The site-wide policy for one response. `upgrade`: add upgrade-insecure-requests (https sites).
+pub fn policy(cfg: &Config, nonce: &str, upgrade: bool) -> String {
     let media = media_origins(cfg);
     let comment_imgs = comment_image_hosts(cfg);
     let join = |base: &[&str], more: &[&Vec<String>]| {
@@ -112,7 +112,7 @@ pub fn policy(cfg: &Config, nonce: &str) -> String {
         "frame-ancestors 'self'".to_string(),
         format!("report-uri {REPORT_PATH}"),
     ];
-    if cfg.is_secure() {
+    if upgrade {
         p.push("upgrade-insecure-requests".to_string());
     }
     p.join("; ")
@@ -132,8 +132,33 @@ pub fn header_name(cfg: &Config) -> Option<&'static str> {
 /// Queue the site policy on the response (routes that set their own policy keep theirs).
 pub fn apply(cfg: &Config, req: &Req) {
     if let Some(name) = header_name(cfg) {
-        req.set_header(name, &policy(cfg, &req.csp_nonce));
+        let upgrade = cfg.is_secure() && !plain_http_to_loopback(req);
+        req.set_header(name, &policy(cfg, &req.csp_nonce, upgrade));
     }
+}
+
+/// An https site opened over plain http on this machine (testing it locally): upgrading its
+/// requests to https would break them, e.g. fetch() then follows every redirect over https, which
+/// nothing answers here. Requests that came through a proxy as https keep the upgrade.
+fn plain_http_to_loopback(req: &Req) -> bool {
+    if req.header("x-forwarded-proto").is_some_and(|p| p.trim().eq_ignore_ascii_case("https")) {
+        return false;
+    }
+    is_loopback_host(req.header("host").unwrap_or(""))
+}
+
+/// `localhost`, `*.localhost`, 127.0.0.0/8 or [::1], with or without a port
+fn is_loopback_host(host: &str) -> bool {
+    let name = match host.strip_prefix('[') {
+        Some(v6) => v6.split(']').next().unwrap_or(""),
+        None => match host.rsplit_once(':') {
+            Some((h, port)) if port.chars().all(|c| c.is_ascii_digit()) => h,
+            _ => host,
+        },
+    };
+    name.eq_ignore_ascii_case("localhost")
+        || name.to_ascii_lowercase().ends_with(".localhost")
+        || name.parse::<std::net::IpAddr>().map(|ip| ip.is_loopback()).unwrap_or(false)
 }
 
 pub fn register(r: &mut Router) {
@@ -201,5 +226,15 @@ mod tests {
         assert!(is_source("https://cdn.example.com"));
         assert!(!is_source("https://x; script-src *"));
         assert!(!is_source("'unsafe-inline'"));
+    }
+
+    #[test]
+    fn loopback_hosts() {
+        for h in ["localhost", "localhost:1337", "LOCALHOST:80", "f0ck.localhost:1337", "127.0.0.1", "127.0.0.1:1337", "127.1.2.3:8080", "[::1]", "[::1]:1337"] {
+            assert!(is_loopback_host(h), "{h}");
+        }
+        for h in ["example.com", "example.com:443", "f0ck.example.com", "10.0.0.1:1337", "192.168.1.5", "[2001:db8::1]:443", "localhost.example.com", ""] {
+            assert!(!is_loopback_host(h), "{h}");
+        }
     }
 }
