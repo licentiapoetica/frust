@@ -2138,3 +2138,81 @@ details.w0bm-msg[open] > summary {
     font-size: 0.85em;
     color: #888;
 }
+
+/* ── Phones: the item page as one column in normal flow ───────────────────────────────────
+   w0bm's own phone CSS put the sidebar absolutely over the page, gave the comment list a fixed
+   900px height and pinned the tags to the bottom of the screen. Here: item, MOTD, comment box,
+   comments, then tags and page links, each as tall as its content; the page scrolls once. */
+@media (max-width: 767px) {
+    .wrapper:has(> #sidebar.aside) {
+        display: flex;
+        flex-direction: column;
+        /* at least the screen under the navbar: on short pages the tags close it at the bottom */
+        min-height: calc(100vh - 51px);
+        min-height: calc(100dvh - 51px);
+    }
+    .wrapper > .w0bm-main {
+        order: 1;
+    }
+    .wrapper > #sidebar.aside {
+        order: 2;
+        position: static !important;
+        top: auto !important;
+        bottom: auto !important;
+        height: auto !important;
+        width: 100% !important;
+        float: none;
+        display: flex !important;
+        flex-direction: column;
+        margin: 10px 0 0;
+        z-index: auto;
+    }
+    html.w0bm-comments-off .wrapper > #sidebar.aside {
+        display: none !important;
+    }
+    /* no empty title row above items without a title */
+    .videotitle-div:has(> #w0bm-item-title:empty) {
+        display: none;
+    }
+    /* the item area only as tall as the item (w0bm held it to the screen height) */
+    .w0bm-main .vertical-align {
+        min-height: 0 !important;
+    }
+    /* tags, page links and version close the page, after the comments */
+    .wrapper > #sidebar.aside {
+        flex: 1 0 auto;
+    }
+    #sidebar > .tags {
+        position: static !important;
+        order: 10;
+        margin-top: auto;
+        width: 100%;
+        border-top: 1px solid #353434;
+        border-bottom: 0;
+    }
+    #sidebar > .comments,
+    #sidebar > #comment_container_scrollable {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding-bottom: 10px !important;
+        flex-grow: 0;
+    }
+    #sidebar > .panel {
+        margin-left: 0;
+        margin-right: 0;
+    }
+    /* the Glitch theme fixes the sidebar parts at 380px (important), wider than small phones */
+    .wrapper > #sidebar.aside > .comments,
+    .wrapper > #sidebar.aside > .tags,
+    .wrapper > #sidebar.aside > #comment_container_scrollable {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .wrapper > #sidebar.aside #tag-display {
+        width: auto;
+        height: auto;
+    }
+}
