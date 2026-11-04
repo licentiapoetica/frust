@@ -99,7 +99,7 @@ now visit http://localhost:1337 in your browser. Templates (`views/`), translati
 | `F0CKM_PORT` | Port to listen on (default: `websrv.port`). |
 | `F0CKM_BASE` | Project root with `config.yaml`, `views/`, `public/`, `locales/`, `migrations/` (default: current directory). |
 | `IP_HASH_SECRET` | Secret for hashing user IPs (see `.env.example`). |
-| `GIT_HASH` | Version shown in the footer (set by `build.bash`). |
+| `GIT_HASH` | Version shown in the footer. Baked into the image as a build arg by `build.bash` / `install.sh`; hidden when unknown. |
 | `RUST_LOG` | Log filter, e.g. `info` or `debug,sqlx=warn`. |
 
 ### Command line

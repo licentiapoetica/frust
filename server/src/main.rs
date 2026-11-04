@@ -46,10 +46,13 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+/// Version shown in the footer: `GIT_HASH` (baked into the Docker image), else the checkout's
+/// branch and commit. Empty when neither is known, so the footer link is left out.
 fn git_hash() -> String {
     if let Ok(h) = std::env::var("GIT_HASH") {
-        if !h.is_empty() && h != "unknown" {
-            return h;
+        let h = h.trim();
+        if !h.is_empty() && h != "unknown" && !h.ends_with("-unknown") {
+            return h.to_string();
         }
     }
     let run = |args: &[&str]| {
@@ -63,7 +66,7 @@ fn git_hash() -> String {
     };
     match (run(&["rev-parse", "--abbrev-ref", "HEAD"]), run(&["rev-parse", "--short", "HEAD"])) {
         (Some(b), Some(h)) => format!("{b}-{h}"),
-        _ => "unknown".into(),
+        _ => String::new(),
     }
 }
 
@@ -372,7 +375,7 @@ async fn main() -> Result<()> {
 
     let port = std::env::var("F0CKM_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(cfg.port());
     let st = new_state(cfg, pool, i18n, tpl)?;
-    tracing::info!("Git hash: {}", st.git_hash);
+    tracing::info!("Git hash: {}", if st.git_hash.is_empty() { "unknown" } else { &st.git_hash });
 
     net_guard::start().await.context("outgoing request guard")?;
     prepare_db(&st).await;

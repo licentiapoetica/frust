@@ -36,7 +36,7 @@ services:
       - ./f0ckm-data/s/img/navbar/:/opt/f0ckm/public/s/img/navbar/:Z
 
     environment:
-      - GIT_HASH=${F0CKM_TAG:-unknown}
+      # GIT_HASH is baked into the image at build time (build arg); don't override it here
       - VIRTUAL_HOST=${VIRTUAL_HOST:-localhost}
       - VIRTUAL_PORT=1337
       - LETSENCRYPT_HOST=${LETSENCRYPT_HOST:-}
