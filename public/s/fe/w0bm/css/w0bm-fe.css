@@ -2281,8 +2281,14 @@ html[data-w0bm-theme="DARK"] :is(.w0bm-report-cat, .w0bm-mime):has(input:checked
 html[data-w0bm-theme="DARK"] .w0bm-hallform + .w0bm-hallform {
     border-top-color: #1c1c1c;
 }
-html[data-w0bm-theme="DARK"] .w0bm-mode-group > .btn {
+html[data-w0bm-theme="DARK"] .w0bm-mode-group > .btn:not(.active) {
     background-color: #000;
+}
+/* the selected mode stands out in DARK too (accent, dark text) */
+html[data-w0bm-theme="DARK"] .w0bm-mode-group > .btn.active {
+    background-color: #1fb2b0 !important;
+    border-color: #1fb2b0 !important;
+    color: #000 !important;
 }
 
 /* ── Flash: volume by dragging on the right edge (w0bm.js) ───────────────────────────────── */
