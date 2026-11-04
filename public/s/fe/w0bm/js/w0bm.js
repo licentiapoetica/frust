@@ -53,22 +53,32 @@
     }
     try { data = await res.json(); } catch { /* not JSON */ }
     const ok = res.ok && !(data && data.success === false);
-    return { ok, status: res.status, data, msg: (data && (data.msg || data.message)) || (ok ? '' : 'Error ' + res.status) };
+    // redirected/url: a successful POST /login answers with a redirect (fetch follows it)
+    return { ok, status: res.status, data, redirected: res.redirected, url: res.url, msg: (data && (data.msg || data.message)) || (ok ? '' : 'Error ' + res.status) };
   }
 
   // ── Flash messages (partials/flash.blade.php) ─────────────────────────────────────────
-  function flash(type, message) {
+  // `key`: a message with the same key is updated in place instead of stacking a new one
+  function flash(type, message, key) {
     if (type === 'error') type = 'danger';
     const box = $('#sidebar .flashcontainer > .flash-inner') || $('#w0bm-flash > .flash-inner');
     if (!box) return;
-    const div = document.createElement('div');
-    div.className = 'alert alert-' + type + ' alert-dismissable';
-    div.setAttribute('role', 'alert');
-    div.innerHTML = '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
-    div.append(document.createTextNode(message));
-    box.appendChild(div);
+    let div = key ? Array.from(box.children).find((c) => c.dataset.flashKey === key) : null;
+    if (div) {
+      clearTimeout(div._w0bmTimer);
+      div.className = 'alert alert-' + type + ' alert-dismissable';
+      div.lastChild.textContent = message;
+    } else {
+      div = document.createElement('div');
+      div.className = 'alert alert-' + type + ' alert-dismissable';
+      div.setAttribute('role', 'alert');
+      if (key) div.dataset.flashKey = key;
+      div.innerHTML = '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>';
+      div.append(document.createTextNode(message));
+      box.appendChild(div);
+    }
     const n = box.children.length;
-    setTimeout(() => {
+    div._w0bmTimer = setTimeout(() => {
       div.classList.add('w0bm-alert-out');
       setTimeout(() => div.remove(), 300);
     }, 3000 + n * 1000);
@@ -98,7 +108,9 @@
   }
   function closeModal(m) {
     if (!m) return;
+    const wasOpen = m.classList.contains('w0bm-modal-open');
     m.classList.remove('w0bm-modal-open', 'in');
+    if (wasOpen) m.dispatchEvent(new CustomEvent('w0bm:close'));
     if (!$('.modal.w0bm-modal-open')) document.body.classList.remove('modal-open');
     if (location.hash === '#' + m.id) history.replaceState(null, '', location.pathname + location.search);
     // /?login=1 opened the login modal: drop the parameter once it is closed
@@ -109,6 +121,43 @@
       history.replaceState(null, '', u.pathname + u.search + u.hash);
     }
   }
+  // Confirmations and short questions in a w0bm modal (template #w0bm-dialog-tpl in body-end.html)
+  // instead of the browser's confirm()/prompt(). Resolves to true (confirmed), the typed text
+  // (with `input`) or null (cancelled).
+  function dialog({ title, text = '', input = null, ok = 'OK', danger = true } = {}) {
+    const tpl = $('#w0bm-dialog-tpl');
+    if (!tpl) return Promise.resolve(input ? window.prompt(text || title, '') : (window.confirm(text || title) || null));
+    const m = tpl.content.firstElementChild.cloneNode(true);
+    m.querySelector('.modal-title').textContent = title || '';
+    const p = m.querySelector('.w0bm-dialog-text');
+    p.textContent = text;
+    p.hidden = !text;
+    const inp = m.querySelector('.w0bm-dialog-input');
+    const lab = m.querySelector('.w0bm-dialog-label');
+    if (input) {
+      inp.hidden = false;
+      inp.placeholder = input.placeholder || '';
+      inp.required = !!input.required;
+      if (input.label) { lab.textContent = input.label; lab.hidden = false; }
+    }
+    const okBtn = m.querySelector('.w0bm-dialog-ok');
+    okBtn.textContent = ok;
+    okBtn.classList.toggle('btn-danger', danger);
+    okBtn.classList.toggle('btn-primary', !danger);
+    document.body.appendChild(m);
+    return new Promise((resolve) => {
+      let result = null;
+      m.querySelector('form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        result = input ? inp.value.trim() : true;
+        closeModal(m);
+      });
+      m.addEventListener('w0bm:close', () => { m.remove(); resolve(result); }, { once: true });
+      openModal(m);
+      setTimeout(() => (input ? inp : okBtn).focus(), 60);
+    });
+  }
+
   // /register redirects to /#register, /#register:<token> or /#register:error|success:<message>
   const regHash = decodeURIComponent(location.hash.slice(1));
   if (/^register(-modal)?(:|$)/.test(regHash) && $('#register-modal')) {
@@ -185,11 +234,23 @@
   });
 
   // Theme switcher (themechanger.blade.php)
-  $$('#switcher button[data-style]').forEach((b) => b.addEventListener('click', (e) => {
+  $$('#switcher button[data-style]').forEach((b) => b.addEventListener('click', async (e) => {
     e.preventDefault();
-    if (b.dataset.confirm && !confirm(b.dataset.confirm)) return;
+    if (b.dataset.confirm && !(await dialog({ title: b.dataset.style, text: b.dataset.confirm, ok: 'Use it' }))) return;
     window.w0bmStyle?.set(b.dataset.style);
   }));
+  // "t" cycles the themes, like f0ckm. Themes that ask for confirmation (Epilepsie: flashing)
+  // are left out: they stay an explicit choice in the menu.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 't' || e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    if (/^(input|textarea|select)$/i.test(e.target.nodeName) || e.target.isContentEditable) return;
+    if (!window.w0bmStyle) return;
+    const themes = $$('#switcher button[data-style]').filter((b) => !b.dataset.confirm).map((b) => b.dataset.style);
+    if (!themes.length) return;
+    const current = document.documentElement.dataset.w0bmTheme || 'w0bmcustom';
+    const next = themes[(themes.indexOf(current) + 1) % themes.length];
+    window.w0bmStyle.set(next);
+  });
 
   // ── Tooltips & popovers (Bootstrap 3 look, positioned by CSS) ─────────────────────────
   function initTooltip(el) {
@@ -281,8 +342,14 @@
         if (t.dataset.originalTitle !== undefined) t.dataset.originalTitle = d.toLocaleString();
         else t.setAttribute('title', d.toLocaleString());
       }
+      // only the text node: an open tooltip lives inside the element and must survive the refresh
       const s = timeago(d);
-      if (t.textContent !== s) t.textContent = s;
+      let label = t.firstChild;
+      if (!label || label.nodeType !== Node.TEXT_NODE) {
+        label = document.createTextNode('');
+        t.prepend(label);
+      }
+      if (label.nodeValue !== s) label.nodeValue = s;
     });
   }
   refreshTimeago();
@@ -380,8 +447,68 @@
       },
       input: typer,
     };
+    // Suggestions while typing (GET /api/v2/tags/suggest, like f0ckm's tag autocomplete)
+    const sug = document.createElement('ul');
+    sug.className = 'dropdown-menu w0bm-tag-suggest';
+    sug.setAttribute('role', 'listbox');
+    box.appendChild(sug);
+    let sugTimer = null;
+    let sugSeq = 0;
+    let sugIndex = -1;
+    const sugItems = () => Array.from(sug.children);
+    const closeSug = () => { sug.classList.remove('w0bm-open'); sug.textContent = ''; sugIndex = -1; };
+    const markSug = (i) => {
+      const list = sugItems();
+      sugIndex = list.length ? (i + list.length) % list.length : -1;
+      list.forEach((li, n) => li.classList.toggle('active', n === sugIndex));
+    };
+    const pickSug = (tag) => { api_.add(tag); typer.value = ''; closeSug(); typer.focus(); };
+    typer.addEventListener('input', () => {
+      clearTimeout(sugTimer);
+      const q = typer.value.trim();
+      if (!q || q.includes(',')) { closeSug(); return; }
+      sugTimer = setTimeout(async () => {
+        const seq = ++sugSeq;
+        const r = await api('/api/v2/tags/suggest?q=' + encodeURIComponent(q), { method: 'GET' });
+        if (seq !== sugSeq || typer.value.trim() !== q) return; // a newer query is on its way
+        const have = items.map((t) => t.toLowerCase());
+        const list = (r.data?.suggestions || []).map((s) => s.tag).filter((t) => t && !have.includes(String(t).toLowerCase())).slice(0, 8);
+        sug.textContent = '';
+        list.forEach((tag) => {
+          const li = document.createElement('li');
+          li.setAttribute('role', 'option');
+          const a = document.createElement('a');
+          a.href = '#';
+          a.textContent = tag;
+          // mousedown, so the field doesn't lose focus (and flush half a tag) before the pick
+          a.addEventListener('mousedown', (ev) => { ev.preventDefault(); pickSug(tag); });
+          li.appendChild(a);
+          sug.appendChild(li);
+        });
+        sugIndex = -1;
+        sug.classList.toggle('w0bm-open', list.length > 0);
+      }, 150);
+    });
     typer.addEventListener('keydown', (e) => {
+      if (sug.classList.contains('w0bm-open')) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          markSug(sugIndex + (e.key === 'ArrowDown' ? 1 : -1));
+          return;
+        }
+        if ((e.key === 'Enter' || e.key === 'Tab') && sugIndex >= 0) {
+          e.preventDefault();
+          pickSug(sugItems()[sugIndex].textContent);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          closeSug();
+          return;
+        }
+      }
       if (e.key === 'Enter' || e.key === ',') {
+        closeSug();
         if (e.key === 'Enter' && !typer.value.trim()) return; // submit the form
         e.preventDefault();
         api_.flush();
@@ -389,7 +516,7 @@
         api_.remove(items[items.length - 1]);
       }
     });
-    typer.addEventListener('blur', () => api_.flush());
+    typer.addEventListener('blur', () => { closeSug(); api_.flush(); });
     box.addEventListener('click', () => typer.focus());
     (input.defaultValue || '').split(',').forEach((t) => api_.add(t));
     input.w0bmTags = api_;
@@ -423,6 +550,9 @@
   // Widgets in the page load Cap right away, those in modals when the modal opens
   if ($$('cap-widget').some((w) => !w.closest('.modal'))) loadCap();
   document.addEventListener('w0bm:open', (e) => { if (e.target.querySelector('cap-widget')) loadCap(); }, true);
+  // a modal already open on load (from the URL, e.g. #register-modal after a failed form post, or
+  // rendered open by the server) opened before this listener existed
+  if ($$('.modal.w0bm-modal-open cap-widget, .modal:target cap-widget').length) loadCap();
   function showCap(form) {
     const tpl = form.querySelector('template.w0bm-cap-template');
     if (tpl && !form.querySelector('cap-widget')) {
@@ -441,6 +571,14 @@
     if (!f.querySelector('input[name="kmsi"]')?.checked) fd.delete('kmsi');
     const r = await api('/login', { body: fd });
     btn.disabled = false;
+    // Logged in: the server redirects (with the session cookie) to the page we came from, like
+    // f0ckm.js handles it. Without the login parameters, so the modal doesn't open again.
+    if (r.redirected && r.url) {
+      const u = new URL(r.url, location.href);
+      ['login', 'login_error', 'login_done', 'login_captcha'].forEach((k) => u.searchParams.delete(k));
+      location.href = u.pathname + u.search;
+      return;
+    }
     if (r.data && r.data.success) {
       const u = new URL(location.href);
       u.searchParams.delete('login');
@@ -462,16 +600,24 @@
     if (!el) return;
     el.textContent = n > 99 ? '99+' : String(n);
     el.classList.toggle('w0bm-has-count', n > 0);
+    el.hidden = n <= 0;
   }
+  let pollBadges = () => {};
   if (DATA.user) {
     const poll = async () => {
       const n = await api('/api/notifications', { method: 'GET' });
       if (n.ok && Array.isArray(n.data?.notifications)) setBadge($('#w0bm-notif-badge'), n.data.notifications.filter((x) => !x.is_read).length);
-      if ($('#w0bm-dm-badge')) {
+      // #dm-badge: messages.js keeps it current too (it sets its display)
+      if ($('#dm-badge')) {
         const d = await api('/api/dm/unread', { method: 'GET' });
-        if (d.ok) setBadge($('#w0bm-dm-badge'), +d.data?.count || 0);
+        if (d.ok) {
+          const b = $('#dm-badge');
+          b.style.removeProperty('display');
+          setBadge(b, +d.data?.count || 0);
+        }
       }
     };
+    pollBadges = poll;
     poll();
     setInterval(() => { if (!document.hidden) poll(); }, 60000);
   }
@@ -517,6 +663,32 @@
   }
 
   // ── Generic JSON forms (report …) ─────────────────────────────────────────────────────
+  // Report a comment: the item's report modal (partials/report.html, with categories and captcha),
+  // switched to the comment while it is open
+  function reportComment(id) {
+    const form = $('#webmreport');
+    const modal = $('#webmreportmodal');
+    if (!form || !modal) return;
+    const item = form.querySelector('input[name="item_id"]');
+    const comment = form.querySelector('input[name="comment_id"]');
+    const title = $('#reportModalTitle');
+    const what = modal.querySelector('.w0bm-report-what');
+    const old = { title: title.textContent, what: what ? what.textContent : '' };
+    item.disabled = true;
+    comment.disabled = false;
+    comment.value = id;
+    title.textContent = 'Report comment ' + id;
+    if (what) what.textContent = 'comment';
+    modal.addEventListener('w0bm:close', () => {
+      item.disabled = false;
+      comment.disabled = true;
+      comment.value = '';
+      title.textContent = old.title;
+      if (what) what.textContent = old.what;
+    }, { once: true });
+    openModal(modal);
+  }
+
   $$('form.w0bm-ajaxform').forEach((f) => f.addEventListener('submit', async (e) => {
     e.preventDefault();
     const r = await api(f.action, { body: new FormData(f) });
@@ -533,7 +705,6 @@
   // Item page
   // ════════════════════════════════════════════════════════════════════════════════════
   const media = $('#video');
-  const mediaBox = $('.w0bm-media');
   let player = null;
 
   const fmtTime = (s) => {
@@ -742,15 +913,6 @@
   if (media && (media.tagName === 'VIDEO' || media.tagName === 'AUDIO')) {
     player = buildPlayer(media);
     if (ITEM && ITEM.autoplay && player.paused()) player.play();
-
-    // 3px progress line under the player
-    if (mediaBox) {
-      const line = document.createElement('div');
-      line.className = 'w0bm-progressline';
-      line.innerHTML = '<div></div>';
-      mediaBox.appendChild(line);
-      mediaBox.classList.add('w0bm-has-progress');
-    }
   }
 
   // Album: thumbnails swap the stage
@@ -781,11 +943,16 @@
   });
 
   // Flash (sandboxed Ruffle frame from /s/js/flash-embed.js)
-  const swf = $('#w0bm-flash[data-swf]');
+  const swf = $('#w0bm-swf[data-swf]');
   if (swf && window.customElements?.get('f0ck-flash')) {
     const el = document.createElement('f0ck-flash');
+    // The download link is the no-JS / failed-load stand-in: hidden while the player loads
+    swf.classList.add('w0bm-flash-js');
     swf.appendChild(el);
-    el.load({ url: swf.dataset.swf }).then(() => swf.classList.add('w0bm-flash-loaded')).catch(() => el.remove());
+    el.load({ url: swf.dataset.swf }).catch(() => {
+      el.remove();
+      swf.classList.remove('w0bm-flash-js');
+    });
   }
 
   // ── The blurred background (#bg) ──────────────────────────────────────────────────────
@@ -835,11 +1002,44 @@
     }
   }
 
+  // ── Tables (index, profile, search): the row's thumbnail follows the mouse ─────────────
+  // One floating box (#w0bm-hoverthumb) next to the cursor; its position goes through two custom
+  // properties. Without JavaScript the CSS preview in the row (.w0bm-rowthumb) shows instead.
+  {
+    let box = null;
+    const place = (e) => {
+      if (!box) return;
+      const w = box.offsetWidth || 130, h = box.offsetHeight || 130;
+      const x = e.clientX + 15 + w > window.innerWidth - 10 ? e.clientX - 15 - w : e.clientX + 15;
+      const y = e.clientY + 15 + h > window.innerHeight - 10 ? e.clientY - 15 - h : e.clientY + 15;
+      box.style.setProperty('--thumb-x', Math.max(0, x) + 'px');
+      box.style.setProperty('--thumb-y', Math.max(0, y) + 'px');
+    };
+    $$('tr[data-thumb]').forEach((row) => {
+      row.addEventListener('mouseenter', (e) => {
+        if (!box) {
+          box = document.createElement('div');
+          box.id = 'w0bm-hoverthumb';
+          box.innerHTML = '<img alt="">';
+          document.body.appendChild(box);
+        }
+        const img = box.firstChild;
+        img.onerror = () => { img.onerror = null; img.src = '/s/fe/w0bm/img/small_404.gif'; };
+        img.src = row.dataset.thumb;
+        box.hidden = false;
+        place(e);
+      });
+      row.addEventListener('mousemove', place);
+      row.addEventListener('mouseleave', () => { if (box) box.hidden = true; });
+    });
+  }
+
   // ── Comments sidebar toggle (C) ───────────────────────────────────────────────────────
   const aside = $('.aside');
   if (aside && $('#toggle')) {
     if (store.get('comments') == null) store.set('comments', 'true');
-    const apply = () => aside.classList.toggle('w0bm-hidden', store.get('comments') !== 'true');
+    // the class on <html> is also set by early.js before the page is drawn (no flash)
+    const apply = () => document.documentElement.classList.toggle('w0bm-comments-off', store.get('comments') !== 'true');
     apply();
     var toggleComments = () => { store.set('comments', String(store.get('comments') !== 'true')); apply(); };
     $('#toggle').addEventListener('click', (e) => { e.preventDefault(); toggleComments(); });
@@ -858,7 +1058,10 @@
         case 37: case 65: case 72: goPrev(); break; // ← a h
         case 82: $('#w0bm-context')?.click(); break; // r
         case 70: $('#fav')?.click(); break; // f
+        case 80: cycleRating(); break; // p
+        case 73: if (openTagInput()) e.preventDefault(); break; // i (no "i" typed into the field)
         case 67: if (typeof toggleComments === 'function') toggleComments(); break; // c
+        case 88: if ($('#w0bm-delmodal')) { e.preventDefault(); openModal($('#w0bm-delmodal')); } break; // x (mods: delete)
         case 87: case 38: if (player) { e.preventDefault(); player.volume(player.volume() + 0.1); } break; // w ↑
         case 83: case 40: if (player) { e.preventDefault(); player.volume(player.volume() - 0.1); } break; // s ↓
         case 32: if (player) { e.preventDefault(); player.toggle(); } break; // space
@@ -889,6 +1092,21 @@
     const icon = favForm.querySelector('i');
     icon.classList.toggle('fa-heart', faved);
     icon.classList.toggle('fa-heart-o', !faved);
+    // "Favorited by" popover on the heart (partials/favlist.html)
+    const list = $('#w0bm-favlist');
+    if (list && Array.isArray(r.data?.favs)) {
+      list.textContent = '';
+      r.data.favs.forEach((f, i) => {
+        if (i) list.append(', ');
+        const self = DATA.user && f.user === DATA.user;
+        if (f.is_anon || (f.hide_fav_badge && !self)) { list.append('?'); return; }
+        const a = document.createElement('a');
+        a.href = '/user/' + encodeURIComponent(String(f.user || '').toLowerCase());
+        a.textContent = f.display_name || f.user;
+        list.append(a);
+      });
+      list.closest('.w0bm-favpop').hidden = !r.data.favs.length;
+    }
   });
 
   // ── Subscribe to comments ─────────────────────────────────────────────────────────────
@@ -933,16 +1151,68 @@
     else flash('success', 'Upload successfully updated');
     closeModal($('#webmeditmodal'));
   });
-  $('.delete_video')?.addEventListener('click', async (e) => {
+  // [del] / "x": the delete modal (partials/deletemodal.html), sent with fetch
+  const delForm = $('#w0bm-delform');
+  delForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const reason = prompt('Reason for deleting ' + ITEM.id);
-    if (reason === null) return;
-    const r = await api('/api/v2/admin/deletepost', { body: { postid: ITEM.id, reason: reason.trim() } });
+    const btn = delForm.querySelector('[type="submit"]');
+    btn.disabled = true;
+    const r = await api(delForm.action, { body: new FormData(delForm) });
+    btn.disabled = false;
     if (r.ok) {
+      closeModal(delForm.querySelector('.modal'));
       flash('success', 'Deleted');
       const n = $('#prev:not(.w0bm-invisible)') || $('#next:not(.w0bm-invisible)');
       setTimeout(() => { location.href = n ? n.href : '/'; }, 500);
     } else flash('error', r.msg || 'Error deleting');
+  });
+
+  // ── Halls ("+" in the item bar, partials/hallmodal.html) ───────────────────────────────
+  // Plain forms; sent with fetch here. Options carry data-in="1" (✓) when the item is in that hall;
+  // Remove only shows for those.
+  $$('#w0bm-hallmodal form.w0bm-hallform').forEach((form) => {
+    const select = form.querySelector('select[name="hall"]');
+    const addBtn = form.querySelector('[data-hall-add]');
+    const removeBtn = form.querySelector('[data-hall-remove]');
+    const newName = form.querySelector('input[name="new_name"]');
+    const label = (o) => (o.dataset.name || o.value) + (o.textContent.includes('(private)') ? ' (private)' : '') + (o.dataset.in === '1' ? ' ✓' : '');
+    const sync = () => {
+      const o = select.selectedOptions[0];
+      removeBtn.hidden = !(o && o.value && o.dataset.in === '1');
+      addBtn.hidden = !!(o && o.value && o.dataset.in === '1');
+    };
+    // Typing a new name means "new hall": drop the picked one
+    newName?.addEventListener('input', () => { if (newName.value.trim()) { select.value = ''; sync(); } });
+    select.addEventListener('change', () => { if (newName && select.value) newName.value = ''; sync(); });
+    sync();
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.submitter || addBtn;
+      const remove = btn === removeBtn;
+      const fd = new FormData(form);
+      if (btn.name) fd.set(btn.name, btn.value);
+      btn.disabled = true;
+      const r = await api(btn.getAttribute('formaction') || form.action, { body: fd });
+      btn.disabled = false;
+      if (!r.ok) { flash('error', r.msg || 'Error'); return; }
+      let opt = select.selectedOptions[0];
+      const created = r.data && r.data.created;
+      if (created) {
+        opt = document.createElement('option');
+        opt.value = created.slug;
+        opt.dataset.name = created.name;
+        select.appendChild(opt);
+        select.value = created.slug;
+        if (newName) newName.value = '';
+      }
+      if (opt && opt.value) {
+        opt.dataset.in = remove ? '0' : '1';
+        opt.textContent = label(opt);
+      }
+      sync();
+      const name = opt ? (opt.dataset.name || opt.value) : '';
+      flash('success', (remove ? 'Removed from ' : 'Added to ') + (name ? '"' + name + '"' : 'hall'));
+    });
   });
 
   // ── Tags ──────────────────────────────────────────────────────────────────────────────
@@ -951,8 +1221,17 @@
     if (!tagDisplay) return;
     const canDelete = tagDisplay.dataset.canDelete === '1';
     tagDisplay.textContent = '';
-    if (!tags || !tags.length) { tagDisplay.textContent = 'No tags yet ...'; return; }
     const ratings = ['sfw', 'nsfw', 'nsfl'];
+    // unrated: "?" in place of the rating tag (click or "p" to rate)
+    if (!(tags || []).some((t) => ratings.includes(t.normalized || String(t.tag).toLowerCase()))) {
+      const q = document.createElement('span');
+      q.className = 'label label-default w0bm-rating-tag w0bm-rating-unset';
+      q.dataset.rating = 'untagged';
+      q.title = 'unrated';
+      q.textContent = '?';
+      tagDisplay.append(q, ' ');
+    }
+    if (!tags || !tags.length) { tagDisplay.append('No tags yet ...'); markRatingTags(); return; }
     tags.forEach((t, i) => {
       const norm = t.normalized || String(t.tag).toLowerCase();
       const span = document.createElement('span');
@@ -994,7 +1273,7 @@
     if (del) {
       e.preventDefault();
       const tag = del.closest('.label').dataset.tag;
-      if (!confirm('Do you really want to delete this tag?')) return;
+      if (!(await dialog({ title: 'Delete tag', text: 'Do you really want to delete the tag "' + tag + '"?', ok: 'Delete' }))) return;
       const r = await api('/api/v2/tags/' + ITEM.id + '/' + encodeURIComponent(tag), { method: 'DELETE' });
       if (r.ok) {
         flash('success', 'Tag successfully deleted');
@@ -1005,11 +1284,76 @@
     const rating = e.target.closest('.w0bm-rating-tag.w0bm-can-rate');
     if (rating) {
       e.preventDefault();
-      const r = await api('/api/v2/tags/' + ITEM.id + '/cycle-rating', { method: 'PUT', body: {} });
-      if (r.ok) { flash('success', 'Rating: ' + (r.data.rating_label || '')); reloadTags(); }
-      else flash('error', r.msg || 'Error');
+      cycleRating();
     }
   });
+  // Rating: unrated -> sfw -> nsfw -> nsfl (if enabled) -> sfw; click on the rating tag or "p".
+  // Like f0ckm: every press shows the new rating at once, only the last one is saved (after a short
+  // pause), as an explicit rating (POST /api/v2/item/:id/rating).
+  let wantedRating = null;
+  let ratingTimer = null;
+  let ratingSaving = Promise.resolve();
+  const shownRating = () => {
+    const tag = tagDisplay && Array.from(tagDisplay.querySelectorAll('.w0bm-rating-tag')).find((s) => s.dataset.rating !== 'untagged');
+    return tag ? String(tag.dataset.tag).toLowerCase() : 'untagged';
+  };
+  function showRating(rating) {
+    tagDisplay.querySelectorAll('.w0bm-rating-tag').forEach((s) => s.remove());
+    const span = document.createElement('span');
+    span.className = 'label label-default w0bm-rating-tag';
+    span.dataset.tag = rating;
+    const a = document.createElement('a');
+    a.href = '/tag/' + rating;
+    a.className = 'default-link w0bm-tag-' + rating;
+    a.textContent = rating;
+    span.appendChild(a);
+    tagDisplay.prepend(span, ' ');
+    markRatingTags();
+  }
+  // "i": open [+Add Tag] and focus its field, like f0ckm. Escape in the field closes it again.
+  function openTagInput() {
+    const toggle = $('#tag-add-toggle');
+    const field = $('#tag-add .bootstrap-tagsinput input') || $('#tag-add input[name="tagname"]');
+    if (!toggle || !field) return false;
+    // the tags live in the sidebar: show it for this page if C hid it (the saved choice stays)
+    document.documentElement.classList.remove('w0bm-comments-off');
+    toggle.checked = true;
+    field.focus();
+    return true;
+  }
+  $('#tag-add')?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const toggle = $('#tag-add-toggle');
+    if (toggle) toggle.checked = false;
+    e.target.blur();
+  });
+  function cycleRating() {
+    if (!ITEM || !tagDisplay || tagDisplay.dataset.canRate !== '1') return;
+    const cur = wantedRating || shownRating();
+    const next = cur === 'sfw' ? 'nsfw' : (cur === 'nsfw' && DATA.nsfl) ? 'nsfl' : 'sfw';
+    wantedRating = next;
+    showRating(next);
+    flash('info', 'Rating: ' + next.toUpperCase(), 'rating');
+    clearTimeout(ratingTimer);
+    ratingTimer = setTimeout(saveRating, 300);
+  }
+  function saveRating() {
+    const rating = wantedRating;
+    // one request at a time; a newer choice waits for the running one
+    ratingSaving = ratingSaving.then(async () => {
+      const r = await api('/api/v2/item/' + ITEM.id + '/rating', { json: { rating, csrf_token: DATA.csrf || '' } });
+      if (wantedRating !== rating) return; // pressed again meanwhile: the next save follows
+      wantedRating = null;
+      if (r.ok) {
+        // same message and colour as while pressing; only a failure turns it red
+        flash('info', 'Rating: ' + String(r.data.rating || rating).toUpperCase(), 'rating');
+        if (r.data.tags) renderTags(r.data.tags); else reloadTags();
+      } else {
+        flash('error', r.msg || 'Could not change the rating', 'rating');
+        reloadTags();
+      }
+    });
+  }
   const tagForm = $('form.w0bm-tagform');
   const tagInput = $('#tags');
   if (tagForm && tagInput) {
@@ -1063,7 +1407,7 @@
   };
 
   // w0bm's simplemd for f0ckm comments: greentext, links, media, mentions, emojis, timestamps,
-  // [spoiler] [blur] [rb] [reich] [krebs], **bold**, *italic*, `code`
+  // [spoiler] [blur] [rb] [reich] [krebs] [glitch], **bold**, *italic*, `code`
   function renderComment(text) {
     const codes = [];
     let s = escapeHTML(text || '').replace(/&#x2F;/g, '/').replace(/&#x3D;/g, '=').replace(/&#x60;/g, '`');
@@ -1085,10 +1429,10 @@
     s = s.replace(/(^|\s)&gt;&gt;(\d+)/g, (m, pre, id) => pre + '<a class="w0bm-quote" href="#c' + id + '">&gt;&gt;' + id + '</a>');
     s = s.replace(/\b(\d{1,2}:\d{2})\b(?![^<]*>)/g, '<a class="comment_clickable_timestamp" href="#">$1</a>');
     s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
-    const wrapTag = (tag, cls) => {
+    const wrapTag = (tag, cls, attrs = '') => {
       const re = new RegExp('\\[' + tag + '\\]((?:(?!\\[' + tag + '\\])[\\s\\S])*?)\\[\\/' + tag + '\\]', 'gi');
       for (let i = 0; i < 10; i++) {
-        const n = s.replace(re, '<span class="' + cls + '">$1</span>');
+        const n = s.replace(re, '<span class="' + cls + '"' + attrs + '>$1</span>');
         if (n === s) break;
         s = n;
       }
@@ -1098,6 +1442,8 @@
     wrapTag('rb', 'rainbow');
     wrapTag('reich', 'reich');
     wrapTag('krebs', 'anim');
+    // the same as in the other frontends (f0ck-core.js f0ckCommentFx, /s/css/comment-fx.css)
+    wrapTag('glitch', 'cfx-glitch', ' data-glitch="0.5"');
     if (emojis) s = s.replace(/:([a-z0-9_\-]+):/g, (m, n) => (emojis[n] ? '<img class="comment_emoji" src="' + escapeHTML(emojis[n]) + '" alt=":' + n + ':" title=":' + n + ':">' : m));
     s = s.replace(/\u0000(\d+)\u0000/g, (m, i) => codes[+i]);
     return s.replace(/\n/g, '<br>');
@@ -1211,9 +1557,9 @@
       e.preventDefault();
       let reason = '';
       if (DATA.is_mod && !(c && DATA.user && c.username === DATA.user)) {
-        reason = prompt('Reason for deleting comment ' + id + ' by ' + (c ? c.username : ''));
+        reason = await dialog({ title: 'Delete comment', text: 'Comment ' + id + ' by ' + (c ? c.username : ''), input: { label: 'Reason', placeholder: 'Reason' }, ok: 'Delete' });
         if (reason === null) return;
-      } else if (!confirm('Delete this comment?')) return;
+      } else if (!(await dialog({ title: 'Delete comment', text: 'Delete this comment?', ok: 'Delete' }))) return;
       const r = await api('/api/comments/' + id + '/delete', { body: { reason: reason.trim() } });
       if (r.ok) { flash('success', 'Comment deleted'); loadComments(null); }
       else flash('error', r.msg || 'Error deleting comment');
@@ -1228,11 +1574,7 @@
     }
     if (e.target.closest('.report_comment')) {
       e.preventDefault();
-      const reason = prompt('Why do you report this comment?');
-      if (!reason || !reason.trim()) return;
-      const r = await api('/api/v2/report', { body: { comment_id: id, reason: reason.trim(), 'categories[]': 'other' } });
-      if (r.ok) flash('success', 'Report sent. Thanks!');
-      else flash('error', r.msg || 'Error');
+      reportComment(id);
       return;
     }
     const edit = e.target.closest('.edit_comment');
@@ -1304,7 +1646,7 @@
         flash('error', r.msg || 'Error saving comment');
       }
     });
-    // [rb] [reich] [krebs] [spoiler] (formatText)
+    // [rb] [reich] [krebs] [glitch] [spoiler] (formatText)
     $$('.w0bm-fmt', commentForm).forEach((a) => a.addEventListener('click', (e) => {
       e.preventDefault();
       const tag = a.dataset.fmt;
@@ -1513,15 +1855,27 @@
     ['dragleave', 'drop'].forEach((ev) => dnd.addEventListener(ev, (e) => { e.preventDefault(); dnd.classList.remove('w0bm-dnd-over'); }));
     dnd.addEventListener('drop', (e) => { const f = e.dataTransfer?.files?.[0]; if (f) preview(f); });
 
+    const lazor = $('#btn-upload');
     const send = (fd) => new Promise((resolve) => {
       xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/v2/upload');
       xhr.setRequestHeader('X-CSRF-Token', csrf());
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       const started = Date.now();
+      // Sent completely: full bar while the server processes the file
+      xhr.upload.addEventListener('load', () => {
+        progress.style.setProperty('--progress', '1');
+        lazor?.style.setProperty('--progress', '1');
+        progress.firstElementChild?.setAttribute('aria-valuenow', '100');
+        stats.textContent += ' – processing…';
+      });
       xhr.upload.addEventListener('progress', (e) => {
         if (!e.lengthComputable) return;
-        progress.style.setProperty('--progress', (e.loaded / e.total).toFixed(4));
+        const frac = Math.min(1, e.loaded / e.total);
+        progress.style.setProperty('--progress', frac.toFixed(4));
+        // the shoop's laz0r is the visible progress bar (w0bm-fe.css: #btn-upload.w0bm-firing)
+        lazor?.style.setProperty('--progress', frac.toFixed(4));
+        progress.firstElementChild?.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
         const secs = Math.max(0.001, (Date.now() - started) / 1000);
         stats.textContent = 'Speed: ' + humanFileSize(e.loaded / secs) + '/s Uploaded: ' + humanFileSize(e.loaded) + ' / ' + humanFileSize(e.total);
       });
@@ -1549,6 +1903,8 @@
       if (currentFile && !url) fd.set('file', currentFile, currentFile.name);
       const btn = $('#btn-upload');
       btn.disabled = true;
+      btn.style.setProperty('--progress', '0');
+      btn.classList.add('w0bm-firing');
       progress.classList.remove('w0bm-hidden');
       let r = await send(fd);
       if (r.status === 403 && r.data && r.data.captcha_required && window.f0ckCaptchaGate) {
@@ -1565,6 +1921,7 @@
         return;
       }
       progress.classList.add('w0bm-hidden');
+      btn.classList.remove('w0bm-firing');
       if (r.status !== -1) flash('error', (r.data && (r.data.msg || r.data.message)) || (r.status === 413 ? 'File too large' : 'Upload failed'));
     });
   }
@@ -1590,5 +1947,93 @@
   }));
   $$('form.w0bm-setting input[type="checkbox"][data-autosave], form.w0bm-setting select[data-autosave]').forEach((c) => c.addEventListener('change', () => c.form.requestSubmit()));
 
-  window.w0bm = { api, flash, openModal, closeModal, tagsinput, escapeHTML, timeago, player: () => player };
+  window.w0bm = { api, flash, openModal, closeModal, tagsinput, escapeHTML, timeago, player: () => player, pollBadges: () => pollBadges(), reloadComments: () => loadComments(null) };
+
+  // Hooks for the shared client code (f0ck-core.js / f0ck-frontend.js, loaded after this file by
+  // snippets/frontend-scripts.html): its messages show in w0bm's flash box, live events refresh
+  // the badges and the comment list. Contract: views/frontends/README.md
+  const flashTypes = { error: 'error', success: 'success', info: 'info', warning: 'warning' };
+  window.f0ckFrontend = Object.assign(window.f0ckFrontend || {}, {
+    itemId: ITEM ? ITEM.id : null,
+    flash: (message, type) => flash(flashTypes[type] || 'info', String(message ?? '')),
+    notify: () => pollBadges(),
+    comments: (data) => {
+      if (ITEM && data && String(data.item_id) === String(ITEM.id)) loadComments(null);
+    },
+    dmBadge: () => pollBadges(),
+    reconnected: () => pollBadges(),
+    motd: (text) => renderMotd(text),
+    newItem: (data) => addNewItem(data),
+    // passkey.js closes the login dialog when it opens "Login as anonymous"
+    closeLogin: () => closeModal($('#login-modal')),
+  });
+
+  // New uploads appear at the top of the main grid, like in f0ckm: only on the unfiltered first page,
+  // only in the visitor's rating mode, after the pinned items, never twice
+  function addNewItem(data) {
+    const grid = $('.items');
+    if (!grid || !data || !data.id) return;
+    const path = location.pathname;
+    if (!/^\/(p\/1\/?)?$/.test(path) || new URLSearchParams(location.search).get('view') === 'index') return;
+    const nsfl = window.f0ckSession?.nsfl_tag_id || 3;
+    const rating = data.tag_id === 1 ? 'sfw' : data.tag_id === 2 ? 'nsfw' : (data.tag_id && data.tag_id == nsfl) ? 'nsfl' : 'untagged';
+    const mode = Number(DATA.mode ?? 0);
+    const wanted = { 0: 'sfw', 1: 'nsfw', 2: 'untagged', 4: 'nsfl' }[mode];
+    if (mode !== 3 && wanted && rating !== wanted) return;
+    const key = String(data.slug || data.id);
+    if (grid.querySelector(`a[href$="/${CSS.escape(key)}"], a[href$="/${data.id}"]`)) return;
+    const tile = document.createElement('div');
+    tile.className = 'main-item w0bm-mode-' + rating + ' w0bm-new-item';
+    const a = document.createElement('a');
+    a.href = '/' + key;
+    a.title = (data.title || key) + (data.display_name || data.username ? ' – ' + (data.display_name || data.username) : '');
+    const img = document.createElement('img');
+    img.src = '/t/' + data.id + '.webp';
+    img.alt = String(data.id);
+    img.loading = 'lazy';
+    img.addEventListener('error', () => { img.src = '/s/fe/w0bm/img/small_404.gif'; img.classList.add('nothumb'); });
+    a.appendChild(img);
+    tile.appendChild(a);
+    const pinned = grid.querySelectorAll('.w0bm-pinned');
+    if (pinned.length) pinned[pinned.length - 1].after(tile);
+    else grid.prepend(tile);
+    $('.w0bm-noresults')?.remove();
+    requestAnimationFrame(() => requestAnimationFrame(() => tile.classList.remove('w0bm-new-item')));
+  }
+
+  // Message of the day (above the comment form): escaped, inline Markdown, sanitized, as in f0ckm
+  const motdBox = $('#w0bm-motd');
+  function renderMotd(text) {
+    if (!motdBox) return;
+    const body = motdBox.querySelector('.w0bm-motd-text');
+    const motd = String(text ?? '');
+    if (window.marked && window.Sanitizer && window.escHTML) body.innerHTML = window.Sanitizer.clean(window.marked.parseInline(window.escHTML(motd)));
+    else body.textContent = motd;
+    motdBox.hidden = !motd.trim() || motdBox.dataset.show === '0';
+  }
+  // marked (deferred) and the sanitizer load after this file: render once they're there
+  if (motdBox) document.addEventListener('DOMContentLoaded', () => renderMotd(motdBox.querySelector('.w0bm-motd-text').textContent));
+
+  // Passkey login (partials/loginform.html): the WebAuthn round trip is f0ck-core.js's
+  // f0ckPasskeyLogin, loaded after this file, so it is looked up on click
+  $$('.w0bm-passkey-btn').forEach((btn) => btn.addEventListener('click', async () => {
+    const box = btn.closest('.w0bm-passkey');
+    const err = box.querySelector('.w0bm-passkey-error');
+    const label = btn.innerHTML;
+    err.hidden = true;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Waiting for passkey…';
+    try {
+      await window.f0ckPasskeyLogin();
+      location.reload();
+    } catch (e) {
+      err.textContent = (e && e.message) || 'Passkey login failed.';
+      err.hidden = false;
+      btn.disabled = false;
+      btn.innerHTML = label;
+    }
+  }));
+
+  // Navbar brand (image + text from the admin panel): window.updateBrandImage / updateBrandText
+  // in f0ck-core.js work on the [data-brand-img] / [data-brand-text] marks in partials/navigation.html.
 })();

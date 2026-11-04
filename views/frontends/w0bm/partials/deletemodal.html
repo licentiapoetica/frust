@@ -1,5 +1,4 @@
-{#- [del] for mods: POST /api/v2/admin/deletepost (plain form without JavaScript; w0bm.js asks for
-    the reason with a prompt instead) -#}
+{#- [del] for mods: POST /api/v2/admin/deletepost (plain form without JavaScript; w0bm.js sends it with fetch; "x" opens it) -#}
 <form method="post" action="/api/v2/admin/deletepost" id="w0bm-delform">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="postid" value="{{ item.id }}">

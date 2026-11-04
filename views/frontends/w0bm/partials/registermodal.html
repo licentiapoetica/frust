@@ -1,6 +1,6 @@
 {#- partials/registermodal.blade.php. GET /register redirects to /#register-modal (:target opens it);
     a plain form post comes back with ?register_error=… / ?register_done=… -#}
-<div class="modal fade{% if (register_error_msg or register_done_msg) %} w0bm-modal-open{% endif %}" id="register-modal" tabindex="-1" role="dialog" aria-labelledby="Register">
+<div class="modal fade f0ck-shell-chrome{% if (register_error_msg or register_done_msg) %} w0bm-modal-open{% endif %}" id="register-modal" tabindex="-1" role="dialog" aria-labelledby="Register">
     <a href="{% if (register_error_msg or register_done_msg) %}{{ url.pathname }}{% else %}#_{% endif %}" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -11,10 +11,6 @@
             {% if register_error_msg %}<div class="alert alert-danger w0bm-form-msg">{{ register_error_msg }}</div>{% endif %}
             {% if register_done_msg %}<div class="alert alert-success w0bm-form-msg">{{ register_done_msg }}</div>{% endif %}
             <div class="w0bm-register-msg alert" hidden></div>
-            <div class="advantages">
-                <p>Registering on {{ domain }} has some advantages...</p>
-                <p>With an account you can comment, favor uploads, upload, tag, filter out unwanted tags and watch NSFW!</p>
-            </div>
             <div class="reg_wrapper">
                 <div class="register">
                     <div class="col-md-10">

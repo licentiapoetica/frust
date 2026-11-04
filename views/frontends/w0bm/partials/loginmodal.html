@@ -1,6 +1,6 @@
 {#- partials/loginmodal.blade.php (+ registermodal footer link). /login redirects to /?login=1,
     which renders this modal open. -#}
-<div class="modal fade{% if ((url and url.qs and url.qs.login) or login_error_msg or login_done_msg) %} w0bm-modal-open{% endif %}" id="login-modal" tabindex="-1" role="dialog" aria-labelledby="Login">
+<div class="modal fade f0ck-shell-chrome{% if ((url and url.qs and url.qs.login) or login_error_msg or login_done_msg) %} w0bm-modal-open{% endif %}" id="login-modal" tabindex="-1" role="dialog" aria-labelledby="Login">
     <a href="{% if ((url and url.qs and url.qs.login) or login_error_msg or login_done_msg) %}{{ url.pathname }}{% else %}#_{% endif %}" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
     <div class="modal-dialog" role="document">
         <div class="modal-content">

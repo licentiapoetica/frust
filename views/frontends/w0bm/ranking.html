@@ -15,7 +15,7 @@
             <tbody>
             {% for u in list %}
             <tr>
-                <td>{% if loop.index == 1 %}👑 {% endif %}{{ loop.index }}</td>
+                <td>{{ loop.index }}</td>
                 <td><a href="/user/{{ u.user|lower }}">{{ (u.display_name or u.user) }}</a></td>
                 <td>{{ u.count }}</td>
             </tr>
@@ -67,5 +67,4 @@
         {% endif %}
     </div>
 </div>
-{% include "frontends/w0bm/partials/footer.html" %}
 {% endblock %}

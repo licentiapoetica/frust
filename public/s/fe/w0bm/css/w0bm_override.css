@@ -78,7 +78,7 @@ span#w0bm_version {
 }
 
 .navbar-brand {
-  background-image: url(../img/w0bm_mosh_banner_by_marderchen.gif)!important;
+  background-image: none!important;
   background-repeat: no-repeat!important;
   background-size: contain!important;
   background-position: center!important;

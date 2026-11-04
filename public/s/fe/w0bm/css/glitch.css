@@ -7,7 +7,7 @@
 a.navbar-brand {
     content: "";
     background-size: contain;
-    background-image: url(../img/w0bm_mosh_banner_by_marderchen.gif);
+    background-image: none;
     background-repeat: no-repeat;
 }
 

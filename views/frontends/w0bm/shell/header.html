@@ -1,0 +1,18 @@
+{#- w0bm shell, top half: shared pages (settings, messages, admin, mod, …) open with this inside the
+    w0bm chrome. Contract: views/frontends/README.md. Same partials as layout.html. -#}
+<!DOCTYPE html>
+<html lang="{{ (lang or "en") }}" class="w0bm-nojs f0ck-shell">
+<head>
+    {% include "frontends/w0bm/partials/head-assets.html" %}
+    <title>{% if (page_meta is defined and page_meta.title) %}{{ page_meta.title }} - {% endif %}{{ domain }}</title>
+    <link rel="stylesheet" href="/s/fe/w0bm/css/w0bm-shell.css?v={{ mtime("/public/s/fe/w0bm/css/w0bm-shell.css") }}">
+    {% include "snippets/shell-head.html" %}
+</head>
+<body class="w0bm-shell-body{% if not (session and session.user) %} w0bm-guest{% endif %}">
+{% include "frontends/w0bm/partials/body-top.html" %}
+{% include "frontends/w0bm/partials/chrome-top.html" %}
+<div class="wrapper">
+    <div class="w0bm-main w0bm-main-profile">
+        <div class="no-js-mode f0ck-shell-chrome">nojs</div>
+        <div class="fucklaravel">
+<div class="f0ck-shell-page">

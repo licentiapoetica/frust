@@ -1,0 +1,109 @@
+/*
+ * w0bm frontend: the shared pages (settings, messages, admin, mod, …) in the w0bm shell
+ * (views/frontends/w0bm/shell/). The palette below styles them through /s/css/f0ck-shell.css;
+ * w0bm-specific fixes are scoped to .f0ck-shell-page. Contract: views/frontends/README.md
+ */
+html.f0ck-shell {
+    --fe-navbar-h: 50px;
+    --fe-accent: #1fb2b0;
+    --fe-accent-rgb: 31, 178, 176;
+    --fe-bg: #161618;
+    --fe-surface: #222222;
+    --fe-surface-2: #1c1c1d;
+    --fe-border: #353434;
+    --fe-text: #c8c8c8;
+    --fe-muted: #888888;
+    --fe-link: #1fb2b0;
+    --fe-font: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --fe-heading-font: Oswald, "Roboto", sans-serif;
+    --fe-input-bg: #1c1c1d;
+    --fe-radius: 0;
+    --w0bm-nav-bg: #222;
+}
+
+/* The theme picked in the Theme menu (early.js marks it on <html>). f0ckm.css paints the page from
+   --bg (= --fe-bg) and the navbar from !important rules, so each theme's own colours are set here.
+   Default (w0bmcustom) is the block above. */
+html.f0ck-shell[data-w0bm-theme="DARK"] {
+    --fe-bg: #000;
+    --fe-surface: rgba(0, 0, 0, 0.8);
+    --fe-surface-2: #0a0a0a;
+    --fe-border: #1c1c1c;
+    --fe-input-bg: #0a0a0a;
+    --w0bm-nav-bg: #000;
+}
+html.f0ck-shell[data-w0bm-theme="Chilledblue"],
+html.f0ck-shell[data-w0bm-theme="Glitch"] {
+    --fe-bg: #171d21;
+    --fe-surface: #21292f;
+    --fe-surface-2: #1a2126;
+    --fe-border: #131619;
+    --fe-input-bg: #21292f;
+    --w0bm-nav-bg: #21292f;
+}
+/* Epilepsie flashes the body background with an animation; f0ckm.css's !important page background
+   would block it, so on shell pages the flashing runs on a layer behind the page */
+html.f0ck-shell[data-w0bm-theme="Epilepsie"] body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    animation: epilepsie 0.1s infinite;
+}
+
+/* The page sits in w0bm's .fucklaravel column, below the static navbar */
+.w0bm-shell-body .fucklaravel {
+    padding-top: 15px;
+}
+.f0ck-shell-page {
+    min-height: calc(100vh - 160px);
+}
+.f0ck-shell-page h1,
+.f0ck-shell-page h2 {
+    color: #fff;
+    text-shadow: 1px 1px 1px #1fb2b0;
+}
+.f0ck-shell-page a:hover {
+    color: #00fbff;
+}
+/* f0ckm.css sets its sticky flex navbar with !important. Important declarations of a cascade layer
+   beat unlayered ones, so w0bm's navbar is put back from the layer f0ck-shell.css declares first. */
+@layer f0ck-shell-important {
+    .navbar.f0ck-shell-chrome {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1030 !important;
+        width: auto !important;
+        display: block !important;
+        flex-direction: row !important;
+        align-items: normal !important;
+        flex-wrap: nowrap !important;
+        flex-shrink: 1 !important;
+        min-height: 50px !important;
+        background: var(--w0bm-nav-bg) !important;
+    }
+    .f0ck-shell-chrome .navbar-brand {
+        display: flex !important;
+        align-items: center !important;
+        height: 50px !important;
+        flex-shrink: 1 !important;
+    }
+    @media (max-width: 768px) {
+        .f0ck-shell-chrome .navbar-nav {
+            display: block !important;
+        }
+    }
+    @media (max-width: 599px) {
+        #bg.f0ck-shell-chrome {
+            width: 100% !important;
+        }
+    }
+}
+
+/* f0ck-shell.css colours every link in the page with --fe-link; links on an accent background
+   need the dark text f0ckm.css gives them */
+.f0ck-shell-page .settings .settings-frontend-link:hover,
+.f0ck-shell-page .settings .settings-frontend-link.active {
+    color: #161618;
+}

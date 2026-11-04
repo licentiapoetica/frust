@@ -6,7 +6,11 @@
 /* ── Layout (inline styles of layout.blade.php / profilelayout.blade.php) ───────────────── */
 .w0bm-main {
     width: auto;
-    overflow: hidden;
+    /* the original's overflow: hidden put the content beside the floated sidebar; flow-root does
+       that without making it a scroll container (which broke sticky parts like the settings
+       quick-nav), clip still hides what spills over */
+    display: flow-root;
+    overflow: clip;
     position: relative;
 }
 .w0bm-main.LooLOut {
@@ -98,11 +102,9 @@ html.w0bm-nojs .w0bm-dropdown:focus-within > .dropdown-menu {
     background-color: #1fb2b0;
     color: #161618;
 }
-ul.navbar-right > li > a > span.badge.message-badge {
-    visibility: hidden;
-}
-ul.navbar-right > li > a > span.badge.message-badge.w0bm-has-count {
-    visibility: visible;
+/* Shown when there is a count: w0bm.js sets [hidden], messages.js (DMs) sets display */
+ul.navbar-right > li > a > span.badge.message-badge[hidden] {
+    display: none;
 }
 .navbar-nav > li > .dropdown-menu > li > a > .fa {
     width: 1.2em;
@@ -181,8 +183,12 @@ a.w0bm-forgot {
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    margin-bottom: 10px;
+    margin-bottom: 9px; /* the arrow's tip (9.9px below the box) touches the icon */
     min-width: 160px;
+    /* as wide as its content: inside the small icon host the shrink-to-fit width would be tiny */
+    width: max-content;
+    max-width: min(460px, 90vw);
+    overflow-wrap: anywhere;
     text-align: left;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 14px;
@@ -223,6 +229,12 @@ a.w0bm-forgot {
     transform: translateX(-50%);
     z-index: 1060;
     max-width: 90vw;
+}
+/* info / download popovers: as wide as their content (bootstrap caps .popover at 276px) */
+.popover.w0bm-target-popover {
+    width: max-content;
+    max-width: min(460px, 90vw);
+    overflow-wrap: anywhere;
 }
 .w0bm-target-popover .popover-title .close {
     font-size: 18px;
@@ -381,8 +393,16 @@ a.w0bm-iconbtn {
     align-items: center;
     justify-content: center;
 }
-.w0bm-flash-stage.w0bm-flash-loaded .w0bm-flash-fallback {
+/* With JS the player takes the whole stage; the download link only shows without JS or when
+   the player failed to load */
+.w0bm-flash-stage.w0bm-flash-js .w0bm-flash-fallback {
     display: none;
+}
+.w0bm-flash-stage > f0ck-flash {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
 }
 .w0bm-download-stage {
     position: absolute;
@@ -456,27 +476,6 @@ a.w0bm-iconbtn {
     bottom: 0;
     font-size: 10px;
     text-shadow: 1px 1px 1px #000;
-}
-/* the 3px progress line under the player (w0bmscript.js) */
-.w0bm-progressline {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: 2;
-}
-.w0bm-progressline > div {
-    height: 100%;
-    width: 100%;
-    background-color: rgba(31, 178, 176, 0.4);
-    transform: translateX(calc(var(--progress, 0) * 100% - 100%));
-    will-change: transform;
-}
-.w0bm-media.w0bm-has-progress {
-    margin-bottom: 3px;
 }
 /* video.js look for the native <video> (w0bm.js builds the same DOM as video.js 5) */
 .video-js .vjs-progress-holder .vjs-play-progress {
@@ -698,14 +697,28 @@ tr[data-thumb] > td:first-child {
 tr[data-thumb]:hover .w0bm-rowthumb {
     display: block;
 }
-
-/* ── Footer ────────────────────────────────────────────────────────────────────────────── */
-.w0bm-footer {
-    position: relative;
-    margin-top: 20px;
+/* with JavaScript the thumbnail follows the mouse instead (w0bm.js, #w0bm-hoverthumb) */
+html:not(.w0bm-nojs) tr[data-thumb]:hover .w0bm-rowthumb {
+    display: none;
 }
-.w0bm-footer .futter {
-    text-align: center;
+#w0bm-hoverthumb {
+    position: fixed;
+    left: var(--thumb-x, 0);
+    top: var(--thumb-y, 0);
+    z-index: 1100;
+    border: 1px white solid;
+    box-shadow: 5px 5px 7px 0 rgba(0, 0, 0, 0.75);
+    background-color: #181818;
+    pointer-events: none;
+}
+#w0bm-hoverthumb[hidden] {
+    display: none;
+}
+#w0bm-hoverthumb img {
+    display: block;
+    width: 128px;
+    height: 128px;
+    object-fit: cover;
 }
 
 /* ── Flash messages (fixed, for pages without the sidebar's flash container) ────────────── */
@@ -952,8 +965,64 @@ span#halls-user > a {
     color: #555;
     margin: 0 6px;
 }
-#w0bm-progress .progress-bar {
+/* Progress of an upload: its own full-width row above the button (w0bm.js sets --progress 0…1) */
+.w0bm-upload-status {
+    display: block;
+    clear: both;
+    white-space: normal;
+}
+#w0bm-progress {
+    display: block;
+    width: 100%;
+    margin: 5px 0;
+    overflow: hidden;
+}
+#w0bm-progress > .progress-bar {
+    float: none;
+    display: block;
+    height: 100%;
     width: calc(var(--progress, 0) * 100%);
+    transition: width .15s linear;
+}
+.w0bm-upload-status .upload-info {
+    display: block;
+    text-align: center;
+}
+#btn-upload.w0bm-btn-upload {
+    display: block;
+    clear: both;
+    /* the laz0r (span#laz0r-fire, absolutely positioned) stays inside the button */
+    position: relative;
+    overflow: hidden;
+    height: 50px;
+    padding: 0 6px;
+}
+/* FIRE THE LAZ0R (w0bmcustom.css), sized for this 50px button: the shoop head on the left, the beam
+   leaving its mouth, the label centred. Also while uploading (the button is disabled but hovered). */
+#btn-upload.w0bm-btn-upload:hover {
+    background-size: auto 44px;
+    background-position: 6px center;
+}
+#btn-upload.w0bm-btn-upload:hover > span#laz0r-fire {
+    left: 26px;
+    top: 17px;
+    height: 12px;
+    width: calc(100% - 32px);
+    animation-name: w0bm-shoop;
+}
+#btn-upload.w0bm-btn-upload:hover > span.laz0r {
+    line-height: 50px;
+}
+#btn-upload.w0bm-btn-upload > span.laz0r {
+    position: relative;
+    z-index: 1;
+}
+@keyframes w0bm-shoop {
+    0% { transform: translateY(0); }
+    2% { transform: translateY(1px); }
+    3% { transform: translateY(3px); }
+    10% { transform: translateY(1px); }
+    100% { transform: translateY(0); }
 }
 
 /* Settings */
@@ -1000,6 +1069,39 @@ span#halls-user > a {
 }
 .w0bm-tabs {
     margin-bottom: 10px;
+}
+/* active tab in w0bm's accent, not the bootswatch blue */
+.w0bm-tabs > li.active > a,
+.w0bm-tabs > li.active > a:hover,
+.w0bm-tabs > li.active > a:focus {
+    background-color: #1fb2b0;
+    border-color: #1fb2b0;
+    color: #161618;
+}
+.w0bm-tabs > li > a:hover {
+    border-color: #1fb2b0;
+}
+/* notifications: "Read all" centred in the panel heading (w0bmcustom.css pulls .readall up by 20px
+   for the original floated layout) */
+.w0bm-notif .panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.w0bm-notif .panel-heading .readall {
+    margin-top: 0;
+}
+.w0bm-notif .readall:hover,
+.w0bm-notif .readall:focus {
+    background-color: #1fb2b0;
+    border-color: #1fb2b0;
+    color: #161618;
+}
+/* unread DMs next to the bell */
+.w0bm-dm-badge {
+    background-color: #1fb2b0;
+    color: #161618;
 }
 label.w0bm-strict {
     float: right;
@@ -1065,4 +1167,748 @@ html:not(.w0bm-nojs) .w0bm-nojs-only {
     display: block;
     margin: 3px 0;
     font-weight: normal;
+}
+
+/* Site title in the navbar (instead of the w0bm logo), glitched by /s/js/glitchfx.js */
+.navbar-brand.w0bm-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The themes (DARK, Chilledblue, Glitch, ...) size the brand for the old logo image: a fixed-size
+   pill with border, shadow and offsets. The title is text, so keep its box plain and centred
+   in the 50px bar whatever theme is active. */
+.navbar .navbar-header a.navbar-brand.w0bm-brand {
+    width: auto !important;
+    height: 50px !important;
+    top: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: none !important;
+    font-size: inherit !important;
+    opacity: 1 !important;
+}
+
+/* Same spot in every theme: the navbar header flush with the left edge (the themes add a
+   gap there, Glitch paints a gradient block), the title 12px inside it */
+.navbar > .container-fluid {
+    padding-left: 0 !important;
+}
+
+.navbar > .container-fluid > .navbar-header {
+    margin-left: 0 !important;
+}
+
+.navbar > .container-fluid .navbar-header a.navbar-brand.w0bm-brand {
+    margin-left: 0 !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+}
+
+.w0bm-brand-text {
+    display: inline-block;
+    padding: 0 4px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 26px;
+    font-weight: bold;
+    line-height: 1;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #1fb2b0;
+    white-space: nowrap;
+}
+
+/* Brand image uploaded in the admin panel (instead of the site title). The themes hide or
+   resize .navbar-brand images for the old logo, so pin it here. */
+.navbar .navbar-header a.navbar-brand.w0bm-brand > img.w0bm-brand-img {
+    display: block !important;
+    visibility: visible !important;
+    height: 40px !important;
+    width: auto !important;
+    max-width: 240px !important;
+    margin-top: 0 !important;
+}
+
+.navbar .navbar-header a.navbar-brand.w0bm-brand > [hidden] {
+    display: none !important;
+}
+/* unrated item: "?" in place of the rating tag */
+.label.w0bm-rating-unset {
+    background-color: #555;
+    color: #fff;
+}
+.label.w0bm-rating-unset.w0bm-can-rate {
+    cursor: pointer;
+}
+/* message of the day above the comment form */
+.panel.w0bm-motd {
+    margin-bottom: 5px;
+}
+/* no line under the message (the theme files set .panel.panel-default borders) */
+.panel.panel-default.w0bm-motd {
+    border-bottom: 0;
+}
+/* the comment form (or "log in") sits right under it */
+.panel.w0bm-motd + #commentForm,
+.panel.w0bm-motd + #commentForm .sees.panel,
+.panel.w0bm-motd + .panel {
+    margin-top: 0;
+}
+.w0bm-motd .panel-body {
+    padding: 8px 10px;
+    color: #fff;
+    word-wrap: break-word;
+}
+/* info / warning flash messages in the same w0bm look as .alert-success / .alert-danger
+   (w0bmcustom.css only styles those two), in the accent colour */
+.flash-inner .alert-info,
+.flash-inner .alert-warning {
+    background-color: #0f6b6a;
+    border-color: #1fb2b0;
+    box-shadow: 0 0 5px #1fb2b0;
+    color: #fff;
+    text-align: center;
+    font-weight: bold;
+    font-family: vcr;
+    text-transform: uppercase;
+}
+.flash-inner .alert-warning {
+    background-color: #8a6d00;
+    border-color: #ffd21f;
+    box-shadow: 0 0 5px #ffd21f;
+}
+/* comments sidebar hidden with C / the comments button (class set in <head> by early.js) */
+html.w0bm-comments-off #sidebar.aside {
+    display: none !important;
+}
+/* Popover arrow without bootstrap's 1px outline seam: a square in the popover's own background
+   (every theme), turned 45° and overlapping the box edge */
+.popover.top > .arrow {
+    border: 0;
+    width: 14px;
+    height: 14px;
+    bottom: -7px;
+    left: 50%;
+    margin-left: 0;
+    background: inherit;
+    /* the popover's colour only: a gradient (Glitch) on this small square would show as a diamond;
+       the colour matches the box's bottom edge */
+    background-image: none;
+    transform: translateX(-50%) rotate(45deg);
+    /* only the half below the box edge: the turned square's right, bottom and left corners */
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.popover.top > .arrow::after {
+    display: none;
+}
+/* "Favorited by" popover on the heart (item.html), shown by CSS on hover / keyboard focus */
+.w0bm-favpop-host {
+    position: relative;
+}
+.w0bm-favpop-host > .w0bm-favpop {
+    display: none;
+    top: auto;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 9px;
+    min-width: 120px;
+    width: max-content;
+    max-width: min(360px, 90vw);
+    overflow-wrap: anywhere;
+    text-align: left;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+}
+.w0bm-favpop-host:hover > .w0bm-favpop:not([hidden]),
+.w0bm-favpop-host:focus-within > .w0bm-favpop:not([hidden]) {
+    display: block;
+}
+/* bridge the gap to the heart, so the mouse can move into the popover to click a name */
+.w0bm-favpop-host > .w0bm-favpop::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -12px;
+    height: 12px;
+}
+/* Tooltip arrow without a seam: bootstrap's 5px border triangle gets an anti-aliased edge against
+   the box (the tooltip sits on half pixels when centred); a black square turned 45° overlapping
+   the box instead (same colour as .tooltip-inner) */
+.tooltip.top > .tooltip-arrow {
+    border: 0;
+    width: 8px;
+    height: 8px;
+    bottom: 1px;
+    left: 50%;
+    margin-left: 0;
+    background-color: #000;
+    transform: translateX(-50%) rotate(45deg);
+}
+/* timestamps with the full date on hover */
+time.timeago.w0bm-tip-host {
+    cursor: pointer;
+}
+/* Navbar dropdowns (Theme, Layout, user menu): solid background (the themes make them
+   translucent), in the active theme's panel colour (early.js marks the theme on <html>) */
+.navbar .dropdown-menu {
+    background-color: #1c1c1d;
+    background-image: none;
+}
+html[data-w0bm-theme="DARK"] .navbar .dropdown-menu {
+    background-color: #0a0a0a;
+}
+html[data-w0bm-theme="Chilledblue"] .navbar .dropdown-menu,
+html[data-w0bm-theme="Glitch"] .navbar .dropdown-menu {
+    background-color: #21292f;
+}
+/* hovered / current entry in the w0bm accent, not Bootstrap Cyborg's blue (style.css) */
+.dropdown-menu > li > a:hover,
+.dropdown-menu > li > a:focus,
+.dropdown-menu > .active > a,
+.dropdown-menu > .active > a:hover,
+.dropdown-menu > .active > a:focus {
+    background-color: #1fb2b0;
+}
+
+/* Search modal: the search row like the theme's own search field (.suchleiste) instead of the
+   default grey band (only DARK restyles it itself) */
+html[data-w0bm-theme="Glitch"] .searchbar {
+    background: transparent;
+}
+html[data-w0bm-theme="Glitch"] .suchleiste_video {
+    height: 40px;
+    background: #13171a none;
+    border: 1px solid #8080804a;
+    border-radius: 15px 0 0 15px;
+    color: #ccc;
+}
+html[data-w0bm-theme="Glitch"] .suchleiste_video:hover,
+html[data-w0bm-theme="Glitch"] .suchleiste_video:focus {
+    background: linear-gradient(to top, #0a0a0a 0%, #326558a6 100%);
+}
+html[data-w0bm-theme="Glitch"] .suchbutton_video {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #8080804a;
+    border-left: 0;
+    border-radius: 0 15px 15px 0;
+    background: linear-gradient(to top, #0a0a0a 0%, #326558a6 100%);
+}
+html[data-w0bm-theme="Chilledblue"] .searchbar {
+    background: #1a2126;
+}
+html[data-w0bm-theme="Chilledblue"] .suchleiste_video {
+    background: #21292f none;
+    border-color: #131619;
+}
+/* Navbar dropdowns right under their button: w0bmcustom.css and the themes shift every
+   .dropdown-menu with margin: -15px 15px 0 !important (up into the navbar, off to the right) */
+.navbar .navbar-nav > .dropdown > .dropdown-menu {
+    margin: 0 !important;
+    top: 100%;
+}
+@media (min-width: 768px) {
+    .navbar .navbar-nav > .dropdown > .dropdown-menu {
+        left: 0;
+        right: auto;
+    }
+    .navbar .navbar-right > .dropdown > .dropdown-menu {
+        left: auto;
+        right: 0;
+    }
+}
+/* [+Add Tag] opens the tag form (checkbox toggle); w0bmcustom.css only hides it on small screens,
+   so on desktop it took up blank space under the tags */
+#tag-add-toggle {
+    display: none;
+}
+#tag-add-toggle + #tag-add {
+    display: none;
+}
+#tag-add-toggle:checked + #tag-add {
+    display: block;
+}
+/* Navbar in the same colour as the panels under it (the MOTD), per theme, fully opaque */
+nav.navbar.navbar-inverse {
+    background-color: #222 !important;
+    background-image: none !important;
+}
+html[data-w0bm-theme="DARK"] nav.navbar.navbar-inverse {
+    background-color: #000 !important;
+}
+html[data-w0bm-theme="Chilledblue"] nav.navbar.navbar-inverse,
+html[data-w0bm-theme="Glitch"] nav.navbar.navbar-inverse {
+    background-color: #21292f !important;
+}
+/* passkey login under the login form */
+.w0bm-passkey {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #353434;
+    text-align: center;
+}
+.w0bm-passkey-or {
+    display: block;
+    margin-bottom: 6px;
+    color: #888;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+.w0bm-passkey-btn {
+    width: 100%;
+}
+.w0bm-passkey-error {
+    margin-top: 8px;
+    text-align: left;
+}
+.w0bm-anon-btn {
+    width: 100%;
+    margin-top: 6px;
+}
+
+/* "Login as anonymous" dialogs (snippets/anon-login.html, shared with f0ckm; passkey.js shows them
+   with display: flex) in the w0bm look. Their icons are Font Awesome 6 (w0bm has 4): hidden. */
+#anon-setup-modal,
+#privacy-consent-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1060;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+#privacy-consent-modal {
+    z-index: 1070;
+}
+#anon-setup-modal i[class*="fa-solid"],
+#privacy-consent-modal i[class*="fa-solid"] {
+    display: none;
+}
+#anon-setup-modal .navbar-anon-modal-box,
+#privacy-consent-modal .pc-content {
+    position: relative;
+    width: min(420px, 92vw);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    background: #222;
+    border: 1px solid #1fb2b0;
+    box-shadow: 0 0 9px rgba(31, 178, 176, 0.4);
+    color: #c8c8c8;
+}
+#privacy-consent-modal .pc-content {
+    width: min(640px, 94vw);
+}
+#anon-setup-modal .navbar-anon-modal-close,
+#privacy-consent-modal .pc-close {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    background: none;
+    border: 0;
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    opacity: 0.6;
+    cursor: pointer;
+}
+#anon-setup-modal .navbar-anon-modal-close:hover,
+#privacy-consent-modal .pc-close:hover {
+    opacity: 1;
+}
+#anon-setup-modal .lm-panel {
+    padding: 20px;
+}
+#anon-setup-modal .lm-title,
+#privacy-consent-modal .pc-header h3 {
+    margin: 0 0 15px;
+    font-family: Oswald, sans-serif;
+    font-size: 22px;
+    color: #fff;
+    text-shadow: 1px 1px 1px #1fb2b0;
+}
+#anon-setup-modal .lm-check {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-weight: normal;
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+#anon-setup-modal .lm-check-box {
+    display: none;
+}
+#anon-setup-modal .lm-link,
+#privacy-consent-modal a {
+    color: #1fb2b0;
+}
+#anon-setup-modal .lm-btn,
+#privacy-consent-modal .pc-accept {
+    width: 100%;
+    padding: 6px 12px;
+    background: #222;
+    border: 1px solid #1fb2b0;
+    color: #fff;
+    cursor: pointer;
+}
+#anon-setup-modal .lm-btn:hover:not(:disabled),
+#privacy-consent-modal .pc-accept:hover:not(:disabled) {
+    background: #1fb2b0;
+    color: #161618;
+}
+#anon-setup-modal .lm-btn:disabled,
+#privacy-consent-modal .pc-accept:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+#anon-setup-modal .lm-error {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background-color: #cc000099;
+    border: 1px solid #ff002ac7;
+    color: #fff;
+}
+#anon-setup-modal .lm-footer {
+    margin: 12px 0 0;
+    text-align: center;
+}
+#anon-setup-modal .lm-textbtn {
+    background: none;
+    border: 0;
+    color: #888;
+    text-decoration: underline;
+    cursor: pointer;
+}
+#anon-setup-modal .lm-textbtn:hover {
+    color: #1fb2b0;
+}
+#privacy-consent-modal .pc-header {
+    padding: 15px 20px 0;
+}
+#privacy-consent-modal .pc-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 20px;
+    border-top: 1px solid #353434;
+    border-bottom: 1px solid #353434;
+}
+#privacy-consent-modal .pc-footer {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 20px;
+}
+#privacy-consent-modal .pc-hint {
+    flex: 1;
+    color: #888;
+    font-size: 12px;
+}
+#privacy-consent-modal .pc-accept {
+    width: auto;
+}
+/* the privacy text in the consent dialog (privacy.css) in w0bm's accent */
+#privacy-consent-modal {
+    --accent: #1fb2b0;
+    --text-color: #c8c8c8;
+    --text-muted: #888;
+}
+/* Sidebar (comments, MOTD, tags) solid, so the background canvas doesn't show through the gaps
+   between its panels; same colour as the navbar, per theme */
+#sidebar.aside {
+    background-color: #222 !important;
+}
+html[data-w0bm-theme="DARK"] #sidebar.aside {
+    background-color: #000 !important;
+}
+html[data-w0bm-theme="Chilledblue"] #sidebar.aside,
+html[data-w0bm-theme="Glitch"] #sidebar.aside {
+    background-color: #21292f !important;
+}
+/* Disabled primary buttons (e.g. Login while it is sending) in the w0bm look, not bootswatch blue */
+.btn-primary.disabled,
+.btn-primary[disabled],
+.btn-primary.disabled:hover,
+.btn-primary[disabled]:hover,
+.btn-primary.disabled:focus,
+.btn-primary[disabled]:focus,
+.btn-primary.disabled:active,
+.btn-primary[disabled]:active,
+fieldset[disabled] .btn-primary {
+    color: #ffffff;
+    background-color: #222222;
+    border-color: #1fb2b0;
+}
+
+/* Thin scrollbars everywhere (sidebar comments, modals, lists) instead of the browser's thick ones.
+   Chrome ignores ::-webkit-scrollbar once scrollbar-width/-color are set (the themes set them), and its
+   "thin" standard scrollbar keeps the arrow buttons: so ::-webkit-scrollbar there, the standard
+   properties elsewhere (Firefox). */
+@supports selector(::-webkit-scrollbar) {
+    * {
+        scrollbar-width: auto !important;
+        scrollbar-color: auto !important;
+    }
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: rgba(31, 178, 176, 0.6);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #1fb2b0;
+    }
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-track-piece,
+    ::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-button {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+}
+@supports not selector(::-webkit-scrollbar) {
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(31, 178, 176, 0.6) transparent;
+    }
+}
+/* Uploading: the shoop fires and its laz0r IS the progress bar (w0bm.js sets --progress 0…1 on the
+   button). The separate bar stays for screen readers only. */
+#w0bm-progress {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+#btn-upload.w0bm-btn-upload.w0bm-firing,
+#btn-upload.w0bm-btn-upload.w0bm-firing:hover,
+#btn-upload.w0bm-btn-upload.w0bm-firing[disabled] {
+    opacity: 1;
+    cursor: progress;
+    background-color: #222;
+    background-image: url(../img/shoop.png);
+    background-repeat: no-repeat;
+    background-size: auto 44px;
+    background-position: 6px center;
+}
+#btn-upload.w0bm-btn-upload.w0bm-firing > span#laz0r-fire,
+#btn-upload.w0bm-btn-upload.w0bm-firing:hover > span#laz0r-fire {
+    position: absolute;
+    left: 26px;
+    top: 17px;
+    height: 12px;
+    width: calc((100% - 32px) * var(--progress, 0));
+    background: aqua;
+    box-shadow: -1px 0 3px 1px white;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    z-index: 0;
+    /* uploads to a fast server report progress only once or twice: the beam still visibly shoots
+       across (and follows the real progress on slow uploads) */
+    transition: width .6s ease-out;
+    animation: w0bm-shoop 0.1s infinite;
+}
+#btn-upload.w0bm-btn-upload.w0bm-firing > span.laz0r {
+    position: relative;
+    z-index: 1;
+    font-size: 39px;
+    line-height: 50px;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-shadow: 0 0 5px #00ffff;
+    font-family: vcr;
+    color: #151013;
+}
+/* tag suggestions under a tag field (w0bm.js tagsinput) */
+.bootstrap-tagsinput {
+    position: relative;
+}
+.w0bm-tag-suggest {
+    top: 100%;
+    left: 0;
+    min-width: 200px;
+    max-height: 260px;
+    overflow-y: auto;
+    margin: 2px 0 0 !important;
+    background-color: #1c1c1d;
+    border: 1px solid #1fb2b0;
+    z-index: 1070;
+}
+.w0bm-tag-suggest.w0bm-open {
+    display: block;
+}
+.w0bm-tag-suggest > li > a {
+    color: #c8c8c8;
+}
+.w0bm-tag-suggest > li.active > a,
+.w0bm-tag-suggest > li > a:hover {
+    background-color: #1fb2b0;
+    color: #161618;
+}
+
+/* a new upload arriving live on the main grid fades in */
+.main-item {
+    transition: opacity .4s ease, transform .4s ease;
+}
+.main-item.w0bm-new-item {
+    opacity: 0;
+    transform: scale(0.9);
+}
+/* the navbar stays at the top while scrolling */
+nav.navbar.navbar-static-top {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+/* stats page: the label / link column on the left reads left-aligned */
+table.w0bm-ranking > tbody > tr > td:first-child,
+table.w0bm-ranking > thead > tr > th:first-child {
+    text-align: left;
+}
+/* [+Add Tag] sits at the bottom of the sidebar, with the tag list right below: its suggestions open
+   upwards, over the links of the same row */
+#tag-add .w0bm-tag-suggest {
+    top: auto;
+    bottom: 100%;
+    margin: 0 0 2px !important;
+}
+/* the tag box clips its content (overflow: hidden); while suggestions are open they must show */
+.bootstrap-tagsinput:has(> .w0bm-tag-suggest.w0bm-open) {
+    overflow: visible;
+}
+
+/* ── Halls dialog ("+" in the item bar, partials/hallmodal.html) ────────────────────────── */
+#w0bm-hallbtn {
+    padding: 0 5px;
+}
+.modal-body.w0bm-hallmodal-body {
+    display: block;
+}
+.w0bm-hallform + .w0bm-hallform {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #353434;
+}
+.w0bm-hallmodal-body label {
+    display: block;
+    font-family: Oswald, sans-serif;
+    font-weight: normal;
+    color: #1fb2b0;
+    margin-bottom: 5px;
+}
+.w0bm-hallmodal-body label.w0bm-hall-newlabel {
+    margin-top: 10px;
+    color: #888;
+}
+.w0bm-hallrow {
+    display: flex;
+    gap: 5px;
+}
+.w0bm-hallrow > select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.w0bm-hallrow > .btn {
+    flex: 0 0 auto;
+}
+.w0bm-hallrow > .btn[hidden],
+.w0bm-dialog [hidden] {
+    display: none !important;
+}
+.w0bm-hall-mylink {
+    display: inline-block;
+    margin-top: 15px;
+}
+
+/* ── Confirm / reason dialog (w0bmDialog in w0bm.js, template in partials/body-end.html) ─── */
+.w0bm-dialog .modal-dialog {
+    max-width: 420px;
+}
+.modal-body.w0bm-dialog-body {
+    display: block;
+}
+.w0bm-dialog-text {
+    margin: 0 0 10px;
+    overflow-wrap: anywhere;
+}
+.w0bm-dialog-text:last-child {
+    margin-bottom: 0;
+}
+.w0bm-dialog-label {
+    display: block;
+    font-weight: normal;
+    margin-bottom: 5px;
+}
+
+/* Emoji picker: one tile per emoji, side by side (the themes' flex-grow stretched a lone emoji
+   across the whole box) */
+#child.emojis > .w0bm_emoji_anchor {
+    flex: 0 0 auto;
+    align-items: center;
+    min-width: 60px;
+    height: 60px;
+}
+#child.emojis > .w0bm_emoji_anchor > .comment_emoji_small {
+    max-width: 50px;
+    max-height: 50px;
+    object-fit: contain;
+}
+/* the box only grows as tall as its emojis need (the theme gave it a fixed 15rem), and scrolls
+   past that */
+div#parent.emojis-box {
+    height: auto;
+    max-height: 15rem;
+    overflow-y: auto;
+}
+
+/* Comment toolbar: Post at the top left, the effect buttons and the emoji in one row on the right
+   (a second row when the sidebar is narrow).
+   The buttons show their effect at text size (the full [rb]/[reich] size didn't fit with [glitch]
+   added and pushed the emoji onto a second line, stretching Post with it). */
+#comment_tools.commentform-panel-footer {
+    align-items: flex-start;
+    gap: 10px;
+}
+#comment_tools > .btn {
+    flex: 0 0 auto;
+}
+#comment_tools > .textmodifierss {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px 8px;
+    min-width: 0;
+    align-self: flex-start;
+}
+#comment_tools > .textmodifierss > * {
+    white-space: nowrap;
+    line-height: 1.5;
+}
+#comment_tools > .textmodifierss > .rainbow {
+    font-size: 1em;
+    letter-spacing: 0.08em;
+}
+#comment_tools > .textmodifierss > .reich {
+    font-size: 1.1em;
+}
+#comment_tools > .textmodifierss > .emoji-shit {
+    font-size: 1.15em;
+}
+#comment_tools > .textmodifierss > .spoiler {
+    padding: 0 4px;
 }

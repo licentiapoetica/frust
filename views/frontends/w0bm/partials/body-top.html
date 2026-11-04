@@ -1,0 +1,17 @@
+{#- Start of <body> of every w0bm page: page data for w0bm.js, the filter modal (layout.html and shell/header.html) -#}
+{%- set loggedin = session and session.user -%}
+{%- set is_mod = loggedin and (session.admin or session.is_moderator) -%}
+<script type="application/json" id="w0bm-data">{{ {
+    "user": (session.user if loggedin else none),
+    "csrf": (csrf_token or ""),
+    "is_mod": (is_mod and true or false),
+    "comment_max_length": (comment_max_length or none),
+    "allow_comment_deletion": (allow_comment_deletion and true or false),
+    "nsfl": (enable_nsfl and true or false),
+    "mode": (mode or 0),
+    "frontend": frontend
+}|tojson }}</script>
+<script type="application/json" id="w0bm-images">{{ (allowed_comment_images_json or "[]")|safe }}</script>
+{% if loggedin %}
+    {% include "frontends/w0bm/partials/filterselect.html" %}
+{% endif %}

@@ -1,0 +1,60 @@
+{#- The "+" in the item bar: put the item into a site hall (staff) or one of your own halls.
+    Plain forms, so it works without JavaScript; w0bm.js sends them with fetch and keeps the ✓ marks
+    and the Remove buttons in sync. Lists: hall_choices / my_hall_choices (server/src/routes/index.rs) -#}
+{% set in_halls = (halls_slugs or "").split(",") %}
+{% set in_my_halls = (user_halls_slugs or "").split(",") %}
+<div class="modal fade" id="w0bm-hallmodal" tabindex="-1" role="dialog" aria-labelledby="w0bm-hallmodal-title">
+    <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                <h4 class="modal-title" id="w0bm-hallmodal-title">Add {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }} to a hall</h4>
+            </div>
+            <div class="modal-body w0bm-hallmodal-body">
+                {% if hall_choices is defined %}
+                <form method="post" action="/mod/halls/add" class="w0bm-hallform" data-kind="site">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="id" value="{{ item.id }}">
+                    {% include "frontends/w0bm/partials/back.html" %}
+                    <label for="w0bm-hall-site">Site hall</label>
+                    <div class="w0bm-hallrow">
+                        <select class="form-control" id="w0bm-hall-site" name="hall" required>
+                            <option value="">-- Choose a hall --</option>
+                            {% for h in hall_choices %}
+                            <option value="{{ h.slug }}" data-name="{{ h.name }}" data-in="{{ ("1" if h.slug in in_halls else "0") }}">{{ h.name }}{% if h.slug in in_halls %} ✓{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary" data-hall-add>Add</button>
+                        <button type="submit" class="btn btn-danger" formaction="/mod/halls/remove" data-hall-remove>Remove</button>
+                    </div>
+                </form>
+                {% endif %}
+                {% if my_hall_choices is defined %}
+                <form method="post" action="/api/v2/me/hall-items" class="w0bm-hallform" data-kind="mine">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                    {% include "frontends/w0bm/partials/back.html" %}
+                    <label for="w0bm-hall-mine">My halls</label>
+                    <div class="w0bm-hallrow">
+                        <select class="form-control" id="w0bm-hall-mine" name="hall">
+                            <option value="">{{ ("-- Choose a hall --" if my_hall_choices else "-- No halls yet --") }}</option>
+                            {% for h in my_hall_choices %}
+                            <option value="{{ h.slug }}" data-name="{{ h.name }}" data-in="{{ ("1" if h.slug in in_my_halls else "0") }}">{{ h.name }}{% if h.is_private %} (private){% endif %}{% if h.slug in in_my_halls %} ✓{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary" name="action" value="add" data-hall-add>Add</button>
+                        <button type="submit" class="btn btn-danger" name="action" value="remove" data-hall-remove>Remove</button>
+                    </div>
+                    <label for="w0bm-hall-new" class="w0bm-hall-newlabel">…or put it in a new hall</label>
+                    <input class="form-control" type="text" id="w0bm-hall-new" name="new_name" maxlength="100" placeholder="Name of the new hall" autocomplete="off">
+                </form>
+                {% endif %}
+                <a class="w0bm-hall-mylink" href="/user/{{ (session.user or "")|lower }}/halls">Manage my halls</a>
+            </div>
+            <div class="modal-footer">
+                <a href="#_" class="btn btn-primary" data-dismiss="modal">Close</a>
+            </div>
+        </div>
+    </div>
+</div>

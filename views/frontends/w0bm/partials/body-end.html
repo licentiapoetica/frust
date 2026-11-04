@@ -1,0 +1,28 @@
+{#- End of <body> of every w0bm page, before snippets/frontend-scripts.html: flash box, w0bm.js (registers window.f0ckFrontend), captcha popup -#}
+<div id="w0bm-flash" class="flashcontainer w0bm-flash-global f0ck-shell-chrome"><div class="flash-inner">{% if nojs_flash %}<div class="alert alert-{{ ("success" if nojs_flash.kind == "success" else "danger") }} alert-dismissable w0bm-nojs-flash" role="alert"><a href="#_" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></a>{{ nojs_flash.text }}</div>{% endif %}</div></div>
+{#- w0bm.js asks for confirmations and delete reasons with this dialog (w0bmDialog), not the browser's confirm()/prompt() -#}
+<template id="w0bm-dialog-tpl">
+<div class="modal fade w0bm-dialog" tabindex="-1" role="dialog">
+    <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+    <div class="modal-dialog" role="document">
+        <form class="modal-content">
+            <div class="modal-header">
+                <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                <h4 class="modal-title"></h4>
+            </div>
+            <div class="modal-body w0bm-dialog-body">
+                <p class="w0bm-dialog-text"></p>
+                <label class="w0bm-dialog-label" for="w0bm-dialog-input" hidden></label>
+                <input class="form-control w0bm-dialog-input" id="w0bm-dialog-input" type="text" maxlength="500" autocomplete="off" hidden>
+            </div>
+            <div class="modal-footer">
+                <a href="#_" class="btn btn-primary" data-dismiss="modal">Cancel</a>
+                <button type="submit" class="btn btn-danger w0bm-dialog-ok">OK</button>
+            </div>
+        </form>
+    </div>
+</div>
+</template>
+<script src="/s/fe/w0bm/js/w0bm.js?v={{ mtime("/public/s/fe/w0bm/js/w0bm.js") }}"></script>
+<script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>
+{% include "snippets/cap-gate.html" %}

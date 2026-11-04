@@ -12,7 +12,12 @@
 
   const sheets = () => Array.from(document.querySelectorAll('link[rel~="stylesheet"][title]'));
 
+  // Active theme as <html data-w0bm-theme>, so CSS can follow it (the shared pages' palette,
+  // public/s/fe/w0bm/css/w0bm-shell.css)
+  const markTheme = (title) => { document.documentElement.dataset.w0bmTheme = title || 'w0bmcustom'; };
+
   function setActiveStyleSheet(title) {
+    markTheme(title);
     for (const link of sheets()) {
       link.disabled = true;
       if (link.getAttribute('title') === title) link.disabled = false;
@@ -30,6 +35,13 @@
   }
 
   window.w0bmStyle = { set: chooseStyle };
+  markTheme(readCookie('style'));
+
+  // Comments sidebar hidden with C / the comments button: set before the page is drawn, so it
+  // doesn't flash on the next item (w0bm.js keeps the class in sync when toggling)
+  try {
+    if (localStorage.getItem('comments') === 'false') document.documentElement.classList.add('w0bm-comments-off');
+  } catch (e) { /* storage blocked */ }
 
   // The <link>s are parsed after this script: apply once they exist
   const apply = () => setActiveStyleSheet(readCookie('style') || 'w0bmcustom');

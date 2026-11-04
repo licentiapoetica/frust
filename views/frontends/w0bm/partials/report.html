@@ -1,7 +1,9 @@
-{#- partials/report.blade.php -> POST /api/v2/report -#}
+{#- partials/report.blade.php -> POST /api/v2/report. Also reports comments: w0bm.js swaps item_id for
+    comment_id and the titles while it is open for one (so comments get the captcha too) -#}
 <form id="webmreport" method="POST" action="/api/v2/report" class="w0bm-ajaxform" data-success="Report sent. Thanks!">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="item_id" value="{{ item.id }}">
+    <input type="hidden" name="comment_id" value="" disabled>
     {% include "frontends/w0bm/partials/back.html" %}
     <div class="modal fade" id="webmreportmodal" tabindex="-1" role="dialog" aria-labelledby="Report">
         <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
@@ -11,7 +13,7 @@
                     <h4 class="modal-title" id="reportModalTitle">Report {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</h4>
                 </div>
                 <div class="modal-body-report webmreportmodal">
-                    So you want to report this upload? Tell us why:<br>
+                    So you want to report this <span class="w0bm-report-what">upload</span>? Tell us why:<br>
                     <br>
                     <div class="form-group">
                         <label for="reportReasons">

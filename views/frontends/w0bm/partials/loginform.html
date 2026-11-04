@@ -16,3 +16,11 @@
     <button type="submit" class="btn btn-primary">Login</button> <input id="rememberme" checked type="checkbox" name="kmsi"> <label for="rememberme" id="rember">Remember me?</label>
     {% if smtp_enabled %}<br><a href="/forgot-password" class="w0bm-forgot">Forgot password?</a>{% endif %}
 </form>
+{#- Passkey login (WebAuthn needs JavaScript: f0ckPasskeyLogin in f0ck-core.js, w0bm.js) -#}
+<div class="w0bm-passkey w0bm-js-only">
+    <span class="w0bm-passkey-or">or</span>
+    <button type="button" class="btn btn-primary w0bm-passkey-btn"><i class="fa fa-key"></i> Login with passkey</button>
+    {#- "Login as anonymous": passkey.js opens snippets/anon-login.html for .trigger-login-anon -#}
+    {% if enable_anonymous_access %}<button type="button" class="btn btn-primary w0bm-anon-btn trigger-login-anon"><i class="fa fa-user-secret"></i> Login as anonymous</button>{% endif %}
+    <div class="w0bm-passkey-error alert alert-danger w0bm-form-msg" hidden></div>
+</div>

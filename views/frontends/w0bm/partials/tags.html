@@ -27,6 +27,9 @@
     </div>
     <div class="toggo tag-panel-body">
         <div id="tag-display" class="tag-panel-body" data-can-delete="{{ ("1" if is_mod_or_admin else "0") }}" data-can-rate="{{ ("1" if can_rate_item else "0") }}">
+            {%- set w0bm_rated = (item.tags or [])|selectattr("normalized", "in", ["sfw", "nsfw", "nsfl"])|list %}
+            {#- unrated: "?" in place of the rating tag (click or "p" to rate) -#}
+            {% if not w0bm_rated %}<span class="label label-default w0bm-rating-tag w0bm-rating-unset" data-rating="untagged" title="unrated">?</span> {% endif %}
             {% if (item.tags and (item.tags|length)) %}
                 {% for tag in item.tags %}
                 <span class="label label-default{% if tag.normalized in ["sfw", "nsfw", "nsfl"] %} w0bm-rating-tag{% endif %}" data-tag="{{ tag.tag }}"{% if (((not is_anonymized and session) and not session.is_anon) and (tag.display_name or tag.user)) %} title="added by {{ (tag.display_name or tag.user) }}"{% endif %}><a href="/tag/{{ tag.normalized|encode_uri_component }}" class="default-link{% if tag.normalized == "nsfw" %} w0bm-tag-nsfw{% elif tag.normalized == "sfw" %} w0bm-tag-sfw{% elif tag.normalized == "nsfl" %} w0bm-tag-nsfl{% endif %}">{{ tag.tag }}</a>{% if (is_mod_or_admin and tag.normalized not in ["sfw", "nsfw", "nsfl"]) %} <a class="delete-tag default-link w0bm-js-only" href="#"><i class="fa fa-times"></i></a>{% endif %}</span>

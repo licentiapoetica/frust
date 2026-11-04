@@ -28,7 +28,7 @@
     <a href="{{ item.dest }}" target="_blank"><img id="w0bm-image" src="{{ item.dest }}" alt="" decoding="async" {% if item.width %}width="{{ item.width }}"{% endif %} {% if item.height %}height="{{ item.height }}"{% endif %}></a>
 </div>
 {% elif ((item.mime == "application/x-shockwave-flash" or item.mime == "application/vnd.adobe.flash.movie") and enable_swf) %}
-<div id="w0bm-flash" class="embed-responsive-item w0bm-flash-stage" data-swf="{{ item.dest }}">
+<div id="w0bm-swf" class="embed-responsive-item w0bm-flash-stage" data-swf="{{ item.dest }}">
     <a class="w0bm-flash-fallback" href="{{ item.dest }}" download><i class="fa fa-download"></i> {{ (item.original_filename or "Download SWF") }}</a>
 </div>
 {% elif (item.mime == "application/pdf" and enable_pdf) %}

@@ -1,0 +1,2 @@
+{#- who favorited the item (the popover on the heart, item.html); w0bm.js rebuilds it after a fav -#}
+{%- for f in (item.favorites or []) %}{% if (f.hide_fav_badge and (not session or session.user != f.user)) or is_anonymized or f.is_anon %}?{% else %}<a href="/user/{{ f.user|lower }}">{{ (f.display_name or f.user) }}</a>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}

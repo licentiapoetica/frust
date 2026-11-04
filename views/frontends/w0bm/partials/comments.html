@@ -1,5 +1,11 @@
 {#- partials/comments.blade.php + commentform.blade.php. The list is loaded by w0bm.js from
     /api/comments/:id; the form posts to /api/comments. -#}
+{#- Message of the day above the comment form (hidden when empty or turned off in the settings);
+    w0bm.js renders it like f0ckm (inline Markdown) and updates it live -#}
+{%- set w0bm_motd_off = (session and session.show_motd == false) %}
+<div class="panel panel-default w0bm-motd" id="w0bm-motd" data-show="{{ ("0" if w0bm_motd_off else "1") }}"{% if (w0bm_motd_off or not ((motd or "")|trim)) %} hidden{% endif %}>
+    <div class="panel-body w0bm-motd-text">{{ (motd or "") }}</div>
+</div>
 {% if session %}
 {% if (item.is_comments_locked and not is_mod_or_admin) %}
 <div class="panel panel-default w0bm-locked"><div class="panel-body">🔒 Comments are disabled on this upload.</div></div>
@@ -21,6 +27,7 @@
                     <a class="rainbow w0bm-fmt" href="#" data-fmt="rb">[rb]</a>
                     <a class="reich w0bm-fmt" href="#" data-fmt="reich">[reich]</a>
                     <a class="anim w0bm-fmt" href="#" data-fmt="krebs">[krebs]</a>
+                    <a class="cfx-glitch w0bm-fmt" href="#" data-fmt="glitch" data-glitch="0.5">[glitch]</a>
                     <a class="spoiler w0bm-fmt w0bm-white" href="#" data-fmt="spoiler">[spoiler]</a>
                     <div class="emoji-shit">
                         <div class="header"><span>😂</span></div>
