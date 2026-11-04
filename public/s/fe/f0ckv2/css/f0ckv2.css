@@ -1372,8 +1372,9 @@ html[theme="f0ck95d"] :is(#upload-drag-modal, #drop-overlay, .v2-upload-page) { 
   white-space: nowrap;
   align-items: center;
 }
-/* random has no dropdown arrow text: an empty line box gives it the same height as the others */
-#random.v2-nav-iconlink::after {
+/* icon buttons have no text: an empty line box gives them the height of the text buttons, also at
+   the widths where f0ck.css drops the dropdown arrows (the gear shrank to its icon there) */
+.nav-link.v2-nav-iconlink::before {
   content: "\200b";
 }
 /* theme / filter / mode / frontend side by side */
