@@ -11609,11 +11609,12 @@ input#s_avatar {
   }
 }
 
+/* as wide as avatar + name + caret: short names give a small button, long ones stop at
+   .nav-avatar-name's max-width (the widest it ever was) */
 #nav-user-toggle {
-  min-width: 100px;
   text-align: left;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto auto auto;
 }
 
 /* nav-links base: horizontal flex row on desktop */
