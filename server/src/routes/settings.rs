@@ -114,8 +114,6 @@ const BOOL_PREFS: [&str; 16] = [
     "ruffle_background",
 ];
 
-const LANGUAGES: [&str; 4] = ["en", "de", "nl", "zange"];
-
 fn form_bool(v: &str) -> bool {
     v.split(',').any(|p| p == "1")
 }
@@ -142,7 +140,7 @@ async fn save(st: AppState, mut req: Req) -> Res {
     let language = if cfg.is_false("websrv.allow_language_change") {
         None
     } else {
-        field("language").map(|l| if LANGUAGES.contains(&l.as_str()) { l } else { String::new() })
+        field("language").map(|l| if crate::i18n::is_selectable(&cfg, &l) { l } else { String::new() })
     };
     if let Some(l) = &language {
         let cookie = if l.is_empty() {

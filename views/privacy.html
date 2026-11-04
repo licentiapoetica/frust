@@ -129,13 +129,17 @@
         <li>Per session the server keeps: user agent string, creation time, last-used time, the last path requested, a CSRF token{% if pv.log_ips %}, and the IP{% endif %}.</li>
         <li><code>localStorage</code>: UI preferences{% if pv.hw %}, and for anonymous users the device fingerprint hash{% endif %}.</li>
         <li><code>f0ck_banned</code> cookie / <code>f0ck_anon_tombstone</code>: only set if you are banned, to show the ban notice.</li>
+        {% if pv.frontend_switch %}<li><code>frontend</code> cookie: the site layout you picked with the layout switcher (<code>/frontend/&lt;name&gt;</code> or <code>?frontend=&lt;name&gt;</code>), kept for a year. Picking the site's default layout deletes it.</li>{% endif %}
+        <li>Display cookies, read by the page and the server to draw it the way you left it: <code>theme</code> (colour theme), <code>fullscreen</code> (wide layout), <code>style</code> (stylesheet picked in the w0bm layout), <code>mode</code> / <code>ratings</code> (content filter: which ratings are shown), <code>mime</code> (media type filter), <code>f0ck_onara</code> (onara player on/off), <code>language</code>. They hold only that choice and are not tied to your account.</li>
+        <li><code>f0ck_nojs_prefs</code> cookie: only set when you save settings with JavaScript disabled; it holds those display settings instead of <code>localStorage</code>. Flags: <code>HttpOnly</code>.</li>
+        <li><code>f0ck_flash</code> cookie: only with JavaScript disabled, carries the result message of a form (e.g. "Report submitted") to the next page; deleted when shown, expires after a minute. Flags: <code>HttpOnly</code>.</li>
       </ul>
       <p>Registered accounts: passwords are hashed with <strong>scrypt</strong> (random 16-byte salt, 64-byte key). The plain password is never stored.</p>
     </section>
 
     <section class="pv-sec">
       <h2><i class="fa-solid fa-ban"></i> Not collected</h2>
-      <p>For anonymous identities: no email, real name, phone number or password{% if pv.anon %}{% if not pv.hw %}, and no device fingerprint: device fingerprinting is disabled on this instance{% endif %}{% endif %}. No third-party analytics, trackers or ad networks are involved in authentication.</p>
+      <p>For anonymous identities: no email, real name, phone number or password{% if pv.anon %}{% if not pv.hw %}, and no device fingerprint: device fingerprinting is disabled on this instance{% endif %}{% endif %}. No third-party analytics, trackers or ad networks are used anywhere on this site.</p>
     </section>
 
     <p class="pv-foot">Questions? See <a href="/about">About</a>{% if mail %} or write to <a href="mailto:{{ mail }}">{{ mail }}</a>{% endif %}.</p>

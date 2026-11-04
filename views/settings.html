@@ -103,10 +103,9 @@
               {#- Guests: the language cookie #}
               {% set cur_lang = (session.language if session else language_cookie) %}
               <option value="" {% if not cur_lang %} selected {% endif %}>{{ t("settings.language_default") }}</option>
-              <option value="en" {% if cur_lang == "en" %} selected {% endif %}>{{ t("settings.language_en") }}</option>
-              <option value="de" {% if cur_lang == "de" %} selected {% endif %}>{{ t("settings.language_de") }}</option>
-              <option value="nl" {% if cur_lang == "nl" %} selected {% endif %}>{{ t("settings.language_nl") }}</option>
-              <option value="zange" {% if cur_lang == "zange" %} selected {% endif %}>{{ t("settings.language_zange") }}</option>
+              {% for code in languages %}
+              <option value="{{ code }}" {% if cur_lang == code %} selected {% endif %}>{{ t("settings.language_" ~ code) }}</option>
+              {% endfor %}
             </select>
             <small class="text-muted settings-hint-block">{{ t("settings.language_hint") }}</small>
           </div>

@@ -26,25 +26,30 @@ main:
   # Previous IP hash secrets, only used to match bans hashed before a rotation (invite_secret is added automatically)
   ip_hash_legacy_secrets: []
   hide_comments_from_public: false
+  # Anonymized view: uploaders, commenters and favs show as "anonymous" (no names, avatars, banners or item source),
+  # and user profiles, user feeds, user halls and user tags are blocked. Registered users always see names.
+  # guest_anonymize: for visitors who are not logged in
   guest_anonymize: false
-  anon_anonymize: false
+  # anon_anonymize: for anonymous-access users (enable_anonymous_access); they can still open their own profile/favs.
+  # anonymous_permissions.anonymize_users overrides this when set.
+  anon_anonymize: true
   timezone: UTC
-  development: true
+  development: false
 allowedModes:
   - sfw
   - nsfw
   - untagged
   - all
   - nsfl
-enable_pdf: false
 enable_nsfl: false
+enable_pdf: false
 enable_comments: true
-enable_private_uploads: true
-enable_expiring_uploads: true
+enable_private_uploads: false
+enable_expiring_uploads: false
 default_upload_visibility: 0
-allow_user_upload_visibility: true
+allow_user_upload_visibility: false
 enable_item_slugs: true
-enable_anonymous_access: true
+enable_anonymous_access: false
 anonymous_permissions:
   upload: false
   comment: true
@@ -58,7 +63,7 @@ anonymous_permissions:
   filter: true
   exclude_tags: true
   chan: false
-  anonymize_users: false
+  anonymize_users: true
   allowed_modes:
     - sfw
     - nsfw
@@ -99,8 +104,16 @@ websrv:
   port: "1337"
   # Extra origins allowed to call /api/ with cookies (CORS). The site URL and main.onion are always allowed.
   # cors_origins: ["https://tools.example.com"]
+  # Site default language (en, de, nl, zange)
   language: en
-  allow_language_change: true
+  # Let visitors pick their own language in the settings
+  allow_language_change: false
+  # Languages offered in that picker (empty or unset = all). A stored choice that is no longer listed falls back to language.
+  languages:
+    - en
+    - de
+    - nl
+    - zange
   cache: false
   eps: 155
   default_thumb_size: m
@@ -117,8 +130,22 @@ websrv:
   retention_sessions_days: 365       # sessions unused this long are deleted
   retention_fingerprint_days: 365    # device fingerprint of anonymous identities inactive this long
   description: Example Description
+  # Themes visitors can pick in the settings (all available ones); theme is the site default
   themes:
     - amoled
+    - atmos
+    - f0ck
+    - f0ck95
+    - f0ck95d
+    - '95'
+    - iced
+    - orange
+    - p1nk
+    - '4d'
+    - light
+    - paper
+    - term
+    - xd
   theme: amoled
   # Site frontend: f0ckm (default), or an alternative one from views/frontends/ (w0bm, f0ckv2).
   # Pages a frontend has no template for use the f0ckm one.
@@ -133,35 +160,40 @@ websrv:
   show_koepfe: false
   hide_sidebar_default: true
   koepfe: []
-  enable_tor_hs: true
-  enable_global_chat: true
+  enable_tor_hs: false
+  enable_global_chat: false
   enable_danmaku: true
-  private_messages: true
+  private_messages: false
   dm_attachments: true
   dm_unencrypted: false
   dm_attachment_expiry_days: 90
-  halls_enabled: true
-  userhalls_enabled: true
-  enable_userhall_image_upload: true
-  enable_oc: true
+  halls_enabled: false
+  userhalls_enabled: false
+  enable_userhall_image_upload: false
+  enable_oc: false
   abyss_enabled: true
-  meme_creator: true
+  meme_creator: false
   enable_cleanup: false
   enable_data_export: true
   inactivity_ban_days: 60
-  enable_user_api_keys: true
+  enable_user_api_keys: false
   enable_user_invites: true
   user_invite_slots: 2
   invite_criteria:
-    uploads: 10
-    age_days: 10
-    comments: 10
-    tags: 10
+    uploads: 150
+    age_days: 90
+    comments: 500
+    tags: 1000
   cleanup_timeframe_days: 30
+  # Albums: several files uploaded as one post (album tab on the upload form); false turns it off
+  albums_enabled: false
   web_url_upload: true
   enable_youtube_upload: true
   web_meta_extraction: true
-  bypass_duplicate_check: true
+  # Global switch for the repost/duplicate check on every upload path (web, URL/link, chat bots, `f0ckm import` default).
+  # false = check on: same checksum, visually similar file (phash) or an already uploaded URL is rejected with a link to the original.
+  # true  = check off: duplicates are allowed; a re-uploaded identical file is stored as a symlink to the existing copy, not twice.
+  bypass_duplicate_check: false
   shitpost_mode: false
   shitpost_require_rating: false
   shitpost_min_tags: 0
@@ -183,7 +215,7 @@ websrv:
     extra_script: []
   show_mime_picker: true
   embed_youtube_in_comments: true
-  allow_fileupload_comments: true
+  allow_fileupload_comments: false
   allow_comment_deletion: false
   enable_comment_polls: false
   fileupload_comments_multifile: true
@@ -195,15 +227,16 @@ websrv:
     - video
     - audio
   show_content_warning: true
+  # Comment layout for guests and users who haven't picked one: 0 = tree (threaded replies), 1 = linear (flat, oldest first).
+  # Users can change it in their settings unless an admin locked it for their account.
   default_comment_display_mode: 1
   phrases:
     - Hello World
   ban_video: ""
-  enable_xd_score: false
-  enable_autoplay: false
+  enable_autoplay: true
   enable_swiping: true
   enable_profile_description: true
-  user_alternative_infobox: false
+  user_alternative_infobox: true
   user_banner_enabled: true
   comment_banner_enabled: true
   comment_banner_max_height: 300
@@ -211,7 +244,7 @@ websrv:
   expose_repost_links_to_guests: false
   enable_swf: false
   swf_thumb: /s/img/swf.png
-  enable_archive: true
+  enable_archive: false
   archive_thumb: /s/img/archive.webp
   enable_item_title: true
   open_registration: false
@@ -337,7 +370,7 @@ smtp:
 # login after repeated failures.
 # No third-party service: the browser solves small SHA-256 puzzles, the server checks them.
 cap:
-  enabled: false
+  enabled: true
   challenge_count: 50   # puzzles per captcha
   difficulty: 4         # hex digits per puzzle (each +1 = 16x more work)
   # Login asks for a captcha after 5 failed logins from an IP (lockout only after 30), and that IP
@@ -350,7 +383,7 @@ cap:
   # for pass_minutes (so multi-file uploads or a few comments in a row need only one).
   # pass_minutes: 0 asks every time: one captcha per upload (per file) and per comment.
   # pass_minutes_anon applies to anonymous accounts instead (left out: same as pass_minutes).
-  uploads: "off"
-  comments: "off"
+  uploads: "anon"
+  comments: "anon"
   pass_minutes: 10
-  # pass_minutes_anon: 0
+  pass_minutes_anon: 0

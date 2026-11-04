@@ -10,6 +10,30 @@ use std::time::SystemTime;
 
 pub const VALID_LANGS: [&str; 4] = ["en", "de", "nl", "zange"];
 
+/// Languages visitors may pick (`websrv.languages`, known codes only, in config order); all of them when unset or empty.
+pub fn selectable_langs(cfg: &crate::config::Config) -> Vec<&'static str> {
+    let list: Vec<&'static str> = match cfg.get("websrv.languages") {
+        Value::Array(a) => {
+            let mut out: Vec<&'static str> = Vec::new();
+            for code in a.iter().filter_map(Value::as_str) {
+                if let Some(l) = VALID_LANGS.iter().find(|l| **l == code.trim()) {
+                    if !out.contains(l) {
+                        out.push(l);
+                    }
+                }
+            }
+            out
+        }
+        _ => Vec::new(),
+    };
+    if list.is_empty() { VALID_LANGS.to_vec() } else { list }
+}
+
+/// A visitor's own language choice (account or cookie) still applies: known and enabled.
+pub fn is_selectable(cfg: &crate::config::Config, lang: &str) -> bool {
+    selectable_langs(cfg).contains(&lang)
+}
+
 pub struct I18n {
     dir: PathBuf,
     cache: RwLock<HashMap<String, (Option<SystemTime>, Arc<Value>)>>,
