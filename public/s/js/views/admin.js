@@ -1,7 +1,11 @@
 F0ckActions.define({
   saveAdminSettings: () => saveAdminSettings(),
-  uploadBrandImage: (el) => uploadBrandImage(el),
-  removeBrandImage: () => removeBrandImage(),
+  saveBrandText: (form) => saveBrandText(form),
+  saveBrandGlitch: (el) => saveBrandGlitch(el.closest('form')),
+  uploadBrandImage: (el) => uploadBrandImage(el.closest('form')),
+  removeBrandImage: (form) => removeBrandImage(form),
+  uploadFavicon: (el) => uploadFavicon(el.closest('form')),
+  removeFavicon: (form) => removeFavicon(form),
   regenerateTagImages: () => regenerateTagImages(),
 });
 
@@ -98,97 +102,133 @@ async function regenerateTagImages() {
   }
 }
 
-async function uploadBrandImage(input) {
-  const file = input.files[0];
-  if (!file) return;
+// ── Branding: brand text, brand image, favicon ──────────────────────────────────────────
+// The forms post to the same endpoints without JavaScript; here they save in place.
 
+let brandStatusTimer = null;
+function brandStatus(text, kind) {
   const status = document.getElementById('brand-status');
-  const removeBtn = document.getElementById('brand-remove-btn');
-  status.textContent = 'Uploading…';
-  status.style.color = 'var(--accent)';
+  if (!status) return;
+  clearTimeout(brandStatusTimer);
+  status.textContent = text;
+  status.classList.remove('is-busy', 'is-ok', 'is-err');
+  if (kind) status.classList.add('is-' + kind);
+  if (kind === 'ok') brandStatusTimer = setTimeout(() => { status.textContent = ''; }, 3000);
+}
 
-  const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || document.getElementById('settings-status').dataset.csrf;
-  const fd = new FormData();
-  fd.append('file', file);
+// POST a branding form (its fields minus the no-JS `back`) and return the JSON reply
+async function brandPost(form) {
+  const fd = new FormData(form);
+  fd.delete('back');
+  const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || fd.get('csrf_token') || '';
+  const res = await fetch(form.action, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': csrfToken },
+    body: form.enctype === 'multipart/form-data' ? fd : new URLSearchParams(fd),
+  });
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* not JSON */ }
+  if (!data || !data.success) throw new Error((data && data.msg) || 'Request failed');
+  return data;
+}
 
+async function saveBrandText(form) {
+  brandStatus('Saving…', 'busy');
   try {
-    const res = await fetch('/admin/brand_image/upload', {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRF-Token': csrfToken
-      },
-      body: fd
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.msg || 'Upload failed');
-
-    status.textContent = '✓ Brand image updated!';
-    status.style.color = '#28a745';
-
-    // Update preview
-    const wrap = document.getElementById('brand-preview-wrap');
-    let preview = document.getElementById('brand-preview');
-    if (!preview || preview.tagName !== 'IMG') {
-      wrap.innerHTML = '';
-      preview = document.createElement('img');
-      preview.id = 'brand-preview';
-      preview.alt = 'current brand';
-      wrap.appendChild(preview);
-    }
-    preview.src = data.url;
-
-    // Immediately update navbar brand logo
-    if (window.updateBrandImage) window.updateBrandImage(data.url);
-
-    removeBtn.disabled = false;
-
-    setTimeout(() => { status.textContent = ''; }, 3000);
+    const data = await brandPost(form);
+    const input = form.querySelector('input[name="text"]');
+    if (input) input.value = data.text || '';
+    if (window.updateBrandText) window.updateBrandText(data.text || '');
+    brandStatus('✓ Brand text saved.', 'ok');
   } catch (err) {
-    status.textContent = 'Error: ' + err.message;
-    status.style.color = '#d9534f';
+    brandStatus('Error: ' + err.message, 'err');
+  }
+}
+
+async function saveBrandGlitch(form) {
+  brandStatus('Saving…', 'busy');
+  try {
+    const data = await brandPost(form);
+    form.querySelector('#brand-glitch-text').checked = !!data.glitch_text;
+    form.querySelector('#brand-glitch-image').checked = !!data.glitch_image;
+    brandStatus('✓ Glitch effect saved (applies on the next page load).', 'ok');
+  } catch (err) {
+    brandStatus('Error: ' + err.message, 'err');
+  }
+}
+
+async function uploadBrandImage(form) {
+  const input = form.querySelector('input[type="file"]');
+  if (!input || !input.files[0]) return;
+  brandStatus('Uploading…', 'busy');
+  try {
+    const data = await brandPost(form);
+    const preview = document.getElementById('brand-preview');
+    preview.src = data.url;
+    preview.hidden = false;
+    document.getElementById('brand-preview-empty').hidden = true;
+    document.getElementById('brand-remove-btn').disabled = false;
+    if (window.updateBrandImage) window.updateBrandImage(data.url);
+    brandStatus('✓ Brand image updated!', 'ok');
+  } catch (err) {
+    brandStatus('Error: ' + err.message, 'err');
   } finally {
     input.value = '';
   }
 }
 
-async function removeBrandImage() {
-  const status = document.getElementById('brand-status');
-  const removeBtn = document.getElementById('brand-remove-btn');
-
-  if (!confirm('Remove the custom brand image? The navbar will revert to text.')) return;
-
-  status.textContent = 'Removing…';
-  status.style.color = 'var(--accent)';
-
-  const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || document.getElementById('settings-status').dataset.csrf;
-
+async function removeBrandImage(form) {
+  if (!confirm('Remove the custom brand image? The navbar will show the brand text (or the site name).')) return;
+  brandStatus('Removing…', 'busy');
   try {
-    const res = await fetch('/admin/brand_image/delete', {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRF-Token': csrfToken
-      }
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.msg || 'Remove failed');
-
-    status.textContent = '✓ Brand image removed.';
-    status.style.color = '#28a745';
-
-    // Reset preview
-    const wrap = document.getElementById('brand-preview-wrap');
-    wrap.innerHTML = '<span id="brand-preview" class="adm-muted">No image set</span>';
-
-    // Immediately update navbar brand logo (revert to text)
+    await brandPost(form);
+    const preview = document.getElementById('brand-preview');
+    preview.removeAttribute('src');
+    preview.hidden = true;
+    document.getElementById('brand-preview-empty').hidden = false;
+    document.getElementById('brand-remove-btn').disabled = true;
     if (window.updateBrandImage) window.updateBrandImage(null);
-
-    removeBtn.disabled = true;
-
-    setTimeout(() => { status.textContent = ''; }, 3000);
+    brandStatus('✓ Brand image removed.', 'ok');
   } catch (err) {
-    status.textContent = 'Error: ' + err.message;
-    status.style.color = '#d9534f';
+    brandStatus('Error: ' + err.message, 'err');
+  }
+}
+
+// The favicon of this tab (the other pages pick it up on their next load)
+function setPageFavicon(url) {
+  document.querySelectorAll('link[rel~="icon"]').forEach((l) => {
+    l.removeAttribute('type');
+    l.href = url;
+  });
+}
+
+async function uploadFavicon(form) {
+  const input = form.querySelector('input[type="file"]');
+  if (!input || !input.files[0]) return;
+  brandStatus('Uploading…', 'busy');
+  try {
+    const data = await brandPost(form);
+    document.getElementById('favicon-preview').src = data.url;
+    document.getElementById('favicon-remove-btn').disabled = false;
+    setPageFavicon(data.url);
+    brandStatus('✓ Favicon updated!', 'ok');
+  } catch (err) {
+    brandStatus('Error: ' + err.message, 'err');
+  } finally {
+    input.value = '';
+  }
+}
+
+async function removeFavicon(form) {
+  if (!confirm('Remove the custom favicon? The config favicon is used again.')) return;
+  brandStatus('Removing…', 'busy');
+  try {
+    const data = await brandPost(form);
+    document.getElementById('favicon-preview').src = data.url;
+    document.getElementById('favicon-remove-btn').disabled = true;
+    setPageFavicon(data.url);
+    brandStatus('✓ Favicon removed.', 'ok');
+  } catch (err) {
+    brandStatus('Error: ' + err.message, 'err');
   }
 }

@@ -836,8 +836,15 @@ async fn dispatch_json(st: &AppState, channel: &str, mut data: Value) {
             }
         }
         "brand_image" => {
-            let url = data.get("url").filter(|u| crate::config::truthy(u)).cloned().unwrap_or(Value::Null);
-            HUB.broadcast(&json!({ "type": "brand_image", "data": { "url": url } }));
+            // `url` (image uploaded / removed) and/or `text` (navbar text saved): only what changed
+            let mut d = serde_json::Map::new();
+            if data.get("url").is_some() {
+                d.insert("url".into(), data.get("url").filter(|u| crate::config::truthy(u)).cloned().unwrap_or(Value::Null));
+            }
+            if let Some(t) = data.get("text").and_then(Value::as_str) {
+                d.insert("text".into(), json!(t));
+            }
+            HUB.broadcast(&json!({ "type": "brand_image", "data": d }));
         }
         "new_item" => {
             let vis = data["visibility"].as_i64().unwrap_or(0);

@@ -25,7 +25,7 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/a\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.a, "/a/").await) });
     r.get(r"^\/robots\.txt$", |st: AppState, _req: Req| async move { public_file(&st, "robots.txt", "text/plain").await });
     r.get(r"^\/manifest\.json$", |st: AppState, _req: Req| async move {
-        Ok(reply(200, "application/manifest+json", crate::pwa::manifest(&st.cfg()).to_string()))
+        Ok(reply(200, "application/manifest+json", crate::pwa::manifest(&st.cfg(), &st.settings.favicon_url()).to_string()))
     });
     r.get(r"^\/sw\.js$", |st: AppState, _req: Req| async move { public_file(&st, "sw.js", "application/javascript").await });
 }

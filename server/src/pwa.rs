@@ -21,9 +21,11 @@ fn icon_mime(src: &str) -> &'static str {
     }
 }
 
-pub fn manifest(cfg: &Config) -> Value {
+/// `favicon`: the site's favicon (admin panel upload or `websrv.custom_favicon`), empty for the
+/// built-in one.
+pub fn manifest(cfg: &Config, favicon: &str) -> Value {
     let domain = cfg.domain();
-    let favicon = cfg.str_or("websrv.custom_favicon", "/s/img/favicon.gif");
+    let favicon = if favicon.is_empty() { "/s/img/favicon.gif" } else { favicon };
     let mut m = json!({
         "id": "/",
         "name": domain,
@@ -65,7 +67,7 @@ mod tests {
 
     #[test]
     fn defaults_from_config() {
-        let m = manifest(&cfg(json!({ "main": { "url": { "domain": "f0ck.me" } }, "websrv": { "description": "d", "custom_favicon": "/s/img/x.webp" } })));
+        let m = manifest(&cfg(json!({ "main": { "url": { "domain": "f0ck.me" } }, "websrv": { "description": "d" } })), "/s/img/x.webp");
         assert_eq!(m["name"], "f0ck.me");
         assert_eq!(m["description"], "d");
         assert_eq!(m["icons"][0]["type"], "image/webp");
@@ -74,7 +76,7 @@ mod tests {
     #[test]
     fn overrides_and_removal() {
         let c = cfg(json!({ "manifest": { "name": "F", "theme_color": "#f00", "categories": null, "icons": [] } }));
-        let m = manifest(&c);
+        let m = manifest(&c, "");
         assert_eq!(m["name"], "F");
         assert_eq!(m["icons"], json!([]));
         assert!(m.get("categories").is_none());

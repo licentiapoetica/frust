@@ -27,6 +27,13 @@ pub struct SiteSettings {
     pub cleanup_include_engaged: bool,
     pub nsfp_ids: Vec<i64>,
     pub brand_image_url: String,
+    /// Navbar text next to the brand image (or alone); admin panel, else `websrv.custom_navbar_brand_text`
+    pub brand_text: String,
+    /// Favicon URL; admin panel upload, else `websrv.custom_favicon` (empty: the built-in one)
+    pub favicon_url: String,
+    /// w0bm frontend: glitch effect (`data-glitch`) on the navbar brand text / image
+    pub brand_glitch_text: bool,
+    pub brand_glitch_image: bool,
     pub motd: String,
     pub about_text: String,
     pub rules_text: String,
@@ -59,6 +66,10 @@ impl Settings {
                 cleanup_include_engaged: false,
                 nsfp_ids: cfg.nsfp(),
                 brand_image_url: brand,
+                brand_text: cfg.str_or("websrv.custom_navbar_brand_text", "").to_string(),
+                favicon_url: cfg.str_or("websrv.custom_favicon", "").to_string(),
+                brand_glitch_text: true,
+                brand_glitch_image: true,
                 motd: String::new(),
                 about_text: String::new(),
                 rules_text: String::new(),
@@ -110,6 +121,12 @@ impl Settings {
     }
     pub fn brand_image_url(&self) -> String {
         self.inner.read().brand_image_url.clone()
+    }
+    pub fn brand_text(&self) -> String {
+        self.inner.read().brand_text.clone()
+    }
+    pub fn favicon_url(&self) -> String {
+        self.inner.read().favicon_url.clone()
     }
     pub fn motd(&self) -> String {
         self.inner.read().motd.clone()
@@ -388,6 +405,8 @@ pub async fn load_from_db(st: &crate::state::AppState) {
         s.protect_files = cfg.get("websrv.protect_files") == &Value::Bool(true);
         s.nsfp_ids = cfg.nsfp();
         s.brand_image_url = config_brand_image(&cfg);
+        s.brand_text = cfg.str_or("websrv.custom_navbar_brand_text", "").to_string();
+        s.favicon_url = cfg.str_or("websrv.custom_favicon", "").to_string();
         s.private_messages = cfg.enabled("websrv.private_messages");
         s.dm_attachments = cfg.enabled("websrv.dm_attachments");
         s.dm_unencrypted = cfg.truthy("websrv.dm_unencrypted");
@@ -411,6 +430,11 @@ pub async fn load_from_db(st: &crate::state::AppState) {
                 "cleanup_end_date" => s.cleanup_end_date = val,
                 "cleanup_include_engaged" => s.cleanup_include_engaged = b,
                 "brand_image_url" => s.brand_image_url = val,
+                "brand_text" => s.brand_text = val,
+                "brand_glitch_text" => s.brand_glitch_text = b,
+                "brand_glitch_image" => s.brand_glitch_image = b,
+                // No row (or an empty one) keeps the config favicon
+                "favicon_url" if !val.is_empty() => s.favicon_url = val,
                 "about_text" => s.about_text = val,
                 "rules_text" => s.rules_text = val,
                 "terms_text" => s.terms_text = val,
@@ -432,6 +456,12 @@ fn config_brand_image(cfg: &Config) -> String {
         Value::String(s) => s.clone(),
         _ => String::new(),
     }
+}
+
+/// Drop one site setting (the config value applies again after the next load).
+pub async fn remove(st: &crate::state::AppState, key: &str) -> anyhow::Result<()> {
+    crate::sql!("DELETE FROM site_settings WHERE key = ", key).execute(&st.db).await?;
+    Ok(())
 }
 
 /// Persist one site setting.

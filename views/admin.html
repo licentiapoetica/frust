@@ -1,4 +1,4 @@
-{% include "snippets/header.html" %}
+{% include (shell_header or "snippets/header.html") %}
 <div class="pagewrapper">
 <div id="main">
   <div class="container adm">
@@ -190,26 +190,81 @@
       {% endif %}
 
       <h3 class="adm-group-title">Branding</h3>
+      {#- Plain forms (they post back here without JavaScript); admin.js saves them in place -#}
       <div class="adm-panel" id="brand-image-section">
         <div class="adm-row adm-row-wrap">
           <div class="adm-row-text">
-            <label>Navbar brand image</label>
-            <p>Shown in the navbar instead of the site name. gif, jpg, png, webp or svg, max 5&nbsp;MB.</p>
+            <label for="brand-text-input">Navbar brand text</label>
+            <p>Shown next to the brand image, or on its own without one. Empty: just the image, or the site name ({{ domain }}) when there is no image.</p>
+          </div>
+          <form class="adm-brand" method="post" action="/admin/brand_text" data-on="submit:prevent,saveBrandText">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="/admin#brand-image-section">
+            <input type="text" id="brand-text-input" name="text" class="adm-text" maxlength="64" value="{{ (custom_navbar_brand_text or "") }}" placeholder="{{ domain }}" autocomplete="off">
+            <button type="submit" class="adm-btn adm-btn-primary">Save</button>
+          </form>
+        </div>
+        <div class="adm-row adm-row-wrap">
+          <div class="adm-row-text">
+            <label for="brand-file-input">Navbar brand image</label>
+            <p>Shown in the navbar, with the brand text next to it if set. gif, jpg, png, webp or svg, max 5&nbsp;MB.</p>
           </div>
           <div class="adm-brand">
             <div id="brand-preview-wrap" class="adm-brand-preview">
-              {% if current_brand_image %}
-              <img id="brand-preview" src="{{ current_brand_image }}" alt="current brand">
-              {% else %}
-              <span id="brand-preview" class="adm-muted">No image set</span>
-              {% endif %}
+              <img id="brand-preview" alt="current brand"{% if current_brand_image %} src="{{ current_brand_image }}"{% else %} hidden{% endif %}>
+              <span id="brand-preview-empty" class="adm-muted"{% if current_brand_image %} hidden{% endif %}>No image set</span>
             </div>
-            <label for="brand-file-input" class="adm-btn adm-btn-primary">Choose image</label>
-            <input type="file" id="brand-file-input" accept="image/gif,image/jpeg,image/png,image/webp,image/svg+xml" hidden data-on="change:uploadBrandImage">
-            <button type="button" id="brand-remove-btn" class="adm-btn adm-btn-danger" data-on="click:removeBrandImage" {% if not current_brand_image %} disabled {% endif %}>Remove</button>
+            <form class="adm-brand-form" method="post" action="/admin/brand_image/upload" enctype="multipart/form-data" data-on="submit:prevent,uploadBrandImage">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="back" value="/admin#brand-image-section">
+              <label for="brand-file-input" class="adm-btn adm-btn-primary">Choose image</label>
+              <input type="file" id="brand-file-input" name="file" class="adm-file-input" accept="image/gif,image/jpeg,image/png,image/webp,image/svg+xml" data-on="change:uploadBrandImage">
+              <button type="submit" class="adm-btn adm-btn-ghost adm-nojs-only">Upload</button>
+            </form>
+            <form class="adm-brand-form" method="post" action="/admin/brand_image/delete" data-on="submit:prevent,removeBrandImage">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="back" value="/admin#brand-image-section">
+              <button type="submit" id="brand-remove-btn" class="adm-btn adm-btn-danger"{% if not current_brand_image %} disabled{% endif %}>Remove</button>
+            </form>
           </div>
         </div>
-        <span id="brand-status" class="adm-status adm-status-row"></span>
+        <div class="adm-row adm-row-wrap">
+          <div class="adm-row-text">
+            <label for="favicon-file-input">Favicon</label>
+            <p>The icon in browser tabs and of the installed web app. ico, png, gif, jpg, webp or svg, max 5&nbsp;MB (pictures are scaled to 256&nbsp;px at most). Remove goes back to the config favicon.</p>
+          </div>
+          <div class="adm-brand">
+            <div class="adm-brand-preview adm-favicon-preview">
+              <img id="favicon-preview" alt="current favicon" src="{{ (current_favicon or "/s/img/favicon.gif") }}">
+            </div>
+            <form class="adm-brand-form" method="post" action="/admin/favicon/upload" enctype="multipart/form-data" data-on="submit:prevent,uploadFavicon">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="back" value="/admin#brand-image-section">
+              <label for="favicon-file-input" class="adm-btn adm-btn-primary">Choose icon</label>
+              <input type="file" id="favicon-file-input" name="file" class="adm-file-input" accept="image/x-icon,image/vnd.microsoft.icon,.ico,image/png,image/gif,image/jpeg,image/webp,image/svg+xml" data-on="change:uploadFavicon">
+              <button type="submit" class="adm-btn adm-btn-ghost adm-nojs-only">Upload</button>
+            </form>
+            <form class="adm-brand-form" method="post" action="/admin/favicon/delete" data-on="submit:prevent,removeFavicon">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="back" value="/admin#brand-image-section">
+              <button type="submit" id="favicon-remove-btn" class="adm-btn adm-btn-danger"{% if not favicon_uploaded %} disabled{% endif %}>Remove</button>
+            </form>
+          </div>
+        </div>
+        <div class="adm-row adm-row-wrap">
+          <div class="adm-row-text">
+            <label for="brand-glitch-text">Glitch effect</label>
+            <p>w0bm frontend: run the glitch effect on the navbar brand text and/or image. Applies on the next page load.</p>
+          </div>
+          <form class="adm-brand" method="post" action="/admin/brand_glitch" data-on="submit:prevent,saveBrandGlitch">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="/admin#brand-image-section">
+            <label class="adm-check"><input type="hidden" name="glitch_text" value="0"><input type="checkbox" id="brand-glitch-text" name="glitch_text" value="1"{% if brand_glitch_text %} checked{% endif %} data-on="change:saveBrandGlitch"> Brand text</label>
+            <label class="adm-check"><input type="hidden" name="glitch_image" value="0"><input type="checkbox" id="brand-glitch-image" name="glitch_image" value="1"{% if brand_glitch_image %} checked{% endif %} data-on="change:saveBrandGlitch"> Brand image</label>
+            <button type="submit" class="adm-btn adm-btn-ghost adm-nojs-only">Save</button>
+          </form>
+        </div>
+        <span id="brand-status" class="adm-status adm-status-row" role="status"></span>
       </div>
 
       <h3 class="adm-group-title">Maintenance</h3>
@@ -230,4 +285,4 @@
   <script src="/s/js/views/admin.js?v={{ mtime("/public/s/js/views/admin.js") }}"></script>
 </div>
 </div>
-{% include "snippets/footer.html" %}
+{% include (shell_footer or "snippets/footer.html") %}

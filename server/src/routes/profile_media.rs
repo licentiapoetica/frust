@@ -1,6 +1,7 @@
 //! Profile media upload handlers registered as bypass routes like in index.mjs:
 //! `/api/v2/settings/uploadAvatar` (src/avatar_handler.mjs), `/api/v2/settings/uploadBanner`
-//! (src/banner_handler.mjs) and `/admin/brand_image/{upload,delete}` (src/brand_image_handler.mjs).
+//! (src/banner_handler.mjs), `/admin/brand_image/{upload,delete}` (src/brand_image_handler.mjs),
+//! `/admin/favicon/{upload,delete}` and `/admin/brand_text` (navbar text next to the brand image).
 //!
 //! The session middleware has already run (the old handlers looked the session up themselves), so
 //! bans, anonymous-access rules etc. apply. The CSRF middleware skips these paths: the token is
@@ -39,6 +40,10 @@ pub fn register(r: &mut Router) {
     r.pre(Method::DELETE, r"^\/api\/v2\/settings\/uploadAvatar$", None, avatar_delete);
     r.pre(Method::POST, r"^\/admin\/brand_image\/upload$", None, brand_upload);
     r.pre(Method::POST, r"^\/admin\/brand_image\/delete$", None, brand_delete);
+    r.post(r"^\/admin\/brand_text$", brand_text_save);
+    r.post(r"^\/admin\/brand_glitch$", brand_glitch_save);
+    r.pre(Method::POST, r"^\/admin\/favicon\/upload$", None, favicon_upload);
+    r.pre(Method::POST, r"^\/admin\/favicon\/delete$", None, favicon_delete);
     r.pre(Method::POST, r"^\/api\/v2\/settings\/uploadBanner$", None, banner_upload);
     r.pre(Method::DELETE, r"^\/api\/v2\/settings\/uploadBanner$", None, banner_delete);
 }
@@ -394,13 +399,52 @@ async fn banner_delete(st: AppState, req: Req) -> Res {
     }
 }
 
-// ── brand image (admin) ─────────────────────────────────────────────────────
+// ── brand image, favicon (admin) ────────────────────────────────────────────
 
-/// Admin session + CSRF header check (`getAdminSession`).
-fn admin_session(req: &Req) -> Result<Session, Res> {
+/// Admin session for the brand image / favicon uploads (`getAdminSession`). Scripts send the CSRF
+/// token in the `X-CSRF-Token` header, checked here before the body is read. A plain form post
+/// (no JavaScript) can't set headers: then `Ok((session, false))`, and [`form_csrf_ok`] checks the
+/// form's `csrf_token` field once the (admin-only, capped) body is parsed.
+fn admin_session(req: &Req) -> Result<(Session, bool), Res> {
     let Some(s) = req.session.clone().filter(|s| s.admin) else { return Err(fail(401, "Unauthorized")) };
-    if s.csrf_token.as_deref().is_some_and(|t| !t.is_empty()) && !crate::routes::uploads::csrf_header_ok(req, &s) {
-        tracing::warn!("[CSRF] Blocked brand image request for user {}. Invalid token.", s.user);
+    if s.csrf_token.as_deref().is_none_or(str::is_empty) {
+        return Ok((s, true));
+    }
+    if req.header("x-csrf-token").is_none() && !crate::auth::is_ajax(req) {
+        return Ok((s, false));
+    }
+    if !crate::routes::uploads::csrf_header_ok(req, &s) {
+        tracing::warn!("[CSRF] Blocked brand/favicon request for user {}. Invalid token.", s.user);
+        return Err(fail(403, "Invalid CSRF token"));
+    }
+    Ok((s, true))
+}
+
+/// The `csrf_token` field of a form post without JavaScript (see [`admin_session`]).
+fn form_csrf_ok(s: &Session, form: &multipart::Form) -> bool {
+    match (s.csrf_token.as_deref().filter(|t| !t.is_empty()), form.text("csrf_token")) {
+        (None, _) => true,
+        (Some(expected), Some(got)) => crate::util::ct_eq(got, expected),
+        _ => false,
+    }
+}
+
+/// A multipart form post without JavaScript names the page to return to in `back` (the request
+/// pipeline only reads it from urlencoded bodies, crate::nojs): answer with that redirect.
+async fn finish_form(st: &AppState, req_ajax: bool, back: Option<String>, resp: Res) -> Res {
+    match back.filter(|_| !req_ajax) {
+        Some(back) => {
+            let resp = resp.unwrap_or_else(|e| e.into_response_for(true));
+            Ok(crate::nojs::finish(&crate::nojs::flash_cookie_attrs(&st.cfg()), &back, resp).await)
+        }
+        None => resp,
+    }
+}
+
+/// Admin + CSRF check of the remove buttons (urlencoded or empty body; header, query or body token).
+async fn admin_session_simple(req: &mut Req) -> Result<Session, Res> {
+    let Some(s) = req.session.clone().filter(|s| s.admin) else { return Err(fail(401, "Unauthorized")) };
+    if !crate::app::validate_csrf(req).await {
         return Err(fail(403, "Invalid CSRF token"));
     }
     Ok(s)
@@ -410,12 +454,11 @@ fn navbar_dir(st: &AppState) -> PathBuf {
     st.cfg().paths.s.join("img").join("navbar")
 }
 
-/// Delete the file of the stored brand image URL, if it is one of ours.
-async fn delete_old_brand_file(st: &AppState) {
-    let current = st.settings.brand_image_url();
+/// Delete the file behind a stored URL, if it is one of ours (`/s/img/navbar/<prefix>.*`).
+async fn delete_own_file(st: &AppState, current: &str, prefix: &str) {
     let url_path = current.split('?').next().unwrap_or("");
     let Some(name) = url_path.strip_prefix("/s/img/navbar/") else { return };
-    if !name.starts_with("brand.") || !crate::media::is_plain_name(name) {
+    if !name.starts_with(prefix) || !crate::media::is_plain_name(name) {
         return;
     }
     let _ = tokio::fs::remove_file(navbar_dir(st).join(name)).await;
@@ -435,25 +478,65 @@ fn svg_is_safe(text: &str) -> bool {
     text.to_ascii_lowercase().contains("<svg") && !BAD.is_match(text)
 }
 
+/// Copy an uploaded SVG to `dest` after [`svg_is_safe`]; `Err` is the response to send.
+async fn store_svg(file: &FilePart, dest: &Path, what: &str) -> Result<(), Res> {
+    let text = tokio::fs::read(&file.path).await.map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default();
+    if !svg_is_safe(&text) {
+        return Err(send(json!({ "success": false, "msg": "SVG contains scripts or external references" }), 400));
+    }
+    if let Err(e) = tokio::fs::copy(&file.path, dest).await {
+        tracing::error!("[{what} UPLOAD ERROR] {e}");
+        return Err(send(json!({ "success": false, "msg": "Upload failed" }), 500));
+    }
+    Ok(())
+}
+
+/// The parsed form of an admin upload with its CSRF checked; `Err` is the response to send.
+async fn admin_form(st: &AppState, req: &mut Req, s: &Session, header_ok: bool) -> Result<multipart::Form, Res> {
+    let form = read_form(st, req, 10 * MB, "Invalid content type — multipart boundary missing", "File too large (5 MB max)").await?;
+    if !header_ok && !form_csrf_ok(s, &form) {
+        tracing::warn!("[CSRF] Blocked brand/favicon form post for user {}. Invalid token.", s.user);
+        return Err(fail(403, "Invalid CSRF token"));
+    }
+    Ok(form)
+}
+
+/// The uploaded `file`, checked against the 5 MB cap; `Err` is the response to send.
+fn admin_file(form: &multipart::Form) -> Result<&FilePart, Res> {
+    let Some(file) = form.file("file").filter(|f| f.size > 0) else { return Err(send(json!({ "success": false, "msg": "No file provided" }), 400)) };
+    if file.size > MAX_IMAGE {
+        let msg = format!("File too large. Maximum is 5 MB, got {:.2} MB", file.size as f64 / 1024.0 / 1024.0);
+        return Err(send(json!({ "success": false, "msg": msg }), 400));
+    }
+    Ok(file)
+}
+
 async fn brand_upload(st: AppState, mut req: Req) -> Res {
-    let s = match admin_session(&req) {
-        Ok(s) => s,
+    let (s, header_ok) = match admin_session(&req) {
+        Ok(v) => v,
         Err(r) => return r,
     };
-    let form = match read_form(&st, &mut req, 10 * MB, "Invalid content type — multipart boundary missing", "File too large (5 MB max)").await {
+    let ajax = crate::auth::is_ajax(&req);
+    let form = match admin_form(&st, &mut req, &s, header_ok).await {
         Ok(f) => f,
         Err(r) => return r,
     };
-    let Some(file) = form.file("file").filter(|f| f.size > 0) else { return send(json!({ "success": false, "msg": "No file provided" }), 400) };
-    if file.size > MAX_IMAGE {
-        let msg = format!("File too large. Maximum is 5 MB, got {:.2} MB", file.size as f64 / 1024.0 / 1024.0);
-        return send(json!({ "success": false, "msg": msg }), 400);
-    }
+    let back = form.text("back").and_then(crate::nojs::safe_back);
+    let resp = brand_store(&st, &s, &form).await;
+    drop(form);
+    finish_form(&st, ajax, back, resp).await
+}
+
+async fn brand_store(st: &AppState, s: &Session, form: &multipart::Form) -> Res {
+    let file = match admin_file(form) {
+        Ok(f) => f,
+        Err(r) => return r,
+    };
     let mime = declared_mime(file);
     if !["image/gif", "image/jpeg", "image/jpg", "image/png", "image/webp", "image/svg+xml"].contains(&mime.as_str()) {
         return send(json!({ "success": false, "msg": format!("Invalid file type. Allowed: gif, jpg, png, webp, svg. Got: {mime}") }), 400);
     }
-    let dir = navbar_dir(&st);
+    let dir = navbar_dir(st);
     if let Err(e) = tokio::fs::create_dir_all(&dir).await {
         tracing::error!("[BRAND UPLOAD ERROR] {e}");
         return send(json!({ "success": false, "msg": "Upload failed" }), 500);
@@ -475,36 +558,28 @@ async fn brand_upload(st: AppState, mut req: Req) -> Res {
             let _ = tokio::fs::remove_file(&final_path).await;
             return send(json!({ "success": false, "msg": "Failed to process image (ImageMagick required)" }), 500);
         }
-    } else {
-        let text = tokio::fs::read(&file.path).await.map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default();
-        if !svg_is_safe(&text) {
-            return send(json!({ "success": false, "msg": "SVG contains scripts or external references" }), 400);
-        }
-        if let Err(e) = tokio::fs::copy(&file.path, &final_path).await {
-            tracing::error!("[BRAND UPLOAD ERROR] {e}");
-            return send(json!({ "success": false, "msg": "Upload failed" }), 500);
-        }
+    } else if let Err(r) = store_svg(file, &final_path, "BRAND").await {
+        return r;
     }
     crate::media::make_public(&final_path).await;
-    drop(form);
 
-    delete_old_brand_file(&st).await;
+    delete_own_file(st, &st.settings.brand_image_url(), "brand.").await;
     let public_url = format!("/s/img/navbar/{out_name}");
-    if let Err(e) = persist_brand_image(&st, &public_url).await {
+    if let Err(e) = persist_brand_image(st, &public_url).await {
         tracing::error!("[BRAND UPLOAD ERROR] {e}");
         return send(json!({ "success": false, "msg": "Upload failed" }), 500);
     }
-    notify(&st, "brand_image", json!({ "url": public_url })).await;
-    crate::social::helpers::audit_log(&st, s.id, "update_brand_image", "system", "0", Some(json!({ "url": public_url }))).await;
+    notify(st, "brand_image", json!({ "url": public_url })).await;
+    crate::social::helpers::audit_log(st, s.id, "update_brand_image", "system", "0", Some(json!({ "url": public_url }))).await;
     send(json!({ "success": true, "url": public_url, "msg": "Brand image updated" }), 200)
 }
 
-async fn brand_delete(st: AppState, req: Req) -> Res {
-    let s = match admin_session(&req) {
+async fn brand_delete(st: AppState, mut req: Req) -> Res {
+    let s = match admin_session_simple(&mut req).await {
         Ok(s) => s,
         Err(r) => return r,
     };
-    delete_old_brand_file(&st).await;
+    delete_own_file(&st, &st.settings.brand_image_url(), "brand.").await;
     if let Err(e) = persist_brand_image(&st, "").await {
         tracing::error!("[BRAND DELETE ERROR] {e}");
         return send(json!({ "success": false, "msg": "Delete failed" }), 500);
@@ -512,6 +587,168 @@ async fn brand_delete(st: AppState, req: Req) -> Res {
     notify(&st, "brand_image", json!({ "url": null })).await;
     crate::social::helpers::audit_log(&st, s.id, "delete_brand_image", "system", "0", Some(json!({}))).await;
     send(json!({ "success": true, "msg": "Brand image removed" }), 200)
+}
+
+/// Longest navbar brand text.
+const BRAND_TEXT_MAX: usize = 64;
+
+/// `POST /admin/brand_text` (`text`): the navbar text next to the brand image. Empty: no text
+/// next to an image, the site name without one. A normal route, so the CSRF middleware and the
+/// no-JavaScript `back` redirect apply.
+async fn brand_text_save(st: AppState, mut req: Req) -> Res {
+    let Some(s) = req.session.clone().filter(|s| s.admin) else { return fail(401, "Unauthorized") };
+    let raw = req.post_str("text").await.unwrap_or_default();
+    let text: String = raw.split_whitespace().collect::<Vec<_>>().join(" ").chars().filter(|c| !c.is_control()).take(BRAND_TEXT_MAX).collect();
+    let t = text.clone();
+    st.settings.update(|x| x.brand_text = t);
+    if let Err(e) = crate::settings::save(&st, "brand_text", &text).await {
+        tracing::error!("[BRAND TEXT ERROR] {e}");
+        return fail(500, "Failed to save the brand text");
+    }
+    notify(&st, "brand_image", json!({ "text": text })).await;
+    crate::social::helpers::audit_log(&st, s.id, "update_brand_text", "system", "0", Some(json!({ "text": text }))).await;
+    send(json!({ "success": true, "text": text, "msg": "Brand text saved" }), 200)
+}
+
+/// `POST /admin/brand_glitch` (`glitch_text`, `glitch_image`: "1" or "0", explicit states): whether
+/// the w0bm frontend runs its glitch effect on the navbar brand text / image. Applies on the next
+/// page load. A normal route like [`brand_text_save`].
+async fn brand_glitch_save(st: AppState, mut req: Req) -> Res {
+    let Some(s) = req.session.clone().filter(|s| s.admin) else { return fail(401, "Unauthorized") };
+    // hidden "0" + checkbox "1" with the same name arrive as "0,1": the last value wins
+    let on = |v: Option<String>| v.map(|v| matches!(v.rsplit(',').next().unwrap_or("").trim(), "1" | "true" | "on"));
+    let text = on(req.post_str("glitch_text").await);
+    let image = on(req.post_str("glitch_image").await);
+    st.settings.update(|x| {
+        if let Some(t) = text {
+            x.brand_glitch_text = t;
+        }
+        if let Some(i) = image {
+            x.brand_glitch_image = i;
+        }
+    });
+    let cur = st.settings.get();
+    for (key, v) in [("brand_glitch_text", cur.brand_glitch_text), ("brand_glitch_image", cur.brand_glitch_image)] {
+        if let Err(e) = crate::settings::save(&st, key, if v { "true" } else { "false" }).await {
+            tracing::error!("[BRAND GLITCH ERROR] {e}");
+            return fail(500, "Failed to save the glitch setting");
+        }
+    }
+    let data = json!({ "glitch_text": cur.brand_glitch_text, "glitch_image": cur.brand_glitch_image });
+    crate::social::helpers::audit_log(&st, s.id, "update_brand_glitch", "system", "0", Some(data.clone())).await;
+    send(json!({ "success": true, "glitch_text": cur.brand_glitch_text, "glitch_image": cur.brand_glitch_image, "msg": "Glitch effect saved" }), 200)
+}
+
+/// Favicon upload formats: what file(1) reports -> file extension.
+fn favicon_ext(detected: &str) -> Option<&'static str> {
+    Some(match detected {
+        "image/vnd.microsoft.icon" | "image/x-icon" => "ico",
+        "image/png" | "image/jpeg" | "image/webp" => "png",
+        "image/gif" => "gif",
+        _ => return None,
+    })
+}
+
+async fn favicon_upload(st: AppState, mut req: Req) -> Res {
+    let (s, header_ok) = match admin_session(&req) {
+        Ok(v) => v,
+        Err(r) => return r,
+    };
+    let ajax = crate::auth::is_ajax(&req);
+    let form = match admin_form(&st, &mut req, &s, header_ok).await {
+        Ok(f) => f,
+        Err(r) => return r,
+    };
+    let back = form.text("back").and_then(crate::nojs::safe_back);
+    let resp = favicon_store(&st, &s, &form).await;
+    drop(form);
+    finish_form(&st, ajax, back, resp).await
+}
+
+async fn favicon_store(st: &AppState, s: &Session, form: &multipart::Form) -> Res {
+    let file = match admin_file(form) {
+        Ok(f) => f,
+        Err(r) => return r,
+    };
+    let dir = navbar_dir(st);
+    if let Err(e) = tokio::fs::create_dir_all(&dir).await {
+        tracing::error!("[FAVICON UPLOAD ERROR] {e}");
+        return send(json!({ "success": false, "msg": "Upload failed" }), 500);
+    }
+    let ts = crate::util::now_ms();
+    let out_name = if declared_mime(file) == "image/svg+xml" {
+        let name = format!("favicon.{ts}.svg");
+        if let Err(r) = store_svg(file, &dir.join(&name), "FAVICON").await {
+            return r;
+        }
+        name
+    } else {
+        let detected = match crate::media::mime::detect(&file.path).await {
+            Ok(m) => m,
+            Err(e) => {
+                tracing::error!("[FAVICON UPLOAD] file(1) failed: {e}");
+                return fail(500, "Failed to process image");
+            }
+        };
+        let Some(ext) = favicon_ext(&detected) else {
+            return fail(400, &format!("Invalid file type. Allowed: ico, png, gif, jpg, webp, svg. Got: {detected}"));
+        };
+        let name = format!("favicon.{ts}.{ext}");
+        let dest = dir.join(&name);
+        let r = match (ext, coder(&detected)) {
+            // .ico files go up as they are (they hold several sizes)
+            ("ico", _) => tokio::fs::copy(&file.path, &dest).await.map(|_| ()).map_err(anyhow::Error::from),
+            // the rest: at most 256 px, animated GIFs stay animated
+            (_, Some(c)) => {
+                let input = format!("{c}:{}", file.path.to_string_lossy());
+                let out = dest.to_string_lossy().into_owned();
+                if ext == "gif" {
+                    magick(&[&input, "-coalesce", "-resize", "256x256>", "-layers", "optimize", &out]).await
+                } else {
+                    magick(&[&input, "-resize", "256x256>", "-strip", &out]).await
+                }
+            }
+            _ => Err(anyhow::anyhow!("no decoder for {detected}")),
+        };
+        if let Err(e) = r {
+            tracing::error!("[FAVICON UPLOAD] {e}");
+            let _ = tokio::fs::remove_file(&dest).await;
+            return send(json!({ "success": false, "msg": "Failed to process image (ImageMagick required)" }), 500);
+        }
+        name
+    };
+    let final_path = dir.join(&out_name);
+    crate::media::make_public(&final_path).await;
+
+    delete_own_file(st, &st.settings.favicon_url(), "favicon.").await;
+    let public_url = format!("/s/img/navbar/{out_name}");
+    let u = public_url.clone();
+    st.settings.update(|x| x.favicon_url = u);
+    if let Err(e) = crate::settings::save(st, "favicon_url", &public_url).await {
+        tracing::error!("[FAVICON UPLOAD ERROR] {e}");
+        return send(json!({ "success": false, "msg": "Upload failed" }), 500);
+    }
+    crate::social::helpers::audit_log(st, s.id, "update_favicon", "system", "0", Some(json!({ "url": public_url }))).await;
+    send(json!({ "success": true, "url": public_url, "msg": "Favicon updated" }), 200)
+}
+
+/// Back to the config favicon (`websrv.custom_favicon`, else the built-in one).
+async fn favicon_delete(st: AppState, mut req: Req) -> Res {
+    let s = match admin_session_simple(&mut req).await {
+        Ok(s) => s,
+        Err(r) => return r,
+    };
+    delete_own_file(&st, &st.settings.favicon_url(), "favicon.").await;
+    let fallback = st.cfg().str_or("websrv.custom_favicon", "").to_string();
+    let f = fallback.clone();
+    st.settings.update(|x| x.favicon_url = f);
+    if let Err(e) = crate::settings::remove(&st, "favicon_url").await {
+        tracing::error!("[FAVICON DELETE ERROR] {e}");
+        return send(json!({ "success": false, "msg": "Delete failed" }), 500);
+    }
+    crate::social::helpers::audit_log(&st, s.id, "delete_favicon", "system", "0", Some(json!({}))).await;
+    let url = if fallback.is_empty() { "/s/img/favicon.gif".to_string() } else { fallback };
+    send(json!({ "success": true, "url": url, "msg": "Custom favicon removed" }), 200)
 }
 
 #[cfg(test)]
