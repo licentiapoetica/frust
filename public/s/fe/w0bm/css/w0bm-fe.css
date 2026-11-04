@@ -503,6 +503,18 @@ a.w0bm-iconbtn {
 .video-js .vjs-volume-bar {
     cursor: pointer;
 }
+/* Fullscreen video: w0bm.js moves the media box into .w0bm-fs-host (end of <body>, kept across
+   page changes) and fullscreens that, so → / ← / random stay in fullscreen */
+.w0bm-fs-host:fullscreen {
+    background: #000;
+}
+.w0bm-fs-host > .embed-responsive.w0bm-media {
+    width: 100%;
+    height: 100%;
+    padding-bottom: 0;
+    margin: 0;
+    border: 0;
+}
 .video-js .vjs-progress-holder {
     cursor: pointer;
 }

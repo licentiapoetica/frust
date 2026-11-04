@@ -41,6 +41,19 @@
     pageAC = new AbortController();
   }
 
+  // Fullscreen goes on this element, not on the player: it sits after the swapped part of <body>,
+  // so it stays when → / ← / random change the page, and fullscreen with it. The player's media
+  // box moves in while fullscreen (buildPlayer).
+  let fsHost = null;
+  const fullscreenHost = () => {
+    if (!fsHost) {
+      fsHost = document.createElement('div');
+      fsHost.className = 'w0bm-fs-host';
+      document.body.appendChild(fsHost);
+    }
+    return fsHost;
+  };
+
   function boot() {
   const DATA = readJSON('w0bm-data') || {};
   // the footer data (window.f0ckSession) stays from the first page; the rating mode can change
@@ -957,19 +970,36 @@
       setRate(rates[(i - 1 + rates.length) % rates.length]);
     });
 
-    // fullscreen
+    // fullscreen: the media box moves into the host (fullscreenHost) and back on leaving it
     const fsBtn = q('.vjs-fullscreen-control');
+    const host = fullscreenHost();
+    const mark = document.createComment('w0bm-media');
+    const intoHost = () => { if (box.parentNode !== host) { box.before(mark); host.appendChild(box); } };
+    const outOfHost = () => { if (box.parentNode === host) { if (mark.parentNode) mark.replaceWith(box); else box.remove(); } };
+    const showFs = () => {
+      const fs = document.fullscreenElement === host && box.parentNode === host;
+      wrap.classList.toggle('vjs-fullscreen', fs);
+      if (fsBtn) fsBtn.title = fs ? 'Non-Fullscreen' : 'Fullscreen';
+    };
     const toggleFs = () => {
-      if (document.fullscreenElement) document.exitFullscreen?.();
-      else wrap.requestFullscreen?.().catch(() => {});
+      if (document.fullscreenElement) { document.exitFullscreen?.(); return; }
+      if (!host.requestFullscreen) return;
+      intoHost();
+      host.requestFullscreen().catch(() => { outOfHost(); showFs(); });
     };
     fsBtn?.addEventListener('click', toggleFs);
     if (!isAudio) el.addEventListener('dblclick', toggleFs);
     on(document, 'fullscreenchange', () => {
-      const fs = document.fullscreenElement === wrap;
-      wrap.classList.toggle('vjs-fullscreen', fs);
-      if (fsBtn) fsBtn.title = fs ? 'Non-Fullscreen' : 'Fullscreen';
+      if (document.fullscreenElement !== host) outOfHost();
+      showFs();
     });
+    // a page change in fullscreen: this video stops and goes, the next one moves in (below)
+    onLeave(() => {
+      if (box.parentNode !== host) return;
+      try { el.pause(); el.removeAttribute('src'); el.load(); } catch { /* gone */ }
+      box.remove();
+    });
+    if (!isAudio && document.fullscreenElement === host) { intoHost(); showFs(); }
     p.toggleFullscreen = toggleFs;
 
     // user activity (inactivityTimeout: 1000); a mouse resting on the control bar keeps it shown
@@ -1002,6 +1032,8 @@
     player = buildPlayer(media);
     if (ITEM && ITEM.autoplay && player.paused()) player.play();
   }
+  // came here in fullscreen, but this page has no video to show in it
+  if (fsHost && document.fullscreenElement === fsHost && !fsHost.firstChild) document.exitFullscreen?.().catch(() => {});
 
   // Album: thumbnails swap the stage
   $$('.w0bm-album').forEach((album) => {
@@ -1242,15 +1274,18 @@
       }
     });
     const main = $('.wrapper > .w0bm-main');
-    main?.addEventListener('wheel', (e) => {
+    const wheelNav = (e) => {
       if (e.ctrlKey || e.altKey || e.shiftKey) return;
       if (e.target.closest('.modal, .popover, .vjs-volume-control')) return;
-      // pages taller than the window keep scrolling normally
+      // pages taller than the window keep scrolling normally (not in fullscreen: nothing scrolls)
       const se = document.scrollingElement;
-      if (se && se.scrollHeight > window.innerHeight + 5) return;
+      if (!document.fullscreenElement && se && se.scrollHeight > window.innerHeight + 5) return;
       e.preventDefault();
       if (e.deltaY > 0) goNext(); else if (e.deltaY < 0) goPrev();
-    }, { passive: false });
+    };
+    main?.addEventListener('wheel', wheelNav, { passive: false });
+    // the fullscreen video sits in the host, outside main
+    if (fsHost) on(fsHost, 'wheel', wheelNav, { passive: false });
   }
 
   // ── Favorite ──────────────────────────────────────────────────────────────────────────
