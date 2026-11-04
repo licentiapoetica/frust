@@ -1,3 +1,8 @@
+{#- Preferences a frontend doesn't use are left out: views/frontends/<fe>/settings-prefs.html lists
+    the ones it does (frontend_settings_prefs, tpl.rs; views/frontends/README.md). Without that file
+    every preference shows. A group left without any is hidden (settings CSS). -#}
+{%- set fe_prefs = none %}
+{%- if frontend_settings_prefs %}{% import frontend_settings_prefs as fe_settings %}{% set fe_prefs = fe_settings.prefs %}{% endif %}
 {% include (shell_header or "snippets/header.html") %}
 <div class="pagewrapper">
   <div id="main">
@@ -57,6 +62,7 @@
         <fieldset>
           <legend><i class="fa-solid fa-palette"></i> {{ t("settings.appearance_section") }}</legend>
           
+          {% if fe_prefs is none or "theme" in fe_prefs %}
           <div class="setting-item settings-row-first">
             <label for="website_theme_select" class="settings-field-label">{{ t("settings.theme") }}</label>
             <div class="settings-select-row">
@@ -69,6 +75,7 @@
               <button type="submit" class="button settings-nojs-apply">{{ t("settings.save") }}</button>
             </div>
           </div>
+          {% endif %}
 
           {% if frontend_switch and frontends|length > 1 %}
           <div class="setting-item settings-row-spaced">
@@ -83,6 +90,7 @@
           {% endif %}
 
           {% if not guest %}
+          {% if fe_prefs is none or "font" in fe_prefs %}
           <div class="setting-item settings-row-spaced">
             <label for="website_font_select" class="settings-field-label">{{ t("settings.website_font") }}</label>
             <div class="settings-select-row">
@@ -95,8 +103,10 @@
             </div>
           </div>
           {% endif %}
+          {% endif %}
 
           {% if allow_language_change %}
+          {% if fe_prefs is none or "language" in fe_prefs %}
           <div class="setting-item settings-row-spaced">
             <label for="language_select" class="settings-field-label">{{ t("settings.language") }}</label>
             <select id="language_select" name="language" class="input settings-select">
@@ -110,7 +120,9 @@
             <small class="text-muted settings-hint-block">{{ t("settings.language_hint") }}</small>
           </div>
           {% endif %}
+          {% endif %}
 
+          {% if fe_prefs is none or "show_background" in fe_prefs %}
           <div class="setting-item settings-row-spaced{% if guest %} settings-js-only{% endif %}">
             <label for="show_background_toggle" class="settings-check">
               <input type="hidden" name="show_background" value="0"><input type="checkbox" id="show_background_toggle" name="show_background" value="1" {% if guest %}{% if show_background_cfg %} checked {% endif %}{% elif session.show_background != false %} checked {% endif %}>
@@ -118,6 +130,7 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.enable_bg_blur_hint") }}</small>
           </div>
+          {% endif %}
 
           {#- only frontends that have the Onara viewer (tpl::frontend_has_onara; not w0bm) -#}
           {% if frontend_onara %}
@@ -137,12 +150,14 @@
           {% endif %}
 
           {% if not guest %}
+          {% if fe_prefs is none or "show_motd" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="show_motd_toggle" class="settings-check">
               <input type="hidden" name="show_motd" value="0"><input type="checkbox" id="show_motd_toggle" name="show_motd" value="1" {% if session.show_motd != false %} checked {% endif %}>
               <span>{{ t("settings.show_motd") }}</span>
             </label>
           </div>
+          {% endif %}
           {% endif %}
         </fieldset>
 
@@ -151,6 +166,7 @@
           <legend><i class="fa-solid fa-desktop"></i> {{ t("settings.ui_section") }}</legend>
           
           {% if not guest %}
+          {% if fe_prefs is none or "use_new_layout" in fe_prefs %}
           <div class="setting-item">
             <label for="use_new_layout_toggle" class="settings-check">
               <input type="hidden" name="use_new_layout" value="0"><input type="checkbox" id="use_new_layout_toggle" name="use_new_layout" value="1" {% if session.use_new_layout == true %} checked {% endif %}>
@@ -158,8 +174,10 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.modern_layout_hint") }}</small>
           </div>
+          {% endif %}
 
           {% if not session.use_new_layout %}
+          {% if fe_prefs is none or "use_new_layout" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="alternative_infobox_toggle"
               class="settings-check">
@@ -168,6 +186,8 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.alternative_infobox_hint") }}</small>
           </div>
+          {% endif %}
+          {% if fe_prefs is none or "use_new_layout" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="alternative_steuerung_toggle"
               class="settings-check">
@@ -177,8 +197,10 @@
             <small class="text-muted settings-hint">{{ t("settings.alternative_steuerung_hint") }}</small>
           </div>
           {% endif %}
+          {% endif %}
 
           {% if show_koepfe %}
+          {% if fe_prefs is none or "hide_koepfe" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="hide_koepfe_toggle" class="settings-check">
               <input type="hidden" name="hide_koepfe" value="0"><input type="checkbox" id="hide_koepfe_toggle" name="hide_koepfe" value="1" {% if session.hide_koepfe == true %} checked {% endif %}>
@@ -188,7 +210,9 @@
           </div>
           {% endif %}
           {% endif %}
+          {% endif %}
 
+          {% if fe_prefs is none or "hide_infobox" in fe_prefs %}
           <div class="setting-item{% if not guest %} settings-row{% endif %}">
             <label for="hide_infobox_toggle" class="settings-check">
               <input type="hidden" name="hide_infobox" value="0"><input type="checkbox" id="hide_infobox_toggle" name="hide_infobox" value="1"{% if "hide_infobox" in nojs_prefs %} checked{% endif %}>
@@ -196,7 +220,9 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.hide_infobox_hint") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "hide_navbar" in fe_prefs %}
           <div class="setting-item settings-row settings-js-only">
             <label for="hide_navbar_toggle" class="settings-check">
               <input type="checkbox" id="hide_navbar_toggle">
@@ -204,6 +230,7 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.hide_navbar_hint") }}</small>
           </div>
+          {% endif %}
         </fieldset>
 
         <!-- 3. Playback & Navigation Controls -->
@@ -211,6 +238,7 @@
           <legend><i class="fa-solid fa-play"></i> Playback & Navigation</legend>
 
           {% if not guest %}
+          {% if fe_prefs is none or "disable_autoplay" in fe_prefs %}
           <div class="setting-item">
             <label for="disable_autoplay_toggle" class="settings-check">
               <input type="hidden" name="disable_autoplay" value="0"><input type="checkbox" id="disable_autoplay_toggle" name="disable_autoplay" value="1" {% if session.disable_autoplay == true %} checked {% endif %}>
@@ -218,7 +246,9 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.disable_autoplay_hint") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "disable_swiping" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="disable_swiping_toggle" class="settings-check">
               <input type="hidden" name="disable_swiping" value="0"><input type="checkbox" id="disable_swiping_toggle" name="disable_swiping" value="1" {% if session.disable_swiping == true %} checked {% endif %}>
@@ -227,7 +257,9 @@
             <small class="text-muted settings-hint">{{ t("settings.disable_swiping_hint") }}</small>
           </div>
           {% endif %}
+          {% endif %}
 
+          {% if fe_prefs is none or "wheel_nav" in fe_prefs %}
           <div class="setting-item{% if not guest %} settings-row{% endif %} settings-js-only">
             <label for="wheel_nav_toggle" class="settings-check">
               <input type="checkbox" id="wheel_nav_toggle">
@@ -235,7 +267,9 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.scroll_nav_hint") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "image_expand" in fe_prefs %}
           <div class="setting-item settings-row settings-js-only">
             <label for="image_expand_toggle" class="settings-check">
               <input type="checkbox" id="image_expand_toggle">
@@ -243,7 +277,9 @@
             </label>
             <small class="text-muted settings-hint">{{ (t("settings.image_expand_on_click_hint") or "Instead of opening the scroll zoom modal, clicking an image will expand it to full size within the page.") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "f_for_fullscreen" in fe_prefs %}
           <div class="setting-item settings-row settings-js-only">
             <label for="f_for_fullscreen_toggle" class="settings-check">
               <input type="checkbox" id="f_for_fullscreen_toggle">
@@ -251,6 +287,7 @@
             </label>
             <small class="text-muted settings-hint">{{ (t("settings.f_for_fullscreen_hint") or "Pressing F will toggle fullscreen in the video player instead of favoriting the post (Shift+F to favorite).") }}</small>
           </div>
+          {% endif %}
         </fieldset>
 
         <!-- 4. Comments & Discussion -->
@@ -258,6 +295,7 @@
         <fieldset>
           <legend><i class="fa-solid fa-comments"></i> Comments & Discussion</legend>
 
+          {% if fe_prefs is none or "comment_display_mode" in fe_prefs %}
           <div class="setting-item">
             <label for="comment_display_mode_select" class="settings-field-label">{{ t("settings.comment_display_mode") }}</label>
             <select id="comment_display_mode_select" name="comment_display_mode" class="input settings-select" {% if session.force_comment_display_mode %} disabled {% endif %}>
@@ -272,7 +310,9 @@
               {% endif %}
             </small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "quote_emojis" in fe_prefs %}
           <div class="setting-item settings-row-spaced">
             <label for="quote_emojis_toggle" class="settings-check">
               <input type="hidden" name="quote_emojis" value="0"><input type="checkbox" id="quote_emojis_toggle" name="quote_emojis" value="1" {% if session.quote_emojis != false %} checked {% endif %}>
@@ -280,7 +320,9 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.render_emojis_hint") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "embed_youtube_in_comments" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="embed_youtube_in_comments_toggle" class="settings-check">
               <input type="hidden" name="embed_youtube_in_comments" value="0"><input type="checkbox" id="embed_youtube_in_comments_toggle" name="embed_youtube_in_comments" value="1" {% if session.embed_youtube_in_comments != false %} checked {% endif %}>
@@ -288,6 +330,7 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.embed_yt_hint") }}</small>
           </div>
+          {% endif %}
         </fieldset>
         {% endif %}
 
@@ -295,6 +338,7 @@
         <fieldset>
           <legend><i class="fa-solid fa-eye-slash"></i> {{ t("settings.content_preferences_section") }}</legend>
           
+          {% if fe_prefs is none or "blur" in fe_prefs %}
           <div class="setting-item">
             <label for="blur_sfw_toggle" class="settings-check">
               <input type="hidden" name="blur_sfw" value="0"><input type="checkbox" id="blur_sfw_toggle" name="blur_sfw" value="1"{% if "blur_sfw" in nojs_prefs %} checked{% endif %}>
@@ -302,8 +346,10 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.blur_sfw_hint") }}</small>
           </div>
+          {% endif %}
 
           {% if not guest %}
+          {% if fe_prefs is none or "blur" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="blur_nsfw_toggle" class="settings-check">
               <input type="hidden" name="blur_nsfw" value="0"><input type="checkbox" id="blur_nsfw_toggle" name="blur_nsfw" value="1"{% if "blur_nsfw" in nojs_prefs %} checked{% endif %}>
@@ -311,7 +357,9 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.blur_nsfw_hint") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "blur" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="blur_nsfl_toggle" class="settings-check">
               <input type="hidden" name="blur_nsfl" value="0"><input type="checkbox" id="blur_nsfl_toggle" name="blur_nsfl" value="1"{% if "blur_nsfl" in nojs_prefs %} checked{% endif %}>
@@ -319,7 +367,9 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.blur_nsfl_hint") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "blur" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="blur_untagged_toggle" class="settings-check">
               <input type="hidden" name="blur_untagged" value="0"><input type="checkbox" id="blur_untagged_toggle" name="blur_untagged" value="1"{% if "blur_untagged" in nojs_prefs %} checked{% endif %}>
@@ -328,7 +378,9 @@
             <small class="text-muted settings-hint">{{ t("settings.blur_untagged_hint") }}</small>
           </div>
           {% endif %}
+          {% endif %}
 
+          {% if fe_prefs is none or "blur_detail" in fe_prefs %}
           <div class="setting-item settings-row settings-js-only">
             <label for="blur_detail_toggle" class="settings-check">
               <input type="checkbox" id="blur_detail_toggle">
@@ -336,7 +388,9 @@
             </label>
             <small class="text-muted settings-hint">{{ (t("settings.blur_detail_hint") or "Require clicking to reveal blurred media on the post detail page instead of showing it immediately.") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "hide_item_ratings" in fe_prefs %}
           <div class="setting-item settings-row">
             <label for="hide_item_ratings_toggle" class="settings-check">
               <input type="hidden" name="hide_item_ratings" value="0"><input type="checkbox" id="hide_item_ratings_toggle" name="hide_item_ratings" value="1"{% if "hide_item_ratings" in nojs_prefs %} checked{% endif %}>
@@ -344,6 +398,7 @@
             </label>
             <small class="text-muted settings-hint">{{ (t("settings.hide_item_ratings_hint") or "Don't show SFW/NSFW rating indicators on main page items") }}</small>
           </div>
+          {% endif %}
         </fieldset>
 
         {% if not guest %}
@@ -351,6 +406,7 @@
         <fieldset>
           <legend><i class="fa-solid fa-user-shield"></i> Privacy & Defaults</legend>
 
+          {% if fe_prefs is none or "favorites_private" in fe_prefs %}
           <div class="setting-item">
             <label for="favorites_private_toggle" class="settings-check">
               <input type="hidden" name="favorites_private" value="0"><input type="checkbox" id="favorites_private_toggle" name="favorites_private" value="1" {% if session.favorites_private == true %} checked {% endif %}>
@@ -358,6 +414,7 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.favorites_private_hint") }}</small>
             
+            {% if fe_prefs is none or "hide_fav_badge" in fe_prefs %}
             <div class="sub-setting-item settings-subrow">
               <label for="hide_fav_badge_toggle" class="settings-check">
                 <input type="hidden" name="hide_fav_badge" value="0"><input type="checkbox" id="hide_fav_badge_toggle" name="hide_fav_badge" value="1" {% if session.hide_fav_badge == true %} checked {% endif %}>
@@ -365,9 +422,12 @@
               </label>
               <small class="text-muted settings-hint">{{ t("settings.hide_fav_badge_hint") }}</small>
             </div>
+            {% endif %}
           </div>
+          {% endif %}
 
           {% if (allow_user_upload_visibility != false and not session.is_anon) %}
+          {% if fe_prefs is none or "default_upload_visibility" in fe_prefs %}
           <div class="setting-item settings-row-spaced">
             <label for="default_upload_visibility_select" class="settings-field-label">
               <span>{{ t("settings.default_upload_visibility") }}</span>
@@ -380,12 +440,14 @@
             <small class="text-muted settings-hint-block-loose">{{ t("settings.default_upload_visibility_hint") }}</small>
           </div>
           {% endif %}
+          {% endif %}
         </fieldset>
 
         <!-- 7. Notifications -->
         <fieldset>
           <legend><i class="fa-solid fa-bell"></i> {{ t("settings.notifications_section") }}</legend>
           
+          {% if fe_prefs is none or "notifications" in fe_prefs %}
           <div class="setting-item">
             <label class="checkbox-container settings-check">
               <input type="hidden" name="receive_system_notifications" value="0"><input type="checkbox" id="chk-receive-system-notifications" name="receive_system_notifications" value="1" {% if session.receive_system_notifications != false %} checked {% endif %}>
@@ -393,7 +455,9 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.receive_system_notifications_hint") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "notifications" in fe_prefs %}
           <div class="setting-item settings-row">
             <label class="checkbox-container settings-check">
               <input type="hidden" name="receive_user_notifications" value="0"><input type="checkbox" id="chk-receive-user-notifications" name="receive_user_notifications" value="1" {% if session.receive_user_notifications != false %} checked {% endif %}>
@@ -401,7 +465,9 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.receive_user_notifications_hint") }}</small>
           </div>
+          {% endif %}
 
+          {% if fe_prefs is none or "notifications" in fe_prefs %}
           <div class="setting-item settings-row">
             <label class="checkbox-container settings-check">
               <input type="hidden" name="do_not_disturb" value="0"><input type="checkbox" id="chk-do-not-disturb" name="do_not_disturb" value="1" {% if session.do_not_disturb == true %} checked {% endif %}>
@@ -409,6 +475,7 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.do_not_disturb_hint") }}</small>
           </div>
+          {% endif %}
         </fieldset>
 
         <!-- 8. Flash / SWF Settings (if enabled) -->
@@ -416,6 +483,7 @@
         <fieldset>
           <legend><i class="fa-solid fa-bolt"></i> {{ t("settings.flash_section") }}</legend>
 
+          {% if fe_prefs is none or "ruffle_background" in fe_prefs %}
           <div class="setting-item">
             <label for="ruffle_background_toggle"
               class="settings-check">
@@ -424,6 +492,7 @@
             </label>
             <small class="text-muted settings-hint">{{ t("settings.flash_bg_hint") }}</small>
           </div>
+          {% endif %}
           <div id="ruffle-settings-status" class="avatar-status"></div>
         </fieldset>
         {% endif %}

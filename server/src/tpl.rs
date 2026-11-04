@@ -1024,6 +1024,10 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     }
     // the settings page offers the Onara viewer only where the frontend has it
     ctx.insert("frontend_onara".into(), json!(frontend_name_has_onara(st, &frontend)));
+    // ... and only the preferences the frontend uses, when it lists them (views/frontends/README.md)
+    let prefs_tpl = format!("{FRONTENDS_DIR}/{frontend}/settings-prefs");
+    let prefs_tpl = (frontend != DEFAULT_FRONTEND && st.tpl.has(&prefs_tpl)).then(|| format!("{prefs_tpl}.html"));
+    ctx.insert("frontend_settings_prefs".into(), json!(prefs_tpl));
     ctx.insert("frontend".into(), json!(frontend));
     ctx.insert("frontends".into(), json!(frontend_names(st)));
     ctx.insert("frontend_switch".into(), json!(frontend_switch_enabled(&cfg)));
@@ -1171,6 +1175,34 @@ mod tests {
         // every boolean the server saves has its hidden "0" and the box's "1"
         for col in ["show_motd", "use_new_layout", "disable_autoplay", "quote_emojis", "favorites_private", "do_not_disturb", "blur_nsfw", "hide_infobox"] {
             assert!(s.contains(&format!("<input type=\"hidden\" name=\"{col}\" value=\"0\">")), "{col}");
+        }
+    }
+
+    #[test]
+    fn settings_shows_only_the_frontends_preferences() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let empty = "frontends/w0bm/settings-prefs.html";
+        let render = |prefs: Option<&str>| {
+            let ctx = serde_json::json!({
+                "shell_header": empty, "shell_footer": empty, "frontend_settings_prefs": prefs,
+                "session": { "user": "bob", "id": 1 }, "enable_comments": true, "enable_swf": true,
+                "allow_language_change": true, "languages": ["en", "de"], "show_koepfe": true,
+                "csrf_token": "tok", "themes": ["f0ck"], "fonts": {},
+            });
+            env.get_template("settings.html").unwrap().render(to_jvalue(&ctx)).unwrap()
+        };
+        let all = render(None);
+        let w0bm = render(Some("frontends/w0bm/settings-prefs.html"));
+        // what w0bm uses stays
+        for id in ["language_select", "show_motd_toggle", "disable_autoplay_toggle", "favorites_private_toggle", "hide_fav_badge_toggle", "default_upload_visibility_select", "chk-do-not-disturb"] {
+            assert!(all.contains(&format!("id=\"{id}\"")), "{id}");
+            assert!(w0bm.contains(&format!("id=\"{id}\"")), "w0bm {id}");
+        }
+        // f0ckm's own preferences go
+        for id in ["website_theme_select", "website_font_select", "show_background_toggle", "use_new_layout_toggle", "hide_infobox_toggle", "wheel_nav_toggle", "comment_display_mode_select", "blur_nsfw_toggle", "hide_item_ratings_toggle", "ruffle_background_toggle"] {
+            assert!(all.contains(&format!("id=\"{id}\"")), "{id}");
+            assert!(!w0bm.contains(&format!("id=\"{id}\"")), "w0bm {id}");
         }
     }
 

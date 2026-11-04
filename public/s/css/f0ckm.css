@@ -1348,6 +1348,11 @@ html[theme='paper'] .infobox-modal-body::-webkit-scrollbar-thumb {
 }
 
 /* Settings Page */
+/* a group whose preferences the frontend doesn't use (views/settings.html, fe_prefs) */
+.preferences-settings-wrapper fieldset:not(:has(.setting-item)) {
+  display: none;
+}
+
 html[theme='light'] .preferences-settings-wrapper fieldset,
 html[theme='light'] .settings-section,
 html[theme='paper'] .preferences-settings-wrapper fieldset,

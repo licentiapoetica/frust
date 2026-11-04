@@ -80,6 +80,12 @@ URL renders the grid page that contains the item, with the item over it (`routes
 Without `ajax-item.html` (w0bm), items always open on their own page and the settings page hides the
 Onara toggle (`frontend_onara`, `tpl::frontend_has_onara`).
 
+**Settings preferences (optional).** A frontend that only uses some of the preferences lists them in
+`settings-prefs.html` (`{% set prefs = ["language", "show_motd", …] %}`, keys: the
+`"…" in fe_prefs` tests in `views/settings.html`). The settings page then shows only those
+(`frontend_settings_prefs`, tpl.rs); a group left empty is hidden. Without the file every
+preference shows. w0bm: `views/frontends/w0bm/settings-prefs.html`.
+
 **Hooks.** Set them in the frontend's main script; all are optional:
 
 ```js
