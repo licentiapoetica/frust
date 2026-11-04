@@ -660,6 +660,13 @@ a.w0bm-tag-nsfl {
 }
 
 /* ── Index / main ──────────────────────────────────────────────────────────────────────── */
+/* thumbnails dim on hover in the default theme too, as in DARK (w0bm_override.css); without
+   JavaScript no theme is marked on <html>, which is the default theme */
+html:not([data-w0bm-theme]) .main-item img:hover,
+html[data-w0bm-theme="w0bmcustom"] .main-item img:hover {
+    opacity: 0.5;
+    transition: 0.2s ease;
+}
 .main-item {
     position: relative;
 }
