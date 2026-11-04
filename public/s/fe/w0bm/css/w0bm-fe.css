@@ -2450,3 +2450,24 @@ ul.navbar-right > li > a > span.badge.message-badge.w0bm-dm-badge {
     top: auto;
     bottom: 4px;
 }
+
+/* ── Page changes without reloading (w0bm.js, navigation): a thin bar while the next page loads ── */
+.w0bm-navbar-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1100;
+    width: 100%;
+    height: 2px;
+    background: #1fb2b0;
+    transform-origin: left center;
+    animation: w0bm-navload 1.2s ease-out forwards;
+    pointer-events: none;
+}
+.w0bm-navbar-loading[hidden] {
+    display: none;
+}
+@keyframes w0bm-navload {
+    from { transform: scaleX(0.05); }
+    to { transform: scaleX(0.85); }
+}

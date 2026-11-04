@@ -6,18 +6,45 @@
  * Page data comes from <script type="application/json"> blocks: #w0bm-data (every page) and
  * #w0bm-item-data (item page). Styles are never set from here, only classes, except CSS custom
  * properties for live numbers (playback progress, volume).
+ *
+ * Pages change without reloading, like in f0ckm (navigation at the end of this file): the next
+ * page is fetched, the page part of <body> (everything before #w0bm-flash) is swapped and boot()
+ * sets it up again. So everything in boot() lives as long as its page: listeners on document /
+ * window go through on() (removed on leaving), intervals through every(), other clean-ups
+ * through onLeave(). What stays across pages: the flash box, the shared scripts and their data
+ * (snippets/frontend-scripts.html), the live socket.
  */
 (() => {
   'use strict';
 
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-  const readJSON = (id) => {
-    const el = document.getElementById(id);
+  const readJSON = (id, doc = document) => {
+    const el = doc.getElementById(id);
     if (!el) return null;
     try { return JSON.parse(el.textContent); } catch { return null; }
   };
+  // Shared by every page: Cap loads once, the emoji list once
+  let capLoading = null;
+  let emojis = null; // name -> url
+
+  // ── Page lifetime ──────────────────────────────────────────────────────────────────────
+  let pageAC = new AbortController();
+  let pageCleanups = [];
+  const on = (target, type, fn, opts) => target.addEventListener(type, fn,
+    Object.assign(typeof opts === 'boolean' ? { capture: opts } : { ...(opts || {}) }, { signal: pageAC.signal }));
+  const every = (fn, ms) => { const id = setInterval(fn, ms); pageCleanups.push(() => clearInterval(id)); return id; };
+  const onLeave = (fn) => { pageCleanups.push(fn); };
+  function leavePage() {
+    pageAC.abort();
+    pageCleanups.splice(0).forEach((fn) => { try { fn(); } catch (err) { console.error('[w0bm] leave', err); } });
+    pageAC = new AbortController();
+  }
+
+  function boot() {
   const DATA = readJSON('w0bm-data') || {};
+  // the footer data (window.f0ckSession) stays from the first page; the rating mode can change
+  if (window.f0ckSession && DATA.mode !== undefined) window.f0ckSession.mode = DATA.mode;
   // Stand-ins for visitors without JavaScript (image captcha, plain forms): not needed now
   $$('.w0bm-nojs-only').forEach((el) => el.remove());
   const ITEM = readJSON('w0bm-item-data');
@@ -45,6 +72,7 @@
     } else if (body !== undefined) {
       payload = body instanceof URLSearchParams ? body : new URLSearchParams(body instanceof FormData ? body : Object.entries(body));
     }
+    if (method !== 'GET') prefetched.clear();
     let res, data = null;
     try {
       res = await fetch(url, { method, headers, body: payload, credentials: 'same-origin' });
@@ -84,7 +112,7 @@
     }, 3000 + n * 1000);
   }
   // Server-rendered alerts fade out like alertrm()
-  $$('.flash-inner > .alert').forEach((a, i) => setTimeout(() => {
+  $$('.flash-inner > .alert').filter((a) => !a._w0bmTimer && !a.dataset.w0bmFade).forEach((a, i) => (a.dataset.w0bmFade = '1') && setTimeout(() => {
     a.classList.add('w0bm-alert-out');
     setTimeout(() => a.remove(), 300);
   }, 3000 + i * 1000));
@@ -145,6 +173,7 @@
     okBtn.classList.toggle('btn-danger', danger);
     okBtn.classList.toggle('btn-primary', !danger);
     document.body.appendChild(m);
+    onLeave(() => closeModal(m));
     return new Promise((resolve) => {
       let result = null;
       m.querySelector('form').addEventListener('submit', (e) => {
@@ -183,7 +212,7 @@
   }
 
   // ── Dropdowns, alerts, collapse, modal triggers (one delegated click handler) ─────────
-  document.addEventListener('click', (e) => {
+  on(document, 'click', (e) => {
     const t = e.target;
     const modalTrigger = t.closest('[data-toggle="modal"]');
     if (modalTrigger) {
@@ -225,7 +254,7 @@
       li.querySelector('[data-toggle="dropdown"]')?.setAttribute('aria-expanded', 'false');
     });
   }
-  document.addEventListener('keydown', (e) => {
+  on(document, 'keydown', (e) => {
     if (e.key === 'Escape') {
       $$('.modal.w0bm-modal-open').forEach(closeModal);
       closeDropdowns();
@@ -241,7 +270,7 @@
   }));
   // "t" cycles the themes, like f0ckm. Themes that ask for confirmation (Epilepsie: flashing)
   // are left out: they stay an explicit choice in the menu.
-  document.addEventListener('keydown', (e) => {
+  on(document, 'keydown', (e) => {
     if (e.key !== 't' || e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
     if (/^(input|textarea|select)$/i.test(e.target.nodeName) || e.target.isContentEditable) return;
     if (!window.w0bmStyle) return;
@@ -354,7 +383,7 @@
   }
   refreshTimeago();
   initTooltips();
-  setInterval(refreshTimeago, 1000);
+  every(refreshTimeago, 1000);
 
   // Missing thumbnails get w0bm's 404 thumb (main.blade.php)
   const thumbFallback = (img) => {
@@ -364,7 +393,7 @@
     img.classList.add('nothumb');
     img.src = '/s/fe/w0bm/img/small_404.gif';
   };
-  document.addEventListener('error', (e) => thumbFallback(e.target), true);
+  on(document, 'error', (e) => thumbFallback(e.target), true);
 
   // ── Endless grid (index-main.html: front page, tags, users, halls) ─────────────────────
   // Near the end of the grid the next page is fetched and its thumbnails appended (skipping ones
@@ -398,6 +427,7 @@
         if (pager && curPager) curPager.replaceWith(document.importNode(pager, true));
         next = pagerNext(doc)?.href || null;
         history.replaceState(history.state, '', url);
+        shownPath = pathKey(location.href);
       } catch (err) {
         next = null;
       }
@@ -409,9 +439,10 @@
       }
     }, { rootMargin: '0px 0px 600px 0px' });
     io.observe(sentinel);
+    onLeave(() => io.disconnect());
   }
   $$('.main-item img, .w0bm-thumbs img').forEach((img) => { if (img.complete && !img.naturalWidth) thumbFallback(img); });
-  document.addEventListener('error', (e) => {
+  on(document, 'error', (e) => {
     const img = e.target;
     if (img.tagName === 'IMG' && img.classList.contains('w0bm-avatar')) img.remove();
   }, true);
@@ -574,12 +605,11 @@
     if (!q) { e.preventDefault(); return; }
     if (f.dataset.guest) {
       e.preventDefault();
-      location.href = '/tag/' + encodeURIComponent(q.split(',')[0].trim());
+      navigate('/tag/' + encodeURIComponent(q.split(',')[0].trim()));
     }
   }));
 
   // ── Captcha (Cap) on demand ───────────────────────────────────────────────────────────
-  let capLoading = null;
   function loadCap() {
     if (capLoading) return capLoading;
     const add = (src) => new Promise((res) => {
@@ -594,7 +624,7 @@
   }
   // Widgets in the page load Cap right away, those in modals when the modal opens
   if ($$('cap-widget').some((w) => !w.closest('.modal'))) loadCap();
-  document.addEventListener('w0bm:open', (e) => { if (e.target.querySelector('cap-widget')) loadCap(); }, true);
+  on(document, 'w0bm:open', (e) => { if (e.target.querySelector('cap-widget')) loadCap(); }, true);
   // a modal already open on load (from the URL, e.g. #register-modal after a failed form post, or
   // rendered open by the server) opened before this listener existed
   if ($$('.modal.w0bm-modal-open cap-widget, .modal:target cap-widget').length) loadCap();
@@ -664,7 +694,7 @@
     };
     pollBadges = poll;
     poll();
-    setInterval(() => { if (!document.hidden) poll(); }, 60000);
+    every(() => { if (!document.hidden) poll(); }, 60000);
   }
 
   // ── Filter modal (filterselect.blade.php): excluded tags ──────────────────────────────
@@ -702,7 +732,7 @@
       } else {
         flash('success', 'Filter successfully updated');
         closeModal($('#filterselectmodal'));
-        if (removed.length || added.length) setTimeout(() => location.reload(), 600);
+        if (removed.length || added.length) setTimeout(() => reloadPage(), 600);
       }
     });
   }
@@ -719,7 +749,8 @@
     document.cookie = picked.length < boxes.length
       ? 'mime=' + picked.join(',') + '; path=/; max-age=31536000; SameSite=Lax'
       : 'mime=; path=/; max-age=0; SameSite=Lax';
-    location.reload();
+    closeModal($('#filterselectmodal'));
+    reloadPage();
   });
 
   // ── Generic JSON forms (report …) ─────────────────────────────────────────────────────
@@ -933,7 +964,7 @@
     };
     fsBtn?.addEventListener('click', toggleFs);
     if (!isAudio) el.addEventListener('dblclick', toggleFs);
-    document.addEventListener('fullscreenchange', () => {
+    on(document, 'fullscreenchange', () => {
       const fs = document.fullscreenElement === wrap;
       wrap.classList.toggle('vjs-fullscreen', fs);
       if (fsBtn) fsBtn.title = fs ? 'Non-Fullscreen' : 'Fullscreen';
@@ -1034,6 +1065,7 @@
       clearTimeout(hudTimer);
       hudTimer = setTimeout(() => { hud.hidden = true; }, 1000);
     };
+    onLeave(() => { delete window.w0bmFlashVolume; });
     window.w0bmFlashVolume = (v) => {
       v = Math.max(0, Math.min(1, Math.round(v * 100) / 100));
       el.volume = v;
@@ -1060,8 +1092,8 @@
       e.preventDefault();
       strip.classList.add('w0bm-dragging');
     });
-    document.addEventListener('mousemove', (e) => { if (drag) move(e.clientY); });
-    document.addEventListener('mouseup', end);
+    on(document, 'mousemove', (e) => { if (drag) move(e.clientY); });
+    on(document, 'mouseup', end);
     el.addEventListener('flash-touch', (e) => {
       const d = e.detail || {};
       if (d.phase === 'start') start(d.clientX, d.clientY);
@@ -1101,6 +1133,7 @@
           requestAnimationFrame(loop);
         } else if (source.tagName === 'CANVAS') {
           // Flash: ~12 redraws a second are plenty for a blurred backdrop
+          if (!canvas.isConnected) return;
           if (!document.hidden) drawOnce();
           setTimeout(loop, 80);
         } else if (source.complete) {
@@ -1110,7 +1143,7 @@
         }
       };
       if (source.tagName === 'VIDEO') source.addEventListener('play', loop);
-      window.addEventListener('resize', () => { size(); if (source.tagName === 'IMG' || source.paused) drawOnce(); });
+      on(window, 'resize', () => { size(); if (source.tagName === 'IMG' || source.paused) drawOnce(); });
       loop();
       $('#togglebg')?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1127,6 +1160,7 @@
   // properties. Without JavaScript the CSS preview in the row (.w0bm-rowthumb) shows instead.
   {
     let box = null;
+    onLeave(() => box?.remove());
     const place = (e) => {
       if (!box) return;
       const w = box.offsetWidth || 130, h = box.offsetHeight || 130;
@@ -1170,7 +1204,7 @@
   const goNext = () => { const n = $('#next'); if (visible(n)) n.click(); };
   const goPrev = () => { const p = $('#prev'); if (visible(p)) p.click(); };
   if (ITEM) {
-    document.addEventListener('keydown', (e) => {
+    on(document, 'keydown', (e) => {
       if (e.defaultPrevented || /^(input|textarea|select)$/i.test(e.target.nodeName) || e.target.isContentEditable || e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return;
       if ($('.modal.w0bm-modal-open')) return;
       switch (e.keyCode) {
@@ -1353,7 +1387,7 @@
       closeModal(delForm.querySelector('.modal'));
       flash('success', 'Deleted');
       const n = $('#prev:not(.w0bm-invisible)') || $('#next:not(.w0bm-invisible)');
-      setTimeout(() => { location.href = n ? n.href : '/'; }, 500);
+      setTimeout(() => navigate(n ? n.href : '/'), 500);
     } else flash('error', r.msg || 'Error deleting');
   });
 
@@ -1577,7 +1611,6 @@
   }
 
   // ── Comments ──────────────────────────────────────────────────────────────────────────
-  let emojis = null; // name -> url
   async function loadEmojis() {
     if (emojis) return emojis;
     emojis = {};
@@ -1961,6 +1994,7 @@
       }
     }, { rootMargin: '0px 0px 600px 0px' });
     io.observe(moreTags);
+    onLeave(() => io.disconnect());
   }
 
   // Markdown of rules/about/terms (admin-written; rendered escaped, then a small Markdown subset)
@@ -2142,7 +2176,7 @@
       xhr = null;
       if (r.data && r.data.success) {
         flash('success', r.data.msg || 'Upload successful');
-        setTimeout(() => { location.href = r.data.redirect || '/pending'; }, 800);
+        setTimeout(() => navigate(r.data.redirect || '/pending'), 800);
         return;
       }
       progress.classList.add('w0bm-hidden');
@@ -2257,7 +2291,11 @@
     motdBox.hidden = !motd.trim() || motdBox.dataset.show === '0';
   }
   // marked (deferred) and the sanitizer load after this file: render once they're there
-  if (motdBox) document.addEventListener('DOMContentLoaded', () => renderMotd(motdBox.querySelector('.w0bm-motd-text').textContent));
+  if (motdBox) {
+    const first = () => renderMotd(motdBox.querySelector('.w0bm-motd-text').textContent);
+    if (document.readyState === 'loading') on(document, 'DOMContentLoaded', first);
+    else first();
+  }
 
   // Passkey login (partials/loginform.html): the WebAuthn round trip is f0ck-core.js's
   // f0ckPasskeyLogin, loaded after this file, so it is looked up on click
@@ -2281,4 +2319,216 @@
 
   // Navbar brand (image + text from the admin panel): window.updateBrandImage / updateBrandText
   // in f0ck-core.js work on the [data-brand-img] / [data-brand-text] marks in partials/navigation.html.
+
+  // item page: the neighbours load in the background, like f0ckm (600 ms after the page shows)
+  if (ITEM) {
+    const t = setTimeout(() => ['#next', '#prev'].forEach((sel) => {
+      const a = $(sel);
+      if (visible(a) && navigable(a)) prefetch(a.href);
+    }), 600);
+    onLeave(() => clearTimeout(t));
+  }
+  } // boot()
+
+  // ════════════════════════════════════════════════════════════════════════════════════
+  // Navigation without reloading (like f0ckm)
+  // ════════════════════════════════════════════════════════════════════════════════════
+  // Links and GET forms to w0bm's own pages fetch the page and swap the page part of <body>
+  // (everything before #w0bm-flash), then boot() sets it up. A full load instead when: the page is
+  // a shared page in the w0bm shell (settings, messages, admin, ...: other CSS and scripts), another
+  // frontend, someone else logged in (login, logout: the footer data changes), not HTML, or the
+  // request fails. Without JavaScript all of this is plain links and forms.
+  const isShellPage = () => document.documentElement.classList.contains('f0ck-shell');
+  // Pages that never load in place: session changes, frontend switch, files, the upload page (its
+  // own form instead of the quick upload), the shared pages of the shell
+  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|settings|messages|admin|mod(?:\/|$)|mod_reports|pending|banned|privacy|mime(?:\/|$))/;
+  const pathKey = (href) => { const u = new URL(href, location.href); return u.pathname + u.search; };
+  let shownPath = pathKey(location.href);
+
+  function navigable(a) {
+    if (!a || !a.href || isShellPage()) return false;
+    if (a.target && a.target !== '_self') return false;
+    if (a.hasAttribute('download') || a.closest('[data-no-ajax]')) return false;
+    const raw = a.getAttribute('href') || '';
+    if (!raw || raw.startsWith('#') || /^(javascript|mailto|tel):/i.test(raw)) return false;
+    let u;
+    try { u = new URL(a.href, location.href); } catch { return false; }
+    if (u.origin !== location.origin) return false;
+    // a jump within this page
+    if (u.hash && pathKey(u.href) === pathKey(location.href)) return false;
+    if (FULL_LOAD.test(u.pathname)) return false;
+    // files (media, downloads)
+    if (/\.[a-z0-9]{2,5}$/i.test(u.pathname)) return false;
+    return true;
+  }
+
+  // ── Fetched pages, kept briefly: prefetched neighbours, hovered links ──────────────────
+  // Keyed by URL and the page it is requested from (/random picks its tag/user/hall from the
+  // Referer). Any change sent to the server (api() with POST/PUT/...) empties it.
+  const prefetched = new Map();
+  const PREFETCH_TTL = 60000;
+  const cacheKey = (url) => new URL(url, location.href).href + ' ' + location.href;
+  function fetchPage(url, { signal, prefetch: pf = false } = {}) {
+    const headers = { Accept: 'text/html' };
+    if (pf) Object.assign(headers, { 'X-Purpose': 'prefetch', Purpose: 'prefetch' });
+    return fetch(url, { credentials: 'same-origin', headers, signal, priority: pf ? 'low' : 'high' }).then(async (res) => {
+      const type = res.headers.get('content-type') || '';
+      if (!/text\/html/i.test(type)) return null;
+      return { url: res.url || new URL(url, location.href).href, status: res.status, html: await res.text(), prefetched: pf };
+    });
+  }
+  function prefetch(url) {
+    const key = cacheKey(url);
+    const hit = prefetched.get(key);
+    if (hit && Date.now() - hit.at < PREFETCH_TTL) return;
+    const entry = { at: Date.now(), page: fetchPage(url, { prefetch: true }).catch(() => null) };
+    prefetched.set(key, entry);
+    if (prefetched.size > 12) prefetched.delete(prefetched.keys().next().value);
+  }
+  function takePrefetched(url) {
+    const key = cacheKey(url);
+    const hit = prefetched.get(key);
+    prefetched.delete(key);
+    return hit && Date.now() - hit.at < PREFETCH_TTL ? hit.page : null;
+  }
+
+  // Hovering a link for a moment loads its page already (a click follows in most cases)
+  let hoverTimer = null;
+  window.addEventListener('mouseover', (e) => {
+    const a = e.target.closest?.('a[href]');
+    if (!a || a === e.relatedTarget?.closest?.('a[href]')) return;
+    clearTimeout(hoverTimer);
+    if (!navigable(a)) return;
+    hoverTimer = setTimeout(() => prefetch(a.href), 120);
+  });
+  window.addEventListener('mouseout', (e) => {
+    const a = e.target.closest?.('a[href]');
+    if (a && !a.contains(e.relatedTarget)) clearTimeout(hoverTimer);
+  });
+  window.addEventListener('touchstart', (e) => {
+    const a = e.target.closest?.('a[href]');
+    if (navigable(a)) prefetch(a.href);
+  }, { passive: true });
+
+  // ── Loading bar (only when a page takes a moment) ──────────────────────────────────────
+  const bar = document.createElement('div');
+  bar.className = 'w0bm-navbar-loading';
+  bar.hidden = true;
+  document.body.appendChild(bar);
+  let barTimer = null;
+  const loading = (onOff) => {
+    clearTimeout(barTimer);
+    if (onOff) barTimer = setTimeout(() => { bar.hidden = false; }, 150);
+    else bar.hidden = true;
+  };
+
+  function isOwnPage(doc) {
+    if (doc.documentElement.classList.contains('f0ck-shell')) return false;
+    const next = readJSON('w0bm-data', doc);
+    const cur = readJSON('w0bm-data') || {};
+    return !!(next && doc.getElementById('w0bm-flash') && next.frontend === cur.frontend && (next.user || null) === (cur.user || null));
+  }
+
+  // The page part of <body>: the nodes before #w0bm-flash
+  function swapBody(doc) {
+    const anchor = document.getElementById('w0bm-flash');
+    const nextAnchor = doc.getElementById('w0bm-flash');
+    const old = [];
+    for (const n of document.body.childNodes) { if (n === anchor) break; old.push(n); }
+    // media of the page we leave stop (and stop downloading)
+    old.forEach((n) => n.querySelectorAll?.('video, audio').forEach((m) => {
+      try { m.pause(); m.removeAttribute('src'); m.querySelectorAll('source').forEach((x) => x.remove()); m.load(); } catch { /* gone */ }
+    }));
+    const frag = document.createDocumentFragment();
+    for (const n of Array.from(doc.body.childNodes)) { if (n === nextAnchor) break; frag.appendChild(document.adoptNode(n)); }
+    old.forEach((n) => n.remove());
+    anchor.before(frag);
+    // flash messages of the new page join the box
+    const box = anchor.querySelector('.flash-inner');
+    nextAnchor.querySelectorAll('.flash-inner > .alert').forEach((a) => box?.appendChild(document.adoptNode(a)));
+    document.body.className = doc.body.className;
+    document.title = doc.title;
+    const desc = doc.querySelector('meta[name="description"]');
+    if (desc) document.querySelector('meta[name="description"]')?.setAttribute('content', desc.getAttribute('content') || '');
+  }
+
+  let navSeq = 0;
+  let navAbort = null;
+  // opts: replace (no new history entry), pop (back/forward: no entry, scroll restored),
+  // keepScroll (the same page again)
+  async function navigate(url, opts = {}) {
+    if (isShellPage()) { location.assign(url); return; }
+    const target = new URL(url, location.href);
+    const seq = ++navSeq;
+    navAbort?.abort();
+    navAbort = new AbortController();
+    loading(true);
+    let page = null;
+    try {
+      page = await (takePrefetched(target.href) || null);
+      if (!page) page = await fetchPage(target.href, { signal: navAbort.signal });
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      page = null;
+    }
+    if (seq !== navSeq) return;
+    loading(false);
+    const doc = page && new DOMParser().parseFromString(page.html, 'text/html');
+    if (!doc || !isOwnPage(doc)) { location.assign(page ? page.url : target.href); return; }
+
+    // where the page we leave was scrolled to, for "back"
+    if (!opts.pop) {
+      try { history.replaceState({ ...(history.state || {}), w0bmScroll: window.scrollY }, ''); } catch { /* ignore */ }
+    }
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    const final = new URL(page.url);
+    if (!final.hash && target.hash) final.hash = target.hash;
+    leavePage();
+    swapBody(doc);
+    if (opts.replace) history.replaceState({ w0bm: 1 }, '', final.href);
+    else if (!opts.pop) history.pushState({ w0bm: 1 }, '', final.href);
+    shownPath = pathKey(location.href);
+    boot();
+    // a prefetched item page didn't mark its notifications read (the server skips that for prefetches)
+    const item = readJSON('w0bm-item-data');
+    if (page.prefetched && item && item.id && (readJSON('w0bm-data') || {}).user) {
+      fetch('/api/notifications/item/' + item.id + '/read', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': (readJSON('w0bm-data') || {}).csrf || '' } })
+        .then(() => window.w0bm?.pollBadges()).catch(() => {});
+    }
+    const saved = opts.pop ? history.state?.w0bmScroll : null;
+    if (typeof saved === 'number') window.scrollTo(0, saved);
+    else if (final.hash.length > 1 && document.getElementById(decodeURIComponent(final.hash.slice(1)))) document.getElementById(decodeURIComponent(final.hash.slice(1))).scrollIntoView();
+    else if (!opts.keepScroll) window.scrollTo(0, 0);
+    document.dispatchEvent(new CustomEvent('w0bm:page', { detail: { url: location.href } }));
+  }
+  // the same page again (a filter changed)
+  const reloadPage = () => navigate(location.href, { replace: true, keepScroll: true });
+
+  window.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest?.('a[href]');
+    if (!navigable(a)) return;
+    e.preventDefault();
+    navigate(a.href);
+  });
+  window.addEventListener('submit', (e) => {
+    const f = e.target;
+    if (e.defaultPrevented || isShellPage() || !(f instanceof HTMLFormElement)) return;
+    if ((f.getAttribute('method') || 'get').toLowerCase() !== 'get' || (f.target && f.target !== '_self')) return;
+    const u = new URL(f.action || location.href, location.href);
+    if (u.origin !== location.origin || FULL_LOAD.test(u.pathname)) return;
+    let fd;
+    try { fd = new FormData(f, e.submitter || undefined); } catch { fd = new FormData(f); }
+    u.search = new URLSearchParams(fd).toString();
+    e.preventDefault();
+    navigate(u.href);
+  });
+  window.addEventListener('popstate', () => {
+    if (isShellPage()) return;
+    // only the #hash changed: the page stays
+    if (pathKey(location.href) === shownPath) return;
+    navigate(location.href, { pop: true });
+  });
+
+  boot();
 })();
