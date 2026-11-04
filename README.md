@@ -20,7 +20,7 @@ Node.js is no longer needed.
 ## prod
 
 ```bash
-git clone <repo> f0ckm && cd f0ckm
+git clone https://github.com/licentiapoetica/frust.git f0ckm && cd f0ckm
 ./install.sh
 ```
 
@@ -160,7 +160,7 @@ and Peter Wiegel, under the SIL Open Font License 1.1; the license text is in
 
 ## Configuration
 
-All configuration lives in one file, `config.yaml` (start from `config_example.yaml`). Edits are picked up while the app is running; settings that are only read at startup need a restart. Every option is documented in the [wiki](https://github.com/licentiapoetica/f0ckm/wiki/Configuration).
+All configuration lives in one file, `config.yaml` (start from `config_example.yaml`). Edits are picked up while the app is running; settings that are only read at startup need a restart. Every option is documented in the [wiki](https://github.com/licentiapoetica/frust/wiki/Configuration).
 
 ## NGINX
 
