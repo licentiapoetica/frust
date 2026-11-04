@@ -2284,3 +2284,67 @@ html[data-w0bm-theme="DARK"] .w0bm-hallform + .w0bm-hallform {
 html[data-w0bm-theme="DARK"] .w0bm-mode-group > .btn {
     background-color: #000;
 }
+
+/* ── Flash: volume by dragging on the right edge (w0bm.js) ───────────────────────────────── */
+.w0bm-flash-volstrip {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 7%;
+    min-width: 28px;
+    z-index: 3;
+    cursor: ns-resize;
+}
+.w0bm-flash-volstrip:hover,
+.w0bm-flash-volstrip.w0bm-dragging {
+    background: linear-gradient(to left, rgba(31, 178, 176, 0.18), transparent);
+}
+.w0bm-volhud {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.75);
+    border: 1px solid #1fb2b0;
+    color: #fff;
+    font-size: 20px;
+    pointer-events: none;
+}
+.w0bm-volhud[hidden] {
+    display: none;
+}
+.w0bm-volhud > i {
+    width: 22px;
+    text-align: center;
+    color: #1fb2b0;
+}
+.w0bm-volhud > meter {
+    width: 140px;
+    height: 8px;
+    appearance: none;
+    border: 0;
+    background: #353434;
+}
+.w0bm-volhud > meter::-webkit-meter-bar {
+    background: #353434;
+    border: 0;
+    height: 8px;
+}
+.w0bm-volhud > meter::-webkit-meter-optimum-value {
+    background: #1fb2b0;
+}
+.w0bm-volhud > meter::-moz-meter-bar {
+    background: #1fb2b0;
+}
+@media (max-width: 767px) {
+    /* phones: the frame forwards touches; no strip over the movie */
+    .w0bm-flash-volstrip {
+        display: none;
+    }
+}

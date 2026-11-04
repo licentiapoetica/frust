@@ -997,14 +997,76 @@
 
   // Flash (sandboxed Ruffle frame from /s/js/flash-embed.js)
   const swf = $('#w0bm-swf[data-swf]');
+  let flashPlayer = null;
+  const savedVolume = () => {
+    const v = parseFloat(store.get('volume'));
+    return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.5;
+  };
   if (swf && window.customElements?.get('f0ck-flash')) {
     const el = document.createElement('f0ck-flash');
     // The download link is the no-JS / failed-load stand-in: hidden while the player loads
     swf.classList.add('w0bm-flash-js');
     swf.appendChild(el);
-    el.load({ url: swf.dataset.swf }).catch(() => {
+    flashPlayer = el;
+    el.load({ url: swf.dataset.swf, volume: savedVolume() }).catch(() => {
       el.remove();
+      flashPlayer = null;
       swf.classList.remove('w0bm-flash-js');
+    });
+
+    // Volume: drag up/down on the right edge of the stage (a strip over the frame, which swallows
+    // mouse events itself); touches arrive from the frame as flash-touch. The level shows in a
+    // small HUD (a <meter>) and is saved like the video player's ("volume").
+    const hud = document.createElement('div');
+    hud.className = 'w0bm-volhud';
+    hud.hidden = true;
+    hud.innerHTML = '<i class="fa fa-volume-up" aria-hidden="true"></i><meter min="0" max="1" value="0"></meter>';
+    const strip = document.createElement('div');
+    strip.className = 'w0bm-flash-volstrip';
+    strip.title = 'Drag up/down: volume';
+    swf.append(strip, hud);
+    let hudTimer = null;
+    const showVolume = (v) => {
+      hud.querySelector('meter').value = v;
+      const icon = hud.querySelector('i');
+      icon.className = 'fa ' + (v === 0 ? 'fa-volume-off' : v <= 0.5 ? 'fa-volume-down' : 'fa-volume-up');
+      hud.hidden = false;
+      clearTimeout(hudTimer);
+      hudTimer = setTimeout(() => { hud.hidden = true; }, 1000);
+    };
+    window.w0bmFlashVolume = (v) => {
+      v = Math.max(0, Math.min(1, Math.round(v * 100) / 100));
+      el.volume = v;
+      store.set('volume', String(v));
+      showVolume(v);
+    };
+    let drag = null;
+    const start = (x, y) => {
+      const r = swf.getBoundingClientRect();
+      if (x < r.left + r.width / 2) return false;
+      drag = { y, vol: el.volume, moved: false };
+      return true;
+    };
+    const move = (y) => {
+      if (!drag) return;
+      const dy = drag.y - y;
+      if (!drag.moved && Math.abs(dy) < 4) return;
+      drag.moved = true;
+      window.w0bmFlashVolume(drag.vol + dy / 200);
+    };
+    const end = () => { drag = null; strip.classList.remove('w0bm-dragging'); };
+    strip.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || !start(e.clientX, e.clientY)) return;
+      e.preventDefault();
+      strip.classList.add('w0bm-dragging');
+    });
+    document.addEventListener('mousemove', (e) => { if (drag) move(e.clientY); });
+    document.addEventListener('mouseup', end);
+    el.addEventListener('flash-touch', (e) => {
+      const d = e.detail || {};
+      if (d.phase === 'start') start(d.clientX, d.clientY);
+      else if (d.phase === 'move') move(d.clientY);
+      else end();
     });
   }
 
@@ -1012,7 +1074,8 @@
   const canvas = $('#bg');
   if (canvas) {
     const img = $('#w0bm-image') || $('.w0bm-album-image');
-    const source = player ? (player.el.tagName === 'VIDEO' ? player.el : null) : img;
+    // Flash: the player's ambient canvas (a small copy of the movie, kept up to date by the frame)
+    const source = player ? (player.el.tagName === 'VIDEO' ? player.el : null) : (flashPlayer ? flashPlayer.ambientCanvas : img);
     if (!source) {
       canvas.remove();
       $('#togglebg')?.remove();
@@ -1036,6 +1099,10 @@
           if (source.paused || source.ended) return;
           drawOnce();
           requestAnimationFrame(loop);
+        } else if (source.tagName === 'CANVAS') {
+          // Flash: ~12 redraws a second are plenty for a blurred backdrop
+          if (!document.hidden) drawOnce();
+          setTimeout(loop, 80);
         } else if (source.complete) {
           drawOnce();
         } else {
@@ -1043,7 +1110,7 @@
         }
       };
       if (source.tagName === 'VIDEO') source.addEventListener('play', loop);
-      window.addEventListener('resize', () => { size(); if (source.tagName !== 'VIDEO' || source.paused) drawOnce(); });
+      window.addEventListener('resize', () => { size(); if (source.tagName === 'IMG' || source.paused) drawOnce(); });
       loop();
       $('#togglebg')?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1115,8 +1182,8 @@
         case 73: if (openTagInput()) e.preventDefault(); break; // i (no "i" typed into the field)
         case 67: if (typeof toggleComments === 'function') toggleComments(); break; // c
         case 88: if ($('#w0bm-delmodal')) { e.preventDefault(); openModal($('#w0bm-delmodal')); } break; // x (mods: delete)
-        case 87: case 38: if (player) { e.preventDefault(); player.volume(player.volume() + 0.1); } break; // w ↑
-        case 83: case 40: if (player) { e.preventDefault(); player.volume(player.volume() - 0.1); } break; // s ↓
+        case 87: case 38: if (player) { e.preventDefault(); player.volume(player.volume() + 0.1); } else if (flashPlayer && window.w0bmFlashVolume) { e.preventDefault(); window.w0bmFlashVolume(flashPlayer.volume + 0.1); } break; // w ↑
+        case 83: case 40: if (player) { e.preventDefault(); player.volume(player.volume() - 0.1); } else if (flashPlayer && window.w0bmFlashVolume) { e.preventDefault(); window.w0bmFlashVolume(flashPlayer.volume - 0.1); } break; // s ↓
         case 32: if (player) { e.preventDefault(); player.toggle(); } break; // space
         default: break;
       }
@@ -1800,17 +1867,31 @@
   })();
 
   // Tags page: "Load more" (/api/tags renders tag-cards.html of this frontend)
+  // /tags: the next tags load by themselves once the end of the list comes into view
   const moreTags = $('#w0bm-more-tags');
-  moreTags?.addEventListener('click', async () => {
-    const page = +moreTags.dataset.page || 2;
-    moreTags.disabled = true;
-    const r = await api('/api/tags?ajax=1&page=' + page, { method: 'GET' });
-    moreTags.disabled = false;
-    if (!r.ok) return;
-    $('#categories')?.insertAdjacentHTML('beforeend', r.data.html || '');
-    if (r.data.hasMore) moreTags.dataset.page = String(page + 1);
-    else moreTags.remove();
-  });
+  if (moreTags && 'IntersectionObserver' in window) {
+    let busy = false;
+    const io = new IntersectionObserver(async (entries) => {
+      if (!entries.some((en) => en.isIntersecting) || busy) return;
+      busy = true;
+      moreTags.classList.add('w0bm-more-loading');
+      const page = +moreTags.dataset.page || 2;
+      const r = await api('/api/tags?ajax=1&page=' + page, { method: 'GET' });
+      moreTags.classList.toggle('w0bm-more-loading', false);
+      busy = false;
+      if (r.ok) $('#categories')?.insertAdjacentHTML('beforeend', r.data.html || '');
+      if (r.ok && r.data.hasMore) {
+        moreTags.dataset.page = String(page + 1);
+        // still in view (short pages): keep going
+        io.unobserve(moreTags);
+        io.observe(moreTags);
+      } else {
+        io.disconnect();
+        moreTags.hidden = true;
+      }
+    }, { rootMargin: '0px 0px 600px 0px' });
+    io.observe(moreTags);
+  }
 
   // Markdown of rules/about/terms (admin-written; rendered escaped, then a small Markdown subset)
   function renderMarkdown(src) {

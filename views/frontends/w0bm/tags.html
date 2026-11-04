@@ -11,8 +11,7 @@
 </div>
 <div class="clearfix"></div>
 {% if (toptags and (toptags|length >= 50)) %}
-<div class="text-center w0bm-js-only">
-    <button type="button" class="btn btn-primary" id="w0bm-more-tags" data-page="2">Load more</button>
-</div>
+{#- more tags load by themselves when this comes into view (w0bm.js) -#}
+<div class="w0bm-more w0bm-js-only" id="w0bm-more-tags" data-page="2"></div>
 {% endif %}
 {% endblock %}
