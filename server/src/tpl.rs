@@ -475,6 +475,109 @@ pub fn frontend_for(st: &AppState, cfg: &Config, req: Option<&Req>) -> String {
     cfg.str("websrv.frontend").filter(|f| valid(f)).map(str::to_string).unwrap_or_else(|| DEFAULT_FRONTEND.to_string())
 }
 
+/// Shared pages: default views that render inside the frontend's shell (they include
+/// `shell_header`). Paths relative to views/, e.g. "admin/users.html".
+pub fn shared_views(views: &std::path::Path) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut stack = vec![views.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for e in std::fs::read_dir(&dir).into_iter().flatten().flatten() {
+            let p = e.path();
+            let rel = p.strip_prefix(views).unwrap_or(&p).to_string_lossy().replace('\\', "/");
+            if p.is_dir() {
+                if rel != FRONTENDS_DIR {
+                    stack.push(p);
+                }
+            } else if rel.ends_with(".html") && std::fs::read_to_string(&p).map(|t| t.contains("shell_header")).unwrap_or(false) {
+                out.push(rel);
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// Checks every alternative frontend against the contract in views/frontends/README.md; returns
+/// the problems found (empty = fine). `public` is the public/ directory.
+pub fn check_frontends(views: &std::path::Path, public: &std::path::Path) -> Vec<String> {
+    let read = |p: &std::path::Path| std::fs::read_to_string(p).unwrap_or_default();
+    let mut problems = Vec::new();
+    let shared = shared_views(views);
+    for v in &shared {
+        if !read(&views.join(v)).contains("shell_footer") {
+            problems.push(format!("views/{v}: includes shell_header but not shell_footer"));
+        }
+    }
+    let mut fronts: Vec<String> = std::fs::read_dir(views.join(FRONTENDS_DIR))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|e| e.path().is_dir())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    fronts.sort();
+    for fe in fronts {
+        let dir = views.join(FRONTENDS_DIR).join(&fe);
+        let at = |rel: &str| format!("views/{FRONTENDS_DIR}/{fe}/{rel}");
+        let header = read(&dir.join("shell/header.html"));
+        let footer = read(&dir.join("shell/footer.html"));
+        if header.is_empty() {
+            problems.push(format!("{}: missing", at("shell/header.html")));
+        } else {
+            for need in ["snippets/shell-head.html", "f0ck-shell-page"] {
+                if !header.contains(need) {
+                    problems.push(format!("{}: must contain {need}", at("shell/header.html")));
+                }
+            }
+        }
+        if footer.is_empty() {
+            problems.push(format!("{}: missing", at("shell/footer.html")));
+        } else {
+            for need in ["snippets/frontend-scripts.html", "snippets/shell-foot.html"] {
+                if !footer.contains(need) {
+                    problems.push(format!("{}: must contain {need}", at("shell/footer.html")));
+                }
+            }
+        }
+        for v in &shared {
+            if dir.join(v).is_file() {
+                problems.push(format!("{}: overrides the shared page views/{v}; delete it (it renders in the shell)", at(v)));
+            }
+        }
+        // Its own pages load the shared scripts; nothing copies the page data
+        let mut own_includes_scripts = false;
+        let mut stack = vec![dir.clone()];
+        while let Some(d) = stack.pop() {
+            for e in std::fs::read_dir(&d).into_iter().flatten().flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    stack.push(p);
+                    continue;
+                }
+                let rel = p.strip_prefix(&dir).unwrap_or(&p).to_string_lossy().replace('\\', "/");
+                let text = read(&p);
+                if !rel.starts_with("shell/") && text.contains("snippets/frontend-scripts.html") {
+                    own_includes_scripts = true;
+                }
+                if text.contains("id=\"footer-data\"") {
+                    problems.push(format!("{}: copies #footer-data; include snippets/frontend-scripts.html instead", at(&rel)));
+                }
+            }
+        }
+        if !own_includes_scripts {
+            problems.push(format!("views/{FRONTENDS_DIR}/{fe}: no page layout includes snippets/frontend-scripts.html"));
+        }
+        // One live socket for everyone: F0ckLive (f0ck-core.js)
+        for e in std::fs::read_dir(public.join("s/fe").join(&fe).join("js")).into_iter().flatten().flatten() {
+            let text = read(&e.path());
+            if text.contains("new WebSocket") || text.contains("/api/notifications/ws") {
+                problems.push(format!("public/s/fe/{fe}/js/{}: opens its own live socket; use F0ckLive / f0ckFrontend hooks", e.file_name().to_string_lossy()));
+            }
+        }
+    }
+    problems
+}
+
 /// flummpress: `.replace(/\n\s*\n/g, "\n")`
 fn collapse_blank_lines(s: &str) -> String {
     static RE: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"\n\s*\n").unwrap());
@@ -620,9 +723,11 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("enable_youtube_upload", json!(cfg.enabled("websrv.enable_youtube_upload")));
     put("upload_limit", if cfg.get("main.upload_limit").is_null() { json!(69) } else { cfg.get("main.upload_limit").clone() });
     put("meme_creator", json!(cfg.truthy("websrv.meme_creator")));
-    put("custom_favicon", json!(cfg.str_or("websrv.custom_favicon", "")));
+    put("custom_favicon", json!(s.favicon_url));
     put("custom_brand_image", json!(brand));
-    put("custom_navbar_brand_text", json!(cfg.str_or("websrv.custom_navbar_brand_text", "")));
+    put("custom_navbar_brand_text", json!(s.brand_text));
+    put("brand_glitch_text", json!(s.brand_glitch_text));
+    put("brand_glitch_image", json!(s.brand_glitch_image));
     put("default_font", json!(cfg.str_or("websrv.default_font", "")));
     put("site_description", json!(cfg.str_or("websrv.description", "The webs dumpster")));
     put("enable_nsfl", json!(cfg.enable_nsfl()));
@@ -895,6 +1000,14 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     let frontend = frontend_for(st, &cfg, req);
     let fe_view = format!("{FRONTENDS_DIR}/{frontend}/{}", view.trim_end_matches(".html"));
     let view = if frontend != DEFAULT_FRONTEND && st.tpl.has(&fe_view) { fe_view.as_str() } else { view };
+    // Shared pages (settings, messages, admin, mod, ...) exist once, as default views. They include
+    // `shell_header` / `shell_footer`: the frontend's own chrome (views/frontends/<fe>/shell/) when it
+    // has one, else the default header/footer. See views/frontends/README.md.
+    for part in ["header", "footer"] {
+        let fe_part = format!("{FRONTENDS_DIR}/{frontend}/shell/{part}");
+        let shell = if frontend != DEFAULT_FRONTEND && st.tpl.has(&fe_part) { format!("{fe_part}.html") } else { format!("snippets/{part}.html") };
+        ctx.insert(format!("shell_{part}"), json!(shell));
+    }
     ctx.insert("frontend".into(), json!(frontend));
     ctx.insert("frontends".into(), json!(frontend_names(st)));
     ctx.insert("frontend_switch".into(), json!(frontend_switch_enabled(&cfg)));
@@ -905,6 +1018,13 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn frontends_follow_contract() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let problems = check_frontends(&root.join("views"), &root.join("public"));
+        assert!(problems.is_empty(), "frontend contract (views/frontends/README.md):\n{}", problems.join("\n"));
+    }
 
     #[test]
     fn numbers_format_like_js() {

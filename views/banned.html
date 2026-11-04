@@ -1,4 +1,4 @@
-{% include "snippets/header.html" %}
+{% include (shell_header or "snippets/header.html") %}
 <div class="pagewrapper">
   <div id="main" class="banned-page-main">
     <div class="banned-page-center">
@@ -50,4 +50,4 @@
   </div>
 </div>
 <script src="/s/js/views/banned.js?v={{ mtime("/public/s/js/views/banned.js") }}"></script>
-{% include "snippets/footer.html" %}
+{% include (shell_footer or "snippets/footer.html") %}

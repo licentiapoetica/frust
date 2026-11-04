@@ -1,0 +1,243 @@
+/*
+ * privacy.css: the privacy page (views/privacy.html, a shared page) and the same text in the
+ * "login as anonymous" privacy consent dialog (snippets/anon-login.html). Part of bundle.css for the
+ * default frontend (f0ckm build-css); the other frontends get it through f0ck-shell.css (shared pages)
+ * and anon-login.html (the dialog). Colours follow --accent / --text-color / --text-muted, else the
+ * --pv-* defaults below.
+ */
+/* ---- privacy.html (also shown in the navbar privacy-consent modal, which imports the page's .pv) ---- */
+.pv {
+  --pv-accent: var(--accent, #0096ff);
+  --pv-text: var(--text-color, #fff);
+  --pv-muted: var(--text-muted, #8a8f98);
+  --pv-surface: rgba(255, 255, 255, 0.04);
+  --pv-border: rgba(255, 255, 255, 0.1);
+  --pv-good: #3ecf8e;
+  --pv-warn: #ffb020;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px 16px 60px;
+  color: var(--pv-text);
+  line-height: 1.6;
+}
+
+.pv * {
+  border-radius: 0 !important;
+}
+
+.pv-head {
+  padding-bottom: 18px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid var(--pv-accent);
+}
+
+.pv-head h1 {
+  margin: 0;
+  font-size: 1.8em;
+  font-weight: 800;
+}
+
+.pv-head p {
+  margin: 6px 0 0;
+  color: var(--pv-muted);
+}
+
+.pv-sec {
+  margin-bottom: 32px;
+}
+
+.pv-sec h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 1.1em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pv-sec h2 i {
+  color: var(--pv-accent);
+  font-size: 0.9em;
+}
+
+.pv-sec h3 {
+  margin: 18px 0 8px;
+  font-size: 0.9em;
+  font-weight: 700;
+  color: var(--pv-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.pv p {
+  margin: 0 0 10px;
+}
+
+.pv a {
+  color: var(--pv-accent);
+}
+
+.pv code {
+  padding: 1px 5px;
+  font-size: 0.86em;
+  background: var(--pv-surface);
+  border: 1px solid var(--pv-border);
+  word-break: break-word;
+}
+
+.pv-small {
+  font-size: 0.88em;
+  color: var(--pv-muted);
+}
+
+.pv-note {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  font-size: 0.9em;
+  background: var(--pv-surface);
+  border: 1px solid var(--pv-border);
+  border-left: 3px solid var(--pv-accent);
+}
+
+.pv-note > i {
+  color: var(--pv-accent);
+  margin-top: 4px;
+}
+
+.pv-steps,
+.pv-list {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.pv-steps li,
+.pv-list li {
+  margin-bottom: 6px;
+}
+
+.pv-status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  margin-bottom: 12px;
+  background: var(--pv-border);
+  border: 1px solid var(--pv-border);
+}
+
+.pv-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg, #000);
+}
+
+.pv-stat-label {
+  font-size: 0.72em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pv-muted);
+}
+
+.pv-pill {
+  align-self: flex-start;
+  padding: 3px 9px;
+  font-size: 0.78em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid currentColor;
+}
+
+.pv-pill.is-on {
+  color: var(--pv-accent);
+}
+
+.pv-pill.is-off {
+  color: var(--pv-muted);
+}
+
+.pv-pill.is-good {
+  color: var(--pv-good);
+}
+
+.pv-pill.is-warn {
+  color: var(--pv-warn);
+}
+
+.pv-table {
+  border: 1px solid var(--pv-border);
+  font-size: 0.88em;
+}
+
+.pv-row {
+  display: grid;
+  grid-template-columns: 1fr 0.7fr 2fr;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--pv-surface);
+}
+
+.pv-row + .pv-row {
+  border-top: 1px solid var(--pv-border);
+}
+
+.pv-row-head {
+  background: transparent;
+  font-size: 0.8em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pv-muted);
+}
+
+.pv-row span:first-child {
+  font-weight: 700;
+}
+
+.pv-row span:last-child {
+  color: var(--pv-muted);
+}
+
+.pv-row-head span {
+  font-weight: 800 !important;
+}
+
+.pv-ok {
+  color: var(--pv-good);
+  font-weight: 700;
+}
+
+.pv-warn {
+  color: var(--pv-warn);
+  font-weight: 700;
+}
+
+.pv-foot {
+  margin-top: 36px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pv-border);
+  color: var(--pv-muted);
+  font-size: 0.9em;
+}
+
+@media (max-width: 700px) {
+  .pv-status {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .pv-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .pv-row-head {
+    display: none;
+  }
+}

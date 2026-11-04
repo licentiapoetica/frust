@@ -1,56 +1,18 @@
-// Passkey login for registered users — fires only on explicit button click
+// Passkey login for registered users — fires only on explicit button click.
+// The WebAuthn round trip is f0ckPasskeyLogin (f0ck-core.js, shared with the other frontends).
 async function loginWithPasskey() {
   const btn = document.getElementById('modal-login-passkey-btn');
   const errEl = document.getElementById('modal-passkey-error');
   if (errEl) errEl.style.display = 'none';
-  if (!window.PublicKeyCredential) {
-    if (errEl) { errEl.style.display = ''; errEl.textContent = 'Passkeys are not supported in this browser.'; }
-    return;
-  }
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Waiting for passkey...'; }
-
-  function b64urlToArr(s) { return Uint8Array.from(atob(s.split('-').join('+').split('_').join('/')), c=>c.charCodeAt(0)); }
-  function arrToB64url(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))).split('+').join('-').split('/').join('_').replace(/=+$/,''); }
-
   try {
-    const beginRes = await fetch('/api/v2/settings/passkeys/login/begin', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
-    const beginData = await beginRes.json();
-    if (!beginData.success) throw new Error(beginData.msg || 'Server error');
-
-    const opts = beginData.options;
-    const cred = await navigator.credentials.get({ publicKey: {
-      challenge: b64urlToArr(opts.challenge),
-      rpId: opts.rpId,
-      allowCredentials: (opts.allowCredentials || []).map(c => ({ type: c.type, id: b64urlToArr(c.id) })),
-      userVerification: opts.userVerification || 'preferred',
-      timeout: opts.timeout || 60000
-    }});
-
-    const finishRes = await fetch('/api/v2/settings/passkeys/login/finish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        challenge: opts.challenge,
-        credentialId: arrToB64url(cred.rawId),
-        clientDataJSON: arrToB64url(cred.response.clientDataJSON),
-        authenticatorData: arrToB64url(cred.response.authenticatorData),
-        signature: arrToB64url(cred.response.signature),
-        userHandle: cred.response.userHandle ? arrToB64url(cred.response.userHandle) : null
-      })
-    });
-    const finishData = await finishRes.json();
-    if (!finishData.success) throw new Error(finishData.msg || 'Authentication failed');
-
+    await window.f0ckPasskeyLogin();
     window.location.reload();
   } catch (e) {
     console.warn('[PASSKEY] Login failed:', e);
     if (errEl) {
       errEl.style.display = '';
-      if (e && e.name === 'NotAllowedError') {
-        errEl.textContent = 'Passkey request was cancelled or blocked. If Bitwarden or another password manager is locked, please unlock it or check extension permissions.';
-      } else {
-        errEl.textContent = (e && e.message) || 'Passkey login failed.';
-      }
+      errEl.textContent = (e && e.message) || 'Passkey login failed.';
     }
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-fingerprint"></i> Use my passkey'; }
   }

@@ -1,0 +1,16 @@
+{#- Every page of an alternative frontend (views/frontends/*), at the end of <body>: the page data the
+    shared scripts read (footer-data -> window.f0ckSession, f0ckI18n), the shared client core, the live
+    events (f0ck-frontend.js) and for logged-in visitors the DM keys (messages.js).
+    Contract: views/frontends/README.md -#}
+{% include "snippets/footer-data.html" %}
+<script src="/s/js/sanitizer.js?v={{ mtime("/public/s/js/sanitizer.js") }}"></script>
+<script src="/s/js/marked.min.js?v={{ mtime("/public/s/js/marked.min.js") }}" defer></script>
+<script src="/s/js/f0ck-core.js?v={{ mtime("/public/s/js/f0ck-core.js") }}"></script>
+{% if enable_anonymous_access %}
+{#- "Login as anonymous": any element with class trigger-login-anon opens it (passkey.js) -#}
+{% include "snippets/anon-login.html" %}
+<script src="/s/js/passkey.js?v={{ mtime("/public/s/js/passkey.js") }}"></script>
+{% endif %}
+{% if (session and private_messages) %}<script src="/s/js/messages.js?v={{ mtime("/public/s/js/messages.js") }}"></script>{% endif %}
+{#- live events (comments, new uploads, notifications, …) for every visitor, like f0ckm.js -#}
+<script src="/s/js/f0ck-frontend.js?v={{ mtime("/public/s/js/f0ck-frontend.js") }}"></script>

@@ -1,0 +1,312 @@
+/*
+ * f0ck-shell.css: the shared pages (settings, messages, admin, mod, pending, banned) inside an
+ * alternative frontend's chrome (views/frontends/<fe>/shell/). Loaded by snippets/shell-head.html.
+ *
+ * Those pages are the default views, written for f0ckm.css. It is imported here into a cascade
+ * layer, so it stays in sync by itself (nothing is copied or generated):
+ *   - every unlayered rule of the frontend's own CSS beats it, whatever the specificity;
+ *   - inside the page content (.f0ck-shell-page) and the moderator dialog, `all: revert-layer`
+ *     hands everything back to f0ckm.css, so the frontend's generic rules (bootstrap's h1-h6, .btn,
+ *     .modal-content, ...) don't break the f0ckm components;
+ *   - the frontend's chrome (marked .f0ck-shell-chrome) gets f0ckm.css reset to browser defaults
+ *     for whatever the frontend doesn't set itself, so it looks as on the frontend's own pages;
+ *   - the look comes from the frontend's palette (--fe-* on html.f0ck-shell, see README).
+ *
+ * Contract: views/frontends/README.md
+ */
+@layer f0ck-shell-important, f0ckm, fa, f0ck-shell-reset;
+@import url("/s/css/f0ckm.css") layer(f0ckm);
+@import url("/s/css/privacy.css") layer(f0ckm);
+@import url("/s/fa/all.min.css") layer(fa);
+
+/* ── frontend palette → the theme variables f0ckm.css uses ── */
+html.f0ck-shell {
+  --accent: var(--fe-accent, #9f0);
+  --accent-rgb: var(--fe-accent-rgb, 153, 255, 0);
+  --bg: var(--fe-bg, #101010);
+  --black: #000;
+  --white: #fff;
+  --gray: var(--fe-surface, #282828);
+  --fg: var(--fe-text, #fff);
+  --text: var(--fe-text, #fff);
+  --text-color: var(--fe-text, #fff);
+  --text-muted: var(--fe-muted, #999);
+  --danger: #e74c3c;
+  --nav-bg: var(--fe-surface-2, #191919);
+  --nav-border-color: var(--fe-border, #444);
+  --nav-link-hover-bg: var(--fe-surface, #282828);
+  --dropdown-bg: var(--fe-surface-2, #191919);
+  --dropdown-item-hover: var(--fe-surface, #282828);
+  --metadata-bg: var(--fe-surface, #282828);
+  --badge-bg: var(--fe-surface, #282828);
+  --badge-tag: var(--fe-surface, #282828);
+  --tooltip-bg: var(--fe-surface-2, #191919);
+  --scrollbar-color: var(--fe-border, #444);
+  --navbar-h: 0px;
+  --font: var(--fe-font, sans-serif);
+}
+
+html.f0ck-shell .f0ck-shell-page {
+  --adm-accent: var(--fe-accent, #9f0);
+  --adm-surface: var(--fe-surface, #282828);
+  --adm-border: var(--fe-border, #444);
+  --st-accent: var(--fe-accent, #9f0);
+  --st-border: var(--fe-border, #444);
+}
+
+/* ── keep f0ckm.css off the frontend's chrome (frontend CSS still wins) ── */
+@layer f0ck-shell-reset {
+  html.f0ck-shell,
+  html.f0ck-shell body,
+  .f0ck-shell-chrome,
+  .f0ck-shell-chrome * {
+    all: revert;
+  }
+}
+
+/* ── the page content and the moderator dialog belong to f0ckm.css ── */
+.f0ck-shell-page,
+.f0ck-shell-page *,
+#mod-action-modal,
+#mod-action-modal * {
+  all: revert-layer;
+}
+
+/* The frontend's link colour replaces only f0ckm.css's base `a { color: var(--accent) }`: same layer,
+   same specificity (:where), later in the layer. Component rules for links (buttons, tabs, ...) are
+   more specific and keep their colours. */
+@layer f0ckm {
+  :where(.f0ck-shell-page) a {
+    color: var(--fe-link, var(--fe-accent, #9f0));
+  }
+}
+
+/* ── frontend look on top ── */
+.f0ck-shell-page {
+  color: var(--fe-text, #fff);
+  font-family: var(--fe-font, sans-serif);
+  margin-bottom: 2rem;
+}
+
+.f0ck-shell-page .container {
+  max-width: none;
+  padding: 0;
+}
+
+.f0ck-shell-page h1,
+.f0ck-shell-page h2,
+.f0ck-shell-page h3,
+.f0ck-shell-page .adm-section-title,
+.f0ck-shell-page .settings fieldset > legend {
+  font-family: var(--fe-heading-font, var(--fe-font, sans-serif));
+}
+
+.f0ck-shell-page .adm-header,
+.f0ck-shell-page .messages-header,
+.f0ck-shell-page #settings-page-header,
+.f0ck-shell-page .mq-header,
+.f0ck-shell-page .pending-header {
+  background: var(--fe-surface, #282828);
+  border: 0;
+  margin: 0 0 .5rem;
+  padding: .5rem;
+}
+
+.f0ck-shell-page .adm-section,
+.f0ck-shell-page .adm-card,
+.f0ck-shell-page fieldset,
+.f0ck-shell-page .settings-section,
+.f0ck-shell-page .dm-inbox-list,
+.f0ck-shell-page .mq-card {
+  background: var(--fe-surface, #282828);
+  border: 1px solid var(--fe-border, #444);
+  border-radius: var(--fe-radius, 0);
+}
+
+.f0ck-shell-page input[type="text"],
+.f0ck-shell-page input[type="search"],
+.f0ck-shell-page input[type="number"],
+.f0ck-shell-page input[type="password"],
+.f0ck-shell-page input[type="email"],
+.f0ck-shell-page input[type="url"],
+.f0ck-shell-page input[type="date"],
+.f0ck-shell-page input[type="datetime-local"],
+.f0ck-shell-page select,
+.f0ck-shell-page textarea {
+  background: var(--fe-input-bg, #121214);
+  border: 1px solid var(--fe-border, #444);
+  border-radius: var(--fe-radius, 0);
+  color: var(--fe-text, #fff);
+  font-family: inherit;
+}
+
+.f0ck-shell-page input:focus,
+.f0ck-shell-page select:focus,
+.f0ck-shell-page textarea:focus {
+  border-color: var(--fe-accent, #9f0);
+  outline: 0;
+}
+
+.f0ck-shell-page button,
+.f0ck-shell-page .adm-btn,
+.f0ck-shell-page .btn-small {
+  border-radius: var(--fe-radius, 0);
+  font-family: inherit;
+}
+
+.f0ck-shell-page table {
+  background: var(--fe-surface, #282828);
+  color: var(--fe-text, #fff);
+}
+
+.f0ck-shell-page th,
+.f0ck-shell-page td {
+  border-color: var(--fe-border, #444);
+}
+
+.f0ck-shell-page .adm-section,
+.f0ck-shell-page .adm-card {
+  padding: 12px;
+}
+
+/* the breadcrumb back to the dashboard: no extra inset, it lines up with the page title */
+.f0ck-shell-page .adm-back {
+  padding: 0;
+  margin: 0 0 .5rem;
+}
+
+/* frontend CSS like bootstrap's a:hover { underline } is more specific than the revert above;
+   links on shared pages are decorated as f0ckm.css says */
+.f0ck-shell-page a:hover,
+.f0ck-shell-page a:focus,
+.f0ck-shell-page a:active {
+  text-decoration: revert-layer;
+}
+
+.f0ck-shell-page .adm-tool:hover,
+.f0ck-shell-page .adm-stat-link:hover {
+  box-shadow: 0 0 0 2px var(--fe-accent, #9f0);
+}
+
+.f0ck-shell-page #settings-page-header .sph-close {
+  display: none;
+}
+
+.f0ck-shell-page #settings-quicknav {
+  background: var(--fe-surface-2, #191919);
+  border: 1px solid var(--fe-border, #444);
+  z-index: 5;
+}
+
+.f0ck-shell-page .messages-page {
+  max-width: none;
+  padding: 0;
+}
+
+.f0ck-shell-page .messages-convo-page {
+  background: var(--fe-surface, #282828);
+  border: 1px solid var(--fe-border, #444);
+  max-width: none;
+}
+
+.f0ck-shell-page .dm-thread {
+  background: var(--fe-surface-2, #191919);
+}
+
+/* f0ckm.css lays some of these pages out with !important (fixed title bars, a full-viewport DM
+   pane) under its fixed navbar. Important declarations of an earlier layer beat later layers and
+   unlayered ones, so the overrides sit in f0ck-shell-important, declared before f0ckm. */
+@layer f0ck-shell-important {
+  .f0ck-shell-page .pagewrapper {
+    height: auto !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    position: static !important;
+    width: auto !important;
+  }
+
+  .f0ck-shell-page #main {
+    height: auto !important;
+    margin: 0 !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    position: static !important;
+    width: auto !important;
+  }
+
+  .f0ck-shell-page #settings-page-header {
+    left: auto !important;
+    position: static !important;
+    right: auto !important;
+    top: auto !important;
+    width: auto !important;
+    z-index: auto !important;
+  }
+
+  .f0ck-shell-page #settings-quicknav {
+    left: auto !important;
+    margin: 0 0 .5rem !important;
+    position: sticky !important;
+    right: auto !important;
+    /* below the frontend's sticky navbar, as on f0ckm */
+    top: var(--fe-navbar-h, 0px) !important;
+    width: auto !important;
+  }
+
+  .f0ck-shell-page .settings {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    /* f0ckm hides sideways overflow with overflow: hidden auto, which makes .settings its own scroll
+       container: the sticky quick-nav would stick inside it (i.e. not at all). clip doesn't. */
+    overflow: visible !important;
+    overflow-x: clip !important;
+    /* f0ckm adds empty space below the last section (--settings-tail, settings.quicknav.js) so the
+       quick-nav can scroll even that one to the top; in the frontends' column it's just a huge gap */
+    padding-bottom: 15px !important;
+  }
+
+  /* the DM conversation: a box in the column instead of a fixed full-viewport pane */
+  .f0ck-shell-page #main.messages-convo-page {
+    height: calc(100vh - 110px) !important;
+    min-height: 420px !important;
+  }
+
+  .f0ck-shell-page .messages-convo-page {
+    bottom: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    left: auto !important;
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+  }
+}
+
+/* ── f0ck-core.js toast (used when the frontend has no flash hook) ── */
+#f0ck-core-flash {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  left: 50%;
+  position: fixed;
+  top: 70px;
+  transform: translateX(-50%);
+  width: min(480px, 92vw);
+  z-index: 3000;
+}
+
+.f0ck-core-toast {
+  background: var(--fe-surface, #282828);
+  border: 1px solid var(--fe-border, #444);
+  border-left: 4px solid var(--fe-accent, #9f0);
+  color: var(--fe-text, #fff);
+  padding: 8px 12px;
+}
+
+.f0ck-core-toast-error {
+  border-left-color: #e74c3c;
+}

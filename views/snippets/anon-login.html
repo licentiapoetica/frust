@@ -1,0 +1,61 @@
+{#- "Login as anonymous": the passkey setup dialog and the privacy consent it asks for (passkey.js,
+    navbar.anon-setup.js). Used by snippets/navbar.html and, through snippets/frontend-scripts.html, by
+    every alternative frontend (which style #anon-setup-modal / #privacy-consent-modal themselves). -#}
+{% if enable_anonymous_access %}
+{#- the privacy text in the consent dialog (part of bundle.css on the default frontend) -#}
+{% if (frontend and frontend != "f0ckm") %}<link rel="stylesheet" href="/s/css/privacy.css?v={{ mtime("/public/s/css/privacy.css") }}">{% endif %}
+<!-- Anonymous Passkey Setup Modal — shown when user clicks "Login as anonymous" -->
+<div id="anon-setup-modal" class="navbar-anon-modal" style="display: none;">
+  <div class="navbar-anon-modal-box">
+    <button id="anon-setup-modal-close" class="navbar-anon-modal-close">&times;</button>
+
+    <div id="anon-setup-view">
+      <!-- New user view (no passkey yet) -->
+      <div id="anon-setup-new" class="lm-panel lm-panel-passkey">
+        <h2 class="lm-title">Create passkey</h2>
+        <div class="lm-row anon-consent">
+          <label class="lm-check lm-check-multiline" for="anon-consent-new">
+            <input type="checkbox" id="anon-consent-new" class="anon-consent-input" />
+            <span class="lm-check-box"><i class="fa-solid fa-check"></i></span>
+            <span>I have read the <a href="/privacy" class="lm-link anon-consent-open">privacy page</a> and accept how my data is processed.</span>
+          </label>
+        </div>
+        <button type="button" id="anon-setup-create-btn" class="lm-btn lm-btn-primary">
+          <i class="fa-solid fa-fingerprint"></i> Create
+        </button>
+        <div id="anon-setup-new-error" class="lm-error" style="display: none;"></div>
+        <p class="lm-footer">
+          <button type="button" id="anon-setup-switch-existing" class="lm-textbtn">Already have one? Use existing passkey</button>
+        </p>
+      </div>
+
+      <!-- Returning user view (has passkey) -->
+      <div id="anon-setup-returning" class="lm-panel lm-panel-passkey" style="display: none;">
+        <h2 class="lm-title">Authenticate with passkey</h2>
+        <button type="button" id="anon-setup-auth-btn" class="lm-btn lm-btn-primary">
+          <i class="fa-solid fa-fingerprint"></i> Authenticate
+        </button>
+        <div id="anon-setup-ret-error" class="lm-error" style="display: none;"></div>
+        <p class="lm-footer">
+          <button type="button" id="anon-setup-switch-new" class="lm-textbtn">Create a new passkey instead</button>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Privacy consent modal: opened from the "Create passkey" consent checkbox; must be read to the end -->
+<div id="privacy-consent-modal" style="display: none;">
+  <div class="pc-content">
+    <div class="pc-header">
+      <h3><i class="fa-solid fa-shield-halved"></i> Privacy</h3>
+      <button type="button" id="privacy-consent-close" class="pc-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="pc-body" id="privacy-consent-body"></div>
+    <div class="pc-footer">
+      <span class="pc-hint" id="privacy-consent-hint">Scroll to the end to accept.</span>
+      <button type="button" id="privacy-consent-accept" class="pc-accept" disabled><i class="fa-solid fa-check"></i> Accept</button>
+    </div>
+  </div>
+</div>
+<script src="/s/js/views/snippets/navbar.anon-setup.js?v={{ mtime("/public/s/js/views/snippets/navbar.anon-setup.js") }}"></script>
+{% endif %}

@@ -120,16 +120,16 @@ websrv:
   themes:
     - amoled
   theme: amoled
-  # Site frontend: f0ckm (default), or an alternative one from views/frontends/ (w0bm, w0bm2, f0ckv2).
+  # Site frontend: f0ckm (default), or an alternative one from views/frontends/ (w0bm, f0ckv2).
   # Pages a frontend has no template for use the f0ckm one.
   frontend: f0ckm
   # Let visitors pick their own frontend with /frontend/<name> or ?frontend=<name> (kept in a cookie)
   frontend_switch: true
   default_font: Manrope-Regular.woff2   # font file (built-in: public/s/fonts-builtin; add your own to the fonts dir)
   default_layout: legacy
-  custom_favicon: /s/img/favicon.gif
-  custom_brand_image: []
-  custom_navbar_brand_text: ""
+  custom_favicon: /s/img/favicon.gif   # admin panel → Branding: an uploaded favicon replaces it
+  custom_brand_image: []               # admin panel → Branding: an uploaded image replaces it
+  custom_navbar_brand_text: ""         # shown next to the brand image; the admin panel text replaces it
   show_koepfe: false
   hide_sidebar_default: true
   koepfe: []

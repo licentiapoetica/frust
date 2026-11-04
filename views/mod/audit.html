@@ -1,4 +1,4 @@
-{% include "snippets/header.html" %}
+{% include (shell_header or "snippets/header.html") %}
 <div id="main">
     {% include "snippets/admin-back.html" %}
     <div class="container">
@@ -185,4 +185,4 @@
         <script src="/s/js/views/mod/audit.js?v={{ mtime("/public/s/js/views/mod/audit.js") }}"></script>
     </div>
 </div>
-        {% include "snippets/footer.html" %}
+        {% include (shell_footer or "snippets/footer.html") %}

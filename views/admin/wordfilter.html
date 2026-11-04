@@ -1,4 +1,4 @@
-{% include "snippets/header.html" %}
+{% include (shell_header or "snippets/header.html") %}
 <div class="pagewrapper">
 <div id="main" class="admin-container">
     {% include "snippets/admin-back.html" %}
@@ -48,4 +48,4 @@
     </div>
 </div>
 </div>
-{% include "snippets/footer.html" %}
+{% include (shell_footer or "snippets/footer.html") %}

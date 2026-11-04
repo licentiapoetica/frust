@@ -1,4 +1,4 @@
-{% include "snippets/header.html" %}
+{% include (shell_header or "snippets/header.html") %}
 <div id="main">
   <table class="table adm-recover-table">
   <thead>
@@ -23,4 +23,4 @@
   </tbody>
   </table>
 </div>
-{% include "snippets/footer.html" %}
+{% include (shell_footer or "snippets/footer.html") %}

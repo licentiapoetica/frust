@@ -50,6 +50,9 @@
     <link rel="stylesheet" href="/s/css/bundle.css?v={{ ts }}">
     {% endif %}
     <link rel="stylesheet" href="/s/css/upload.css?v={{ ts }}">
+    {#- navbar brand glitch (admin panel → brand) -#}
+    <link rel="stylesheet" href="/s/css/glitchfx.css?v={{ mtime("/public/s/css/glitchfx.css") }}">
+    <link rel="stylesheet" href="/s/css/comment-fx.css?v={{ mtime("/public/s/css/comment-fx.css") }}">
   {% endif %}
   <script type="application/json" id="header-data">{"themes": {{ themes_json|safe }}, "default_theme": {{ default_theme|string|tojson }}, "default_layout": {{ default_layout|string|tojson }}, "domain": {{ domain|string|tojson }}, "git_hash": {{ git_hash|string|tojson }}, "allowed_images": {{ allowed_comment_images_json|safe }}, "embed_youtube_in_comments": {{ ("true" if embed_youtube_in_comments else "false")|safe }}, "enable_youtube_upload": {{ ("true" if enable_youtube_upload else "false")|safe }}, "brand_images": {{ custom_brand_images_json|safe }}, "custom_brand_text": {{ (custom_navbar_brand_text or "")|string|tojson }}, "media_base": {{ paths_images|string|tojson }}, "shitpost_mode": {{ ("true" if shitpost_mode else "false")|safe }}, "shitpost_require_rating": {{ ("true" if shitpost_require_rating else "false")|safe }}, "shitpost_min_tags": {{ (shitpost_min_tags or 0)|safe }}, "enable_item_title": {{ ("true" if enable_item_title else "false")|safe }}, "comment_banner_enabled": {% if comment_banner_enabled %} true {% else %} false {% endif %}, "server_audio_tuner": {{ (audio_tuner_json or "null")|safe }}, "enable_comments": {{ ("true" if enable_comments else "false")|safe }}, "hw_fingerprint": {{ ("true" if hw_fingerprint_enabled else "false")|safe }}}</script>
   <script src="/s/js/views/snippets/header.config.js?v={{ mtime("/public/s/js/views/snippets/header.config.js") }}"></script>

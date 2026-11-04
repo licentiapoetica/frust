@@ -1,0 +1,21 @@
+{#- Confirm/reason dialog of ModAction (f0ck-core.js). Used by snippets/footer.html and every frontend's shell. -#}
+{% if session %}
+<div id="mod-action-modal" class="modal-overlay footer-hidden">
+  <div class="modal-content ma-modal-content">
+    <div class="ma-header">
+      <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="mod-action-cancel">&times;</button>
+      <h3 id="mod-action-title">{{ t("mod.confirm_action") }}</h3>
+    </div>
+    <div class="ma-body">
+      <div id="mod-action-content"></div>
+      <textarea id="mod-reason" class="mod-reason" placeholder="{{ t("mod.reason_placeholder") }}"></textarea>
+      <div id="mod-action-error" class="error-msg"></div>
+    </div>
+    <div class="modal-actions ma-footer">
+      <button type="button" id="mod-action-cancel" class="btn-secondary">{{ t("common.cancel") }}</button>
+      <button type="button" id="mod-action-confirm" class="btn-danger">{{ t("mod.confirm") }}</button>
+    </div>
+  </div>
+</div>
+
+{% endif %}

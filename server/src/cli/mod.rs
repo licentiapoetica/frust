@@ -48,6 +48,7 @@ Config:
 Build / development:
   build-css [--check]                       Build public/s/css/bundle.css (also done at server start)
   check-templates                           Compile every template in views/
+  check-frontends                           Check the alternative frontends against views/frontends/README.md
 
 Passwords left out on the command line are read from stdin. Environment: STORAGE_DIR, DB_HOST,
 DB_PORT, DB_USER, DB_PASS, DB_NAME, F0CKM_BASE (project root, default: current directory).";
@@ -82,6 +83,14 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
             }
             println!("{} template(s) with errors", errors.len());
             return Ok(if errors.is_empty() { 0 } else { 1 });
+        }
+        "check-frontends" => {
+            let problems = crate::tpl::check_frontends(&base.join("views"), &base.join("public"));
+            for p in &problems {
+                println!("{p}");
+            }
+            println!("{} problem(s); shared pages: {}", problems.len(), crate::tpl::shared_views(&base.join("views")).len());
+            return Ok(if problems.is_empty() { 0 } else { 1 });
         }
         _ => {}
     }

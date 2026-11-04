@@ -1,4 +1,4 @@
-{% include "snippets/header.html" %}
+{% include (shell_header or "snippets/header.html") %}
 <div class="pagewrapper">
 <div id="main">
   {% if log %}
@@ -12,4 +12,4 @@
   {% endif %}
 </div>
 </div>
-{% include "snippets/footer.html" %}
+{% include (shell_footer or "snippets/footer.html") %}

@@ -493,8 +493,12 @@
         return;
       }
 
-      // Close the login modal first
-      const lm = document.getElementById('login-modal'); if (lm) lm.style.display = 'none';
+      // Close the login modal first (an alternative frontend closes its own: f0ckFrontend.closeLogin)
+      if (window.f0ckFrontend && typeof window.f0ckFrontend.closeLogin === 'function') {
+        window.f0ckFrontend.closeLogin();
+      } else {
+        const lm = document.getElementById('login-modal'); if (lm) lm.style.display = 'none';
+      }
 
       const hasPasskey = this._hasLocalPasskey();
       const newView = document.getElementById('anon-setup-new');

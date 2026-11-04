@@ -74,9 +74,6 @@ async fn pipeline(st: &AppState, mut req: Req) -> Res {
     if let Some(r) = cors(st, &req) {
         return Ok(r);
     }
-    if let Some(r) = config_editor(st, &req).await {
-        return Ok(r);
-    }
     static_cache_headers(st, &req);
     if req.path.ends_with(".map") {
         return Ok(reply(404, "text/plain", "Not Found"));
@@ -209,21 +206,6 @@ fn cors(st: &AppState, req: &Req) -> Option<Response> {
         req.set_header("vary", "Origin");
     }
     (req.method == Method::OPTIONS).then(|| raw(204, ""))
-}
-
-async fn config_editor(st: &AppState, req: &Req) -> Option<Response> {
-    if req.method != Method::GET || !(req.path == "/config_editor.html" || req.path == "/config.html") {
-        return None;
-    }
-    let file = st.cfg().base.join("config_editor.html");
-    Some(match tokio::fs::read_to_string(file).await {
-        Ok(c) => {
-            let mut r = raw(200, c);
-            r.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("text/html; charset=utf-8"));
-            r
-        }
-        Err(_) => raw(404, "config_editor.html not found"),
-    })
 }
 
 fn static_cache_headers(st: &AppState, req: &Req) {
@@ -763,6 +745,7 @@ const CSRF_EXEMPT: &[&str] = &[
     "/api/v2/admin/sticker-packs/import",
     "/admin/brand_image/upload",
     "/admin/brand_image/delete",
+    "/admin/favicon/upload",
     // No session state involved: captcha puzzles and browser CSP reports
     "/api/cap/challenge",
     "/api/cap/redeem",

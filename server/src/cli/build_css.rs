@@ -9,7 +9,7 @@ use super::Args;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
-pub const SOURCES: [&str; 2] = ["f0ckm.css", "v0ck.css"];
+pub const SOURCES: [&str; 3] = ["f0ckm.css", "privacy.css", "v0ck.css"];
 pub const OUTPUT: &str = "bundle.css";
 
 fn css_dir(base: &Path) -> PathBuf {

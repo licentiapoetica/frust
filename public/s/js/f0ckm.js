@@ -28,12 +28,8 @@ if (typeof window.f0ckDebug !== 'function') {
   };
 }
 
-window.getCsrfToken = () => {
-  return (window.f0ckSession && window.f0ckSession.csrf_token) ||
-         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-         document.querySelector('input[name="csrf_token"]')?.value ||
-         '';
-};
+// getCsrfToken, escHTML, f0ckTimeAgo, f0ckFormatDateFull, updateGlobalTimestamps, ModAction and the
+// live socket (F0ckLive) are in f0ck-core.js, loaded before this file and shared with the other frontends.
 
 window.requestAnimFrame = (function () {
 
@@ -53,12 +49,6 @@ window.cancelAnimFrame = (function () {
 
 (() => {
   var i18n = window.f0ckI18n || {};
-  window.escHTML = (str) => {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  };
 
   window.getCurrentItemId = () => {
     // 1. If Onara modal is open or mounted, strictly search within #onara-item-mount
@@ -11508,45 +11498,7 @@ window.cancelAnimFrame = (function () {
     _existingNavbarLogo.addEventListener('load', window.syncNavbarHeight);
   }
 
-  window.updateBrandImage = (url) => {
-    const logos = document.querySelectorAll('#navbar-logo');
-    if (url) {
-      window.f0ckBrandImages = [url];
-      if (logos.length > 0) {
-        logos.forEach(el => {
-          el.src = url;
-          el.style.display = '';
-          el.onload = () => { if (window.syncNavbarHeight) window.syncNavbarHeight(); };
-        });
-      } else {
-        document.querySelectorAll('a.navbar-brand').forEach(brandLink => {
-          brandLink.querySelectorAll('.f0ck').forEach(s => s.style.display = 'none');
-          const img = document.createElement('img');
-          img.id = 'navbar-logo';
-          img.src = url;
-          img.alt = window.f0ckDomain || document.title;
-          img.style.cssText = 'max-height:40px;vertical-align:middle;max-width:180px;width:auto;';
-          img.onload = () => { if (window.syncNavbarHeight) window.syncNavbarHeight(); };
-          brandLink.prepend(img);
-        });
-      }
-    } else {
-      window.f0ckBrandImages = [];
-      logos.forEach(el => el.remove());
-      document.querySelectorAll('a.navbar-brand').forEach(brandLink => {
-        const f0ckSpan = brandLink.querySelector('.f0ck');
-        if (f0ckSpan) {
-          f0ckSpan.style.display = '';
-        } else {
-          const span = document.createElement('span');
-          span.className = 'f0ck';
-          span.textContent = window.f0ckCustomBrandText || window.f0ckDomain || '';
-          brandLink.appendChild(span);
-        }
-      });
-    }
-    if (window.syncNavbarHeight) window.syncNavbarHeight();
-  };
+  // window.updateBrandImage / updateBrandText: f0ck-core.js (shared with the other frontends)
 
   // Sidebar state init — apply persisted hidden/visible state on load
   window.initSidebarRightToggle = () => {
@@ -18307,8 +18259,6 @@ class NotificationSystem {
     this.list = this.dropdown ? this.dropdown.querySelector('.notif-list') : null;
     this.markAllBtn = document.getElementById('mark-all-read');
     this.customEmojis = {};
-    this.retryCount = 0;
-    this.maxRetries = 20; // Increased retries
     this.pendingNotifIds = new Set(); // item IDs notified before thumbnail was in the grid
     const activeTabEl = this.dropdown ? this.dropdown.querySelector('.notif-tab.active') : null;
     this.activeTab = activeTabEl ? activeTabEl.dataset.tab : ((window.f0ckEnableComments === false) ? 'system' : 'user');
@@ -18316,12 +18266,8 @@ class NotificationSystem {
     this._cachedSystem = [];
     this._cachedAdmin = [];
 
-    // Generate/retrieve unique tab ID
-    this.tabId = sessionStorage.getItem('f0ck_tab_id');
-    if (!this.tabId) {
-        this.tabId = Math.random().toString(36).slice(2);
-        sessionStorage.setItem('f0ck_tab_id', this.tabId);
-    }
+    // Unique tab ID (kept in sessionStorage by F0ckLive, f0ck-core.js)
+    this.tabId = window.F0ckLive.tabId;
 
     // Initialize even if bell is missing (for guests MOTD)
     this.init();
@@ -18363,15 +18309,8 @@ class NotificationSystem {
     this.initSocket();
 
     // Signal server that this tab is active
-    const signalActive = () => {
-        if (document.hidden) return;
-        fetch(`/api/notifications/active?tabId=${this.tabId}`).catch(() => {});
-        // If the socket is closed, reconnect
-        if (!this.ws || this.ws.readyState >= WebSocket.CLOSING) {
-            window.f0ckDebug("[NotificationSystem] Socket was closed, reconnecting as active tab...");
-            this.initSocket();
-        }
-    };
+    // Mark this tab active and revive the socket if it closed (F0ckLive, f0ck-core.js)
+    const signalActive = () => window.F0ckLive.ping();
 
     // When a tab with a #c<id> URL hash regains focus, browsers natively jump
     // to the anchor element. scrollTo() cannot override this because the native
@@ -18422,11 +18361,7 @@ class NotificationSystem {
 
       window.f0ckDebug("[NotificationSystem] Tab visible, signaling active...");
       // If the socket died while hidden, restart it now
-      if (!this.ws) {
-        window.f0ckDebug("[NotificationSystem] Socket was dead, restarting on tab visible.");
-        this.retryCount = 0;
-        this.initSocket();
-      }
+      window.F0ckLive.ensure();
       if (this.pollDebounced) this.pollDebounced();
       if (this.checkForNewItems) this.checkForNewItems();
       // Note: emojis_updated dispatch was removed from here — it caused emoji cache flush +
@@ -18468,41 +18403,23 @@ class NotificationSystem {
     });
   }
 
+  // Live events: the socket itself is F0ckLive (f0ck-core.js, shared with the other frontends).
+  // The handlers are registered once; later calls only reconnect.
   initSocket() {
-    if (this.ws) {
-      // Detach first: unlike EventSource, close() fires onclose, which would schedule a retry
-      this.ws.onclose = null;
-      this.ws.close();
+    if (this._liveBound) {
+      window.F0ckLive.connect();
+      return;
     }
-    clearTimeout(this._wsRetryTimer);
+    this._liveBound = true;
 
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    let wsUrl = `${proto}//${location.host}/api/notifications/ws?tabId=${this.tabId}`;
-    try {
-      const fp = localStorage.getItem('f0ck_anon_ssh_fp');
-      if (fp) wsUrl += `&fp=${encodeURIComponent(fp)}`;
-      const hw = localStorage.getItem('f0ck_anon_hw_fp') || window.f0ckAnonSSH?.hwFingerprint;
-      if (hw) wsUrl += `&hw=${encodeURIComponent(hw)}`;
-    } catch (e) {}
-
-    window.f0ckDebug(`[NotificationSystem] Opening live socket (tabId: ${this.tabId})...`);
-    const ws = new WebSocket(wsUrl);
-    this.ws = ws;
-
-    ws.onopen = () => {
-      window.f0ckDebug("[NotificationSystem] Live socket connected");
-      this.retryCount = 0;
-      document.documentElement.dataset.sseReady = '1';
-      document.dispatchEvent(new CustomEvent('f0ck:sse_ready'));
+    window.F0ckLive.onOpen(() => {
       // A reconnect means new_item events may have been missed while the socket was down
       if (this._wsWasOpen && !document.hidden) this.checkForNewItems();
       this._wsWasOpen = true;
-    };
+    });
 
-    ws.onmessage = (e) => {
+    window.F0ckLive.onMessage((data) => {
       try {
-        const data = JSON.parse(e.data);
-        window.f0ckDebug(`[SSE] Received message:`, data.type);
         if (data.type === 'banned') {
           window.f0ckDebug(`[SSE] Live ban event received:`, data.data);
           if (window.f0ckAnonSSH && typeof window.f0ckAnonSSH.setTombstone === 'function') {
@@ -18758,15 +18675,13 @@ class NotificationSystem {
         } else if (data.type === 'global_chat_presence') {
           document.dispatchEvent(new CustomEvent('f0ck:global_chat_presence', { detail: data.data }));
         } else if (data.type === 'brand_image') {
-          window.f0ckDebug(`[SSE] Brand image update received:`, data.data?.url);
-          if (window.updateBrandImage) {
-            window.updateBrandImage(data.data?.url || null);
-          }
+          window.f0ckDebug(`[SSE] Brand update received:`, data.data);
+          if (window.applyBrandEvent) window.applyBrandEvent(data.data);
         }
       } catch (err) {
-        console.error('SSE data parse error', err);
+        console.error('SSE data handler error', err);
       }
-    };
+    });
 
     // Helper: apply a display name change to all relevant DOM nodes
     this.applyDisplayNameUpdate = (display_name, user) => {
@@ -19086,31 +19001,7 @@ class NotificationSystem {
       } catch (e) { /* silent — best-effort background sync */ }
     };
 
-    // onerror is always followed by onclose, so reconnecting is handled there only
-    ws.onclose = (ev) => {
-      if (this.ws !== ws) return; // replaced by a newer socket
-      console.warn('Notification socket closed', ev.code, ev.reason);
-      this.ws = null;
-
-      // If tab is hidden, don't retry now — visibilitychange will reconnect when visible again
-      if (document.hidden) {
-          window.f0ckDebug("[NotificationSystem] Tab hidden, deferring socket retry until visible.");
-          return;
-      }
-
-      // Exponential backoff, capped at 30s
-      const delay = Math.min(Math.pow(2, this.retryCount) * 1000, 30000);
-      if (this.retryCount < this.maxRetries) {
-        window.f0ckDebug(`[NotificationSystem] Reconnecting socket in ${delay}ms... (attempt ${this.retryCount + 1}/${this.maxRetries})`);
-        this._wsRetryTimer = setTimeout(() => this.initSocket(), delay);
-        this.retryCount++;
-      } else {
-        // Past max retries — keep trying every 30s indefinitely, reset counter so backoff starts fresh
-        console.warn("[NotificationSystem] Max socket retries reached, retrying every 30s.");
-        this.retryCount = 0;
-        this._wsRetryTimer = setTimeout(() => this.initSocket(), 30000);
-      }
-    };
+    window.F0ckLive.connect();
   }
 
   get isOpen() {
@@ -21133,113 +21024,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-// Mod Action Modal
-class ModAction {
-  static confirm(title, promptHtml, callback, options = {}) {
-    const modal = document.getElementById('mod-action-modal');
-    if (!modal) return window.flashMessage('Error: Mod modal not found', 3000, 'error');
-    const titleEl = document.getElementById('mod-action-title');
-    const contentEl = document.getElementById('mod-action-content');
-    const reasonEl = document.getElementById('mod-reason');
-    const confirmBtn = document.getElementById('mod-action-confirm');
-    const cancelBtn = document.getElementById('mod-action-cancel');
-    const errorEl = document.getElementById('mod-action-error');
-
-    const singleLine = options.singleLine || false;
-    const hideReason = options.hideReason || false;
-    const allowEmpty = options.allowEmpty || false;
-    const i18n = window.f0ckI18n || {};
-
-    titleEl.innerText = title;
-    if (options.unsafeContent) {
-      contentEl.innerHTML = promptHtml; // Trusted admin-only content — skip sanitizer
-    } else {
-      contentEl.innerHTML = Sanitizer.clean(promptHtml);
-    }
-
-    reasonEl.value = '';
-    errorEl.style.display = 'none';
-    modal.style.display = 'flex';
-
-    // Apply single-line mode: style the textarea to look and act like a text input
-    if (singleLine) {
-      reasonEl.rows = 1;
-      reasonEl.style.resize = 'none';
-      reasonEl.style.overflow = 'hidden';
-      reasonEl.style.height = 'auto';
-    } else {
-      reasonEl.rows = 3;
-      reasonEl.style.resize = '';
-      reasonEl.style.overflow = '';
-      reasonEl.style.height = '';
-    }
-
-    if (hideReason) {
-      reasonEl.style.display = 'none';
-    } else {
-      reasonEl.style.display = 'block';
-      reasonEl.placeholder = options.placeholder ||
-        (allowEmpty ? (i18n.reason_optional || 'Reason (optional)') : (i18n.reason_required_label || 'Reason (required)'));
-      reasonEl.focus();
-    }
-
-    confirmBtn.innerText = options.confirmText || (hideReason ? (i18n.confirm_yes || 'Yes') : (i18n.confirm_btn || 'Confirm'));
-    cancelBtn.innerText = options.cancelText || (hideReason ? (i18n.confirm_no || 'No') : (i18n.cancel_btn || 'Cancel'));
-
-    confirmBtn.style.display = options.hideConfirm ? 'none' : '';
-    cancelBtn.style.display = options.hideCancel ? 'none' : '';
-
-    const close = () => {
-      modal.style.display = 'none';
-      cleanup();
-    };
-
-    const onConfirm = async () => {
-      const reason = reasonEl.value.trim();
-      if (!hideReason && !allowEmpty && !reason) {
-        errorEl.innerText = (window.f0ckI18n && window.f0ckI18n.reason_required) || 'Reason is required.';
-        errorEl.style.display = 'block';
-        return;
-      }
-      errorEl.style.display = 'none';
-      confirmBtn.disabled = true;
-      confirmBtn.innerText = (window.f0ckI18n && window.f0ckI18n.processing) || 'Processing...';
-
-      try {
-        await callback(hideReason ? null : reason);
-        close();
-      } catch (e) {
-        errorEl.innerText = e.message || 'Error occurred';
-        errorEl.style.display = 'block';
-        confirmBtn.disabled = false;
-        confirmBtn.innerText = options.confirmText || (hideReason ? (i18n.confirm_yes || 'Yes') : (i18n.confirm_btn || 'Confirm'));
-      }
-    };
-
-    // Block Enter from inserting newlines in single-line mode; instead submit
-    const enterHandler = singleLine ? (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); onConfirm(); }
-    } : null;
-    if (enterHandler) reasonEl.addEventListener('keydown', enterHandler);
-
-    const cleanup = () => {
-      confirmBtn.onclick = null;
-      cancelBtn.onclick = null;
-      confirmBtn.style.display = '';
-      cancelBtn.style.display = '';
-      if (enterHandler) reasonEl.removeEventListener('keydown', enterHandler);
-      confirmBtn.disabled = false;
-    };
-
-    confirmBtn.onclick = onConfirm;
-    cancelBtn.onclick = close;
-
-    modal.onclick = (e) => {
-      if (e.target === modal) close();
-    };
-  }
-}
-window.ModAction = ModAction;
+// Mod Action Modal: ModAction is in f0ck-core.js
 
 // Hover Video Preview
 document.addEventListener('DOMContentLoaded', () => {
@@ -21417,96 +21202,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, true);
 
     // Global Timeago — uses Intl.RelativeTimeFormat for native, correctly-localized output
-    const timeAgo = (date) => {
-        const i18n = window.f0ckI18n || {};
-        const lang = i18n.lang || navigator.language || 'en';
-        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-
-        if (seconds < 5) return i18n.timeago_just_now || 'just now';
-
-        const intervals = [
-            { unit: 'year',   seconds: 31536000 },
-            { unit: 'month',  seconds: 2592000  },
-            { unit: 'week',   seconds: 604800   },
-            { unit: 'day',    seconds: 86400    },
-            { unit: 'hour',   seconds: 3600     },
-            { unit: 'minute', seconds: 60       },
-            { unit: 'second', seconds: 1        }
-        ];
-
-        for (const interval of intervals) {
-            const count = Math.floor(seconds / interval.seconds);
-            if (count >= 1) {
-                try {
-                    // Force fallback for custom/unrecognized locales like 'zange'
-                    if (lang === 'zange') throw new Error('Force fallback');
-                    const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
-                    return rtf.format(-count, interval.unit);
-                } catch (e) {
-                    // Intl not available — fall back to i18n strings
-                    const key = count === 1 ? `timeago_${interval.unit}` : `timeago_${interval.unit}s`;
-                    const tpl = i18n[key] || `{n} ${interval.unit}${count !== 1 ? 's' : ''}`;
-                    const timeStr = tpl.replace('{n}', count).replace('{s}', count !== 1 ? 's' : '');
-                    const agoTpl = i18n.timeago_ago || '{t} ago';
-                    return agoTpl.replace('{t}', timeStr);
-                }
-            }
-        }
-        return i18n.timeago_just_now || 'just now';
-    };
-
-    // Expose globally so comments.js, user_comments.js, messages.js etc. can use the same i18n-aware implementation
-    window.f0ckTimeAgo = timeAgo;
-
-    // Format an ISO date string as DD.MM.YYYY - HH:MM:SS in local time
-    const formatDateFull = (dateStr) => {
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr;
-        const pad = n => String(n).padStart(2, '0');
-        return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} - ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-    };
-    window.f0ckFormatDateFull = formatDateFull;
-
-    const updateGlobalTimestamps = () => {
-        document.querySelectorAll('.timeago').forEach(el => {
-            // On first run, seed data-iso from the server-rendered tooltip (raw ISO string)
-            // so we always have a reliable source for time calculations even after the
-            // tooltip is rewritten to the human-readable DD.MM.YYYY format.
-            if (!el.dataset.iso && el.hasAttribute('tooltip')) {
-                el.dataset.iso = el.getAttribute('tooltip');
-            }
-
-            // Use data-iso (seeded above) → data-ts (sidebar) → tooltip as fallback
-            const isoStr = el.dataset.iso || el.getAttribute('data-ts');
-            if (isoStr) {
-                const newTime = timeAgo(isoStr);
-                if (el.textContent !== newTime) {
-                    el.textContent = newTime;
-                }
-                // Update tooltip to show nicely formatted local date instead of raw ISO string
-                if (el.hasAttribute('tooltip')) {
-                    const niceFull = formatDateFull(isoStr);
-                    if (el.getAttribute('tooltip') !== niceFull) {
-                        el.setAttribute('tooltip', niceFull);
-                    }
-                }
-            }
-        });
-
-        // Also reformat tooltip on static date elements (e.g. .stat-joined on profiles)
-        // that carry a data-iso attribute but are NOT .timeago (text content not updated).
-        document.querySelectorAll('[data-iso][tooltip]:not(.timeago)').forEach(el => {
-            const isoStr = el.dataset.iso;
-            if (isoStr) {
-                const niceFull = formatDateFull(isoStr);
-                if (el.getAttribute('tooltip') !== niceFull) {
-                    el.setAttribute('tooltip', niceFull);
-                }
-            }
-        });
-    };
-    // Expose globally so AJAX content hooks can re-stamp immediately after injection
-    window.updateGlobalTimestamps = updateGlobalTimestamps;
+    // In f0ck-core.js (shared with the other frontends)
+    const timeAgo = window.f0ckTimeAgo;
+    const formatDateFull = window.f0ckFormatDateFull;
+    const updateGlobalTimestamps = window.updateGlobalTimestamps;
 
     // Start global timer
     // Global Flash Message Helper

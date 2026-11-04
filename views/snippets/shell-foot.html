@@ -1,0 +1,9 @@
+{#- End of <body> of a shared page in an alternative frontend's shell, after
+    snippets/frontend-scripts.html. Contract: views/frontends/README.md -#}
+{% include "snippets/mod-action-modal.html" %}
+{% if session %}
+<script src="/s/js/mention_autocomplete.js?v={{ mtime("/public/s/js/mention_autocomplete.js") }}"></script>
+{% endif %}
+{% if (session and (session.admin or session.is_moderator)) %}
+<script src="/s/js/admin.js?v={{ mtime("/public/s/js/admin.js") }}"></script>
+{% endif %}

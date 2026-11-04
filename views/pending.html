@@ -1,4 +1,4 @@
-{% include "snippets/header.html" %}
+{% include (shell_header or "snippets/header.html") %}
 <div class="pagewrapper">
 <div id="main">
   <div class="container adm up">
@@ -70,4 +70,4 @@
   <script src="/s/js/views/pending.js?v={{ mtime("/public/s/js/views/pending.js") }}"></script>
 </div>
 </div>
-{% include "snippets/footer.html" %}
+{% include (shell_footer or "snippets/footer.html") %}

@@ -221,7 +221,7 @@
     "font_default": "Standaard",
     "theme": "Thema",
     "frontend": "Frontend",
-    "frontend_hint": "De lay-out van de hele site. w0bm, w0bm2 en f0ckv2 zijn de oude lay-outs.",
+    "frontend_hint": "De lay-out van de hele site. w0bm en f0ckv2 zijn de oude lay-outs.",
     "flash_section": "Flash",
     "flash_bg": "Flash in de achtergrond blijven afspelen",
     "flash_bg_hint": "Prevents Ruffle from pausing when leaving the tab",
