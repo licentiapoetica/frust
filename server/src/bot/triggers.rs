@@ -208,7 +208,6 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
     };
     let rating = row.str("rating").filter(|s| !s.is_empty()).unwrap_or("untagged").to_string();
     let id = row.i64("id").unwrap_or(0);
-    let link = super::item_url(&rt.st, id).await.replace("http://", "https://");
     let size = format!("~{}", crate::util::format_size(row.val("size")));
     let date = js_date(row.i64("stamp").unwrap_or(0));
     let (user, mime) = (row.string("username"), row.string("mime"));
@@ -233,17 +232,18 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
             e.reply_rich(&body, &html).await;
         }
         _ => {
-            let r = if e.kind == Kind::Irc {
+            // IRC: the ID, not the link, so clients don't preview the same item a second time
+            let (head, r) = if e.kind == Kind::Irc {
                 let color = match rating.as_str() {
                     "sfw" => "green",
                     "nsfw" => "red",
                     _ => "brown",
                 };
-                format!("[color={color}]{rating}[/color]")
+                (format!("ID: {id}"), format!("[color={color}]{rating}[/color]"))
             } else {
-                rating
+                (super::item_url(&rt.st, id).await.replace("http://", "https://"), rating)
             };
-            e.reply(&[link, r, format!("user: {user}"), size, mime, date].join(" - ")).await;
+            e.reply(&[head, r, format!("user: {user}"), size, mime, date].join(" - ")).await;
         }
     }
     Ok(())
