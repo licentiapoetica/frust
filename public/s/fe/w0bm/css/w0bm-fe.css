@@ -513,6 +513,47 @@ a.w0bm-iconbtn {
 .video-js .vjs-menu.w0bm-open {
     display: block;
 }
+/* Playback-rate menu in the player's own look: a dark see-through panel like the bar over the
+   video, centred over the button, the rates as plain text in the player's font, the current one
+   in the accent colour (instead of video.js 5's grey boxes and blue highlight) */
+.video-js .vjs-playback-rate.vjs-menu-button-popup .vjs-menu {
+    left: 50%;
+    width: 4.6em;
+    margin-left: -2.3em;
+}
+.video-js .vjs-playback-rate.vjs-menu-button-popup .vjs-menu .vjs-menu-content {
+    left: 0;
+    width: 100%;
+    /* clear of the progress track over the bar */
+    bottom: 1.8em;
+    padding: 3px 0;
+    background: rgba(22, 22, 24, 0.85);
+    border-top: 2px solid #1fb2b0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+.video-js .vjs-playback-rate.vjs-menu-button-popup .vjs-menu .vjs-menu-item {
+    margin: 0;
+    padding: 0.25em 0;
+    background: transparent;
+    border: 0;
+    color: #c8c8c8;
+    font-family: "Oswald", sans-serif;
+    font-size: 1.15em;
+    line-height: 1.4;
+    text-transform: none;
+    opacity: 1;
+    cursor: pointer;
+}
+.video-js .vjs-playback-rate.vjs-menu-button-popup .vjs-menu .vjs-menu-item:hover,
+.video-js .vjs-playback-rate.vjs-menu-button-popup .vjs-menu .vjs-menu-item:focus {
+    background: rgba(31, 178, 176, 0.18);
+    color: #fff;
+    opacity: 1;
+}
+.video-js .vjs-playback-rate.vjs-menu-button-popup .vjs-menu .vjs-menu-item.vjs-selected {
+    background: transparent;
+    color: #1fb2b0;
+}
 
 /* Tags */
 .w0bm-tag-nsfw,
