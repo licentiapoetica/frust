@@ -144,3 +144,19 @@ pub fn render_451(req: &Req) -> Response {
     r.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("text/html"));
     no_cache(r)
 }
+
+/// 401 (guest) / 403 (signed in, rating not allowed) for gated item media (crate::media_gate).
+/// Private society: guests keep getting the gate's 502, which hides that the site exists.
+pub fn render_denied(st: &AppState, req: &Req, status: u16) -> Response {
+    if status == 401 && st.cfg().truthy("websrv.private_society") {
+        return render_502(st, req);
+    }
+    let msg = if status == 401 { "401 Unauthorized" } else { "403 Forbidden" };
+    if req.is_xhr() || req.accepts_json() {
+        return no_cache(json_raw(&json!({ "success": false, "msg": msg }), status));
+    }
+    let body = format!("<html>\r\n<head><title>{msg}</title></head>\r\n<body>\r\n<center><h1>{msg}</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n");
+    let mut r = raw(status, body);
+    r.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("text/html"));
+    no_cache(r)
+}

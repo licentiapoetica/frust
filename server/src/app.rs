@@ -326,7 +326,7 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
             no_store(req);
             return Ok(None);
         }
-        // nsfw/nsfl/untagged item media: 502 for visitors who may not see that rating
+        // nsfw/nsfl/untagged item media: 401 for guests (403 for anon users) who may not see that rating
         let mut viewer = None;
         match crate::media_gate::check(st, &path, || async {
             let v = media_viewer(st, req).await;
@@ -335,7 +335,10 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
         })
         .await
         {
-            crate::media_gate::Decision::Deny => return Ok(Some(crate::private_items::render_502(st, req))),
+            crate::media_gate::Decision::Deny => {
+                let status = if viewer == Some(crate::media_gate::Viewer::Guest) { 401 } else { 403 };
+                return Ok(Some(crate::private_items::render_denied(st, req, status)));
+            }
             // Never in a shared (CDN) cache, or guests would get it from there
             crate::media_gate::Decision::Restricted => req.set_header("cache-control", "private, max-age=3600"),
             crate::media_gate::Decision::Public => {}

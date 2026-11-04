@@ -1,5 +1,5 @@
-//! Direct media URLs of rated items: guests (and anonymous users) get the same 502 as private
-//! items for files whose rating they may not see (nsfl always, nsfw without `websrv.public_nsfw`,
+//! Direct media URLs of rated items: guests get a 401 (anonymous users a 403) for files whose
+//! rating they may not see (nsfl always, nsfw without `websrv.public_nsfw`,
 //! untagged without `websrv.public_untagged`; anon users: `anonymous_permissions.allowed_modes`).
 //!
 //! Gated: `/b/<dest>` (items and album entries), `/t/<id>.webp`, `/t/<album entry>.webp`,
