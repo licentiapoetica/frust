@@ -2929,6 +2929,12 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   }
 
   body.layout-legacy .item-layout-container .item-main-content {
+    /* the player column as wide as in the w0bm and f0ckv2 layouts (1140px, Bootstrap's container),
+       but never so wide that a 16:9 player pushes prev / random / next below the window (zoomed in,
+       short windows: about 240px of navbar, title and that row above and below it); metadata and
+       comments keep their old 3:4 ratio to it */
+    --legacy-item-w: min(1140px, calc((100vh - 310px) * 16 / 9));
+    --legacy-meta-w: calc(var(--legacy-item-w) * 0.75);
     grid-column: 1;
     display: flex !important;
     flex-direction: column;
@@ -2942,31 +2948,43 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
 
   body.layout-legacy .item-layout-container .item-main-content ._204863 {
     align-self: center;
-    width: 800px;
+    width: var(--legacy-item-w);
     max-width: 100%;
   }
 
   body.layout-legacy .item-layout-container .item-main-content .content {
     align-self: center;
-    width: 800px;
+    width: var(--legacy-item-w);
     max-width: 100%;
+  }
+
+  /* the player box: 16:9 of its real width, never taller than the window minus the title and the
+     prev / random / next row (replaces the zoom-dependent padding-top hacks of
+     .embed-responsive-16by9::before for this layout, which got 140% zoom wrong) */
+  body.layout-legacy .item-layout-container .item-main-content .embed-responsive-16by9::before {
+    padding-top: 0 !important;
+  }
+  body.layout-legacy .item-layout-container .item-main-content .embed-responsive-16by9 {
+    aspect-ratio: 16 / 9;
+    height: auto;
+    max-height: calc(100vh - 310px);
   }
 
   body.layout-legacy .item-layout-container .item-main-content .metadata {
     align-self: center;
-    width: 600px;
+    width: var(--legacy-meta-w);
     max-width: 100%;
   }
 
   body.layout-legacy .item-layout-container .item-main-content .item_title,
   body.layout-legacy .item-layout-container .item-main-content .item-title {
     align-self: center;
-    width: 800px;
+    width: var(--legacy-item-w);
     max-width: 100%;
   }
 
   body.layout-legacy .item-layout-container #comments-container {
-    width: 600px;
+    width: var(--legacy-meta-w);
     max-width: 100%;
     align-self: center;
     flex: 0 0 auto !important;
@@ -2974,7 +2992,7 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   }
 
   body.layout-legacy .item-layout-container .user-infobox-block {
-    width: 800px;
+    width: var(--legacy-item-w);
     max-width: 100%;
   }
 
