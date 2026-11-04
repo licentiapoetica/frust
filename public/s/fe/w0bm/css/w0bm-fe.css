@@ -1344,7 +1344,13 @@ html:not(.w0bm-nojs) .w0bm-nojs-only {
 .w0bm-motd .panel-body {
     padding: 8px 10px;
     color: #fff;
+    text-align: center;
     word-wrap: break-word;
+}
+/* set apart from the comments: a faint accent-colour gradient over the theme's panel colour
+   (only the image, so each theme keeps its own background colour under it) */
+.panel.w0bm-motd {
+    background-image: linear-gradient(100deg, rgba(31, 178, 176, 0.2) 0%, rgba(31, 178, 176, 0.06) 45%, rgba(255, 0, 148, 0.07) 100%);
 }
 /* info / warning flash messages in the same w0bm look as .alert-success / .alert-danger
    (w0bmcustom.css only styles those two), in the accent colour */
