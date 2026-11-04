@@ -2787,9 +2787,9 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
     transition: grid-template-columns 0.3s ease;
   }
 
-  /* Collapsed right sidebar — grid track shrinks to 0 */
+  /* Collapsed right sidebar: its track shrinks to 0, the comments column keeps its width */
   body.layout-modern.sidebar-right-hidden .item-layout-container {
-    grid-template-columns: min(300px, 30vw) minmax(0, 1fr) 0px;
+    grid-template-columns: min(350px, 30vw) minmax(0, 1fr) 0px;
   }
 
   body.layout-modern .item-sidebar-left {
