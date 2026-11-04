@@ -9,6 +9,11 @@
  * don't come into play, instead of correcting them one by one.
  */
 
+/* Nothing makes a phone page scroll sideways (clip, unlike hidden, keeps the sticky navbar) */
+body {
+    overflow-x: clip;
+}
+
 /* ── Navbar ──────────────────────────────────────────────────────────────────────────────── */
 /* No JavaScript: the hamburger is a checkbox label (partials/navigation.html) */
 #w0bm-navtoggle:checked ~ .navbar-collapse,
@@ -190,7 +195,9 @@ body.w0bm-item-page > .wrapper {
     display: flex;
     flex-direction: column;
     /* when the parts don't fit even with the comment list at its smallest (short screen, the tag
-       field or the keyboard open) the column scrolls instead of cutting off the bottom */
+       field or the keyboard open) the column scrolls instead of cutting off the bottom; never
+       sideways */
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
 }
@@ -255,6 +262,7 @@ body.w0bm-item-page #sidebar > .flashcontainer,
 body.w0bm-item-page #sidebar > .w0bm-motd {
     order: 2;
     flex: none;
+    width: auto;
     margin: 0 8px;
 }
 body.w0bm-item-page #sidebar > .w0bm-motd {
@@ -376,7 +384,35 @@ body.w0bm-item-page #sidebar > .tags {
 body.w0bm-item-page #sidebar #tag-display {
     width: auto;
     height: auto;
+    /* every row of tags (w0bmcustom.css: two rows, the rest scrolled away under the version) */
+    max-height: none;
+    overflow: visible;
     padding: 4px 8px;
+}
+/* the page links ([+Add Tag] About Rules Terms Privacy Stats) and long tags wrap onto more lines
+   instead of running past the screen */
+body.w0bm-item-page #sidebar > .tags ul.info-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 4px;
+    float: none;
+    margin: 0;
+}
+body.w0bm-item-page #sidebar > .tags ul.info-nav::before,
+body.w0bm-item-page #sidebar > .tags ul.info-nav::after {
+    display: none;
+}
+body.w0bm-item-page #sidebar > .tags ul.info-nav > li,
+body.w0bm-item-page #sidebar > .tags ul.info-nav > label {
+    float: none;
+}
+body.w0bm-item-page #sidebar #tag-display .label {
+    display: inline-block;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
 }
 body.w0bm-item-page #sidebar > .tags .git {
     padding: 2px 8px;
