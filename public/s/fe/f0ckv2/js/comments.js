@@ -1,4 +1,6 @@
 // f0ckv2 frontend: comments under an item (f0ckm's /api/comments), rendered in f0ckv2's style.
+// A page script (data-v2-page): runs again for every page shown; its listeners on window and the
+// danmaku go when the page is left (v2Page, early.js).
 (() => {
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -141,7 +143,7 @@
   };
 
   // collapsed by default (<details>): a link to a comment opens it
-  window.addEventListener('hashchange', () => { if(/^#c\d+$/.test(location.hash)) box.open = true; });
+  window.addEventListener('hashchange', () => { if(/^#c\d+$/.test(location.hash)) box.open = true; }, { signal: window.v2Page?.signal });
 
   box.querySelectorAll('[data-sort]').forEach(a => a.addEventListener('click', e => {
     e.preventDefault();
@@ -234,7 +236,11 @@
   // live event (f0ck-frontend.js): a comment was posted, edited or deleted somewhere; reload if it's
   // this item's (not while a reply is being typed)
   const fe = window.f0ckFrontend = window.f0ckFrontend || {};
-  fe.comments = (data) => {
+  window.v2Page?.onLeave(() => {
+    if(window.danmakuInstance) { window.danmakuInstance.destroy(); window.danmakuInstance = null; }
+    if(fe.comments === onComments) delete fe.comments;
+  });
+  const onComments = fe.comments = (data) => {
     if(String(data?.item_id) !== String(itemId)) return;
     if(form && form.content === document.activeElement && form.content.value.trim()) return;
     load();

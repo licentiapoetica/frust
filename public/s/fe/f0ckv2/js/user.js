@@ -1,7 +1,7 @@
 // f0ckv2 frontend, logged-in visitors: favs, tags, subscriptions, delete, notifications.
 // Port of f0ckv2's user.js/admin.js to the f0ckm API (/api/v2/togglefav, /api/v2/tags/:id, …).
-(async () => {
-  const data = JSON.parse(document.getElementById('f0ckv2-data')?.textContent || '{}');
+// The page setup runs for every page shown (v2Page.onPage, early.js: pages change without reloading).
+(() => {
   const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
 
   const queryapi = async (url, body, method = 'GET') => {
@@ -19,10 +19,29 @@
   const get  = (url, body) => queryapi(url, body, 'GET');
   const post = (url, body) => queryapi(url, body || {}, 'POST');
 
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // live events f0ck-frontend.js leaves to the frontend: new uploads on the first grid page, warnings
+  // (F0ckLive is the shared socket from f0ck-core.js, loaded after this file; subscribed once)
+  let newShown = false;
+  document.addEventListener('DOMContentLoaded', () => window.F0ckLive?.onMessage(msg => {
+    if(msg.type === 'new_item') {
+      const grid = document.querySelector('.index-container div.posts');
+      const firstPage = !document.querySelector('.pagination > .prev:not(.disabled)');
+      if(!grid || !firstPage || newShown) return;
+      newShown = true;
+      window.flashMessage?.('<a href="' + esc(location.pathname + location.search) + '">new f0cks, click to reload</a>', 15000, 'info');
+    }
+    else if(msg.type === 'warning') {
+      window.flashMessage?.(`Warning from the moderators: ${msg.data?.reason || ''}`, 10000, 'error');
+    }
+  }));
+
+  window.v2Page.onPage(() => {
+  newShown = false;
+  const data = JSON.parse(document.getElementById('f0ckv2-data')?.textContent || '{}');
   // hooks for the shared live events (f0ck-frontend.js, views/frontends/README.md)
   const fe = window.f0ckFrontend = window.f0ckFrontend || {};
-
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // <notifications> unread count on the navbar, newest few in its dropdown
   const notifLink = document.getElementById('nav-notifs');
@@ -72,7 +91,7 @@
     refresh();
     fe.notify = () => refresh();
     // live events update it; this only catches a dropped connection
-    setInterval(() => { if(!document.hidden) refresh(); }, 300000);
+    window.v2Page.every(() => { if(!document.hidden) refresh(); }, 300000);
   }
   // </notifications>
 
@@ -90,22 +109,6 @@
     window.DMSystem?.refreshDmBadge?.();
     fe.comments?.({ item_id: fe.itemId });
   };
-
-  // live events f0ck-frontend.js leaves to the frontend: new uploads on the first grid page, warnings
-  // (F0ckLive is the shared socket from f0ck-core.js, loaded after this file)
-  let newShown = false;
-  document.addEventListener('DOMContentLoaded', () => window.F0ckLive?.onMessage(msg => {
-    if(msg.type === 'new_item') {
-      const grid = document.querySelector('.index-container div.posts');
-      const firstPage = !document.querySelector('.pagination > .prev:not(.disabled)');
-      if(!grid || !firstPage || newShown) return;
-      newShown = true;
-      window.flashMessage?.('<a href="' + esc(location.pathname + location.search) + '">new f0cks, click to reload</a>', 15000, 'info');
-    }
-    else if(msg.type === 'warning') {
-      window.flashMessage?.(`Warning from the moderators: ${msg.data?.reason || ''}`, 10000, 'error');
-    }
-  }));
 
   // <item>
   const container = document.querySelector('.container[data-item-id]');
@@ -304,7 +307,8 @@
     if(!res.success)
       return alert(res.msg || 'could not delete');
     const next = document.querySelector('#prev:not([href="#"])') || document.querySelector('#next:not([href="#"])');
-    location.href = next ? next.href : '/';
+    if(window.v2Nav) window.v2Nav.go(next ? next.href : '/');
+    else location.href = next ? next.href : '/';
   };
   document.querySelector('#a_delete')?.addEventListener('click', deleteButtonEvent);
 
@@ -322,6 +326,7 @@
       deleteButtonEvent();
     else if(e.key === 'f')
       toggleFavEvent();
-  });
+  }, { signal: window.v2Page.signal });
   // </item>
+  });
 })();

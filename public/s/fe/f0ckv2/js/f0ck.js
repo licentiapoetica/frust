@@ -1,5 +1,8 @@
-// f0ckv2 frontend: player, keybindings, wheel/swipe paging, image zoom, visualizer, themes.
+// f0ckv2 frontend: player, keybindings, wheel/swipe paging, image zoom, visualizer, themes, and
+// pages changing without reloading (<navigation> at the end).
 // Port of f0ckv2's f0ck.js + theme.js to the f0ckm server (no inline styles: classes in f0ckv2.css).
+// The page setup runs for every page shown (v2Page.onPage, early.js): listeners on document /
+// window go through on() and are removed when the page is left.
 
 window.requestAnimFrame = (function(){
   return window.requestAnimationFrame
@@ -26,14 +29,18 @@ const Cookie = {
 
 const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName) || e.target.isContentEditable;
 
-(() => {
+// a listener for as long as the page is shown
+const v2On = (target, type, fn, opts) => target.addEventListener(type, fn,
+  Object.assign(typeof opts === 'boolean' ? { capture: opts } : { ...(opts || {}) }, { signal: window.v2Page.signal }));
+
+window.v2Page.onPage(() => {
   // Onara viewer: the item over its grid page (index.html), closed by a link to that page
   const onara = document.getElementById('v2-onara');
   let video;
   let elem = document.querySelector("#my-video");
   if(elem) {
     video = new v0ck(elem);
-    document.addEventListener("keydown", e => {
+    v2On(document, "keydown", e => {
       if(e.key === " " && !isTyping(e)) {
         e.preventDefault();
         video[video.paused ? 'play' : 'pause']();
@@ -103,7 +110,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     document.querySelectorAll('a.v2-chip[href^="/theme/"]').forEach(a => a.classList.toggle("active", a.getAttribute("href") === "/theme/" + t));
   };
   // The /theme/<name> links stay the no-JS fallback
-  document.addEventListener("click", e => {
+  v2On(document, "click", e => {
     const a = e.target.closest('a[href^="/theme/"]:not([data-toggle])');
     if(!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
     e.preventDefault();
@@ -128,7 +135,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
       setTheme(themes[i]);
     }
   };
-  document.addEventListener("keydown", e => {
+  v2On(document, "keydown", e => {
     if(e.key in keybindings && !isTyping(e)) {
       if(e.shiftKey || e.ctrlKey || e.metaKey || e.altKey)
         return;
@@ -184,7 +191,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     lastWheelNav = now;
     el.click();
   };
-  window.addEventListener('wheel', wheelEventListener, { passive: false });
+  v2On(window, 'wheel', wheelEventListener, { passive: false });
   // </wheeler>
 
   const f0ckimage = document.querySelector("img#f0ck-image");
@@ -199,7 +206,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
         isImageExpanded = false;
         f0ckimagescroll.classList.remove("v2-scroll");
         f0ckimage.classList.remove("v2-expanded");
-        window.addEventListener('wheel', wheelEventListener, { passive: false });
+        v2On(window, 'wheel', wheelEventListener, { passive: false });
       }
       else {
         if(img.width > img.height) return;
@@ -220,7 +227,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   // Wheel past the bottom / top of a grid turns the page: only with the wheel navigation setting on
   // (see <wheeler>); otherwise the grid scrolls like any page and the page numbers turn it.
   if([...document.querySelectorAll("div.posts")].length === 1 && footbar) {
-    document.addEventListener("wheel", e => {
+    v2On(document, "wheel", e => {
       if(!wheelNavOn() || onara) return;
       const main = document.querySelector('#main');
       if(main && Math.ceil(window.innerHeight + window.scrollY) >= main.offsetHeight && e.deltaY > 0) { // down
@@ -258,7 +265,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   const swipeRT = { xDown: null, yDown: null, xDiff: null, yDiff: null, timeDown: null, startEl: null };
   const swipeOpt = { treshold: 20, timeout: 500 };
 
-  document.addEventListener('touchstart', e => {
+  v2On(document, 'touchstart', e => {
     swipeRT.startEl = e.target;
     swipeRT.timeDown = Date.now();
     swipeRT.xDown = e.touches[0].clientX;
@@ -267,14 +274,14 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     swipeRT.yDiff = 0;
   }, false);
 
-  document.addEventListener('touchmove', e => {
+  v2On(document, 'touchmove', e => {
     if(!swipeRT.xDown || !swipeRT.yDown)
       return;
     swipeRT.xDiff = swipeRT.xDown - e.touches[0].clientX;
     swipeRT.yDiff = swipeRT.yDown - e.touches[0].clientY;
   }, false);
 
-  document.addEventListener('touchend', e => {
+  v2On(document, 'touchend', e => {
     if(swipeRT.startEl !== e.target)
       return;
     const timeDiff = Date.now() - swipeRT.timeDown;
@@ -423,7 +430,7 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   // <touch dropdowns> no hover on touch screens: the first tap on a navbar dropdown opens it
   // (.v2-open), a second tap follows its link; a tap anywhere else closes it
   const touch = window.matchMedia ? window.matchMedia('(hover: none)') : { matches: false };
-  document.addEventListener('click', e => {
+  v2On(document, 'click', e => {
     const open = [...document.querySelectorAll('.navbar .nav-item.v2-open')];
     const t = e.target.closest('.navbar .nav-item.dropdown > [data-toggle="dropdown"]');
     if(!t || !touch.matches) {
@@ -439,8 +446,8 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   // </touch dropdowns>
 
   // <soft view switch> filter and mode change the listing in place, without reloading the page.
-  // Listings swap #main (and the navbar's pagination and view menu) with the fetched page; on an item
-  // page a mode change only refreshes prev/next and the pagination (the player keeps playing).
+  // Listings load again (<navigation>); on an item page a mode change only refreshes prev/next and
+  // the pagination (the player keeps playing).
   // The links stay plain links without JavaScript (/mode/<n> redirects, the filter is a listing URL).
   const softSwap = (doc, sels) => sels.forEach(sel => {
     const cur = document.querySelector(sel), next = doc.querySelector(sel);
@@ -451,24 +458,9 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     if(!res.ok) throw new Error(res.status);
     return new DOMParser().parseFromString(await res.text(), 'text/html');
   };
-  const softLoad = async (url, push) => {
-    const onListing = !!document.querySelector('.pagewrapper > #main');
-    const doc = await fetchDoc(url);
-    if(!onListing || !doc.querySelector('.pagewrapper > #main')) { location.href = url; return; }
-    // (a#prev / a#next: the item of the Onara viewer, over the listing)
-    softSwap(doc, ['.pagewrapper > #main', '.pagination-wrapper', '#view-settings', 'a#prev', 'a#next']);
-    document.title = doc.title;
-    if(push) {
-      // the entry we came from has to reload in place too when going back
-      if(!(history.state && history.state.v2soft)) history.replaceState({ v2soft: true }, '', location.href);
-      history.pushState({ v2soft: true }, '', url);
-    }
-    window.scrollTo(0, 0);
-  };
-  window.addEventListener('popstate', e => {
-    if(e.state && e.state.v2soft) softLoad(location.href, false).catch(() => location.reload());
-  });
-  document.addEventListener('click', async e => {
+  // a listing: the whole page again (<navigation>)
+  const softLoad = (url, push) => window.v2Nav.go(url, push ? {} : { replace: true, keepScroll: true });
+  v2On(document, 'click', async e => {
     const a = e.target.closest('#view-settings a[href]');
     if(!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || a.dataset.theme) return;
     const href = a.getAttribute('href');
@@ -540,11 +532,11 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
   if(onara) {
     const active = document.querySelector('div.posts > a.v2-onara-active');
     if(active) active.scrollIntoView({ block: 'center' });
-    document.addEventListener('keydown', e => {
+    v2On(document, 'keydown', e => {
       if(e.key !== 'Escape' || isTyping(e) || e.defaultPrevented) return;
       if(location.hash && location.hash !== '#_' && document.querySelector(`.v2-modal#${CSS.escape(location.hash.slice(1))}`)) return;
       e.preventDefault();
-      location.href = onara.dataset.close || '/';
+      window.v2Nav.go(onara.dataset.close || '/');
     });
   }
   // </onara>
@@ -558,4 +550,239 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
     });
   });
   // </timeago>
+
+  // item page: the neighbours load in the background, like f0ckm (600 ms after the page shows)
+  if(itemBox) {
+    const t = setTimeout(() => ['#next', '#prev'].forEach(sel => {
+      const a = document.querySelector(sel);
+      if(a && window.v2Nav?.navigable(a)) window.v2Nav.prefetch(a.href);
+    }), 600);
+    window.v2Page.onLeave(() => clearTimeout(t));
+  }
+});
+
+// <navigation> pages change without reloading, like f0ckm: links and GET forms to f0ckv2's own pages
+// fetch the page and swap the page part of <body> (everything before #footer-data: navbar, content,
+// the page data #f0ckv2-data). Then the setups of the scripts that stay (v2Page.onPage) run again,
+// and the page's own scripts: libraries (Cap, danmaku, flash-embed) load once, scripts marked
+// data-v2-page (comments.js, dynamic-page.js) run for every page.
+// A full load instead for: the shared pages in the f0ckv2 shell (settings, messages, admin, ...:
+// other CSS and scripts), login / logout / register (the session changes), another frontend,
+// files, the upload page, a page that isn't f0ckv2's or a failed request.
+// Without JavaScript all of this is plain links and forms.
+(() => {
+  const html = document.documentElement;
+  const isShellPage = () => html.classList.contains('f0ck-shell');
+  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|theme\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|settings|messages|admin|mod(?:\/|$)|mod_reports|pending|banned|privacy|mime(?:\/|$))/;
+  const pathKey = href => { const u = new URL(href, location.href); return u.pathname + u.search; };
+  let shownPath = pathKey(location.href);
+  const readData = (doc = document) => {
+    try { return JSON.parse(doc.getElementById('f0ckv2-data')?.textContent || 'null'); } catch { return null; }
+  };
+
+  const navigable = a => {
+    if(!a || !a.href || isShellPage()) return false;
+    if(a.target && a.target !== '_self') return false;
+    if(a.hasAttribute('download') || a.closest('[data-no-ajax]')) return false;
+    const raw = a.getAttribute('href') || '';
+    if(!raw || raw.startsWith('#') || /^(javascript|mailto|tel):/i.test(raw)) return false;
+    let u;
+    try { u = new URL(a.href, location.href); } catch { return false; }
+    if(u.origin !== location.origin) return false;
+    if(u.hash && pathKey(u.href) === pathKey(location.href)) return false; // a jump within the page
+    if(FULL_LOAD.test(u.pathname)) return false;
+    if(/\.[a-z0-9]{2,5}$/i.test(u.pathname)) return false; // files
+    return true;
+  };
+
+  // ── fetched pages, kept briefly (prefetched neighbours, hovered links). Keyed by URL and the page
+  // they are asked from (/random picks its context from the Referer); any POST/PUT/DELETE empties it.
+  const prefetched = new Map();
+  const TTL = 60000;
+  const cacheKey = url => new URL(url, location.href).href + ' ' + location.href;
+  const fetchPage = (url, { signal, prefetch = false } = {}) => {
+    const headers = { Accept: 'text/html' };
+    if(prefetch) Object.assign(headers, { 'X-Purpose': 'prefetch', Purpose: 'prefetch' });
+    return fetch(url, { credentials: 'same-origin', headers, signal, priority: prefetch ? 'low' : 'high' }).then(async res => {
+      if(!/text\/html/i.test(res.headers.get('content-type') || '')) return null;
+      return { url: res.url || new URL(url, location.href).href, html: await res.text(), prefetched: prefetch };
+    });
+  };
+  const prefetch = url => {
+    const key = cacheKey(url);
+    const hit = prefetched.get(key);
+    if(hit && Date.now() - hit.at < TTL) return;
+    prefetched.set(key, { at: Date.now(), page: fetchPage(url, { prefetch: true }).catch(() => null) });
+    if(prefetched.size > 12) prefetched.delete(prefetched.keys().next().value);
+  };
+  const takePrefetched = url => {
+    const key = cacheKey(url);
+    const hit = prefetched.get(key);
+    prefetched.delete(key);
+    return hit && Date.now() - hit.at < TTL ? hit.page : null;
+  };
+  // a change sent to the server makes kept pages stale
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    const method = String((init && init.method) || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+    if(method !== 'GET' && method !== 'HEAD') prefetched.clear();
+    return nativeFetch(input, init);
+  };
+
+  // hovering a link for a moment loads its page already
+  let hoverTimer = null;
+  window.addEventListener('mouseover', e => {
+    const a = e.target.closest?.('a[href]');
+    if(!a || a === e.relatedTarget?.closest?.('a[href]')) return;
+    clearTimeout(hoverTimer);
+    if(navigable(a)) hoverTimer = setTimeout(() => prefetch(a.href), 120);
+  });
+  window.addEventListener('mouseout', e => {
+    const a = e.target.closest?.('a[href]');
+    if(a && !a.contains(e.relatedTarget)) clearTimeout(hoverTimer);
+  });
+  window.addEventListener('touchstart', e => {
+    const a = e.target.closest?.('a[href]');
+    if(navigable(a)) prefetch(a.href);
+  }, { passive: true });
+
+  // the navbar pulses (.pbwork, f0ck.css) while a page takes a moment
+  let barTimer = null;
+  const loading = onOff => {
+    clearTimeout(barTimer);
+    if(onOff) barTimer = setTimeout(() => document.querySelector('nav.navbar')?.classList.add('pbwork'), 150);
+    else document.querySelector('nav.navbar')?.classList.remove('pbwork');
+  };
+
+  const isOwnPage = doc => {
+    if(doc.documentElement.classList.contains('f0ck-shell')) return false;
+    const next = readData(doc), cur = readData() || {};
+    return !!(next && doc.getElementById('footer-data') && (next.user || '') === (cur.user || ''));
+  };
+
+  // scripts already run once (libraries load only once)
+  const loaded = new Set([...document.scripts].filter(s => s.src).map(s => s.src));
+  const runScripts = async scripts => {
+    for(const old of scripts) {
+      const type = (old.getAttribute('type') || '').trim().toLowerCase();
+      if(type && !['text/javascript', 'module', 'application/javascript'].includes(type)) continue;
+      const src = old.src;
+      if(!src) continue; // no inline scripts (CSP)
+      if(loaded.has(src) && !old.hasAttribute('data-v2-page')) { old.remove(); continue; }
+      const s = document.createElement('script');
+      [...old.attributes].forEach(a => s.setAttribute(a.name, a.value));
+      s.async = false;
+      await new Promise(res => {
+        s.addEventListener('load', res, { once: true });
+        s.addEventListener('error', res, { once: true });
+        old.replaceWith(s);
+      });
+      loaded.add(src);
+    }
+  };
+
+  // the page part of <body>: the nodes before #footer-data
+  const swapBody = doc => {
+    const anchor = document.getElementById('footer-data');
+    const nextAnchor = doc.getElementById('footer-data');
+    const old = [];
+    for(const n of document.body.childNodes) { if(n === anchor) break; old.push(n); }
+    // media of the page we leave stop (and stop downloading)
+    old.forEach(n => n.querySelectorAll?.('video, audio').forEach(m => {
+      try { m.pause(); m.removeAttribute('src'); m.querySelectorAll('source').forEach(x => x.remove()); m.load(); } catch { /* gone */ }
+    }));
+    const frag = document.createDocumentFragment();
+    for(const n of [...doc.body.childNodes]) { if(n === nextAnchor) break; frag.appendChild(document.adoptNode(n)); }
+    const scripts = [...frag.querySelectorAll('script')];
+    old.forEach(n => n.remove());
+    anchor.before(frag);
+    [...document.body.attributes].forEach(a => document.body.removeAttribute(a.name));
+    [...doc.body.attributes].forEach(a => document.body.setAttribute(a.name, a.value));
+    html.classList.toggle('v2-onara-open', doc.documentElement.classList.contains('v2-onara-open'));
+    document.title = doc.title;
+    const desc = doc.querySelector('meta[name="description"]');
+    if(desc) document.querySelector('meta[name="description"]')?.setAttribute('content', desc.getAttribute('content') || '');
+    return scripts;
+  };
+
+  let seq = 0;
+  let abort = null;
+  // opts: replace (no new history entry), pop (back / forward: scroll restored), keepScroll
+  const go = async (url, opts = {}) => {
+    if(isShellPage()) { location.assign(url); return; }
+    const target = new URL(url, location.href);
+    const mine = ++seq;
+    abort?.abort();
+    abort = new AbortController();
+    loading(true);
+    let page = null;
+    try {
+      page = await (takePrefetched(target.href) || null);
+      if(!page) page = await fetchPage(target.href, { signal: abort.signal });
+    } catch(err) {
+      if(err && err.name === 'AbortError') return;
+      page = null;
+    }
+    if(mine !== seq) return;
+    loading(false);
+    const doc = page && new DOMParser().parseFromString(page.html, 'text/html');
+    if(!doc || !isOwnPage(doc)) { location.assign(page ? page.url : target.href); return; }
+
+    if(!opts.pop) {
+      try { history.replaceState({ ...(history.state || {}), v2Scroll: window.scrollY }, ''); } catch { /* ignore */ }
+    }
+    if('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    const final = new URL(page.url);
+    if(!final.hash && target.hash) final.hash = target.hash;
+    window.v2Page.leave();
+    const scripts = swapBody(doc);
+    if(opts.replace) history.replaceState({ v2: 1 }, '', final.href);
+    else if(!opts.pop) history.pushState({ v2: 1 }, '', final.href);
+    shownPath = pathKey(location.href);
+    // the same order as a full load: the page's scripts (flash-embed.js, danmaku, comments.js) first,
+    // then the setups of the scripts at the end of the page (f0ck.js starts the player, the Flash frame)
+    await runScripts(scripts);
+    window.v2Page.show();
+    // a prefetched item page didn't mark its notifications read (the server skips that for prefetches)
+    const data = readData() || {};
+    if(page.prefetched && data.itemId && data.loggedIn) {
+      fetch(`/api/notifications/item/${data.itemId}/read`, { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || '' } })
+        .then(() => window.f0ckFrontend?.notify?.()).catch(() => {});
+    }
+    const saved = opts.pop ? history.state?.v2Scroll : null;
+    const hashEl = final.hash.length > 1 ? document.getElementById(decodeURIComponent(final.hash.slice(1))) : null;
+    if(typeof saved === 'number') window.scrollTo(0, saved);
+    else if(hashEl) hashEl.scrollIntoView();
+    else if(!opts.keepScroll) window.scrollTo(0, 0);
+    document.dispatchEvent(new CustomEvent('v2:page', { detail: { url: location.href } }));
+  };
+
+  window.v2Nav = { go, reload: () => go(location.href, { replace: true, keepScroll: true }), navigable, prefetch };
+
+  window.addEventListener('click', e => {
+    if(e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest?.('a[href]');
+    if(!navigable(a)) return;
+    e.preventDefault();
+    go(a.href);
+  });
+  window.addEventListener('submit', e => {
+    const f = e.target;
+    if(e.defaultPrevented || isShellPage() || !(f instanceof HTMLFormElement)) return;
+    if((f.getAttribute('method') || 'get').toLowerCase() !== 'get' || (f.target && f.target !== '_self')) return;
+    const u = new URL(f.action || location.href, location.href);
+    if(u.origin !== location.origin || FULL_LOAD.test(u.pathname)) return;
+    let fd;
+    try { fd = new FormData(f, e.submitter || undefined); } catch { fd = new FormData(f); }
+    u.search = new URLSearchParams(fd).toString();
+    e.preventDefault();
+    go(u.href);
+  });
+  window.addEventListener('popstate', () => {
+    if(isShellPage()) return;
+    if(pathKey(location.href) === shownPath) return; // only the #hash changed
+    go(location.href, { pop: true });
+  });
 })();
+// </navigation>
+
