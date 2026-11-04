@@ -926,6 +926,7 @@
         const move = (ev) => onFrac(at(ev));
         const up = () => {
           wrap.classList.remove('vjs-scrubbing');
+          active(); // restart the hide timer that skipped while scrubbing
           bar.removeEventListener('pointermove', move);
           bar.removeEventListener('pointerup', up);
           bar.removeEventListener('pointercancel', up);
@@ -971,14 +972,17 @@
     });
     p.toggleFullscreen = toggleFs;
 
-    // user activity (inactivityTimeout: 1000)
-    let idle;
+    // user activity (inactivityTimeout: 1000); a mouse resting on the control bar keeps it shown
+    let idle, overBar = false;
+    const bar = q('.vjs-control-bar');
+    bar.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') overBar = true; });
+    bar.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { overBar = false; active(); } });
     const active = () => {
       wrap.classList.add('vjs-user-active');
       wrap.classList.remove('vjs-user-inactive');
       clearTimeout(idle);
       idle = setTimeout(() => {
-        if (!el.paused && !isAudio) {
+        if (!el.paused && !isAudio && !overBar && !wrap.classList.contains('vjs-scrubbing')) {
           wrap.classList.remove('vjs-user-active');
           wrap.classList.add('vjs-user-inactive');
         }
