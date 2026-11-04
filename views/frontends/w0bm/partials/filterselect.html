@@ -22,23 +22,30 @@
                 {% endif %}
                 {% if show_mime_picker %}
                 {#- Media filter (f0ckm's mime picker, websrv.show_mime_picker): the "mime" cookie the listings
-                    read. w0bm.js saves a change at once and reloads; without JavaScript "Apply" goes
-                    through /mime. Anonymous users only get their allowed types (locked when only one). -#}
+                    read. Ticked = shown: without a filter every type is ticked; all ticked again clears it.
+                    w0bm.js saves a change at once and reloads; without JavaScript "Apply" goes through
+                    /mime. Anonymous users only get their allowed types (locked when only one). -#}
                 {%- set _anonUser = (not session or session.is_anon) -%}
                 {%- set _mimeAllowed = ((anon_permissions.allowed_mimes if (anon_permissions and anon_permissions.allowed_mimes) else none) or ["image", "video", "audio", "flash"]) -%}
                 {%- set _mimeCur = (mime_filter or "").split(",") -%}
+                {%- set _mimeAll = not ((mime_filter or "")|trim) -%}
                 {%- set _mimeLocked = (_anonUser and (_mimeAllowed|length == 1)) -%}
                 <form method="get" action="/mime" class="w0bm-mimes" id="w0bm-mime-form">
                     {% include "frontends/w0bm/partials/back.html" %}
                     <h5>Media</h5>
+                    {%- set _mimeLabels = {"video": t("filter.video"), "audio": t("filter.audio"), "image": t("filter.image"), "flash": t("filter.flash")} -%}
+                    {%- set _offer = [] -%}
+                    {%- if ((not (scroller_mime_cats is sequence) or "video" in scroller_mime_cats) and (not _anonUser or "video" in _mimeAllowed)) %}{% set _offer = _offer + ["video"] %}{% endif -%}
+                    {%- if ((not (scroller_mime_cats is sequence) or "audio" in scroller_mime_cats) and (not _anonUser or "audio" in _mimeAllowed)) %}{% set _offer = _offer + ["audio"] %}{% endif -%}
+                    {%- if ((not (scroller_mime_cats is sequence) or "image" in scroller_mime_cats) and (not _anonUser or "image" in _mimeAllowed)) %}{% set _offer = _offer + ["image"] %}{% endif -%}
+                    {%- if (enable_swf and (not _anonUser or "flash" in _mimeAllowed)) %}{% set _offer = _offer + ["flash"] %}{% endif %}
+                    <input type="hidden" name="all" value="{{ _offer|length }}">
                     <div class="w0bm-mime-group">
-                        {% for m in [["video", t("filter.video")], ["audio", t("filter.audio")], ["image", t("filter.image")], ["flash", t("filter.flash")]] %}
-                        {% if ((m[0] != "flash" or enable_swf) and (m[0] == "flash" or not (scroller_mime_cats is sequence) or m[0] in scroller_mime_cats) and (not _anonUser or m[0] in _mimeAllowed)) %}
-                        <label class="w0bm-mime{% if _mimeLocked %} w0bm-mime-locked{% endif %}"><input type="checkbox" name="{{ m[0] }}" value="1"{% if (m[0] in _mimeCur or _mimeLocked) %} checked{% endif %}{% if _mimeLocked %} disabled{% endif %}> {{ m[1] }}</label>
-                        {% endif %}
+                        {% for m in _offer %}
+                        <label class="w0bm-mime{% if _mimeLocked %} w0bm-mime-locked{% endif %}"><input type="checkbox" name="{{ m }}" value="1"{% if (_mimeAll or m in _mimeCur or _mimeLocked) %} checked{% endif %}{% if _mimeLocked %} disabled{% endif %}> {{ _mimeLabels[m] }}</label>
                         {% endfor %}
                     </div>
-                    <p class="w0bm-mime-hint">Nothing ticked: everything.</p>
+                    <p class="w0bm-mime-hint">Untick a type to hide it.</p>
                     {% if not _mimeLocked %}<button type="submit" class="btn btn-primary w0bm-nojs-only">Apply</button>{% endif %}
                 </form>
                 {% endif %}

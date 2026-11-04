@@ -77,7 +77,8 @@ fn truthy_q(req: &Req, k: &str) -> bool {
 /// `req.cookies.mime !== undefined ? req.cookies.mime : (query mime || params.mime || null)`
 fn feed_mime(req: &Req) -> Option<String> {
     if let Some(m) = req.cookie("mime") {
-        return Some(m.to_string());
+        // percent-encoded commas ("video%2Cflash") must filter like "video,flash"
+        return Some(crate::util::decode_lossy(m));
     }
     req.query("mime").filter(|m| !m.is_empty()).or_else(|| req.param("mime").filter(|m| !m.is_empty())).map(str::to_string)
 }
@@ -102,7 +103,7 @@ async fn user_profile(st: AppState, req: Req) -> Res {
     }
     let user = crate::util::decode_lossy(raw_user);
     let mime = match req.cookie("mime") {
-        Some(m) => Some(m.to_string()),
+        Some(m) => Some(crate::util::decode_lossy(m)),
         None => req.query("mime").filter(|m| !m.is_empty()).map(str::to_string),
     };
 
@@ -1002,14 +1003,16 @@ async fn strict(st: AppState, req: Req) -> Res {
 
 /// `GET /mime?video=1&audio=1&image=1&flash=1&back=/path`: the media filter as a plain form (the
 /// mime picker without JavaScript; f0ckm.js and w0bm.js set the same `mime` cookie themselves).
-/// Nothing ticked clears the filter. Redirects back to `back` (a local path) or the front page.
+/// The ticked types are the ones shown; none or every offered type (`all=<count offered>`) clears
+/// the filter. Redirects back to `back` (a local path) or the front page.
 async fn mime_pick(st: AppState, req: Req) -> Res {
     let cfg = st.cfg();
     let picked: Vec<&str> = ["video", "audio", "image", "flash"].into_iter().filter(|m| req.query(m) == Some("1")).collect();
     let back = req.query("back").and_then(crate::nojs::safe_back).unwrap_or_else(|| "/".to_string());
+    let offered: usize = req.query("all").and_then(|n| n.parse().ok()).unwrap_or(4);
     let mut r = redirect(&back);
     r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
-    let cookie = if picked.is_empty() {
+    let cookie = if picked.is_empty() || picked.len() >= offered {
         format!("mime=; {}", cookie_options(&cfg, CookieExpiry::MaxAge(0), false))
     } else {
         format!("mime={}; {}", picked.join(","), cookie_options(&cfg, CookieExpiry::MaxAge(31536000), false))

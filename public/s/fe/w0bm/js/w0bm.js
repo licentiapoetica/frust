@@ -666,9 +666,12 @@
   // The same "mime" cookie as f0ckm's mime picker; a change applies at once (page reload). Without
   // JavaScript the form's "Apply" goes through /mime.
   const mimeForm = $('#w0bm-mime-form');
-  mimeForm?.addEventListener('change', () => {
-    const picked = $$('input[type="checkbox"]:checked', mimeForm).map((c) => c.name);
-    document.cookie = picked.length
+  // Ticked = shown. All ticked is no filter (cookie cleared); the last ticked type stays ticked.
+  mimeForm?.addEventListener('change', (e) => {
+    const boxes = $$('input[type="checkbox"]:not(:disabled)', mimeForm);
+    const picked = boxes.filter((c) => c.checked).map((c) => c.name);
+    if (!picked.length) { e.target.checked = true; return; }
+    document.cookie = picked.length < boxes.length
       ? 'mime=' + picked.join(',') + '; path=/; max-age=31536000; SameSite=Lax'
       : 'mime=; path=/; max-age=0; SameSite=Lax';
     location.reload();
