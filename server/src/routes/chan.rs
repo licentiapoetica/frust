@@ -954,7 +954,9 @@ async fn thread_item_inner(st: &AppState, req: &Req, board: &str, tid_raw: &str,
         "page_meta": page_meta,
     });
 
-    let partial = if session.and_then(|s| s.use_new_layout).unwrap_or(false) { "item-partial-modern" } else { "item-partial-legacy" };
+    // The Onara viewer always shows the legacy layout (views/item-partial.html does the same)
+    let onara = s::is_onara_enabled_for(&cfg, &req.cookies, session, false);
+    let partial = if !onara && session.and_then(|s| s.use_new_layout).unwrap_or(false) { "item-partial-modern" } else { "item-partial-legacy" };
     if wants_ajax(req) {
         let html_s = crate::tpl::render(st, Some(req), partial, data.clone());
         let body = json!({
@@ -967,7 +969,7 @@ async fn thread_item_inner(st: &AppState, req: &Req, board: &str, tid_raw: &str,
         return Ok(json_resp(&body, 200));
     }
 
-    if s::is_onara_enabled_for(&cfg, &req.cookies, session, false) {
+    if onara {
         let item_html = crate::tpl::render(st, Some(req), partial, data.clone());
         let mut tv = thread_view_data(st, req, board, tid, &posts, &rehosts, &favs, target_no, &lang);
         if let Some(m) = tv.as_object_mut() {

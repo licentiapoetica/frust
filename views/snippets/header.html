@@ -92,7 +92,7 @@
   {% endif %}
 </head>
 
-<body class="{% if session %}{% if session.use_new_layout %}layout-modern{% else %} layout-legacy {% endif %}{% else %} {% if default_layout == "legacy" %}layout-legacy{% else %} layout-modern{% endif %} {% endif %} {% if (private_society and not session) %}private-gate-active{% endif %} {% if is_onara_item %} onara-modal-open {% endif %}">
+<body class="{% if is_onara_item %}layout-legacy{% elif session %}{% if session.use_new_layout %}layout-modern{% else %} layout-legacy {% endif %}{% else %} {% if default_layout == "legacy" %}layout-legacy{% else %} layout-modern{% endif %} {% endif %} {% if (private_society and not session) %}private-gate-active{% endif %} {% if is_onara_item %} onara-modal-open {% endif %}">
   <script src="/s/js/views/snippets/header.body.js?v={{ mtime("/public/s/js/views/snippets/header.body.js") }}" data-hide-sidebar-default="{% if hide_sidebar_default %}true{% else %}false{% endif %}"></script>
   {% if (not private_society or session) %}
   <canvas class="hidden-xs" id="bg"></canvas>

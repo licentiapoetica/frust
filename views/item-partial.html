@@ -1,4 +1,8 @@
-{% if session %}
+{#- The Onara viewer always shows the legacy layout (also for members on the modern one); f0ckm.js
+    keeps the body on layout-legacy while it is open -#}
+{% if (onara or is_onara_item) %}
+  {% include "item-partial-legacy.html" %}
+{% elif session %}
   {% if session.use_new_layout %}
     {% include "item-partial-modern.html" %}
   {% else %}

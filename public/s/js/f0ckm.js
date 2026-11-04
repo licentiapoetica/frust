@@ -431,8 +431,11 @@ window.cancelAnimFrame = (function () {
       } catch(e) { console.error('Visit tracking error:', e); }
   };
 
+  // The Onara viewer always uses the legacy item layout (item-partial.html renders it), so while it is
+  // open or closing the body is layout-legacy whatever the user picked; closing it restores the choice.
   const ensureLayoutClass = () => {
-    const isLegacy = window.f0ckSession ? !window.f0ckSession.use_new_layout : (window.f0ckDefaultLayout === 'legacy');
+    const inOnara = document.body.classList.contains('onara-modal-open') || document.body.classList.contains('onara-modal-closing');
+    const isLegacy = inOnara || (window.f0ckSession ? !window.f0ckSession.use_new_layout : (window.f0ckDefaultLayout === 'legacy'));
     document.body.classList.remove('legacy-view', 'layout-modern', 'layout-legacy');
     if (isLegacy) {
       document.body.classList.add('layout-legacy');
@@ -1871,6 +1874,7 @@ window.cancelAnimFrame = (function () {
     const wasAlreadyOpen = document.body.classList.contains('onara-modal-open');
     document.body.classList.remove('onara-modal-closing');
     document.body.classList.add('onara-modal-open');
+    ensureLayoutClass();
     if (typeof window.applyBackgroundOpacitySettings === 'function') {
       window.applyBackgroundOpacitySettings(window.onaraTuning || null, true);
     }
@@ -2582,6 +2586,7 @@ window.cancelAnimFrame = (function () {
       modal.setAttribute('aria-hidden', 'true');
       modal.classList.remove('onara-fade-out', 'onara-fade-in');
       document.body.classList.remove('onara-modal-open', 'onara-modal-closing');
+      ensureLayoutClass();
       document.querySelectorAll('.onara-active, .active-thread-post').forEach(el => el.classList.remove('onara-active', 'active-thread-post'));
       if (typeof window.applyBackgroundOpacitySettings === 'function') {
         window.applyBackgroundOpacitySettings(null, false);
@@ -2616,6 +2621,7 @@ window.cancelAnimFrame = (function () {
 
       // Now that modal is completely invisible, smoothly restore background state
       document.body.classList.remove('onara-modal-open', 'onara-modal-closing');
+      ensureLayoutClass();
       document.querySelectorAll('.onara-active, .active-thread-post').forEach(el => el.classList.remove('onara-active', 'active-thread-post'));
       if (typeof window.applyBackgroundOpacitySettings === 'function') {
         window.applyBackgroundOpacitySettings(null, false);
