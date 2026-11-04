@@ -211,3 +211,75 @@ html.w0bm-comments-off body.w0bm-item-page #sidebar > :not(.tags, .flashcontaine
 html.w0bm-comments-off body.w0bm-item-page #sidebar > .tags {
     margin-top: auto;
 }
+
+/* ── Profile header (partials/profileheader.html) ────────────────────────────────────────────
+   The avatar, with name, links and join date beside it; under them the counts as a row of even
+   boxes. (w0bmcustom.css floats the join date right on the line of the counts, where both don't
+   fit on a phone.) */
+.w0bm-profilehead {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: center;
+}
+.w0bm-profilehead > * {
+    grid-column: 2;
+}
+.w0bm-profilehead > .w0bm-avatar {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    float: none;
+    margin: 0;
+}
+.w0bm-profilehead:not(:has(> .w0bm-avatar)) {
+    grid-template-columns: minmax(0, 1fr);
+}
+.w0bm-profilehead:not(:has(> .w0bm-avatar)) > * {
+    grid-column: 1;
+}
+.w0bm-profilehead > h3 {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+.w0bm-profilehead > #jointime {
+    float: none;
+    font-size: 13px;
+    text-align: left;
+    color: #aaa;
+}
+.w0bm-profilehead > .profile-info {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 4px;
+    margin-top: 10px;
+    font-size: 12px;
+    text-align: center;
+}
+.w0bm-profilehead > .profile-info > span {
+    margin: 0;
+}
+.w0bm-profilehead > .profile-info > span > a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 2px;
+    background: rgba(34, 34, 34, 0.8);
+    border: 1px solid #383737;
+    text-decoration: none;
+}
+.w0bm-profilehead .profile-info .fa {
+    margin: 0 0 2px;
+    font-size: 16px;
+}
+.w0bm-profilehead .w0bm-stat-n {
+    font-size: 16px;
+    line-height: 1.2;
+}
+.w0bm-profilehead .w0bm-stat-l {
+    opacity: 0.8;
+}
+.w0bm-profilehead > .w0bm-userdesc {
+    grid-column: 1 / -1;
+}

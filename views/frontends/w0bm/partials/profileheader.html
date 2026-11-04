@@ -1,5 +1,5 @@
 {#- partials/profileheader.blade.php -#}
-<div class="page-header">
+<div class="page-header w0bm-profilehead">
     {% if user.avatar_file %}<img class="w0bm-avatar" src="/a/{{ user.avatar_file }}" alt="">{% elif (user.avatar and (user.avatar > 0)) %}<img class="w0bm-avatar" src="/t/{{ user.avatar }}.webp" alt="">{% endif %}
     <h3{% if user.username_color %} class="w0bm-usercolor" style="--user-color: {{ user.username_color }}"{% endif %}>{{ (user.display_name or user.user) }} {% if user.id %}<small>ID: {{ user.id }}</small>{% endif %}{% if user.is_ghost %} <small>(legacy)</small>{% endif %} {% if user.banned %}<span class="w0bm-banned">({{ (user.ban_duration or "banned") }})</span>{% endif %}</h3>
     <div class="admin-settings">
@@ -15,12 +15,12 @@
     </div>
     <span id="jointime">Joined: <time class="timeago" datetime="{{ user.timestamp.timefull }}" title="{{ user.timestamp.timefull }}" data-toggle="tooltip">{{ user.timestamp.timeago }}</time></span>
     <div class="profile-info">
-        <span id="count-upload"> <a href="/user/{{ user.user|lower }}/uploads"> <i class="fa fa-cloud-upload"></i> {{ (count.f0cks or 0) }} Uploads</a></span>
+        <span id="count-upload"> <a href="/user/{{ user.user|lower }}/uploads"> <i class="fa fa-cloud-upload"></i> <span class="w0bm-stat-n">{{ (count.f0cks or 0) }}</span> <span class="w0bm-stat-l">Uploads</span></a></span>
         {% if not user.is_ghost %}
-        <span id="comments-user"> <a href="/user/{{ user.user|lower }}/comments"><i class="fa fa-commenting"></i> {{ (count.comments or 0) }} Comments</a></span>
-        <span id="favs-user"><a href="/user/{{ user.user|lower }}/favs"><i class="fa fa-heart"></i> {{ (count.favs or 0) }} Favorites</a></span>
-        <span id="tags-user"><a href="/user/{{ user.user|lower }}/tags"><i class="fa fa-tags"></i> {{ (count.tags or 0) }} Tags</a></span>
-        {% if userhalls_enabled %}<span id="halls-user"><a href="/user/{{ user.user|lower }}/halls"><i class="fa fa-clone"></i> {{ (count.halls or 0) }} Halls</a></span>{% endif %}
+        <span id="comments-user"> <a href="/user/{{ user.user|lower }}/comments"><i class="fa fa-commenting"></i> <span class="w0bm-stat-n">{{ (count.comments or 0) }}</span> <span class="w0bm-stat-l">Comments</span></a></span>
+        <span id="favs-user"><a href="/user/{{ user.user|lower }}/favs"><i class="fa fa-heart"></i> <span class="w0bm-stat-n">{{ (count.favs or 0) }}</span> <span class="w0bm-stat-l">Favorites</span></a></span>
+        <span id="tags-user"><a href="/user/{{ user.user|lower }}/tags"><i class="fa fa-tags"></i> <span class="w0bm-stat-n">{{ (count.tags or 0) }}</span> <span class="w0bm-stat-l">Tags</span></a></span>
+        {% if userhalls_enabled %}<span id="halls-user"><a href="/user/{{ user.user|lower }}/halls"><i class="fa fa-clone"></i> <span class="w0bm-stat-n">{{ (count.halls or 0) }}</span> <span class="w0bm-stat-l">Halls</span></a></span>{% endif %}
         {% endif %}
     </div>
     {% if user.description %}<div class="w0bm-userdesc">{{ user.description }}</div>{% endif %}
