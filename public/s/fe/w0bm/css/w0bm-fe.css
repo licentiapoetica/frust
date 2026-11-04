@@ -2126,6 +2126,15 @@ div#parent.emojis-box {
     border-color: #e74c3c;
     background: rgba(231, 76, 60, 0.08);
 }
+/* the captcha centred under the details, the same 10px apart as the reasons above them */
+.w0bm-report-body > cap-widget {
+    display: block;
+    width: fit-content;
+    margin: 10px auto 0;
+}
+.w0bm-report-body > .w0bm-imgcap {
+    margin: 10px auto 0;
+}
 
 /* ── Messages: comment notifications open in place (snippets/notifications-list.html) ───── */
 details.list-group-item.w0bm-msg {
