@@ -931,6 +931,85 @@ span#halls-user > a {
 .w0bm-hallgrid .thumbnail .holocene {
     background-image: var(--hall-image);
 }
+/* Tag and hall cards (tags.html, tags_user.html, halls.html): a grid of cards that are all the same
+   size, at most three to a row (1 / 2 / 3), on a page wider than Bootstrap's fixed 1170px. The name
+   is always two lines high (longer ones end in "…", the full name is the tooltip), so is a hall's
+   description; the button sits at the bottom. (Floated columns of different heights left holes.) */
+.w0bm-main > .container:has(> .w0bm-hallgrid) {
+    /* important: style.css fixes .container at 1170px with !important from 1550px */
+    width: auto !important;
+    max-width: 1600px;
+}
+.w0bm-hallgrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px 30px;
+    margin-bottom: 20px;
+}
+@media (min-width: 768px) {
+    .w0bm-hallgrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (min-width: 992px) {
+    .w0bm-hallgrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+.w0bm-hallgrid > .category {
+    float: none;
+    width: auto;
+    min-width: 0;
+    padding: 0;
+}
+.w0bm-hallgrid > p {
+    grid-column: 1 / -1;
+}
+.w0bm-hallgrid .thumbnail {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    margin: 0;
+}
+.w0bm-hallgrid .caption {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+.w0bm-hallgrid .caption > h3 {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.2;
+}
+.w0bm-hallgrid .w0bm-card-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 2.4em;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+.w0bm-hallgrid .caption > h3 > small,
+.w0bm-hallgrid .caption > h3 > .label {
+    flex: none;
+    float: none;
+}
+.w0bm-hallgrid .w0bm-card-desc {
+    height: 2.86em;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+.w0bm-hallgrid .caption > p:last-child {
+    margin-top: auto;
+    margin-bottom: 0;
+}
 .w0bm-ranking td,
 .w0bm-ranking th {
     text-align: center;

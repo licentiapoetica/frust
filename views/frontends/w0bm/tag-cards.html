@@ -4,7 +4,7 @@
     <div class="thumbnail">
         <a href="/tag/{{ toptag.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}"><div class="holocene" style="--hall-image: url('/tag_image/{{ toptag.encoded_tag }}?m={{ mode }}')"></div></a>
         <div class="caption">
-            <h3>#{{ toptag.tag }} <small>{{ toptag.total_items }}</small></h3>
+            <h3><span class="w0bm-card-name" title="#{{ toptag.tag }}">#{{ toptag.tag }}</span> <small>{{ toptag.total_items }}</small></h3>
             <p><a href="/tag/{{ toptag.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}" class="btn btn-primary" role="button">View</a></p>
         </div>
     </div>
