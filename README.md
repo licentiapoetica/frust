@@ -46,7 +46,9 @@ Moving an existing site: `./install.sh --import-db /path/to/dump.sql` (or `IMPOR
 `pg_dump -Fc`); a fresh install also asks for one. f0ckm brings it up to the current schema on its
 first start. The dump is loaded into a separate database and only swapped in when it loaded
 completely, so a failed import changes nothing; replacing a database that already has tables asks
-first (unattended: `IMPORT_DB_REPLACE=1`). Uploaded files aren't in the dump: copy them into
+first (unattended: `IMPORT_DB_REPLACE=1`). The database user then defaults to the one the dump was
+made with instead of `f0ckm` (`POSTGRES_USER`/`POSTGRES_DB`/`POSTGRES_PASSWORD` set it explicitly,
+also without a dump). Uploaded files aren't in the dump: copy them into
 `f0ckm-data/` (the folders are listed in `docker-compose.yml`).
 
 Postgres (`127.0.0.1:5454`) and the app (`127.0.0.1:1337`) only listen on the server itself; public

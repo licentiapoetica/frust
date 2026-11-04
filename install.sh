@@ -7,6 +7,8 @@
 #
 # Asks for anything it needs; for unattended installs set these instead:
 #   DOMAIN=f0ck.example  EMAIL=you@example.com  ADMIN_USER=admin  ADMIN_PASSWORD=...  ./install.sh
+# The database user and name are f0ckm (POSTGRES_USER, POSTGRES_DB and POSTGRES_PASSWORD set others);
+# with an imported dump the user defaults to the one the dump was made with.
 # Leave DOMAIN empty for a local install on http://localhost:1337 without nginx/Let's Encrypt.
 # PROXY=nginx (default) runs the bundled nginx-proxy + Let's Encrypt; PROXY=own skips them, so your own
 # reverse proxy forwards the domain to 127.0.0.1:1337 (example: config/nginx/own-proxy.example.conf).
@@ -37,6 +39,17 @@ resolve_dump() {
     IMPORT_DB=${IMPORT_DB/#\~/$HOME}
     [ -f "$IMPORT_DB" ] && [ -r "$IMPORT_DB" ] || die "can't read the database dump '$IMPORT_DB'"
     IMPORT_DB=$(cd "$(dirname "$IMPORT_DB")" && pwd)/$(basename "$IMPORT_DB")
+    command -v "$(dump_unpacker)" >/dev/null 2>&1 || die "'$(dump_unpacker)' is needed to unpack $IMPORT_DB"
+}
+# The dump, unpacked
+dump_unpacker() {
+    case $IMPORT_DB in *.gz) echo gzip ;; *.zst) echo zstd ;; *.xz) echo xz ;; *.bz2) echo bzip2 ;; *) echo cat ;; esac
+}
+dump_cat() { local d; d=$(dump_unpacker); if [ "$d" = cat ]; then cat "$IMPORT_DB"; else "$d" -dc "$IMPORT_DB"; fi; }
+# The database user that owns the objects in a plain SQL dump (the old site's user), if it names one
+dump_owner() {
+    { dump_cat 2>/dev/null | head -c 4000000 | grep -m 1 -oE 'OWNER TO "?[A-Za-z_][A-Za-z0-9_]*' \
+        | sed -E 's/OWNER TO "?//'; } || true
 }
 [ -n "$IMPORT_DB" ] && resolve_dump
 START_DIR=$PWD
@@ -109,16 +122,26 @@ else
             [ -n "${EMAIL:-}" ] || die "an email is needed for the Let's Encrypt certificate"
         fi
     fi
-    DB_PASS=$(secret 32)
+    # Database user and name: f0ckm, or for an imported site the user its dump was made with
+    if [ -n "$IMPORT_DB" ]; then
+        owner=$(dump_owner)
+        ask POSTGRES_USER "Database user" "${owner:-f0ckm}"
+    fi
+    POSTGRES_USER=${POSTGRES_USER:-f0ckm}
+    POSTGRES_DB=${POSTGRES_DB:-$POSTGRES_USER}
+    for v in "$POSTGRES_USER" "$POSTGRES_DB"; do
+        [[ $v =~ ^[a-z_][a-z0-9_]*$ ]] || die "database user/name '$v' may only use a-z, 0-9 and _"
+    done
+    DB_PASS=${POSTGRES_PASSWORD:-$(secret 32)}
     # An existing database keeps the password it was created with (the old default was f0ckm)
-    if [ -n "$(ls -A f0ckm-data/postgres 2>/dev/null)" ]; then
+    if [ -z "${POSTGRES_PASSWORD:-}" ] && [ -n "$(ls -A f0ckm-data/postgres 2>/dev/null)" ]; then
         warn "f0ckm-data/postgres already holds a database; keeping its default password 'f0ckm'"
         DB_PASS=f0ckm
     fi
     say "Writing .env"
     {
-        echo "POSTGRES_USER=f0ckm"
-        echo "POSTGRES_DB=f0ckm"
+        echo "POSTGRES_USER=$POSTGRES_USER"
+        echo "POSTGRES_DB=$POSTGRES_DB"
         echo "POSTGRES_PASSWORD=$DB_PASS"
         echo "IP_HASH_SECRET=$(secret 64)"
         if [ -n "$DOMAIN" ]; then
@@ -184,15 +207,7 @@ esac
 
 # ── Database import ──────────────────────────────────────────────────────────────
 import_db() {
-    local user name tmp tables ans magic decomp
-    user=$(sed -n 's/^POSTGRES_USER=//p' .env | tail -n 1); user=${user:-f0ckm}
-    name=$(sed -n 's/^POSTGRES_DB=//p' .env | tail -n 1); name=${name:-f0ckm}
-    tmp=${name}_import
-    case $IMPORT_DB in
-        *.gz) decomp="gzip -dc" ;; *.zst) decomp="zstd -dc" ;; *.xz) decomp="xz -dc" ;; *.bz2) decomp="bzip2 -dc" ;;
-        *) decomp=cat ;;
-    esac
-    command -v "${decomp%% *}" >/dev/null 2>&1 || die "'${decomp%% *}' is needed to unpack $IMPORT_DB"
+    local user name tmp tables ans magic owner
     pg() { docker exec -i -e PGOPTIONS='-c client_min_messages=warning' f0ckm-db "$@"; }
     sql() { pg psql -U "$user" -d "$1" -v ON_ERROR_STOP=1 -Atqc "$2"; }
 
@@ -203,8 +218,28 @@ import_db() {
         [ "$i" = 60 ] && die "the database did not start; see: $COMPOSE logs f0ckm-db"
         sleep 2
     done
+    # The user and database the container runs with (from .env), which are also what f0ckm connects with
+    user=$(docker exec f0ckm-db printenv POSTGRES_USER); name=$(docker exec f0ckm-db printenv POSTGRES_DB)
+    tmp=${name}_import
+    # Postgres only creates POSTGRES_USER when it sets up an empty f0ckm-data/postgres; a folder made
+    # by another setup keeps its own users, and f0ckm couldn't log in to it either
+    if ! sql postgres "SELECT 1" >/dev/null 2>&1; then
+        owner=$(dump_owner)
+        if [ -n "$owner" ] && [ "$owner" != "$user" ] && pg psql -U "$owner" -d postgres -Atqc "SELECT 1" >/dev/null 2>&1; then
+            owner="It has the user '$owner' instead: set POSTGRES_USER=$owner (and its POSTGRES_PASSWORD) in .env,"
+        else
+            owner="Set POSTGRES_USER/POSTGRES_PASSWORD in .env to the user it was created with,"
+        fi
+        die "the database in f0ckm-data/postgres has no user '$user' (POSTGRES_USER in .env): another setup created it.
+       $owner
+       or start with a new database (the dump brings the data): $COMPOSE down,
+       mv f0ckm-data/postgres f0ckm-data/postgres.old, and run the installer again"
+    fi
 
-    tables=$(sql "$name" "SELECT count(*) FROM pg_tables WHERE schemaname = 'public'")
+    tables=0
+    if sql postgres "SELECT 1 FROM pg_database WHERE datname = '$name'" | grep -q 1; then
+        tables=$(sql "$name" "SELECT count(*) FROM pg_tables WHERE schemaname = 'public'")
+    fi
     if [ "$tables" != 0 ] && [ "${IMPORT_DB_REPLACE:-}" != 1 ]; then
         warn "the database '$name' already holds $tables tables, the import replaces all of it"
         ans=; [ -t 0 ] && read -r -p "Type 'replace' to continue: " ans
@@ -214,12 +249,12 @@ import_db() {
     # Loaded into a separate database in one transaction; the current one is only replaced once it worked
     pg dropdb -U "$user" --if-exists "$tmp"
     pg createdb -U "$user" "$tmp"
-    magic=$($decomp "$IMPORT_DB" 2>/dev/null | head -c 5 || true)
+    magic=$(dump_cat 2>/dev/null | head -c 5 || true)
     if [ "$magic" = PGDMP ]; then
-        $decomp "$IMPORT_DB" | pg pg_restore -U "$user" -d "$tmp" --no-owner --no-acl --single-transaction --exit-on-error
+        dump_cat | pg pg_restore -U "$user" -d "$tmp" --no-owner --no-acl --single-transaction --exit-on-error
     else
-        # The old site's roles don't exist here: drop OWNER TO lines (outside COPY data) so f0ckm owns everything
-        $decomp "$IMPORT_DB" \
+        # Drop the OWNER TO lines (outside COPY data), so this install's database user owns everything
+        dump_cat \
             | awk '/^COPY .* FROM stdin;$/ { c = 1 } c { print; if ($0 == "\\.") c = 0; next } /^ALTER .* OWNER TO [^ ]+;$/ { next } { print }' \
             | pg psql -U "$user" -d "$tmp" -q -v ON_ERROR_STOP=1 --single-transaction >/dev/null
     fi || { pg dropdb -U "$user" --if-exists "$tmp"; die "the import failed (see above); the database was not changed"; }
