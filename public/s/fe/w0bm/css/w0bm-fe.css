@@ -627,7 +627,7 @@ a.w0bm-tag-nsfl {
     border-color: #353434;
 }
 .comment_emoji {
-    max-height: 2em;
+    max-height: 5em;
     vertical-align: middle;
 }
 .comment_emoji_small {
