@@ -2430,7 +2430,9 @@ html[data-w0bm-theme="DARK"] :is(.w0bm-edit-tools, .w0bm-meta-chip:not(.w0bm-met
    w0bmcustom.css hides every badge in the right navbar (visibility: hidden): shown here whenever
    there is a count. Notifications on the bell's top right corner, unread DMs on its bottom right, so
    the two don't cover each other. */
-ul.navbar-right > li > a > span.badge.message-badge.w0bm-has-count {
+/* visible whenever shown: w0bm.js hides a zero count with [hidden], messages.js (live DMs) with
+   display: none, so neither needs a class to appear */
+ul.navbar-right > li > a > span.badge.message-badge {
     visibility: visible;
 }
 ul.navbar-right > li > a > span.badge.message-badge {

@@ -2181,7 +2181,7 @@
   window.f0ckFrontend = Object.assign(window.f0ckFrontend || {}, {
     itemId: ITEM ? ITEM.id : null,
     flash: (message, type) => flash(flashTypes[type] || 'info', String(message ?? '')),
-    notify: () => pollBadges(),
+    notify: () => { pollBadges(); refreshNotifList(); },
     comments: (data) => {
       if (ITEM && data && String(data.item_id) === String(ITEM.id)) loadComments(null);
     },
@@ -2192,6 +2192,26 @@
     // passkey.js closes the login dialog when it opens "Login as anonymous"
     closeLogin: () => closeModal($('#login-modal')),
   });
+
+  // On /notifications a new notification appears at the top of the list right away (rows already
+  // shown, e.g. loaded "older messages", stay)
+  async function refreshNotifList() {
+    const list = $('.w0bm-notif #listitems');
+    if (!list) return;
+    const tab = $('#w0bm-readall')?.dataset.tab || '';
+    const r = await api('/ajax/notifications?page=1' + (tab ? '&tab=' + encodeURIComponent(tab) : ''), { method: 'GET' });
+    if (!r.ok || !r.data || !r.data.html) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = r.data.html;
+    const have = new Set($$('[data-id]', list).map((el) => el.dataset.id));
+    const fresh = $$(':scope > [data-id]', tmp).filter((el) => !have.has(el.dataset.id));
+    if (!fresh.length) return;
+    list.querySelectorAll(':scope > .list-group-item:not([data-id])').forEach((el) => {
+      if (/no messages/i.test(el.textContent)) el.hidden = true;
+    });
+    fresh.reverse().forEach((el) => list.prepend(el));
+    refreshTimeago();
+  }
 
   // New uploads appear at the top of the main grid, like in f0ckm: only on the unfiltered first page,
   // only in the visitor's rating mode, after the pinned items, never twice
