@@ -1,7 +1,8 @@
 {#- popover-content.blade.php: what the (i) popover shows, one line per fact (the rating is the tag in the sidebar) -#}
 <div>ID: {{ item.id }}</div>
 {% if item.title %}<div>Title: {{ item.title }}</div>{% endif %}
-{% if (item.src and item.src.long) %}<div>Source: <a href="{{ item.src.long }}" rel="noopener noreferrer" target="_blank">{{ (item.src.short or item.src.long) }}</a></div>{% endif %}
+{#- the source is a link only when it is a URL of another site (a name like "w0bm" or this site: text) -#}
+{% if (item.src and item.src.long) %}<div>Source: {% if (item.src.short and (item.src.short|lower) != (domain|lower)) %}<a href="{{ item.src.long }}" rel="noopener noreferrer" target="_blank">{{ item.src.short }}</a>{% else %}{{ (item.src.short or item.src.long) }}{% endif %}</div>{% endif %}
 {% if item.original_filename %}<div>File: {{ item.original_filename }}</div>{% endif %}
 <div>Type: {{ item.mime }}{% if item.mime != "video/youtube" %} ({{ item.size }}){% endif %}</div>
 {% if (item.width and item.height) %}<div>Dimensions: {{ item.width }}×{{ item.height }}</div>{% endif %}

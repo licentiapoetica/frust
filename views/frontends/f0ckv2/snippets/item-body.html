@@ -112,8 +112,11 @@
     </span>
     {% if user and (user.network or user.channel) %}<span class="badge badge-dark">{{ user.network }} / {{ user.channel }}</span>{% endif %}
     <span class="badge badge-dark image-source">
-      {% if (item.src and item.src.long) %}
+      {#- a link only for a URL of another site; a name like "w0bm" or this site: text -#}
+      {% if (item.src and item.src.short and (item.src.short|lower) != (domain|lower)) %}
       <a href="{{ item.src.long }}" target="_blank" rel="noopener noreferrer">{{ item.src.short }}</a>
+      {% elif (item.src and item.src.long) %}
+      {{ (item.src.short or item.src.long) }}
       {% else %}
       hidden
       {% endif %}
