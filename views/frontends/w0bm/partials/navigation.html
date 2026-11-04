@@ -11,8 +11,7 @@
                 <span class="icon-bar"></span>
             </label>
             <a class="navbar-brand w0bm-brand" href="/">
-                <img class="w0bm-brand-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}>
-                <span class="w0bm-brand-text" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="{{ domain }}"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else domain)) }}</span>
+                <img class="w0bm-brand-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="w0bm-brand-text" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="{{ domain }}"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else domain)) }}</span>
             </a>
         </div>
 
@@ -50,7 +49,9 @@
                         {% if enable_comments %}
                         <li><a href="/subscriptions"><i class="fa fa-bell"></i> Subscriptions</a></li>
                         {% endif %}
+                        {% if manual_approval %}
                         <li><a href="/pending"><i class="fa fa-clock-o"></i> Pending{% if session.own_pending_count %} <span class="badge">{{ session.own_pending_count }}</span>{% endif %}</a></li>
+                        {% endif %}
                         {% if (userhalls_enabled and not session.is_anon) %}
                         <li><a href="/user/{{ session.user|lower }}/halls"><i class="fa fa-clone"></i> My Halls</a></li>
                         {% endif %}

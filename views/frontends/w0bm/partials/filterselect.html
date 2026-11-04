@@ -20,6 +20,28 @@
                     <button type="submit" class="btn btn-primary">Add</button>
                 </form>
                 {% endif %}
+                {% if show_mime_picker %}
+                {#- Media filter (f0ckm's mime picker, websrv.show_mime_picker): the "mime" cookie the listings
+                    read. w0bm.js saves a change at once and reloads; without JavaScript "Apply" goes
+                    through /mime. Anonymous users only get their allowed types (locked when only one). -#}
+                {%- set _anonUser = (not session or session.is_anon) -%}
+                {%- set _mimeAllowed = ((anon_permissions.allowed_mimes if (anon_permissions and anon_permissions.allowed_mimes) else none) or ["image", "video", "audio", "flash"]) -%}
+                {%- set _mimeCur = (mime_filter or "").split(",") -%}
+                {%- set _mimeLocked = (_anonUser and (_mimeAllowed|length == 1)) -%}
+                <form method="get" action="/mime" class="w0bm-mimes" id="w0bm-mime-form">
+                    {% include "frontends/w0bm/partials/back.html" %}
+                    <h5>Media</h5>
+                    <div class="w0bm-mime-group">
+                        {% for m in [["video", t("filter.video")], ["audio", t("filter.audio")], ["image", t("filter.image")], ["flash", t("filter.flash")]] %}
+                        {% if ((m[0] != "flash" or enable_swf) and (m[0] == "flash" or not (scroller_mime_cats is sequence) or m[0] in scroller_mime_cats) and (not _anonUser or m[0] in _mimeAllowed)) %}
+                        <label class="w0bm-mime{% if _mimeLocked %} w0bm-mime-locked{% endif %}"><input type="checkbox" name="{{ m[0] }}" value="1"{% if (m[0] in _mimeCur or _mimeLocked) %} checked{% endif %}{% if _mimeLocked %} disabled{% endif %}> {{ m[1] }}</label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <p class="w0bm-mime-hint">Nothing ticked: everything.</p>
+                    {% if not _mimeLocked %}<button type="submit" class="btn btn-primary w0bm-nojs-only">Apply</button>{% endif %}
+                </form>
+                {% endif %}
                 <div class="w0bm-modes">
                     <h5>Mode</h5>
                     <div class="btn-group w0bm-mode-group" role="group">

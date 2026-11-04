@@ -578,8 +578,51 @@ a.w0bm-tag-nsfl {
     color: #c8c8c8;
     background: rgba(90, 88, 88, 0.4);
 }
-.panel-footer .w0bm-c-actions a {
-    margin-left: 3px;
+/* Comment footer: "by name · time" on the left, the action buttons on the right */
+.commentwrapper .panel-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 4px;
+}
+.panel-footer .w0bm-c-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+}
+/* one look for all of them (the theme floated [edit]/[del] right in white) */
+.panel-footer .w0bm-c-actions a.w0bm-cact {
+    float: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 22px;
+    padding: 0 5px;
+    font-size: 13px;
+    color: #777;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: color .15s, border-color .15s;
+}
+.panel-footer .w0bm-c-actions a.w0bm-cact:hover,
+.panel-footer .w0bm-c-actions a.w0bm-cact:focus {
+    color: #1fb2b0;
+    border-color: #353434;
+    outline: 0;
+}
+.panel-footer .w0bm-c-actions a.w0bm-cact.w0bm-cact-on {
+    color: #1fb2b0;
+}
+.panel-footer .w0bm-c-actions a.w0bm-cact.w0bm-cact-danger:hover,
+.panel-footer .w0bm-c-actions a.w0bm-cact.w0bm-cact-danger:focus {
+    color: #e74c3c;
+}
+.panel-footer .w0bm-c-actions a.w0bm-cact.w0bm-cact-text {
+    font-size: 12px;
+    color: #c8c8c8;
+    border-color: #353434;
 }
 .comment_emoji {
     max-height: 2em;
@@ -1246,7 +1289,8 @@ html:not(.w0bm-nojs) .w0bm-nojs-only {
 }
 /* message of the day above the comment form */
 .panel.w0bm-motd {
-    margin-bottom: 5px;
+    /* flush with the comment box (or "log in" panel) under it */
+    margin-bottom: 0;
 }
 /* no line under the message (the theme files set .panel.panel-default borders) */
 .panel.panel-default.w0bm-motd {
@@ -1911,4 +1955,186 @@ div#parent.emojis-box {
 }
 #comment_tools > .textmodifierss > .spoiler {
     padding: 0 4px;
+}
+
+/* ── Quick upload (f0ckm's upload dropdown, snippets/upload-modal-frontend.html) ───────────
+   f0ckm's colour variables in w0bm's colours */
+#upload-drag-modal,
+#drop-overlay {
+    --accent: #1fb2b0;
+    --accent-rgb: 31, 178, 176;
+    --white: #fff;
+    --black: #000;
+    --bg: #161618;
+    --bg-form: #1c1c1d;
+    --nav-bg: #222;
+    --dropdown-bg: #222;
+    --nav-border-color: #353434;
+    --text: #c8c8c8;
+    --text-color: #c8c8c8;
+    --navbar-h: 50px;
+    --badge-sfw: #23dd06;
+    --badge-nsfw: #e10dc3;
+    --badge-nsfl: #660000;
+    --upload-opt-color: #c8c8c8;
+    font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* ── Report modal (partials/report.html): f0ckm's reasons as checkbox rows ─────────────────── */
+.modal-body.w0bm-report-body {
+    display: block;
+}
+.w0bm-report-intro {
+    margin: 0 0 10px;
+    color: #888;
+}
+.w0bm-report-cats {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+.w0bm-report-cat {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    padding: 7px 10px;
+    font-weight: normal;
+    border: 1px solid #353434;
+    cursor: pointer;
+}
+.w0bm-report-cat:hover {
+    border-color: #1fb2b0;
+}
+.w0bm-report-cat:has(input:checked) {
+    border-color: #1fb2b0;
+    background: rgba(31, 178, 176, 0.08);
+}
+.w0bm-report-cat > input {
+    margin: 3px 0 0;
+    accent-color: #1fb2b0;
+}
+.w0bm-report-cat-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.35;
+}
+.w0bm-report-cat-text > strong {
+    color: #fff;
+}
+.w0bm-report-cat-text > span {
+    color: #888;
+    font-size: 0.9em;
+}
+.w0bm-report-cat.w0bm-report-danger > .w0bm-report-cat-text > strong {
+    color: #e74c3c;
+}
+.w0bm-report-cat.w0bm-report-danger:has(input:checked) {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.08);
+}
+
+/* ── Messages: comment notifications open in place (snippets/notifications-list.html) ───── */
+details.list-group-item.w0bm-msg {
+    padding: 0;
+}
+details.w0bm-msg > summary {
+    display: block;
+    padding: 10px 15px;
+    cursor: pointer;
+    list-style: none;
+}
+details.w0bm-msg > summary::-webkit-details-marker {
+    display: none;
+}
+details.w0bm-msg > summary:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+details.w0bm-msg[open] > summary {
+    border-bottom: 1px solid #353434;
+}
+.w0bm-msg-body {
+    padding: 10px 15px 12px 38px;
+}
+.w0bm-msg-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: #c8c8c8;
+    margin-bottom: 8px;
+}
+.w0bm-msg-text img,
+.w0bm-msg-text video {
+    max-width: 100%;
+    max-height: 240px;
+}
+.w0bm-msg-open {
+    font-size: 0.9em;
+}
+/* once w0bm.js has formatted it, line breaks are <br>s */
+.w0bm-msg-text[data-done] {
+    white-space: normal;
+}
+
+/* comment id, top right of each comment (the >>id quotes refer to it) */
+.commentwrapper .panel > .panel-body {
+    position: relative;
+    padding-right: 44px;
+}
+.commentwrapper .panel > .panel-body > a.w0bm-cid {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    font-size: 12px;
+    color: #666;
+    text-decoration: none;
+}
+.commentwrapper .panel > .panel-body > a.w0bm-cid:hover {
+    color: #1fb2b0;
+}
+
+/* ── Filter dialog: media types (mime picker) ─────────────────────────────────────────────── */
+.w0bm-mimes {
+    text-align: center;
+    margin-top: 10px;
+}
+.w0bm-mimes h5 {
+    font-family: Oswald, sans-serif;
+    color: #1fb2b0;
+}
+.w0bm-mime-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
+.w0bm-mime {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 5px 12px;
+    font-weight: normal;
+    border: 1px solid #353434;
+    cursor: pointer;
+}
+.w0bm-mime:hover {
+    border-color: #1fb2b0;
+}
+.w0bm-mime:has(input:checked) {
+    border-color: #1fb2b0;
+    background: rgba(31, 178, 176, 0.12);
+    color: #fff;
+}
+.w0bm-mime > input {
+    margin: 0;
+    accent-color: #1fb2b0;
+}
+.w0bm-mime.w0bm-mime-locked {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+.w0bm-mime-hint {
+    margin: 6px 0 0;
+    font-size: 0.85em;
+    color: #888;
 }

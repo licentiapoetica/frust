@@ -1,45 +1,45 @@
-{#- partials/report.blade.php -> POST /api/v2/report. Also reports comments: w0bm.js swaps item_id for
-    comment_id and the titles while it is open for one (so comments get the captcha too) -#}
+{#- POST /api/v2/report, with the content of f0ckm's report dialog (snippets/footer.html #report-modal)
+    in w0bm's modal. Also reports comments: w0bm.js swaps item_id for comment_id and the title while
+    it is open for one (so comments get the captcha too). A plain form without JavaScript. -#}
 <form id="webmreport" method="POST" action="/api/v2/report" class="w0bm-ajaxform" data-success="Report sent. Thanks!">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="item_id" value="{{ item.id }}">
     <input type="hidden" name="comment_id" value="" disabled>
     {% include "frontends/w0bm/partials/back.html" %}
-    <div class="modal fade" id="webmreportmodal" tabindex="-1" role="dialog" aria-labelledby="Report">
+    <div class="modal fade" id="webmreportmodal" tabindex="-1" role="dialog" aria-labelledby="reportModalTitle">
         <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title" id="reportModalTitle">Report {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</h4>
+                    <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                    <h4 class="modal-title" id="reportModalTitle">{{ t("report.title") }}</h4>
                 </div>
-                <div class="modal-body-report webmreportmodal">
-                    So you want to report this <span class="w0bm-report-what">upload</span>? Tell us why:<br>
-                    <br>
-                    <div class="form-group">
-                        <label for="reportReasons">
-                            Reason(s)<br>
-                            <em>(hold ctrl to select multiple)</em>
+                <div class="modal-body w0bm-report-body">
+                    <p class="w0bm-report-intro">Select one or more reasons and optionally add details below.</p>
+                    <div class="w0bm-report-cats">
+                        {% for c in [
+                            ["wrong_rating", "Wrong Rating", "Content is marked SFW but should be NSFW, or vice versa."],
+                            ["spam", "Spam", "Repeated, unwanted, or promotional content."],
+                            ["duplicate", "Duplicate", "This content has already been posted before."],
+                            ["copyright", "Copyright", "Content infringes on intellectual property rights."],
+                            ["illegal", "Illegal Content", "Content that may violate laws or platform rules."],
+                            ["other", "Other", "Something else not listed above."]
+                        ] %}
+                        <label class="w0bm-report-cat{% if c[0] == "illegal" %} w0bm-report-danger{% endif %}">
+                            <input type="checkbox" name="categories[]" value="{{ c[0] }}">
+                            <span class="w0bm-report-cat-text"><strong>{{ c[1] }}</strong><span>{{ c[2] }}</span></span>
                         </label>
-                        <select multiple class="form-control" id="reportReasons" name="categories[]">
-                            <option value="wrong_rating">Wrong rating (sfw/nsfw)</option>
-                            <option value="spam">Shitpost / spam</option>
-                            <option value="duplicate">Duplicate</option>
-                            <option value="copyright">Copyright</option>
-                            <option value="illegal">Breaks a rule / illegal</option>
-                            <option value="other">Other</option>
-                        </select>
+                        {% endfor %}
                     </div>
-                    <label for="reportText">Please explain a bit more detailed why you want to report this upload</label>
-                    <textarea class="form-control" id="reportText" name="reason" rows="3"></textarea>
+                    <textarea class="form-control" id="reportText" name="reason" rows="3" placeholder="{{ (t("report.placeholder") or "Details (optional)") }}"></textarea>
                     {% if captcha_enabled %}
                     <cap-widget class="cap-dark w0bm-cap w0bm-js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
                     {% include "frontends/w0bm/partials/capimage.html" %}
                     {% endif %}
-                    <p>Abuse of this form will be awarded with a permanent ban!</p>
                 </div>
                 <div class="modal-footer">
-                    <a href="#_" class="btn btn-primary" data-dismiss="modal">Close</a>
-                    <button type="submit" class="btn btn-primary">Send Report</button>
+                    <a href="#_" class="btn btn-primary" data-dismiss="modal">{{ t("common.cancel") }}</a>
+                    <button type="submit" class="btn btn-primary">{{ t("report.submit") }}</button>
                 </div>
             </div>
         </div>

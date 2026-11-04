@@ -662,29 +662,34 @@
     });
   }
 
+  // ── Media filter (filter dialog, partials/filterselect.html) ─────────────────────────────
+  // The same "mime" cookie as f0ckm's mime picker; a change applies at once (page reload). Without
+  // JavaScript the form's "Apply" goes through /mime.
+  const mimeForm = $('#w0bm-mime-form');
+  mimeForm?.addEventListener('change', () => {
+    const picked = $$('input[type="checkbox"]:checked', mimeForm).map((c) => c.name);
+    document.cookie = picked.length
+      ? 'mime=' + picked.join(',') + '; path=/; max-age=31536000; SameSite=Lax'
+      : 'mime=; path=/; max-age=0; SameSite=Lax';
+    location.reload();
+  });
+
   // ── Generic JSON forms (report …) ─────────────────────────────────────────────────────
-  // Report a comment: the item's report modal (partials/report.html, with categories and captcha),
-  // switched to the comment while it is open
+  // Report a comment: the item's report modal (partials/report.html, f0ckm's reasons and the
+  // captcha), sending comment_id instead of item_id while it is open for the comment
   function reportComment(id) {
     const form = $('#webmreport');
     const modal = $('#webmreportmodal');
     if (!form || !modal) return;
     const item = form.querySelector('input[name="item_id"]');
     const comment = form.querySelector('input[name="comment_id"]');
-    const title = $('#reportModalTitle');
-    const what = modal.querySelector('.w0bm-report-what');
-    const old = { title: title.textContent, what: what ? what.textContent : '' };
     item.disabled = true;
     comment.disabled = false;
     comment.value = id;
-    title.textContent = 'Report comment ' + id;
-    if (what) what.textContent = 'comment';
     modal.addEventListener('w0bm:close', () => {
       item.disabled = false;
       comment.disabled = true;
       comment.value = '';
-      title.textContent = old.title;
-      if (what) what.textContent = old.what;
     }, { once: true });
     openModal(modal);
   }
@@ -1459,6 +1464,8 @@
     div.id = 'c' + c.id;
     const body = document.createElement('div');
     body.className = 'panel-body';
+    // the comment's id, top right: what >>id quotes refer to
+    body.insertAdjacentHTML('beforeend', '<a class="w0bm-cid" href="#c' + c.id + '" title="Link to this comment">#' + c.id + '</a>');
     if (c.parent_id) body.insertAdjacentHTML('beforeend', '<div class="w0bm-reply-to">↳ <a href="#c' + c.parent_id + '">&gt;&gt;' + c.parent_id + '</a></div>');
     body.insertAdjacentHTML('beforeend', c.is_deleted && !DATA.is_mod ? '<i>[deleted]</i>' : renderComment(c.content));
     (c.files || []).filter((f) => f.dest && !String(c.content || '').includes(f.dest)).forEach((f) => {
@@ -1477,12 +1484,13 @@
       : '<a href="/user/' + encodeURIComponent(String(c.username).toLowerCase()) + '"' + (c.username_color ? ' class="w0bm-usercolor"' : '') + '>' + escapeHTML(name) + '</a>') +
       ' <small><time class="timeago" data-toggle="tooltip" data-placement="top" datetime="' + escapeHTML(c.created_at) + '" title="' + escapeHTML(c.created_at) + '"></time></small>' +
       (c.is_pinned ? ' <i class="fa fa-thumb-tack" title="pinned"></i>' : '') +
+      // actions: one row of icon buttons on the right (labels as tooltips)
       '<span class="w0bm-c-actions">' +
-        (DATA.user && !c.is_deleted && !(ITEM && ITEM.locked && !DATA.is_mod) && $('#cinput') ? ' <a class="reply_comment" href="#">[reply]</a>' : '') +
-        (!c.is_deleted && (DATA.is_mod || (mine && DATA.allow_comment_deletion)) ? ' <a class="delete_comment" href="#">[del]</a>' : '') +
-        (!c.is_deleted && DATA.is_mod ? ' <a class="edit_comment" href="#">[edit]</a>' : '') +
-        (!c.is_deleted && DATA.is_mod ? ' <a class="pin_comment" href="#">[' + (c.is_pinned ? 'unpin' : 'pin') + ']</a>' : '') +
-        (DATA.user ? ' <a class="report_comment" href="#" title="Report"><i class="fa fa-warning"></i></a>' : '') +
+        (DATA.user && !c.is_deleted && !(ITEM && ITEM.locked && !DATA.is_mod) && $('#cinput') ? '<a class="reply_comment w0bm-cact" href="#" title="Reply" aria-label="Reply"><i class="fa fa-reply"></i></a>' : '') +
+        (!c.is_deleted && DATA.is_mod ? '<a class="pin_comment w0bm-cact' + (c.is_pinned ? ' w0bm-cact-on' : '') + '" href="#" title="' + (c.is_pinned ? 'Unpin' : 'Pin') + '" aria-label="' + (c.is_pinned ? 'Unpin' : 'Pin') + '"><i class="fa fa-thumb-tack"></i></a>' : '') +
+        (!c.is_deleted && DATA.is_mod ? '<a class="edit_comment w0bm-cact" href="#" title="Edit" aria-label="Edit"><i class="fa fa-pencil"></i></a>' : '') +
+        (DATA.user ? '<a class="report_comment w0bm-cact" href="#" title="Report" aria-label="Report"><i class="fa fa-flag"></i></a>' : '') +
+        (!c.is_deleted && (DATA.is_mod || (mine && DATA.allow_comment_deletion)) ? '<a class="delete_comment w0bm-cact w0bm-cact-danger" href="#" title="Delete" aria-label="Delete"><i class="fa fa-trash"></i></a>' : '') +
       '</span>';
     if (c.username_color) foot.querySelector('a.w0bm-usercolor')?.style.setProperty('--user-color', c.username_color);
     div.append(body, foot);
@@ -1549,8 +1557,11 @@
         form.appendChild(parent);
       }
       parent.value = id;
-      if (c && c.username && !c.is_anon && !ta.value.includes('@' + c.username)) ta.value = '@' + c.username + ' ' + ta.value;
+      // like f0ckm: the reply quotes the comment as >>id (a link to it, not an @mention)
+      const quote = '>>' + id;
+      if (!new RegExp('(^|\\s)' + quote + '(?!\\d)').test(ta.value)) ta.value = quote + ' ' + ta.value;
       ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
       return;
     }
     if (e.target.closest('.delete_comment')) {
@@ -1587,7 +1598,7 @@
       body.replaceWith(ta);
       const actions = panel.querySelector('.w0bm-c-actions');
       const old = actions.innerHTML;
-      actions.innerHTML = ' <a href="#" class="saveCommentEdit">[save]</a> <a href="#" class="abortCommentEdit">[abort]</a>';
+      actions.innerHTML = '<a href="#" class="saveCommentEdit w0bm-cact w0bm-cact-text" title="Save">save</a><a href="#" class="abortCommentEdit w0bm-cact w0bm-cact-text" title="Cancel">cancel</a>';
       actions.querySelector('.abortCommentEdit').addEventListener('click', (ev) => {
         ev.preventDefault();
         ta.replaceWith(body);
@@ -1699,11 +1710,26 @@
       setBadge($('#w0bm-notif-badge'), 0);
     } else flash('error', 'Failed to mark all messages as read');
   });
-  $$('.w0bm-notif a.list-group-item[data-id]').forEach((a) => a.addEventListener('click', () => {
-    if (a.classList.contains('list-group-item-info')) {
-      navigator.sendBeacon?.('/api/notifications/' + a.dataset.id + '/read?csrf_token=' + encodeURIComponent(csrf()));
+  const markNotifRead = (el) => {
+    if (!el.classList.contains('list-group-item-info')) return;
+    el.classList.remove('list-group-item-info');
+    navigator.sendBeacon?.('/api/notifications/' + el.dataset.id + '/read?csrf_token=' + encodeURIComponent(csrf()));
+  };
+  $$('.w0bm-notif a.list-group-item[data-id]').forEach((a) => a.addEventListener('click', () => markNotifRead(a)));
+  // Comment messages open in place (<details>): the comment in w0bm's formatting, read once opened.
+  // Delegated, so the rows of "older messages" work too.
+  $('.w0bm-notif')?.addEventListener('toggle', (e) => {
+    const d = e.target;
+    if (!d.matches?.('details.w0bm-msg') || !d.open) return;
+    markNotifRead(d);
+    const text = d.querySelector('.w0bm-msg-text[data-raw]');
+    if (text && !text.dataset.done) {
+      loadEmojis().then(() => {
+        text.innerHTML = renderComment(text.dataset.raw);
+        text.dataset.done = '1';
+      });
     }
-  }));
+  }, true);
   const moreNotifs = $('#w0bm-more-notifs');
   moreNotifs?.addEventListener('click', async (e) => {
     e.preventDefault();

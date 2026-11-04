@@ -50,7 +50,7 @@
     JavaScript too; w0bm.js loads them again from /api/comments and replaces the list. -#}
 {%- macro wcomment(c, parent) -%}
 <div class="panel panel-default{% if c.is_pinned %} w0bm-pinned{% endif %}" id="c{{ c.id }}" data-id="{{ c.id }}">
-    <div class="panel-body w0bm-static-body">{% if parent %}<div class="w0bm-reply-to">↳ <a href="#c{{ parent }}">&gt;&gt;{{ parent }}</a></div>{% endif %}{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+    <div class="panel-body w0bm-static-body"><a class="w0bm-cid" href="#c{{ c.id }}" title="Link to this comment">#{{ c.id }}</a>{% if parent %}<div class="w0bm-reply-to">↳ <a href="#c{{ parent }}">&gt;&gt;{{ parent }}</a></div>{% endif %}{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
     <div class="panel-footer">by {% if c.username %}<a href="/user/{{ c.username|lower }}"{% if c.username_color %} class="w0bm-usercolor" style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<span>{{ (c.name or "anonymous") }}</span>{% endif %} <small><time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ c.iso }}" title="{{ c.iso }}">{{ c.timeago }}</time></small>{% if c.is_pinned %} <i class="fa fa-thumb-tack" title="pinned"></i>{% endif %}{% if c.backlinks %} <small class="w0bm-backlinks">{% for b in c.backlinks %}<a href="#c{{ b }}">&gt;&gt;{{ b }}</a> {% endfor %}</small>{% endif %}</div>
 </div>
 {%- endmacro -%}

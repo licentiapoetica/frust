@@ -12,5 +12,16 @@
 {% elif n.type == "warning" %}{% set href = "/notifications" %}{% set icon = "fa-exclamation-triangle" %}{% set subject = "Account Warning – " ~ (n.reason or "") %}
 {% else %}{% set href = "/" ~ ref ~ "#c" ~ (n.comment_id or n.reference_id) %}{% set icon = ("fa-reply" if n.type == "comment_reply" else ("fa-at" if n.type == "mention" else "fa-bell")) %}{% set subject = (n.from_user or "") ~ " " ~ ((t("notifications.replied") if n.type == "comment_reply" else (t("notifications.subscribed") if n.type == "subscription" else t("notifications.mentioned")))).replace("{id}", ref|string, 1) %}
 {% endif %}
+{% if n.comment_content %}
+{#- comment notifications open in place with the comment (as w0bm's message list did), a link to it inside -#}
+<details data-id="{{ n.id }}" class="list-group-item w0bm-msg{% if not n.is_read %} list-group-item-info{% endif %}">
+    <summary><i class="fa {{ icon }}"></i> {{ subject }} <small><time class="timeago" datetime="{{ n.created_at|iso_date }}" title="{{ n.created_at|iso_date }}">{{ n.created_at|time_ago }}</time></small></summary>
+    <div class="w0bm-msg-body">
+        <div class="w0bm-msg-text" data-raw="{{ n.comment_content }}">{{ n.comment_content }}</div>
+        <a class="w0bm-msg-open" href="{{ href }}">go to comment <i class="fa fa-angle-right"></i></a>
+    </div>
+</details>
+{% else %}
 <a href="{{ href }}" data-id="{{ n.id }}" class="list-group-item{% if not n.is_read %} list-group-item-info{% endif %}"><i class="fa {{ icon }}"></i> {{ subject }} <small><time class="timeago" datetime="{{ n.created_at|iso_date }}" title="{{ n.created_at|iso_date }}">{{ n.created_at|time_ago }}</time></small></a>
+{% endif %}
 {% endfor %}
