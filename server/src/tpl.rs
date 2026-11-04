@@ -780,6 +780,10 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("cleanup_include_engaged", json!(s.cleanup_include_engaged));
     put("matrix_enabled", json!(cfg.client_enabled("matrix")));
     put("telegram_enabled", json!(cfg.client_enabled("tg")));
+    put("irc_enabled", json!(cfg.client_enabled("irc")));
+    // settings → linked accounts: who to /msg and on which network
+    put("irc_bot_nick", cfg.client("irc").map(|c| c["nickname"].clone()).unwrap_or(Value::Null));
+    put("irc_network", cfg.client("irc").map(|c| c["network"].clone()).unwrap_or(Value::Null));
     put("ts", json!(crate::util::now_ms()));
     put("default_layout", json!(s.default_layout));
     put("show_koepfe", json!(cfg.truthy("websrv.show_koepfe")));

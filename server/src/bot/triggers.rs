@@ -64,6 +64,7 @@ pub fn all() -> Vec<Trigger> {
         t("invite_matrix", Call::Re(r"(?i)^!invite$"), 0, &[Kind::Matrix], Some("!invite"), h!(invite_matrix)),
         t("matrix_link", Call::Re(r"(?i)(^!link(?:\s+(.+))?$)|(^(?:[a-z0-9]{6}|[0-9a-f]{64})$)"), 0, &[Kind::Matrix], None, h!(matrix_link)),
         t("telegram_link", Call::Re(r"(?i)^!link(?:\s+(.+))?$"), 0, &[Kind::Tg], None, h!(telegram_link)),
+        t("irc_link", Call::Re(r"(?i)^!link(?:\s+(.+))?$"), 0, &[Kind::Irc], None, h!(irc_link)),
         t("tags show", Call::Re(r"(?i)^!tags show [A-Za-z0-9_-]+$"), 100, Kind::ALL, None, h!(tags_show)),
         t("thumbnailer", Call::Re(r"(?i)^!thumb .*"), 100, Kind::ALL, None, h!(thumbnailer)),
         t("parser", Call::Dyn(super::parser::pattern), 0, Kind::ALL, None, h!(super::parser::run)),
@@ -400,7 +401,7 @@ enum LinkResult {
     Linked,
 }
 
-/// Link a chat account (`alias`, `kind` = `matrix`/`telegram`) to the website user owning `token`.
+/// Link a chat account (`alias`, `kind` = `matrix`/`telegram`/`irc`) to the website user owning `token`.
 /// Fix: tokens expire (`link_token.expires_at`, 10 minutes) — the old code accepted them forever.
 async fn link_account(rt: &Runtime, token: &str, alias: &str, kind: &str, case_insensitive: bool) -> Result<LinkResult> {
     let db = &rt.st.db;
@@ -490,6 +491,46 @@ async fn telegram_link(rt: Arc<Runtime>, e: Message) -> Result<()> {
         }
         Err(err) => {
             tracing::error!("[Telegram Link] Error: {err:#}");
+            "An internal error occurred while linking your account.".to_string()
+        }
+    };
+    e.reply(&text).await;
+    Ok(())
+}
+
+/// `!link <TOKEN>` on IRC (new: IRC had no linking, so uploads were credited to whoever held a
+/// nick). Only in a private message, and only while the nick is identified to services (fresh
+/// WHOIS: user mode +r / logged in); the account linked is the services account, per network.
+/// A token posted in a channel is deleted: anyone there could link their own account with it.
+async fn irc_link(rt: Arc<Runtime>, e: Message) -> Result<()> {
+    let full = url_full(&rt.st.cfg());
+    let bot = e.irc_bot_nick();
+    let token = e.args.first().map(|s| s.trim().to_uppercase()).unwrap_or_default();
+    if !e.irc_private() {
+        if !token.is_empty() {
+            sql!("DELETE FROM link_token WHERE token = ", token.clone()).execute(&rt.st.db).await?;
+            e.reply(&format!("{}: never post your token in a channel. It has been deleted; generate a new one at {full}/settings#linked and send it with /msg {bot} !link <TOKEN>", e.user.nick)).await;
+        } else {
+            e.reply(&format!("{}: generate a token at {full}/settings#linked, then send /msg {bot} !link <TOKEN>", e.user.nick)).await;
+        }
+        return Ok(());
+    }
+    if token.is_empty() {
+        e.reply(&format!("Generate a link token at {full}/settings#linked, then send: /msg {bot} !link <TOKEN>")).await;
+        return Ok(());
+    }
+    let Some(account) = e.irc_identified().await else {
+        e.reply("You must be identified with NickServ (user mode +r) to link your account. Identify and try again.").await;
+        return Ok(());
+    };
+    let alias = super::irc_alias(&account, &e.network);
+    let text = match link_account(&rt, &token, &alias, "irc", true).await {
+        Ok(LinkResult::Invalid) => format!("Invalid or expired token. Please generate a new one at {full}/settings#linked"),
+        Ok(LinkResult::AlreadyLinked) => format!("The IRC account {account} is already linked to your website profile."),
+        Ok(LinkResult::Taken) => format!("The IRC account {account} is already linked to a different website profile."),
+        Ok(LinkResult::Linked) => format!("Successfully linked IRC account {account} ({}) to your website profile!", e.network),
+        Err(err) => {
+            tracing::error!("[IRC Link] Error: {err:#}");
             "An internal error occurred while linking your account.".to_string()
         }
     };

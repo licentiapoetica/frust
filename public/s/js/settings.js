@@ -1027,6 +1027,8 @@
             // Simple text fallback if fontawesome not fully loaded/supported in snippet
             if (a.type === 'matrix') icon = '[Matrix]';
             if (a.type === 'discord') icon = '[Discord]';
+            if (a.type === 'telegram') icon = '[Telegram]';
+            if (a.type === 'irc') icon = '[IRC]';
 
             infoDiv.innerHTML = `<span style="font-weight:bold; opacity:0.7;">${icon}</span> <span>${escHTML(a.alias || '')}</span>`;
 

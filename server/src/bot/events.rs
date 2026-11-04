@@ -101,7 +101,19 @@ impl Runtime {
         let (cmd, args) = parse_args(&e.message);
         e.cmd = cmd;
         e.args = args;
-        for t in self.matching(&e) {
+        let mut matching = self.matching(&e);
+        // IRC nicks prove nothing: commands above level 0 also need the sender identified to
+        // services (user mode +r) right now, on top of the admin prefix match
+        if e.kind == Kind::Irc && matching.iter().any(|t| t.level > 0) {
+            match e.irc_identified().await {
+                Some(account) => e.user.account = Some(account),
+                None => {
+                    matching.retain(|t| t.level <= 0);
+                    e.reply("You must be identified with NickServ (user mode +r) to use this command.").await;
+                }
+            }
+        }
+        for t in matching {
             let (name, f) = (t.name, t.f);
             let rt = self.clone();
             let e = e.clone();

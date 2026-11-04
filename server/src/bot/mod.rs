@@ -167,6 +167,28 @@ pub struct Message {
 }
 
 impl Message {
+    /// IRC: the services account the sender is identified to right now (fresh WHOIS: user mode +r
+    /// / logged in), else `None`. Always `None` on the other networks, which authenticate senders.
+    pub async fn irc_identified(&self) -> Option<String> {
+        match &self.client {
+            Client::Irc(c) => c.verify(&self.user.nick).await,
+            _ => None,
+        }
+    }
+
+    /// IRC: the bot's current nick (for `/msg <nick> ...` hints).
+    pub fn irc_bot_nick(&self) -> String {
+        match &self.client {
+            Client::Irc(c) => c.nick(),
+            _ => String::new(),
+        }
+    }
+
+    /// IRC: a private message to the bot, not one in a channel.
+    pub fn irc_private(&self) -> bool {
+        self.kind == Kind::Irc && !self.channel.starts_with(['#', '&', '+', '!'])
+    }
+
     /// `e.reply(msg)`. Telegram returns the sent message (`result` of sendMessage).
     pub async fn reply(&self, text: &str) -> Option<Value> {
         self.reply_opts(text, json!({})).await
@@ -269,6 +291,12 @@ pub enum Event {
 }
 
 pub type Emitter = mpsc::UnboundedSender<Event>;
+
+/// `user_alias.alias` of a linked IRC account: the services account and the network
+/// (`clients[].network`), as accounts of different networks are different people.
+pub fn irc_alias(account: &str, network: &str) -> String {
+    format!("{account}@{network}")
+}
 
 /// `getLevel(user)` from `src/inc/admin.mjs`: `(level, verified)` by exact prefix match against
 /// `cfg.admins`.

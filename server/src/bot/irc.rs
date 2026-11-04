@@ -17,6 +17,8 @@ use tokio::sync::mpsc;
 
 /// Re-WHOIS a cached user after 30 minutes (`_recachetime`).
 const RECACHE_SECS: i64 = 60 * 30;
+/// How long `verify` waits for the WHOIS reply.
+const VERIFY_TIMEOUT: Duration = Duration::from_secs(10);
 /// Max bytes of message text per PRIVMSG line (the server adds our prefix when relaying; 512 total).
 const MAX_LINE_TEXT: usize = 400;
 /// Old limit: refuse messages with 5 or more lines.
@@ -92,6 +94,23 @@ struct State {
     cap_ls: String,
     cap_done: bool,
     registered: bool,
+    /// nicks (lower case) whose WHOIS reply is being read: its 311 came, its 318 not yet
+    whois_open: std::collections::HashSet<String>,
+    /// `verify` callers waiting for the next end of WHOIS (318) of a nick (lower case)
+    verify_waiting: HashMap<String, Vec<tokio::sync::oneshot::Sender<Option<String>>>>,
+}
+
+/// Nick comparison key (rfc1459 casemapping: `[]\~` are the lower case of `{}|^`).
+pub fn nick_key(nick: &str) -> String {
+    nick.chars()
+        .map(|c| match c {
+            '[' => '{',
+            ']' => '}',
+            '\\' => '|',
+            '~' => '^',
+            c => c.to_ascii_lowercase(),
+        })
+        .collect()
 }
 
 pub struct Irc {
@@ -305,6 +324,30 @@ impl Irc {
         self.send(&format!("WHOIS {}", list.join(",")));
     }
 
+    /// The services account `nick` is identified to *right now*, from a fresh WHOIS: 307 (the nick
+    /// is registered and identified, user mode +r) or 330 (logged in as an account). `None` when it
+    /// isn't, the nick is gone or the server doesn't answer in time. Never from the cache: a nick
+    /// changes hands with NICK / QUIT, which the bot doesn't always see.
+    ///
+    /// The waiter is registered after the message being checked was read, and the connection
+    /// delivers lines in order, so the 318 it takes describes the nick at or after that message.
+    pub async fn verify(&self, nick: &str) -> Option<String> {
+        if nick.trim().is_empty() || nick.contains([' ', ',', '*', '?']) {
+            return None;
+        }
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let first = {
+            let mut st = self.state.lock();
+            let list = st.verify_waiting.entry(nick_key(nick)).or_default();
+            list.push(tx);
+            list.len() == 1
+        };
+        if first {
+            self.send(&format!("WHOIS {nick}"));
+        }
+        tokio::time::timeout(VERIFY_TIMEOUT, rx).await.ok()?.ok()?
+    }
+
     pub fn cached_user(&self, nick: &str) -> Option<Value> {
         self.state.lock().users.get(nick).and_then(|u| serde_json::to_value(u).ok())
     }
@@ -346,6 +389,9 @@ impl Irc {
             st.cap_done = false;
             st.registered = false;
             st.channels.clear();
+            st.users.clear();
+            st.whois_open.clear();
+            st.verify_waiting.clear();
         }
         *self.out.lock() = Some(tx);
         let writer = tokio::spawn(async move {
@@ -528,6 +574,11 @@ impl Irc {
                     self.whois(&[nick], false);
                 }
             }
+            // the nick is free for someone else now: forget what WHOIS said about it
+            "QUIT" => {
+                let nick = msg.prefix.as_deref().and_then(parse_prefix).map(|x| x.0).unwrap_or_default();
+                self.state.lock().users.retain(|n, _| nick_key(n) != nick_key(&nick));
+            }
             "PART" | "KICK" => {
                 let me = self.nick();
                 let gone = if msg.command == "KICK" { p(1).to_string() } else { msg.prefix.as_deref().and_then(parse_prefix).map(|x| x.0).unwrap_or_default() };
@@ -603,7 +654,10 @@ impl Irc {
                 u.registered = true;
             }
             "311" => {
+                // first line of a WHOIS reply: start from nothing, so an old 307/330 doesn't stay
                 let mut st = self.state.lock();
+                st.whois_open.insert(nick_key(p(1)));
+                st.users.insert(p(1).to_string(), IrcUser::default());
                 let u = Irc::user_entry(&mut st, p(1));
                 u.nickname = Some(p(1).to_string());
                 u.username = Some(p(2).to_string());
@@ -630,8 +684,15 @@ impl Irc {
             }
             "318" => {
                 let mut st = self.state.lock();
+                let key = nick_key(p(1));
+                // a reply without 311 (no such nick, 401) has nothing fresh: not identified
+                let fresh = st.whois_open.remove(&key);
                 let mut u = st.users.remove(p(1)).unwrap_or_default();
                 u.cached = now();
+                let account = (fresh && u.registered).then(|| u.account.clone().filter(|a| !a.is_empty()).unwrap_or_else(|| p(1).to_string()));
+                for tx in st.verify_waiting.remove(&key).unwrap_or_default() {
+                    let _ = tx.send(account.clone());
+                }
                 if p(0) == p(1) {
                     st.me = u;
                 } else {
@@ -768,6 +829,67 @@ mod tests {
         irc.handle(&parse(":srv 900 bot bot!u@h botuser :You are now logged in").unwrap());
         irc.handle(&parse(":srv 903 bot :SASL authentication successful").unwrap());
         assert_eq!(drain(&mut out), vec!["CAP END"]);
+    }
+
+    /// `verify` asks the server and waits for that WHOIS to end.
+    async fn verify_with(irc: &Arc<Irc>, out: &mut mpsc::UnboundedReceiver<String>, nick: &str, reply: &[&str]) -> Option<String> {
+        let me = irc.clone();
+        let n = nick.to_string();
+        let task = tokio::spawn(async move { me.verify(&n).await });
+        // the WHOIS goes out before the reply is handled
+        for _ in 0..50 {
+            if !out.is_empty() {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(drain(out), vec![format!("WHOIS {nick}")]);
+        for line in reply {
+            irc.handle(&parse(line).unwrap());
+        }
+        task.await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn verify_needs_a_fresh_identified_whois() {
+        let (irc, mut out, _ev) = client(false);
+        // +r (307): the account is the nick
+        let r = verify_with(&irc, &mut out, "Alice", &[
+            ":srv 311 bot Alice ~al host * :Alice",
+            ":srv 307 bot Alice :is identified for this nick",
+            ":srv 318 bot Alice :End of /WHOIS list.",
+        ]).await;
+        assert_eq!(r.as_deref(), Some("Alice"));
+        // logged in (330): the services account
+        let r = verify_with(&irc, &mut out, "bob", &[
+            ":srv 311 bot bob ~b host * :Bob",
+            ":srv 330 bot bob bob_acc :is logged in as",
+            ":srv 318 bot bob :End of /WHOIS list.",
+        ]).await;
+        assert_eq!(r.as_deref(), Some("bob_acc"));
+        // Alice was identified a moment ago; now someone holds the nick without +r: the old 307
+        // in the cache doesn't count
+        let r = verify_with(&irc, &mut out, "Alice", &[
+            ":srv 311 bot Alice ~evil other * :Alice",
+            ":srv 318 bot Alice :End of /WHOIS list.",
+        ]).await;
+        assert_eq!(r, None);
+        assert_eq!(irc.cached_user("Alice").unwrap()["registered"], false);
+        // no such nick: only 401 + 318, the cached entry of bob doesn't count
+        let r = verify_with(&irc, &mut out, "bob", &[
+            ":srv 401 bot bob :No such nick",
+            ":srv 318 bot bob :End of /WHOIS list.",
+        ]).await;
+        assert_eq!(r, None);
+        // a nick change or quit drops the cached identity
+        irc.handle(&parse(":srv 311 bot carol ~c h * :C").unwrap());
+        irc.handle(&parse(":srv 307 bot carol :is identified for this nick").unwrap());
+        irc.handle(&parse(":srv 318 bot carol :End").unwrap());
+        assert!(irc.cached_user("carol").is_some());
+        irc.handle(&parse(":carol!~c@h QUIT :bye").unwrap());
+        assert!(irc.cached_user("carol").is_none());
+        assert_eq!(nick_key("Fo[o]\\~"), "fo{o}|^");
+        assert_eq!(irc.verify("a b").await, None);
     }
 
     #[tokio::test]

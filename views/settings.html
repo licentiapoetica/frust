@@ -30,7 +30,7 @@
         {% if (not session.is_anon and enable_user_api_keys) %}
         <a href="#apikey"><i class="fa-solid fa-key"></i> API Key</a>
         {% endif %}
-        {% if (not session.is_anon and (matrix_enabled or telegram_enabled)) %}
+        {% if (not session.is_anon and (matrix_enabled or telegram_enabled or irc_enabled)) %}
         <a href="#linked"><i class="fa-solid fa-link"></i> {{ t("settings.linked_accounts") }}</a>
         {% endif %}
         {% if (not session.is_anon and enable_user_invites) %}
@@ -818,7 +818,7 @@
       </div>
       {% endif %}
 
-      {% if (not guest and not session.is_anon and (matrix_enabled or telegram_enabled)) %}
+      {% if (not guest and not session.is_anon and (matrix_enabled or telegram_enabled or irc_enabled)) %}
       <!-- ═══════════════════════════════ LINKED ACCOUNTS ═══════════════════════════════ -->
       <h2 id="linked"><i class="fa-solid fa-link"></i> {{ t("settings.linked_accounts") }}</h2>
       <div class="linked-accounts-wrapper">
@@ -839,6 +839,11 @@
           {% if telegram_enabled %}
           <p class="settings-muted settings-small-note">
             <strong>Telegram:</strong> Generate a token below, then send <code>!link &lt;TOKEN&gt;</code> to the Telegram bot.
+          </p>
+          {% endif %}
+          {% if irc_enabled %}
+          <p class="settings-muted settings-small-note">
+            <strong>IRC{% if irc_network %} ({{ irc_network }}){% endif %}:</strong> Identify with NickServ first (your nick needs user mode +r), generate a token below, then send it in a private message: <code>/msg {{ (irc_bot_nick or "the bot") }} !link &lt;TOKEN&gt;</code>. Never post the token in a channel. Uploads from IRC need a linked account.
           </p>
           {% endif %}
 

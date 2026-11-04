@@ -366,15 +366,27 @@ fn trunc(s: &str, n: usize) -> String {
     s.chars().take(n).collect()
 }
 
-/// The website account (`id`, `user`) linked to the sender's Telegram/Matrix account
-/// (`!link`). Always `None` on IRC and Slack, which have no account linking.
+/// The website account (`id`, `user`) linked to the sender's Telegram/Matrix/IRC account
+/// (`!link`). On IRC the account comes from a fresh WHOIS (`irc_identified`), never from the nick.
+/// Always `None` on Slack, which has no account linking.
 pub(crate) async fn linked_user(st: &crate::state::AppState, e: &Message) -> Result<Option<(i64, String)>> {
-    let kind = match e.kind {
-        Kind::Matrix => "matrix",
-        Kind::Tg => "telegram",
-        _ => return Ok(None),
+    let (kind, alias) = match e.kind {
+        Kind::Matrix => ("matrix", e.user.account.clone().unwrap_or_default()),
+        Kind::Tg => ("telegram", e.user.account.clone().unwrap_or_default()),
+        Kind::Irc => match e.irc_identified().await {
+            Some(account) => ("irc", super::irc_alias(&account, &e.network)),
+            None => return Ok(None),
+        },
+        Kind::Slack => return Ok(None),
     };
-    let alias = e.user.account.clone().unwrap_or_default();
+    alias_user(st, kind, &alias).await
+}
+
+/// The website account (`id`, `user`) a chat account (`user_alias`, `kind` + `alias`) is linked to.
+pub(crate) async fn alias_user(st: &crate::state::AppState, kind: &str, alias: &str) -> Result<Option<(i64, String)>> {
+    if alias.is_empty() {
+        return Ok(None);
+    }
     let row = sql!(
         r#"SELECT "user".id, "user"."user" FROM user_alias JOIN "user" ON "user".id = user_alias.userid
            WHERE lower(user_alias.alias) = lower("#,
@@ -490,8 +502,35 @@ pub async fn run(rt: Arc<Runtime>, e: Message) -> Result<()> {
         }
     }
 
-    // linked website account (required for !w on Matrix/Telegram)
+    // linked website account (required for !w on Matrix/Telegram and for every IRC upload: an
+    // IRC upload is credited to the linked website user, never to the nick, which anyone can take)
     let mut website_user: Option<(i64, String)> = None;
+    if irc {
+        let Some(account) = e.irc_identified().await else {
+            e.reply(&format!(
+                "{}: you must be identified with NickServ (user mode +r) to upload. Identify, link your account ({full}/settings#linked) and try again.",
+                e.user.nick
+            ))
+            .await;
+            return Ok(());
+        };
+        match alias_user(st, "irc", &super::irc_alias(&account, &e.network)).await {
+            Ok(Some(u)) => website_user = Some(u),
+            Ok(None) => {
+                e.reply(&format!(
+                    "{}: the IRC account {account} isn't linked to a website account. Generate a token at {full}/settings#linked, then send /msg {} !link <TOKEN>",
+                    e.user.nick,
+                    e.irc_bot_nick()
+                ))
+                .await;
+                return Ok(());
+            }
+            Err(err) => {
+                tracing::error!("[PARSER] DB Link check error: {err:#}");
+                return Ok(());
+            }
+        }
+    }
     if matches!(e.kind, Kind::Matrix | Kind::Tg) {
         match linked_user(st, &e).await {
             Ok(u) => website_user = u,
