@@ -1,6 +1,9 @@
 {% include "frontends/f0ckv2/snippets/header.html" %}
+{#- f0ckgle: the search box under f0ckv2's coloured title, results as rows in the metadata look
+    (thumbnail, item, tag, type, uploader, match score), page links under them. -#}
+{%- set searched = (result is defined and result is not none and result is not false) -%}
 <div id="main">
-  <div class="f0ckgle">
+  <div class="v2-search">
     <div class="search-title">
         <span class="g-blue">f</span>
         <span class="g-red">0</span>
@@ -10,41 +13,36 @@
         <span class="g-red">l</span>
         <span class="g-blue">e</span>
     </div>
-    <form action="/search" class="admin-search v2-search-form">
-      <input type="text" name="tag" value="{{ (searchstring or "") }}" placeholder="tag1, tag2..." /><button type="submit">&#128269;</button>
+    <form action="/search" class="v2-search-form" role="search">
+      <div class="v2-search-bar">
+        <input type="search" name="tag" value="{{ (searchstring if searchstring is string else "") }}" placeholder="tag1, tag2 … or title:text" aria-label="search" autocomplete="off"><button type="submit" aria-label="search">&#128269;</button>
+      </div>
       <label class="v2-search-opts"><input type="checkbox" name="mode" value="strict"{% if search_mode == "strict" %} checked{% endif %}> strict (all tags must match)</label>
     </form>
-    <div class="results">
-      {% if result %}
-      <h2>{{ count }} f0cks given (page {{ pagination.page }} of {{ pagination.end }}):</h2>
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Thumbnail</th>
-            <th>ID</th>
-            <th>Tag</th>
-            <th>Mime</th>
-            <th>Username</th>
-            <th>Score</th>
-          </tr>
-        </thead>
-        <tbody>
+    {% if searched %}
+    <div class="v2-search-results">
+      <div class="f0cks-header"><span>{{ count }} f0ck{{ ("" if count == 1 else "s") }} given</span>{% if pagination %}<span>page {{ pagination.page }} of {{ pagination.end }}</span>{% endif %}</div>
+      {% if result|length %}
+      <ul class="v2-search-list">
         {% for line in result %}
-          <tr>
-            <td class="v2-search-thumb"><a href="/tag/{{ line.tag|encode_uri_component }}/{{ line.id }}" target="_blank"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy" /></a></td>
-            <td><span class="mview_desc">ID:</span><a href="/tag/{{ line.tag|encode_uri_component }}/{{ line.id }}" target="_blank">{{ line.id }}</a></td>
-            <td><span class="mview_desc">Tag:</span><a href="/tag/{{ line.tag|encode_uri_component }}">{{ line.tag }}</a></td>
-            <td><span class="mview_desc">Mime:</span>{{ line.mime }}</td>
-            <td><span class="mview_desc">User:</span><a href="/user/{{ line.username|lower|encode_uri_component }}/uploads/{{ line.id }}">{{ line.username }}</a></td>
-            <td><span class="mview_desc">Score:</span>{% if line.score is number %}{{ line.score|fixed(2) }}{% endif %}</td>
-          </tr>
+        {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) -%}
+        {%- set href = ("/tag/" ~ (line.tag|encode_uri_component) ~ "/" ~ ref) if line.tag else ("/" ~ ref) -%}
+        <li class="v2-search-row">
+          <a class="v2-search-thumb" href="{{ href }}"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></a>
+          <a class="badge badge-dark v2-search-ref" href="{{ href }}">{{ ref }}</a>
+          {% if line.tag %}<a class="badge badge-dark v2-search-tag" href="/tag/{{ line.tag|encode_uri_component }}">{{ line.tag }}</a>{% elif line.title %}<span class="badge badge-dark v2-search-tag">{{ line.title }}</span>{% else %}<span></span>{% endif %}
+          <span class="badge badge-dark v2-search-mime">{{ (line.mime or "") }}</span>
+          {% if line.username %}<a class="badge badge-dark v2-search-user" href="/user/{{ line.username|lower|encode_uri_component }}">{{ line.username }}</a>{% else %}<span></span>{% endif %}
+          <span class="badge badge-dark v2-search-score" title="match score">{% if (line.score is defined and line.score is number) %}{{ line.score|fixed(2) }}{% endif %}</span>
+        </li>
         {% endfor %}
-        </tbody>
-      </table>
-      {% elif searchstring %}
-      <h2>no f0cks given for "{{ searchstring }}"</h2>
+      </ul>
+      <div class="v2-search-pages">{% include "frontends/f0ckv2/snippets/pagination.html" %}</div>
+      {% else %}
+      <p class="v2-empty">no f0cks given for "{{ searchstring }}"</p>
       {% endif %}
     </div>
+    {% endif %}
   </div>
 </div>
 {% include "frontends/f0ckv2/snippets/footer.html" %}

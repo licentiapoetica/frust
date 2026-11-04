@@ -114,7 +114,7 @@ async fn search(st: AppState, req: Req) -> Res {
                 let pages = pages_of(total);
                 let act = pages.min(page);
                 let rows: Vec<Row> = sql!(
-                    r#"select "items".id, "items".username, "items".mime, min("tags".tag) as tag
+                    r#"select "items".id, "items".slug, "items".username, "items".mime, min("tags".tag) as tag
                     from "items"
                     join "tags_assign" on "tags_assign".item_id = "items".id
                     join "tags" on "tags".id = "tags_assign".tag_id
@@ -165,7 +165,7 @@ async fn search(st: AppState, req: Req) -> Res {
             let pages = pages_of(total);
             let act = pages.min(page);
             let rows: Vec<Row> = sql!(
-                r#"select "items".id, "items".username, "items".mime, min("tags".tag) as tag
+                r#"select "items".id, "items".slug, "items".username, "items".mime, min("tags".tag) as tag
                 from "items"
                 join "tags_assign" on "tags_assign".item_id = "items".id
                 join "tags" on "tags".id = "tags_assign".tag_id

@@ -609,29 +609,147 @@ div.posts.v2-cards>a>p {
 .search-title .g-yellow { color: #FBBC05; }
 .search-title .g-green { color: #34A853; }
 
+.v2-search {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 25px 10px 40px;
+}
+.v2-search .search-title {
+  font-size: 3.4em;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  margin-bottom: 14px;
+}
 .v2-search-form {
-  flex-wrap: wrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
 }
-
+.v2-search-bar {
+  display: flex;
+  width: min(620px, 100%);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  background: var(--badge-tag, var(--bg));
+  box-shadow: var(--nav-link-box-shadow);
+}
+.v2-search-bar input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--white);
+  font-family: var(--font);
+  font-size: 15px;
+}
+.v2-search-bar button {
+  flex: 0 0 auto;
+  padding: 0 16px;
+  border: 0;
+  border-left: 1px solid var(--accent);
+  background-color: var(--nav-bg);
+  background-image: linear-gradient(to bottom, var(--nav-link-background-linear-gradient));
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 15px;
+}
+.v2-search-bar button:hover {
+  background-color: var(--nav-link-hover-bg);
+}
 .v2-search-opts {
-  flex-basis: 100%;
-  text-align: center;
   font-size: 12px;
+  opacity: .8;
+  cursor: pointer;
 }
-
 .v2-search-opts input {
   width: auto;
   min-width: 0;
   padding: 0;
+  margin: 0 4px 0 0;
   vertical-align: middle;
+  accent-color: var(--accent);
 }
-
-td.v2-search-thumb {
-  width: 128px;
+.v2-search-results {
+  background: var(--metadata-bg);
+  border: 1px solid var(--img-border-color);
 }
-
-td.v2-search-thumb img {
-  max-width: 128px;
+.v2-search-results > .f0cks-header {
+  background: linear-gradient(to right, #131313, #4f4a4f);
+  line-height: 1.7;
+}
+.v2-search-list {
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  display: grid;
+  gap: 5px;
+}
+.v2-search-row {
+  display: grid;
+  /* fixed column widths, so the rows line up like a table */
+  grid-template-columns: 56px minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 0.8fr) 52px;
+  align-items: center;
+  gap: 5px;
+}
+.v2-search-row > .badge {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 2;
+}
+.v2-search-thumb {
+  display: block;
+  width: 56px;
+  height: 56px;
+  background: #000;
+  border: 1px solid var(--img-border-color);
+}
+.v2-search-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.v2-search-ref {
+  text-align: left;
+}
+.v2-search-mime,
+.v2-search-score {
+  opacity: .8;
+}
+.v2-search-score {
+  text-align: center;
+}
+.v2-search-pages {
+  padding: 5px;
+  display: flex;
+  justify-content: center;
+}
+.v2-search-results > .v2-empty {
+  padding: 30px 10px;
+  margin: 0;
+}
+@media (max-width: 768px) {
+  .v2-search .search-title {
+    font-size: 2.6em;
+  }
+  .v2-search-row {
+    grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .v2-search-mime {
+    display: none;
+  }
+  .v2-search-thumb {
+    grid-row: span 2;
+  }
+  .v2-search-score {
+    display: none;
+  }
 }
 
 /* ── settings / forms ──────────────────────────────────────────────────────── */

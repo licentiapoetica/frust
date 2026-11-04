@@ -1,49 +1,56 @@
 {% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
-  <div class="f0ckgle">
-    <div class="search-title">
-      <span>{{ t("search.title") }}</span>
-    </div>
-    <form action="/search" method="GET" class="admin-search">
-      <input type="text" name="tag" value="{{ (searchstring or "") }}" placeholder="tag1, tag2..." />
-      <button type="submit">🔍</button>
-      <div class="search-options">
-        <label>
-          <input type="checkbox" name="mode" value="strict" {{ ("checked" if search_mode == "strict" else "") }}> {{ t("search.strict_mode") }}
-        </label>
+  {#- Search: a search bar, then the results as a list (thumbnail, item, tag, type, uploader, match
+      score) with page links. Styles: f0ckm.css "search.html" (.srch-*). -#}
+  {%- set searched = (result is defined and result is not none and result is not false) -%}
+  <div class="srch">
+    <header class="srch-head">
+      <h1 class="srch-title">{{ t("search.title") }}</h1>
+      <p class="srch-sub">Tags separated by commas &middot; <code>title:</code> text in titles &middot; <code>src:</code> text in the source</p>
+    </header>
+    <form action="/search" method="GET" class="srch-form" role="search">
+      <div class="srch-bar">
+        <i class="fa-solid fa-magnifying-glass srch-bar-icon" aria-hidden="true"></i>
+        <input type="search" name="tag" value="{{ (searchstring if searchstring is string else "") }}" placeholder="tag1, tag2 … or title:text" aria-label="{{ t("search.title") }}" autocomplete="off">
+        <button type="submit">{{ t("search.title") }}</button>
       </div>
+      <label class="srch-strict">
+        <input type="checkbox" name="mode" value="strict"{% if search_mode == "strict" %} checked{% endif %}>
+        <span>{{ t("search.strict_mode") }}</span>
+        <small>all tags must match</small>
+      </label>
     </form>
-    <div class="results">
-      {% if result is defined and result is not none and result is not false %}
-      <h2>{{ (((t("search.results_found")).replace("{count}", count|string, 1)).replace("{page}", pagination.page|string, 1)).replace("{total}", pagination.end|string, 1) }}</h2>
-      <table class="table search-results-table">
-        <thead>
-          <tr>
-            <th>{{ t("search.col_thumbnail") }}</th>
-            <th>{{ t("search.col_id") }}</th>
-            <th>{{ t("search.col_tag") }}</th>
-            <th>{{ t("search.col_mime") }}</th>
-            <th>{{ t("search.col_username") }}</th>
-            <th>{{ t("search.col_score") }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for key, line in result|entries %}
-          <tr>
-            <td class="search-thumb-cell"><a href="/tag/{{ line.tag }}/{{ line.id }}" target="_blank"><img
-                  src="/t/{{ line.id }}.webp" loading="lazy" /></a></td>
-            <td><span class="mview_desc">ID:</span><a href="/tag/{{ line.tag }}/{{ line.id }}" target="_blank">{{ line.id }}</a></td>
-            <td><span class="mview_desc">Tag:</span><a href="/tag/{{ line.tag }}">{{ line.tag }}</a></td>
-            <td><span class="mview_desc">Mime:</span>{{ line.mime }}</td>
-            <td><span class="mview_desc">User:</span><a href="/user/{{ line.username }}/uploads/{{ line.id }}">{{ line.username }}</a></td>
-            <td><span class="mview_desc">Score:</span>{% if line.score is defined and line.score is not none %}{{ line.score|fixed(2) }}{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% endif %}
+
+    {% if searched %}
+    <div class="srch-meta">{{ (((t("search.results_found")).replace("{count}", count|string, 1)).replace("{page}", pagination.page|string, 1)).replace("{total}", pagination.end|string, 1) }}</div>
+    {% if result|length %}
+    <ul class="srch-list">
+      {% for line in result %}
+      {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) -%}
+      {%- set href = ("/tag/" ~ (line.tag|encode_uri_component) ~ "/" ~ ref) if line.tag else ("/" ~ ref) -%}
+      <li class="srch-row">
+        <a class="srch-thumb" href="{{ href }}"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></a>
+        <div class="srch-info">
+          <a class="srch-ref" href="{{ href }}">{{ ref }}</a>
+          <div class="srch-tags">
+            {% if line.tag %}<a class="srch-tag" href="/tag/{{ line.tag|encode_uri_component }}">{{ line.tag }}</a>{% elif line.title %}<span class="srch-text">{{ line.title }}</span>{% endif %}
+            {% if line.mime %}<span class="srch-mime">{{ line.mime }}</span>{% endif %}
+          </div>
+        </div>
+        {% if line.username %}<a class="srch-user" href="/user/{{ line.username|lower|encode_uri_component }}"><i class="fa-solid fa-user" aria-hidden="true"></i> {{ line.username }}</a>{% endif %}
+        {% if (line.score is defined and line.score is number) %}<span class="srch-score" title="{{ t("search.col_score") }}">{{ line.score|fixed(2) }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="srch-pages">{% include "snippets/pagination.html" %}</div>
+    {% else %}
+    <div class="srch-empty">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <p>Nothing found for <strong>{{ searchstring }}</strong></p>
     </div>
+    {% endif %}
+    {% endif %}
   </div>
 </div>
 </div>

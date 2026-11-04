@@ -25,8 +25,9 @@
     </thead>
     <tbody>
     {% for line in result %}
+    {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) %}
     <tr data-thumb="/t/{{ line.id }}.webp">
-        <td><span class="w0bm-rowthumb"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></span><a href="{% if line.tag %}/tag/{{ line.tag|encode_uri_component }}/{{ line.id }}{% else %}/{{ line.id }}{% endif %}">{{ line.id }}</a></td>
+        <td><span class="w0bm-rowthumb"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></span><a href="{% if line.tag %}/tag/{{ line.tag|encode_uri_component }}/{{ ref }}{% else %}/{{ ref }}{% endif %}">{{ ref }}</a></td>
         <td>{% if line.tag %}<a href="/tag/{{ line.tag|encode_uri_component }}">{{ line.tag }}</a>{% else %}{{ (line.title or "") }}{% endif %}</td>
         <td class="hidden-xs">{{ line.mime }}</td>
         <td><a href="/user/{{ (line.username or "")|lower }}">{{ line.username }}</a></td>
