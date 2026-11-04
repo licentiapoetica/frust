@@ -1021,6 +1021,9 @@
     wrap.addEventListener('mousemove', active);
     wrap.addEventListener('touchstart', active, { passive: true });
     wrap.addEventListener('mouseleave', () => { if (!el.paused && !isAudio) { wrap.classList.remove('vjs-user-active'); wrap.classList.add('vjs-user-inactive'); } });
+    // playback starting counts as activity too: the controls hide a second later without the mouse
+    // touching the player (an item reached with the keys, a swipe or the prev/next links)
+    el.addEventListener('play', active);
 
     updState();
     updVol();
