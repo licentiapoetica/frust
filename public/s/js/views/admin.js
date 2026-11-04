@@ -145,6 +145,7 @@ async function saveBrandText(form) {
     const input = form.querySelector('input[name="text"]');
     if (input) input.value = data.text || '';
     if (window.updateBrandText) window.updateBrandText(data.text || '');
+    if (window.updateBrandStyle) window.updateBrandStyle(data.case || '', data.font_css || '');
     brandStatus('✓ Brand text saved.', 'ok');
   } catch (err) {
     brandStatus('Error: ' + err.message, 'err');

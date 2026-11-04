@@ -195,12 +195,23 @@
         <div class="adm-row adm-row-wrap">
           <div class="adm-row-text">
             <label for="brand-text-input">Navbar brand text</label>
-            <p>Shown next to the brand image, or on its own without one. Empty: just the image, or the site name ({{ domain }}) when there is no image.</p>
+            <p>Shown next to the brand image, or on its own without one. Empty: just the image, or the site name ({{ domain }}) when there is no image. Case and font apply in every frontend; "Default" keeps the frontend's own.</p>
           </div>
           <form class="adm-brand" method="post" action="/admin/brand_text" data-on="submit:prevent,saveBrandText">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="back" value="/admin#brand-image-section">
             <input type="text" id="brand-text-input" name="text" class="adm-text" maxlength="64" value="{{ (custom_navbar_brand_text or "") }}" placeholder="{{ domain }}" autocomplete="off">
+            <select id="brand-case-select" name="case" class="adm-text adm-select" title="Letter case" aria-label="Letter case">
+              <option value=""{% if not brand_case %} selected{% endif %}>Default case</option>
+              <option value="upper"{% if brand_case == "upper" %} selected{% endif %}>UPPERCASE</option>
+              <option value="lower"{% if brand_case == "lower" %} selected{% endif %}>lowercase</option>
+            </select>
+            <select id="brand-font-select" name="font" class="adm-text adm-select" title="Font" aria-label="Font">
+              <option value=""{% if not brand_font %} selected{% endif %}>Default font</option>
+              {% for font in fonts %}
+              <option value="{{ font.file }}"{% if brand_font in font.files %} selected{% endif %}>{{ font.name }}</option>
+              {% endfor %}
+            </select>
             <button type="submit" class="adm-btn adm-btn-primary">Save</button>
           </form>
         </div>

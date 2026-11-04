@@ -29,6 +29,12 @@ pub fn register(r: &mut Router) {
         let icons = crate::pwa::ensure_icons(&cfg, &favicon).await;
         Ok(reply(200, "application/manifest+json", crate::pwa::manifest(&cfg, &favicon, icons.as_ref()).to_string()))
     });
+    // The navbar brand font (admin panel → branding), see crate::fonts::brand_css
+    r.get(r"^\/brand-font\.css$", |st: AppState, _req: Req| async move {
+        let font = st.settings.get().brand_font;
+        let css = crate::fonts::brand_css(&st.cfg(), &font);
+        Ok(crate::http::with_header(reply(200, "text/css; charset=utf-8", css), "cache-control", "public, max-age=86400"))
+    });
     r.get(r"^\/sw\.js$", |st: AppState, _req: Req| async move { public_file(&st, "sw.js", "application/javascript").await });
 }
 

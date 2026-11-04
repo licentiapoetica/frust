@@ -842,8 +842,10 @@ async fn dispatch_json(st: &AppState, channel: &str, mut data: Value) {
             if data.get("url").is_some() {
                 d.insert("url".into(), data.get("url").filter(|u| crate::config::truthy(u)).cloned().unwrap_or(Value::Null));
             }
-            if let Some(t) = data.get("text").and_then(Value::as_str) {
-                d.insert("text".into(), json!(t));
+            for k in ["text", "case", "font", "font_css"] {
+                if let Some(t) = data.get(k).and_then(Value::as_str) {
+                    d.insert(k.into(), json!(t));
+                }
             }
             HUB.broadcast(&json!({ "type": "brand_image", "data": d }));
         }

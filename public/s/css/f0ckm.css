@@ -25014,6 +25014,14 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   outline: none;
 }
 
+:where(.adm) .adm-select {
+  width: auto;
+}
+
+:where(.adm) .adm-select option {
+  background: #1a1a1a;
+}
+
 :where(.adm) .adm-text:focus {
   border-color: var(--adm-accent);
 }
@@ -30760,6 +30768,20 @@ body:has(#force-password-modal) {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+}
+
+/* Brand text case and font (admin panel → branding; the font's @font-face: /brand-font.css).
+   Same rules in the frontends' own CSS (w0bm-fe.css, f0ckv2.css). */
+[data-brand-text].brand-case-upper {
+  text-transform: uppercase !important;
+}
+
+[data-brand-text].brand-case-lower {
+  text-transform: lowercase !important;
+}
+
+[data-brand-text].brand-font {
+  font-family: 'BrandFont', monospace !important;
 }
 
 .nav-links a.navbar-upload-link {

@@ -129,6 +129,35 @@ pub fn faces_json(cfg: &Config, file: Option<&str>) -> Value {
         .unwrap_or_else(|| json!([]))
 }
 
+/// URL of the navbar brand font's stylesheet (see [`brand_css`]); versioned by the font's name.
+pub fn brand_css_url(file: &str) -> String {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    file.hash(&mut h);
+    format!("/brand-font.css?v={:x}", h.finish())
+}
+
+/// `/brand-font.css`: an `@font-face` per weight of the family of `file`, as 'BrandFont' (the
+/// `.brand-font` class on the navbar brand text uses it; the frontends' CSS files hold that rule).
+/// Empty when no font is set or the font is gone.
+pub fn brand_css(cfg: &Config, file: &str) -> String {
+    let enc = |f: &str| -> String {
+        f.bytes()
+            .map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") })
+            .collect()
+    };
+    let faces = faces_json(cfg, Some(file));
+    faces
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|f| Some((f["file"].as_str()?, f["weight"].as_u64()?)))
+                .map(|(f, w)| format!("@font-face {{ font-family: 'BrandFont'; src: url('/s/fonts/{}'); font-weight: {w}; font-display: swap; }}\n", enc(f)))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// Whether `file` is an available font (validates a user's choice).
 pub fn exists(cfg: &Config, file: &str) -> bool {
     is_font_file(file) && all_files(cfg).iter().any(|f| f == file)

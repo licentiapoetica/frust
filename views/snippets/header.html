@@ -57,6 +57,8 @@
     <link rel="stylesheet" href="/s/css/glitchfx.css?v={{ mtime("/public/s/css/glitchfx.css") }}">
     <link rel="stylesheet" href="/s/css/comment-fx.css?v={{ mtime("/public/s/css/comment-fx.css") }}">
   {% endif %}
+  {#- navbar brand font (admin panel → branding) -#}
+  {% if brand_font_css %}<link rel="stylesheet" id="brand-font-css" href="{{ brand_font_css }}">{% endif %}
   {% include "snippets/header-data.html" %}
   {% if (not private_society or session) %}
   {% if enable_comments %}

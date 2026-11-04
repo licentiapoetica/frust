@@ -11,7 +11,7 @@
  *
  * f0ckCommentFx (comment text effects [rb] [reich] [krebs] [glitch], see the end of the file),
  * f0ckLoadEmojis / f0ckEmojify (custom emojis :name: in comments, for the frontends' renderers),
- * updateBrandImage / updateBrandText / applyBrandEvent (the navbar brand, see below),
+ * updateBrandImage / updateBrandText / updateBrandStyle / applyBrandEvent (the navbar brand, see below),
  * and fallbacks for what f0ckm.js provides on the default frontend (showFlash, flashMessage,
  * loadPageAjax, updateMotdUI). A fallback is only set when nothing defined the
  * name yet; f0ckm.js (loaded after this file) and the frontends' own scripts replace them. The
@@ -481,11 +481,32 @@ window.F0ckLive = (() => {
     window.syncNavbarHeight?.();
     hook({ text: text || '' });
   };
+  // Case ("" / "upper" / "lower") and font (font_css: the @font-face stylesheet, "" for the
+  // frontend's own font) of the brand text: classes from the frontend's CSS
+  window.updateBrandStyle = (kase, fontCss) => {
+    let link = document.getElementById('brand-font-css');
+    if (fontCss) {
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.id = 'brand-font-css';
+        document.head.appendChild(link);
+      }
+      if (link.getAttribute('href') !== fontCss) link.setAttribute('href', fontCss);
+    } else if (link) link.remove();
+    each((img, txt) => {
+      txt.classList.toggle('brand-case-upper', kase === 'upper');
+      txt.classList.toggle('brand-case-lower', kase === 'lower');
+      txt.classList.toggle('brand-font', !!fontCss);
+    });
+    window.syncNavbarHeight?.();
+  };
   // Live event payload: only the changed parts
   window.applyBrandEvent = (data) => {
     if (!data) return;
     if ('url' in data) window.updateBrandImage(data.url || null);
     if ('text' in data) window.updateBrandText(data.text || '');
+    if ('case' in data || 'font_css' in data) window.updateBrandStyle(data.case || '', data.font_css || '');
   };
 })();
 

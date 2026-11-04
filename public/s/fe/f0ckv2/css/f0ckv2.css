@@ -1798,3 +1798,17 @@ div.posts > a.v2-onara-active {
 .imageDoor:hover::after {
   content: none;
 }
+
+/* Brand text case and font (admin panel → branding; the font's @font-face: /brand-font.css).
+   Same rules in f0ckm.css. */
+[data-brand-text].brand-case-upper {
+  text-transform: uppercase !important;
+}
+
+[data-brand-text].brand-case-lower {
+  text-transform: lowercase !important;
+}
+
+[data-brand-text].brand-font {
+  font-family: 'BrandFont', monospace !important;
+}

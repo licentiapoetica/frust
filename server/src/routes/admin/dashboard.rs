@@ -112,6 +112,8 @@ async fn dashboard(st: AppState, req: Req) -> Res {
         "current_brand_image": s.brand_image_url,
         "brand_glitch_text": s.brand_glitch_text,
         "brand_glitch_image": s.brand_glitch_image,
+        "brand_case": s.brand_case,
+        "brand_font": s.brand_font,
         "current_favicon": s.favicon_url,
         // an upload of the admin panel (Remove goes back to the config favicon)
         "favicon_uploaded": s.favicon_url.starts_with("/s/img/navbar/favicon."),

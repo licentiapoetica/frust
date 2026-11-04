@@ -741,6 +741,12 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("custom_navbar_brand_text", json!(s.brand_text));
     put("brand_glitch_text", json!(s.brand_glitch_text));
     put("brand_glitch_image", json!(s.brand_glitch_image));
+    // Brand text case and font (admin panel → branding); a font that is gone counts as none
+    put("brand_case", json!(s.brand_case));
+    let brand_font = Some(s.brand_font.as_str())
+        .filter(|f| !f.is_empty() && fonts.as_array().is_some_and(|a| a.iter().any(|fam| fam["files"].as_array().is_some_and(|fs| fs.iter().any(|x| x.as_str() == Some(f))))));
+    put("brand_font", json!(brand_font.unwrap_or("")));
+    put("brand_font_css", json!(brand_font.map(crate::fonts::brand_css_url).unwrap_or_default()));
     put("default_font", json!(cfg.str_or("websrv.default_font", "")));
     put("site_description", json!(cfg.str_or("websrv.description", "The webs dumpster")));
     put("enable_nsfl", json!(cfg.enable_nsfl()));

@@ -11,7 +11,7 @@
                 <span class="icon-bar"></span>
             </label>
             <a class="navbar-brand w0bm-brand" href="/">
-                <img class="w0bm-brand-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="w0bm-brand-text" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="{{ domain }}"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else domain)) }}</span>
+                <img class="w0bm-brand-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="w0bm-brand-text{% if brand_case %} brand-case-{{ brand_case }}{% endif %}{% if brand_font %} brand-font{% endif %}" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="{{ domain }}"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else domain)) }}</span>
             </a>
         </div>
 

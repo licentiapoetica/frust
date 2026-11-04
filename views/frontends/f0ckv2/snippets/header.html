@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="/s/fe/f0ckv2/css/f0ckv2.css?v={{ mtime("/public/s/fe/f0ckv2/css/f0ckv2.css") }}">
   {#- comment effects [rb] [reich] [krebs] [glitch], shared with the other frontends -#}
   <link rel="stylesheet" href="/s/css/comment-fx.css?v={{ mtime("/public/s/css/comment-fx.css") }}">
+  {% if brand_font_css %}<link rel="stylesheet" id="brand-font-css" href="{{ brand_font_css }}">{% endif %}
   <link rel="stylesheet" href="/s/css/glitchfx.css?v={{ mtime("/public/s/css/glitchfx.css") }}">
   <script src="/s/fe/f0ckv2/js/early.js?v={{ mtime("/public/s/fe/f0ckv2/js/early.js") }}"></script>
   {% if v2_shell %}

@@ -34,6 +34,10 @@ pub struct SiteSettings {
     /// w0bm frontend: glitch effect (`data-glitch`) on the navbar brand text / image
     pub brand_glitch_text: bool,
     pub brand_glitch_image: bool,
+    /// Navbar brand text case: "" (the frontend's own), "upper" or "lower"
+    pub brand_case: String,
+    /// Navbar brand text font: a font file of crate::fonts (its family), "" for the frontend's own
+    pub brand_font: String,
     pub motd: String,
     pub about_text: String,
     pub rules_text: String,
@@ -70,6 +74,8 @@ impl Settings {
                 favicon_url: cfg.str_or("websrv.custom_favicon", "").to_string(),
                 brand_glitch_text: true,
                 brand_glitch_image: true,
+                brand_case: String::new(),
+                brand_font: String::new(),
                 motd: String::new(),
                 about_text: String::new(),
                 rules_text: String::new(),
@@ -407,6 +413,8 @@ pub async fn load_from_db(st: &crate::state::AppState) {
         s.brand_image_url = config_brand_image(&cfg);
         s.brand_text = cfg.str_or("websrv.custom_navbar_brand_text", "").to_string();
         s.favicon_url = cfg.str_or("websrv.custom_favicon", "").to_string();
+        s.brand_case = String::new();
+        s.brand_font = String::new();
         s.private_messages = cfg.enabled("websrv.private_messages");
         s.dm_attachments = cfg.enabled("websrv.dm_attachments");
         s.dm_unencrypted = cfg.truthy("websrv.dm_unencrypted");
@@ -433,6 +441,8 @@ pub async fn load_from_db(st: &crate::state::AppState) {
                 "brand_text" => s.brand_text = val,
                 "brand_glitch_text" => s.brand_glitch_text = b,
                 "brand_glitch_image" => s.brand_glitch_image = b,
+                "brand_case" => s.brand_case = brand_case(&val).to_string(),
+                "brand_font" => s.brand_font = val,
                 // No row (or an empty one) keeps the config favicon
                 "favicon_url" if !val.is_empty() => s.favicon_url = val,
                 "about_text" => s.about_text = val,
@@ -447,6 +457,15 @@ pub async fn load_from_db(st: &crate::state::AppState) {
             }
         }
     });
+}
+
+/// A stored navbar brand case, unknown values as "" (the frontend's own).
+pub fn brand_case(v: &str) -> &'static str {
+    match v {
+        "upper" => "upper",
+        "lower" => "lower",
+        _ => "",
+    }
 }
 
 /// `websrv.custom_brand_image`: a string or a list (first entry wins).
