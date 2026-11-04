@@ -569,9 +569,11 @@ a.w0bm-tag-nsfl {
     vertical-align: text-bottom;
     margin-right: 3px;
 }
+/* the comment a link points to: a faint accent glow inside, no outline */
 .commentwrapper .panel:target,
 .commentwrapper .panel.w0bm-highlight {
-    box-shadow: 0 0 0 1px #1fb2b0 inset;
+    box-shadow: inset 0 0 14px rgba(31, 178, 176, 0.14);
+    background-image: linear-gradient(rgba(31, 178, 176, 0.04), rgba(31, 178, 176, 0.04));
 }
 .commentwrapper textarea.form-control {
     min-height: 6em;
