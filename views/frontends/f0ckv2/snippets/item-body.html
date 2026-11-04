@@ -5,7 +5,7 @@
 {%- set uploader = ("anonymous" if is_anonymized else (item.username or user.name or "")) -%}
 <div class="container" data-item-id="{{ item.id }}">
   <div class="_204863">
-    <div class="imageDoor" style="--hover-image: url('{{ (item.thumbnail or ("/t/" ~ item.id ~ ".webp")) }}')">
+    <div class="imageDoor">
       <img src="{{ (item.thumbnail or ("/t/" ~ item.id ~ ".webp")) }}" alt="" />
     </div>
     <div class="gapLeft">

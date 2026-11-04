@@ -1793,3 +1793,8 @@ div.posts > a.v2-onara-active {
     right: 10px;
   }
 }
+
+/* The item's thumbnail in the title bar: no enlarged copy on hover (f0ck.css .imageDoor:hover:after) */
+.imageDoor:hover::after {
+  content: none;
+}
