@@ -2,10 +2,10 @@
 {% extends "frontends/w0bm/layout.html" %}
 {% block mainclass %}w0bm-main-profile{% endblock %}
 {% block innerclass %}fucklaravel{% endblock %}
-{% block title %}Messages - {{ domain }}{% endblock %}
+{% block title %}{{ t("nav.notifications") }} - {{ domain }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h3>Messages</h3>
+    <h3>{{ t("nav.notifications") }}</h3>
 </div>
 <ul class="nav nav-tabs w0bm-tabs">
     {% if enable_comments %}
@@ -25,7 +25,7 @@
 <div class="w0bm-notif">
     <div class="panel panel-default">
         <div class="panel-heading">
-            <h3 class="panel-title">Messages</h3> <form method="post" action="/api/notifications/read?tab={{ activeTab }}" class="w0bm-inline-form" id="w0bm-readall-form">
+            <h3 class="panel-title">{{ t("nav.notifications") }}</h3> <form method="post" action="/api/notifications/read?tab={{ activeTab }}" class="w0bm-inline-form" id="w0bm-readall-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 {% include "frontends/w0bm/partials/back.html" %}
                 <button type="submit" class="btn btn-primary readall" id="w0bm-readall" data-tab="{{ activeTab }}">Read all</button>
