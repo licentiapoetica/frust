@@ -5,7 +5,7 @@
 <div id="main">
   <div class="profile_head">
     <div class="profile_head_avatar">
-      <img class="v2-profile-ava" src="{% if user.avatar_file %}/a/{{ user.avatar_file }}{% elif user.avatar %}/t/{{ user.avatar }}.webp{% else %}/s/fe/f0ckv2/img/default.png{% endif %}" alt="" />
+      <img class="v2-profile-ava" src="{% if user.avatar_file and user.avatar_file != "default.png" %}/a/{{ user.avatar_file }}{% elif user.avatar %}/t/{{ user.avatar }}.webp{% else %}/s/fe/f0ckv2/img/default.png{% endif %}" alt="" />
     </div>
     <div class="layersoffear">
       <div class="profile_head_username"><span>comments by {{ (user.display_name or uname) }}</span></div>

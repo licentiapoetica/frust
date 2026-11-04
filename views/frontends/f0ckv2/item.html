@@ -152,7 +152,7 @@
         <span class="badge" id="favs"{% if not item.favorites %} hidden{% endif %}>
           {% for fav in (item.favorites or []) %}
           {% if not fav.hide_fav_badge %}
-          <a href="/user/{{ (fav.login or fav.user)|lower|encode_uri_component }}/favs" tooltip="{{ (fav.display_name or fav.user) }}" flow="up"><img src="{% if fav.avatar_file %}/a/{{ fav.avatar_file }}{% elif fav.avatar %}/t/{{ fav.avatar }}.webp{% else %}/s/fe/f0ckv2/img/default.png{% endif %}" alt="" class="v2-favava" /></a>
+          <a href="/user/{{ (fav.login or fav.user)|lower|encode_uri_component }}/favs" tooltip="{{ (fav.display_name or fav.user) }}" flow="up"><img src="{% if fav.avatar_file and fav.avatar_file != "default.png" %}/a/{{ fav.avatar_file }}{% elif fav.avatar %}/t/{{ fav.avatar }}.webp{% else %}/s/fe/f0ckv2/img/default.png{% endif %}" alt="" class="v2-favava" /></a>
           {% endif %}
           {% endfor %}
         </span>

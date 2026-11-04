@@ -11,7 +11,7 @@
         {% for u in (list or []) %}
           <tr>
             <td>{{ loop.index }}</td>
-            <td>{% if u.avatar_file %}<a href="/user/{{ u.user|lower|encode_uri_component }}"><img class="avatar" src="/a/{{ u.avatar_file }}" alt=""></a>{% elif u.avatar %}<a href="/{{ u.avatar }}"><img class="avatar" src="/t/{{ u.avatar }}.webp" alt=""></a>{% else %}<img class="avatar" src="/s/fe/f0ckv2/img/default.png" alt="">{% endif %}</td>
+            <td>{% if u.avatar_file and u.avatar_file != "default.png" %}<a href="/user/{{ u.user|lower|encode_uri_component }}"><img class="avatar" src="/a/{{ u.avatar_file }}" alt=""></a>{% elif u.avatar %}<a href="/{{ u.avatar }}"><img class="avatar" src="/t/{{ u.avatar }}.webp" alt=""></a>{% else %}<img class="avatar" src="/s/fe/f0ckv2/img/default.png" alt="">{% endif %}</td>
             <td>{% if u.admin %}&#11088;&nbsp;{% endif %}<a href="/user/{{ u.user|lower|encode_uri_component }}">{{ (u.display_name or u.user) }}</a></td>
             <td>{{ u.count }}</td>
           </tr>

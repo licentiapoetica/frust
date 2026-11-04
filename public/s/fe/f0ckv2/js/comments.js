@@ -40,7 +40,7 @@
     return 'just now';
   };
 
-  const avatar = c => c.avatar_file ? `/a/${encodeURIComponent(c.avatar_file)}` : (c.avatar ? `/t/${+c.avatar}.webp` : '/s/fe/f0ckv2/img/default.png');
+  const avatar = c => (c.avatar_file && c.avatar_file !== 'default.png') ? `/a/${encodeURIComponent(c.avatar_file)}` : (c.avatar ? `/t/${+c.avatar}.webp` : '/s/fe/f0ckv2/img/default.png');
 
   const render = comments => {
     const byParent = new Map();

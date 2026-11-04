@@ -18,7 +18,7 @@
     <ul class="navbar-nav">
       <li class="nav-item dropdown">
         <a class="nav-link user" href="/user/{{ me|encode_uri_component }}" data-toggle="dropdown">
-          {% if session.avatar_file %}<img src="/a/{{ session.avatar_file }}" class="avatar" alt="" data-on="error:img-fallback" data-fallback="/s/fe/f0ckv2/img/default.png">{% elif session.avatar %}<img src="/t/{{ session.avatar }}.webp" class="avatar" alt="">{% else %}<img src="/s/fe/f0ckv2/img/default.png" class="avatar" alt="">{% endif %}<span class="navUserName">{% if session.admin %}&#11088;&nbsp;{% endif %}{{ (session.display_name or session.user) }}</span>
+          {% if session.avatar_file and session.avatar_file != "default.png" %}<img src="/a/{{ session.avatar_file }}" class="avatar" alt="" data-on="error:img-fallback" data-fallback="/s/fe/f0ckv2/img/default.png">{% elif session.avatar %}<img src="/t/{{ session.avatar }}.webp" class="avatar" alt="">{% else %}<img src="/s/fe/f0ckv2/img/default.png" class="avatar" alt="">{% endif %}<span class="navUserName">{% if session.admin %}&#11088;&nbsp;{% endif %}{{ (session.display_name or session.user) }}</span>
         </a>
         <ul class="dropdown-menu">
           <li><a href="/user/{{ me|encode_uri_component }}">my profile</a></li>

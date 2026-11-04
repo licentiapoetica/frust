@@ -216,7 +216,7 @@
       const img = document.createElement('img');
       img.className = 'v2-favava';
       img.alt = '';
-      img.src = f.avatar_file ? `/a/${encodeURIComponent(f.avatar_file)}` : (f.avatar ? `/t/${+f.avatar}.webp` : '/s/fe/f0ckv2/img/default.png');
+      img.src = (f.avatar_file && f.avatar_file !== 'default.png') ? `/a/${encodeURIComponent(f.avatar_file)}` : (f.avatar ? `/t/${+f.avatar}.webp` : '/s/fe/f0ckv2/img/default.png');
       a.appendChild(img);
       favcontainer.appendChild(a);
       favcontainer.insertAdjacentHTML('beforeend', '&nbsp;');

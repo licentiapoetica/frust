@@ -24,7 +24,8 @@ html:not(.no-js) .nojs-only {
 
 /* ── grid thumbnails (was an inline background-image) ─────────────────────── */
 div.posts>a {
-  background-image: var(--thumb);
+  /* the f0ckv2 placeholder shows through when the thumbnail is missing */
+  background-image: var(--thumb), url("/s/fe/f0ckv2/img/200.gif");
 }
 
 div.posts>a[data-mode="nsfl"]>p:before {
