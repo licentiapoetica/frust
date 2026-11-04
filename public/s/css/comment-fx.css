@@ -3,7 +3,8 @@
  * the same in every frontend. Markup: window.f0ckCommentFx in /s/js/f0ck-core.js, and its server
  * copy for the no-JavaScript comments (comment_fx in server/src/routes/comments.rs).
  * [glitch] is animated by /s/js/glitchfx.js (data-glitch on the span).
- * Loaded by snippets/header.html (f0ckm), the f0ckv2 and w0bm heads, and activity-frame.html.
+ * Loaded by snippets/header.html (f0ckm), the f0ckv2 and w0bm heads, and activity-frame.html. The
+ * font lives in public/s/fonts-ui (static); /s/fonts/ serves the uploaded website fonts only.
  */
 
 @font-face {
@@ -11,7 +12,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: local('UnifrakturCook'), local('UnifrakturCook-Bold'), url(/s/fonts/UnifrakturCook.woff2) format('woff2');
+  src: local('UnifrakturCook'), local('UnifrakturCook-Bold'), url(/s/fonts-ui/UnifrakturCook.woff2) format('woff2');
 }
 
 /* [rb]: rainbow with a trailing colour smear */

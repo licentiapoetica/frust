@@ -6,6 +6,7 @@ not offered as website fonts in Settings.
 | Font | File | Source | License |
 |---|---|---|---|
 | f0ckm Nav Arrows | `NavArrows.woff2` | Noto Sans Mono 2.014, Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic) | SIL Open Font License 1.1, [`LICENSE-Noto-OFL.txt`](LICENSE-Noto-OFL.txt) |
+| UnifrakturCook | `UnifrakturCook.woff2` | Copyright (c) 2010 j. 'mach' wust, Copyright (c) 2009 Peter Wiegel (https://fonts.google.com/specimen/UnifrakturCook) | SIL Open Font License 1.1, [`LICENSE-UnifrakturCook-OFL.txt`](LICENSE-UnifrakturCook-OFL.txt) |
 
 `NavArrows.woff2` holds only ← (U+2190) and → (U+2192), for the item page's "← prev" / "next →"
 (`.steuerung-arrow` in `f0ckm.css`). Manrope, the site font, has no arrows, so the browser used to
@@ -14,3 +15,8 @@ the glyphs makes them the same everywhere. The outlines are moved up 104 units (
 arrow's ink centre sits at 0.27em, the middle of Manrope's x-height, so it is centred on lowercase
 text with no CSS offset. It is a renamed Modified Version as the OFL requires; Noto has no Reserved
 Font Name.
+
+`UnifrakturCook.woff2` is the blackletter of the `[reich]` comment effect (`.cfx-reich` in
+`public/s/css/comment-fx.css`), used by every frontend. It is unmodified and keeps its Reserved Font
+Name.
+
