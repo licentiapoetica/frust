@@ -1527,6 +1527,12 @@ html.w0bm-comments-off #sidebar.aside {
     transform: translateX(-50%) rotate(45deg);
     /* only the half below the box edge: the turned square's right, bottom and left corners */
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    /* outlined like the box: its two outer edges in the popover's border colour (each theme's),
+       drawn over what is behind, as the box's own border (background-clip) */
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+    border-color: inherit;
+    background-clip: padding-box;
 }
 .popover.top > .arrow::after {
     display: none;
