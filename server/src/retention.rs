@@ -85,7 +85,6 @@ pub async fn run_retention(st: &AppState) {
         step!("items.uploader_ip", sql!("update items set uploader_ip = null where uploader_ip is not null and stamp < ", cutoff_secs));
         step!("comments.ip", sql!("update comments set ip = null where ip is not null and created_at < ", @c));
         step!("reports.reporter_ip", sql!("update reports set reporter_ip = null where reporter_ip is not null and created_at < ", @c));
-        step!("tos.accepted_ip", sql!("update user_tos_acceptance set accepted_ip = null where accepted_ip is not null and accepted_at < ", @c));
     }
 
     if r.activity_log > 0 {

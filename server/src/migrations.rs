@@ -12,6 +12,96 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS original_filename text DEFAULT NULL"#,
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS title text DEFAULT NULL"#,
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS uploader_ip character varying(128) DEFAULT NULL"#,
+    // migrations/add_private_unlisted_uploads.sql (slugs are filled in by backfill_slugs at boot)
+    r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS visibility smallint DEFAULT 0 NOT NULL"#,
+    r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS slug character varying(16) UNIQUE"#,
+    r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS default_upload_visibility smallint DEFAULT 0"#,
+    // migrations/add_expiring_uploads.sql
+    r#"CREATE INDEX IF NOT EXISTS idx_items_expires_at ON items(expires_at) WHERE ((expires_at IS NOT NULL) AND (is_purged = false))"#,
+    // migrations/add_reporter_ip.sql, add_anon_activity_and_bans.sql
+    r#"ALTER TABLE reports ADD COLUMN IF NOT EXISTS reporter_ip text"#,
+    r#"ALTER TABLE comments ADD COLUMN IF NOT EXISTS ip character varying(128)"#,
+    r#"ALTER TABLE meme_templates ADD COLUMN IF NOT EXISTS category character varying(100) DEFAULT 'General'"#,
+    // anonymous accounts (migrations/add_anon_identities.sql, add_passkey_credentials.sql, add_hardware_fingerprint_bans.sql)
+    r#"CREATE TABLE IF NOT EXISTS anon_identities (
+      id SERIAL PRIMARY KEY,
+      user_id integer NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+      pubkey text UNIQUE,
+      fingerprint text UNIQUE,
+      credential_id text UNIQUE,
+      created_at timestamp with time zone DEFAULT now(),
+      last_seen timestamp with time zone DEFAULT now(),
+      created_ip character varying(128),
+      last_ip character varying(128),
+      hw_fingerprint character varying(128)
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_anon_identities_user_id ON anon_identities(user_id)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_anon_identities_hw ON anon_identities(hw_fingerprint)"#,
+    // migrations/add_anon_activity_and_bans.sql
+    r#"CREATE TABLE IF NOT EXISTS anon_activity_log (
+      id SERIAL PRIMARY KEY,
+      user_id integer NOT NULL,
+      fingerprint character varying(128),
+      hw_fingerprint character varying(128),
+      action character varying(64) NOT NULL,
+      target_id integer,
+      ip character varying(128),
+      user_agent text,
+      details jsonb,
+      created_at timestamp with time zone DEFAULT now()
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_anon_act_user_id ON anon_activity_log(user_id)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_anon_act_action ON anon_activity_log(action)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_anon_act_ip ON anon_activity_log(ip)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_anon_act_created ON anon_activity_log(created_at)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_anon_activity_hw ON anon_activity_log(hw_fingerprint)"#,
+    r#"CREATE TABLE IF NOT EXISTS banned_ips (
+      id SERIAL PRIMARY KEY,
+      ip character varying(128) NOT NULL UNIQUE,
+      ip_hash character varying(128),
+      reason text DEFAULT 'Banned by administrator',
+      banned_by integer,
+      created_at timestamp with time zone DEFAULT now(),
+      expires_at timestamp with time zone
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_banned_ips_hash ON banned_ips(ip_hash)"#,
+    r#"CREATE TABLE IF NOT EXISTS banned_fingerprints (
+      id SERIAL PRIMARY KEY,
+      fingerprint character varying(128) NOT NULL UNIQUE,
+      pubkey text,
+      reason text DEFAULT 'Banned by administrator',
+      banned_by integer,
+      created_at timestamp with time zone DEFAULT now(),
+      expires_at timestamp with time zone
+    )"#,
+    r#"CREATE TABLE IF NOT EXISTS banned_hardware_fingerprints (
+      id SERIAL PRIMARY KEY,
+      hw_fingerprint character varying(128) NOT NULL UNIQUE,
+      banned_by integer REFERENCES "user"(id) ON DELETE SET NULL,
+      reason text,
+      created_at timestamp with time zone DEFAULT now() NOT NULL,
+      expires_at timestamp with time zone
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_banned_hw_expires ON banned_hardware_fingerprints(expires_at)"#,
+    // migrations/add_user_recommendation_affinity.sql
+    r#"CREATE TABLE IF NOT EXISTS user_tag_affinity (
+      user_id integer NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+      tag_id integer NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+      score real DEFAULT 0.0,
+      interaction_count integer DEFAULT 1,
+      last_interacted timestamp with time zone DEFAULT now(),
+      PRIMARY KEY (user_id, tag_id)
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_user_tag_affinity_user_score ON user_tag_affinity(user_id, score DESC)"#,
+    r#"CREATE TABLE IF NOT EXISTS user_creator_affinity (
+      user_id integer NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+      creator_username text NOT NULL,
+      score real DEFAULT 0.0,
+      interaction_count integer DEFAULT 1,
+      last_interacted timestamp with time zone DEFAULT now(),
+      PRIMARY KEY (user_id, creator_username)
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_user_creator_affinity_user_score ON user_creator_affinity(user_id, score DESC)"#,
     r#"ALTER TABLE anon_activity_log ALTER COLUMN ip DROP NOT NULL"#,
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS is_album boolean DEFAULT false"#,
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS album_count integer DEFAULT 0"#,
@@ -43,6 +133,13 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     // chat uploads for external clients were removed
     r#"DROP TABLE IF EXISTS chat_uploads"#,
     r#"DROP TABLE IF EXISTS upload_api_keys"#,
+    // the xD score was removed
+    r#"DROP TRIGGER IF EXISTS trg_comments_xd_score ON comments"#,
+    r#"DROP FUNCTION IF EXISTS trg_update_xd_score()"#,
+    r#"DROP FUNCTION IF EXISTS update_item_xd_score(bigint)"#,
+    r#"DROP INDEX IF EXISTS idx_items_xd_score"#,
+    r#"ALTER TABLE items DROP COLUMN IF EXISTS xd_score"#,
+    r#"ALTER TABLE user_options DROP COLUMN IF EXISTS min_xd_score"#,
     // migrations/rust_webauthn.sql
     r#"CREATE TABLE IF NOT EXISTS webauthn_credentials (
       id serial PRIMARY KEY,
@@ -97,6 +194,66 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
         ALTER TABLE items ALTER COLUMN visibility SET NOT NULL;
       END IF;
     END $$"#,
+    // older comment poll tables: votes keyed by (poll_id, user_id) without an id, missing constraints
+    r#"DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_schema = 'public' AND table_name = 'comment_poll_votes' AND column_name = 'id') THEN
+        ALTER TABLE comment_poll_votes DROP CONSTRAINT IF EXISTS comment_poll_votes_pkey;
+        DROP INDEX IF EXISTS uq_cpv_poll_user;
+        ALTER TABLE comment_poll_votes ADD COLUMN id SERIAL PRIMARY KEY;
+        ALTER TABLE comment_poll_votes ADD CONSTRAINT comment_poll_votes_poll_id_user_id_key UNIQUE (poll_id, user_id);
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'comment_poll_votes_user_id_fkey') THEN
+        DELETE FROM comment_poll_votes v WHERE NOT EXISTS (SELECT 1 FROM "user" u WHERE u.id = v.user_id);
+        ALTER TABLE comment_poll_votes ADD CONSTRAINT comment_poll_votes_user_id_fkey FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'comment_polls_comment_id_key') THEN
+        ALTER TABLE comment_polls ADD CONSTRAINT comment_polls_comment_id_key UNIQUE (comment_id);
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'public' AND table_name = 'comment_poll_options' AND column_name = 'sort_order' AND is_nullable = 'YES') THEN
+        UPDATE comment_poll_options SET sort_order = 0 WHERE sort_order IS NULL;
+        ALTER TABLE comment_poll_options ALTER COLUMN sort_order SET NOT NULL;
+      END IF;
+    END $$"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_comment_poll_options_poll ON comment_poll_options(poll_id)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_comment_poll_votes_poll ON comment_poll_votes(poll_id)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_comment_poll_votes_user ON comment_poll_votes(user_id)"#,
+    // older defaults and column types
+    r#"ALTER TABLE user_options ALTER COLUMN comment_display_mode SET DEFAULT 1"#,
+    r#"ALTER TABLE user_options ALTER COLUMN username_color TYPE character varying"#,
+    r#"ALTER TABLE dm_attachments ALTER COLUMN expires_at SET DEFAULT (now() + '90 days'::interval)"#,
+    // no longer used: old views over items, tag aliases, the tags_nsfp table (NSFP tags are `nsfp` in
+    // the config), the old Node passkey table (passkeys live in webauthn_credentials) and versioned TOS
+    r#"DROP VIEW IF EXISTS items_li"#,
+    r#"DROP VIEW IF EXISTS items_sfw"#,
+    r#"DROP TABLE IF EXISTS tags_nsfp"#,
+    r#"DROP TABLE IF EXISTS tags_alias"#,
+    r#"DROP TABLE IF EXISTS passkey_credentials"#,
+    r#"DROP TABLE IF EXISTS user_tos_first_seen"#,
+    r#"DROP TABLE IF EXISTS user_tos_acceptance"#,
+    r#"DROP TABLE IF EXISTS tos_versions"#,
+    // plain indexes that repeat the index of a UNIQUE constraint (dropped only while that constraint exists)
+    r#"DO $$ DECLARE p text[]; BEGIN
+      FOREACH p SLICE 1 IN ARRAY ARRAY[
+        ['idx_items_slug', 'items_slug_key'],
+        ['idx_anon_identities_credential_id', 'anon_identities_credential_id_key'],
+        ['idx_anon_identities_fingerprint', 'anon_identities_fingerprint_key'],
+        ['idx_anon_identities_pubkey', 'anon_identities_pubkey_key'],
+        ['idx_banned_fp_fp', 'banned_fingerprints_fingerprint_key'],
+        ['idx_banned_hw_fp', 'banned_hardware_fingerprints_hw_fingerprint_key'],
+        ['idx_banned_ips_ip', 'banned_ips_ip_key'],
+        ['idx_comment_polls_comment_id', 'comment_polls_comment_id_key'],
+        ['idx_link_token_token', 'link_token_token_key'],
+        ['idx_user_api_keys_api_key', 'user_api_keys_api_key_key']
+      ] LOOP
+        IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = p[2] AND connamespace = 'public'::regnamespace) THEN
+          EXECUTE format('DROP INDEX IF EXISTS public.%I', p[1]);
+        END IF;
+      END LOOP;
+    END $$"#,
+    r#"DROP INDEX IF EXISTS idx_user_halls_assign_item_id"#,
+    r#"DROP INDEX IF EXISTS idx_user_halls_assign_user_id"#,
 ];
 
 #[cfg(test)]

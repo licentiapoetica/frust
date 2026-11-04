@@ -14,14 +14,11 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 DROP PUBLICATION IF EXISTS alltables;
+ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS webauthn_credentials_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_admin_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_video_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.user_tos_first_seen DROP CONSTRAINT IF EXISTS user_tos_first_seen_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.user_tos_first_seen DROP CONSTRAINT IF EXISTS user_tos_first_seen_tos_version_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.user_tos_acceptance DROP CONSTRAINT IF EXISTS user_tos_acceptance_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.user_tos_acceptance DROP CONSTRAINT IF EXISTS user_tos_acceptance_tos_version_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_sessions DROP CONSTRAINT IF EXISTS user_sessions_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_pubkeys DROP CONSTRAINT IF EXISTS user_pubkeys_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_options DROP CONSTRAINT IF EXISTS user_options_user_id_fkey;
@@ -36,11 +33,9 @@ ALTER TABLE IF EXISTS ONLY public.user_dm_keyvault DROP CONSTRAINT IF EXISTS use
 ALTER TABLE IF EXISTS ONLY public.user_conversation_states DROP CONSTRAINT IF EXISTS user_conversation_states_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_conversation_states DROP CONSTRAINT IF EXISTS user_conversation_states_other_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_api_keys DROP CONSTRAINT IF EXISTS user_api_keys_user_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.tos_versions DROP CONSTRAINT IF EXISTS tos_versions_created_by_fkey;
 ALTER TABLE IF EXISTS ONLY public.tags_assign DROP CONSTRAINT IF EXISTS tags_assign_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.tags_assign DROP CONSTRAINT IF EXISTS tags_assign_tag_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.tags_assign DROP CONSTRAINT IF EXISTS tags_assign_item_id_fkey;
-ALTER TABLE IF EXISTS ONLY public.tags_alias DROP CONSTRAINT IF EXISTS tags_alias_tag_orig_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.reports DROP CONSTRAINT IF EXISTS reports_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.reports DROP CONSTRAINT IF EXISTS reports_resolved_by_fkey;
 ALTER TABLE IF EXISTS ONLY public.reports DROP CONSTRAINT IF EXISTS reports_reporter_id_fkey;
@@ -79,25 +74,21 @@ ALTER TABLE IF EXISTS ONLY public.comment_files DROP CONSTRAINT IF EXISTS commen
 DROP TRIGGER IF EXISTS trigger_notify_private_message ON public.private_messages;
 DROP TRIGGER IF EXISTS trigger_notify_notification ON public.notifications;
 DROP TRIGGER IF EXISTS trigger_notify_activity ON public.comments;
-DROP TRIGGER IF EXISTS trg_comments_xd_score ON public.comments;
+
 DROP TRIGGER IF EXISTS tags_bu ON public.tags;
 DROP TRIGGER IF EXISTS tags_bi ON public.tags;
 DROP TRIGGER IF EXISTS tags_assign_ad ON public.tags_assign;
 DROP TRIGGER IF EXISTS global_chat_notify ON public.global_chat;
-DROP INDEX IF EXISTS public.user_tos_acceptance_version_idx;
-DROP INDEX IF EXISTS public.user_tos_acceptance_user_idx;
-DROP INDEX IF EXISTS public.tos_versions_is_active_idx;
 DROP INDEX IF EXISTS public.tags_assign_tag_id_idx;
 DROP INDEX IF EXISTS public.items_phash;
+DROP INDEX IF EXISTS public.idx_webauthn_credentials_user_id;
 DROP INDEX IF EXISTS public.idx_user_warnings_user_status;
-DROP INDEX IF EXISTS public.idx_user_tos_first_seen_version;
 DROP INDEX IF EXISTS public.idx_user_last_seen;
 DROP INDEX IF EXISTS public.idx_user_ips_user_id;
 DROP INDEX IF EXISTS public.idx_user_halls_user_id;
 DROP INDEX IF EXISTS public.idx_user_halls_assign_item;
 DROP INDEX IF EXISTS public.idx_user_halls_assign_hall;
 DROP INDEX IF EXISTS public.idx_user_emoji_favorites_user_id;
-DROP INDEX IF EXISTS public.idx_user_api_keys_api_key;
 DROP INDEX IF EXISTS public.idx_user_alias_userid;
 DROP INDEX IF EXISTS public.idx_user_alias_type;
 DROP INDEX IF EXISTS public.idx_user_alias_alias;
@@ -110,11 +101,9 @@ DROP INDEX IF EXISTS public.idx_notifications_user_id;
 DROP INDEX IF EXISTS public.idx_notifications_unread;
 DROP INDEX IF EXISTS public.idx_login_attempts_username_time;
 DROP INDEX IF EXISTS public.idx_login_attempts_ip_time;
-DROP INDEX IF EXISTS public.idx_link_token_token;
-DROP INDEX IF EXISTS public.idx_items_xd_score;
+
 DROP INDEX IF EXISTS public.idx_items_username_lower;
 DROP INDEX IF EXISTS public.idx_items_username;
-DROP INDEX IF EXISTS public.idx_items_slug;
 DROP INDEX IF EXISTS public.idx_items_pinned_id;
 DROP INDEX IF EXISTS public.idx_items_is_purged;
 DROP INDEX IF EXISTS public.idx_items_is_deleted;
@@ -130,7 +119,6 @@ DROP INDEX IF EXISTS public.idx_discord_queue_sent;
 DROP INDEX IF EXISTS public.idx_comments_user_id;
 DROP INDEX IF EXISTS public.idx_comments_item_id;
 DROP INDEX IF EXISTS public.idx_comments_is_pinned;
-DROP INDEX IF EXISTS public.idx_comment_polls_comment_id;
 DROP INDEX IF EXISTS public.idx_comment_poll_votes_user;
 DROP INDEX IF EXISTS public.idx_comment_poll_votes_poll;
 DROP INDEX IF EXISTS public.idx_comment_poll_options_poll;
@@ -142,10 +130,10 @@ DROP INDEX IF EXISTS public.idx_audit_log_action;
 DROP INDEX IF EXISTS public.custom_emojis_pack_id_idx;
 ALTER TABLE IF EXISTS ONLY public.wordfilter DROP CONSTRAINT IF EXISTS wordfilter_word_key;
 ALTER TABLE IF EXISTS ONLY public.wordfilter DROP CONSTRAINT IF EXISTS wordfilter_pkey;
+ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS webauthn_credentials_pkey;
+ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS webauthn_credentials_cred_id_key;
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_pkey;
-ALTER TABLE IF EXISTS ONLY public.user_tos_first_seen DROP CONSTRAINT IF EXISTS user_tos_first_seen_pkey;
-ALTER TABLE IF EXISTS ONLY public.user_tos_acceptance DROP CONSTRAINT IF EXISTS user_tos_acceptance_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_pubkeys DROP CONSTRAINT IF EXISTS user_pubkeys_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_options DROP CONSTRAINT IF EXISTS user_options_user_id;
 ALTER TABLE IF EXISTS ONLY public."user" DROP CONSTRAINT IF EXISTS user_name_unique;
@@ -161,12 +149,9 @@ ALTER TABLE IF EXISTS ONLY public.user_dm_keyvault DROP CONSTRAINT IF EXISTS use
 ALTER TABLE IF EXISTS ONLY public.user_conversation_states DROP CONSTRAINT IF EXISTS user_conversation_states_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_api_keys DROP CONSTRAINT IF EXISTS user_api_keys_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_api_keys DROP CONSTRAINT IF EXISTS user_api_keys_api_key_key;
-ALTER TABLE IF EXISTS ONLY public.tos_versions DROP CONSTRAINT IF EXISTS tos_versions_pkey;
 ALTER TABLE IF EXISTS ONLY public.tags DROP CONSTRAINT IF EXISTS tags_id;
 ALTER TABLE IF EXISTS ONLY public.tags_assign DROP CONSTRAINT IF EXISTS tags_assign_item_id_tag_id_unique;
 ALTER TABLE IF EXISTS ONLY public.tags_assign DROP CONSTRAINT IF EXISTS tags_assign_item_id_tag_id_primary;
-ALTER TABLE IF EXISTS ONLY public.tags_alias DROP CONSTRAINT IF EXISTS tags_alias_tag_orig_id;
-ALTER TABLE IF EXISTS ONLY public.tags_alias DROP CONSTRAINT IF EXISTS tags_alias_tag_alias_tag_orig_id;
 ALTER TABLE IF EXISTS ONLY public.sticker_packs DROP CONSTRAINT IF EXISTS sticker_packs_tg_name_key;
 ALTER TABLE IF EXISTS ONLY public.sticker_packs DROP CONSTRAINT IF EXISTS sticker_packs_pkey;
 ALTER TABLE IF EXISTS ONLY public.site_settings DROP CONSTRAINT IF EXISTS site_settings_pkey;
@@ -207,10 +192,10 @@ ALTER TABLE IF EXISTS ONLY public.comment_poll_options DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.comment_files DROP CONSTRAINT IF EXISTS comment_files_pkey;
 ALTER TABLE IF EXISTS ONLY public.audit_log DROP CONSTRAINT IF EXISTS audit_log_pkey;
 ALTER TABLE IF EXISTS public.wordfilter ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.webauthn_credentials ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.user_warnings ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.user_ips ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.user_halls ALTER COLUMN id DROP DEFAULT;
-ALTER TABLE IF EXISTS public.tos_versions ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.sticker_packs ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.reports ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.private_messages ALTER COLUMN id DROP DEFAULT;
@@ -232,11 +217,11 @@ ALTER TABLE IF EXISTS public.comment_files ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.audit_log ALTER COLUMN id DROP DEFAULT;
 DROP SEQUENCE IF EXISTS public.wordfilter_id_seq;
 DROP TABLE IF EXISTS public.wordfilter;
+DROP SEQUENCE IF EXISTS public.webauthn_credentials_id_seq;
+DROP TABLE IF EXISTS public.webauthn_credentials;
 DROP SEQUENCE IF EXISTS public.user_warnings_id_seq;
 DROP TABLE IF EXISTS public.user_warnings;
 DROP TABLE IF EXISTS public.user_video_views;
-DROP TABLE IF EXISTS public.user_tos_first_seen;
-DROP TABLE IF EXISTS public.user_tos_acceptance;
 DROP TABLE IF EXISTS public.user_sessions;
 DROP SEQUENCE IF EXISTS public.user_sessions_id_seq;
 DROP TABLE IF EXISTS public.user_pubkeys;
@@ -253,9 +238,6 @@ DROP TABLE IF EXISTS public.user_api_keys;
 DROP TABLE IF EXISTS public.user_alias;
 DROP TABLE IF EXISTS public."user";
 DROP SEQUENCE IF EXISTS public.user_id_seq;
-DROP SEQUENCE IF EXISTS public.tos_versions_id_seq;
-DROP TABLE IF EXISTS public.tos_versions;
-DROP TABLE IF EXISTS public.tags_alias;
 DROP TABLE IF EXISTS public.tags;
 DROP SEQUENCE IF EXISTS public.tags_id_seq;
 DROP SEQUENCE IF EXISTS public.sticker_packs_id_seq;
@@ -274,10 +256,7 @@ DROP SEQUENCE IF EXISTS public.login_attempts_id_seq;
 DROP TABLE IF EXISTS public.login_attempts;
 DROP SEQUENCE IF EXISTS public.link_token_id_seq;
 DROP TABLE IF EXISTS public.link_token;
-DROP VIEW IF EXISTS public.items_sfw;
-DROP TABLE IF EXISTS public.tags_nsfp;
 DROP TABLE IF EXISTS public.tags_assign;
-DROP VIEW IF EXISTS public.items_li;
 DROP TABLE IF EXISTS public.items;
 DROP SEQUENCE IF EXISTS public.items_id_seq;
 DROP SEQUENCE IF EXISTS public.invite_tokens_id_seq;
@@ -308,9 +287,9 @@ DROP SEQUENCE IF EXISTS public.comment_files_id_seq;
 DROP TABLE IF EXISTS public.comment_files;
 DROP SEQUENCE IF EXISTS public.audit_log_id_seq;
 DROP TABLE IF EXISTS public.audit_log;
-DROP FUNCTION IF EXISTS public.update_item_xd_score(p_item_id bigint);
+
 DROP FUNCTION IF EXISTS public.unaccent_text(text);
-DROP FUNCTION IF EXISTS public.trg_update_xd_score();
+
 DROP FUNCTION IF EXISTS public.slugify(v text);
 DROP FUNCTION IF EXISTS public.notify_private_message();
 DROP FUNCTION IF EXISTS public.notify_notification();
@@ -478,23 +457,6 @@ END;
 $$;
 
 
---
--- Name: trg_update_xd_score(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.trg_update_xd_score() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    IF TG_OP = 'DELETE' THEN
-        PERFORM update_item_xd_score(OLD.item_id);
-    ELSE
-        PERFORM update_item_xd_score(NEW.item_id);
-    END IF;
-    RETURN NULL;
-END;
-$$;
-
 
 --
 -- Name: unaccent_text(text); Type: FUNCTION; Schema: public; Owner: -
@@ -511,24 +473,6 @@ CREATE FUNCTION public.unaccent_text(text) RETURNS text
   --SELECT ''::text;
 $_$;
 
-
---
--- Name: update_item_xd_score(bigint); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.update_item_xd_score(p_item_id bigint) RETURNS void
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    UPDATE public.items SET xd_score = (
-        SELECT COALESCE(SUM(length(m[1])), 0)
-        FROM public.comments c
-        CROSS JOIN LATERAL regexp_matches(c.content, 'x(D+)', 'gi') AS m
-        WHERE c.item_id = p_item_id AND c.is_deleted = false
-    )
-    WHERE id = p_item_id;
-END;
-$$;
 
 
 SET default_tablespace = '';
@@ -1033,7 +977,6 @@ CREATE TABLE public.items (
     has_coverart boolean DEFAULT false,
     is_pinned boolean DEFAULT false,
     is_oc boolean DEFAULT false,
-    xd_score integer DEFAULT 0 NOT NULL,
     original_filename text,
     title text,
     width integer,
@@ -1059,23 +1002,6 @@ COMMENT ON COLUMN public.items.dest IS 'filename';
 
 
 --
--- Name: items_li; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.items_li AS
- SELECT NULL::integer AS id,
-    NULL::character varying(255) AS src,
-    NULL::character varying(40) AS dest,
-    NULL::character varying(100) AS mime,
-    NULL::integer AS size,
-    NULL::character varying(255) AS checksum,
-    NULL::character varying(40) AS username,
-    NULL::character varying(255) AS userchannel,
-    NULL::character varying(40) AS usernetwork,
-    NULL::integer AS stamp;
-
-
---
 -- Name: tags_assign; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1084,50 +1010,6 @@ CREATE TABLE public.tags_assign (
     tag_id integer NOT NULL,
     user_id integer DEFAULT 10 NOT NULL
 );
-
-
---
--- Name: tags_nsfp; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.tags_nsfp (
-    id integer NOT NULL
-);
-
-
---
--- Name: items_sfw; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.items_sfw AS
- SELECT ( SELECT
-                CASE
-                    WHEN (tags_assign.tag_id > 0) THEN tags_assign.tag_id
-                    ELSE 0
-                END AS "case"
-           FROM public.tags_assign
-          WHERE ((tags_assign.tag_id = ANY (ARRAY[1, 2])) AND (tags_assign.item_id = items.id))) AS sfw,
-    ( SELECT
-                CASE
-                    WHEN (tags_assign.tag_id > 0) THEN 1
-                    ELSE 0
-                END AS "case"
-           FROM public.tags_assign
-          WHERE ((tags_assign.tag_id IN ( SELECT tags_nsfp.id
-                   FROM public.tags_nsfp)) AND (tags_assign.item_id = items.id))
-         LIMIT 1) AS nsfp,
-    id,
-    src,
-    dest,
-    mime,
-    size,
-    checksum,
-    username,
-    userchannel,
-    usernetwork,
-    stamp,
-    active
-   FROM public.items;
 
 
 --
@@ -1422,52 +1304,6 @@ CREATE TABLE public.tags (
 
 
 --
--- Name: tags_alias; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.tags_alias (
-    tag_orig_id integer NOT NULL,
-    tag_alias character varying NOT NULL
-);
-
-
---
--- Name: tos_versions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.tos_versions (
-    id integer NOT NULL,
-    terms_text text DEFAULT ''::text NOT NULL,
-    rules_text text DEFAULT ''::text NOT NULL,
-    diff_from_previous text,
-    version_hash character varying(16) NOT NULL,
-    created_by integer,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    is_active boolean DEFAULT true NOT NULL
-);
-
-
---
--- Name: tos_versions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.tos_versions_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: tos_versions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.tos_versions_id_seq OWNED BY public.tos_versions.id;
-
-
---
 -- Name: user_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -1500,7 +1336,8 @@ CREATE TABLE public."user" (
     reset_token text,
     reset_expires timestamp without time zone,
     last_seen integer DEFAULT 0,
-    force_password_change boolean DEFAULT false
+    force_password_change boolean DEFAULT false,
+    groups text[] DEFAULT '{}'::text[]
 );
 
 
@@ -1668,7 +1505,6 @@ CREATE TABLE public.user_options (
     disable_swiping boolean DEFAULT false,
     description text,
     display_name character varying(60),
-    min_xd_score integer DEFAULT 0 NOT NULL,
     show_background boolean,
     ruffle_volume numeric(3,2) DEFAULT NULL::numeric,
     ruffle_background boolean DEFAULT true,
@@ -1688,7 +1524,8 @@ CREATE TABLE public.user_options (
     banner_size character varying(50) DEFAULT 'cover'::character varying,
     favorites_private boolean DEFAULT false,
     hide_fav_badge boolean DEFAULT false,
-    default_upload_visibility smallint DEFAULT 0
+    default_upload_visibility smallint DEFAULT 0,
+    banner_repeat character varying(50) DEFAULT 'repeat'::character varying
 );
 
 
@@ -1765,29 +1602,6 @@ CREATE TABLE public.user_sessions (
 
 
 --
--- Name: user_tos_acceptance; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.user_tos_acceptance (
-    user_id integer NOT NULL,
-    tos_version_id integer NOT NULL,
-    accepted_at timestamp with time zone DEFAULT now() NOT NULL,
-    accepted_ip text
-);
-
-
---
--- Name: user_tos_first_seen; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.user_tos_first_seen (
-    user_id integer NOT NULL,
-    tos_version_id integer NOT NULL,
-    first_seen_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
 -- Name: user_video_views; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1831,6 +1645,43 @@ CREATE SEQUENCE public.user_warnings_id_seq
 --
 
 ALTER SEQUENCE public.user_warnings_id_seq OWNED BY public.user_warnings.id;
+
+
+--
+-- Name: webauthn_credentials; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.webauthn_credentials (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    cred_id text NOT NULL,
+    user_handle uuid NOT NULL,
+    passkey jsonb NOT NULL,
+    name text,
+    aaguid text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_used timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: webauthn_credentials_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.webauthn_credentials_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: webauthn_credentials_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.webauthn_credentials_id_seq OWNED BY public.webauthn_credentials.id;
 
 
 --
@@ -1999,13 +1850,6 @@ ALTER TABLE ONLY public.sticker_packs ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
--- Name: tos_versions id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tos_versions ALTER COLUMN id SET DEFAULT nextval('public.tos_versions_id_seq'::regclass);
-
-
---
 -- Name: user_halls id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2024,6 +1868,13 @@ ALTER TABLE ONLY public.user_ips ALTER COLUMN id SET DEFAULT nextval('public.use
 --
 
 ALTER TABLE ONLY public.user_warnings ALTER COLUMN id SET DEFAULT nextval('public.user_warnings_id_seq'::regclass);
+
+
+--
+-- Name: webauthn_credentials id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webauthn_credentials ALTER COLUMN id SET DEFAULT nextval('public.webauthn_credentials_id_seq'::regclass);
 
 
 --
@@ -2346,22 +2197,6 @@ ALTER TABLE ONLY public.sticker_packs
 
 
 --
--- Name: tags_alias tags_alias_tag_alias_tag_orig_id; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tags_alias
-    ADD CONSTRAINT tags_alias_tag_alias_tag_orig_id UNIQUE (tag_alias, tag_orig_id);
-
-
---
--- Name: tags_alias tags_alias_tag_orig_id; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tags_alias
-    ADD CONSTRAINT tags_alias_tag_orig_id PRIMARY KEY (tag_orig_id);
-
-
---
 -- Name: tags_assign tags_assign_item_id_tag_id_primary; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2383,14 +2218,6 @@ ALTER TABLE ONLY public.tags_assign
 
 ALTER TABLE ONLY public.tags
     ADD CONSTRAINT tags_id PRIMARY KEY (id);
-
-
---
--- Name: tos_versions tos_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tos_versions
-    ADD CONSTRAINT tos_versions_pkey PRIMARY KEY (id);
 
 
 --
@@ -2514,22 +2341,6 @@ ALTER TABLE ONLY public.user_pubkeys
 
 
 --
--- Name: user_tos_acceptance user_tos_acceptance_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_tos_acceptance
-    ADD CONSTRAINT user_tos_acceptance_pkey PRIMARY KEY (user_id, tos_version_id);
-
-
---
--- Name: user_tos_first_seen user_tos_first_seen_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_tos_first_seen
-    ADD CONSTRAINT user_tos_first_seen_pkey PRIMARY KEY (user_id, tos_version_id);
-
-
---
 -- Name: user_video_views user_video_views_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2543,6 +2354,22 @@ ALTER TABLE ONLY public.user_video_views
 
 ALTER TABLE ONLY public.user_warnings
     ADD CONSTRAINT user_warnings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: webauthn_credentials webauthn_credentials_cred_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webauthn_credentials
+    ADD CONSTRAINT webauthn_credentials_cred_id_key UNIQUE (cred_id);
+
+
+--
+-- Name: webauthn_credentials webauthn_credentials_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webauthn_credentials
+    ADD CONSTRAINT webauthn_credentials_pkey PRIMARY KEY (id);
 
 
 --
@@ -2622,13 +2449,6 @@ CREATE INDEX idx_comment_poll_votes_poll ON public.comment_poll_votes USING btre
 --
 
 CREATE INDEX idx_comment_poll_votes_user ON public.comment_poll_votes USING btree (user_id);
-
-
---
--- Name: idx_comment_polls_comment_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_comment_polls_comment_id ON public.comment_polls USING btree (comment_id);
 
 
 --
@@ -2737,13 +2557,6 @@ CREATE INDEX idx_items_pinned_id ON public.items USING btree (is_pinned DESC, id
 
 
 --
--- Name: idx_items_slug; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_items_slug ON public.items USING btree (slug);
-
-
---
 -- Name: idx_items_username; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2756,19 +2569,6 @@ CREATE INDEX idx_items_username ON public.items USING btree (username);
 
 CREATE INDEX idx_items_username_lower ON public.items USING btree (lower((username)::text));
 
-
---
--- Name: idx_items_xd_score; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_items_xd_score ON public.items USING btree (xd_score) WHERE (xd_score > 0);
-
-
---
--- Name: idx_link_token_token; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_link_token_token ON public.link_token USING btree (token);
 
 
 --
@@ -2856,13 +2656,6 @@ CREATE INDEX idx_user_alias_userid ON public.user_alias USING btree (userid);
 
 
 --
--- Name: idx_user_api_keys_api_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_user_api_keys_api_key ON public.user_api_keys USING btree (api_key);
-
-
---
 -- Name: idx_user_emoji_favorites_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2905,17 +2698,17 @@ CREATE INDEX idx_user_last_seen ON public."user" USING btree (last_seen);
 
 
 --
--- Name: idx_user_tos_first_seen_version; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_user_tos_first_seen_version ON public.user_tos_first_seen USING btree (tos_version_id);
-
-
---
 -- Name: idx_user_warnings_user_status; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_user_warnings_user_status ON public.user_warnings USING btree (user_id, acknowledged);
+
+
+--
+-- Name: idx_webauthn_credentials_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_webauthn_credentials_user_id ON public.webauthn_credentials USING btree (user_id);
 
 
 --
@@ -2930,27 +2723,6 @@ CREATE INDEX items_phash ON public.items USING btree (phash);
 --
 
 CREATE INDEX tags_assign_tag_id_idx ON public.tags_assign USING btree (tag_id);
-
-
---
--- Name: tos_versions_is_active_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX tos_versions_is_active_idx ON public.tos_versions USING btree (is_active);
-
-
---
--- Name: user_tos_acceptance_user_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX user_tos_acceptance_user_idx ON public.user_tos_acceptance USING btree (user_id);
-
-
---
--- Name: user_tos_acceptance_version_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX user_tos_acceptance_version_idx ON public.user_tos_acceptance USING btree (tos_version_id);
 
 
 --
@@ -2980,12 +2752,6 @@ CREATE TRIGGER tags_bi BEFORE INSERT ON public.tags FOR EACH ROW EXECUTE FUNCTIO
 
 CREATE TRIGGER tags_bu BEFORE UPDATE ON public.tags FOR EACH ROW EXECUTE FUNCTION public.fill_normalized();
 
-
---
--- Name: comments trg_comments_xd_score; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_comments_xd_score AFTER INSERT OR DELETE OR UPDATE OF content, is_deleted ON public.comments FOR EACH ROW EXECUTE FUNCTION public.trg_update_xd_score();
 
 
 --
@@ -3290,14 +3056,6 @@ ALTER TABLE ONLY public.reports
 
 
 --
--- Name: tags_alias tags_alias_tag_orig_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tags_alias
-    ADD CONSTRAINT tags_alias_tag_orig_id_fkey FOREIGN KEY (tag_orig_id) REFERENCES public.tags(id) ON DELETE CASCADE;
-
-
---
 -- Name: tags_assign tags_assign_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3319,14 +3077,6 @@ ALTER TABLE ONLY public.tags_assign
 
 ALTER TABLE ONLY public.tags_assign
     ADD CONSTRAINT tags_assign_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE SET DEFAULT;
-
-
---
--- Name: tos_versions tos_versions_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.tos_versions
-    ADD CONSTRAINT tos_versions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public."user"(id) ON DELETE SET NULL;
 
 
 --
@@ -3442,38 +3192,6 @@ ALTER TABLE ONLY public.user_sessions
 
 
 --
--- Name: user_tos_acceptance user_tos_acceptance_tos_version_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_tos_acceptance
-    ADD CONSTRAINT user_tos_acceptance_tos_version_id_fkey FOREIGN KEY (tos_version_id) REFERENCES public.tos_versions(id) ON DELETE CASCADE;
-
-
---
--- Name: user_tos_acceptance user_tos_acceptance_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_tos_acceptance
-    ADD CONSTRAINT user_tos_acceptance_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE;
-
-
---
--- Name: user_tos_first_seen user_tos_first_seen_tos_version_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_tos_first_seen
-    ADD CONSTRAINT user_tos_first_seen_tos_version_id_fkey FOREIGN KEY (tos_version_id) REFERENCES public.tos_versions(id) ON DELETE CASCADE;
-
-
---
--- Name: user_tos_first_seen user_tos_first_seen_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.user_tos_first_seen
-    ADD CONSTRAINT user_tos_first_seen_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE;
-
-
---
 -- Name: user_video_views user_video_views_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3487,6 +3205,14 @@ ALTER TABLE ONLY public.user_video_views
 
 ALTER TABLE ONLY public.user_video_views
     ADD CONSTRAINT user_video_views_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: webauthn_credentials webauthn_credentials_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webauthn_credentials
+    ADD CONSTRAINT webauthn_credentials_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE;
 
 
 --
@@ -3524,27 +3250,8 @@ CREATE TABLE IF NOT EXISTS public.anon_identities (
     hw_fingerprint VARCHAR(128)
 );
 
-CREATE INDEX IF NOT EXISTS idx_anon_identities_pubkey ON public.anon_identities(pubkey);
-CREATE INDEX IF NOT EXISTS idx_anon_identities_fingerprint ON public.anon_identities(fingerprint);
 CREATE INDEX IF NOT EXISTS idx_anon_identities_user_id ON public.anon_identities(user_id);
-CREATE INDEX IF NOT EXISTS idx_anon_identities_credential_id ON public.anon_identities(credential_id);
 CREATE INDEX IF NOT EXISTS idx_anon_identities_hw ON public.anon_identities(hw_fingerprint);
-
--- Migration: passkey_credentials
-CREATE TABLE IF NOT EXISTS public.passkey_credentials (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES public."user"(id) ON DELETE CASCADE,
-    credential_id TEXT NOT NULL UNIQUE,
-    public_key_spki TEXT NOT NULL,
-    sign_count BIGINT NOT NULL DEFAULT 0,
-    aaguid TEXT,
-    name TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_used TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_passkey_credential_id ON public.passkey_credentials(credential_id);
-CREATE INDEX IF NOT EXISTS idx_passkey_user_id ON public.passkey_credentials(user_id);
 
 -- Migration: anon_activity_log and ban tables
 CREATE TABLE IF NOT EXISTS anon_activity_log (
@@ -3554,7 +3261,7 @@ CREATE TABLE IF NOT EXISTS anon_activity_log (
     hw_fingerprint VARCHAR(128),
     action VARCHAR(64) NOT NULL,
     target_id INT,
-    ip VARCHAR(128) NOT NULL,
+    ip VARCHAR(128),
     user_agent TEXT,
     details JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -3576,7 +3283,6 @@ CREATE TABLE IF NOT EXISTS banned_ips (
     expires_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX IF NOT EXISTS idx_banned_ips_ip ON banned_ips (ip);
 CREATE INDEX IF NOT EXISTS idx_banned_ips_hash ON banned_ips (ip_hash);
 
 CREATE TABLE IF NOT EXISTS banned_fingerprints (
@@ -3589,7 +3295,6 @@ CREATE TABLE IF NOT EXISTS banned_fingerprints (
     expires_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX IF NOT EXISTS idx_banned_fp_fp ON banned_fingerprints (fingerprint);
 
 CREATE TABLE IF NOT EXISTS banned_hardware_fingerprints (
     id SERIAL PRIMARY KEY,
@@ -3600,7 +3305,6 @@ CREATE TABLE IF NOT EXISTS banned_hardware_fingerprints (
     expires_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_banned_hw_fp ON banned_hardware_fingerprints(hw_fingerprint);
 CREATE INDEX IF NOT EXISTS idx_banned_hw_expires ON banned_hardware_fingerprints(expires_at);
 
 -- Add IP columns to comments/items if missing
