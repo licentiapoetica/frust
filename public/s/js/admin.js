@@ -375,11 +375,9 @@
           if (isAnonymized || isAnon) {
             selfBadge.className = 'ghost-fav';
             selfBadge.setAttribute('tooltip', 'anonymous');
-            selfBadge.style.cursor = 'default';
             const img = document.createElement('img');
             img.src = '/a/default.png';
-            img.style.height = "32px";
-            img.style.width = "32px";
+            img.className = 'item-fav-avatar';
             selfBadge.appendChild(img);
           } else {
             selfBadge.href = `/user/${currentUser}`;
@@ -388,8 +386,7 @@
             const avatarFile = window.f0ckSession?.avatar_file;
             const avatar = window.f0ckSession?.avatar;
             img.src = avatarFile ? `/a/${avatarFile}` : (avatar ? `/t/${avatar}.webp` : '/a/default.png');
-            img.style.height = "32px";
-            img.style.width = "32px";
+            img.className = 'item-fav-avatar';
             if (window.f0ckSession?.username_color) img.style.borderColor = window.f0ckSession.username_color;
             selfBadge.appendChild(img);
           }
@@ -498,12 +495,10 @@
                   a.className = 'ghost-fav';
                   a.setAttribute('tooltip', '?');
                   a.setAttribute('flow', 'up');
-                  a.style.cursor = 'default';
 
                   const img = document.createElement('img');
                   img.src = '/s/img/ghost_fav.svg';
-                  img.style.height = "32px";
-                  img.style.width = "32px";
+                  img.className = 'item-fav-avatar';
 
                   a.appendChild(img);
                   fragment.appendChild(a);
@@ -513,12 +508,10 @@
                   if (isSelf) a.dataset.self = 'true';
                   a.setAttribute('tooltip', 'anonymous');
                   a.setAttribute('flow', 'up');
-                  a.style.cursor = 'default';
 
                   const img = document.createElement('img');
                   img.src = '/a/default.png';
-                  img.style.height = "32px";
-                  img.style.width = "32px";
+                  img.className = 'item-fav-avatar';
 
                   a.appendChild(img);
                   fragment.appendChild(a);
@@ -531,8 +524,7 @@
 
                   const img = document.createElement('img');
                   img.src = f.avatar_file ? `/a/${f.avatar_file}` : (f.avatar ? `/t/${f.avatar}.webp` : '/a/default.png');
-                  img.style.height = "32px";
-                  img.style.width = "32px";
+                  img.className = 'item-fav-avatar';
                   if (f.username_color) img.style.borderColor = f.username_color;
 
                   a.appendChild(img);
