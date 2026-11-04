@@ -28858,11 +28858,6 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   font-weight: 600;
 }
 
-/* Hidden (451) item: red ban icon; f0ckm.js toggles .active together with the same inline colour */
-i#a_unavailable.iconset.active {
-  color: var(--danger, #ff4444);
-}
-
 /* Favourite avatars (a user's colour stays an inline border-color: f0ckm.js sets/removes it live) */
 #favs > a > img.item-fav-avatar {
   height: 32px;

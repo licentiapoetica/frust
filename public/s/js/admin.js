@@ -789,69 +789,10 @@
       deleteEvent(e);
     } else if (target.closest("#a_pin")) {
       pinButtonEvent(e);
-    } else if (target.closest("#a_unavailable")) {
-      unavailableButtonEvent(e);
     } else if (target.closest("#a_favo")) {
       toggleFavEvent(e);
     }
   });
-
-  const unavailableButtonEvent = async e => {
-    if (e) e.preventDefault();
-    const ctx = getContext();
-    if (!ctx) return;
-    const { postid } = ctx;
-
-    const unavBtn = document.querySelector('#a_unavailable');
-    if (!unavBtn) return;
-
-    const currentVis = parseInt(unavBtn.getAttribute('data-visibility') || '0', 10);
-    const willBeUnavailable = currentVis !== 3;
-    const targetVis = willBeUnavailable ? 3 : 0;
-    const actionText = willBeUnavailable ? 'Make Unavailable (serves HTTP 451 to non-logged in visitors)' : 'Make Available (Public)';
-
-    const proceed = async () => {
-      try {
-        const res = await (await fetch('/api/v2/item/visibility', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRF-Token': window.f0ckSession?.csrf_token 
-          },
-          body: new URLSearchParams({ postid, id: postid, visibility: targetVis })
-        })).json();
-
-        if (res.success) {
-          const isNowUnav = res.visibility === 3;
-          unavBtn.setAttribute('data-visibility', res.visibility);
-          unavBtn.classList.toggle('active', isNowUnav);
-          unavBtn.style.color = isNowUnav ? 'var(--danger, #ff4444)' : '';
-          unavBtn.setAttribute('title', isNowUnav ? 'Make Available (Public)' : 'Make Unavailable (451)');
-
-          const infoVisLabel = document.getElementById('info-visibility-label');
-          if (infoVisLabel) {
-            infoVisLabel.innerHTML = isNowUnav
-              ? '<i class="fa-solid fa-ban" style="color: var(--color-danger, #ff4444);"></i> Unavailable (451)'
-              : '<i class="fa-solid fa-globe" style="color: var(--color-success, #00C851);"></i> Public';
-          }
-          const infoVisBtn = document.getElementById('info-visibility-edit-btn');
-          if (infoVisBtn) infoVisBtn.dataset.visibility = res.visibility;
-
-          window.flashMessage(isNowUnav ? 'ITEM MARKED UNAVAILABLE (451)' : 'ITEM RESTORED TO PUBLIC');
-        } else {
-          alert('Error: ' + (res.msg || 'Failed to update visibility'));
-        }
-      } catch (err) {
-        console.error('Unavailable error:', err);
-      }
-    };
-
-    if (typeof ModAction !== 'undefined' && ModAction.confirm) {
-      ModAction.confirm('Item Visibility', `${actionText} for post <strong>#${postid}</strong>?`, proceed);
-    } else if (confirm(`${actionText} for post #${postid}?`)) {
-      proceed();
-    }
-  };
 
   const pinButtonEvent = async e => {
     if (e) e.preventDefault();

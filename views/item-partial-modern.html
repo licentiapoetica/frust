@@ -190,7 +190,6 @@
                 {% endif %}
                 {% if is_mod_or_admin %}
                 <i class="iconset fa-solid fa-thumbtack{{ (" active" if item.is_pinned else "") }}" id="a_pin" data-pinned="{{ item.is_pinned }}" title="{{ ("Unpin from main" if item.is_pinned else "Pin to main") }}"></i>
-                <i class="iconset fa-solid fa-ban{{ (" active" if item.visibility == 3 else "") }}" id="a_unavailable" data-item-id="{{ item.id }}" data-visibility="{{ (item.visibility or 0) }}" title="{{ ("Make Available (Public)" if item.visibility == 3 else "Make Unavailable (451)") }}"></i>
                 <i class="iconset fa-solid fa-xmark" id="a_delete" title="Delete"></i>
                 {% endif %}
                 {% else %}

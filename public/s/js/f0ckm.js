@@ -23220,14 +23220,6 @@ document.addEventListener('click', (e) => {
                   visBtn.setAttribute('title', `Visibility: ${titles[visVal]} (Click to change)`);
               }
 
-              const unavBtn = document.getElementById('a_unavailable');
-              if (unavBtn) {
-                  unavBtn.dataset.visibility = visVal;
-                  unavBtn.classList.toggle('active', visVal === 3);
-                  unavBtn.style.color = visVal === 3 ? 'var(--danger, #ff4444)' : '';
-                  unavBtn.setAttribute('title', visVal === 3 ? 'Make Available (Public)' : 'Make Unavailable (451)');
-              }
-
               const infoVisBtn = document.getElementById('info-visibility-edit-btn');
               if (infoVisBtn) {
                   infoVisBtn.dataset.visibility = visVal;
