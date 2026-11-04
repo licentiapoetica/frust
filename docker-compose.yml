@@ -34,6 +34,7 @@ services:
       - ./f0ckm-data/koepfe/:/opt/f0ckm/public/s/koepfe/:Z
       - ./f0ckm-data/import/:/opt/f0ckm/f0ckm-data/import/:Z
       - ./f0ckm-data/s/img/navbar/:/opt/f0ckm/public/s/img/navbar/:Z
+      - ./f0ckm-data/s/img/manifest/:/opt/f0ckm/public/s/img/manifest/:Z
 
     environment:
       # GIT_HASH is baked into the image at build time (build arg); don't override it here
@@ -78,7 +79,8 @@ services:
         cd /opt/f0ckm
         for d in public/a public/b public/c public/e public/t deleted pending \
                  public/s/emojis public/memes public/ca tmp logs public/tag_cache public/s/fonts \
-                 public/hall_cache public/hall_custom public/s/koepfe f0ckm-data/import public/s/img/navbar; do
+                 public/hall_cache public/hall_custom public/s/koepfe f0ckm-data/import public/s/img/navbar \
+                 public/s/img/manifest; do
           if [ "$$(stat -c %u:%g "$$d")" != "$$OWNER" ]; then
             echo "chown $$OWNER $$d"
             chown -R "$$OWNER" "$$d"

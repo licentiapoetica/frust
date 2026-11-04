@@ -267,7 +267,9 @@ websrv:
     memes: /memes
 # PWA web app manifest served at /manifest.json. Any Web App Manifest key works here and
 # replaces the default; set a key to null to drop it. Defaults: name/short_name = main.url.domain,
-# description = websrv.description, icon = websrv.custom_favicon.
+# description = websrv.description, icons = 192x192 + 512x512 PNGs made from the favicon
+# (admin upload or websrv.custom_favicon, needs ImageMagick; remade when it changes, stored in
+# public/s/img/manifest/) plus the favicon itself. Setting icons here turns that off.
 # theme_color is also used for <meta name="theme-color">.
 manifest:
   # name: f0ckm
@@ -277,8 +279,8 @@ manifest:
   # background_color: "#000000"
   # theme_color: "#0096ff"
   # icons:
-  #   - { src: /s/img/icon-192.png, sizes: 192x192, type: image/png, purpose: any }
-  #   - { src: /s/img/icon-512.png, sizes: 512x512, type: image/png, purpose: any }
+  #   - { src: /s/img/my-icon-192.png, sizes: 192x192, type: image/png, purpose: any }
+  #   - { src: /s/img/my-icon-512.png, sizes: 512x512, type: image/png, purpose: any }
   # categories: [entertainment, social, memes]
 clients:
   - type: tg

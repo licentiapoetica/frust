@@ -397,6 +397,11 @@ async fn main() -> Result<()> {
         let s = st.clone();
         tokio::spawn(async move { backfill_slugs(&s).await });
     }
+    {
+        // PWA icons (192/512 px) from the favicon, so /manifest.json has them from the start
+        let s = st.clone();
+        tokio::spawn(async move { pwa::ensure_icons(&s.cfg(), &s.settings.favicon_url()).await });
+    }
 
     let router = routes::build();
     tracing::info!("[BOOT] {} routes registered", router.len());

@@ -729,7 +729,14 @@ async fn favicon_store(st: &AppState, s: &Session, form: &multipart::Form) -> Re
         return send(json!({ "success": false, "msg": "Upload failed" }), 500);
     }
     crate::social::helpers::audit_log(st, s.id, "update_favicon", "system", "0", Some(json!({ "url": public_url }))).await;
+    refresh_manifest_icons(st);
     send(json!({ "success": true, "url": public_url, "msg": "Favicon updated" }), 200)
+}
+
+/// Remake the PWA icons for the new favicon in the background (/manifest.json would also do it).
+fn refresh_manifest_icons(st: &AppState) {
+    let st = st.clone();
+    tokio::spawn(async move { crate::pwa::ensure_icons(&st.cfg(), &st.settings.favicon_url()).await });
 }
 
 /// Back to the config favicon (`websrv.custom_favicon`, else the built-in one).
@@ -747,6 +754,7 @@ async fn favicon_delete(st: AppState, mut req: Req) -> Res {
         return send(json!({ "success": false, "msg": "Delete failed" }), 500);
     }
     crate::social::helpers::audit_log(&st, s.id, "delete_favicon", "system", "0", Some(json!({}))).await;
+    refresh_manifest_icons(&st);
     let url = if fallback.is_empty() { "/s/img/favicon.gif".to_string() } else { fallback };
     send(json!({ "success": true, "url": url, "msg": "Custom favicon removed" }), 200)
 }
