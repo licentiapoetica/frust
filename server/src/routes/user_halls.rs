@@ -25,6 +25,8 @@ pub fn register(r: &mut Router) {
     r.delete(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/?$", api_delete);
     r.post(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/items\/?$", api_add_item);
     r.delete(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/items\/(?<itemid>\d+)\/?$", api_remove_item);
+    // One form for the halls dialog of an item (works as a plain form without JavaScript)
+    r.post(r"^\/api\/v2\/me\/hall-items\/?$", api_item_form);
     r.post(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/image\/?$", api_image_stub);
     r.delete(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/image\/?$", api_image_delete);
     // index.mjs bypass middleware (multipart upload, needs the raw body)
@@ -537,6 +539,63 @@ async fn api_add_item(st: AppState, mut req: Req) -> Res {
     } else {
         halls::add_item_to_user_hall(&st, hall.i64("id").unwrap_or(0), item_id as i64, uid).await
     };
+    let code = ok_status(&result, 200, 409);
+    jr(result, code)
+}
+
+/// `POST /api/v2/me/hall-items`: the item halls dialog as one plain form (no JavaScript needed).
+/// Fields: `item_id`, `hall` (slug of one of the visitor's halls), `action` ("add" or "remove"),
+/// and `new_name`: with no `hall` picked, "add" creates a hall of that name first.
+async fn api_item_form(st: AppState, mut req: Req) -> Res {
+    if !userhalls_enabled(&st) {
+        return disabled();
+    }
+    let uid = match require_login(&req) {
+        Ok(s) if s.is_anonymous_user() => return jr(json!({ "success": false, "msg": "Login required" }), 401),
+        Ok(s) => s.id,
+        Err(r) => return Ok(r),
+    };
+    let body = req.post_value().await;
+    let field = |k: &str| js_str(body.get(k)).map(|v| v.trim().to_string()).filter(|v| !v.is_empty());
+    let Some(item_id) = field("item_id").and_then(|v| v.parse::<i64>().ok()).filter(|n| *n > 0 && *n <= i32::MAX as i64) else {
+        return jr(json!({ "success": false, "msg": "Missing item_id" }), 400);
+    };
+    let remove = field("action").as_deref() == Some("remove");
+    let mut slug = field("hall").unwrap_or_default();
+    let mut created = None;
+    if slug.is_empty() && !remove {
+        if let Some(name) = field("new_name") {
+            let new_slug = slugify(&name);
+            if new_slug.is_empty() {
+                return jr(json!({ "success": false, "msg": "Name is required" }), 400);
+            }
+            let r = halls::create_user_hall(&st, uid, &name, &new_slug, None).await;
+            if !crate::config::truthy(&r["success"]) {
+                return jr(r, 409);
+            }
+            created = Some(json!({ "slug": new_slug, "name": name }));
+            slug = new_slug;
+        }
+    }
+    if slug.is_empty() {
+        return jr(json!({ "success": false, "msg": "Choose a hall or enter a new name." }), 400);
+    }
+    let Some(hall) = halls::get_user_hall(&st, uid, &slug).await else {
+        return jr(json!({ "success": false, "msg": "Hall not found" }), 404);
+    };
+    let hall_id = hall.i64("id").unwrap_or(0);
+    let mut result = if remove {
+        halls::remove_item_from_user_hall(&st, hall_id, item_id).await
+    } else {
+        halls::add_item_to_user_hall(&st, hall_id, item_id, uid).await
+    };
+    if crate::config::truthy(&result["success"]) {
+        result["msg"] = json!(if remove { "Removed from hall" } else { "Added to hall" });
+        result["hall"] = json!({ "slug": slug, "name": hall.get("name").cloned().unwrap_or(Value::Null) });
+        if let Some(c) = created {
+            result["created"] = c;
+        }
+    }
     let code = ok_status(&result, 200, 409);
     jr(result, code)
 }

@@ -562,6 +562,21 @@ async fn generic(st: AppState, req: Req) -> Res {
 
     if is_item && data["item"].is_object() {
         item_template_flags(&cfg, &mut data, page_session, req.session());
+        // The halls to pick from in the item's halls dialog, rendered with the page so it also works
+        // without JavaScript (frontends/w0bm: partials/hallmodal.html). Site halls for staff, own halls
+        // for members. Full page loads only.
+        if !req.is_xhr() {
+            if let Some(s) = page_session.filter(|s| !s.is_anonymous_user()) {
+                if (s.admin || s.is_moderator) && cfg.enabled("websrv.halls_enabled") {
+                    let rows = sql!("SELECT slug, name FROM halls ORDER BY name ASC").fetch_all(&st.db).await.unwrap_or_default();
+                    data["hall_choices"] = json!(rows);
+                }
+                if cfg.enabled("websrv.userhalls_enabled") {
+                    let rows = sql!("SELECT slug, name, is_private FROM user_halls WHERE user_id = ", s.id as i32, " ORDER BY name ASC").fetch_all(&st.db).await.unwrap_or_default();
+                    data["my_hall_choices"] = json!(rows);
+                }
+            }
+        }
         // Comments for visitors without JavaScript (full page loads only; the SPA uses /api/comments)
         if !req.is_xhr() && cfg.enabled("enable_comments") && (sref.is_some() || !cfg.truthy("main.hide_comments_from_public")) {
             if let Some(item_id) = data["item"]["id"].as_i64() {
