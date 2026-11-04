@@ -225,6 +225,15 @@ html.f0ck-shell .f0ck-shell-page {
    pane) under its fixed navbar. Important declarations of an earlier layer beat later layers and
    unlayered ones, so the overrides sit in f0ck-shell-important, declared before f0ckm. */
 @layer f0ck-shell-important {
+  /* f0ckm's "hidden" helpers must win over frontend CSS such as bootstrap's
+     input[type="file"] { display: block } (the bare avatar/banner file inputs in settings) */
+  .f0ck-shell-page .settings-hidden,
+  .f0ck-shell-page .adm-users-hidden,
+  .f0ck-shell-page .banned-page-hidden,
+  .f0ck-shell-page [hidden] {
+    display: none !important;
+  }
+
   .f0ck-shell-page .pagewrapper {
     height: auto !important;
     margin: 0 !important;
