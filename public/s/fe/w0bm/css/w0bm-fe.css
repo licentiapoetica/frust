@@ -151,6 +151,12 @@ ul.navbar-right > li > a > span.badge.message-badge[hidden] {
 .modal .modal-dialog {
     z-index: 1;
 }
+/* the search dialog near the middle of the screen, not at its top (phones: at the top, above the keyboard) */
+@media (min-width: 768px) {
+    #searchmodal .modal-dialog {
+        margin-top: max(30px, calc(40vh - 120px));
+    }
+}
 .modal-header a.close {
     text-decoration: none;
 }
