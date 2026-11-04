@@ -561,7 +561,14 @@ window.f0ckCommentFx = (html) => {
 //   shown()           the shared scripts' re-init after a swap, as after f0ckm's AJAX loads
 //                     (initMessagesPage, f0ck:contentLoaded)
 window.F0ckPageSwap = (() => {
-  const loaded = new Set([...document.scripts].filter(s => s.src).map(s => s.src));
+  // scripts that ran, by path (a library whose ?v= changed after a deploy still mustn't run twice).
+  // The page's own scripts count once it is parsed: the ones after f0ck-core.js (upload.js,
+  // admin.js, ...) aren't in the document yet when this runs.
+  const srcKey = (src) => { try { return new URL(src, location.href).pathname; } catch { return src; } };
+  const loaded = new Set();
+  const known = () => { for (const s of document.scripts) if (s.src) loaded.add(srcKey(s.src)); };
+  known();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', known, { once: true });
   // elements tail() added: they go again on a page that doesn't have them
   let extras = [];
   const sheetKey = (l) => { try { return new URL(l.getAttribute('href'), location.href).pathname; } catch { return l.getAttribute('href') || ''; } };
@@ -610,14 +617,14 @@ window.F0ckPageSwap = (() => {
     s.addEventListener('load', res, { once: true });
     s.addEventListener('error', res, { once: true });
     old.replaceWith(s);
-    loaded.add(s.src);
+    loaded.add(srcKey(s.src));
   });
   // (only scripts with a src: the templates have no inline scripts)
   const scripts = async (list) => {
     for (const old of list) {
       if (!old.isConnected || !executable(old) || !old.src) continue;
       const page = isPageScript(old);
-      if (loaded.has(old.src) && !page) { old.remove(); continue; }
+      if (loaded.has(srcKey(old.src)) && !page) { old.remove(); continue; }
       await run(old);
     }
   };
@@ -632,7 +639,7 @@ window.F0ckPageSwap = (() => {
     after.forEach((n) => {
       if (n.nodeType !== 1) return;
       if (n.tagName === 'SCRIPT') {
-        if (executable(n) && n.src && !loaded.has(n.src)) {
+        if (executable(n) && n.src && !loaded.has(srcKey(n.src))) {
           const s = document.importNode(n, false);
           document.body.appendChild(s);
           todo.push(s);
