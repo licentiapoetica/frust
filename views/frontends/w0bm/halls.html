@@ -1,9 +1,9 @@
-{#- categories.blade.php: f0ckm halls -#}
+{#- categories.blade.php: f0ckm halls (w0bm called them categories) -#}
 {% extends "frontends/w0bm/layout.html" %}
-{% block title %}Categories - {{ domain }}{% endblock %}
+{% block title %}Halls - {{ domain }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h3>Categories</h3>
+    <h3>Halls</h3>
 </div>
 <div class="extraction_point w0bm-hallgrid" id="categories">
     {% for hall in hallsList %}
@@ -18,7 +18,7 @@
         </div>
     </div>
     {% endfor %}
-    {% if not (hallsList and (hallsList|length)) %}<p><i>No categories yet …</i></p>{% endif %}
+    {% if not (hallsList and (hallsList|length)) %}<p><i>No halls yet …</i></p>{% endif %}
 </div>
 <div class="clearfix"></div>
 <div class="page w0bm-page-bottom">

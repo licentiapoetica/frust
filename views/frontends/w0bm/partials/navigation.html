@@ -17,10 +17,9 @@
 
         <div class=" collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav navbar-left">
+                <li><a href="/tags"><i class="fa fa-tags"></i><span class="hidden-sm"> Tags</span></a></li>
                 {% if halls_enabled %}
-                <li><a href="/halls"><i class="fa fa-clone"></i><span class="hidden-sm"> Categories</span></a></li>
-                {% else %}
-                <li><a href="/tags"><i class="fa fa-clone"></i><span class="hidden-sm"> Tags</span></a></li>
+                <li><a href="/halls"><i class="fa fa-clone"></i><span class="hidden-sm"> Halls</span></a></li>
                 {% endif %}
                 <li><a href="/?view=index"><i class="fa fa-list"></i><span class="hidden-sm"> Index</span></a></li>
                 {% include "frontends/w0bm/partials/themechanger.html" %}

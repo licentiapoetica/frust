@@ -5,5 +5,5 @@
 {% if item.original_filename %}<div>File: {{ item.original_filename }}</div>{% endif %}
 <div>Type: {{ item.mime }}{% if item.mime != "video/youtube" %} ({{ item.size }}){% endif %}</div>
 {% if (item.width and item.height) %}<div>Dimensions: {{ item.width }}×{{ item.height }}</div>{% endif %}
-{% if (halls_enabled and item.halls and (item.halls|length)) %}<div>Category: {% for h in item.halls %}<a href="/h/{{ h.slug }}">{{ h.name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+{% if (halls_enabled and item.halls and (item.halls|length)) %}<div>{{ ("Hall" if (item.halls|length) == 1 else "Halls") }}: {% for h in item.halls %}<a href="/h/{{ h.slug }}">{{ h.name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
 {% if item.expires_at %}<div>Self-destructs {{ item.expires_in }}</div>{% endif %}
