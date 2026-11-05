@@ -178,6 +178,21 @@ pub fn locale_number(f: f64) -> String {
     if neg { format!("-{grouped}") } else { grouped }
 }
 
+/// Python-style methods (pycompat), except that `str.replace` takes any value for the
+/// search and replacement and stringifies it like JS `String.replace` does, so
+/// `.replace("{id}", n.item_slug or n.item_id)` works when the value is a number.
+fn unknown_method(state: &mut State, value: &JValue, method: &str, args: &[JValue]) -> Result<JValue, Error> {
+    if method == "replace" && value.as_str().is_some() && (2..=3).contains(&args.len()) {
+        let args: Vec<JValue> = args
+            .iter()
+            .enumerate()
+            .map(|(i, a)| if i < 2 && a.as_str().is_none() { JValue::from(js_to_string(a)) } else { a.clone() })
+            .collect();
+        return minijinja_contrib::pycompat::unknown_method_callback(state, value, method, &args);
+    }
+    minijinja_contrib::pycompat::unknown_method_callback(state, value, method, args)
+}
+
 fn opt_lang(state: &State, lang: Option<String>) -> Option<String> {
     lang.or_else(|| state.lookup("__date_lang").and_then(|v| v.as_str().map(str::to_string)))
 }
@@ -190,7 +205,7 @@ pub(crate) fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static>
     env.set_formatter(js_formatter);
     env.set_syntax(minijinja::syntax::SyntaxConfig::builder().keep_trailing_newline(true).build().expect("default syntax is valid"));
     minijinja_contrib::add_to_environment(&mut env);
-    env.set_unknown_method_callback(minijinja_contrib::pycompat::unknown_method_callback);
+    env.set_unknown_method_callback(unknown_method);
 
     // t(key, data?) — translation in the page language. Translations are trusted HTML;
     // interpolated values are escaped.
@@ -1067,6 +1082,16 @@ mod tests {
         assert_eq!(locale_number(1234.5), "1,234.5");
         assert_eq!(js_to_string(&JValue::from(3.0)), "3");
         assert_eq!(js_to_string(&JValue::from(vec![1, 2])), "1,2");
+    }
+
+    /// `.replace` takes a number like JS (item id when there is no slug, upload limits).
+    #[test]
+    fn replace_accepts_numbers() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let ctx = serde_json::json!({ "n": { "item_slug": null, "item_id": 42 } });
+        let out = env.render_str(r#"{{ "on #{id}".replace("{id}", (n.item_slug or n.item_id), 1) }}|{{ "a1b".replace(1, "-") }}"#, to_jvalue(&ctx)).unwrap();
+        assert_eq!(out, "on #42|a-b");
     }
 
     /// snippets/comments-static.html (no-JavaScript item comments) renders the thread markup.
