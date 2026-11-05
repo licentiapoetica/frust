@@ -153,8 +153,10 @@ pub async fn get_random_pool(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<
     let rows = p.query.fetch_all(&st.db).await?;
     let mut items = Vec::with_capacity(rows.len());
     let mut id_map = serde_json::Map::new();
+    // slugs only when they're enabled; otherwise the client would put them in the url bar
+    let slugs = crate::settings::enable_item_slugs(&cfg);
     for r in &rows {
-        let slug = r.str("slug").filter(|s| !s.is_empty());
+        let slug = r.str("slug").filter(|s| slugs && !s.is_empty());
         match slug {
             Some(s) => {
                 items.push(json!(s));

@@ -13053,7 +13053,7 @@ window.cancelAnimFrame = (function () {
         }
 
         const _hash = new URL(url, window.location.origin).hash;
-        const itemKey = (window.f0ckSession?.enable_item_slugs !== false && _cachedItem.slug) ? _cachedItem.slug : (_cachedItem.slug || itemid);
+        const itemKey = (window.f0ckSession?.enable_item_slugs !== false && _cachedItem.slug) ? _cachedItem.slug : itemid;
         let _pushUrl = `/${itemKey}`;
         if (isChanUrl) {
           const u = new URL(url, window.location.origin);
@@ -13380,7 +13380,7 @@ window.cancelAnimFrame = (function () {
       // Construct proper History URL (Context Aware)
       // If we inherited context, we should reflect it in the URL
       const hash = new URL(url, window.location.origin).hash;
-      const itemKey = (window.f0ckSession?.enable_item_slugs !== false && responseSlug) ? responseSlug : (responseSlug || itemid);
+      const itemKey = (window.f0ckSession?.enable_item_slugs !== false && responseSlug) ? responseSlug : itemid;
       let pushUrl = `/${itemKey}`;
       // Logic from ajax.mjs context reconstruction:
       if (isChanUrl) {

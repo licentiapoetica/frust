@@ -124,7 +124,7 @@ fn error_json(st: &AppState, req: &Req, data: &Value, itemid: &str, mode: i64, s
     };
     let item = &data["item"];
     let item_id = if crate::config::truthy(&item["id"]) { item["id"].clone() } else { json!(itemid) };
-    let item_slug = if crate::config::truthy(&item["slug"]) {
+    let item_slug = if s::enable_item_slugs(&st.cfg()) && crate::config::truthy(&item["slug"]) {
         item["slug"].clone()
     } else if slug_fallback {
         json!(itemid)
@@ -254,7 +254,7 @@ fn item_envelope(st: &AppState, req: &Req, data: &Value, itemid: &str, numeric_f
         "title": data.get("title").cloned().unwrap_or(Value::Null),
         "id": itemid,
         "numeric_id": numeric_id,
-        "slug": if t("slug") { item["slug"].clone() } else { Value::Null },
+        "slug": if s::enable_item_slugs(&cfg) && t("slug") { item["slug"].clone() } else { Value::Null },
         "page": page,
         "thumb": thumb,
         "mode": mode,
