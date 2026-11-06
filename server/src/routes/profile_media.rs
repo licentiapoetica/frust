@@ -431,7 +431,7 @@ fn form_csrf_ok(s: &Session, form: &multipart::Form) -> bool {
 
 /// A multipart form post without JavaScript names the page to return to in `back` (the request
 /// pipeline only reads it from urlencoded bodies, crate::nojs): answer with that redirect.
-async fn finish_form(st: &AppState, req_ajax: bool, back: Option<String>, resp: Res) -> Res {
+pub(crate) async fn finish_form(st: &AppState, req_ajax: bool, back: Option<String>, resp: Res) -> Res {
     match back.filter(|_| !req_ajax) {
         Some(back) => {
             let resp = resp.unwrap_or_else(|e| e.into_response_for(true));

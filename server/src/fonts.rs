@@ -141,11 +141,7 @@ pub fn brand_css_url(file: &str) -> String {
 /// `.brand-font` class on the navbar brand text uses it; the frontends' CSS files hold that rule).
 /// Empty when no font is set or the font is gone.
 pub fn brand_css(cfg: &Config, file: &str) -> String {
-    let enc = |f: &str| -> String {
-        f.bytes()
-            .map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") })
-            .collect()
-    };
+    let enc = url_enc;
     let faces = faces_json(cfg, Some(file));
     faces
         .as_array()
@@ -171,6 +167,147 @@ pub fn serve_root(cfg: &Config, rel: &str) -> PathBuf {
     }
 }
 
+// ── admin font manager (routes/admin_media/fonts.rs) ────────────────────────
+
+/// Style suffix written into uploaded file names for a CSS weight.
+pub fn weight_name(w: u16) -> &'static str {
+    match w {
+        100 => "Thin",
+        200 => "ExtraLight",
+        300 => "Light",
+        500 => "Medium",
+        600 => "SemiBold",
+        700 => "Bold",
+        800 => "ExtraBold",
+        900 => "Black",
+        _ => "Regular",
+    }
+}
+
+/// The weights the upload form offers.
+pub const WEIGHTS: [u16; 9] = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+
+/// File extension for a font's first bytes; None when it is no single web font (font
+/// collections, anything else). Browsers sanitize fonts themselves (OTS), this only keeps
+/// other files out of the fonts directory.
+pub fn sniff(head: &[u8]) -> Option<&'static str> {
+    match head.get(..4)? {
+        b"wOF2" => Some("woff2"),
+        b"wOFF" => Some("woff"),
+        b"OTTO" => Some("otf"),
+        [0, 1, 0, 0] | b"true" => Some("ttf"),
+        _ => None,
+    }
+}
+
+/// A family name usable in a file name: ASCII letters, digits, `_` and inner `-`, at most 64.
+pub fn clean_family(s: &str) -> String {
+    let s: String = s.chars().filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_')).take(64).collect();
+    s.trim_matches('-').to_string()
+}
+
+/// File name an upload is stored under: `<Family>-<Weight>.<ext>`. The family and weight come from
+/// the form when given, else from the uploaded file's name (`Inter-Bold.ttf` → Inter, 700).
+pub fn upload_name(orig: &str, family: Option<&str>, weight: Option<u16>, ext: &str) -> Option<String> {
+    let base = orig.rsplit(['/', '\\']).next().unwrap_or("");
+    let (orig_family, orig_weight) = split_name(base);
+    let family = clean_family(family.filter(|f| !f.trim().is_empty()).unwrap_or(&orig_family));
+    if family.is_empty() {
+        return None;
+    }
+    Some(format!("{family}-{}.{ext}", weight_name(weight.unwrap_or(orig_weight))))
+}
+
+/// Why `name` can't be stored, if anything: an uploaded file of that name exists, or the family
+/// already has that weight in another file (only the first file of a weight is used). Same name
+/// as a built-in font is fine: the upload replaces it.
+pub fn upload_conflict(cfg: &Config, name: &str) -> Option<String> {
+    if list(&cfg.paths.fonts).iter().any(|f| f == name) {
+        return Some(format!("{name} already exists, delete it first"));
+    }
+    let (family, weight) = split_name(name);
+    all_files(cfg)
+        .into_iter()
+        .filter(|f| f != name)
+        .find(|f| split_name(f) == (family.clone(), weight))
+        .map(|f| format!("{family} already has weight {weight} ({f})"))
+}
+
+/// Whether two font files are the same family and weight (only one of them would be used).
+pub fn same_face(a: &str, b: &str) -> bool {
+    split_name(a) == split_name(b)
+}
+
+/// Whether `name` is an uploaded font (the only kind the font manager deletes).
+pub fn is_uploaded(cfg: &Config, name: &str) -> bool {
+    is_font_file(name) && crate::media::is_plain_name(name) && list(&cfg.paths.fonts).iter().any(|f| f == name)
+}
+
+/// Class/font-family suffix of a family on the font manager page (stable for a name).
+pub fn preview_key(family: &str) -> String {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    family.hash(&mut h);
+    format!("{:x}", h.finish())
+}
+
+fn url_enc(f: &str) -> String {
+    f.bytes().map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") }).collect()
+}
+
+/// Families for the font manager: `[{ name, key, files, faces: [{ file, weight, weight_name, uploaded,
+/// builtin }] }]`. `uploaded` and `builtin` together: an upload replacing a built-in file.
+pub fn admin_json(cfg: &Config) -> Value {
+    let uploaded = list(&cfg.paths.fonts);
+    let builtin = list(&builtin_dir(cfg));
+    // Every file, also a second file of one weight (group() keeps only the first)
+    let mut fams = families(cfg);
+    for f in all_files(cfg) {
+        let (name, weight) = split_name(&f);
+        if let Some(fam) = fams.iter_mut().find(|x| x.name == name) {
+            if !fam.faces.iter().any(|(x, _)| *x == f) {
+                fam.faces.push((f, weight));
+                fam.faces.sort_by_key(|(_, w)| *w);
+            }
+        }
+    }
+    Value::Array(
+        fams.iter()
+            .map(|fam| {
+                json!({
+                    "name": fam.name,
+                    "key": preview_key(&fam.name),
+                    "files": fam.faces.iter().map(|(f, _)| f).collect::<Vec<_>>(),
+                    "faces": fam.faces.iter().map(|(f, w)| json!({
+                        "file": f,
+                        "weight": w,
+                        "weight_name": weight_name(*w),
+                        "uploaded": uploaded.contains(f),
+                        "builtin": builtin.contains(f),
+                    })).collect::<Vec<_>>(),
+                })
+            })
+            .collect(),
+    )
+}
+
+/// `/admin/fonts/preview.css`: an `@font-face` per font as `FontPreview-<key>` and a
+/// `.adm-font-sample-<key>` class using it (see [`preview_key`]).
+pub fn preview_css(cfg: &Config) -> String {
+    let mut css = String::new();
+    for fam in families(cfg) {
+        let key = preview_key(&fam.name);
+        for (f, w) in &fam.faces {
+            css.push_str(&format!(
+                "@font-face {{ font-family: 'FontPreview-{key}'; src: url('/s/fonts/{}'); font-weight: {w}; font-display: swap; }}\n",
+                url_enc(f)
+            ));
+        }
+        css.push_str(&format!(".adm-font-sample-{key} {{ font-family: 'FontPreview-{key}', monospace; }}\n"));
+    }
+    css
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -186,6 +323,30 @@ mod tests {
         assert_eq!(manrope.faces.iter().map(|(_, w)| *w).collect::<Vec<_>>(), [300, 400, 700]);
         assert_eq!(manrope.primary(), "Manrope-Regular.woff2");
         assert_eq!(fams[0].primary(), "Hack.woff");
+    }
+
+    #[test]
+    fn upload_names() {
+        assert_eq!(upload_name("Inter-Bold.ttf", None, None, "ttf").as_deref(), Some("Inter-Bold.ttf"));
+        assert_eq!(upload_name("inter.woff2", None, None, "woff2").as_deref(), Some("inter-Regular.woff2"));
+        assert_eq!(upload_name("x.bin", Some("Open Sans"), Some(300), "otf").as_deref(), Some("OpenSans-Light.otf"));
+        assert_eq!(upload_name("../a/Foo-Black.woff", Some("  "), None, "woff").as_deref(), Some("Foo-Black.woff"));
+        assert_eq!(upload_name("...ttf", None, None, "ttf"), None);
+        assert_eq!(upload_name("ok.ttf", Some("ÄÖÜ"), None, "ttf"), None);
+        // the stored name splits back into the same family and weight
+        let n = upload_name("x", Some("Some-Thing"), Some(600), "ttf").unwrap();
+        assert_eq!(split_name(&n), ("Some-Thing".to_string(), 600));
+    }
+
+    #[test]
+    fn sniffs_font_types() {
+        assert_eq!(sniff(b"wOF2...."), Some("woff2"));
+        assert_eq!(sniff(b"wOFF...."), Some("woff"));
+        assert_eq!(sniff(b"OTTO...."), Some("otf"));
+        assert_eq!(sniff(&[0, 1, 0, 0, 9]), Some("ttf"));
+        assert_eq!(sniff(b"ttcf...."), None);
+        assert_eq!(sniff(b"<svg"), None);
+        assert_eq!(sniff(b"wO"), None);
     }
 
     #[test]

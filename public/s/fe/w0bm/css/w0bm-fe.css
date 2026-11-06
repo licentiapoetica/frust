@@ -2410,7 +2410,7 @@ table.w0bm-ranking > thead > tr > th:first-child {
 .bootstrap-tagsinput:has(> .w0bm-tag-suggest.w0bm-open) {
     overflow: visible;
 }
-/* [+Add Tag] form: field and button as one joined, square control with the cyan accent. Scoped
+/* [+Add Tag] form: field and button as one joined, square control (neutral border). Scoped
    to #tag-add so it wins over the themes' old rules (absolute 79% box, rounded gradients, fixed
    heights that didn't line up with the button); !important only where a theme uses it too. */
 .tags #tag-add {
@@ -2439,7 +2439,7 @@ table.w0bm-ranking > thead > tr > th:first-child {
     box-shadow: none;
     color: #c8c8c8;
     font-size: 14px;
-    transition: border-color .15s ease, box-shadow .15s ease;
+    transition: border-color .15s ease;
 }
 #tag-add .bootstrap-tagsinput {
     display: flex;
@@ -2474,8 +2474,7 @@ table.w0bm-ranking > thead > tr > th:first-child {
 }
 #tag-add .bootstrap-tagsinput:focus-within,
 #tag-add .w0bm-tagform > input[name="tagname"]:focus {
-    border-color: #1fb2b0;
-    box-shadow: 0 0 8px rgba(31, 178, 176, 0.25);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 /* tags typed but not yet sent */
 #tag-add .bootstrap-tagsinput .tag {
@@ -2514,7 +2513,7 @@ table.w0bm-ranking > thead > tr > th:first-child {
     line-height: 1;
     color: #1fb2b0;
     background: rgba(31, 178, 176, 0.1) !important;
-    border: 1px solid #1fb2b0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0;
     outline: 0;
     transition: background-color .15s ease, color .15s ease;

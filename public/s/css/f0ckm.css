@@ -23721,7 +23721,7 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 
 .mq-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr));
   gap: 10px;
 }
 
@@ -23997,7 +23997,7 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 /* ---- mod/approve.html: review cards (page <style> block) ---- */
 /* Review cards (approval queue) */
 .mq-review .mq-grid {
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 540px), 1fr));
   gap: 12px;
 }
 
@@ -25163,6 +25163,139 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   :where(.adm) .adm-tools {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---- admin font manager (views/admin/fonts.html; the samples' font-family: /admin/fonts/preview.css) ---- */
+:where(.adm) .adm-font-upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+:where(.adm) .adm-font-file-input {
+  max-width: 100%;
+  font: inherit;
+  font-size: 0.82em;
+  color: var(--adm-text);
+}
+
+:where(.adm) .adm-font-file-input::file-selector-button {
+  height: 36px;
+  margin-right: 10px;
+  padding: 0 16px;
+  border: 1px solid var(--adm-accent);
+  background: transparent;
+  color: var(--adm-accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+:where(.adm) .adm-font-family {
+  padding: 14px 16px;
+}
+
+:where(.adm) .adm-font-family + .adm-font-family {
+  border-top: 1px solid var(--adm-border);
+}
+
+:where(.adm) .adm-font-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+:where(.adm) .adm-font-name {
+  font-size: 1em;
+  color: var(--adm-text);
+}
+
+:where(.adm) .adm-font-tag {
+  padding: 0 6px;
+  font-size: 0.7em;
+  font-weight: 700;
+  line-height: 1.7;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--adm-accent);
+  color: var(--adm-accent);
+}
+
+:where(.adm) .adm-font-tag-builtin {
+  border-color: var(--adm-border);
+  color: var(--adm-muted);
+}
+
+:where(.adm) .adm-font-faces {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.adm) .adm-font-face {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+}
+
+:where(.adm) .adm-font-face + .adm-font-face {
+  border-top: 1px dashed var(--adm-border);
+}
+
+:where(.adm) .adm-font-sample {
+  flex: 1 1 280px;
+  min-width: 0;
+  font-size: 1.25em;
+  color: var(--adm-text);
+  overflow-wrap: anywhere;
+}
+
+:where(.adm) .adm-font-w100 { font-weight: 100; }
+:where(.adm) .adm-font-w200 { font-weight: 200; }
+:where(.adm) .adm-font-w300 { font-weight: 300; }
+:where(.adm) .adm-font-w400 { font-weight: 400; }
+:where(.adm) .adm-font-w500 { font-weight: 500; }
+:where(.adm) .adm-font-w600 { font-weight: 600; }
+:where(.adm) .adm-font-w700 { font-weight: 700; }
+:where(.adm) .adm-font-w800 { font-weight: 800; }
+:where(.adm) .adm-font-w900 { font-weight: 900; }
+
+:where(.adm) .adm-font-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.82em;
+}
+
+:where(.adm) .adm-font-weight {
+  color: var(--adm-muted);
+}
+
+:where(.adm) .adm-font-filename {
+  font-size: 0.95em;
+  color: var(--adm-muted);
+  background: none;
+}
+
+:where(.adm) .adm-font-delete {
+  display: contents;
+}
+
+:where(.adm) .adm-font-delete .adm-btn {
+  height: 28px;
+  padding: 0 10px;
+}
+
+:where(.adm) .adm-font-empty {
+  margin: 0;
+  padding: 14px 16px;
 }
 
 /* ---- admin/mod subpages: shared bits (identical inline styles on several pages) ---- */

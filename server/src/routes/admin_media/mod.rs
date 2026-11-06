@@ -1,7 +1,7 @@
 //! Admin media: emojis and sticker packs (src/inc/routes/emojis.mjs, emoji_upload_handler.mjs,
 //! sticker_pack_handler.mjs), meme templates (meme-manager.mjs, meme.mjs, meme_upload_handler.mjs),
 //! Köpfe uploads (koepfe_handler.mjs) and the admin hall manager (hall_image_handler.mjs). The
-//! navbar brand image is in routes/profile_media.rs.
+//! navbar brand image is in routes/profile_media.rs. The font manager (`/admin/fonts`) is new.
 //!
 //! The upload handlers were "bypass" middleware in index.mjs that read the raw body and looked the
 //! session up themselves; here they are `pre` routes that use the session the middleware loaded
@@ -16,6 +16,7 @@
 //!   delete unlinked `<custom dir>/<decoded slug>.webp` without checking, so `..%2F` escaped it).
 
 mod emojis;
+mod fonts;
 mod halls;
 mod memes;
 mod misc;
@@ -28,6 +29,7 @@ use std::path::Path;
 
 pub fn register(r: &mut Router) {
     emojis::register(r);
+    fonts::register(r);
     memes::register(r);
     halls::register(r);
     misc::register(r);

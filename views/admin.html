@@ -129,6 +129,10 @@
           <i class="fa-solid fa-file-contract"></i>
           <span class="adm-tool-text"><strong>ToS Page</strong><span>Edit /terms</span></span>
         </a>
+        <a href="/admin/fonts" class="adm-tool">
+          <i class="fa-solid fa-font"></i>
+          <span class="adm-tool-text"><strong>Fonts</strong><span>Upload website fonts</span></span>
+        </a>
         {% if enable_global_chat %}
         <a href="/admin/chat" class="adm-tool">
           <i class="fa-solid fa-comments"></i>
@@ -195,7 +199,7 @@
         <div class="adm-row adm-row-wrap">
           <div class="adm-row-text">
             <label for="brand-text-input">Navbar brand text</label>
-            <p>Shown next to the brand image, or on its own without one. Empty: just the image, or the site name ({{ domain }}) when there is no image. Case and font apply in every frontend; "Default" keeps the frontend's own.</p>
+            <p>Shown next to the brand image, or on its own without one. Empty: just the image, or the site name ({{ domain }}) when there is no image. Case and font apply in every frontend; "Default" keeps the frontend's own. More fonts: <a href="/admin/fonts">Fonts</a>.</p>
           </div>
           <form class="adm-brand" method="post" action="/admin/brand_text" data-on="submit:prevent,saveBrandText">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
