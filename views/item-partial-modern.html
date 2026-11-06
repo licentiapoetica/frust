@@ -1,5 +1,9 @@
 {# MODERN LAYOUT — 3-column grid #}
 {# Used by: guests (no session) + members with use_new_layout = true #}
+{#- Where the item's own links (id, timestamp) point: a 4chan post links to its rehosted copy, or to
+    its /4/ page while it isn't rehosted. Never /<4chan post number>: that is a different local item. -#}
+{%- set item_href = (((item.local_path or item.local_id) if item.local_id else ("4/" ~ item.external_board ~ "/" ~ item.external_tid ~ "/" ~ item.external_id)) if item.is_chan else (item.slug if (enable_item_slugs and item.slug) else item.id)) -%}
+{%- set item_label = (((item.local_path or item.local_id) if item.local_id else item.external_id) if item.is_chan else item_href) %}
 <div class="item-layout-container" data-item-id="{{ (item.local_id or item.id) }}" data-requested-subf0ck="{{ (item.requested_subf0ck_slug or "") }}">
 
     {# LEFT SIDEBAR: comments + tags #}
@@ -133,19 +137,14 @@
             <div class="blahlol">
                 <div class="blahlol-meta">
                     <span class="badge badge-dark">
-                        <a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" class="id-link" data-item-id="{{ item.id }}">{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</a> — [{% if not is_anonymized %}<a id="a_username" data-username="{{ (item.username or "") }}" {% if (session and not session.is_anon) %} data-author-id="{{ (item.author_id or "") }}" {% endif %} href="/user/{{ item_username_lower }}" {% if ((session and not session.is_anon) and item.author_id) %} tooltip="ID: {{ item.author_id }}" {% endif %} {% if item.author_color %} style="color: {{ item.author_color }}" {% endif %}>{{ ((item.author_display_name or item.username) or "unknown") }}</a>{% else %}<span>anonymous</span>{% endif %}] <span id="oc-badge-container">{% if item.is_oc %} — <span class="oc-badge" tooltip="Original Content">OC</span>{% endif %}</span>
+                        <a href="/{{ item_href }}" class="id-link" data-item-id="{{ item.id }}">{{ item_label }}</a> — [{% if not is_anonymized %}<a id="a_username" data-username="{{ (item.username or "") }}" {% if (session and not session.is_anon) %} data-author-id="{{ (item.author_id or "") }}" {% endif %} href="/user/{{ item_username_lower }}" {% if ((session and not session.is_anon) and item.author_id) %} tooltip="ID: {{ item.author_id }}" {% endif %} {% if item.author_color %} style="color: {{ item.author_color }}" {% endif %}>{{ ((item.author_display_name or item.username) or "unknown") }}</a>{% else %}<span>anonymous</span>{% endif %}] <span id="oc-badge-container">{% if item.is_oc %} — <span class="oc-badge" tooltip="Original Content">OC</span>{% endif %}</span>
                     </span>
                     <span id="hall-badge-container">{% if (halls_enabled and item.primaryHall) %}<span class="badge hall-badge-wrap">
                         <a href="/h/{{ item.primaryHall.slug }}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> {{ item.primaryHall.name }}</a>{% if (item.otherHalls and item.otherHalls|length) %}<span class="hall-overflow-pill">+{{ item.otherHalls|length }}<span class="hall-overflow-tooltip">{% for key, oh in item.otherHalls|entries %}<a href="/h/{{ oh.slug }}">{{ oh.name }}</a>{% endfor %}</span></span>{% endif %}
                     </span>{% endif %}</span>
-                    <span class="badge badge-dark"><a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>
+                    <span class="badge badge-dark"><a href="/{{ item_href }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>
                     {% if item.expires_at %}
                     — <span class="badge badge-warning item-expiring-badge" tooltip="Self-destructs {{ item.expires_in }}" flow="up"><i class="fa-solid fa-clock"></i> Expiring ({{ item.expires_in }})</span>
-                    {% endif %}
-                    {% if item.is_chan %}
-                    <span class="badge badge-dark item-chan-badge">
-                        <a href="/4/{{ item.external_board }}/{{ item.external_tid }}" class="item-chan-thread-link" title="View thread overview"><i class="fa-solid fa-clover"></i> /{{ item.external_board }}/{{ item.external_tid }}</a>
-                    </span>
                     {% endif %}
                 </div>
 

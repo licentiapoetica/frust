@@ -1,5 +1,9 @@
 {# LEGACY LAYOUT — 2-column (main + fixed right sidebar) #}
 {# Used by: members with use_new_layout = false #}
+{#- Where the item's own links (id, timestamp) point: a 4chan post links to its rehosted copy, or to
+    its /4/ page while it isn't rehosted. Never /<4chan post number>: that is a different local item. -#}
+{%- set item_href = (((item.local_path or item.local_id) if item.local_id else ("4/" ~ item.external_board ~ "/" ~ item.external_tid ~ "/" ~ item.external_id)) if item.is_chan else (item.slug if (enable_item_slugs and item.slug) else item.id)) -%}
+{%- set item_label = (((item.local_path or item.local_id) if item.local_id else item.external_id) if item.is_chan else item_href) %}
 <div class="item-layout-container" data-item-id="{{ (item.local_id or item.id) }}" data-requested-subf0ck="{{ (item.requested_subf0ck_slug or "") }}">
 
     {# MAIN CONTENT: media + navigation + metadata + comments #}
@@ -121,7 +125,7 @@
                                 <span class="user-infobox-username name-short">anonymous</span>
                                 {% endif %}
                             </div>
-                            <span class="user-infobox-timestamp"><a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>
+                            <span class="user-infobox-timestamp"><a href="/{{ item_href }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>
                         </div>
                         <div class="user-infobox-body">
                             <div class="user-infobox-actions">
@@ -189,7 +193,7 @@
                         {% endif %}
                     </div>
                     {% if not user_alternative_infobox %}
-                    <div class="blahlol-meta-right"><span class="badge badge-dark"><a href="/{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>{% if item.expires_at %} <span class="badge badge-warning item-expiring-badge" tooltip="Self-destructs {{ item.expires_in }}" flow="up"><i class="fa-solid fa-clock"></i> Expiring ({{ item.expires_in }})</span>{% endif %}</div>
+                    <div class="blahlol-meta-right"><span class="badge badge-dark"><a href="/{{ item_href }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>{% if item.expires_at %} <span class="badge badge-warning item-expiring-badge" tooltip="Self-destructs {{ item.expires_in }}" flow="up"><i class="fa-solid fa-clock"></i> Expiring ({{ item.expires_in }})</span>{% endif %}</div>
                     {% endif %}
                 </div>
                 {% if (not user_alternative_infobox and item.is_chan) %} <span class="badge badge-dark chan-post-badge item-chan-badge item-legacy-chan-badge">

@@ -1117,6 +1117,31 @@ mod tests {
         assert!(!empty.contains("comments-static"));
     }
 
+    /// A 4chan item's id and timestamp links never point at /<4chan post number> (a different local
+    /// item): they go to the rehosted copy, or to the post's /4/ page while it isn't rehosted.
+    #[test]
+    fn chan_item_links_skip_the_4chan_post_number() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        for view in ["item-partial-modern.html", "item-partial-legacy.html"] {
+            let item = |local: Value| serde_json::json!({ "id": 6250458, "is_chan": true, "external_board": "wsg", "external_tid": 6250450,
+                "external_id": 6250458, "local_id": local, "local_path": if local.is_null() { Value::Null } else { Value::from("6BHrY1UUphB") },
+                "timestamp": { "timefull": "x", "timeago": "1 day ago" }, "tags": {}, "mime": "video/mp4", "dest": "/b/x.mp4", "favorites": [] });
+            let render = |local: Value| env.get_template(view).unwrap()
+                .render(to_jvalue(&serde_json::json!({ "item": item(local), "enable_item_slugs": true }))).unwrap();
+            let rehosted = render(Value::from(42));
+            assert!(rehosted.contains("href=\"/6BHrY1UUphB\" class=\"timestamp-link\""), "{view}");
+            assert!(!rehosted.contains("href=\"/6250458\""), "{view}");
+            let fresh = render(Value::Null);
+            assert!(fresh.contains("href=\"/4/wsg/6250450/6250458\" class=\"timestamp-link\""), "{view}");
+            assert!(!fresh.contains("href=\"/6250458\""), "{view}");
+            if view == "item-partial-modern.html" {
+                assert!(rehosted.contains("class=\"id-link\" data-item-id=\"6250458\">6BHrY1UUphB</a>"));
+                assert!(fresh.contains("href=\"/4/wsg/6250450/6250458\" class=\"id-link\" data-item-id=\"6250458\">6250458</a>"));
+            }
+        }
+    }
+
     #[test]
     fn login_modal_works_without_js() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
