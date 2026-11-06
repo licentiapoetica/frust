@@ -48,19 +48,33 @@
 {% endif %}
 {#- The comments come with the page (static_comments, routes/comments.rs), so they show without
     JavaScript too; w0bm.js loads them again from /api/comments and replaces the list. -#}
+{#- The action icons, the same as w0bm.js commentPanel() builds them, so they are there from the
+    start instead of popping in when the list is replaced. They need JavaScript (w0bm-js-only). -#}
+{%- set w0bm_user = (session.user if (session and session.user) else none) %}
+{%- set w0bm_is_mod = w0bm_user and (session.admin or session.is_moderator) %}
+{%- set w0bm_can_reply = w0bm_user and not (item.is_comments_locked and not is_mod_or_admin) and not (session.is_anon and anon_permissions and not anon_permissions.comment) %}
+{%- macro wactions(c) -%}
+<span class="w0bm-c-actions w0bm-js-only">
+{%- if w0bm_can_reply %}<a class="reply_comment w0bm-cact" href="#" title="Reply" aria-label="Reply"><i class="fa fa-reply"></i></a>{% endif -%}
+{%- if w0bm_is_mod %}<a class="pin_comment w0bm-cact{% if c.is_pinned %} w0bm-cact-on{% endif %}" href="#" title="{{ "Unpin" if c.is_pinned else "Pin" }}" aria-label="{{ "Unpin" if c.is_pinned else "Pin" }}"><i class="fa fa-thumb-tack"></i></a><a class="edit_comment w0bm-cact" href="#" title="Edit" aria-label="Edit"><i class="fa fa-pencil"></i></a>{% endif -%}
+{%- if w0bm_user %}<a class="report_comment w0bm-cact" href="#" title="Report" aria-label="Report"><i class="fa fa-flag"></i></a>{% endif -%}
+{%- if w0bm_is_mod or (w0bm_user and allow_comment_deletion and c.username and not c.is_anon and (c.username|lower) == (w0bm_user|lower)) %}<a class="delete_comment w0bm-cact w0bm-cact-danger" href="#" title="Delete" aria-label="Delete"><i class="fa fa-trash"></i></a>{% endif -%}
+</span>
+{%- endmacro -%}
 {%- macro wcomment(c) -%}
 <div class="panel panel-default{% if c.is_pinned %} w0bm-pinned{% endif %}" id="c{{ c.id }}" data-id="{{ c.id }}">
     <div class="panel-body w0bm-static-body"><a class="w0bm-cid" href="#c{{ c.id }}" title="Link to this comment">#{{ c.id }}</a>{% if c.replied_by %}<div class="w0bm-replies">↳ {% for r in c.replied_by %}<a href="#c{{ r }}">&gt;&gt;{{ r }}</a> {% endfor %}</div>{% endif %}{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
-    <div class="panel-footer">by {% if c.username %}<a href="/user/{{ c.username|lower }}"{% if c.username_color %} class="w0bm-usercolor" style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<span>{{ (c.name or "anonymous") }}</span>{% endif %} <small><time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ c.iso }}" title="{{ c.iso }}">{{ c.timeago }}</time></small>{% if c.is_pinned %} <i class="fa fa-thumb-tack" title="pinned"></i>{% endif %}</div>
+    <div class="panel-footer">by {% if c.username %}<a href="/user/{{ c.username|lower }}"{% if c.username_color %} class="w0bm-usercolor" style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<span>{{ (c.name or "anonymous") }}</span>{% endif %} <small><time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ c.iso }}" title="{{ c.iso }}">{{ c.timeago }}</time></small>{% if c.is_pinned %} <i class="fa fa-thumb-tack" title="pinned"></i>{% endif %}{{ wactions(c) }}</div>
 </div>
 {%- endmacro -%}
 <div id="comment_container_scrollable" class="comments hidden-xs">
     <div class="commentwrapper" id="w0bm-comments" data-item-id="{{ item.id }}">
         {% if static_comments %}
-        {% for c in static_comments|sort(attribute="id") %}
-        {{ wcomment(c) }}
-        {% for r in (c.replies or []) %}{{ wcomment(r) }}{% endfor %}
-        {% endfor %}
+        {#- flat, pinned first, then oldest first: the order w0bm.js uses, so nothing moves when it replaces the list -#}
+        {%- set ns = namespace(all=[]) %}
+        {%- for c in static_comments %}{% set ns.all = ns.all + [c] + (c.replies or []) %}{% endfor %}
+        {% for c in ns.all|sort(attribute="id") if c.is_pinned %}{{ wcomment(c) }}{% endfor %}
+        {% for c in ns.all|sort(attribute="id") if not c.is_pinned %}{{ wcomment(c) }}{% endfor %}
         {% else %}
         <div class="panel panel-default nocomments">
             <div class="panel-body">

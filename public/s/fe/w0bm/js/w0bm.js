@@ -1971,8 +1971,8 @@
   }
   async function loadComments(scrollTo) {
     if (!commentBox || !ITEM) return;
-    await loadEmojis();
-    const r = await api('/api/comments/' + ITEM.id + '?sort=old', { method: 'GET' });
+    // emojis and comments at the same time (the page already shows the list rendered by the server)
+    const [r] = await Promise.all([api('/api/comments/' + ITEM.id + '?sort=old', { method: 'GET' }), loadEmojis()]);
     if (!r.ok) return;
     comments = (r.data.comments || []).slice().sort((a, b) => (b.is_pinned - a.is_pinned) || (new Date(a.created_at) - new Date(b.created_at)));
     renderComments();

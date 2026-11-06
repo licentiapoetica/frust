@@ -1171,6 +1171,33 @@ mod tests {
         assert!(hidden.contains(">anonymous</span>") && !hidden.contains("Kibi"));
     }
 
+    /// w0bm's server-rendered comment list already has w0bm.js's action icons and order (flat,
+    /// pinned first, then oldest first), so nothing pops in or moves when w0bm.js replaces it.
+    #[test]
+    fn w0bm_static_comments_match_the_js_list() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let c = |id: i64, user: &str, pinned: bool, replies: Value| serde_json::json!({ "id": id, "username": user, "name": user, "is_pinned": pinned,
+            "content_html": format!("text{id}"), "attachments_html": "", "iso": "", "timeago": "", "replies": replies });
+        let comments = serde_json::json!([c(1, "bob", false, serde_json::json!([c(3, "Kibi", false, serde_json::json!([]))])), c(2, "bob", true, serde_json::json!([]))]);
+        let render = |session: Value| env.get_template("frontends/w0bm/partials/comments.html").unwrap()
+            .render(to_jvalue(&serde_json::json!({ "item": { "id": 9 }, "static_comments": comments, "session": session, "allow_comment_deletion": true }))).unwrap();
+        let actions = |html: &str, id: i64| {
+            let panel = &html[html.find(&format!("id=\"c{id}\"")).unwrap()..];
+            let panel = &panel[..panel.find("</span>\n</div>").or(panel.find("</div>\n</div>")).unwrap()];
+            ["reply_comment", "pin_comment", "edit_comment", "report_comment", "delete_comment"].iter().filter(|a| panel.contains(*a)).copied().collect::<Vec<_>>()
+        };
+        let guest = render(Value::Bool(false));
+        assert!(guest.find("id=\"c2\"").unwrap() < guest.find("id=\"c1\"").unwrap() && guest.find("id=\"c1\"").unwrap() < guest.find("id=\"c3\"").unwrap());
+        assert!(actions(&guest, 1).is_empty());
+        let user = render(serde_json::json!({ "user": "kibi" }));
+        assert_eq!(actions(&user, 1), ["reply_comment", "report_comment"]);
+        assert_eq!(actions(&user, 3), ["reply_comment", "report_comment", "delete_comment"]);
+        let modr = render(serde_json::json!({ "user": "mod", "is_moderator": true }));
+        assert_eq!(actions(&modr, 1), ["reply_comment", "pin_comment", "edit_comment", "report_comment", "delete_comment"]);
+        assert!(modr.contains("pin_comment w0bm-cact w0bm-cact-on\" href=\"#\" title=\"Unpin\""));
+    }
+
     /// A 4chan item's id and timestamp links never point at /<4chan post number> (a different local
     /// item): they go to the rehosted copy, or to the post's /4/ page while it isn't rehosted.
     #[test]
