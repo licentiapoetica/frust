@@ -87,7 +87,7 @@
                 let expiryNote = '';
                 if (!isUsed && tok.created_at && data.expire_days) {
                   const expiresAt = new Date(parseInt(tok.created_at) * 1000 + data.expire_days * 24 * 60 * 60 * 1000);
-                  expiryNote = '<span class="invite-refresh-note"> — ' + T('expiresOn', { date: expiresAt.toLocaleDateString() }) + '</span>';
+                  expiryNote = '<span class="invite-refresh-note"> — ' + T('expiresOn', { date: expiresAt.toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) }) + '</span>';
                 }
                 const userLink = tok.used_by_name
                   ? '<a href="/user/' + encodeURIComponent(tok.used_by_name.toLowerCase()) + '" class="settings-invite-user">' + tok.used_by_name + '</a>'
