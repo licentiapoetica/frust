@@ -11658,7 +11658,7 @@ input#s_avatar {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.9rem;
   padding-left: 5px;
 }
 
@@ -13616,6 +13616,12 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
   width: 1rem;
   text-align: center;
   line-height: 1;
+}
+
+/* The nav links' icons keep their own width: in the fixed 1rem box above, wide glyphs (tags)
+   ran into the gap and narrow ones left extra space, so the links looked unevenly spaced */
+.navbar .nav-links i {
+  width: auto;
 }
 
 /* Hamburger button: hidden on desktop */
