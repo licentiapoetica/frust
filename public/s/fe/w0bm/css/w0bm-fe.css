@@ -534,8 +534,8 @@ a.w0bm-iconbtn {
 .video-js .vjs-playback-rate.vjs-menu-button-popup .vjs-menu .vjs-menu-content {
     left: 0;
     width: 100%;
-    /* clear of the progress track over the bar */
-    bottom: 1.8em;
+    /* close over the button (partly over the progress track while it is open) */
+    bottom: 0.9em;
     padding: 3px 0;
     background: rgba(22, 22, 24, 0.85);
     border-top: 2px solid #1fb2b0;
