@@ -2847,6 +2847,24 @@ html[data-w0bm-theme="DARK"] .w0bm-mode-group > .btn.active {
     color: #888;
     font-size: 0.9em;
 }
+.w0bm-snap-preview {
+    margin: 0 0 10px;
+}
+.w0bm-snap-preview[hidden] {
+    display: none;
+}
+.w0bm-snap-preview > img {
+    display: block;
+    max-width: 100%;
+    max-height: 300px;
+    margin: 0 0 6px;
+    border: 1px solid #353434;
+}
+.w0bm-snap-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
 .w0bm-meta-results {
     display: flex;
     flex-wrap: wrap;

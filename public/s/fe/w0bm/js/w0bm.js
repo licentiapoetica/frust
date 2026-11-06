@@ -1457,11 +1457,11 @@
         if (h) h.textContent = r.data.title || '';
       } else errors.push(r.msg);
     }
-    const rating = editForm.querySelector('select[name="rating"]');
-    if (rating && rating.value && !rating.querySelector('option:checked')?.defaultSelected) {
+    const rating = editForm.querySelector('input[name="rating"]:checked');
+    if (rating && !rating.defaultChecked) {
       const r = await api('/api/v2/tags/' + id + '/cycle-rating', { method: 'PUT', body: { rating: rating.value } });
       if (r.ok) {
-        rating.querySelectorAll('option').forEach((o) => { o.defaultSelected = o.selected; });
+        editForm.querySelectorAll('input[name="rating"]').forEach((o) => { o.defaultChecked = o.checked; });
         reloadTags();
       } else errors.push(r.msg);
     }
@@ -1480,13 +1480,64 @@
     btn.disabled = false;
     if (!r.ok) { flash('error', r.msg || 'Thumbnail regeneration failed'); return; }
     flash('success', 'Thumbnail regenerated');
+    bustThumbs();
+  });
+  function bustThumbs() {
     const bust = Date.now();
     $$('img[src*="/t/' + editItemId + '.webp"]').forEach((img) => {
       const u = new URL(img.src, location.origin);
       u.searchParams.set('t', bust);
       img.src = u.toString();
     });
-  });
+  }
+  // Flash: capture the player's current frame, preview it, then upload it as the thumbnail
+  const snapBtn = $('#w0bm-snap-btn');
+  const snapBox = $('#w0bm-snap-preview');
+  if (snapBtn && snapBox) {
+    const snapImg = snapBox.querySelector('img');
+    let snapBlob = null;
+    const clearSnap = () => {
+      if (snapImg.src.startsWith('blob:')) URL.revokeObjectURL(snapImg.src);
+      snapImg.removeAttribute('src');
+      snapBlob = null;
+      snapBox.hidden = true;
+    };
+    const capture = async () => {
+      const blob = flashPlayer ? await flashPlayer.snapshot({ max: 640, quality: 0.92 }).catch(() => null) : null;
+      if (!blob) { flash('error', 'Flash player not ready, play the Flash first'); return; }
+      clearSnap();
+      snapBlob = blob;
+      snapImg.src = URL.createObjectURL(blob);
+      snapBox.hidden = false;
+    };
+    snapBtn.addEventListener('click', capture);
+    snapBox.addEventListener('click', async (e) => {
+      const b = e.target.closest('button[data-snap]');
+      if (!b) return;
+      if (b.dataset.snap === 'again') { capture(); return; }
+      if (b.dataset.snap === 'cancel' || !snapBlob) { clearSnap(); return; }
+      b.disabled = true;
+      const fd = new FormData();
+      fd.append('file', snapBlob, 'thumbnail.jpg');
+      let data = null;
+      try {
+        const res = await fetch('/api/v2/items/' + editItemId + '/thumbnail', {
+          method: 'POST',
+          headers: { 'X-CSRF-Token': csrf(), 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+          body: fd,
+          credentials: 'same-origin',
+        });
+        data = await res.json().catch(() => null);
+        if (!res.ok && data) data.success = false;
+      } catch { /* network error */ }
+      b.disabled = false;
+      if (!data || data.success === false) { flash('error', (data && data.msg) || 'Thumbnail upload failed'); return; }
+      flash('success', data.msg || 'Thumbnail updated');
+      clearSnap();
+      bustThumbs();
+    });
+    onLeave(clearSnap);
+  }
   const metaBtn = $('#w0bm-meta-btn');
   const metaBox = $('#w0bm-meta-results');
   metaBtn?.addEventListener('click', async () => {
@@ -1700,6 +1751,8 @@
     span.appendChild(a);
     tagDisplay.prepend(span, ' ');
     markRatingTags();
+    // keep the edit modal's rating toggles on the current rating
+    $$('#webmedit input[name="rating"]').forEach((o) => { o.checked = o.defaultChecked = (o.value === rating); });
   }
   // "i": open [+Add Tag] and focus its field, like f0ckm. Escape in the field closes it again.
   function openTagInput() {

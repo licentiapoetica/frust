@@ -1,6 +1,7 @@
 {#- partials/frontendedit.blade.php: title (PATCH /api/v2/items/:id/title) and rating
     (PUT /api/v2/tags/:id/cycle-rating), sent by JavaScript; plus, like f0ckm's item tools:
     - a new thumbnail (POST /api/v2/items/:id/rethumb; a plain form without JavaScript),
+    - Flash: the current frame as the thumbnail (POST /api/v2/items/:id/thumbnail; JavaScript only),
     - metadata suggestions from the file (GET /api/v2/meta/extract/item/:id; a click adds one as a tag),
     - for staff: unavailable (451) on/off (POST /api/v2/item/visibility; a plain form).
     The forms sit side by side in the modal (forms can't nest); Save belongs to #webmedit. -#}
@@ -23,13 +24,13 @@
                     {% endif %}
                     {% if can_rate_item %}
                     <div class="form-group">
-                        <label for="ratingselect">Rating</label>
-                        <select class="form-control" name="rating" id="ratingselect">
-                            <option value="sfw"{% if item.is_sfw %} selected{% endif %}>SFW</option>
-                            <option value="nsfw"{% if item.is_nsfw %} selected{% endif %}>NSFW</option>
-                            {% if enable_nsfl %}<option value="nsfl"{% if item.is_nsfl %} selected{% endif %}>NSFL</option>{% endif %}
-                            {% if not (item.is_sfw or item.is_nsfw or item.is_nsfl) %}<option value="" selected>untagged</option>{% endif %}
-                        </select>
+                        <label id="w0bm-edit-rating-label">Rating</label>
+                        {#- the upload page's rating toggles (.w0bm-ul-seg); untagged items start with none chosen -#}
+                        <div class="w0bm-ul-seg" role="radiogroup" aria-labelledby="w0bm-edit-rating-label">
+                            <input type="radio" name="rating" value="sfw" id="edit-rating-sfw"{% if item.is_sfw %} checked{% endif %}><label for="edit-rating-sfw" class="w0bm-ul-sfw">SFW</label>
+                            <input type="radio" name="rating" value="nsfw" id="edit-rating-nsfw"{% if item.is_nsfw %} checked{% endif %}><label for="edit-rating-nsfw" class="w0bm-ul-nsfw">NSFW</label>
+                            {% if enable_nsfl %}<input type="radio" name="rating" value="nsfl" id="edit-rating-nsfl"{% if item.is_nsfl %} checked{% endif %}><label for="edit-rating-nsfl" class="w0bm-ul-nsfl">NSFL</label>{% endif %}
+                        </div>
                     </div>
                     {% endif %}
                 </form>
@@ -42,6 +43,21 @@
                         <button type="submit" class="btn btn-primary"><i class="fa fa-refresh"></i> New thumbnail</button>
                         <span class="w0bm-edit-hint">Generate the thumbnail again from the file.</span>
                     </form>
+                    {% if ((item.mime == "application/x-shockwave-flash" or item.mime == "application/vnd.adobe.flash.movie") and enable_swf) %}
+                    {#- Flash: the frame the player shows right now as the thumbnail (w0bm.js; Ruffle needs JavaScript anyway) -#}
+                    <div class="w0bm-edit-tool w0bm-js-only">
+                        <button type="button" class="btn btn-primary" id="w0bm-snap-btn"><i class="fa fa-camera"></i> Capture Flash thumbnail</button>
+                        <span class="w0bm-edit-hint">Use the Flash's current frame as the thumbnail.</span>
+                    </div>
+                    <div class="w0bm-snap-preview" id="w0bm-snap-preview" hidden>
+                        <img alt="Thumbnail preview">
+                        <div class="w0bm-snap-actions">
+                            <button type="button" class="btn btn-primary" data-snap="use"><i class="fa fa-check"></i> Use as thumbnail</button>
+                            <button type="button" class="btn btn-primary" data-snap="again"><i class="fa fa-camera"></i> Capture again</button>
+                            <button type="button" class="btn btn-primary" data-snap="cancel">Cancel</button>
+                        </div>
+                    </div>
+                    {% endif %}
                     {% if can_extract_meta %}
                     <div class="w0bm-edit-tool w0bm-js-only">
                         <button type="button" class="btn btn-primary" id="w0bm-meta-btn"><i class="fa fa-magic"></i> Metadata suggestions</button>
