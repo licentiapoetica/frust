@@ -14032,6 +14032,17 @@ window.cancelAnimFrame = (function () {
       }
     }
 
+    // After a 4chan post is rehosted, its id / timestamp links point at the local copy (the server
+    // renders them that way on reload; never /<4chan post number>, which is another local item)
+    window.f0ckChanLinkLocal = function (itemPath) {
+      if (!itemPath) return;
+      const scope = document.getElementById('onara-item-mount') || document;
+      scope.querySelectorAll('.blahlol a.id-link, .blahlol a.timestamp-link, .user-infobox-block a.timestamp-link').forEach((a) => {
+        a.href = `/${itemPath}`;
+        if (a.classList.contains('id-link')) a.textContent = String(itemPath);
+      });
+    };
+
     window.openChanRehostModal = function({ itemId, onSave = null, anchorEl = null }) {
       if (!itemId) return;
 
@@ -14265,14 +14276,12 @@ window.cancelAnimFrame = (function () {
           if (locEl && !locEl.querySelector('.is-rehosted')) {
             const sep = document.createElement('span');
             sep.className = 'location-sep';
-            sep.style.cssText = 'opacity: 0.6; margin: 0 4px;';
             sep.textContent = '→';
 
             const a = document.createElement('a');
             a.href = `/${itemPath}`;
             a.className = 'location-link is-rehosted';
             a.title = `View rehosted post /${itemPath} on f0ckm`;
-            a.style.cssText = 'color: #4ade80; font-weight: 700;';
             a.innerHTML = `<i class="fa-solid fa-check"></i> /${itemPath}`;
 
             locEl.appendChild(sep);
@@ -14286,17 +14295,15 @@ window.cancelAnimFrame = (function () {
             favBtn.dataset.localId = itemId;
           }
 
+          window.f0ckChanLinkLocal(itemPath);
+
           // 6. Update #chan-item-rehost-btn if present
           const rehostBtn = document.querySelector('#chan-item-rehost-btn');
           if (rehostBtn) {
             rehostBtn.outerHTML = `
-              <span class="chan-rehost-btn-group" style="display:inline-flex;gap:4px;align-items:center;">
-                <a href="/${itemPath}" class="chan-rehost-action-btn rehosted" title="View /${itemPath}" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:4px 12px;border-radius:6px;font-size:0.8rem;background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);text-decoration:none;font-weight:600;white-space:nowrap;flex-shrink:0;">
-                  <i class="fa-solid fa-check"></i> /${itemPath}
-                </a>
-                <button type="button" class="chan-rehost-edit-btn" data-item-id="${itemId}" title="Edit rating" style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:6px;font-size:0.8rem;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);cursor:pointer;">
-                  <i class="fa-solid fa-pen"></i>
-                </button>
+              <span class="chan-rehosted-wrap">
+                <a href="/${itemPath}" class="chan-rehost-action-btn rehosted item-chan-rehosted-link" title="Already rehosted on f0ckm (/${itemPath})"><i class="fa-solid fa-check"></i> /${itemPath}</a>
+                <button type="button" class="chan-rehost-edit-btn item-chan-edit-btn" data-item-id="${itemId}" title="Edit rating"><i class="fa-solid fa-pen"></i></button>
               </span>
             `;
           }
@@ -14381,7 +14388,7 @@ window.cancelAnimFrame = (function () {
         if (mediaUrl) {
           btn.classList.add('loading');
           const origHtml = btn.innerHTML;
-          btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Rehosting…';
+          btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
 
           (async () => {
             try {
@@ -14415,15 +14422,12 @@ window.cancelAnimFrame = (function () {
                 }
 
                 btn.outerHTML = `
-                  <span class="chan-rehost-btn-group" style="display:inline-flex;gap:4px;align-items:center;">
-                    <a href="/${data.item_path || data.item_id}" class="chan-rehost-action-btn rehosted" title="View /${data.item_path || data.item_id}" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:4px 12px;border-radius:6px;font-size:0.8rem;background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);text-decoration:none;font-weight:600;white-space:nowrap;flex-shrink:0;">
-                      <i class="fa-solid fa-check"></i> /${data.item_path || data.item_id}
-                    </a>
-                    <button type="button" class="chan-rehost-edit-btn" data-item-id="${data.item_id}" title="Edit rating" style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:6px;font-size:0.8rem;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);cursor:pointer;">
-                      <i class="fa-solid fa-pen"></i>
-                    </button>
+                  <span class="chan-rehosted-wrap">
+                    <a href="/${data.item_path || data.item_id}" class="chan-rehost-action-btn rehosted item-chan-rehosted-link" title="Already rehosted on f0ckm (/${data.item_path || data.item_id})"><i class="fa-solid fa-check"></i> /${data.item_path || data.item_id}</a>
+                    <button type="button" class="chan-rehost-edit-btn item-chan-edit-btn" data-item-id="${data.item_id}" title="Edit rating"><i class="fa-solid fa-pen"></i></button>
                   </span>
                 `;
+                window.f0ckChanLinkLocal(data.item_path || data.item_id);
                 if (typeof window.showToast === 'function') {
                   window.showToast(data.repost ? 'Already on site — linked to existing post' : 'Rehosted successfully!');
                 }

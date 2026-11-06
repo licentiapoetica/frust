@@ -439,12 +439,14 @@
               timeEl.textContent = (window.f0ckTimeAgo ? window.f0ckTimeAgo(nowIso) : (window.f0ckI18n?.timeago_just_now || 'just now'));
             }
 
+            if (typeof window.f0ckChanLinkLocal === 'function') window.f0ckChanLinkLocal(rehostData.item_path || localId);
+
             if (chanRehostBtn) {
               chanRehostBtn.classList.add('rehosted');
               chanRehostBtn.outerHTML = `
-                <span class="chan-rehosted-wrap" style="display:inline-flex;gap:4px;align-items:center;">
-                  <a href="/${localId}" class="chan-rehost-action-btn rehosted" title="Already rehosted on f0ckm (Post #${localId})" style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;font-size:0.8rem;background:rgba(74,222,128,0.2);color:#4ade80;border:1px solid rgba(74,222,128,0.4);text-decoration:none;font-weight:600;"><i class="fa-solid fa-check"></i> #${localId}</a>
-                  <button type="button" class="chan-rehost-edit-btn" data-item-id="${localId}" title="Edit rating" style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:6px;font-size:0.8rem;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+                <span class="chan-rehosted-wrap">
+                  <a href="/${localId}" class="chan-rehost-action-btn rehosted item-chan-rehosted-link" title="Already rehosted on f0ckm (/${localId})"><i class="fa-solid fa-check"></i> /${localId}</a>
+                  <button type="button" class="chan-rehost-edit-btn item-chan-edit-btn" data-item-id="${localId}" title="Edit rating"><i class="fa-solid fa-pen"></i></button>
                 </span>
               `;
             }

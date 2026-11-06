@@ -7572,7 +7572,6 @@ body.layout-modern.sidebar-right-hidden .pagination-container-fluid {
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;
-  border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 600;
   font-family: inherit;
@@ -21678,11 +21677,12 @@ body.sidebar-right-hidden .onara-modal-wrapper {
   }
 }
 
-/* Keep .blahlol completely static on new item load — never fade in or animate */
+/* Keep .blahlol completely static on new item load — never fade in or animate
+   (loading spinners excepted: the rehost button's spinner has to turn) */
 .blahlol,
-.blahlol *,
+.blahlol *:not(.fa-spin),
 #onara-item-mount .blahlol,
-#onara-item-mount .blahlol * {
+#onara-item-mount .blahlol *:not(.fa-spin) {
   animation: none !important;
   transition: none !important;
 }
@@ -22826,7 +22826,6 @@ div#flash,
   max-width: calc(100vw - 20px) !important;
   background: #18181b !important;
   border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  border-radius: 10px !important;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
   padding: 10px 12px !important;
   text-align: left !important;
@@ -22897,7 +22896,6 @@ div#flash,
   padding: 6px 2px;
   font-size: 0.72rem;
   font-weight: 600;
-  border-radius: 5px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.05);
   color: #a1a1aa;
@@ -22929,7 +22927,6 @@ div#flash,
   background: #16a34a !important;
   color: #fff !important;
   border: none !important;
-  border-radius: 6px;
   padding: 6px 12px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -22949,7 +22946,6 @@ div#flash,
 .chan-rehost-modal-content {
   background: #18181b;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
   width: 92%;
   max-width: 480px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
@@ -23017,7 +23013,6 @@ div#flash,
   padding: 8px 4px;
   font-size: 0.82rem;
   font-weight: 600;
-  border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.05);
   color: #ccc;
@@ -23057,7 +23052,6 @@ div#flash,
   box-sizing: border-box;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
   padding: 9px 12px;
   color: #fff;
   font-family: inherit;
@@ -28858,7 +28852,9 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 4px 12px;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 12px;
   font-size: 0.8rem;
   background: rgba(74, 222, 128, 0.2);
   color: #4ade80;
@@ -28880,13 +28876,16 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   cursor: pointer;
 }
 
+/* Icon only, a 30px square like the other action-row buttons */
 #chan-item-rehost-btn.item-chan-rehost-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 4px 16px;
-  min-width: 100px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  min-width: 30px;
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;
@@ -28896,6 +28895,18 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   border: 1px solid rgba(74, 222, 128, 0.3);
   cursor: pointer;
   font-weight: 600;
+}
+
+/* Icons inside the rehost controls follow the button's text: the user infobox styles every
+   <i> in its action box as a big accent-coloured icon with a right margin */
+.gapRight .chan-rehost-action-btn i,
+.gapRight .chan-rehost-edit-btn i {
+  position: static;
+  align-self: center;
+  font-size: inherit;
+  color: inherit;
+  margin: 0;
+  text-shadow: none;
 }
 
 /* Favourite avatars (a user's colour stays an inline border-color: f0ckm.js sets/removes it live) */
@@ -28944,8 +28955,8 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 3px 12px;
-  min-width: 88px;
+  padding: 3px 8px;
+  min-width: 0;
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;

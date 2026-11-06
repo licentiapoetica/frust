@@ -157,7 +157,7 @@
                   <button type="button" class="chan-rehost-edit-btn item-chan-edit-btn" data-item-id="{{ item.local_id }}" title="Edit rating"><i class="fa-solid fa-pen"></i></button>
                 </span>
                 {% else %}
-                <button type="button" class="chan-rehost-action-btn item-chan-rehost-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" title="Rehost to f0ckm"><i class="fa-solid fa-cloud-arrow-up"></i> Rehost</button>
+                <button type="button" class="chan-rehost-action-btn item-chan-rehost-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" title="Rehost to f0ckm" aria-label="Rehost to f0ckm"><i class="fa-solid fa-cloud-arrow-up"></i></button>
                 {% endif %}
                 {% endif %}
                 {% if session %}
