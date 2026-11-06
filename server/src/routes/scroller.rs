@@ -438,6 +438,7 @@ async fn feed_inner(st: &AppState, req: &Req) -> anyhow::Result<Response> {
     let tr = st.i18n.translator(&super::index::req_lang(st, req));
     let now = crate::util::now_secs();
     let anonymized = s::is_anonymize_session(&cfg, session);
+    let oc_enabled = cfg.enabled("websrv.enable_oc");
     let mut items: Vec<Value> = Vec::with_capacity(rows.len());
     for row in &rows {
         let mime = row.str("mime").unwrap_or("");
@@ -491,7 +492,7 @@ async fn feed_inner(st: &AppState, req: &Req) -> anyhow::Result<Response> {
             "stamp": row.val("stamp"),
             "timeago": crate::util::time_ago(&tr, now - stamp),
             "tags": row.str("tag_list").unwrap_or(""),
-            "is_oc": row.bool("is_oc"),
+            "is_oc": oc_enabled && row.bool("is_oc"),
             "is_faved": row.bool("is_faved"),
             "fav_count": row.i64("fav_count").unwrap_or(0),
             "comment_count": row.i64("comment_count").unwrap_or(0),

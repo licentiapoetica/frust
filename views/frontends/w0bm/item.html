@@ -102,7 +102,7 @@
                 {% endif %}
                 </div>
                 <span id="uploader">{% if not is_anonymized %}contributed by <a class="w0bm-white{% if item.author_color %} w0bm-usercolor{% endif %}" href="/user/{{ (item.username or "")|lower }}"{% if item.author_color %} style="--user-color: {{ item.author_color }}"{% endif %}>{{ (item.author_display_name or item.username) }}</a>{% endif %}</span>
-                {% if item.is_oc %}<span class="w0bm-oc" title="Original Content">OC</span>{% endif %}
+                {% if enable_oc and item.is_oc %}<span class="w0bm-oc" title="Original Content">OC</span>{% endif %}
                 <time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ item.timestamp.timefull }}" title="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time>
                 {% if (can_manage_item or is_mod_or_admin) %}
                 <a class="w0bm-iconbtn" id="w0bm-editbtn" href="#webmeditmodal" data-toggle="modal" data-target="#webmeditmodal" title="Edit" aria-label="Edit"><i class="w0bm-icon-edit" aria-hidden="true"></i></a>

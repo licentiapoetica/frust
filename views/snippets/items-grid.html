@@ -9,7 +9,7 @@
         {% if item.is_pinned %}
         <i class="fa-solid fa-thumbtack pin-indicator anim"></i>
         {% endif %}
-        {% if item.is_oc %}
+        {% if enable_oc and item.is_oc %}
         <span class="oc-indicator anim">OC</span>
         {% endif %}
         {% if (item.is_album and (item.album_count > 1)) %}

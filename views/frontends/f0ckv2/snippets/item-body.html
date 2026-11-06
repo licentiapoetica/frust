@@ -124,9 +124,9 @@
     <span class="badge badge-dark"><a class="dest-link" href="{{ item.dest }}" target="_blank">{{ item.mime }}</a> / {{ item.size }}</span>
     <span class="badge badge-dark"><time class="timeago" tooltip="{{ item.timestamp.timefull }}" data-full="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></span>
     <span class="badge badge-dark">{{ phrase }}</span>
-    {% if item.is_oc or (halls_enabled and item.primaryHall) or item.expires_in or (item.visibility and item.visibility > 0) %}
+    {% if (enable_oc and item.is_oc) or (halls_enabled and item.primaryHall) or item.expires_in or (item.visibility and item.visibility > 0) %}
     <span class="badge badge-dark v2-extra">
-      {% if item.is_oc %}<span class="badge badge-light" tooltip="Original Content">OC</span>{% endif %}
+      {% if enable_oc and item.is_oc %}<span class="badge badge-light" tooltip="Original Content">OC</span>{% endif %}
       {% if (halls_enabled and item.primaryHall) %}<a class="badge badge-light" href="/h/{{ item.primaryHall.slug }}">hall: {{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %} <a class="badge badge-light" href="/h/{{ h.slug }}">{{ h.name }}</a>{% endfor %}{% endif %}
       {% if item.expires_in %}<span class="badge badge-light" tooltip="{{ item.expires_at }}">expires {{ item.expires_in }}</span>{% endif %}
       {% if (item.visibility and item.visibility > 0) %}<span class="badge badge-light">private</span>{% endif %}

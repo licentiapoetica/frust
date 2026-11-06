@@ -297,7 +297,8 @@
     "allow_comment_deletion": {% if allow_comment_deletion %} true {% else %} false {% endif %},
     "hide_sidebar_default": {% if hide_sidebar_default %} true {% else %} false {% endif %},
     "public_untagged": {% if public_untagged %} true {% else %} false {% endif %},
-    "public_nsfw": {% if public_nsfw %} true {% else %} false {% endif %}
+    "public_nsfw": {% if public_nsfw %} true {% else %} false {% endif %},
+    "enable_oc": {% if enable_oc %} true {% else %} false {% endif %}
   },
   "default_thumb_size": {{ default_thumb_size|string|tojson }}
 }</script>

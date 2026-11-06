@@ -8,7 +8,7 @@
             {% else %}
             <img src="{{ (item.thumb or ("/t/" ~ item.id ~ ".webp")) }}" alt="{{ item.id }}" loading="lazy">
             {% endif %}
-            {% if item.is_oc %}<span class="w0bm-thumb-oc">OC</span>{% endif %}
+            {% if enable_oc and item.is_oc %}<span class="w0bm-thumb-oc">OC</span>{% endif %}
             {% if (item.is_album and (item.album_count > 1)) %}<span class="w0bm-thumb-album"><i class="fa fa-clone"></i> {{ item.album_count }}</span>{% endif %}
         </a>
     </div>

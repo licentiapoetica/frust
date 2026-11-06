@@ -20343,7 +20343,7 @@ class NotificationSystem {
 
     // Build thumb-indicators (matches server-rendered template structure)
     let indicatorsHtml = '';
-    if (data.is_oc) indicatorsHtml += '<span class="oc-indicator anim">OC</span>';
+    if (data.is_oc && window.f0ckSession?.enable_oc) indicatorsHtml += '<span class="oc-indicator anim">OC</span>';
     if (data.is_album && (data.album_count || 0) > 1) {
       indicatorsHtml += `<span class="album-indicator" title="Album: ${data.album_count} images"><i class="fa-solid fa-images"></i> ${data.album_count}</span>`;
     }

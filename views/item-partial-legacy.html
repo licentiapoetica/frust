@@ -177,7 +177,7 @@
                                     <a href="#report-modal" class="iconset fa-solid fa-triangle-exclamation nojs-modal-link" title="Report this post"></a>
                                     {% endif %}
                                 </div>
-                                <span id="oc-badge-container-infobox">{% if item.is_oc %}<span class="oc-badge" tooltip="Original Content">OC</span>{% endif %}</span>
+                                <span id="oc-badge-container-infobox">{% if enable_oc and item.is_oc %}<span class="oc-badge" tooltip="Original Content">OC</span>{% endif %}</span>
                             </div>
                         </div>
                     </div>
@@ -189,7 +189,7 @@
                     <div class="badge badge-dark blahlol-id-badge">
                         {% if not user_alternative_infobox %}{% if not is_anonymized %}<a id="a_username" data-username="{{ (item.username or "") }}" {% if (session and not session.is_anon) %} data-author-id="{{ (item.author_id or "") }}" {% endif %} href="/user/{{ (item.username or "")|lower }}" {% if ((session and not session.is_anon) and item.author_id) %} tooltip="ID: {{ item.author_id }}" {% endif %} {% if item.author_color %} style="color: {{ item.author_color }}" {% endif %}>{{ ((item.author_display_name or item.username) or "unknown") }}</a>{% else %}<span>anonymous</span>{% endif %} {% endif %}
                         {% if not user_alternative_infobox %}
-                        <span id="oc-badge-container">{% if item.is_oc %} — <span class="oc-badge" tooltip="Original Content">OC</span>{% endif %}</span>
+                        <span id="oc-badge-container">{% if enable_oc and item.is_oc %} — <span class="oc-badge" tooltip="Original Content">OC</span>{% endif %}</span>
                         {% endif %}
                     </div>
                     {% if not user_alternative_infobox %}
