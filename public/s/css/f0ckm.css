@@ -4330,7 +4330,8 @@ html[theme='95'] .sidebar-video-title {
   margin-bottom: 6px;
   position: sticky;
   top: -6px;
-  z-index: 10;
+  /* above everything inside the cards scrolling under it (badges 10, preview video 5) */
+  z-index: 20;
 }
 
 .sidebar-tag-title {
