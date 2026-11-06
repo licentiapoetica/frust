@@ -106,7 +106,9 @@ async fn prepare(st: &AppState, cfg: &Config, o: &FeedOpts<'_>, pool: bool) -> a
         if use_tag_id.is_none() {
             q.push("AND ").push(&modequery);
         }
-        q.push(if pool { " ORDER BY items.id LIMIT 10000" } else { " ORDER BY random() LIMIT 1" });
+        // The capped global pool is a random sample: ordered by id it only ever held the oldest 10000
+        // items, and random never reached anything newer. (The client shuffles it anyway.)
+        q.push(if pool { " ORDER BY random() LIMIT 10000" } else { " ORDER BY random() LIMIT 1" });
     }
     Ok(Prepared { user, tag, hall, query: q })
 }
