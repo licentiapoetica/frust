@@ -122,7 +122,20 @@ fn process_queue_item(mut p: Row) -> Row {
             t
         })
         .collect();
+    let rating = {
+        let has = |n: &str| tags.iter().any(|t| t["normalized"].as_str() == Some(n));
+        if has("nsfl") {
+            "nsfl"
+        } else if has("nsfw") {
+            "nsfw"
+        } else if has("sfw") {
+            "sfw"
+        } else {
+            "untagged"
+        }
+    };
     p.insert("tags".into(), Value::Array(tags));
+    p.insert("rating".into(), json!(rating));
     p
 }
 
@@ -383,16 +396,6 @@ async fn approve_queue(st: AppState, req: Req) -> Res {
         .map(process_queue_item)
         .map(|mut p| {
             let id = p.i64("id").unwrap_or(0);
-            let names: Vec<&str> = p["tags"].as_array().map(|a| a.iter().filter_map(|t| t["normalized"].as_str()).collect()).unwrap_or_default();
-            let rating = if names.contains(&"nsfl") {
-                "nsfl"
-            } else if names.contains(&"nsfw") {
-                "nsfw"
-            } else if names.contains(&"sfw") {
-                "sfw"
-            } else {
-                "untagged"
-            };
             let mime = p.string("mime");
             let dest = p.string("dest");
             let rows: Vec<&Row> = if p.bool("is_album") { album_rows.iter().filter(|r| r.i64("item_id") == Some(id)).collect() } else { vec![] };
@@ -430,7 +433,6 @@ async fn approve_queue(st: AppState, req: Req) -> Res {
                 (Some(w), Some(h)) => format!("{w}×{h}"),
                 _ => String::new(),
             };
-            p.insert("rating".into(), json!(rating));
             p.insert("kind".into(), json!(media_kind(&mime)));
             p.insert("media_json".into(), json!(crate::util::json_string(&Value::Array(media.clone()))));
             p.insert("is_album_view".into(), json!(media.len() > 1));

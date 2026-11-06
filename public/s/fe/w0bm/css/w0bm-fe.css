@@ -2502,6 +2502,8 @@ table.w0bm-ranking > thead > tr > th:first-child {
     background: rgba(255, 255, 255, 0.12);
     box-shadow: none;
 }
+/* padding-box: the fill stays inside the faint border, so on hover the button keeps the same edge
+   as the field instead of the border turning cyan and the button looking 1px bigger */
 #tag-add #submittags {
     flex: 0 0 auto;
     margin: 0;
@@ -2512,7 +2514,7 @@ table.w0bm-ranking > thead > tr > th:first-child {
     text-transform: uppercase;
     line-height: 1;
     color: #1fb2b0;
-    background: rgba(31, 178, 176, 0.1) !important;
+    background: rgba(31, 178, 176, 0.1) padding-box !important;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0;
     outline: 0;
@@ -2521,7 +2523,7 @@ table.w0bm-ranking > thead > tr > th:first-child {
 #tag-add #submittags:hover,
 #tag-add #submittags:focus-visible {
     color: #161618;
-    background: #1fb2b0 !important;
+    background: #1fb2b0 padding-box !important;
 }
 
 /* ── Halls dialog ("+" in the item bar, partials/hallmodal.html) ────────────────────────── */

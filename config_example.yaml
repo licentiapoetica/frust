@@ -152,7 +152,7 @@ websrv:
   frontend: f0ckm
   # Let visitors pick their own frontend with /frontend/<name> or ?frontend=<name> (kept in a cookie)
   frontend_switch: true
-  default_font: Manrope-Regular.woff2   # font file (built-in: public/s/fonts-builtin; add your own to the fonts dir)
+  default_font: Manrope-Regular.woff2   # font file (built-in: public/s/fonts-builtin; upload your own in the admin panel, Tools → Fonts)
   default_layout: legacy
   custom_favicon: /s/img/favicon.gif   # admin panel → Branding: an uploaded favicon replaces it
   custom_brand_image: []               # admin panel → Branding: an uploaded image replaces it

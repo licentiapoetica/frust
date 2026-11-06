@@ -806,6 +806,7 @@ const CSRF_EXEMPT: &[&str] = &[
     "/admin/brand_image/upload",
     "/admin/brand_image/delete",
     "/admin/favicon/upload",
+    "/admin/fonts/upload",
     // No session state involved: captcha puzzles and browser CSP reports
     "/api/cap/challenge",
     "/api/cap/redeem",

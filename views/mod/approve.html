@@ -29,7 +29,7 @@
                         <img src="/mod/pending/t/{{ post.id }}.webp" data-full="/mod/pending/b/{{ post.dest }}" alt="Preview" loading="lazy">
                         {% endif %}
                     </div>
-                    <span class="mq-badge mq-badge-rating is-{{ post.rating }}">{{ ("?" if post.rating == "untagged" else post.rating|upper) }}</span>
+                    <button type="button" data-id="{{ post.id }}" class="mq-badge mq-badge-rating is-{{ post.rating }} btn-rating-toggle-async" title="Click to switch SFW / NSFW">{{ ("?" if post.rating == "untagged" else post.rating|upper) }}</button>
                     <span class="mq-badge mq-badge-kind">{% if post.is_album_view %}<i class="fa-solid fa-images"></i> Album · <span class="mq-current">1</span> / {{ post.media|length }}{% else %}{{ post.kind }}{% endif %}</span>
                 </div>
 
@@ -64,15 +64,10 @@
                         {% if post.dims %}<span>{{ post.dims }}</span>{% endif %}
                         {% if post.original_filename %}<span class="mq-filename" title="{{ post.original_filename }}">{{ post.original_filename }}</span>{% endif %}
                     </div>
-                    <div class="mq-tags">
-                        {% for key, tag in post.tags|entries %}
-                        <span class="badge {{ tag.badge }}">{{ tag.tag }}</span>
-                        {% endfor %}
-                    </div>
+                    {% include "snippets/mod-card-tags.html" %}
                     <div class="mq-actions">
                         <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-primary btn-approve-async"><i class="fa-solid fa-check"></i> Approve</button>
                         <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-danger btn-deny-async"><i class="fa-solid fa-xmark"></i> Deny</button>
-                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-ghost mq-btn-rating btn-rating-toggle-async"><i class="fa-solid fa-shield-halved"></i> Toggle rating</button>
                     </div>
                 </div>
             </article>

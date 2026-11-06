@@ -45,19 +45,12 @@
                     {% if post.delete_reason %}
                     <div class="mq-reason"><strong>Reason:</strong> {{ post.delete_reason }}</div>
                     {% endif %}
-                    <div class="mq-tags">
-                        {% for key, tag in post.tags|entries %}
-                        <span class="badge {{ tag.badge }}">{{ tag.tag }}</span>
-                        {% endfor %}
-                    </div>
+                    {% include "snippets/mod-card-tags.html" %}
                     <div class="mq-actions">
-                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-primary btn-approve-async">Restore</button>
                         {% if session.admin %}
                         <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-danger btn-deny-async">Purge</button>
-                        {% else %}
-                        <span></span>
                         {% endif %}
-                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-ghost mq-btn-rating btn-rating-toggle-async"><i class="fa-solid fa-shield-halved"></i> Toggle rating</button>
+                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-primary btn-approve-async{% if not session.admin %} mq-btn-wide{% endif %}">Restore</button>
                     </div>
                 </div>
             </div>

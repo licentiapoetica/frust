@@ -1274,6 +1274,33 @@ mod tests {
         assert!(html.contains("name=\"cap-image-answer\""));
     }
 
+    /// The admin font manager: plain upload/delete forms (no JavaScript needed), deletes only for uploads.
+    #[test]
+    fn admin_fonts_page_renders() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let face = |file: &str, w: u16, uploaded: bool, builtin: bool| serde_json::json!({ "file": file, "weight": w, "weight_name": "Regular", "uploaded": uploaded, "builtin": builtin });
+        let ctx = serde_json::json!({
+            "shell_header": "snippets/admin-skin.html", "shell_footer": "snippets/admin-skin.html",
+            "csrf_token": "tok", "session": { "user": "admin", "admin": true },
+            "preview_css": "/admin/fonts/preview.css?v=1", "default_font": "Manrope-Regular.woff2", "brand_font": "Inter-Bold.woff2",
+            "font_weights": [{ "weight": 400, "name": "Regular" }],
+            "font_families": [
+                { "name": "Inter", "key": "k1", "files": ["Inter-Bold.woff2"], "faces": [face("Inter-Bold.woff2", 700, true, false)] },
+                { "name": "Manrope", "key": "k2", "files": ["Manrope-Regular.woff2"], "faces": [face("Manrope-Regular.woff2", 400, false, true)] },
+            ],
+        });
+        let html = env.get_template("admin/fonts.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(html.contains("action=\"/admin/fonts/upload\" enctype=\"multipart/form-data\""));
+        assert!(html.contains("name=\"back\" value=\"/admin/fonts#font-upload\""));
+        assert!(html.contains("<link rel=\"stylesheet\" href=\"/admin/fonts/preview.css?v=1\">"));
+        assert!(html.contains("adm-font-sample-k1 adm-font-w700"));
+        assert_eq!(html.matches("action=\"/admin/fonts/delete\"").count(), 1);
+        assert!(html.contains("name=\"file\" value=\"Inter-Bold.woff2\""));
+        assert!(html.contains(">Site default<") && html.contains(">Brand text<") && html.contains(">Built-in<"));
+        assert!(!html.contains("style="));
+    }
+
     #[test]
     fn settings_form_names_its_controls() {
         let s = std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../views/settings.html")).unwrap();

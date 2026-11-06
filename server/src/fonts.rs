@@ -264,11 +264,11 @@ pub fn admin_json(cfg: &Config) -> Value {
     let mut fams = families(cfg);
     for f in all_files(cfg) {
         let (name, weight) = split_name(&f);
-        if let Some(fam) = fams.iter_mut().find(|x| x.name == name) {
-            if !fam.faces.iter().any(|(x, _)| *x == f) {
-                fam.faces.push((f, weight));
-                fam.faces.sort_by_key(|(_, w)| *w);
-            }
+        if let Some(fam) = fams.iter_mut().find(|x| x.name == name)
+            && !fam.faces.iter().any(|(x, _)| *x == f)
+        {
+            fam.faces.push((f, weight));
+            fam.faces.sort_by_key(|(_, w)| *w);
         }
     }
     Value::Array(
