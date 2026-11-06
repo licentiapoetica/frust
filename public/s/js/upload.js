@@ -657,7 +657,8 @@ window.initUploadForm = (selector) => {
                 const trigger = document.createElement('button');
                 trigger.type = 'button';
                 trigger.innerText = '☺';
-                trigger.className = 'emoji-trigger';
+                trigger.title = 'Emoji';
+                trigger.className = 'emoji-trigger upload-emoji-trigger';
                 actions.prepend(trigger);
 
                 let picker = null;
@@ -668,7 +669,7 @@ window.initUploadForm = (selector) => {
                         return;
                     }
                     picker = document.createElement('div');
-                    picker.className = 'emoji-picker';
+                    picker.className = 'emoji-picker upload-emoji-picker';
                     Object.keys(emojis).forEach(name => {
                         const img = document.createElement('img');
                         img.src = emojis[name];
