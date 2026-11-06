@@ -1,6 +1,8 @@
 //! Direct media URLs of rated items: guests get a 401 (anonymous users a 403) for files whose
 //! rating they may not see (nsfl always, nsfw without `websrv.public_nsfw`,
 //! untagged without `websrv.public_untagged`; anon users: `anonymous_permissions.allowed_modes`).
+//! Files of items with an NSFP tag (`/admin/nsfp`) get a 403 for everyone not signed in, with the
+//! same exceptions as the listings' nsfp filter (`f0cklib::global_filter`).
 //!
 //! Gated: `/b/<dest>` (items and album entries), `/t/<id>.webp`, `/t/<album entry>.webp`,
 //! `/ca/<id>.webp`. `/t/<id>_blur.webp` stays public. Ratings are looked up per file and cached
@@ -13,15 +15,17 @@ use crate::state::{AppState, TtlCache};
 use once_cell::sync::Lazy;
 use std::time::Duration;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Flags {
     pub sfw: bool,
     pub nsfw: bool,
     pub nsfl: bool,
+    /// The item's (or album entry's) tags that are on the NSFP list.
+    pub nsfp: Vec<i64>,
 }
 
 impl Flags {
-    fn untagged(self) -> bool {
+    fn untagged(&self) -> bool {
         !self.sfw && !self.nsfw && !self.nsfl
     }
 }
@@ -67,7 +71,10 @@ fn target(path: &str) -> Option<Target> {
 /// Rating of the item behind `path`, `None` when the path is no item media.
 async fn lookup(st: &AppState, path: &str) -> Option<Flags> {
     let t = target(path)?;
-    let key = format!("{t:?}");
+    let mut nsfp: Vec<i32> = st.settings.nsfp_ids().into_iter().filter_map(|i| i32::try_from(i).ok()).collect();
+    nsfp.sort_unstable();
+    // The NSFP list is part of the key, so a change to it applies at once
+    let key = format!("{t:?}|{nsfp:?}");
     if let Some(f) = CACHE.get(&key) {
         return Some(f);
     }
@@ -107,12 +114,16 @@ async fn lookup(st: &AppState, path: &str) -> Option<Flags> {
             EXISTS (SELECT 1 FROM rt WHERE id = 2) AS nsfw,
             EXISTS (SELECT 1 FROM rt WHERE id = ",
         cfg.nsfl_tag_id() as i32,
-        " OR normalized = 'nsfl') AS nsfl"
+        " OR normalized = 'nsfl') AS nsfl,
+            ARRAY(SELECT DISTINCT id FROM rt WHERE id = ANY(",
+        nsfp,
+        "))::int4[] AS nsfp"
     ));
     match q.fetch_optional(&st.db).await {
         Ok(Some(r)) if r.bool("found") => {
-            let f = Flags { sfw: r.bool("sfw"), nsfw: r.bool("nsfw"), nsfl: r.bool("nsfl") };
-            CACHE.set(&key, f);
+            let nsfp = r.val("nsfp").as_array().map(|a| a.iter().filter_map(|v| v.as_i64()).collect()).unwrap_or_default();
+            let f = Flags { sfw: r.bool("sfw"), nsfw: r.bool("nsfw"), nsfl: r.bool("nsfl"), nsfp };
+            CACHE.set(&key, f.clone());
             Some(f)
         }
         Ok(_) => None,
@@ -123,8 +134,31 @@ async fn lookup(st: &AppState, path: &str) -> Option<Flags> {
     }
 }
 
+/// Is media of an item with flags `f` hidden from `viewer` by the NSFP list? Same exceptions as
+/// the listings (`f0cklib::global_filter`): guests see nsfw-tagged NSFP with `websrv.public_nsfw`,
+/// anon users the nsfw/nsfl tags their allowed modes include, members everything.
+fn nsfp_blocked(cfg: &Config, viewer: Viewer, f: &Flags) -> bool {
+    let nsfl = cfg.nsfl_tag_id();
+    match viewer {
+        Viewer::Member => false,
+        Viewer::Guest => {
+            let public_nsfw = cfg.truthy("websrv.public_nsfw");
+            f.nsfp.iter().any(|&id| !(id == 2 && public_nsfw))
+        }
+        Viewer::Anon => {
+            let modes = crate::settings::anon_allowed_modes(cfg);
+            let has = |m: &str| modes.iter().any(|x| x == m);
+            f.nsfp.iter().any(|&id| !((id == 2 && has("nsfw")) || (id == nsfl && has("nsfl"))))
+        }
+    }
+}
+
 /// May `viewer` load media of an item rated `f`? (Same rules as the item listings.)
-fn allowed(cfg: &Config, viewer: Viewer, f: Flags) -> bool {
+fn allowed(cfg: &Config, viewer: Viewer, f: &Flags) -> bool {
+    !nsfp_blocked(cfg, viewer, f) && rating_allowed(cfg, viewer, f)
+}
+
+fn rating_allowed(cfg: &Config, viewer: Viewer, f: &Flags) -> bool {
     match viewer {
         Viewer::Member => true,
         Viewer::Guest => {
@@ -143,7 +177,8 @@ pub enum Decision {
     Public,
     /// Visible to this viewer only: serve, but never from a shared cache.
     Restricted,
-    Deny,
+    /// Not for this viewer; `nsfp`: hidden by the NSFP list (always a 403).
+    Deny { nsfp: bool },
 }
 
 /// Gate `path` for the viewer `viewer()` resolves (only called for restricted files).
@@ -154,10 +189,11 @@ where
 {
     let Some(f) = lookup(st, path).await else { return Decision::Public };
     let cfg = st.cfg();
-    if allowed(&cfg, Viewer::Guest, f) && allowed(&cfg, Viewer::Anon, f) {
+    if allowed(&cfg, Viewer::Guest, &f) && allowed(&cfg, Viewer::Anon, &f) {
         return Decision::Public;
     }
-    if allowed(&cfg, viewer().await, f) { Decision::Restricted } else { Decision::Deny }
+    let v = viewer().await;
+    if allowed(&cfg, v, &f) { Decision::Restricted } else { Decision::Deny { nsfp: nsfp_blocked(&cfg, v, &f) } }
 }
 
 #[cfg(test)]
@@ -190,13 +226,30 @@ mod tests {
         let nsfw = Flags { nsfw: true, ..Flags::default() };
         let nsfl = Flags { nsfl: true, ..Flags::default() };
         let untagged = Flags::default();
-        assert!(allowed(&off, Viewer::Guest, sfw));
-        assert!(!allowed(&off, Viewer::Guest, nsfw));
-        assert!(!allowed(&off, Viewer::Guest, nsfl));
-        assert!(!allowed(&off, Viewer::Guest, untagged));
-        assert!(allowed(&on, Viewer::Guest, nsfw));
-        assert!(allowed(&on, Viewer::Guest, untagged));
-        assert!(!allowed(&on, Viewer::Guest, nsfl));
-        assert!(allowed(&off, Viewer::Member, nsfl));
+        assert!(allowed(&off, Viewer::Guest, &sfw));
+        assert!(!allowed(&off, Viewer::Guest, &nsfw));
+        assert!(!allowed(&off, Viewer::Guest, &nsfl));
+        assert!(!allowed(&off, Viewer::Guest, &untagged));
+        assert!(allowed(&on, Viewer::Guest, &nsfw));
+        assert!(allowed(&on, Viewer::Guest, &untagged));
+        assert!(!allowed(&on, Viewer::Guest, &nsfl));
+        assert!(allowed(&off, Viewer::Member, &nsfl));
+    }
+
+    #[test]
+    fn nsfp_rules() {
+        let on = cfg("websrv: {public_nsfw: true, public_untagged: true}");
+        let off = cfg("websrv: {public_nsfw: false, public_untagged: true}");
+        let sfw_nsfp = Flags { sfw: true, nsfp: vec![7], ..Flags::default() };
+        assert!(!allowed(&on, Viewer::Guest, &sfw_nsfp));
+        assert!(nsfp_blocked(&on, Viewer::Guest, &sfw_nsfp));
+        assert!(nsfp_blocked(&on, Viewer::Anon, &sfw_nsfp));
+        assert!(allowed(&on, Viewer::Member, &sfw_nsfp));
+        // nsfw itself on the NSFP list: guests still see it with public_nsfw
+        let nsfw_nsfp = Flags { nsfw: true, nsfp: vec![2], ..Flags::default() };
+        assert!(allowed(&on, Viewer::Guest, &nsfw_nsfp));
+        assert!(nsfp_blocked(&off, Viewer::Guest, &nsfw_nsfp));
+        let plain = Flags { sfw: true, ..Flags::default() };
+        assert!(allowed(&on, Viewer::Guest, &plain));
     }
 }
