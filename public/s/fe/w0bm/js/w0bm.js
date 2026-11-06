@@ -98,11 +98,11 @@
     return { ok, status: res.status, data, redirected: res.redirected, url: res.url, msg: (data && (data.msg || data.message)) || (ok ? '' : 'Error ' + res.status) };
   }
 
-  // ── Flash messages (partials/flash.blade.php) ─────────────────────────────────────────
+  // ── Flash messages: toasts in the bottom right corner (#w0bm-flash, partials/body-end.html) ──
   // `key`: a message with the same key is updated in place instead of stacking a new one
   function flash(type, message, key) {
     if (type === 'error') type = 'danger';
-    const box = $('#sidebar .flashcontainer > .flash-inner') || $('#w0bm-flash > .flash-inner');
+    const box = $('#w0bm-flash > .flash-inner');
     if (!box) return;
     let div = key ? Array.from(box.children).find((c) => c.dataset.flashKey === key) : null;
     if (div) {

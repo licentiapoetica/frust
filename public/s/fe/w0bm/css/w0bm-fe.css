@@ -861,22 +861,72 @@ html:not(.w0bm-nojs) tr[data-thumb]:hover .w0bm-rowthumb {
     object-fit: cover;
 }
 
-/* ── Flash messages (fixed, for pages without the sidebar's flash container) ────────────── */
+/* ── Flash messages: toasts stacked in the bottom right corner (#w0bm-flash; w0bm.js flash() and
+   the server's no-JS flash both land here) ──────────────────────────────────────────────── */
 .w0bm-flash-global {
     position: fixed;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: auto;
-    min-width: 300px;
-    max-width: 90vw;
+    top: auto;
+    bottom: 15px;
+    right: 15px;
+    left: auto;
+    width: 340px;
+    max-width: calc(100vw - 30px);
+    opacity: 1;
     z-index: 1100;
+    pointer-events: none;
+}
+.w0bm-flash-global > .flash-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.w0bm-flash-global .alert {
+    margin: 0;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    opacity: 0.95;
+    pointer-events: auto;
+    animation: w0bm-toast-in .25s ease-out;
+}
+.w0bm-flash-global .alert.w0bm-nojs-flash {
+    animation: w0bm-toast-in .25s ease-out, w0bm-flash-out 0.5s ease 6s forwards;
+}
+/* clear of the "no JS" label in the corner */
+html.w0bm-nojs .w0bm-flash-global {
+    bottom: 30px;
+}
+@keyframes w0bm-toast-in {
+    from {
+        opacity: 0;
+        transform: translateX(40px);
+    }
 }
 .flash-inner .alert {
-    transition: opacity .3s, max-height .3s;
+    transition: opacity .3s, transform .3s;
 }
 .flash-inner .alert.w0bm-alert-out {
     opacity: 0;
+}
+.w0bm-flash-global .alert.w0bm-alert-out {
+    transform: translateX(40px);
+}
+@media (max-width: 767px) {
+    .w0bm-flash-global {
+        bottom: 8px;
+        right: 8px;
+        max-width: calc(100vw - 16px);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .w0bm-flash-global .alert {
+        animation: none;
+    }
+    .w0bm-flash-global .alert.w0bm-nojs-flash {
+        animation: w0bm-flash-out 0.5s ease 6s forwards;
+    }
+    .w0bm-flash-global .alert.w0bm-alert-out {
+        transform: none;
+    }
 }
 
 /* ── Profile / pages ───────────────────────────────────────────────────────────────────── */
