@@ -2531,6 +2531,30 @@ table.w0bm-ranking > thead > tr > th:first-child {
 #w0bm-editbtn {
     padding: 0 5px;
 }
+/* The edit button's icon: Font Awesome 6's regular pen-to-square (f0ckm's /s/fa/). w0bm loads only
+   Font Awesome 4, so just this one font file and glyph instead of all of FA6. */
+@font-face {
+    font-family: "w0bm FA6 Regular";
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url("/s/fa/webfonts/fa-regular-400.woff2") format("woff2"), url("/s/fa/webfonts/fa-regular-400.ttf") format("truetype");
+}
+.w0bm-icon-edit {
+    display: inline-block;
+    font-style: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+a.w0bm-iconbtn#w0bm-editbtn {
+    color: #fff;
+}
+.w0bm-icon-edit::before {
+    font-family: "w0bm FA6 Regular";
+    font-weight: 400;
+    content: "\f044";
+}
 /* Delete (staff) in the edit modal's footer: on the left, away from Close/Save; the same button
    as those two (.btn-primary), only with a red border */
 .modal-footer .w0bm-edit-delete {

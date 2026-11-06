@@ -4,7 +4,8 @@
 {#- the source is a link only when it is a URL of another site (a name like "w0bm" or this site: text) -#}
 {% if (item.src and item.src.long) %}<div>Source: {% if (item.src.short and (item.src.short|lower) != (domain|lower)) %}<a href="{{ item.src.long }}" rel="noopener noreferrer" target="_blank">{{ item.src.short }}</a>{% else %}{{ (item.src.short or item.src.long) }}{% endif %}</div>{% endif %}
 {% if item.original_filename %}<div>File: {{ item.original_filename }}</div>{% endif %}
-<div>Type: {{ item.mime }}{% if item.mime != "video/youtube" %} ({{ item.size }}){% endif %}</div>
+{#- the size downloads the file (the item bar has no download button) -#}
+<div>Type: {{ item.mime }}{% if item.mime != "video/youtube" %} (<a href="{{ item.dest }}" download title="Download">{{ item.size }}</a>){% endif %}</div>
 {% if (item.width and item.height) %}<div>Dimensions: {{ item.width }}×{{ item.height }}</div>{% endif %}
 {% if (halls_enabled and item.halls and (item.halls|length)) %}<div>{{ ("Hall" if (item.halls|length) == 1 else "Halls") }}: {% for h in item.halls %}<a href="/h/{{ h.slug }}">{{ h.name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
 {% if item.expires_at %}<div>Self-destructs {{ item.expires_in }}</div>{% endif %}

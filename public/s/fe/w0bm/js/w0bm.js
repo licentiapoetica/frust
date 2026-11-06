@@ -344,8 +344,7 @@
     host.addEventListener('mouseenter', show);
     host.addEventListener('mouseleave', hide);
     btn.addEventListener('click', (e) => {
-      // touch: tap toggles; the download button still downloads on desktop
-      if (btn.id === 'dlbutton' && !isMobile) return;
+      // touch: tap toggles
       e.preventDefault();
       if (host.querySelector(':scope > .popover')) host.querySelector(':scope > .popover').remove();
       else show();
