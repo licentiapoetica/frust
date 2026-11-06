@@ -1,9 +1,13 @@
 {#- Tag overview (f0ckm /tags) in w0bm's categories.blade.php style -#}
 {% extends "frontends/w0bm/layout.html" %}
+{#- the index's column (w0bm's .fucklaravel), so these pages are as wide as the index -#}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
 {% block title %}Tags - {{ domain }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h3>Tags</h3>
+    {#- id="index": the heading size and spacing of index / search (w0bmcustom.css h3#index) -#}
+    <h3 id="index">Tags</h3>
     {% include "frontends/w0bm/partials/searchform.html" %}
 </div>
 <div class="extraction_point w0bm-hallgrid" id="categories">

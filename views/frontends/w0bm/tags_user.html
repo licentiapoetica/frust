@@ -1,5 +1,8 @@
 {#- A user's tags in w0bm's category tiles -#}
 {% extends "frontends/w0bm/layout.html" %}
+{#- the index's column (w0bm's .fucklaravel), so these pages are as wide as the index -#}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
 {% block title %}Tags of {{ user.user }} - {{ domain }}{% endblock %}
 {% block content %}
 <div class="page-header">

@@ -994,14 +994,9 @@ span#halls-user > a {
     background-image: var(--hall-image);
 }
 /* Tag and hall cards (tags.html, tags_user.html, halls.html): a grid of cards that are all the same
-   size, at most three to a row (1 / 2 / 3), on a page wider than Bootstrap's fixed 1170px. The name
+   size, at most three to a row (1 / 2 / 3), in the same container width as the index. The name
    is always two lines high (longer ones end in "…", the full name is the tooltip), so is a hall's
    description; the button sits at the bottom. (Floated columns of different heights left holes.) */
-.w0bm-main > .container:has(> .w0bm-hallgrid) {
-    /* important: style.css fixes .container at 1170px with !important from 1550px */
-    width: auto !important;
-    max-width: 1600px;
-}
 .w0bm-hallgrid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -2011,6 +2006,28 @@ html[data-w0bm-theme="Glitch"] .navbar .dropdown-menu {
     padding-top: 0;
     padding-bottom: 0;
     line-height: 32px;
+}
+/* The main page's header row (pagination + search box, no title) as high as the index's and the
+   tag list's (title + search box): there the 28px h3#index (line-height 1.1; its 20px top margin
+   collapses into .page-header's own) sets the height and the search box, pulled 30px up, ends
+   4px below it. Here a flex row of that height with the search box at its bottom right, whether
+   or not there are page links. */
+@media (min-width: 768px) {
+    .w0bm-index-page .page-header > .page {
+        display: flex;
+        align-items: flex-end;
+        min-height: calc(4px + 2.2em);
+    }
+    .w0bm-index-page .page-header > .page > .w0bm-searchform {
+        display: flex;
+        flex-direction: row-reverse;
+        margin: 0 0 0 auto;
+    }
+    .w0bm-index-page .page-header > .page > .w0bm-searchform > .suchleiste,
+    .w0bm-index-page .page-header > .page > .w0bm-searchform > .suchbutton {
+        float: none;
+        margin-top: 0;
+    }
 }
 /* Search modal: field and button one row over the full width, the button as tall as the field
    (the themes below may still set their own fixed height for both) */
