@@ -38,6 +38,8 @@ pub struct SiteSettings {
     pub brand_case: String,
     /// Navbar brand text font: a font file of crate::fonts (its family), "" for the frontend's own
     pub brand_font: String,
+    /// Navbar brand text size in percent of the frontend's own (see [`BRAND_SIZES`]), 0 = 100
+    pub brand_size: i64,
     pub motd: String,
     pub about_text: String,
     pub rules_text: String,
@@ -75,6 +77,7 @@ impl Settings {
                 brand_glitch_text: true,
                 brand_glitch_image: true,
                 brand_case: String::new(),
+                brand_size: 0,
                 brand_font: String::new(),
                 motd: String::new(),
                 about_text: String::new(),
@@ -415,6 +418,7 @@ pub async fn load_from_db(st: &crate::state::AppState) {
         s.favicon_url = cfg.str_or("websrv.custom_favicon", "").to_string();
         s.brand_case = String::new();
         s.brand_font = String::new();
+        s.brand_size = 0;
         s.private_messages = cfg.enabled("websrv.private_messages");
         s.dm_attachments = cfg.enabled("websrv.dm_attachments");
         s.dm_unencrypted = cfg.truthy("websrv.dm_unencrypted");
@@ -443,6 +447,7 @@ pub async fn load_from_db(st: &crate::state::AppState) {
                 "brand_glitch_image" => s.brand_glitch_image = b,
                 "brand_case" => s.brand_case = brand_case(&val).to_string(),
                 "brand_font" => s.brand_font = val,
+                "brand_size" => s.brand_size = brand_size(&val),
                 // No row (or an empty one) keeps the config favicon
                 "favicon_url" if !val.is_empty() => s.favicon_url = val,
                 "about_text" => s.about_text = val,
@@ -457,6 +462,14 @@ pub async fn load_from_db(st: &crate::state::AppState) {
             }
         }
     });
+}
+
+/// Navbar brand text sizes (percent of the frontend's own size) besides 100.
+pub const BRAND_SIZES: [i64; 12] = [50, 60, 70, 80, 90, 110, 120, 130, 140, 150, 175, 200];
+
+/// A stored or posted navbar brand size, anything else as 0 (100 %, the frontend's own).
+pub fn brand_size(v: &str) -> i64 {
+    v.trim().parse().ok().filter(|n| BRAND_SIZES.contains(n)).unwrap_or(0)
 }
 
 /// A stored navbar brand case, unknown values as "" (the frontend's own).

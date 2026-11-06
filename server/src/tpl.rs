@@ -765,6 +765,8 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("brand_glitch_image", json!(s.brand_glitch_image));
     // Brand text case and font (admin panel → branding); a font that is gone counts as none
     put("brand_case", json!(s.brand_case));
+    put("brand_size", json!(Some(s.brand_size).filter(|n| *n > 0)));
+    put("brand_sizes", json!(crate::settings::BRAND_SIZES));
     let brand_font = Some(s.brand_font.as_str())
         .filter(|f| !f.is_empty() && fonts.as_array().is_some_and(|a| a.iter().any(|fam| fam["files"].as_array().is_some_and(|fs| fs.iter().any(|x| x.as_str() == Some(f))))));
     put("brand_font", json!(brand_font.unwrap_or("")));
@@ -1381,6 +1383,18 @@ mod tests {
         let one = render("Hack.woff", 400, None);
         let sel = one.split("id=\"website_font_weight_select\"").nth(1).unwrap().split('>').next().unwrap();
         assert!(sel.contains(" hidden"), "one weight: no weight select");
+    }
+
+    /// Every navbar brand size has its rule in each frontend's CSS.
+    #[test]
+    fn brand_sizes_have_css() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        for f in ["public/s/css/f0ckm.css", "public/s/fe/w0bm/css/w0bm-fe.css", "public/s/fe/f0ckv2/css/f0ckv2.css"] {
+            let css = std::fs::read_to_string(root.join(f)).unwrap();
+            for n in crate::settings::BRAND_SIZES {
+                assert!(css.contains(&format!("[data-brand-text].brand-size-{n} {{")), "{f} {n}");
+            }
+        }
     }
 
     /// Every text size has its rule in f0ckm.css and w0bm-fe.css.

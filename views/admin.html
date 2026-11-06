@@ -199,7 +199,7 @@
         <div class="adm-row adm-row-wrap">
           <div class="adm-row-text">
             <label for="brand-text-input">Navbar brand text</label>
-            <p>Shown next to the brand image, or on its own without one. Empty: just the image, or the site name ({{ domain }}) when there is no image. Case and font apply in every frontend; "Default" keeps the frontend's own. More fonts: <a href="/admin/fonts">Fonts</a>.</p>
+            <p>Shown next to the brand image, or on its own without one. Empty: just the image, or the site name ({{ domain }}) when there is no image. Case, font and size apply in every frontend; "Default" keeps the frontend's own. More fonts: <a href="/admin/fonts">Fonts</a>.</p>
           </div>
           <form class="adm-brand" method="post" action="/admin/brand_text" data-on="submit:prevent,saveBrandText">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -214,6 +214,12 @@
               <option value=""{% if not brand_font %} selected{% endif %}>Default font</option>
               {% for font in fonts %}
               <option value="{{ font.file }}"{% if brand_font in font.files %} selected{% endif %}>{{ font.name }}</option>
+              {% endfor %}
+            </select>
+            <select id="brand-size-select" name="size" class="adm-text adm-select" title="Size" aria-label="Size">
+              <option value=""{% if not brand_size %} selected{% endif %}>Default size</option>
+              {% for n in brand_sizes %}
+              <option value="{{ n }}"{% if n == brand_size %} selected{% endif %}>{{ n }}%</option>
               {% endfor %}
             </select>
             <button type="submit" class="adm-btn adm-btn-primary">Save</button>

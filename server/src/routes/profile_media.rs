@@ -592,10 +592,10 @@ async fn brand_delete(st: AppState, mut req: Req) -> Res {
 /// Longest navbar brand text.
 const BRAND_TEXT_MAX: usize = 64;
 
-/// `POST /admin/brand_text` (`text`, `case`, `font`): the navbar text next to the brand image.
+/// `POST /admin/brand_text` (`text`, `case`, `font`, `size`): the navbar text next to the brand image.
 /// Empty: no text next to an image, the site name without one. `case`: "" (the frontend's own),
-/// "upper" or "lower"; `font`: a font file of crate::fonts, "" for the frontend's own (both kept
-/// when not sent). A normal route, so the CSRF middleware and the no-JavaScript `back` redirect apply.
+/// "upper" or "lower"; `font`: a font file of crate::fonts, "" for the frontend's own; `size`: a
+/// percent of crate::settings::BRAND_SIZES, anything else 100 (all three kept when not sent). A normal route, so the CSRF middleware and the no-JavaScript `back` redirect apply.
 async fn brand_text_save(st: AppState, mut req: Req) -> Res {
     let Some(s) = req.session.clone().filter(|s| s.admin) else { return fail(401, "Unauthorized") };
     let raw = req.post_str("text").await.unwrap_or_default();
@@ -604,6 +604,10 @@ async fn brand_text_save(st: AppState, mut req: Req) -> Res {
     let case = match req.post_str("case").await {
         Some(c) => crate::settings::brand_case(c.trim()).to_string(),
         None => cur.brand_case,
+    };
+    let size = match req.post_str("size").await {
+        Some(n) => crate::settings::brand_size(&n),
+        None => cur.brand_size,
     };
     let font = match req.post_str("font").await.map(|f| f.trim().to_string()) {
         Some(f) if f.is_empty() => f,
@@ -616,15 +620,17 @@ async fn brand_text_save(st: AppState, mut req: Req) -> Res {
         x.brand_text = t;
         x.brand_case = c;
         x.brand_font = f;
+        x.brand_size = size;
     });
-    for (key, v) in [("brand_text", &text), ("brand_case", &case), ("brand_font", &font)] {
+    let size_str = if size > 0 { size.to_string() } else { String::new() };
+    for (key, v) in [("brand_text", &text), ("brand_case", &case), ("brand_font", &font), ("brand_size", &size_str)] {
         if let Err(e) = crate::settings::save(&st, key, v).await {
             tracing::error!("[BRAND TEXT ERROR] {e}");
             return fail(500, "Failed to save the brand text");
         }
     }
     let font_css = if font.is_empty() { String::new() } else { crate::fonts::brand_css_url(&font) };
-    let data = json!({ "text": text, "case": case, "font": font, "font_css": font_css });
+    let data = json!({ "text": text, "case": case, "font": font, "font_css": font_css, "size": Some(size).filter(|n| *n > 0) });
     notify(&st, "brand_image", data.clone()).await;
     crate::social::helpers::audit_log(&st, s.id, "update_brand_text", "system", "0", Some(data.clone())).await;
     let mut out = data;

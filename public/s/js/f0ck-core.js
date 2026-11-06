@@ -481,9 +481,10 @@ window.F0ckLive = (() => {
     window.syncNavbarHeight?.();
     hook({ text: text || '' });
   };
-  // Case ("" / "upper" / "lower") and font (font_css: the @font-face stylesheet, "" for the
-  // frontend's own font) of the brand text: classes from the frontend's CSS
-  window.updateBrandStyle = (kase, fontCss) => {
+  // Case ("" / "upper" / "lower"), font (font_css: the @font-face stylesheet, "" for the
+  // frontend's own font) and size (a percent, null/undefined: the frontend's own; left alone
+  // when not given) of the brand text: classes from the frontend's CSS
+  window.updateBrandStyle = (kase, fontCss, size) => {
     let link = document.getElementById('brand-font-css');
     if (fontCss) {
       if (!link) {
@@ -498,6 +499,10 @@ window.F0ckLive = (() => {
       txt.classList.toggle('brand-case-upper', kase === 'upper');
       txt.classList.toggle('brand-case-lower', kase === 'lower');
       txt.classList.toggle('brand-font', !!fontCss);
+      if (size !== undefined) {
+        Array.from(txt.classList).filter((c) => c.startsWith('brand-size-')).forEach((c) => txt.classList.remove(c));
+        if (size) txt.classList.add('brand-size-' + size);
+      }
     });
     window.syncNavbarHeight?.();
   };
@@ -506,7 +511,7 @@ window.F0ckLive = (() => {
     if (!data) return;
     if ('url' in data) window.updateBrandImage(data.url || null);
     if ('text' in data) window.updateBrandText(data.text || '');
-    if ('case' in data || 'font_css' in data) window.updateBrandStyle(data.case || '', data.font_css || '');
+    if ('case' in data || 'font_css' in data || 'size' in data) window.updateBrandStyle(data.case || '', data.font_css || '', 'size' in data ? data.size : undefined);
   };
 })();
 

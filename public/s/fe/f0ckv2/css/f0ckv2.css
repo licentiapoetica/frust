@@ -1812,3 +1812,46 @@ div.posts > a.v2-onara-active {
 [data-brand-text].brand-font {
   font-family: 'BrandFont', monospace !important;
 }
+
+/* Brand text size (admin panel → branding): a percent of this frontend's own brand size. zoom
+   scales from that size (font-size % would start from the parent's); same sizes in all three
+   frontends' CSS (crate::settings::BRAND_SIZES). */
+[data-brand-text][class*="brand-size-"] {
+  display: inline-block;
+}
+[data-brand-text].brand-size-50 {
+  zoom: 0.5;
+}
+[data-brand-text].brand-size-60 {
+  zoom: 0.6;
+}
+[data-brand-text].brand-size-70 {
+  zoom: 0.7;
+}
+[data-brand-text].brand-size-80 {
+  zoom: 0.8;
+}
+[data-brand-text].brand-size-90 {
+  zoom: 0.9;
+}
+[data-brand-text].brand-size-110 {
+  zoom: 1.1;
+}
+[data-brand-text].brand-size-120 {
+  zoom: 1.2;
+}
+[data-brand-text].brand-size-130 {
+  zoom: 1.3;
+}
+[data-brand-text].brand-size-140 {
+  zoom: 1.4;
+}
+[data-brand-text].brand-size-150 {
+  zoom: 1.5;
+}
+[data-brand-text].brand-size-175 {
+  zoom: 1.75;
+}
+[data-brand-text].brand-size-200 {
+  zoom: 2;
+}
