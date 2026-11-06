@@ -526,9 +526,7 @@ pub async fn gen_audio_placeholder(cfg: &Config, target: &Path, thumb_size: u32)
     let pt = ((thumb_size as f64) * 0.35).round().to_string();
     let t = s(target);
     let r = magick(&[
-        "-size", &spec, "radial-gradient:#2c2c2c-#181818",
-        "(", "+clone", "-font", &font, "-pointsize", &pt, "-gravity", "center", "-fill", "rgba(255,255,255,0.3)", "-annotate", "0", "\u{f001}", "-blur", "0x12", ")",
-        "-composite",
+        "-size", &spec, "xc:#1e1e1e",
         "-font", &font, "-pointsize", &pt, "-gravity", "center", "-fill", "rgba(240,240,240,0.88)", "-annotate", "0", "\u{f001}",
         &t,
     ])
@@ -539,7 +537,7 @@ pub async fn gen_audio_placeholder(cfg: &Config, target: &Path, thumb_size: u32)
     if tokio::fs::copy(cfg.paths.s.join("img").join("audio.webp"), target).await.is_ok() {
         return true;
     }
-    let _ = magick(&["-size", &spec, "radial-gradient:#2c2c2c-#181818", "-gravity", "center", "-fill", "rgba(240,240,240,0.88)", "-pointsize", "60", "-annotate", "0", "♪", &t]).await;
+    let _ = magick(&["-size", &spec, "xc:#1e1e1e", "-gravity", "center", "-fill", "rgba(240,240,240,0.88)", "-pointsize", "60", "-annotate", "0", "♪", &t]).await;
     false
 }
 
