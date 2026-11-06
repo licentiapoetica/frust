@@ -841,10 +841,12 @@ tr[data-thumb]:hover .w0bm-rowthumb {
 html:not(.w0bm-nojs) tr[data-thumb]:hover .w0bm-rowthumb {
     display: none;
 }
+/* --thumb-x/y are window pixels (the mouse position); with a custom text size the body is
+   zoomed (--fs-zoom), which would scale them too */
 #w0bm-hoverthumb {
     position: fixed;
-    left: var(--thumb-x, 0);
-    top: var(--thumb-y, 0);
+    left: calc(var(--thumb-x, 0px) / var(--fs-zoom, 1));
+    top: calc(var(--thumb-y, 0px) / var(--fs-zoom, 1));
     z-index: 1100;
     border: 1px white solid;
     box-shadow: 5px 5px 7px 0 rgba(0, 0, 0, 0.75);

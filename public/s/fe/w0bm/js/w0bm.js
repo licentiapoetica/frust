@@ -1246,7 +1246,9 @@
     onLeave(() => box?.remove());
     const place = (e) => {
       if (!box) return;
-      const w = box.offsetWidth || 130, h = box.offsetHeight || 130;
+      // the box's size on screen: the page may be zoomed (text size setting, --fs-zoom)
+      const z = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fs-zoom')) || 1;
+      const w = (box.offsetWidth || 130) * z, h = (box.offsetHeight || 130) * z;
       const x = e.clientX + 15 + w > window.innerWidth - 10 ? e.clientX - 15 - w : e.clientX + 15;
       const y = e.clientY + 15 + h > window.innerHeight - 10 ? e.clientY - 15 - h : e.clientY + 15;
       box.style.setProperty('--thumb-x', Math.max(0, x) + 'px');
