@@ -3444,9 +3444,10 @@ html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav > label[for='ta
 
 /* The visitor's website font (settings): layout.html / shell/header.html put .w0bm-user-font on
    <html> and head-assets.html loads its @font-face rules (/user-font.css). Icon fonts that sit on
-   the element itself (Font Awesome 4 + 6, Glyphicons, Video.js controls) keep theirs. :where()
+   the element itself (Font Awesome 4 + 6, Glyphicons, Video.js controls) keep theirs, so do the
+   admin font manager's samples (.adm-font-sample). :where()
    keeps it at zero specificity, so the brand text font above still wins. */
 :where(html.w0bm-user-font),
-:where(html.w0bm-user-font *:not(canvas):not(.fa):not([class^="fa-"]):not([class*=" fa-"]):not(.fas):not(.far):not(.fab):not(.glyphicon):not([class*="vjs-"]):not(.force-impact):not(.meme-title)) {
+:where(html.w0bm-user-font *:not(canvas):not(.adm-font-sample):not(.fa):not([class^="fa-"]):not([class*=" fa-"]):not(.fas):not(.far):not(.fab):not(.glyphicon):not([class*="vjs-"]):not(.force-impact):not(.meme-title)) {
   font-family: 'CustomUserFont', sans-serif !important;
 }
