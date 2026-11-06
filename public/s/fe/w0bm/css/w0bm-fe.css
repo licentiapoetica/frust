@@ -3209,6 +3209,16 @@ html[class*="user-fs-"] #sidebar {
 html[class*="user-fs-"] .webchat > iframe {
     min-height: calc(70vh / var(--fs-zoom));
 }
+/* The item page's 16:9 player takes its height from the column width (bootstrap's fixed-width
+   container), so zoomed it pushes the prev/next row and the item bar out of the window: cap the
+   width so player + navbar, title and those rows (about 190px) fit the window height, with
+   some room left (.vertical-align centres it: about 30px above and below). */
+@media (min-width: 768px) {
+    html[class*="user-fs-"] body.w0bm-item-page .vertical-align > .wrapper {
+        max-width: calc((100vh / var(--fs-zoom) - 250px) * 16 / 9);
+        margin-inline: auto;
+    }
+}
 /* this file */
 html[class*="user-fs-"] #sidebar.w0bm-sidebar-nocomments ~ .w0bm-main .vertical-align {
     min-height: calc(90vh / var(--fs-zoom) - 50px);
@@ -3256,6 +3266,43 @@ html[class*="user-fs-"] .f0ck-shell-page {
         height: calc(100vh / var(--fs-zoom));
         height: calc(100dvh / var(--fs-zoom));
     }
+}
+
+/* Sidebar footer links ([+Add Tag] About Rules Terms Privacy Stats): always one line, whatever
+   the text size or website font. The row's font shrinks when it would not fit (container query
+   units: 4cqi is about the most these 37 characters + padding take); spread over the whole width, the same space between all links. Beats w0bm-mobile.css's wrapping version. */
+html body.w0bm-item-page #sidebar > .tags .tagtest {
+    container-type: inline-size;
+}
+html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 0;
+    float: none;
+    margin: 0;
+    white-space: nowrap;
+    font-size: min(1em, 4cqi);
+}
+html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav::before,
+html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav::after {
+    display: none;
+}
+html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav > li,
+html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav > label {
+    float: none;
+    flex: none;
+    margin: 0;
+}
+html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav li.addtagsy > a,
+html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav #tagadder {
+    padding-left: 0.35em;
+    padding-right: 0.35em;
+}
+/* the [+Add Tag] label's own side padding (w0bmcustom.css) would double the space after it */
+html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav > label[for='tag-add-toggle'] {
+    padding-left: 0;
+    padding-right: 0;
 }
 
 /* The visitor's website font (settings): layout.html / shell/header.html put .w0bm-user-font on
