@@ -592,10 +592,12 @@ async fn brand_delete(st: AppState, mut req: Req) -> Res {
 /// Longest navbar brand text.
 const BRAND_TEXT_MAX: usize = 64;
 
-/// `POST /admin/brand_text` (`text`, `case`, `font`, `size`): the navbar text next to the brand image.
-/// Empty: no text next to an image, the site name without one. `case`: "" (the frontend's own),
-/// "upper" or "lower"; `font`: a font file of crate::fonts, "" for the frontend's own; `size`: a
-/// percent of crate::settings::BRAND_SIZES, anything else 100 (all three kept when not sent). A normal route, so the CSRF middleware and the no-JavaScript `back` redirect apply.
+/// `POST /admin/brand_text` (`text`, `case`, `font`, `weight`, `size`): the navbar text next to the
+/// brand image. Empty: no text next to an image, the site name without one. `case`: "" (the
+/// frontend's own), "upper" or "lower"; `font`: a font file of crate::fonts, "" for the frontend's
+/// own; `weight`: one of that font family's weights, anything else (or no font) the frontend's
+/// own; `size`: a percent of crate::settings::BRAND_SIZES, anything else 100 (each kept when not
+/// sent). A normal route, so the CSRF middleware and the no-JavaScript `back` redirect apply.
 async fn brand_text_save(st: AppState, mut req: Req) -> Res {
     let Some(s) = req.session.clone().filter(|s| s.admin) else { return fail(401, "Unauthorized") };
     let raw = req.post_str("text").await.unwrap_or_default();
@@ -615,22 +617,31 @@ async fn brand_text_save(st: AppState, mut req: Req) -> Res {
         Some(_) => return fail(400, "Unknown font"),
         None => cur.brand_font,
     };
+    // Only a weight the family has (the select lists them; a family change without JavaScript
+    // posts the old family's weight)
+    let weight = match req.post_str("weight").await {
+        Some(w) => crate::settings::brand_weight(&w),
+        None => cur.brand_weight,
+    };
+    let weight = if font.is_empty() { None } else { crate::fonts::weight_for(&st.cfg(), &font, Some(weight)) };
     let (t, c, f) = (text.clone(), case.clone(), font.clone());
     st.settings.update(|x| {
         x.brand_text = t;
         x.brand_case = c;
         x.brand_font = f;
+        x.brand_weight = weight.map(i64::from).unwrap_or(0);
         x.brand_size = size;
     });
     let size_str = if size > 0 { size.to_string() } else { String::new() };
-    for (key, v) in [("brand_text", &text), ("brand_case", &case), ("brand_font", &font), ("brand_size", &size_str)] {
+    let weight_str = weight.map(|w| w.to_string()).unwrap_or_default();
+    for (key, v) in [("brand_text", &text), ("brand_case", &case), ("brand_font", &font), ("brand_weight", &weight_str), ("brand_size", &size_str)] {
         if let Err(e) = crate::settings::save(&st, key, v).await {
             tracing::error!("[BRAND TEXT ERROR] {e}");
             return fail(500, "Failed to save the brand text");
         }
     }
-    let font_css = if font.is_empty() { String::new() } else { crate::fonts::brand_css_url(&font) };
-    let data = json!({ "text": text, "case": case, "font": font, "font_css": font_css, "size": Some(size).filter(|n| *n > 0) });
+    let font_css = if font.is_empty() { String::new() } else { crate::fonts::brand_css_url(&font, weight) };
+    let data = json!({ "text": text, "case": case, "font": font, "font_css": font_css, "weight": weight, "size": Some(size).filter(|n| *n > 0) });
     notify(&st, "brand_image", data.clone()).await;
     crate::social::helpers::audit_log(&st, s.id, "update_brand_text", "system", "0", Some(data.clone())).await;
     let mut out = data;

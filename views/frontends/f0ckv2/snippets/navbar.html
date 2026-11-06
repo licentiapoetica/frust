@@ -14,7 +14,7 @@
 <nav class="navbar navbar-expand-lg f0ck-shell-chrome">
   {#- image and text from the admin panel (both, either, or "F0CK"); f0ck-core.js updates them live -#}
   <a class="navbar-brand v2-brand" href="/">
-    <img class="v2-brand-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="f0ck{% if brand_case %} brand-case-{{ brand_case }}{% endif %}{% if brand_font %} brand-font{% endif %}{% if brand_size %} brand-size-{{ brand_size }}{% endif %}" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="F0CK"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else "F0CK")) }}</span>
+    <img class="v2-brand-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="f0ck{% if brand_case %} brand-case-{{ brand_case }}{% endif %}{% if brand_font %} brand-font{% endif %}{% if brand_weight %} brand-weight-{{ brand_weight }}{% endif %}{% if brand_size %} brand-size-{{ brand_size }}{% endif %}" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="F0CK"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{{ (custom_navbar_brand_text or ("" if custom_brand_image else "F0CK")) }}</span>
   </a>
   {% if session %}
   <div class="navigation-links">

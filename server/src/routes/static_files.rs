@@ -31,8 +31,9 @@ pub fn register(r: &mut Router) {
     });
     // The navbar brand font (admin panel → branding), see crate::fonts::brand_css
     r.get(r"^\/brand-font\.css$", |st: AppState, _req: Req| async move {
-        let font = st.settings.get().brand_font;
-        let css = crate::fonts::brand_css(&st.cfg(), &font);
+        let s = st.settings.get();
+        let weight = u16::try_from(s.brand_weight).ok().filter(|w| *w > 0);
+        let css = crate::fonts::brand_css(&st.cfg(), &s.brand_font, weight);
         Ok(crate::http::with_header(reply(200, "text/css; charset=utf-8", css), "cache-control", "public, max-age=86400"))
     });
     // A visitor's chosen font as 'CustomUserFont' (#user-font-css in f0ckm and w0bm; settings.js

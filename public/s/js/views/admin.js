@@ -7,6 +7,7 @@ document.querySelectorAll('.adm .adm-nojs-only').forEach((el) => el.remove());
 F0ckActions.define({
   saveAdminSettings: () => saveAdminSettings(),
   saveBrandText: (form) => saveBrandText(form),
+  fillBrandWeights: () => fillBrandWeights(),
   saveBrandGlitch: (el) => saveBrandGlitch(el.closest('form')),
   uploadBrandImage: (el) => uploadBrandImage(el.closest('form')),
   removeBrandImage: (form) => removeBrandImage(form),
@@ -138,6 +139,31 @@ async function brandPost(form) {
   return data;
 }
 
+// The brand weight select lists the chosen font family's weights (data-weights on its option)
+// after "Default weight"; kept when the new family has it, hidden with fewer than two weights.
+function fillBrandWeights() {
+  const fontSelect = document.getElementById('brand-font-select');
+  const weightSelect = document.getElementById('brand-weight-select');
+  if (!fontSelect || !weightSelect) return;
+  let weights = [];
+  try {
+    weights = JSON.parse((fontSelect.selectedOptions[0] && fontSelect.selectedOptions[0].dataset.weights) || '[]');
+  } catch (e) { /* no weights */ }
+  if (!Array.isArray(weights)) weights = [];
+  const keep = weightSelect.value;
+  const def = document.createElement('option');
+  def.value = '';
+  def.textContent = 'Default weight';
+  weightSelect.replaceChildren(def, ...weights.map((w) => {
+    const o = document.createElement('option');
+    o.value = String(w.weight);
+    o.textContent = `${w.weight} ${w.name || ''}`.trim();
+    return o;
+  }));
+  weightSelect.value = weights.some((w) => String(w.weight) === keep) ? keep : '';
+  weightSelect.hidden = weights.length < 2;
+}
+
 async function saveBrandText(form) {
   brandStatus('Saving…', 'busy');
   try {
@@ -145,7 +171,9 @@ async function saveBrandText(form) {
     const input = form.querySelector('input[name="text"]');
     if (input) input.value = data.text || '';
     if (window.updateBrandText) window.updateBrandText(data.text || '');
-    if (window.updateBrandStyle) window.updateBrandStyle(data.case || '', data.font_css || '', data.size || null);
+    if (window.updateBrandStyle) window.updateBrandStyle(data.case || '', data.font_css || '', data.size || null, data.weight || null);
+    const weightSelect = document.getElementById('brand-weight-select');
+    if (weightSelect) weightSelect.value = data.weight ? String(data.weight) : '';
     brandStatus('✓ Brand text saved.', 'ok');
   } catch (err) {
     brandStatus('Error: ' + err.message, 'err');

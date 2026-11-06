@@ -3228,6 +3228,36 @@ ul.navbar-right > li > a > span.badge.message-badge.w0bm-dm-badge {
   font-family: 'BrandFont', monospace !important;
 }
 
+/* Brand text weight (admin panel → branding): one of the brand font's weights, its faces are
+   declared at their own weights in /brand-font.css. Same weights in all three frontends' CSS. */
+[data-brand-text].brand-font.brand-weight-100 {
+  font-weight: 100 !important;
+}
+[data-brand-text].brand-font.brand-weight-200 {
+  font-weight: 200 !important;
+}
+[data-brand-text].brand-font.brand-weight-300 {
+  font-weight: 300 !important;
+}
+[data-brand-text].brand-font.brand-weight-400 {
+  font-weight: 400 !important;
+}
+[data-brand-text].brand-font.brand-weight-500 {
+  font-weight: 500 !important;
+}
+[data-brand-text].brand-font.brand-weight-600 {
+  font-weight: 600 !important;
+}
+[data-brand-text].brand-font.brand-weight-700 {
+  font-weight: 700 !important;
+}
+[data-brand-text].brand-font.brand-weight-800 {
+  font-weight: 800 !important;
+}
+[data-brand-text].brand-font.brand-weight-900 {
+  font-weight: 900 !important;
+}
+
 /* Brand text size (admin panel → branding): a percent of this frontend's own brand size. zoom
    scales from that size (font-size % would start from the parent's); same sizes in all three
    frontends' CSS (crate::settings::BRAND_SIZES). */

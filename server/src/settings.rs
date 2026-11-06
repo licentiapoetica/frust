@@ -38,6 +38,9 @@ pub struct SiteSettings {
     pub brand_case: String,
     /// Navbar brand text font: a font file of crate::fonts (its family), "" for the frontend's own
     pub brand_font: String,
+    /// Navbar brand text weight (one of the brand font family's weights, see crate::fonts), 0 = the
+    /// frontend's own
+    pub brand_weight: i64,
     /// Navbar brand text size in percent of the frontend's own (see [`BRAND_SIZES`]), 0 = 100
     pub brand_size: i64,
     pub motd: String,
@@ -79,6 +82,7 @@ impl Settings {
                 brand_case: String::new(),
                 brand_size: 0,
                 brand_font: String::new(),
+                brand_weight: 0,
                 motd: String::new(),
                 about_text: String::new(),
                 rules_text: String::new(),
@@ -418,6 +422,7 @@ pub async fn load_from_db(st: &crate::state::AppState) {
         s.favicon_url = cfg.str_or("websrv.custom_favicon", "").to_string();
         s.brand_case = String::new();
         s.brand_font = String::new();
+        s.brand_weight = 0;
         s.brand_size = 0;
         s.private_messages = cfg.enabled("websrv.private_messages");
         s.dm_attachments = cfg.enabled("websrv.dm_attachments");
@@ -447,6 +452,7 @@ pub async fn load_from_db(st: &crate::state::AppState) {
                 "brand_glitch_image" => s.brand_glitch_image = b,
                 "brand_case" => s.brand_case = brand_case(&val).to_string(),
                 "brand_font" => s.brand_font = val,
+                "brand_weight" => s.brand_weight = brand_weight(&val),
                 "brand_size" => s.brand_size = brand_size(&val),
                 // No row (or an empty one) keeps the config favicon
                 "favicon_url" if !val.is_empty() => s.favicon_url = val,
@@ -470,6 +476,12 @@ pub const BRAND_SIZES: [i64; 12] = [50, 60, 70, 80, 90, 110, 120, 130, 140, 150,
 /// A stored or posted navbar brand size, anything else as 0 (100 %, the frontend's own).
 pub fn brand_size(v: &str) -> i64 {
     v.trim().parse().ok().filter(|n| BRAND_SIZES.contains(n)).unwrap_or(0)
+}
+
+/// A stored or posted navbar brand weight (a CSS weight, 100–900 in hundreds), anything else as 0
+/// (the frontend's own). Whether the brand font has it is checked where it is used.
+pub fn brand_weight(v: &str) -> i64 {
+    v.trim().parse::<u16>().ok().filter(|w| crate::fonts::WEIGHTS.contains(w)).map(i64::from).unwrap_or(0)
 }
 
 /// A stored navbar brand case, unknown values as "" (the frontend's own).

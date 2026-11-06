@@ -775,8 +775,15 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("brand_sizes", json!(crate::settings::BRAND_SIZES));
     let brand_font = Some(s.brand_font.as_str())
         .filter(|f| !f.is_empty() && fonts.as_array().is_some_and(|a| a.iter().any(|fam| fam["files"].as_array().is_some_and(|fs| fs.iter().any(|x| x.as_str() == Some(f))))));
+    // Brand text weight: only one the brand font's family still has (a .brand-weight-<n> class)
+    let brand_weight = brand_font.and_then(|f| {
+        let fam = fonts.as_array()?.iter().find(|fam| fam["files"].as_array().is_some_and(|fs| fs.iter().any(|x| x.as_str() == Some(f))))?;
+        let has = fam["weights"].as_array()?.iter().any(|w| w["weight"].as_i64() == Some(s.brand_weight));
+        u16::try_from(s.brand_weight).ok().filter(|_| has)
+    });
     put("brand_font", json!(brand_font.unwrap_or("")));
-    put("brand_font_css", json!(brand_font.map(crate::fonts::brand_css_url).unwrap_or_default()));
+    put("brand_weight", json!(brand_weight));
+    put("brand_font_css", json!(brand_font.map(|f| crate::fonts::brand_css_url(f, brand_weight)).unwrap_or_default()));
     put("default_font", json!(cfg.str_or("websrv.default_font", "")));
     put("site_description", json!(cfg.str_or("websrv.description", "The webs dumpster")));
     put("enable_nsfl", json!(cfg.enable_nsfl()));
@@ -1391,6 +1398,33 @@ mod tests {
         assert!(sel.contains(" hidden"), "one weight: no weight select");
     }
 
+    /// Admin → branding: the brand weight select lists the brand font family's weights after
+    /// "Default weight", and is hidden for a family with one weight (or the frontend's own font).
+    #[test]
+    fn admin_brand_weight_select() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let empty = "frontends/w0bm/settings-prefs.html";
+        let fonts = serde_json::json!([
+            { "name": "Hack", "file": "Hack.woff", "files": ["Hack.woff"], "weights": [{ "weight": 400, "name": "Regular" }] },
+            { "name": "M", "file": "M-Regular.woff2", "files": ["M-Light.woff2", "M-Regular.woff2", "M-Bold.woff2"],
+              "weights": [{ "weight": 300, "name": "Light" }, { "weight": 400, "name": "Regular" }, { "weight": 700, "name": "Bold" }] },
+        ]);
+        let render = |font: &str, weight: Option<u16>| {
+            let ctx = serde_json::json!({ "shell_header": empty, "shell_footer": empty, "session": { "user": "admin", "id": 1, "admin": true }, "csrf_token": "tok",
+                "domain": "f0ck.me", "fonts": fonts, "brand_font": font, "brand_weight": weight, "brand_sizes": crate::settings::BRAND_SIZES });
+            let html = env.get_template("admin.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+            html.split("id=\"brand-weight-select\"").nth(1).unwrap().split("</select>").next().unwrap().to_string()
+        };
+        let sel = render("M-Regular.woff2", Some(700));
+        assert!(!sel.split('>').next().unwrap().contains(" hidden"));
+        assert!(sel.contains("<option value=\"\">Default weight</option>"));
+        assert!(sel.contains("<option value=\"700\" selected>700 Bold</option>"));
+        assert!(sel.contains("<option value=\"300\">300 Light</option>"));
+        assert!(render("Hack.woff", None).split('>').next().unwrap().contains(" hidden"));
+        assert!(render("", None).split('>').next().unwrap().contains(" hidden"));
+    }
+
     /// mtime() finds assets through the project directory, whatever the working directory.
     #[test]
     fn mtime_resolves_from_the_project_dir() {
@@ -1408,6 +1442,18 @@ mod tests {
             let css = std::fs::read_to_string(root.join(f)).unwrap();
             for n in crate::settings::BRAND_SIZES {
                 assert!(css.contains(&format!("[data-brand-text].brand-size-{n} {{")), "{f} {n}");
+            }
+        }
+    }
+
+    /// Every navbar brand weight has its rule in each frontend's CSS.
+    #[test]
+    fn brand_weights_have_css() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        for f in ["public/s/css/f0ckm.css", "public/s/fe/w0bm/css/w0bm-fe.css", "public/s/fe/f0ckv2/css/f0ckv2.css"] {
+            let css = std::fs::read_to_string(root.join(f)).unwrap();
+            for w in crate::fonts::WEIGHTS {
+                assert!(css.contains(&format!("[data-brand-text].brand-font.brand-weight-{w} {{\n  font-weight: {w} !important;")), "{f} {w}");
             }
         }
     }

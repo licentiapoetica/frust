@@ -130,6 +130,14 @@ impl Family {
         out
     }
 
+    /// Every face at its own weight (a variable font: one rule per hundred of its range).
+    pub fn real_faces(&self) -> Vec<(String, u16)> {
+        match &self.variable {
+            Some((file, _, _)) => self.weights().into_iter().map(|w| (file.clone(), w)).collect(),
+            None => self.faces.clone(),
+        }
+    }
+
     fn has(&self, file: &str) -> bool {
         self.faces.iter().any(|(f, _)| f == file)
     }
@@ -233,19 +241,30 @@ pub fn size_for(size: Option<i64>) -> Option<u16> {
     size.and_then(|s| u16::try_from(s).ok()).filter(|s| SIZES.contains(s))
 }
 
-/// URL of the navbar brand font's stylesheet (see [`brand_css`]); versioned by the font's name.
-pub fn brand_css_url(file: &str) -> String {
+/// URL of the navbar brand font's stylesheet (see [`brand_css`]); versioned by the font's name and
+/// the chosen weight.
+pub fn brand_css_url(file: &str, weight: Option<u16>) -> String {
     use std::hash::{Hash, Hasher};
     let mut h = std::collections::hash_map::DefaultHasher::new();
     file.hash(&mut h);
+    weight.hash(&mut h);
     format!("/brand-font.css?v={:x}", h.finish())
 }
 
 /// `/brand-font.css`: an `@font-face` per weight of the family of `file`, as 'BrandFont' (the
 /// `.brand-font` class on the navbar brand text uses it; the frontends' CSS files hold that rule).
-/// Empty when no font is set or the font is gone.
-pub fn brand_css(cfg: &Config, file: &str) -> String {
-    family_css(cfg, file, None, "BrandFont")
+/// With a chosen `weight` (a `.brand-weight-<n>` class sets it) every face keeps its real weight,
+/// so the class picks exactly that face; without one the frontend's own weight is drawn in the
+/// family's default weight like a user's font ([`faces_json`]). Empty when no font is set or the
+/// font is gone.
+pub fn brand_css(cfg: &Config, file: &str, weight: Option<u16>) -> String {
+    match weight {
+        Some(w) => match family_of(cfg, file).filter(|fam| fam.weights().contains(&w)) {
+            Some(fam) => faces_css(&fam.real_faces(), "BrandFont"),
+            None => family_css(cfg, file, None, "BrandFont"),
+        },
+        None => family_css(cfg, file, None, "BrandFont"),
+    }
 }
 
 /// URL of the stylesheet declaring a visitor's chosen font as 'CustomUserFont' (see
@@ -265,16 +284,19 @@ pub fn user_css(cfg: &Config, file: &str, weight: Option<u16>) -> String {
 
 /// The `@font-face` rules of [`faces_json`], named `alias`.
 fn family_css(cfg: &Config, file: &str, weight: Option<u16>, alias: &str) -> String {
-    let faces = faces_json(cfg, Some(file), weight);
-    faces
+    let faces: Vec<(String, u16)> = faces_json(cfg, Some(file), weight)
         .as_array()
-        .map(|a| {
-            a.iter()
-                .filter_map(|f| Some((f["file"].as_str()?, f["weight"].as_u64()?)))
-                .map(|(f, w)| format!("@font-face {{ font-family: '{alias}'; src: url('/s/fonts/{}'); font-weight: {w}; font-display: swap; }}\n", url_enc(f)))
-                .collect()
-        })
-        .unwrap_or_default()
+        .map(|a| a.iter().filter_map(|f| Some((f["file"].as_str()?.to_string(), u16::try_from(f["weight"].as_u64()?).ok()?))).collect())
+        .unwrap_or_default();
+    faces_css(&faces, alias)
+}
+
+/// One `@font-face` rule per (file, weight), named `alias`.
+fn faces_css(faces: &[(String, u16)], alias: &str) -> String {
+    faces
+        .iter()
+        .map(|(f, w)| format!("@font-face {{ font-family: '{alias}'; src: url('/s/fonts/{}'); font-weight: {w}; font-display: swap; }}\n", url_enc(f)))
+        .collect()
 }
 
 /// Whether `file` is an available font (validates a user's choice).
@@ -660,6 +682,17 @@ mod tests {
         assert_eq!(fams[0].weights(), [300, 400, 700]);
         assert_eq!(fams[0].default_weight("M-Light.woff2"), 300);
         assert!(fams[0].faces_at(300).contains(&("M-Light.woff2".to_string(), 400)));
+    }
+
+    /// The brand font with a chosen weight: every face at its own weight, so the
+    /// `.brand-weight-<n>` class picks exactly that face.
+    #[test]
+    fn real_faces_keep_their_weights() {
+        let fams = group(["M-ExtraLight.woff2", "M-Light.woff2", "M-Bold.woff2"].map(String::from).to_vec());
+        assert_eq!(fams[0].real_faces(), [("M-ExtraLight.woff2".to_string(), 200), ("M-Light.woff2".to_string(), 300), ("M-Bold.woff2".to_string(), 700)]);
+        let var = Family { name: "S".into(), faces: vec![("S.ttf".into(), 400)], variable: Some(("S.ttf".into(), 300, 700)) };
+        assert_eq!(var.real_faces().iter().map(|(_, w)| *w).collect::<Vec<_>>(), [300, 400, 500, 600, 700]);
+        assert_eq!(faces_css(&var.real_faces()[..1], "BrandFont"), "@font-face { font-family: 'BrandFont'; src: url('/s/fonts/S.ttf'); font-weight: 300; font-display: swap; }\n");
     }
 
     #[test]

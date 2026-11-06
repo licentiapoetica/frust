@@ -199,7 +199,7 @@
         <div class="adm-row adm-row-wrap">
           <div class="adm-row-text">
             <label for="brand-text-input">Navbar brand text</label>
-            <p>Shown next to the brand image, or on its own without one. Empty: just the image, or the site name ({{ domain }}) when there is no image. Case, font and size apply in every frontend; "Default" keeps the frontend's own. More fonts: <a href="/admin/fonts">Fonts</a>.</p>
+            <p>Shown next to the brand image, or on its own without one. Empty: just the image, or the site name ({{ domain }}) when there is no image. Case, font, weight and size apply in every frontend (the weight once the font has several); "Default" keeps the frontend's own. More fonts: <a href="/admin/fonts">Fonts</a>.</p>
           </div>
           <form class="adm-brand" method="post" action="/admin/brand_text" data-on="submit:prevent,saveBrandText">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -210,10 +210,20 @@
               <option value="upper"{% if brand_case == "upper" %} selected{% endif %}>UPPERCASE</option>
               <option value="lower"{% if brand_case == "lower" %} selected{% endif %}>lowercase</option>
             </select>
-            <select id="brand-font-select" name="font" class="adm-text adm-select" title="Font" aria-label="Font">
+            <select id="brand-font-select" name="font" class="adm-text adm-select" title="Font" aria-label="Font" data-on="change:fillBrandWeights">
               <option value=""{% if not brand_font %} selected{% endif %}>Default font</option>
               {% for font in fonts %}
-              <option value="{{ font.file }}"{% if brand_font in font.files %} selected{% endif %}>{{ font.name }}</option>
+              <option value="{{ font.file }}" data-weights='{{ font.weights|tojson }}'{% if brand_font in font.files %} selected{% endif %}>{{ font.name }}</option>
+              {% endfor %}
+            </select>
+            {#- The chosen family's weights (separate files or a variable font's range), hidden with
+                fewer than two; admin.js refills it when the family changes -#}
+            {% set brand_fam = namespace(weights=[]) %}
+            {% for font in fonts %}{% if brand_font and brand_font in font.files %}{% set brand_fam.weights = font.weights %}{% endif %}{% endfor %}
+            <select id="brand-weight-select" name="weight" class="adm-text adm-select" title="Weight" aria-label="Weight"{% if brand_fam.weights|length < 2 %} hidden{% endif %}>
+              <option value=""{% if not brand_weight %} selected{% endif %}>Default weight</option>
+              {% for w in brand_fam.weights %}
+              <option value="{{ w.weight }}"{% if w.weight == brand_weight %} selected{% endif %}>{{ w.weight }} {{ w.name }}</option>
               {% endfor %}
             </select>
             <select id="brand-size-select" name="size" class="adm-text adm-select" title="Size" aria-label="Size">
