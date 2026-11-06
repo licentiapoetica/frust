@@ -199,6 +199,8 @@ fn opt_lang(state: &State, lang: Option<String>) -> Option<String> {
 
 pub(crate) fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static> {
     let mut env = Environment::new();
+    // The project directory (views/ sits in it): mtime() paths ("/public/...") are relative to it
+    let base = views.parent().map(std::path::Path::to_path_buf).unwrap_or_default();
     env.set_loader(minijinja::path_loader(views));
     env.set_undefined_behavior(UndefinedBehavior::Chainable);
     env.set_auto_escape_callback(|name| if name.ends_with(".html") { AutoEscape::Html } else { AutoEscape::None });
@@ -230,8 +232,12 @@ pub(crate) fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static>
         }
     });
 
-    env.add_function("mtime", |path: String| -> i64 {
-        let p = std::env::current_dir().unwrap_or_default().join(path.trim_start_matches('/'));
+    // mtime("/public/s/....js"): the file's modification time, the ?v= of asset URLs so a deploy
+    // changes them. Resolved against the project directory, not the working directory (a server
+    // started elsewhere got 0 for every file, so browsers and caches kept old assets).
+    env.add_function("mtime", move |path: String| -> i64 {
+        let rel = path.trim_start_matches('/');
+        let p = Some(base.join(rel)).filter(|p| p.exists()).unwrap_or_else(|| std::env::current_dir().unwrap_or_default().join(rel));
         std::fs::metadata(p)
             .and_then(|m| m.modified())
             .ok()
@@ -1383,6 +1389,15 @@ mod tests {
         let one = render("Hack.woff", 400, None);
         let sel = one.split("id=\"website_font_weight_select\"").nth(1).unwrap().split('>').next().unwrap();
         assert!(sel.contains(" hidden"), "one weight: no weight select");
+    }
+
+    /// mtime() finds assets through the project directory, whatever the working directory.
+    #[test]
+    fn mtime_resolves_from_the_project_dir() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let v: i64 = env.render_str(r#"{{ mtime("/public/s/js/f0ck-core.js") }}"#, ()).unwrap().parse().unwrap();
+        assert!(v > 0);
     }
 
     /// Every navbar brand size has its rule in each frontend's CSS.
