@@ -1,0 +1,79 @@
+{% include (shell_header or "snippets/header.html") %}
+<div class="pagewrapper">
+<div id="main" class="admin-container">
+    {% include "snippets/admin-back.html" %}
+    {#- In #main so AJAX navigation loads it too: an @font-face + .adm-font-sample-<key> class per family -#}
+    <link rel="stylesheet" href="{{ preview_css }}">
+    <div class="container adm adm-fonts">
+        <h2>Fonts</h2>
+        <p class="adm-page-intro">Website fonts for the font picker in the user settings and the navbar brand text (Branding in the admin panel). New uploads show up there right away.</p>
+
+        <section class="adm-section">
+            <h2 class="adm-section-title"><i class="fa-solid fa-upload"></i> Upload</h2>
+            <div class="adm-panel" id="font-upload">
+                <form class="adm-row adm-row-wrap" method="post" action="/admin/fonts/upload" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="back" value="/admin/fonts#font-upload">
+                    <div class="adm-row-text">
+                        <label for="font-file-input">Font files</label>
+                        <p>ttf, otf, woff or woff2 (woff2 is smallest), up to 50&nbsp;MB per upload. Files named <code>Family-Weight</code> (<code>Inter-Regular.woff2</code>, <code>Inter-Bold.woff2</code>) form one family with every weight. Family and weight below replace what the file name says; the weight only applies when you upload one file.</p>
+                    </div>
+                    <div class="adm-font-upload-controls">
+                        <input type="file" id="font-file-input" name="file" class="adm-font-file-input" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" multiple required>
+                        <input type="text" name="family" class="adm-text" maxlength="64" placeholder="Family (from file name)" aria-label="Family name" autocomplete="off">
+                        <select name="weight" class="adm-text adm-select" aria-label="Weight">
+                            <option value="">Weight (from file name)</option>
+                            {% for w in font_weights %}
+                            <option value="{{ w.weight }}">{{ w.weight }} {{ w.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="adm-btn adm-btn-primary">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="adm-section">
+            <h2 class="adm-section-title"><i class="fa-solid fa-font"></i> Fonts <span class="adm-count">{{ font_families|length }}</span></h2>
+            <div class="adm-panel" id="font-list">
+                {% for fam in font_families %}
+                <div class="adm-font-family">
+                    <div class="adm-font-head">
+                        <strong class="adm-font-name">{{ fam.name }}</strong>
+                        {% if default_font and default_font in fam.files %}<span class="adm-font-tag">Site default</span>{% endif %}
+                        {% if brand_font and brand_font in fam.files %}<span class="adm-font-tag">Brand text</span>{% endif %}
+                    </div>
+                    <ul class="adm-font-faces">
+                        {% for f in fam.faces %}
+                        <li class="adm-font-face">
+                            <span class="adm-font-sample adm-font-sample-{{ fam.key }} adm-font-w{{ f.weight }}">The quick brown fox jumps over the lazy dog 0123456789</span>
+                            <span class="adm-font-meta">
+                                <span class="adm-font-weight">{{ f.weight }} {{ f.weight_name }}</span>
+                                <code class="adm-font-filename">{{ f.file }}</code>
+                                {% if f.uploaded %}
+                                <span class="adm-font-tag adm-font-tag-uploaded">{{ ("Replaces built-in" if f.builtin else "Uploaded") }}</span>
+                                <form method="post" action="/admin/fonts/delete" class="adm-font-delete" data-file="{{ f.file }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="back" value="/admin/fonts#font-list">
+                                    <input type="hidden" name="file" value="{{ f.file }}">
+                                    <button type="submit" class="adm-btn adm-btn-danger">Delete</button>
+                                </form>
+                                {% else %}
+                                <span class="adm-font-tag adm-font-tag-builtin">Built-in</span>
+                                {% endif %}
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% else %}
+                <p class="adm-font-empty adm-muted">No fonts yet.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <script src="/s/js/views/admin/fonts.js?v={{ mtime("/public/s/js/views/admin/fonts.js") }}"></script>
+</div>
+</div>
+{% include (shell_footer or "snippets/footer.html") %}
