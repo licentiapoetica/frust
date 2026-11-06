@@ -1607,7 +1607,8 @@
     let isReCenteringFeed = false;
     let lastAttemptedTagCenterKey = null;
 
-    const highlightActiveTagCard = (scrollIntoView = false) => {
+    // instant: jump to the card without the smooth scroll (used right after the list was swapped)
+    const highlightActiveTagCard = (scrollIntoView = false, instant = false) => {
         const identifiers = getCurrentItemIdentifiers();
         const container = document.getElementById('sidebar-tag-container');
         if (!container) return;
@@ -1643,26 +1644,23 @@
                     const containerRect = container.getBoundingClientRect();
                     const cardRect = matchedCard.getBoundingClientRect();
                     const targetScrollTop = container.scrollTop + (cardRect.top - containerRect.top) - (container.clientHeight / 2) + (cardRect.height / 2);
-                    container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: 'smooth' });
+                    // long jumps (e.g. random) land at once; short moves (next/prev) glide
+                    const far = Math.abs(targetScrollTop - container.scrollTop) > container.clientHeight;
+                    container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: (instant || far) ? 'instant' : 'smooth' });
                 } catch (_) {
-                    matchedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    matchedCard.scrollIntoView({ behavior: instant ? 'instant' : 'smooth', block: 'center' });
                 }
             }
         } else if (!matchedCard && identifiers.length > 0 && currentTag && !isReCenteringFeed && !tagFeedLoading) {
-            // Active item belongs to current tag context but is not in currently rendered slice.
-            // If this was a pool-based random navigation, skip reload — keep existing items visible.
-            if (window._isPoolRandomNav) {
-                window._isPoolRandomNav = false;
-                return;
-            }
+            // Active item belongs to current tag context but is not in currently rendered slice
+            // (random, or next/prev past its edge): swap in the slice around it, without a loading state
             const centerKey = `${currentTag}:${identifiers[0]}`;
             if (lastAttemptedTagCenterKey === centerKey) {
                 return;
             }
             lastAttemptedTagCenterKey = centerKey;
-            // Non-pool navigation (next/prev): center feed around the active item
             isReCenteringFeed = true;
-            loadTagFeed(true, identifiers[0]).finally(() => {
+            loadTagFeed(true, identifiers[0], { quiet: true }).finally(() => {
                 isReCenteringFeed = false;
             });
         }
@@ -1714,7 +1712,48 @@
         }
     };
 
-    const loadTagFeed = async (reset = false, focusId = null) => {
+    const tagFeedUrl = (tag, offset, focusId) => {
+        const mode = typeof window.activeMode !== 'undefined' ? window.activeMode : '';
+        const mime = getCurrentMimeFilter();
+        let url = `/api/v2/tag-feed?tag=${encodeURIComponent(tag)}&order=${tagOrder}&offset=${offset}&limit=20&mode=${mode}`;
+        if (isStrictMode()) url += `&strict=1`;
+        if (mime) url += `&mime=${encodeURIComponent(mime)}`;
+        if (focusId) url += `&focus_id=${encodeURIComponent(focusId)}`;
+        return url;
+    };
+
+    // Short-lived cache of focused tag-feed slices (url → Promise<data>), filled ahead by
+    // prefetchTagFeedFocus so jumping to a random item re-centers the feed without waiting
+    const TAG_FEED_CACHE_TTL_MS = 60 * 1000;
+    const tagFeedCache = new Map();
+    const fetchTagFeedData = (url) => {
+        const hit = tagFeedCache.get(url);
+        if (hit && Date.now() - hit.ts < TAG_FEED_CACHE_TTL_MS) return hit.promise;
+        const promise = fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(res => res.json());
+        tagFeedCache.set(url, { ts: Date.now(), promise });
+        promise.catch(() => tagFeedCache.delete(url));
+        if (tagFeedCache.size > 20) tagFeedCache.delete(tagFeedCache.keys().next().value);
+        return promise;
+    };
+
+    // The slice around `key` (item id or slug) of the current tag's feed, fetched ahead. Stored under
+    // the item's id and slug, so it's found whichever of the two the navigation focuses on.
+    window.prefetchTagFeedFocus = (key) => {
+        const tag = getCurrentTag();
+        if (!tag || !key) return;
+        const url = tagFeedUrl(tag, 0, key);
+        fetchTagFeedData(url).then(data => {
+            const v = (data?.items || []).find(i => String(i.id) === String(key) || String(i.slug || '') === String(key));
+            const entry = tagFeedCache.get(url);
+            if (!v || !entry) return;
+            for (const alias of [v.id, v.slug]) {
+                if (alias && String(alias) !== String(key)) tagFeedCache.set(tagFeedUrl(tag, 0, alias), entry);
+            }
+        }).catch(() => {});
+    };
+
+    // quiet: keep the current cards until the new ones are in (no loading state), then jump to the active one
+    const loadTagFeed = async (reset = false, focusId = null, { quiet = false } = {}) => {
         const container = document.getElementById('sidebar-tag-container');
         const itemsContainer = container?.querySelector('.sidebar-tag-items-container');
         if (!container || !itemsContainer || tagFeedLoading) return;
@@ -1725,6 +1764,8 @@
 
         if (reset) {
             tagOffset = 0;
+        }
+        if (reset && !quiet) {
             itemsContainer.innerHTML = `
                 <div class="sidebar-loading-state">
                     <i class="fa-solid fa-circle-notch fa-spin"></i>
@@ -1734,23 +1775,11 @@
         }
 
         try {
-            const mode = typeof window.activeMode !== 'undefined' ? window.activeMode : '';
-            const mime = getCurrentMimeFilter();
-            const isStrict = isStrictMode();
-            let url = `/api/v2/tag-feed?tag=${encodeURIComponent(currentTag)}&order=${tagOrder}&offset=${tagOffset}&limit=20&mode=${mode}`;
-            if (isStrict) {
-                url += `&strict=1`;
-            }
-            if (mime) {
-                url += `&mime=${encodeURIComponent(mime)}`;
-            }
-            if (focusId) {
-                url += `&focus_id=${encodeURIComponent(focusId)}`;
-            }
-            const res = await fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            const data = await res.json();
+            const url = tagFeedUrl(currentTag, tagOffset, focusId);
+            // focused slices may come from the prefetch cache; plain pages are always fetched fresh
+            const data = focusId
+                ? await fetchTagFeedData(url)
+                : await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(res => res.json());
             const items = data.items || [];
             tagTotal = data.total || 0;
             tagOffset = (data.offset ?? tagOffset) + items.length;
@@ -1787,7 +1816,10 @@
                     html += renderVideoCard(v, { isTagFeed: true, tag: currentTag, isActive });
                 });
 
-                if (reset) {
+                if (reset && quiet) {
+                    itemsContainer.innerHTML = html;
+                    highlightActiveTagCard(true, true);
+                } else if (reset) {
                     itemsContainer.innerHTML = html;
                     setTimeout(() => highlightActiveTagCard(true), 60);
                 } else {
@@ -1796,7 +1828,7 @@
                 }
 
                 initTagSentinel();
-            } else if (reset) {
+            } else if (reset && !quiet) {
                 itemsContainer.innerHTML = `
                     <div class="sidebar-empty-state" style="text-align:center;padding:30px 15px;color:var(--text-muted,#888);font-size:0.88em;">
                         <i class="fa-solid fa-tag" style="font-size:1.8em;opacity:0.4;margin-bottom:8px;display:block;"></i>
@@ -1806,7 +1838,7 @@
             }
         } catch (err) {
             console.error('[TAG-FEED] Failed to load tag items:', err);
-            if (reset) {
+            if (reset && !quiet) {
                 itemsContainer.innerHTML = `
                     <div class="sidebar-empty-state" style="text-align:center;padding:25px;color:var(--danger,#ff4444);font-size:0.88em;">
                         Failed to load tag items

@@ -12829,6 +12829,7 @@ window.cancelAnimFrame = (function () {
     if (cached) {
       preloadMediaFromHtml(cached.html);
       warmVideoFromHtml(cached.html);
+      if (window.prefetchTagFeedFocus) window.prefetchTagFeedFocus(cached.numericId || pick);
       return;
     }
     if (_randomPrefetchUrl === ajaxUrl) return;
@@ -12847,6 +12848,8 @@ window.cancelAnimFrame = (function () {
         window.f0ckDebug('[random-prefetch] Cached next random item', pick);
         preloadMediaFromHtml(entry.html);
         warmVideoFromHtml(entry.html);
+        // the sidebar's tag feed slice around it too, so the feed jumps there at once
+        if (window.prefetchTagFeedFocus) window.prefetchTagFeedFocus(entry.numericId || pick);
       })
       .catch(() => {})
       .finally(() => { if (_randomPrefetchUrl === ajaxUrl) _randomPrefetchUrl = null; });
@@ -13771,9 +13774,6 @@ window.cancelAnimFrame = (function () {
             if (window.flashMessage) window.flashMessage('No items found for this filter');
             return;
           }
-          // Flag for sidebar: skip tag feed re-centering on random nav
-          window._isPoolRandomNav = true;
-
           // Build URL preserving context
           const targetUrl = randomTargetUrl(pick);
 
