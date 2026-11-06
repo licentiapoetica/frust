@@ -87,6 +87,10 @@ STORAGE_DIR=f0ckm-data ./server/target/release/f0ckm
 now visit http://localhost:1337 in your browser. Templates (`views/`), translations (`locales/`),
 `public/` and `config.yaml` are read from disk and picked up without a restart; Rust changes need
 `cargo build` and a restart (`cargo run --manifest-path server/Cargo.toml` does both).
+For day-to-day work, `cargo build --profile fast --manifest-path server/Cargo.toml` (binary:
+`server/target/fast/f0ckm`) is the quickest: dependencies are optimised like `--release`, the f0ckm
+crate itself is built unoptimised and incrementally, so a change rebuilds in seconds instead of
+about a minute and a half. Use `--release` for production.
 `public/s/css/bundle.css` (the production stylesheet) is rebuilt automatically at start when
 `f0ckm.css` or `v0ck.css` changed, or by hand with `f0ckm build-css`.
 

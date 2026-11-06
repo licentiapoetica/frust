@@ -9,6 +9,20 @@ publish = false
 name = "f0ckm"
 path = "src/main.rs"
 
+# Local builds: `cargo build --profile fast` → target/fast/f0ckm. Dependencies stay fully optimised
+# (tokio, sqlx, serde, minijinja, ...); only this crate is built unoptimised and incrementally, so a
+# change rebuilds in ~5 s instead of ~1.5 min. It has to be opt-level 0: with optimisation on, the
+# drop glue of every route handler's future is copied into the router's codegen unit
+# (http::router::into_handler), so editing any handler recompiles that whole unit (~40 s).
+# Production (Dockerfile) keeps using --release.
+[profile.fast]
+inherits = "release"
+incremental = true
+lto = "off"
+
+[profile.fast.package.f0ckm]
+opt-level = 0
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 axum = { version = "0.8", features = ["multipart", "macros", "ws"] }
