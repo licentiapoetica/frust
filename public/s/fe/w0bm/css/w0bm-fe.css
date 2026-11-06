@@ -2410,6 +2410,120 @@ table.w0bm-ranking > thead > tr > th:first-child {
 .bootstrap-tagsinput:has(> .w0bm-tag-suggest.w0bm-open) {
     overflow: visible;
 }
+/* [+Add Tag] form: field and button as one joined, square control with the cyan accent. Scoped
+   to #tag-add so it wins over the themes' old rules (absolute 79% box, rounded gradients, fixed
+   heights that didn't line up with the button); !important only where a theme uses it too. */
+.tags #tag-add {
+    margin: 0;
+    padding: 6px 5px 8px;
+}
+#tag-add .w0bm-tagform {
+    flex-wrap: nowrap;
+    align-items: stretch;
+    height: auto;
+}
+/* the box JavaScript builds, and the plain input without JavaScript */
+#tag-add .bootstrap-tagsinput,
+#tag-add .w0bm-tagform > input[name="tagname"] {
+    position: relative;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    min-height: 34px;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.35) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-right: 0;
+    border-radius: 0;
+    box-shadow: none;
+    color: #c8c8c8;
+    font-size: 14px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+#tag-add .bootstrap-tagsinput {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    line-height: 20px;
+    white-space: normal;
+    overflow: visible;
+    cursor: text;
+}
+#tag-add .w0bm-tagform > input[name="tagname"] {
+    padding: 0 10px;
+}
+#tag-add .bootstrap-tagsinput input {
+    flex: 1 1 80px;
+    width: auto;
+    min-width: 80px;
+    height: 26px;
+    margin: 0;
+    padding: 0 4px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: #e6e6e6;
+    font-size: 14px;
+    vertical-align: middle;
+}
+#tag-add input::placeholder {
+    color: #6d6d70;
+}
+#tag-add .bootstrap-tagsinput:focus-within,
+#tag-add .w0bm-tagform > input[name="tagname"]:focus {
+    border-color: #1fb2b0;
+    box-shadow: 0 0 8px rgba(31, 178, 176, 0.25);
+}
+/* tags typed but not yet sent */
+#tag-add .bootstrap-tagsinput .tag {
+    display: inline-flex;
+    align-items: center;
+    position: static;
+    margin: 0;
+    padding: 2px 4px 2px 7px;
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 18px;
+    color: #1fb2b0;
+    background: rgba(31, 178, 176, 0.12) !important;
+    border: 1px solid rgba(31, 178, 176, 0.5) !important;
+    border-radius: 0;
+}
+#tag-add .bootstrap-tagsinput .tag [data-role="remove"] {
+    margin-left: 4px;
+    padding: 0 3px;
+    color: #888;
+    box-shadow: none;
+}
+#tag-add .bootstrap-tagsinput .tag [data-role="remove"]:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+}
+#tag-add #submittags {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0 16px;
+    font-family: Oswald, sans-serif;
+    font-size: 14px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    line-height: 1;
+    color: #1fb2b0;
+    background: rgba(31, 178, 176, 0.1) !important;
+    border: 1px solid #1fb2b0;
+    border-radius: 0;
+    outline: 0;
+    transition: background-color .15s ease, color .15s ease;
+}
+#tag-add #submittags:hover,
+#tag-add #submittags:focus-visible {
+    color: #161618;
+    background: #1fb2b0 !important;
+}
 
 /* ── Halls dialog ("+" in the item bar, partials/hallmodal.html) ────────────────────────── */
 #w0bm-hallbtn {
