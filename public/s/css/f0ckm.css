@@ -2287,7 +2287,7 @@ html[theme='95'] .item-main-content .metadata {
   right: -5px;
   background: var(--badge-nsfw);
   color: white;
-  font-size: 10px;
+  font-size: 0.625rem;
   padding: 2px 2px;
   border-radius: 3px;
   line-height: 1;
@@ -11492,7 +11492,7 @@ input#s_avatar {
   min-width: 50px;
   justify-content: center;
   opacity: 0.8;
-  height: 32px;
+  height: 2rem;
 }
 
 /* Avatar-style button variant */
@@ -11534,8 +11534,8 @@ input#s_avatar {
 
 .nav-avatar-img {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 1.375rem;
+  height: 1.375rem;
   object-fit: cover;
   flex-shrink: 0;
   cursor: pointer;
@@ -11547,7 +11547,7 @@ input#s_avatar {
 }
 
 .nav-avatar-name {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--white);
   white-space: nowrap;
   max-width: 140px;
@@ -11665,7 +11665,7 @@ input#s_avatar {
 .nav-links a {
   color: var(--white);
   text-decoration: none;
-  font-size: 14px;
+  font-size: 0.875rem;
   opacity: 0.8;
   transition: opacity 0.2s;
 }
@@ -13519,7 +13519,7 @@ body > nav.navbar {
   align-items: center !important;
   flex-wrap: wrap !important;
   flex-shrink: 0 !important;
-  min-height: 42px !important;
+  min-height: 2.625rem !important;
   box-sizing: border-box !important;
   font-family: var(--font);
   border-bottom: 1px solid var(--nav-border-color);
@@ -13608,12 +13608,12 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
   flex-shrink: 0;
 }
 
-/* Uniform size for all Font Awesome icons in the navbar */
+/* Uniform size for all Font Awesome icons in the navbar (rem: follows the user's text size) */
 .navbar .fa-solid,
 .navbar .fa-regular,
 .navbar .fa {
-  font-size: 14px;
-  width: 14px;
+  font-size: 0.875rem;
+  width: 0.875rem;
   text-align: center;
   line-height: 1;
 }
@@ -16755,7 +16755,7 @@ body:has(.messages-convo-page) .pagewrapper {
   right: -5px;
   background: var(--badge-nsfw);
   color: white;
-  font-size: 10px;
+  font-size: 0.625rem;
   padding: 2px 2px;
   border-radius: 3px;
   line-height: 1;
