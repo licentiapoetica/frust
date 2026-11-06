@@ -208,6 +208,19 @@ fn cors(st: &AppState, req: &Req) -> Option<Response> {
     (req.method == Method::OPTIONS).then(|| raw(204, ""))
 }
 
+/// Thumbnails and cover art keep their URL when they are regenerated (rethumb, Flash capture,
+/// `f0ckm regen`), so browsers must ask every time; the 304 from Last-Modified/ETag keeps it cheap.
+const THUMB_CACHE: &str = "public, no-cache";
+
+fn is_thumb_path(p: &str) -> bool {
+    p.starts_with("/t/") || p.starts_with("/ca/")
+}
+
+/// `private` variant for gated media: thumbnails revalidate, everything else is cached for an hour.
+fn private_cache(p: &str) -> &'static str {
+    if is_thumb_path(p) { "private, no-cache" } else { "private, max-age=3600" }
+}
+
 fn static_cache_headers(st: &AppState, req: &Req) {
     let p = req.path.as_str();
     let starts = |prefixes: &[&str]| prefixes.iter().any(|x| p.starts_with(x));
@@ -219,8 +232,8 @@ fn static_cache_headers(st: &AppState, req: &Req) {
     }
     if p.starts_with("/b/") {
         req.set_header("cache-control", "public, max-age=31536000, immutable");
-    } else if starts(&["/t/", "/ca/"]) {
-        req.set_header("cache-control", "public, max-age=3600");
+    } else if is_thumb_path(p) {
+        req.set_header("cache-control", THUMB_CACHE);
     } else if p.starts_with("/s/") && !p.starts_with("/s/emojis/") && !p.starts_with("/s/koepfe/") {
         req.set_header("cache-control", "public, max-age=86400");
     } else if p.starts_with("/a/") {
@@ -340,7 +353,7 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
                 return Ok(Some(crate::private_items::render_denied(st, req, status)));
             }
             // Never in a shared (CDN) cache, or guests would get it from there
-            crate::media_gate::Decision::Restricted => req.set_header("cache-control", "private, max-age=3600"),
+            crate::media_gate::Decision::Restricted => req.set_header("cache-control", private_cache(&path)),
             crate::media_gate::Decision::Public => {}
         }
         if st.settings.protect_files() {
@@ -354,7 +367,7 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
                 }
                 return Ok(Some(raw(401, "Unauthorized")));
             }
-            req.set_header("cache-control", "private, max-age=3600");
+            req.set_header("cache-control", private_cache(&path));
         }
         return Ok(None);
     }

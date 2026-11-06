@@ -158,7 +158,7 @@ async fn thumb(st: AppState, req: Req) -> Res {
         return Ok(raw(404, ""));
     }
     let mut r = files::serve_file(&req, &file, Some("image/webp")).await;
-    r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("private, max-age=60"));
+    r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("private, no-cache"));
     Ok(r)
 }
 

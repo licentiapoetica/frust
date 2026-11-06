@@ -809,7 +809,14 @@ async fn serve_mod_file(req: &Req, root: &Path) -> Response {
     }
     let path = root.join(ty).join(file);
     match tokio::fs::metadata(&path).await {
-        Ok(m) if m.is_file() => files::serve_file(req, &path, Some(mime_by_ext(file))).await,
+        Ok(m) if m.is_file() => {
+            let mut r = files::serve_file(req, &path, Some(mime_by_ext(file))).await;
+            // Thumbnails can be regenerated under the same name: always revalidate
+            if ty == "t" {
+                r.headers_mut().insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static("private, no-cache"));
+            }
+            r
+        }
         _ => raw(404, "File not found"),
     }
 }
