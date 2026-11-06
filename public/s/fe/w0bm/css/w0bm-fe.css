@@ -995,8 +995,8 @@ span#halls-user > a {
 }
 /* Tag and hall cards (tags.html, tags_user.html, halls.html): a grid of cards that are all the same
    size, at most three to a row (1 / 2 / 3), in the same container width as the index. The name
-   is always two lines high (longer ones end in "…", the full name is the tooltip), so is a hall's
-   description; the button sits at the bottom. (Floated columns of different heights left holes.) */
+   and a hall's description take at most two lines (longer ones end in "…", the full name is the
+   tooltip); the button sits at the bottom. (Floated columns of different heights left holes.) */
 .w0bm-hallgrid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -1038,11 +1038,14 @@ span#halls-user > a {
     align-items: flex-start;
     gap: 8px;
     line-height: 1.2;
+    margin: 4px 0 8px;
 }
+/* name and description: at most two lines, no room kept for a second one (the button stays at
+   the card's bottom, so the buttons of a row still line up) */
 .w0bm-hallgrid .w0bm-card-name {
     flex: 1 1 auto;
     min-width: 0;
-    height: 2.4em;
+    max-height: 2.4em;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -1056,7 +1059,8 @@ span#halls-user > a {
     float: none;
 }
 .w0bm-hallgrid .w0bm-card-desc {
-    height: 2.86em;
+    max-height: 2.86em;
+    margin: 0 0 12px;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
