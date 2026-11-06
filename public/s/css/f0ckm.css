@@ -30797,14 +30797,15 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
 /* ---- snippets/header.html: custom / site default font ----
    header.html puts .header-font-user / .header-font-site on <html> when a font is chosen and declares the
    @font-face rules + --font there (values from session/config). :where() keeps the original specificity.
-   The font samples of the admin font manager (.adm-font-sample) keep their own font. */
+   The font samples of the admin font manager (.adm-font-sample) and the [reich] blackletter
+   (.cfx-reich in comments, w0bm's .reich) keep their own font. */
 :where(html.header-font-user),
-:where(html.header-font-user) *:not(canvas):not(.adm-font-sample):not(.meme-title):not(.steuerung-arrow):not(span.f0ck):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
+:where(html.header-font-user) *:not(canvas):not(.adm-font-sample):not(.reich):not(.cfx-reich):not(.meme-title):not(.steuerung-arrow):not(span.f0ck):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
   font-family: 'CustomUserFont', monospace !important;
 }
 
 :where(html.header-font-site),
-:where(html.header-font-site) *:not(canvas):not(.adm-font-sample):not(.meme-title):not(.steuerung-arrow):not(span.f0ck):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
+:where(html.header-font-site) *:not(canvas):not(.adm-font-sample):not(.reich):not(.cfx-reich):not(.meme-title):not(.steuerung-arrow):not(span.f0ck):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
   font-family: 'SiteDefaultFont', monospace !important;
 }
 
