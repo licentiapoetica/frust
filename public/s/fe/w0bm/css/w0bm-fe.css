@@ -1997,6 +1997,21 @@ html[data-w0bm-theme="Glitch"] .navbar .dropdown-menu {
     background-color: #1fb2b0;
 }
 
+/* Search box over the grid / tag list (partials/searchform.html): the button as tall as the field
+   next to it. The field is 34px (w0bmcustom.css: 14px text, line-height 1.42857, 6px padding,
+   1px border); the button's own padding and line-height made it about 30px. Same selector
+   weight as the themes' rules, which load later: Glitch keeps its 40px round pair. Both get the
+   height set, so a browser's own input line-height rounding can't leave them a pixel apart. */
+.suchleiste,
+.suchbutton {
+    box-sizing: border-box;
+    height: 34px;
+}
+.suchbutton {
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 32px;
+}
 /* Search modal: field and button one row over the full width, the button as tall as the field
    (the themes below may still set their own fixed height for both) */
 .searchbar form.w0bm-searchform {
