@@ -113,13 +113,14 @@
                 {% if ((hall_choices is defined) or (my_hall_choices is defined)) %}
                 <a class="w0bm-iconbtn" id="w0bm-hallbtn" href="#w0bm-hallmodal" data-toggle="modal" data-target="#w0bm-hallmodal" title="Add to hall" aria-label="Add to hall"><i class="fa fa-plus"></i></a>
                 {% endif %}
+                {% if (can_manage_item or is_mod_or_admin) %}
+                <a class="w0bm-iconbtn" id="w0bm-editbtn" href="#webmeditmodal" data-toggle="modal" data-target="#webmeditmodal" title="Edit" aria-label="Edit"><i class="fa fa-pencil"></i></a>
+                {% endif %}
                 <a class="fa fa-info-circle w0bm-popover-btn" id="infobox" href="#w0bm-info" data-toggle="popover" data-placement="top" title="Information" data-popover="#w0bm-info-popover"></a>
                 <template id="w0bm-info-popover">{% include "frontends/w0bm/partials/iteminfo.html" %}</template>
                 <span id="uploader">{% if not is_anonymized %}contributed by <a class="w0bm-white{% if item.author_color %} w0bm-usercolor{% endif %}" href="/user/{{ (item.username or "")|lower }}"{% if item.author_color %} style="--user-color: {{ item.author_color }}"{% endif %}>{{ (item.author_display_name or item.username) }}</a>{% endif %}</span>
                 {% if item.is_oc %}<span class="w0bm-oc" title="Original Content">OC</span>{% endif %}
                 <time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ item.timestamp.timefull }}" title="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time>
-                {% if (can_manage_item or is_mod_or_admin) %} <a class="edit_video" href="#webmeditmodal" data-toggle="modal" data-target="#webmeditmodal">[edit]</a>{% endif %}
-                {% if is_mod_or_admin %} <a class="delete_video" href="#w0bm-delmodal" data-toggle="modal" data-target="#w0bm-delmodal" data-id="{{ item.id }}" title="Delete (x)">[del]</a>{% endif %}
             </span>
         </div>
         {% include "frontends/w0bm/partials/infobox-nojs.html" %}

@@ -1,9 +1,9 @@
-{#- partials/frontendedit.blade.php: title (PATCH /api/v2/items/:id/title) and rating
-    (PUT /api/v2/tags/:id/cycle-rating), sent by JavaScript; plus, like f0ckm's item tools:
+{#- partials/frontendedit.blade.php: title (PATCH /api/v2/items/:id/title), sent by JavaScript; plus, like f0ckm's item tools:
     - a new thumbnail (POST /api/v2/items/:id/rethumb; a plain form without JavaScript),
     - Flash: the current frame as the thumbnail (POST /api/v2/items/:id/thumbnail; JavaScript only),
     - metadata suggestions from the file (GET /api/v2/meta/extract/item/:id; a click adds one as a tag),
-    - for staff: unavailable (451) on/off (POST /api/v2/item/visibility; a plain form).
+    - for staff: unavailable (451) on/off (POST /api/v2/item/visibility; a plain form),
+    - for staff: Delete in the footer, which opens the delete modal (partials/deletemodal.html).
     The forms sit side by side in the modal (forms can't nest); Save belongs to #webmedit. -#}
 {%- set w0bm_unavailable = (item.visibility == 3) -%}
 <div class="modal fade" id="webmeditmodal" tabindex="-1" role="dialog" aria-labelledby="editModalTitle">
@@ -20,17 +20,6 @@
                     <div class="form-group">
                         <label for="videotitleedit">Title</label>
                         <input class="form-control" type="text" name="title" id="videotitleedit" value="{{ (item.title or "") }}" placeholder="Title" maxlength="500">
-                    </div>
-                    {% endif %}
-                    {% if can_rate_item %}
-                    <div class="form-group">
-                        <label id="w0bm-edit-rating-label">Rating</label>
-                        {#- the upload page's rating toggles (.w0bm-ul-seg); untagged items start with none chosen -#}
-                        <div class="w0bm-ul-seg" role="radiogroup" aria-labelledby="w0bm-edit-rating-label">
-                            <input type="radio" name="rating" value="sfw" id="edit-rating-sfw"{% if item.is_sfw %} checked{% endif %}><label for="edit-rating-sfw" class="w0bm-ul-sfw">SFW</label>
-                            <input type="radio" name="rating" value="nsfw" id="edit-rating-nsfw"{% if item.is_nsfw %} checked{% endif %}><label for="edit-rating-nsfw" class="w0bm-ul-nsfw">NSFW</label>
-                            {% if enable_nsfl %}<input type="radio" name="rating" value="nsfl" id="edit-rating-nsfl"{% if item.is_nsfl %} checked{% endif %}><label for="edit-rating-nsfl" class="w0bm-ul-nsfl">NSFL</label>{% endif %}
-                        </div>
                     </div>
                     {% endif %}
                 </form>
@@ -78,8 +67,9 @@
                 </div>
             </div>
             <div class="modal-footer">
+                {% if is_mod_or_admin %}<a href="#w0bm-delmodal" class="btn btn-primary w0bm-edit-delete" data-toggle="modal" data-target="#w0bm-delmodal" title="Delete (x)">Delete</a>{% endif %}
                 <a href="#_" class="btn btn-primary" data-dismiss="modal">Close</a>
-                <input type="submit" form="webmedit" class="btn btn-primary w0bm-js-only" value="Save">
+                {% if enable_item_title %}<input type="submit" form="webmedit" class="btn btn-primary w0bm-js-only" value="Save">{% endif %}
             </div>
         </div>
     </div>

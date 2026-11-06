@@ -2527,8 +2527,20 @@ table.w0bm-ranking > thead > tr > th:first-child {
 }
 
 /* ── Halls dialog ("+" in the item bar, partials/hallmodal.html) ────────────────────────── */
-#w0bm-hallbtn {
+#w0bm-hallbtn,
+#w0bm-editbtn {
     padding: 0 5px;
+}
+/* Delete (staff) in the edit modal's footer: on the left, away from Close/Save; the same button
+   as those two (.btn-primary), only with a red border */
+.modal-footer .w0bm-edit-delete {
+    float: left;
+}
+.modal-footer .btn-primary.w0bm-edit-delete,
+.modal-footer .btn-primary.w0bm-edit-delete:hover,
+.modal-footer .btn-primary.w0bm-edit-delete:focus,
+.modal-footer .btn-primary.w0bm-edit-delete:active {
+    border-color: #cc0000;
 }
 .modal-body.w0bm-hallmodal-body {
     display: block;

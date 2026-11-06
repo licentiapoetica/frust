@@ -1457,14 +1457,6 @@
         if (h) h.textContent = r.data.title || '';
       } else errors.push(r.msg);
     }
-    const rating = editForm.querySelector('input[name="rating"]:checked');
-    if (rating && !rating.defaultChecked) {
-      const r = await api('/api/v2/tags/' + id + '/cycle-rating', { method: 'PUT', body: { rating: rating.value } });
-      if (r.ok) {
-        editForm.querySelectorAll('input[name="rating"]').forEach((o) => { o.defaultChecked = o.checked; });
-        reloadTags();
-      } else errors.push(r.msg);
-    }
     if (errors.length) flash('error', 'Error updating upload: ' + errors.join(', '));
     else flash('success', 'Upload successfully updated');
     closeModal($('#webmeditmodal'));
