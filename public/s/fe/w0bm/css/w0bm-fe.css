@@ -2751,9 +2751,12 @@ div#parent.emojis-box {
 }
 
 /* ── Quick upload (f0ckm's upload dropdown, snippets/upload-modal-frontend.html) ───────────
-   f0ckm's colour variables in w0bm's colours */
+   f0ckm's colour variables in w0bm's colours. --u-rem: the form is sized in f0ckm's rem, and
+   bootstrap's root font size is 10px; the text size zooms the body (see "Text size" below). */
 #upload-drag-modal,
-#drop-overlay {
+#drop-overlay,
+#url-upload-tracker {
+    --u-rem: 16px;
     --accent: #1fb2b0;
     --accent-rgb: 31, 178, 176;
     --white: #fff;
@@ -3385,6 +3388,15 @@ html[class*="user-fs-"] .w0bm-favpop-host > .w0bm-favpop {
 }
 html[class*="user-fs-"] .w0bm-flash-global {
     max-width: calc(100vw / var(--fs-zoom) - 30px);
+}
+/* upload-modal.css, upload.css (the quick upload; f0ck_upload_init.js also divides its
+   positions by the zoom) */
+html[class*="user-fs-"] #upload-drag-modal .modal-content {
+    width: min(calc(47.5 * var(--u-rem)), calc(100vw / var(--fs-zoom) - 16px));
+    max-height: calc(100vh / var(--fs-zoom) - var(--navbar-h, 50px) - 18px);
+}
+html[class*="user-fs-"] #url-upload-tracker {
+    max-width: calc(100vw / var(--fs-zoom) - 40px);
 }
 /* w0bm-shell.css */
 html[class*="user-fs-"] .f0ck-shell-page {

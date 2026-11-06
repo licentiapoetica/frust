@@ -20,7 +20,7 @@
     }
 }
 .upload-container h2 {
-    margin-bottom: 0.5rem;
+    margin-bottom: calc(0.5 * var(--u-rem, 1rem));
     color: var(--accent);
     text-align: center;
 }
@@ -37,7 +37,7 @@
 
 /* Upload Limit Info (inside the title line; keeps its own small, normal-case text) */
 .upload-limit-info {
-    font-size: 0.9rem;
+    font-size: calc(0.9 * var(--u-rem, 1rem));
     font-weight: 400;
     letter-spacing: normal;
     text-transform: none;
@@ -45,11 +45,11 @@
 }
 
 .upload-title .upload-limit-info {
-    font-size: 0.8rem;
+    font-size: calc(0.8 * var(--u-rem, 1rem));
 }
 
 .upload-limit-info i {
-    margin-right: 0.3rem;
+    margin-right: calc(0.3 * var(--u-rem, 1rem));
 }
 
 .limit-unlimited {
@@ -71,7 +71,7 @@
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.02);
-    padding: 1rem;
+    padding: calc(1 * var(--u-rem, 1rem));
     border-radius: 0;
     border: 1px solid rgba(255, 255, 255, 0.05);
     gap: 5px;
@@ -79,12 +79,12 @@
 
 /* Title sits between the mode tabs and the drop zone */
 .global-title-section {
-    margin-bottom: 1rem;
+    margin-bottom: calc(1 * var(--u-rem, 1rem));
 }
 
 .form-section label {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: calc(0.5 * var(--u-rem, 1rem));
     font-weight: 500;
 }
 
@@ -140,7 +140,7 @@
     flex-direction: column;
     /* Stacked */
     align-items: center;
-    gap: 0.3rem;
+    gap: calc(0.3 * var(--u-rem, 1rem));
     width: 100%;
 }
 
@@ -155,23 +155,23 @@
     border-radius: 0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     outline: none;
-    margin-bottom: 1rem;
+    margin-bottom: calc(1 * var(--u-rem, 1rem));
 }
 
 .file-meta-row {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: calc(1 * var(--u-rem, 1rem));
     width: 100%;
     justify-content: center;
 }
 
 .file-info {
     display: flex;
-    gap: 1rem;
+    gap: calc(1 * var(--u-rem, 1rem));
     align-items: center;
     background: rgba(0, 0, 0, 0.3);
-    padding: 0.5rem 1rem;
+    padding: calc(0.5 * var(--u-rem, 1rem)) calc(1 * var(--u-rem, 1rem));
     border-radius: 0;
 }
 
@@ -181,14 +181,14 @@
 
 .file-size {
     opacity: 0.6;
-    font-size: 0.9rem;
+    font-size: calc(0.9 * var(--u-rem, 1rem));
 }
 
 .btn-remove {
     background: #ff6b6b;
     color: white;
     border: none;
-    padding: 0.5rem 1.5rem;
+    padding: calc(0.5 * var(--u-rem, 1rem)) calc(1.5 * var(--u-rem, 1rem));
     border-radius: 0;
     cursor: pointer;
     font-weight: 600;
@@ -286,7 +286,7 @@
 }
 
 .file-name-small {
-    font-size: 0.95rem;
+    font-size: calc(0.95 * var(--u-rem, 1rem));
     font-weight: 500;
     overflow: hidden;
     color: #fff;
@@ -296,7 +296,7 @@
 }
 
 .file-size-small {
-    font-size: 0.7rem;
+    font-size: calc(0.7 * var(--u-rem, 1rem));
     opacity: 0.4;
     font-family: 'Outfit', sans-serif;
     letter-spacing: 0.5px;
@@ -322,7 +322,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: calc(0.75 * var(--u-rem, 1rem));
     border-radius: 6px;
     transition: all 0.2s;
 }
@@ -365,13 +365,13 @@
     cursor: pointer;
     color: rgba(255, 255, 255, 0.3);
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: calc(0.9 * var(--u-rem, 1rem));
     transition: all 0.2s;
     backdrop-filter: none;
     border-radius: 8px;
 }
 .add-more-item i {
-    font-size: 1.1rem;
+    font-size: calc(1.1 * var(--u-rem, 1rem));
     opacity: 0.8;
 }
 
@@ -433,7 +433,7 @@
 .item-rating-label {
     display: inline-block;
     padding: 2px 6px;
-    font-size: 0.65rem;
+    font-size: calc(0.65 * var(--u-rem, 1rem));
     font-weight: 700;
     border-radius: 3px;
     background: rgba(255, 255, 255, 0.05);
@@ -539,7 +539,7 @@
     background: rgba(255, 255, 255, 0.1);
     padding: 2px 8px;
     border-radius: 4px;
-    font-size: 0.75rem;
+    font-size: calc(0.75 * var(--u-rem, 1rem));
     display: flex;
     align-items: center;
     gap: 5px;
@@ -561,7 +561,7 @@
     border-radius: 4px;
     padding: 6px 10px;
     color: #fff;
-    font-size: 0.85rem;
+    font-size: calc(0.85 * var(--u-rem, 1rem));
     outline: none;
     transition: border-color 0.2s;
 }
@@ -581,7 +581,7 @@
     background: rgba(255, 255, 255, 0.05);
     padding: 1px 6px;
     border-radius: 3px;
-    font-size: 0.65rem;
+    font-size: calc(0.65 * var(--u-rem, 1rem));
     cursor: pointer;
     border: 1px dashed rgba(255, 255, 255, 0.1);
     word-break: break-all;
@@ -609,7 +609,7 @@
     border-radius: 4px;
     padding: 6px 10px;
     color: #fff;
-    font-size: 0.85rem;
+    font-size: calc(0.85 * var(--u-rem, 1rem));
     outline: none;
     transition: border-color 0.2s;
     margin-top: 10px;
@@ -634,7 +634,7 @@
     border-radius: 4px;
     padding: 5px 10px;
     color: #fff;
-    font-size: 0.8rem;
+    font-size: calc(0.8 * var(--u-rem, 1rem));
     font-family: inherit;
     outline: none;
     transition: border-color 0.2s;
@@ -653,7 +653,7 @@
 .rating-options {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: calc(1 * var(--u-rem, 1rem));
     justify-content: center;
 }
 
@@ -756,7 +756,7 @@
     justify-content: center;
     gap: 6px;
     min-width: 0;
-    padding: 0.65rem 1rem;
+    padding: calc(0.65 * var(--u-rem, 1rem)) calc(1 * var(--u-rem, 1rem));
     background: transparent;
     border: 0;
     box-shadow: none;
@@ -817,11 +817,11 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0;
-    padding: 0.5rem;
+    padding: calc(0.5 * var(--u-rem, 1rem));
     display: flex;
     flex-wrap: wrap;
     position: relative;
-    gap: 0.5rem;
+    gap: calc(0.5 * var(--u-rem, 1rem));
     z-index: 10000 !important;
     margin-bottom: 5px;
 }
@@ -829,18 +829,18 @@
 .tags-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: calc(0.5 * var(--u-rem, 1rem));
 }
 
 .tag-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: calc(0.3 * var(--u-rem, 1rem));
     background: var(--accent);
     color: #000;
-    padding: 0.3rem 0.6rem;
+    padding: calc(0.3 * var(--u-rem, 1rem)) calc(0.6 * var(--u-rem, 1rem));
     border-radius: 0;
-    font-size: 0.9rem;
+    font-size: calc(0.9 * var(--u-rem, 1rem));
     font-weight: 500;
 }
 
@@ -850,7 +850,7 @@
     color: inherit;
     cursor: pointer;
     padding: 0;
-    font-size: 1.1rem;
+    font-size: calc(1.1 * var(--u-rem, 1rem));
     line-height: 1;
 }
 
@@ -860,7 +860,7 @@
     background: transparent;
     border: none;
     color: inherit;
-    padding: 0.5rem;
+    padding: calc(0.5 * var(--u-rem, 1rem));
     outline: none;
 }
 
@@ -870,10 +870,10 @@
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0;
-    padding: 0.5rem;
+    padding: calc(0.5 * var(--u-rem, 1rem));
     color: inherit;
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: calc(0.9 * var(--u-rem, 1rem));
     outline: none;
     transition: border-color 0.2s;
     box-sizing: border-box;
@@ -889,7 +889,7 @@
 
 .tag-count {
     font-weight: normal;
-    font-size: 0.85rem;
+    font-size: calc(0.85 * var(--u-rem, 1rem));
     opacity: 0.7;
 }
 
@@ -911,9 +911,9 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0;
     color: inherit;
-    padding: 0.6rem 0.8rem;
+    padding: calc(0.6 * var(--u-rem, 1rem)) calc(0.8 * var(--u-rem, 1rem));
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: calc(0.9 * var(--u-rem, 1rem));
     resize: vertical;
     min-height: 60px;
     max-height: 200px;
@@ -942,6 +942,60 @@
 .upload-comment-input .emoji-picker {
     position: relative;
     z-index: 1;
+}
+
+/* Emoji button + picker that upload.js adds when the page has no CommentSystem (the alternative
+   frontends, pages without comments): styled here so they look the same without f0ckm.css */
+.upload-comment-input .input-actions .upload-emoji-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(1.9 * var(--u-rem, 1rem));
+    height: calc(1.9 * var(--u-rem, 1rem));
+    margin: 0;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    color: var(--text-color, var(--white, #fff));
+    font-family: inherit;
+    font-size: calc(1.1 * var(--u-rem, 1rem));
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.upload-comment-input .input-actions .upload-emoji-trigger:hover,
+.upload-comment-input .input-actions .upload-emoji-trigger:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent);
+    outline: none;
+}
+
+.upload-comment-input .upload-emoji-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    max-height: 200px;
+    margin-top: 5px;
+    padding: 5px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    box-sizing: border-box;
+    background: var(--bg, #111);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-comment-input .upload-emoji-picker img {
+    width: calc(3 * var(--u-rem, 1rem));
+    height: calc(3 * var(--u-rem, 1rem));
+    padding: 4px;
+    object-fit: contain;
+    cursor: pointer;
+}
+
+.upload-comment-input .upload-emoji-picker img:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .upload-form .tag-suggestions {
@@ -996,13 +1050,13 @@
 }
 
 #upload-form .tag-suggestion-name {
-    font-size: 14px !important;
+    font-size: calc(0.875 * var(--u-rem, 1rem)) !important;
     color: var(--accent, #66d9ef) !important;
     font-weight: 500 !important;
 }
 
 #upload-form .tag-suggestion-meta {
-    font-size: 11px !important;
+    font-size: calc(0.6875 * var(--u-rem, 1rem)) !important;
     color: rgba(255, 255, 255, 0.35) !important;
     margin-left: 12px !important;
     white-space: nowrap !important;
@@ -1013,9 +1067,9 @@
     background: var(--accent);
     color: var(--bg);
     border: none;
-    padding: 1rem 2rem;
+    padding: calc(1 * var(--u-rem, 1rem)) calc(2 * var(--u-rem, 1rem));
     border-radius: 0;
-    font-size: 1.1rem;
+    font-size: calc(1.1 * var(--u-rem, 1rem));
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
@@ -1036,9 +1090,9 @@
 .upload-progress {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: calc(1 * var(--u-rem, 1rem));
     background: rgba(0, 0, 0, 0.2);
-    padding: 1rem;
+    padding: calc(1 * var(--u-rem, 1rem));
     border-radius: 0;
 }
 
@@ -1071,7 +1125,7 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    font-size: 0.88rem;
+    font-size: calc(0.88 * var(--u-rem, 1rem));
     color: rgba(255, 255, 255, 0.85);
     user-select: none;
     transition: color 0.15s ease;
@@ -1091,7 +1145,7 @@
 
 .upload-status {
     text-align: center;
-    padding: 1rem;
+    padding: calc(1 * var(--u-rem, 1rem));
     font-weight: 600;
 }
 
@@ -1118,15 +1172,15 @@
 /* Login Required */
 .login-required {
     text-align: center;
-    padding: 4rem 2rem;
+    padding: calc(4 * var(--u-rem, 1rem)) calc(2 * var(--u-rem, 1rem));
     border: 1px dashed rgba(255, 255, 255, 0.2);
     border-radius: 0;
 }
 
 .btn-login {
     display: inline-block;
-    margin-top: 1rem;
-    padding: 0.75rem 2rem;
+    margin-top: calc(1 * var(--u-rem, 1rem));
+    padding: calc(0.75 * var(--u-rem, 1rem)) calc(2 * var(--u-rem, 1rem));
     background: var(--accent);
     color: #000;
     text-decoration: none;
@@ -1138,7 +1192,7 @@
 .upload-mode-tabs {
     display: flex;
     gap: 0;
-    margin-bottom: 1rem;
+    margin-bottom: calc(1 * var(--u-rem, 1rem));
     border: 1px solid rgba(255, 255, 255, 0.1);
     overflow: hidden;
 }
@@ -1148,12 +1202,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
+    gap: calc(0.5 * var(--u-rem, 1rem));
+    padding: calc(0.75 * var(--u-rem, 1rem)) calc(1 * var(--u-rem, 1rem));
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.45);
-    font-size: 0.95rem;
+    font-size: calc(0.95 * var(--u-rem, 1rem));
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -1198,8 +1252,8 @@
     background: rgba(255, 255, 255, 0.05);
     border: 2px dashed rgba(255, 255, 255, 0.2);
     color: #fff;
-    padding: 1.5rem 1rem;
-    font-size: 1rem;
+    padding: calc(1.5 * var(--u-rem, 1rem)) calc(1 * var(--u-rem, 1rem));
+    font-size: calc(1 * var(--u-rem, 1rem));
     outline: none;
     transition: border-color 0.2s;
     box-sizing: border-box;
@@ -1218,7 +1272,7 @@
     display: none; /* shown via JS */
     margin-top: 6px;
     padding: 5px 14px;
-    font-size: 0.78rem;
+    font-size: calc(0.78 * var(--u-rem, 1rem));
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -1271,7 +1325,7 @@
     display: none;
     align-items: center;
     gap: 8px;
-    font-size: 0.8rem;
+    font-size: calc(0.8 * var(--u-rem, 1rem));
     color: var(--accent);
     margin: 5px 0 5px 5px;
     background: rgba(0, 0, 0, 0.4);
@@ -1301,47 +1355,47 @@
 }
 
 .meta-suggestions-container {
-    margin-top: 1rem;
-    padding: 0.75rem;
+    margin-top: calc(1 * var(--u-rem, 1rem));
+    padding: calc(0.75 * var(--u-rem, 1rem));
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0;
 }
 
 .suggestions-header {
-    font-size: 0.75rem;
+    font-size: calc(0.75 * var(--u-rem, 1rem));
     color: var(--accent);
-    margin-bottom: 0.5rem;
+    margin-bottom: calc(0.5 * var(--u-rem, 1rem));
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: calc(0.5 * var(--u-rem, 1rem));
 }
 
 .meta-suggestions-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: calc(0.5 * var(--u-rem, 1rem));
 }
 
 .meta-suggestion {
-    padding: 0.35rem 0.75rem;
+    padding: calc(0.35 * var(--u-rem, 1rem)) calc(0.75 * var(--u-rem, 1rem));
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 50px;
-    font-size: 0.85rem;
+    font-size: calc(0.85 * var(--u-rem, 1rem));
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: calc(0.5 * var(--u-rem, 1rem));
     color: rgba(255, 255, 255, 0.8);
 }
 
 .meta-suggestion i {
-    font-size: 0.7rem;
+    font-size: calc(0.7 * var(--u-rem, 1rem));
     opacity: 0.6;
 }
 
@@ -1440,7 +1494,7 @@
     background: none;
     border: 1px solid rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.5);
-    font-size: 1rem;
+    font-size: calc(1 * var(--u-rem, 1rem));
     cursor: pointer;
     padding: 2px 7px;
     line-height: 1.4;
@@ -1598,13 +1652,13 @@
 }
 
 .swf-upload-placeholder-icon {
-    font-size: 2.5rem;
+    font-size: calc(2.5 * var(--u-rem, 1rem));
     line-height: 1;
     filter: drop-shadow(0 0 8px rgba(255, 200, 0, 0.7));
 }
 
 .swf-upload-placeholder-text {
-    font-size: 0.8rem;
+    font-size: calc(0.8 * var(--u-rem, 1rem));
     color: rgba(255, 255, 255, 0.5);
     letter-spacing: 0.5px;
 }
@@ -1631,7 +1685,7 @@
     border-top: 1px solid rgba(255, 200, 0, 0.2);
     border-radius: 0 0 6px 6px;
     color: rgba(255, 200, 0, 0.9);
-    font-size: 0.85rem;
+    font-size: calc(0.85 * var(--u-rem, 1rem));
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
@@ -1683,11 +1737,12 @@
     bottom: 20px;
     left: 20px;
     z-index: 9998;
-    width: 320px;
+    width: calc(20 * var(--u-rem, 1rem));
+    max-width: calc(100vw - 40px);
     background: var(--nav-bg, #1c1c1c);
     border: 1px solid rgba(var(--accent-rgb, 120,120,120), 0.15);
     overflow: hidden;
-    font-size: 0.8rem;
+    font-size: calc(0.8 * var(--u-rem, 1rem));
     opacity: 0;
     transform: translateY(10px);
     transition: opacity 1.5s ease, transform 1.5s ease;
@@ -1713,14 +1768,14 @@
 
 .uut-header > .fa-solid {
     color: var(--accent);
-    font-size: 11px;
+    font-size: calc(0.6875 * var(--u-rem, 1rem));
     opacity: 0.75;
     flex-shrink: 0;
 }
 
 .uut-title {
     flex: 1;
-    font-size: 0.74rem;
+    font-size: calc(0.74 * var(--u-rem, 1rem));
     font-weight: 600;
     color: var(--white, #fff);
     letter-spacing: 0.01em;
@@ -1729,7 +1784,7 @@
 .uut-badge {
     background: var(--accent);
     color: #fff;
-    font-size: 0.62rem;
+    font-size: calc(0.62 * var(--u-rem, 1rem));
     font-weight: 700;
     min-width: 16px;
     height: 16px;
@@ -1750,7 +1805,7 @@
     opacity: 0.3;
     padding: 3px 6px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: calc(0.75 * var(--u-rem, 1rem));
     line-height: 1;
     transition: opacity 0.15s, background 0.15s;
 }
@@ -1796,7 +1851,7 @@
 
 .uut-url {
     display: block;
-    font-size: 0.72rem;
+    font-size: calc(0.72 * var(--u-rem, 1rem));
     color: var(--white, #fff);
     opacity: 0.65;
     white-space: nowrap;
@@ -1812,13 +1867,13 @@
 }
 
 .uut-stage {
-    font-size: 0.71rem;
+    font-size: calc(0.71 * var(--u-rem, 1rem));
     color: var(--accent);
     white-space: nowrap;
 }
 
 .uut-speed {
-    font-size: 0.67rem;
+    font-size: calc(0.67 * var(--u-rem, 1rem));
     color: var(--white, #fff);
     opacity: 0.38;
     margin-left: auto;
@@ -1863,7 +1918,7 @@
 }
 
 .album-choice-title {
-    font-size: 0.9rem;
+    font-size: calc(0.9 * var(--u-rem, 1rem));
     font-weight: 600;
     color: #eee;
     display: flex;
@@ -1883,7 +1938,7 @@
 .album-choice-btn {
     padding: 6px 14px;
     border-radius: 6px;
-    font-size: 0.85rem;
+    font-size: calc(0.85 * var(--u-rem, 1rem));
     background: rgba(0, 0, 0, 0.35);
     border: 1px solid rgba(255, 255, 255, 0.18);
     color: #ccc;
@@ -1927,7 +1982,7 @@
 }
 
 .album-staging-title {
-    font-size: 0.92rem;
+    font-size: calc(0.92 * var(--u-rem, 1rem));
     font-weight: 600;
     color: #eee;
     display: flex;
@@ -1945,7 +2000,7 @@
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.16);
     color: #eee;
-    font-size: 0.8rem;
+    font-size: calc(0.8 * var(--u-rem, 1rem));
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -2008,11 +2063,11 @@
 }
 
 .album-stage-audio-preview i {
-    font-size: 1.8rem;
+    font-size: calc(1.8 * var(--u-rem, 1rem));
 }
 
 .album-stage-audio-name {
-    font-size: 0.65rem;
+    font-size: calc(0.65 * var(--u-rem, 1rem));
     color: #ccc;
     max-width: 95px;
     overflow: hidden;
@@ -2026,7 +2081,7 @@
     right: 4px;
     background: rgba(0, 0, 0, 0.7);
     color: #fff;
-    font-size: 0.65rem;
+    font-size: calc(0.65 * var(--u-rem, 1rem));
     padding: 2px 5px;
     border-radius: 4px;
     z-index: 5;
@@ -2041,7 +2096,7 @@
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     color: #fff;
-    font-size: 0.7rem;
+    font-size: calc(0.7 * var(--u-rem, 1rem));
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 4px;
@@ -2084,7 +2139,7 @@
     background: rgba(255, 255, 255, 0.16);
     border: none;
     color: #fff;
-    font-size: 0.72rem;
+    font-size: calc(0.72 * var(--u-rem, 1rem));
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -2120,16 +2175,16 @@
 }
 
 .album-add-icon {
-    font-size: 1.4rem;
+    font-size: calc(1.4 * var(--u-rem, 1rem));
 }
 
 .album-add-text {
-    font-size: 0.75rem;
+    font-size: calc(0.75 * var(--u-rem, 1rem));
     font-weight: 600;
 }
 
 .album-add-sub {
-    font-size: 0.65rem;
+    font-size: calc(0.65 * var(--u-rem, 1rem));
     opacity: 0.7;
 }
 
@@ -2144,7 +2199,7 @@
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 4px;
     padding: 3px 6px;
-    font-size: 0.68rem;
+    font-size: calc(0.68 * var(--u-rem, 1rem));
     color: #fff;
     outline: none;
     box-sizing: border-box;
@@ -2173,7 +2228,7 @@
 }
 
 .upload-form-drop-title {
-  font-size: 1.1rem;
+  font-size: calc(1.1 * var(--u-rem, 1rem));
   font-weight: 500;
 }
 
@@ -2190,7 +2245,7 @@
   justify-content: center;
   gap: 4px 6px;
   margin: 8px 0 0;
-  font-size: 0.75rem;
+  font-size: calc(0.75 * var(--u-rem, 1rem));
   opacity: 0.55;
 }
 
@@ -2202,7 +2257,7 @@
 
 .upload-form-drop-sound {
   margin: 8px 0 0;
-  font-size: 0.8rem;
+  font-size: calc(0.8 * var(--u-rem, 1rem));
   color: var(--accent);
 }
 

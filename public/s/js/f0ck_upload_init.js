@@ -15,17 +15,21 @@
         if (!dragModal || !dragModal.classList.contains('show')) return;
         const content = dragModal.querySelector('.modal-content');
         if (!content) return;
+        // Measured in window pixels; a CSS zoom on the page (w0bm's text size zooms the body) scales
+        // the px values set below, so they are divided by it.
+        const zoom = content.currentCSSZoom || 1;
         const vw = document.documentElement.clientWidth;
+        const vh = window.innerHeight;
         const linkRect = navUploadLink ? navUploadLink.getBoundingClientRect() : null;
         const useLink = !!(linkRect && linkRect.width > 0 && linkRect.height > 0);
         const nav = document.querySelector('body > nav.navbar, nav.navbar');
         const top = Math.round((useLink ? linkRect.bottom : (nav ? nav.getBoundingClientRect().bottom : 0)) + 6);
-        content.style.top = top + 'px';
-        content.style.maxHeight = Math.max(200, window.innerHeight - top - 12) + 'px';
-        const w = content.offsetWidth;
+        content.style.top = (top / zoom) + 'px';
+        content.style.maxHeight = (Math.max(200, vh - top - 12) / zoom) + 'px';
+        const w = content.getBoundingClientRect().width;
         let left = useLink ? linkRect.left : (vw - w) / 2;
         left = Math.max(8, Math.min(left, vw - w - 8));
-        content.style.left = Math.round(left) + 'px';
+        content.style.left = (Math.round(left) / zoom) + 'px';
     };
     window.addEventListener('resize', positionModal, { passive: true });
 

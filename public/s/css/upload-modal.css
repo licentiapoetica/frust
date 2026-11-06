@@ -4,6 +4,10 @@
  * /s/js/f0ck_upload_init.js with /s/js/upload.js (the form). Loaded by snippets/header.html and,
  * in the alternative frontends, by snippets/upload-modal-frontend.html (each frontend sets the
  * colour variables for it, see views/frontends/README.md).
+ *
+ * Sizes here and in upload.css are multiples of --u-rem (default 1rem), so they follow the user's
+ * text size with f0ckm's root font size. Frontends whose root font size isn't the browser's 16px
+ * (w0bm's bootstrap: 10px) set --u-rem to 16px on #upload-drag-modal / #url-upload-tracker.
  */
 
 /* Global Drag & Drop Overlay */
@@ -44,7 +48,7 @@
 
 #drop-overlay h2 {
   margin: 15px 0 0 0;
-  font-size: 2rem;
+  font-size: calc(2 * var(--u-rem, 1rem));
   color: var(--white);
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -76,7 +80,7 @@
   position: fixed;
   top: calc(var(--navbar-h, 50px) + 6px);
   left: 8px;
-  width: min(760px, calc(100vw - 16px));
+  width: min(calc(47.5 * var(--u-rem, 1rem)), calc(100vw - 16px));
   max-width: none;
   max-height: calc(100vh - var(--navbar-h, 50px) - 18px);
   overflow-y: auto;
@@ -125,7 +129,7 @@
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: var(--text-color, var(--white, #fff));
-  font-size: 22px;
+  font-size: calc(1.375 * var(--u-rem, 1rem));
   line-height: 1;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
@@ -147,6 +151,8 @@
 #upload-drag-modal .modal-body {
   flex: 1 1 auto;
   min-height: 0;
+  /* no gap above the sticky title / below the sticky footer (bootstrap's .modal-body has 15px) */
+  padding: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -183,8 +189,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 4px -1rem -1rem;
-  padding: 12px 1rem 14px;
+  margin: 4px calc(-1 * var(--u-rem, 1rem)) calc(-1 * var(--u-rem, 1rem));
+  padding: 12px calc(1 * var(--u-rem, 1rem)) 14px;
   background: var(--bg, #111);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -201,7 +207,7 @@
 
 /* Drag & drop overlay icon and the upload dropdown's container */
 .navbar-drop-icon {
-  font-size: 5rem;
+  font-size: calc(5 * var(--u-rem, 1rem));
 }
 
 #upload-drag-modal .upload-container.navbar-upload-container {
