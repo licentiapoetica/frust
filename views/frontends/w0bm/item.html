@@ -77,11 +77,11 @@
                 <button class="copylink w0bm-js-only" data-clipboard-text="https://{{ domain }}{{ (url.pathname if (url and url.pathname) else ("/" ~ iid)) }}" title="Copy URL!"><i class="fa fa-link"></i></button>
                 <a title="Report" id="webm_report" class="webm-report w0bm-iconbtn" href="#webmreportmodal" data-toggle="modal" data-target="#webmreportmodal"><i class="fa fa-warning fa-md"></i></a>
                 {% if (session and enable_comments) %}
-                <form method="post" action="/api/subscribe/{{ item.id }}" class="w0bm-inline-form" id="w0bm-sub-form">
+                <form method="post" action="/api/subscribe/{{ item.id }}" class="w0bm-inline-form" id="w0bm-sub-form" data-msg-on="{{ t("toast.subscribed_thread") }}" data-msg-off="{{ t("toast.unsubscribed_thread") }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="subscribed" value="{{ ("0" if isSubscribed else "1") }}">
                     {% include "frontends/w0bm/partials/back.html" %}
-                    <button type="submit" class="w0bm-iconbtn" id="w0bm-subscribe" title="{{ ("Unsubscribe" if isSubscribed else "Subscribe to comments") }}"><i class="fa {{ ("fa-bell" if isSubscribed else "fa-bell-o") }}"></i></button>
+                    <button type="submit" class="w0bm-iconbtn" id="w0bm-subscribe" title="{{ ("Unsubscribe from thread" if isSubscribed else "Subscribe to thread") }}"><i class="fa {{ ("fa-bell" if isSubscribed else "fa-bell-o") }}"></i></button>
                 </form>
                 {% endif %}
                 <a class="fa fa-info-circle w0bm-popover-btn" id="infobox" href="#w0bm-info" data-toggle="popover" data-placement="top" title="Information" data-popover="#w0bm-info-popover"></a>

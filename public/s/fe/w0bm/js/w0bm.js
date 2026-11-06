@@ -1426,7 +1426,7 @@
     });
   }
 
-  // ── Subscribe to comments ─────────────────────────────────────────────────────────────
+  // ── Subscribe to the thread ───────────────────────────────────────────────────────────
   const subForm = $('#w0bm-sub-form');
   subForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1437,8 +1437,9 @@
     want.value = on ? '0' : '1';
     const btn = subForm.querySelector('button');
     btn.querySelector('i').className = 'fa ' + (on ? 'fa-bell' : 'fa-bell-o');
-    btn.title = on ? 'Unsubscribe' : 'Subscribe to comments';
-    flash('success', on ? 'Subscribed to comments' : 'Unsubscribed');
+    btn.title = on ? 'Unsubscribe from thread' : 'Subscribe to thread';
+    // texts from the locale (toast.subscribed_thread / unsubscribed_thread, data-* on the form)
+    flash('success', on ? (subForm.dataset.msgOn || 'Subscribed to thread') : (subForm.dataset.msgOff || 'Unsubscribed from thread'));
   });
 
   // ── Edit / delete the item ────────────────────────────────────────────────────────────
