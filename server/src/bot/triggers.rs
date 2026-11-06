@@ -164,12 +164,13 @@ async fn recover(rt: Arc<Runtime>, e: Message) -> Result<()> {
 
 // ── f0ckgag.mjs ─────────────────────────────────────────────────────────────
 
-/// Links to an item on this site. Group 3 is the id, the 11-character slug, or `b/<file>`; it must
-/// be followed by the end of the path, so `/notifications` isn't read as a slug.
+/// Links to an item on this site. Group 3 is the id, the 11-character slug, or `b/<file>` (a direct
+/// link to the media file, any name and extension); it must be followed by the end of the path, so
+/// `/notifications` isn't read as a slug.
 fn f0ckgag_pattern(cfg: &Config) -> String {
     let host = cfg.str("main.url.regex").filter(|s| !s.is_empty()).map(str::to_string).unwrap_or_else(|| regex::escape(cfg.domain()));
     format!(
-        r"(?i)(https?://{host})(/(?:video|image|audio|tag/[^/\s]+|user/[^/\s]+(?:/favs)?|h/[^/\s]+))?/([0-9]+|[A-Za-z0-9_-]{{11}}|(?:b/)[A-Za-z0-9_]{{8}}\.(?:jpg|webm|gif|mp4|png|mov|mp3|ogg|flac))(?:[^A-Za-z0-9_-]|$)"
+        r"(?i)(https?://{host})(/(?:video|image|audio|tag/[^/\s]+|user/[^/\s]+(?:/favs)?|h/[^/\s]+))?/([0-9]+|[A-Za-z0-9_-]{{11}}|b/[A-Za-z0-9_-]+\.[A-Za-z0-9]{{1,5}})(?:[^A-Za-z0-9_-]|$)"
     )
 }
 
@@ -607,6 +608,10 @@ mod tests {
         assert_eq!(t("https://f0ck.me/AbC_dEf-123").as_deref(), Some("AbC_dEf-123"));
         assert_eq!(t("see https://f0ck.me/tag/cats/AbC_dEf-123?x=1").as_deref(), Some("AbC_dEf-123"));
         assert_eq!(t("https://f0ck.me/b/abcdefgh.mp4").as_deref(), Some("abcdefgh.mp4"));
+        // direct links to current uploads: 48 hex characters, any extension
+        let hex = "0123456789abcdef".repeat(3);
+        assert_eq!(t(&format!("lol https://f0ck.me/b/{hex}.webp")).as_deref(), Some(format!("{hex}.webp").as_str()));
+        assert_eq!(t(&format!("https://f0ck.me/b/{hex}.m4a?x=1")).as_deref(), Some(format!("{hex}.m4a").as_str()));
         // longer path words aren't slugs
         assert_eq!(t("https://f0ck.me/notifications"), None);
         assert!(g.is_match("https://f0ck.me/user/x/favs/77"));
