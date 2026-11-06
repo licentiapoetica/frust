@@ -2845,6 +2845,33 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
     overflow: visible;
   }
 
+  /* The player as big as in the legacy layout (same widths, see "LAYOUT: LEGACY" below)
+     instead of the 800px cap above */
+  body.layout-modern .item-layout-container .item-main-content {
+    --legacy-item-w: min(1140px, calc((100vh - 310px) * 16 / 9));
+    --legacy-meta-w: calc(var(--legacy-item-w) * 0.75);
+  }
+
+  body.layout-modern .item-layout-container .item-main-content > :is(._204863, .item_title, .item-title, .content) {
+    width: var(--legacy-item-w);
+    max-width: 100%;
+  }
+
+  body.layout-modern .item-layout-container .item-main-content > .metadata {
+    width: var(--legacy-meta-w);
+    max-width: 100%;
+  }
+
+  body.layout-modern .item-layout-container .item-main-content .embed-responsive-16by9::before {
+    padding-top: 0 !important;
+  }
+
+  body.layout-modern .item-layout-container .item-main-content .embed-responsive-16by9 {
+    aspect-ratio: 16 / 9;
+    height: auto;
+    max-height: calc(100vh - 310px);
+  }
+
   body.layout-modern .item-layout-container .item-main-content span#favs {
     position: absolute;
     top: 100%;
