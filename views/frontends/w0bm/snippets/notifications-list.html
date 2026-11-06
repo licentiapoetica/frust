@@ -1,27 +1,37 @@
 {#- Notification rows (also rendered for /ajax/notifications) as msglist.php list-group items -#}
+{#- Who wrote the comment (the latest one of an upload's bundled "new comments"); anonymous as in the comment list -#}
+{%- macro from_name(n) -%}
+{%- if is_anonymized or n.from_user == "anonymous" or (n.from_user or "").startswith("anon_") -%}<span class="w0bm-msg-from">anonymous</span>
+{%- else -%}<span class="w0bm-msg-from{% if n.username_color %} w0bm-usercolor{% endif %}"{% if n.username_color %} style="--user-color: {{ n.username_color }}"{% endif %}>{{ (n.from_display_name or n.from_user) }}</span>
+{%- endif -%}
+{%- endmacro -%}
 {% for n in notifications %}
-{% set ref = (n.item_slug or n.item_id) %}
+{% set ref = (n.item_slug or n.item_id) %}{% set from = false %}
 {% if n.type == "approve" %}{% set href = "/" ~ ref %}{% set icon = "fa-check" %}{% set subject = (t("notifications.upload_approved")).replace("{id}", ref|string, 1) %}
 {% elif n.type == "admin_pending" %}{% set href = "/mod/approve" %}{% set icon = "fa-clock-o" %}{% set subject = (t("notifications.upload_pending")).replace("{id}", ref|string, 1) %}
 {% elif n.type == "report" %}{% set href = "/mod/reports" %}{% set icon = "fa-warning" %}{% set subject = (t("notifications.new_report")).replace("{id}", (n.reference_id or "")|string, 1) %}
 {% elif n.type == "deny" %}{% set href = "/" ~ ref %}{% set icon = "fa-times" %}{% set subject = (t("notifications.upload_denied")).replace("{id}", ref|string, 1) ~ (" – " ~ n.reason if n.reason else "") %}
 {% elif n.type == "item_deleted" %}{% set href = "/" ~ ref %}{% set icon = "fa-trash" %}{% set subject = (t("notifications.upload_deleted")).replace("{id}", ref|string, 1) ~ (" – " ~ n.reason if n.reason else "") %}
-{% elif n.type == "upload_comment" %}{% set href = "/" ~ ref ~ "#c" ~ n.reference_id %}{% set icon = "fa-commenting" %}{% set subject = t("notifications.new_comments") ~ " " ~ (t("notifications.on_your_upload")).replace("{id}", ref|string, 1) %}
+{% elif n.type == "upload_comment" %}{% set href = "/" ~ ref ~ "#c" ~ n.reference_id %}{% set icon = "fa-commenting" %}{% set from = true %}{% set kind = ("video" if (n.mime or "").startswith("video") else ("image" if (n.mime or "").startswith("image") else ("audio" if (n.mime or "").startswith("audio") else "upload"))) %}{% set subject = (t("notifications.commented_on_" ~ kind) if n.from_user_id else t("notifications.new_comments") ~ " " ~ t("notifications.on_your_upload")).replace("{id}", ref|string, 1) %}
 {% elif n.type == "upload_success" %}{% set href = "/" ~ ref %}{% set icon = "fa-cloud-upload" %}{% set subject = t("notifications.upload_success") %}
 {% elif n.type == "upload_error" %}{% set href = ("/" ~ ref if n.item_id else "/upload") %}{% set icon = "fa-exclamation-circle" %}{% set subject = t("notifications.upload_error") ~ ((" – " ~ n.data.msg) if (n.data and n.data.msg) else "") %}
 {% elif n.type == "warning" %}{% set href = "/notifications" %}{% set icon = "fa-exclamation-triangle" %}{% set subject = "Account Warning – " ~ (n.reason or "") %}
-{% else %}{% set href = "/" ~ ref ~ "#c" ~ (n.comment_id or n.reference_id) %}{% set icon = ("fa-reply" if n.type == "comment_reply" else ("fa-at" if n.type == "mention" else "fa-bell")) %}{% set subject = (n.from_user or "") ~ " " ~ ((t("notifications.replied") if n.type == "comment_reply" else (t("notifications.subscribed") if n.type == "subscription" else t("notifications.mentioned")))).replace("{id}", ref|string, 1) %}
+{% else %}{% set href = "/" ~ ref ~ "#c" ~ (n.comment_id or n.reference_id) %}{% set icon = ("fa-reply" if n.type == "comment_reply" else ("fa-at" if n.type == "mention" else "fa-bell")) %}{% set from = true %}{% set subject = ((t("notifications.replied") if n.type == "comment_reply" else (t("notifications.subscribed") if n.type == "subscription" else t("notifications.mentioned")))).replace("{id}", ref|string, 1) %}
 {% endif %}
 {% if n.comment_content %}
 {#- comment notifications open in place with the comment (as w0bm's message list did), a link to it inside -#}
 <details data-id="{{ n.id }}" class="list-group-item w0bm-msg{% if not n.is_read %} list-group-item-info{% endif %}">
-    <summary><i class="fa {{ icon }}"></i> {{ subject }} <small><time class="timeago" datetime="{{ n.created_at|iso_date }}" title="{{ n.created_at|iso_date }}">{{ n.created_at|time_ago }}</time></small></summary>
+    <summary><i class="fa {{ icon }}"></i> {% if from and n.from_user_id %}{{ from_name(n) }} {% endif %}{{ subject }} <small><time class="timeago" datetime="{{ n.created_at|iso_date }}" title="{{ n.created_at|iso_date }}">{{ n.created_at|time_ago }}</time></small></summary>
     <div class="w0bm-msg-body">
-        <div class="w0bm-msg-text" data-raw="{{ n.comment_content }}">{{ n.comment_content }}</div>
-        <a class="w0bm-msg-open" href="{{ href }}">go to comment <i class="fa fa-angle-right"></i></a>
+        {#- the item's thumbnail, blurred like in the default list when the active filter would hide it -#}
+        {% if n.item_id %}<a class="w0bm-msg-thumb" href="{{ href }}"><img src="/t/{{ n.item_id }}{{ ("_blur" if (((active_mode == 0 and (n.item_mode == "nsfw" or n.item_mode == "nsfl")) or (active_mode == 1 and n.item_mode == "nsfl")) or (active_mode == 4 and (n.item_mode == "sfw" or n.item_mode == "nsfw"))) else "") }}.webp" alt="" loading="lazy"></a>{% endif %}
+        <div class="w0bm-msg-main">
+            <div class="w0bm-msg-text" data-raw="{{ n.comment_content }}">{{ n.comment_content }}</div>
+            <a class="w0bm-msg-open" href="{{ href }}">go to comment <i class="fa fa-angle-right"></i></a>
+        </div>
     </div>
 </details>
 {% else %}
-<a href="{{ href }}" data-id="{{ n.id }}" class="list-group-item{% if not n.is_read %} list-group-item-info{% endif %}"><i class="fa {{ icon }}"></i> {{ subject }} <small><time class="timeago" datetime="{{ n.created_at|iso_date }}" title="{{ n.created_at|iso_date }}">{{ n.created_at|time_ago }}</time></small></a>
+<a href="{{ href }}" data-id="{{ n.id }}" class="list-group-item{% if not n.is_read %} list-group-item-info{% endif %}"><i class="fa {{ icon }}"></i> {% if from and n.from_user_id %}{{ from_name(n) }} {% endif %}{{ subject }} <small><time class="timeago" datetime="{{ n.created_at|iso_date }}" title="{{ n.created_at|iso_date }}">{{ n.created_at|time_ago }}</time></small></a>
 {% endif %}
 {% endfor %}

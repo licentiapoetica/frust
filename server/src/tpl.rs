@@ -1124,6 +1124,25 @@ mod tests {
         assert!(!empty.contains("comments-static"));
     }
 
+    /// w0bm's notification rows name who commented (anonymous for anon accounts and anonymized viewers).
+    #[test]
+    fn w0bm_notifications_name_the_commenter() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let row = |user: &str, ty: &str| {
+            serde_json::json!({ "id": 1, "type": ty, "item_id": 5, "item_slug": "abc", "reference_id": 9, "is_read": false, "created_at": "2026-01-01T00:00:00.000Z",
+                "from_user": user, "from_display_name": "", "from_user_id": 7, "username_color": "#f00", "comment_content": "hi", "mime": "video/mp4" })
+        };
+        let tpl = env.get_template("frontends/w0bm/snippets/notifications-list.html").unwrap();
+        let html = tpl.render(to_jvalue(&serde_json::json!({ "notifications": [row("Kibi", "upload_comment"), row("Bob", "comment_reply")] }))).unwrap();
+        assert!(html.contains("<span class=\"w0bm-msg-from w0bm-usercolor\" style=\"--user-color: #f00\">Kibi</span> commented on your video #abc"));
+        assert!(html.contains(">Bob</span> replied"));
+        let anon = tpl.render(to_jvalue(&serde_json::json!({ "notifications": [row("anon_x1", "upload_comment")] }))).unwrap();
+        assert!(anon.contains("<span class=\"w0bm-msg-from\">anonymous</span> commented on your video #abc") && !anon.contains("anon_x1"));
+        let hidden = tpl.render(to_jvalue(&serde_json::json!({ "is_anonymized": true, "notifications": [row("Kibi", "upload_comment")] }))).unwrap();
+        assert!(hidden.contains(">anonymous</span>") && !hidden.contains("Kibi"));
+    }
+
     /// A 4chan item's id and timestamp links never point at /<4chan post number> (a different local
     /// item): they go to the rehosted copy, or to the post's /4/ page while it isn't rehosted.
     #[test]

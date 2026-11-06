@@ -98,14 +98,13 @@ fn process(st: &AppState, mut n: Row) -> Value {
 
 // ── GET /api/notifications ──────────────────────────────────────────────────
 
-async fn unread(st: AppState, req: Req) -> Res {
-    let Some(s) = req.session() else { return j(json!({ "success": false }), 401) };
-    let nsfl = st.cfg().nsfl_tag_id() as i32;
+/// Joins and WHERE of "unread notifications" (`n` notifications, `i` items must already be joined):
+/// the bell's count and the per-tab counts of the notifications page use the same rules.
+fn unread_filter(s: &Session) -> crate::db::Sql {
     let dnd = s.do_not_disturb == Some(true);
     let sys = s.receive_system_notifications != Some(false);
     let usr = s.receive_user_notifications != Some(false);
-    let q = sql!(
-        @select_head(nsfl),
+    sql!(
         r#" LEFT JOIN reports r ON n.type = 'report' AND n.reference_id = r.id
         WHERE n.user_id = "#,
         s.id as i32,
@@ -123,10 +122,40 @@ async fn unread(st: AppState, req: Req) -> Res {
         )
         AND (n.item_id IS NULL OR (i.active = true AND i.is_deleted = false) OR n.type IN ('admin_pending', 'deny', 'item_deleted', 'report', 'warning', 'invite_request', 'invite_approved', 'invite_denied'))
         AND (n.type != 'report' OR r.status = 'pending')
-        AND (n.type != 'admin_pending' OR (i.active = false AND i.is_deleted = false))
-        ORDER BY n.created_at DESC
-        LIMIT 1000"#
-    );
+        AND (n.type != 'admin_pending' OR (i.active = false AND i.is_deleted = false))"#
+    )
+}
+
+/// Unread notifications per tab of the notifications page (`user`, `system`, `admin`), plus the
+/// unread direct messages (`dm`) when they are on.
+async fn unread_by_tab(st: &AppState, s: &Session) -> anyhow::Result<Value> {
+    let rows = sql!("SELECT n.type, COUNT(*)::int8 AS cnt FROM notifications n LEFT JOIN items i ON n.item_id = i.id", @unread_filter(s), " GROUP BY n.type")
+        .fetch_all(&st.db)
+        .await?;
+    let (mut user, mut system, mut admin) = (0i64, 0i64, 0i64);
+    for r in &rows {
+        let t = r.str("type").unwrap_or("");
+        let c = r.i64("cnt").unwrap_or(0);
+        if USER_TYPES.contains(&t) {
+            user += c;
+        } else if SYSTEM_TYPES.contains(&t) {
+            system += c;
+        } else if ADMIN_TYPES.contains(&t) {
+            admin += c;
+        }
+    }
+    let dm = if st.settings.private_messages() {
+        sql!("SELECT COUNT(*) FROM private_messages WHERE recipient_id = ", s.id as i32, " AND is_read = false").fetch_scalar::<i64, _>(&st.db).await?.unwrap_or(0)
+    } else {
+        0
+    };
+    Ok(json!({ "user": user, "system": system, "admin": admin, "dm": dm }))
+}
+
+async fn unread(st: AppState, req: Req) -> Res {
+    let Some(s) = req.session() else { return j(json!({ "success": false }), 401) };
+    let nsfl = st.cfg().nsfl_tag_id() as i32;
+    let q = sql!(@select_head(nsfl), @unread_filter(&s), " ORDER BY n.created_at DESC LIMIT 1000");
     match q.fetch_all(&st.db).await {
         Ok(rows) => {
             let list: Vec<Value> = rows.into_iter().map(|n| process(&st, n)).collect();
@@ -216,6 +245,7 @@ async fn page(st: AppState, req: Req) -> Res {
         "pagination": { "page": 1, "next": if has_more { json!(2) } else { Value::Null } },
         "link": { "main": "/notifications", "path": "/" },
         "activeTab": tab,
+        "tabUnread": unread_by_tab(&st, &s).await?,
         "domain": cfg.str_or("main.url.domain", ""),
         "active_mode": s.mode.unwrap_or(0),
     });

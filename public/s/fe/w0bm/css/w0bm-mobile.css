@@ -527,7 +527,11 @@ html.w0bm-comments-off body.w0bm-item-page #sidebar > .tags {
     margin-top: 2px;
 }
 .w0bm-notif .w0bm-msg-body {
-    padding: 8px 12px 10px 36px;
+    padding: 8px 12px 10px;
+}
+.w0bm-msg-thumb > img {
+    width: 64px;
+    height: 64px;
 }
 /* the tabs one row, scrolling sideways when they don't fit */
 .w0bm-tabs {

@@ -9,14 +9,18 @@
 </div>
 <ul class="nav nav-tabs w0bm-tabs">
     {% if enable_comments %}
-    <li{% if activeTab == "user" %} class="active"{% endif %}><a href="/notifications?tab=user">{{ t("nav.notif_tab_user") }}</a></li>
+    {% set c = (tabUnread.user if tabUnread else 0) %}
+    <li class="{% if activeTab == "user" %}active{% endif %}{% if c %} w0bm-tab-unread{% endif %}" data-tab="user"><a href="/notifications?tab=user">{{ t("nav.notif_tab_user") }} <span class="badge w0bm-tab-count"{% if not c %} hidden{% endif %}>{{ c }}</span></a></li>
     {% endif %}
-    <li{% if (activeTab == "system" or not enable_comments) %} class="active"{% endif %}><a href="/notifications?tab=system">{{ t("nav.notif_tab_system") }}</a></li>
+    {% set c = (tabUnread.system if tabUnread else 0) %}
+    <li class="{% if (activeTab == "system" or not enable_comments) %}active{% endif %}{% if c %} w0bm-tab-unread{% endif %}" data-tab="system"><a href="/notifications?tab=system">{{ t("nav.notif_tab_system") }} <span class="badge w0bm-tab-count"{% if not c %} hidden{% endif %}>{{ c }}</span></a></li>
     {% if (session and session.admin) %}
-    <li{% if activeTab == "admin" %} class="active"{% endif %}><a href="/notifications?tab=admin">Admin</a></li>
+    {% set c = (tabUnread.admin if tabUnread else 0) %}
+    <li class="{% if activeTab == "admin" %}active{% endif %}{% if c %} w0bm-tab-unread{% endif %}" data-tab="admin"><a href="/notifications?tab=admin">Admin <span class="badge w0bm-tab-count"{% if not c %} hidden{% endif %}>{{ c }}</span></a></li>
     {% endif %}
     {% if (private_messages and not session.is_anon) %}
-    <li><a href="/messages"><i class="fa fa-comments"></i> Direct messages</a></li>
+    {% set c = (tabUnread.dm if tabUnread else 0) %}
+    <li class="{% if c %}w0bm-tab-unread{% endif %}" data-tab="dm"><a href="/messages"><i class="fa fa-comments"></i> Direct messages <span class="badge w0bm-tab-count"{% if not c %} hidden{% endif %}>{{ c }}</span></a></li>
     {% endif %}
     {% if enable_comments %}
     <li><a href="/subscriptions"><i class="fa fa-bell"></i> Subscriptions</a></li>

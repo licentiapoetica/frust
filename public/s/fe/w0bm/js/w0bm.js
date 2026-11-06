@@ -690,11 +690,40 @@
     el.classList.toggle('w0bm-has-count', n > 0);
     el.hidden = n <= 0;
   }
+  // Notifications page: the count on each tab (the server renders the first one, see
+  // routes/notifications.rs unread_by_tab; the type lists are its USER/SYSTEM/ADMIN_TYPES)
+  const NOTIF_TAB = {};
+  ['comment_reply', 'subscription', 'mention', 'upload_comment'].forEach((t) => { NOTIF_TAB[t] = 'user'; });
+  ['approve', 'deny', 'item_deleted', 'upload_success', 'upload_error', 'admin_pending', 'report', 'warning', 'invite_approved', 'invite_denied'].forEach((t) => { NOTIF_TAB[t] = 'system'; });
+  NOTIF_TAB.invite_request = 'admin';
+  const tabCount = (tab) => {
+    const li = $('.w0bm-tabs > li[data-tab="' + tab + '"]');
+    return li ? +(li.querySelector('.w0bm-tab-count')?.textContent || 0) || 0 : 0;
+  };
+  function setTabCount(tab, n) {
+    const li = $('.w0bm-tabs > li[data-tab="' + tab + '"]');
+    if (!li) return;
+    n = Math.max(0, n);
+    li.classList.toggle('w0bm-tab-unread', n > 0);
+    const b = li.querySelector('.w0bm-tab-count');
+    if (b) {
+      b.textContent = n > 99 ? '99+' : String(n);
+      b.hidden = n <= 0;
+    }
+  }
   let pollBadges = () => {};
   if (DATA.user) {
     const poll = async () => {
       const n = await api('/api/notifications', { method: 'GET' });
-      if (n.ok && Array.isArray(n.data?.notifications)) setBadge($('#w0bm-notif-badge'), n.data.notifications.filter((x) => !x.is_read).length);
+      if (n.ok && Array.isArray(n.data?.notifications)) {
+        const unread = n.data.notifications.filter((x) => !x.is_read);
+        setBadge($('#w0bm-notif-badge'), unread.length);
+        if ($('.w0bm-tabs > li[data-tab]')) {
+          const per = { user: 0, system: 0, admin: 0 };
+          unread.forEach((x) => { if (NOTIF_TAB[x.type]) per[NOTIF_TAB[x.type]]++; });
+          Object.keys(per).forEach((t) => setTabCount(t, per[t]));
+        }
+      }
       // #dm-badge: messages.js keeps it current too (it sets its display)
       if ($('#dm-badge')) {
         const d = await api('/api/dm/unread', { method: 'GET' });
@@ -702,6 +731,7 @@
           const b = $('#dm-badge');
           b.style.removeProperty('display');
           setBadge(b, +d.data?.count || 0);
+          setTabCount('dm', +d.data?.count || 0);
         }
       }
     };
@@ -2094,13 +2124,19 @@
     if (r.ok) {
       flash('success', 'Marked all messages as read');
       $$('.list-group-item-info').forEach((x) => x.classList.remove('list-group-item-info'));
-      setBadge($('#w0bm-notif-badge'), 0);
+      // only this tab's messages were marked: the bell keeps the other tabs' count
+      setTabCount(tab, 0);
+      pollBadges();
     } else flash('error', 'Failed to mark all messages as read');
   });
   const markNotifRead = (el) => {
     if (!el.classList.contains('list-group-item-info')) return;
     el.classList.remove('list-group-item-info');
     navigator.sendBeacon?.('/api/notifications/' + el.dataset.id + '/read?csrf_token=' + encodeURIComponent(csrf()));
+    const tab = $('#w0bm-readall')?.dataset.tab;
+    if (tab) setTabCount(tab, tabCount(tab) - 1);
+    const bell = $('#w0bm-notif-badge');
+    if (bell) setBadge(bell, (+bell.textContent || 0) - 1);
   };
   $$('.w0bm-notif a.list-group-item[data-id]').forEach((a) => a.addEventListener('click', () => markNotifRead(a)));
   // Comment messages open in place (<details>): the comment in w0bm's formatting, read once opened.

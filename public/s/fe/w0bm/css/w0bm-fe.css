@@ -1599,6 +1599,46 @@ html.w0bm-nojs .w0bm-ul input.w0bm-ul-fileinput {
 .w0bm-tabs > li > a:hover {
     border-color: #1fb2b0;
 }
+/* tabs with unread messages: accent text and the count (notifications.html, w0bm.js) */
+.w0bm-tabs > li.w0bm-tab-unread > a {
+    color: #1fb2b0;
+}
+.w0bm-tabs > li.active.w0bm-tab-unread > a {
+    color: #161618;
+}
+/* icon, label and count in one row, the count centred on the label; w0bm's style.css gives every
+   .badge negative margins (to sit on the navbar bell), which pulled it up over the text */
+.w0bm-tabs > li > a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.w0bm-tabs .w0bm-tab-count {
+    margin: 0;
+    min-width: 0;
+    padding: 2px 5px;
+    background-color: #1fb2b0;
+    color: #161618;
+}
+.w0bm-tabs > li.active .w0bm-tab-count {
+    background-color: #161618;
+    color: #1fb2b0;
+}
+.w0bm-tabs .w0bm-tab-count[hidden] {
+    display: none;
+}
+/* square corners on the notifications page (bootswatch rounds the tabs, panel, rows, buttons) */
+.w0bm-tabs,
+.w0bm-tabs *,
+.w0bm-notif,
+.w0bm-notif * {
+    border-radius: 0 !important;
+}
+/* the commenter in comment notifications */
+.w0bm-msg-from {
+    font-weight: bold;
+    color: #fff;
+}
 /* notifications: "Read all" centred in the panel heading (w0bmcustom.css pulls .readall up by 20px
    for the original floated layout) */
 .w0bm-notif .panel-heading {
@@ -2551,7 +2591,28 @@ details.w0bm-msg[open] > summary {
     border-bottom: 1px solid #353434;
 }
 .w0bm-msg-body {
-    padding: 10px 15px 12px 38px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 15px 12px;
+}
+/* the commented item's thumbnail left of the comment */
+.w0bm-msg-thumb {
+    flex: 0 0 auto;
+}
+.w0bm-msg-thumb > img {
+    display: block;
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border: 1px solid #353434;
+}
+.w0bm-msg-thumb:hover > img {
+    border-color: #1fb2b0;
+}
+.w0bm-msg-main {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 .w0bm-msg-text {
     white-space: pre-wrap;
@@ -2841,6 +2902,8 @@ ul.navbar-right > li > a > span.badge.message-badge {
     bottom: auto;
     margin: 0;
     pointer-events: none;
+    padding: 2px 5px;
+    border-radius: 3px;
 }
 ul.navbar-right > li > a > span.badge.message-badge.w0bm-dm-badge {
     top: auto;
