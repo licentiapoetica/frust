@@ -4950,6 +4950,23 @@ window.cancelAnimFrame = (function () {
     }
   };
 
+  // Reusable offscreen canvases for scaling big media (4K video, full-size album images) down
+  // before it is blurred or read back, so that work never runs on the full-resolution frame
+  const bgScratch = {};
+  const getBgScratch = (name, w, h) => {
+    let s = bgScratch[name];
+    if (!s) {
+      const c = document.createElement('canvas');
+      s = bgScratch[name] = { canvas: c, ctx: c.getContext('2d') };
+    }
+    if (!s.ctx) return null;
+    if (s.canvas.width !== w || s.canvas.height !== h) {
+      s.canvas.width = w;
+      s.canvas.height = h;
+    }
+    return s;
+  };
+
   let mediaAmbientSampleCanvas = null;
   let mediaAmbientSampleCtx = null;
 
@@ -4958,6 +4975,22 @@ window.cancelAnimFrame = (function () {
     const w = source.videoWidth || source.naturalWidth || source.width || 0;
     const h = source.videoHeight || source.naturalHeight || source.height || 0;
     if (w <= 0 || h <= 0) return null;
+
+    // The sample canvas lives in CPU memory (willReadFrequently): drawing a big frame into it
+    // copies the whole frame off the GPU. Shrink it on the GPU first, then copy only 32×32.
+    let sampleSrc = source;
+    if (w * h > 64 * 64) {
+      const s = getBgScratch('sample', 32, 32);
+      if (s) {
+        try {
+          s.ctx.clearRect(0, 0, 32, 32);
+          s.ctx.drawImage(source, 0, 0, 32, 32);
+          sampleSrc = s.canvas;
+        } catch (e) {
+          sampleSrc = source;
+        }
+      }
+    }
 
     if (!mediaAmbientSampleCanvas) {
       mediaAmbientSampleCanvas = document.createElement('canvas');
@@ -4969,7 +5002,7 @@ window.cancelAnimFrame = (function () {
 
     try {
       mediaAmbientSampleCtx.clearRect(0, 0, 4, 4);
-      mediaAmbientSampleCtx.drawImage(source, 0, 0, 4, 4);
+      mediaAmbientSampleCtx.drawImage(sampleSrc, 0, 0, 4, 4);
       const data = mediaAmbientSampleCtx.getImageData(0, 0, 4, 4).data;
 
       // Sample top half (rows 0, 1) and bottom half (rows 2, 3)
@@ -5499,6 +5532,20 @@ window.cancelAnimFrame = (function () {
 
           if (sw > 0 && sh > 0) {
             const scale = Math.max(targetCw / sw, targetCh / sh);
+            // Source bigger than the canvas (e.g. 3840×2160 video): copy the visible part, scaled down
+            // and unfiltered, into a canvas-sized scratch first, so the blur only ever runs on that
+            // small copy instead of the full frame
+            if (scale < 1) {
+              const s = getBgScratch('cover', targetCw, targetCh);
+              if (s) {
+                const cropW = targetCw / scale;
+                const cropH = targetCh / scale;
+                s.ctx.clearRect(0, 0, targetCw, targetCh);
+                s.ctx.drawImage(source, (sw - cropW) / 2, (sh - cropH) / 2, cropW, cropH, 0, 0, targetCw, targetCh);
+                ctx.drawImage(s.canvas, 0, 0);
+                return;
+              }
+            }
             const dw = sw * scale;
             const dh = sh * scale;
             const dx = (targetCw - dw) / 2;
