@@ -1995,6 +1995,28 @@ html[data-w0bm-theme="Glitch"] .navbar .dropdown-menu {
     background-color: #1fb2b0;
 }
 
+/* Search modal: field and button one row over the full width, the button as tall as the field
+   (the themes below may still set their own fixed height for both) */
+.searchbar form.w0bm-searchform {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: stretch;
+    width: 100%;
+}
+.searchbar .suchleiste_video,
+.searchbar .suchbutton_video {
+    box-sizing: border-box;
+    height: auto;
+    margin: 0;
+    align-self: stretch;
+}
+.searchbar .suchbutton_video {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    line-height: 1;
+}
 /* Search modal: the search row like the theme's own search field (.suchleiste) instead of the
    default grey band (only DARK restyles it itself) */
 html[data-w0bm-theme="Glitch"] .searchbar {
