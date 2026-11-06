@@ -10,7 +10,7 @@
         <span><a href="/messages/{{ user.user|encode_uri_component }}">[message]</a></span>
         {% endif %}
         {% if (session and session.user == user.user) %}
-        <span><a href="/settings">[edit profile]</a></span>
+        <span><a href="/settings#profile">[edit profile]</a></span>
         {% endif %}
     </div>
     <span id="jointime">Joined: <time class="timeago" datetime="{{ user.timestamp.timefull }}" title="{{ user.timestamp.timefull }}" data-toggle="tooltip">{{ user.timestamp.timeago }}</time></span>
