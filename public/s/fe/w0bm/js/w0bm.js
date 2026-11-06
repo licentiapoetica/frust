@@ -1815,7 +1815,25 @@
 
   const commentBox = $('#w0bm-comments');
   let comments = [];
-  function commentPanel(c) {
+  // everything that answers each comment: direct replies (parent_id) and >>id quotes, listed on
+  // the answered comment as ↳ >>36 >>37 (like the page's static list, routes/comments.rs replied_by)
+  function repliedByMap(list) {
+    const ids = new Set(list.map((c) => Number(c.id)));
+    const map = new Map();
+    const add = (target, id) => {
+      if (target === id || !ids.has(target)) return;
+      if (!map.has(target)) map.set(target, []);
+      if (!map.get(target).includes(id)) map.get(target).push(id);
+    };
+    list.forEach((c) => {
+      const id = Number(c.id);
+      if (c.parent_id) add(Number(c.parent_id), id);
+      if (!c.is_deleted) for (const m of String(c.content || '').matchAll(/>>(\d+)/g)) add(+m[1], id);
+    });
+    map.forEach((v) => v.sort((a, b) => a - b));
+    return map;
+  }
+  function commentPanel(c, repliedBy) {
     const mine = DATA.user && c.username && c.username.toLowerCase() === String(DATA.user).toLowerCase() && !c.is_anon;
     const div = document.createElement('div');
     div.className = 'panel ' + (c.is_deleted ? 'panel-danger' : 'panel-default') + (c.is_pinned ? ' w0bm-pinned' : '');
@@ -1825,7 +1843,8 @@
     body.className = 'panel-body';
     // the comment's id, top right: what >>id quotes refer to
     body.insertAdjacentHTML('beforeend', '<a class="w0bm-cid" href="#c' + c.id + '" title="Link to this comment">#' + c.id + '</a>');
-    if (c.parent_id) body.insertAdjacentHTML('beforeend', '<div class="w0bm-reply-to">↳ <a href="#c' + c.parent_id + '">&gt;&gt;' + c.parent_id + '</a></div>');
+    const answers = (repliedBy && repliedBy.get(Number(c.id))) || [];
+    if (answers.length) body.insertAdjacentHTML('beforeend', '<div class="w0bm-replies">↳ ' + answers.map((r) => '<a href="#c' + r + '">&gt;&gt;' + r + '</a>').join(' ') + '</div>');
     body.insertAdjacentHTML('beforeend', c.is_deleted && !DATA.is_mod ? '<i>[deleted]</i>' : renderComment(c.content));
     (c.files || []).filter((f) => f.dest && !String(c.content || '').includes(f.dest)).forEach((f) => {
       const url = '/c/' + String(f.dest || '').replace(/^\/?c\//, '');
@@ -1862,7 +1881,8 @@
     if (!list.length) {
       commentBox.innerHTML = '<div class="panel panel-default nocomments"><div class="panel-body">No comments yet …<br /></div></div>';
     } else {
-      list.forEach((c) => commentBox.appendChild(commentPanel(c)));
+      const repliedBy = repliedByMap(list);
+      list.forEach((c) => commentBox.appendChild(commentPanel(c, repliedBy)));
     }
     const amount = $('#commentAmount');
     if (amount) amount.textContent = String(comments.filter((c) => !c.is_deleted).length);

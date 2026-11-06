@@ -1273,6 +1273,21 @@ pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Se
         }
     }
 
+    // everything that answers a comment: its direct replies (parent_id) and the >>id quotes;
+    // w0bm lists these on the answered comment (↳ >>36 >>37)
+    let mut replied_by: HashMap<i64, Vec<i64>> = backlinks.clone();
+    for c in &rows {
+        if let (Some(id), Some(parent)) = (c.i64("id"), c.i64("parent_id").filter(|p| *p != 0)) {
+            let list = replied_by.entry(parent).or_default();
+            if parent != id && !list.contains(&id) {
+                list.push(id);
+            }
+        }
+    }
+    for list in replied_by.values_mut() {
+        list.sort_unstable();
+    }
+
     let view = |c: &Row| -> Value {
         let content = c.str("content").unwrap_or("").to_string();
         let files = c.get("files").and_then(Value::as_array).cloned().unwrap_or_default();
@@ -1304,6 +1319,7 @@ pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Se
             "timeago": created.map(|t| crate::util::time_ago(&tr, (now - t.with_timezone(&chrono::Utc)).num_seconds().max(0))).unwrap_or_default(),
             "iso": c.str("created_at").unwrap_or(""),
             "backlinks": c.i64("id").and_then(|id| backlinks.get(&id)).cloned().unwrap_or_default(),
+            "replied_by": c.i64("id").and_then(|id| replied_by.get(&id)).cloned().unwrap_or_default(),
             "replies": [],
         })
     };

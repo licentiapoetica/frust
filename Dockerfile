@@ -28,6 +28,7 @@ FROM alpine:3.24
 ARG GIT_HASH=unknown
 ENV GIT_HASH=$GIT_HASH
 
+# bash: the curl-impersonate browser wrappers (curl_chrome*, curl_firefox*, …) are bash scripts.
 # deno: JavaScript runtime yt-dlp needs for YouTube (main.ytdlp_js_runtime, default deno).
 # tzdata: local time for the `TZ` setting (Node carried its own time zone data).
 RUN apk add --no-cache \
@@ -42,6 +43,7 @@ RUN apk add --no-cache \
     curl \
     torsocks \
     exiftool \
+    bash \
     tzdata \
     ca-certificates
 
@@ -64,7 +66,8 @@ RUN set -eux; \
     mkdir -p /opt/curl-impersonate; \
     tar xzf /tmp/curl-impersonate.tgz -C /opt/curl-impersonate; \
     rm /tmp/curl-impersonate.tgz; \
-    /opt/curl-impersonate/curl-impersonate --version | head -n 1
+    /opt/curl-impersonate/curl-impersonate --version | head -n 1; \
+    for w in /opt/curl-impersonate/curl_*; do "$w" --version >/dev/null; done
 ENV PATH="/opt/curl-impersonate:${PATH}"
 
 WORKDIR /opt/f0ckm

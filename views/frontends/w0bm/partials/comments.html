@@ -48,18 +48,18 @@
 {% endif %}
 {#- The comments come with the page (static_comments, routes/comments.rs), so they show without
     JavaScript too; w0bm.js loads them again from /api/comments and replaces the list. -#}
-{%- macro wcomment(c, parent) -%}
+{%- macro wcomment(c) -%}
 <div class="panel panel-default{% if c.is_pinned %} w0bm-pinned{% endif %}" id="c{{ c.id }}" data-id="{{ c.id }}">
-    <div class="panel-body w0bm-static-body"><a class="w0bm-cid" href="#c{{ c.id }}" title="Link to this comment">#{{ c.id }}</a>{% if parent %}<div class="w0bm-reply-to">↳ <a href="#c{{ parent }}">&gt;&gt;{{ parent }}</a></div>{% endif %}{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
-    <div class="panel-footer">by {% if c.username %}<a href="/user/{{ c.username|lower }}"{% if c.username_color %} class="w0bm-usercolor" style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<span>{{ (c.name or "anonymous") }}</span>{% endif %} <small><time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ c.iso }}" title="{{ c.iso }}">{{ c.timeago }}</time></small>{% if c.is_pinned %} <i class="fa fa-thumb-tack" title="pinned"></i>{% endif %}{% if c.backlinks %} <small class="w0bm-backlinks">{% for b in c.backlinks %}<a href="#c{{ b }}">&gt;&gt;{{ b }}</a> {% endfor %}</small>{% endif %}</div>
+    <div class="panel-body w0bm-static-body"><a class="w0bm-cid" href="#c{{ c.id }}" title="Link to this comment">#{{ c.id }}</a>{% if c.replied_by %}<div class="w0bm-replies">↳ {% for r in c.replied_by %}<a href="#c{{ r }}">&gt;&gt;{{ r }}</a> {% endfor %}</div>{% endif %}{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+    <div class="panel-footer">by {% if c.username %}<a href="/user/{{ c.username|lower }}"{% if c.username_color %} class="w0bm-usercolor" style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<span>{{ (c.name or "anonymous") }}</span>{% endif %} <small><time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ c.iso }}" title="{{ c.iso }}">{{ c.timeago }}</time></small>{% if c.is_pinned %} <i class="fa fa-thumb-tack" title="pinned"></i>{% endif %}</div>
 </div>
 {%- endmacro -%}
 <div id="comment_container_scrollable" class="comments hidden-xs">
     <div class="commentwrapper" id="w0bm-comments" data-item-id="{{ item.id }}">
         {% if static_comments %}
         {% for c in static_comments|sort(attribute="id") %}
-        {{ wcomment(c, none) }}
-        {% for r in (c.replies or []) %}{{ wcomment(r, c.id) }}{% endfor %}
+        {{ wcomment(c) }}
+        {% for r in (c.replies or []) %}{{ wcomment(r) }}{% endfor %}
         {% endfor %}
         {% else %}
         <div class="panel panel-default nocomments">

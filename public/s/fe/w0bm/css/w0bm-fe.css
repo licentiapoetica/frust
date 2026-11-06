@@ -624,7 +624,7 @@ a.w0bm-tag-nsfl {
     cursor: pointer;
     color: #1fb2b0;
 }
-.commentwrapper .w0bm-reply-to {
+.commentwrapper .w0bm-replies {
     font-size: 11px;
     color: #888;
 }
@@ -1370,8 +1370,7 @@ html:not(.w0bm-nojs) .w0bm-nojs-only {
 .commentwrapper .external-link-icon {
     display: none;
 }
-.commentwrapper a.mention,
-.commentwrapper .w0bm-backlinks a {
+.commentwrapper a.mention {
     color: #1fb2b0;
 }
 .w0bm-excl-form {
