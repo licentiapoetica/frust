@@ -6842,9 +6842,13 @@ div.posts>a:not(.notif-item).touch-active::after {
   background: var(--black);
 }
 
+/* Brand text: the same size as in the w0bm frontend (w0bm-fe.css .w0bm-brand-text) */
 span.f0ck {
   font-family: 'VCR', monospace;
-  font-size: 20px;
+  font-size: 26px;
+  letter-spacing: 1px;
+  padding: 0 4px;
+  line-height: 1;
   text-shadow: 1px 1px 1px var(--black), 0px 0px 0px var(--green), -1px -1px 0px var(--black), 1px -1px 0px var(--black), -1px 1px 0px var(--black), 0px 0px 0px var(--green);
 }
 
