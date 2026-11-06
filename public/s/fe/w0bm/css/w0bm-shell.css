@@ -59,6 +59,12 @@ html.f0ck-shell[data-w0bm-theme="Epilepsie"] body::before {
 .f0ck-shell-page {
     min-height: calc(100vh - 160px);
 }
+/* Shared pages fill the column like the back-to-dashboard bar above them (f0ck-shell.css). style.css
+   fixes .container at 1170px with !important from 1550px, which left the page narrower and centred
+   under a full-width back bar, so the width is put back with !important too. */
+.f0ck-shell-page #main > .container {
+    width: auto !important;
+}
 .f0ck-shell-page h1,
 .f0ck-shell-page h2 {
     color: #fff;
