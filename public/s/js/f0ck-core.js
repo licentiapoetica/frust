@@ -549,6 +549,32 @@ window.f0ckCommentFx = (html) => {
   return s;
 };
 
+// ── Links to this site ──────────────────────────────────────────────────────────────────────
+// Comment/message renderers show a full URL to this site as its path: https://f0ck.me/123-slug
+// becomes /123-slug (link and text). "This site" is the host being browsed or the configured
+// domain, with or without www. and any scheme. f0ckSitePath(href) is that path or null;
+// f0ckSiteLink(href, text) gives { href, text, internal } for a renderer's link, shortening the
+// text only when it is the URL itself (not for [custom text](url)). Server copy for visitors
+// without JavaScript: site_path in server/src/routes/comments.rs.
+window.f0ckSitePath = (href) => {
+  const m = /^(?:https?:)?\/\/([^/?#\s]+)([^\s]*)$/i.exec(String(href || ''));
+  if (!m) return null;
+  const host = (h) => String(h || '').toLowerCase().replace(/^www\./, '');
+  const h = host(m[1]);
+  if (!h || ![location.host, location.hostname, window.f0ckDomain].some(o => o && host(o) === h)) return null;
+  const path = m[2] || '/';
+  return path.startsWith('/') ? path : '/' + path;
+};
+window.f0ckSiteLink = (href, text) => {
+  href = String(href || '');
+  const path = window.f0ckSitePath(href);
+  if (path) {
+    const bare = href.replace(/^(?:https?:)?\/\//i, '');
+    return { href: path, text: (text === href || text === bare) ? path : text, internal: true };
+  }
+  return { href, text, internal: href.startsWith('/') && !href.startsWith('//') };
+};
+
 // ── Custom emojis ───────────────────────────────────────────────────────────────────────────
 // :name: in comments, for the alternative frontends' comment renderers (f0ckm.js has its own).
 // f0ckLoadEmojis() loads /api/v2/emojis once and resolves to { name: url }; it reloads after the

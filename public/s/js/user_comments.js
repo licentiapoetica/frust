@@ -259,15 +259,11 @@ if (!window.UserCommentSystem) {
                 if (!href) return text || '';
                 const titleAttr = title ? ` title="${title}"` : '';
                 const isExternal = href.startsWith('http://') || href.startsWith('https://');
-                const isSameSite = href.startsWith(siteOrigin);
-
-                let displayText = text;
-                if (isSameSite && (text === href || text === href.replace(/^https?:\/\//, '') || text === href.replace(siteOrigin, ''))) {
-                    try {
-                        const url = new URL(href.startsWith('http') ? href : siteOrigin + (href.startsWith('/') ? '' : '/') + href);
-                        displayText = url.pathname + url.search + url.hash;
-                    } catch (e) {}
-                }
+                // Links to this site become /path (f0ck-core.js)
+                const site = window.f0ckSiteLink(href, text);
+                href = site.href;
+                const isSameSite = site.internal;
+                const displayText = site.text;
 
                 if (isExternal && !isSameSite) {
                     return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${displayText}</a>`;

@@ -18,7 +18,11 @@
       .replace(/(^|\s)(\/c\/[\w.-]+\.(?:png|jpe?g|gif|webp|avif))(#gif)?(?=\s|$)/g, (m, pre, u) => `${pre}<a href="${u}" target="_blank"><img class="v2-comment-img" src="${u}" alt="" loading="lazy"></a>`)
       // [text](/local/path): f0ckm writes @mentions like that
       .replace(/\[([^\]\n]+)\]\((\/(?![\/\\])[^\s)"<]*)\)/g, (m, t, u) => `<a href="${u}">${t}</a>`)
-      .replace(/(https?:\/\/[^\s<]+)/g, u => `<a href="${u}" target="_blank" rel="noopener noreferrer nofollow">${u}</a>`)
+      .replace(/(https?:\/\/[^\s<]+)/g, u => {
+        // links to this site as /path (f0ck-core.js)
+        const p = window.f0ckSitePath && window.f0ckSitePath(u);
+        return p ? `<a href="${p}">${p}</a>` : `<a href="${u}" target="_blank" rel="noopener noreferrer nofollow">${u}</a>`;
+      })
       .replace(/&gt;&gt;(\d+)/g, (m, id) => `<a href="#c${id}" class="v2-quote" data-quote="${id}">&gt;&gt;${id}</a>`)
       .replace(/(^|\s)@([A-Za-z0-9_-]{2,32})/g, (m, pre, u) => `${pre}<a href="/user/${encodeURIComponent(u.toLowerCase())}">@${u}</a>`);
     if(/^&gt;(?!&gt;)/.test(line)) l = `<span class="v2-greentext">${l}</span>`;

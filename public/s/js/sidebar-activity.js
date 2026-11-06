@@ -236,24 +236,11 @@
                     extraSuffix = '[/spoiler]';
                 }
 
-                if (href.startsWith(siteOrigin) || (href.startsWith('/') && !href.startsWith('//'))) {
-                    isSameSite = true;
-                } else {
-                    try {
-                        const urlToParse = href.startsWith('//') ? window.location.protocol + href : href;
-                        const urlObj = new URL(urlToParse, siteOrigin);
-                        isSameSite = (urlObj.hostname === window.location.hostname);
-                    } catch (e) { }
-                }
-
-                let displayText = text;
-                if (isSameSite && (text === href || text === href.replace(/^https?:\/\//, '') || text === href.replace(siteOrigin, ''))) {
-                    try {
-                        const urlToParse = href.startsWith('//') ? window.location.protocol + href : href;
-                        const url = new URL(urlToParse.startsWith('http') ? urlToParse : siteOrigin + (urlToParse.startsWith('/') ? '' : '/') + urlToParse);
-                        displayText = url.pathname + url.search + url.hash;
-                    } catch (e) { }
-                }
+                // Links to this site become /path (f0ck-core.js)
+                const site = window.f0ckSiteLink(href, text);
+                href = site.href;
+                isSameSite = site.internal;
+                const displayText = site.text;
 
                 const isMention = href.startsWith('/user/') && text.startsWith('@');
                 if (isExternal && !isSameSite) {

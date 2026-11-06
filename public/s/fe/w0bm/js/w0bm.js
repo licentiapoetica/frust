@@ -1863,6 +1863,9 @@
         if (/\.(mp4|webm|mov|ogv)$/.test(path)) return pre + '<video src="' + url + '" controls loop muted playsinline preload="metadata"></video>';
         if (/\.(mp3|ogg|wav|flac|opus|m4a|aac)$/.test(path)) return pre + '<audio src="' + url + '" controls preload="metadata"></audio>';
       }
+      // links to this site as /path (f0ck-core.js)
+      const own = window.f0ckSitePath && window.f0ckSitePath(url);
+      if (own) return pre + '<a href="' + own + '">' + own + '</a>';
       const ext = !clean.startsWith('/') && !clean.startsWith(location.origin);
       return pre + '<a href="' + url + '"' + (ext ? ' rel="extern noopener noreferrer" target="_blank"' : '') + '>' + url + '</a>';
     });

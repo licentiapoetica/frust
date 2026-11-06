@@ -1124,6 +1124,7 @@ async fn activity_inner(st: &AppState, req: &Req) -> anyhow::Result<axum::respon
     // snippets/footer.html). With JavaScript the sidebar uses the JSON above and never loads this.
     let tr = st.i18n.translator(&crate::routes::index::req_lang(st, req));
     let now = chrono::Utc::now();
+    let hosts = site_hosts(&st.cfg(), &req.host_without_port());
     let comments: Vec<Value> = processed
         .into_iter()
         .map(|mut c| {
@@ -1139,7 +1140,7 @@ async fn activity_inner(st: &AppState, req: &Req) -> anyhow::Result<axum::respon
             };
             let content = c["content"].as_str().unwrap_or("").to_string();
             let files = c["files"].as_array().cloned().unwrap_or_default();
-            c["content_html"] = json!(frame_comment_html(&content, &format!("/{item_key}")) + &frame_attachments_html(&files, &content));
+            c["content_html"] = json!(frame_comment_html(&content, &format!("/{item_key}"), &hosts) + &frame_attachments_html(&files, &content));
             c
         })
         .collect();
@@ -1151,8 +1152,9 @@ async fn activity_inner(st: &AppState, req: &Req) -> anyhow::Result<axum::respon
 /// Comment text as HTML for the no-JavaScript sidebar frame: a small server-side version of
 /// renderCommentContent in sidebar-activity.js (greentext, >>id links, links, @mentions,
 /// same-site images and #gif videos, [spoiler]/[blur]). Markdown and custom emoji stay plain text.
-/// Everything is escaped; only the tags built here are HTML.
-fn frame_comment_html(content: &str, link_base: &str) -> String {
+/// Everything is escaped; only the tags built here are HTML. Full URLs to one of `hosts` (see
+/// [`site_hosts`]) show as their path, like in the JS renderers.
+fn frame_comment_html(content: &str, link_base: &str, hosts: &[String]) -> String {
     use crate::util::escape_html as esc;
     let html = content
         .split('\n')
@@ -1172,7 +1174,7 @@ fn frame_comment_html(content: &str, link_base: &str) -> String {
                 let split = rest.find(char::is_whitespace).unwrap_or(rest.len());
                 let (word, after) = rest.split_at(split);
                 let ws = after.len() - after.trim_start().len();
-                frame_word_html(word, link_base, &mut out);
+                frame_word_html(word, link_base, hosts, &mut out);
                 out.push_str(&after[..ws]);
                 rest = &after[ws..];
             }
@@ -1196,7 +1198,41 @@ fn comment_fx(html: &str) -> String {
     COMMENT_FX.iter().fold(html.to_string(), |s, (tag, attrs)| wrap_tags_with(&s, tag, attrs))
 }
 
-fn frame_word_html(word: &str, link_base: &str, out: &mut String) {
+/// Hosts of this site for [`site_path`]: the configured domain and the requested host, lowercase,
+/// without `www.` and port.
+fn site_hosts(cfg: &crate::config::Config, req_host: &str) -> Vec<String> {
+    let mut hosts: Vec<String> = [cfg.domain(), req_host].iter().map(|h| norm_host(h)).filter(|h| !h.is_empty()).collect();
+    hosts.dedup();
+    hosts
+}
+
+fn norm_host(h: &str) -> String {
+    let h = h.trim().to_ascii_lowercase();
+    let h = h.split(':').next().unwrap_or("");
+    h.strip_prefix("www.").unwrap_or(h).to_string()
+}
+
+/// A full URL to this site (any of `hosts`) as its path: `https://f0ck.me/123-slug` → `/123-slug`.
+/// Server copy of `f0ckSitePath` in public/s/js/f0ck-core.js.
+fn site_path(url: &str, hosts: &[String]) -> Option<String> {
+    let lower = url.get(..8).unwrap_or(url).to_ascii_lowercase();
+    let rest = if lower.starts_with("https://") {
+        &url[8..]
+    } else if lower.starts_with("http://") {
+        &url[7..]
+    } else {
+        return None;
+    };
+    let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let (host, path) = rest.split_at(end);
+    let host = norm_host(host);
+    if host.is_empty() || !hosts.contains(&host) {
+        return None;
+    }
+    Some(if path.starts_with('/') { path.to_string() } else { format!("/{path}") })
+}
+
+fn frame_word_html(word: &str, link_base: &str, hosts: &[String], out: &mut String) {
     use crate::util::escape_html as esc;
     if word.is_empty() {
         return;
@@ -1207,7 +1243,7 @@ fn frame_word_html(word: &str, link_base: &str, out: &mut String) {
         if digits > 0 {
             let id = &r[..digits];
             out.push_str(&format!("<a href=\"{}#c{id}\" class=\"comment-context-link\">&gt;&gt;{id}</a>", esc(link_base)));
-            return frame_word_html(&r[digits..], link_base, out);
+            return frame_word_html(&r[digits..], link_base, hosts, out);
         }
     }
     let external = word.starts_with("http://") || word.starts_with("https://");
@@ -1215,6 +1251,12 @@ fn frame_word_html(word: &str, link_base: &str, out: &mut String) {
     if external || relative {
         let gif = word.ends_with("#gif");
         let url = word.trim_end_matches("#gif");
+        // a full URL to this site counts as a relative one (shown as its path)
+        let site = if external { site_path(url, hosts) } else { None };
+        let (url, relative, external) = match &site {
+            Some(p) => (p.as_str(), true, false),
+            None => (url, relative, external),
+        };
         let path = url.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();
         let ext = path.rsplit_once('.').map(|(_, e)| e).unwrap_or("");
         let u = esc(url);
@@ -1245,8 +1287,9 @@ fn frame_word_html(word: &str, link_base: &str, out: &mut String) {
 /// in a <noscript> inside #comments-container; comments.js replaces that box when it runs). Same
 /// order and threading as comments.js render(): newest first (oldest first in the legacy layout or
 /// linear mode), pinned on top, replies one level deep under their root, oldest first.
-pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Session>, real_session: Option<&Session>, item_id: i64, lang: &str) -> Value {
+pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Session>, real_session: Option<&Session>, item_id: i64, lang: &str, req_host: &str) -> Value {
     let cfg = st.cfg();
+    let hosts = site_hosts(&cfg, req_host);
     let legacy = match page_session {
         Some(s) => !s.use_new_layout.unwrap_or(false),
         None => st.settings.default_layout() == "legacy",
@@ -1314,7 +1357,7 @@ pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Se
             "username_color": if anon { Value::Null } else { c.get("username_color").cloned().unwrap_or(Value::Null) },
             "avatar_src": avatar,
             "banner": banner.map(|b| json!({ "file": b, "position": pos, "size": size })),
-            "content_html": frame_comment_html(&content, ""),
+            "content_html": frame_comment_html(&content, "", &hosts),
             "attachments_html": frame_attachments_html(&files, &content),
             "timeago": created.map(|t| crate::util::time_ago(&tr, (now - t.with_timezone(&chrono::Utc)).num_seconds().max(0))).unwrap_or_default(),
             "iso": c.str("created_at").unwrap_or(""),
@@ -1679,25 +1722,37 @@ mod frame_tests {
 
     #[test]
     fn greentext_quotes_and_context_links() {
-        let h = frame_comment_html(">>7 \n>x\n>foobar", "/10");
+        let h = frame_comment_html(">>7 \n>x\n>foobar", "/10", &[]);
         assert_eq!(h, "<a href=\"/10#c7\" class=\"comment-context-link\">&gt;&gt;7</a> \n<span class=\"greentext\">&gt;x</span>\n<span class=\"greentext\">&gt;foobar</span>");
     }
 
     #[test]
     fn site_images_links_and_escaping() {
-        let h = frame_comment_html("/c/ab.webp#gif hi <b> https://x.org/a?b=1&c @bob, [spoiler]s[/spoiler]", "/3");
+        let h = frame_comment_html("/c/ab.webp#gif hi <b> https://x.org/a?b=1&c @bob, [spoiler]s[/spoiler]", "/3", &[]);
         assert!(h.starts_with("<img class=\"sidebar-comment-img\" src=\"/c/ab.webp\""));
         assert!(h.contains("hi &lt;b&gt; "));
         assert!(h.contains("<a href=\"https://x.org/a?b=1&amp;c\" target=\"_blank\""));
         assert!(h.contains("<a href=\"/user/bob\" class=\"mention\">@bob</a>,"));
         assert!(h.ends_with("<span class=\"spoiler\">s</span>"));
-        assert!(!frame_comment_html("//evil.com/x.png javascript:alert(1)", "1").contains("<img"));
-        assert_eq!(frame_comment_html("a\n\nb", "1"), "a\n&nbsp;\nb");
+        assert!(!frame_comment_html("//evil.com/x.png javascript:alert(1)", "1", &[]).contains("<img"));
+        assert_eq!(frame_comment_html("a\n\nb", "1", &[]), "a\n&nbsp;\nb");
+    }
+
+    #[test]
+    fn site_links_show_as_path() {
+        let hosts = vec!["f0ck.me".to_string(), "localhost".to_string()];
+        let h = frame_comment_html("see https://www.F0ck.me/123-some-slug and http://localhost:1337/45?x=1&y#c2 https://f0ck.me", "/1", &hosts);
+        assert!(h.contains("<a href=\"/123-some-slug\">/123-some-slug</a>"));
+        assert!(h.contains("<a href=\"/45?x=1&amp;y#c2\">/45?x=1&amp;y#c2</a>"));
+        assert!(h.ends_with("<a href=\"/\">/</a>"));
+        assert!(frame_comment_html("https://f0ck.me/c/ab.webp", "1", &hosts).starts_with("<img class=\"sidebar-comment-img\" src=\"/c/ab.webp\""));
+        assert!(frame_comment_html("https://f0ck.me.evil.org/1", "1", &hosts).contains("target=\"_blank\""));
+        assert!(frame_comment_html("https://f0ck.me/1", "1", &[]).contains("target=\"_blank\""));
     }
 
     #[test]
     fn comment_effects() {
-        let h = frame_comment_html("[rb]a [glitch]b[/glitch][/rb] [REICH]c[/reich] [krebs]d", "1");
+        let h = frame_comment_html("[rb]a [glitch]b[/glitch][/rb] [REICH]c[/reich] [krebs]d", "1", &[]);
         assert_eq!(h, "<span class=\"cfx-rb\">a <span class=\"cfx-glitch\" data-glitch=\"0.5\">b</span></span> <span class=\"cfx-reich\">c</span> [krebs]d");
     }
 
