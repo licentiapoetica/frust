@@ -1612,16 +1612,19 @@
     // half a sidebar short of the target, under a quick fade, and glides the rest: no slow crawl
     // through the whole list, and no thumbnail loads for every card passed on the way.
     let tagGlide = null; // { target, raf }
+    let pendingGlideCard = null; // card whose thumbnails are being decoded before a far glide
     const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
     const glideTagFeed = (container, target, cut = false) => {
         const max = Math.max(0, container.scrollHeight - container.clientHeight);
         target = Math.max(0, Math.min(Math.round(target), max));
-        // already heading there (the click-time and the after-load pass ask for the same card)
-        if (tagGlide && Math.abs(tagGlide.target - target) < 2) return;
+        // already heading there (the click-time and the after-load pass ask for the same card).
+        // Never for a swapped list: focused slices put the card on the same row every time, so its
+        // spot often equals the old scroll position, and skipping would show the swap as a hard cut.
+        if (!cut && tagGlide && Math.abs(tagGlide.target - target) < 2) return;
         if (tagGlide) cancelAnimationFrame(tagGlide.raf);
         tagGlide = null;
         let from = container.scrollTop;
-        if (Math.abs(target - from) < 2) return;
+        if (!cut && Math.abs(target - from) < 2) return;
         if (reduceMotion.matches) {
             container.scrollTop = target;
             return;
@@ -1689,10 +1692,27 @@
             const isTagTabActive = document.querySelector('.sidebar-tab.active')?.dataset.tab === 'tag' &&
                                   container.style.display !== 'none';
             if (isTagTabActive) {
-                const containerRect = container.getBoundingClientRect();
-                const cardRect = matchedCard.getBoundingClientRect();
-                const targetScrollTop = container.scrollTop + (cardRect.top - containerRect.top) - (container.clientHeight / 2) + (cardRect.height / 2);
-                glideTagFeed(container, targetScrollTop, cut);
+                const centerOn = (card) => {
+                    const containerRect = container.getBoundingClientRect();
+                    const cardRect = card.getBoundingClientRect();
+                    return container.scrollTop + (cardRect.top - containerRect.top) - (container.clientHeight / 2) + (cardRect.height / 2);
+                };
+                const targetScrollTop = centerOn(matchedCard);
+                const far = !cut && Math.abs(targetScrollTop - container.scrollTop) > container.clientHeight * 1.5;
+                if (far && !(tagGlide && Math.abs(tagGlide.target - targetScrollTop) < 2)) {
+                    // Far down (or up) the loaded list: those lazy thumbnails never loaded. Decode the ones
+                    // around the card first, or the list glides in with blank cards that fill in afterwards.
+                    if (pendingGlideCard === matchedCard) return;
+                    pendingGlideCard = matchedCard;
+                    decodeAroundActive(container).then(() => {
+                        if (pendingGlideCard !== matchedCard) return;
+                        pendingGlideCard = null;
+                        if (matchedCard.isConnected) glideTagFeed(container, centerOn(matchedCard), false);
+                    });
+                } else {
+                    pendingGlideCard = null;
+                    glideTagFeed(container, targetScrollTop, cut);
+                }
             }
         } else if (!matchedCard && identifiers.length > 0 && currentTag && !isReCenteringFeed && !tagFeedLoading) {
             // Active item belongs to current tag context but is not in currently rendered slice
@@ -1811,6 +1831,19 @@
         highlightActiveTagCard(true, false, ids.map(String));
     };
 
+    // Load and decode the thumbnails of the active card and its neighbours in `root` (capped at 250ms)
+    const decodeAroundActive = (root) => {
+        const cards = [...root.querySelectorAll('.sidebar-video-card')];
+        const idx = Math.max(0, cards.findIndex(c => c.classList.contains('active-tag-item')));
+        const decodes = cards.slice(Math.max(0, idx - 4), idx + 5).flatMap(card =>
+            [...card.querySelectorAll('img.sidebar-video-thumb')].map(img => {
+                img.loading = 'eager';
+                return img.decode().catch(() => {});
+            })
+        );
+        return Promise.race([Promise.all(decodes), new Promise(r => setTimeout(r, 250))]);
+    };
+
     // quiet: keep the current cards until the new ones are in (no loading state), then jump to the active one
     const loadTagFeed = async (reset = false, focusId = null, { quiet = false, ids = null } = {}) => {
         const container = document.getElementById('sidebar-tag-container');
@@ -1876,7 +1909,12 @@
                 });
 
                 if (reset && quiet) {
-                    itemsContainer.innerHTML = html;
+                    // Build the new slice off-screen and decode the thumbnails that will be on screen
+                    // first: swapped in straight away, lazy images paint a blank frame before they appear
+                    const next = document.createElement('div');
+                    next.innerHTML = html;
+                    await decodeAroundActive(next);
+                    itemsContainer.replaceChildren(...next.childNodes);
                     highlightActiveTagCard(true, true, ids);
                 } else if (reset) {
                     itemsContainer.innerHTML = html;
