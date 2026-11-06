@@ -63,13 +63,14 @@
       const img = e.target.closest('img[data-full]');
       if (img) window.open(img.dataset.full, '_blank', 'noopener');
     });
-    // Keep the rating badge in sync after "Toggle rating" (tags are re-rendered by mod-cards)
+    // Keep the rating badge in sync after a rating toggle (tags are re-rendered by mod-cards)
     const badge = card.querySelector('.mq-badge-rating');
     const tags = card.querySelector('.mq-tags');
     if (badge && tags) new MutationObserver(() => {
       const names = Array.from(tags.querySelectorAll('.badge')).map(b => b.textContent.trim().toLowerCase());
       const r = names.includes('nsfl') ? 'nsfl' : names.includes('nsfw') ? 'nsfw' : names.includes('sfw') ? 'sfw' : 'untagged';
-      badge.className = 'mq-badge mq-badge-rating is-' + r;
+      badge.classList.remove('is-sfw', 'is-nsfw', 'is-nsfl', 'is-untagged');
+      badge.classList.add('is-' + r);
       badge.textContent = r === 'untagged' ? '?' : r.toUpperCase();
     }).observe(tags, { childList: true });
   });

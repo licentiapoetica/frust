@@ -23804,6 +23804,24 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   margin: 0;
 }
 
+/* Rating badge = toggle button (mod-cards.js): click switches SFW / NSFW */
+.mq-rating-toggle {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.mq-rating-toggle:hover,
+.mq-rating-toggle:focus-visible {
+  outline: 1px solid var(--mq-text);
+  outline-offset: 1px;
+}
+
+.mq-rating-toggle:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .mq-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -23811,7 +23829,7 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   margin-top: auto;
 }
 
-.mq-actions .mq-btn-rating {
+.mq-actions .mq-btn-wide {
   grid-column: span 2;
 }
 
@@ -24063,6 +24081,19 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 .mq-review .mq-badge-rating {
   top: 8px;
   left: 8px;
+  font-family: inherit;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.mq-review .mq-badge-rating:hover,
+.mq-review .mq-badge-rating:focus-visible {
+  border-color: #fff;
+}
+
+.mq-review .mq-badge-rating:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .mq-review .mq-badge-rating.is-sfw {

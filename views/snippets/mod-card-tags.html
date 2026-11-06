@@ -1,0 +1,13 @@
+{# Tags of a moderation card (mod/approve, mod/trash). The rating badge is a button: click switches SFW / NSFW (mod-cards.js). #}
+<div class="mq-tags">
+    {% if post.rating == "untagged" %}
+    <button type="button" data-id="{{ post.id }}" class="badge badge-light mq-rating-toggle btn-rating-toggle-async" title="No rating yet: click to set SFW">?</button>
+    {% endif %}
+    {% for key, tag in post.tags|entries %}
+    {% if tag.normalized in ["sfw", "nsfw", "nsfl"] %}
+    <button type="button" data-id="{{ post.id }}" class="badge {{ tag.badge }} mq-rating-toggle btn-rating-toggle-async" title="Click to switch SFW / NSFW">{{ tag.tag }}</button>
+    {% else %}
+    <span class="badge {{ tag.badge }}">{{ tag.tag }}</span>
+    {% endif %}
+    {% endfor %}
+</div>

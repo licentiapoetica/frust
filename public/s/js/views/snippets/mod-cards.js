@@ -74,12 +74,33 @@ window.mq = (() => {
     }, 300);
   };
 
-  // Rating toggle (same on both pages)
-  document.querySelectorAll('.btn-rating-toggle-async').forEach(btn => {
-    btn.addEventListener('click', async e => {
+  // Rating toggle (same on both pages): clicking a rating badge switches SFW / NSFW.
+  // Delegated on the grid because the badges are rebuilt after every toggle.
+  const ratingBadge = (tag, id) => {
+    const rating = ['sfw', 'nsfw', 'nsfl'].includes(tag.normalized);
+    const el = document.createElement(rating ? 'button' : 'span');
+    let cls = 'badge-light';
+    if (tag.normalized === 'sfw') cls = 'badge-success';
+    else if (tag.normalized === 'nsfw') cls = 'badge-danger';
+    else if (tag.tag.startsWith('>')) cls = 'badge-greentext badge-light';
+    el.className = 'badge ' + cls;
+    el.innerText = tag.tag;
+    if (rating) {
+      el.type = 'button';
+      el.dataset.id = id;
+      el.title = 'Click to switch SFW / NSFW';
+      el.classList.add('mq-rating-toggle', 'btn-rating-toggle-async');
+    }
+    return el;
+  };
+  document.querySelectorAll('.mq-grid').forEach(grid => {
+    grid.addEventListener('click', async e => {
+      const btn = e.target.closest('.btn-rating-toggle-async');
+      if (!btn || btn.disabled) return;
       e.preventDefault();
-      const tagsContainer = btn.closest('.mq-card')?.querySelector('.mq-tags');
-      btn.disabled = true;
+      const card = btn.closest('.mq-card');
+      const toggles = card ? card.querySelectorAll('.btn-rating-toggle-async') : [btn];
+      toggles.forEach(b => { b.disabled = true; });
       try {
         const res = await fetch('/api/v2/tags/' + btn.dataset.id + '/toggle', {
           method: 'PUT',
@@ -87,23 +108,12 @@ window.mq = (() => {
         });
         const data = await res.json();
         if (!data.success || !data.tags) throw new Error(data.msg || 'Unknown error');
-        if (tagsContainer) {
-          tagsContainer.innerHTML = '';
-          data.tags.forEach(tag => {
-            let cls = 'badge-light';
-            if (tag.normalized === 'sfw') cls = 'badge-success';
-            else if (tag.normalized === 'nsfw') cls = 'badge-danger';
-            else if (tag.tag.startsWith('>')) cls = 'badge-greentext badge-light';
-            const span = document.createElement('span');
-            span.className = 'badge ' + cls;
-            span.innerText = tag.tag;
-            tagsContainer.appendChild(span);
-          });
-        }
+        const tagsContainer = card?.querySelector('.mq-tags');
+        if (tagsContainer) tagsContainer.replaceChildren(...data.tags.map(tag => ratingBadge(tag, btn.dataset.id)));
       } catch (err) {
         flash('Error: ' + err.message, 'error');
       } finally {
-        btn.disabled = false;
+        toggles.forEach(b => { b.disabled = false; });
       }
     });
   });
