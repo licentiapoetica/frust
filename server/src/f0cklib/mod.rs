@@ -62,6 +62,8 @@ pub struct FeedOpts<'a> {
     pub lang: Option<String>,
     pub subf0ck: Option<String>,
     pub bypass_filter: bool,
+    /// getf0ck: a background prefetch (`Sec-Purpose: prefetch`), not a visit — no view is counted
+    pub prefetch: bool,
     /// getItemPage
     pub target_item_id: Option<String>,
     pub target_item_pinned: Option<bool>,

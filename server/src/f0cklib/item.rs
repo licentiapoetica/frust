@@ -268,7 +268,8 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
         return Ok(not_found());
     }
 
-    if let Some(u) = uid {
+    // a prefetch isn't a view: the client counts it when it shows the item (cache-hit revalidation)
+    if let Some(u) = uid.filter(|_| !o.prefetch) {
         let db = st.db.clone();
         tokio::spawn(async move {
             let r = sql!(

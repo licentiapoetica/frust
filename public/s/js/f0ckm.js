@@ -215,6 +215,8 @@ window.cancelAnimFrame = (function () {
           window._randomPoolNsfpVersion = newNsfpVersion;
           window._randomPoolFetchedAt = Date.now();
           console.log(`[RANDOM-POOL] Cached ${data.items.length} items (shuffled) for context: ${contextKey}`);
+          // the next pick is known now: get it ready
+          prefetchRandomNext();
         }
       })
       .catch(err => console.warn('[RANDOM-POOL] Failed to fetch:', err));
@@ -3293,6 +3295,8 @@ window.cancelAnimFrame = (function () {
     }
     _prefetchAbortController = new AbortController();
     const signal = _prefetchAbortController.signal;
+
+    prefetchRandomNext();
 
     // Prioritize next item (most frequent user journey), then prev
     const nextBtn = document.getElementById('next');
@@ -12554,6 +12558,301 @@ window.cancelAnimFrame = (function () {
   };
 
 
+  // Everything a loadItemAjax(url, inheritContext, options) call derives from its URL: the item key,
+  // the feed context and the /ajax/item request URL (also the itemCacheMap key). Prefetchers use it
+  // too, so what they cache is found again by the real navigation.
+  const buildItemRequest = (url, inheritContext = true, options = {}) => {
+    const useOnara = isOnaraActive();
+    // Use the last numeric/slug segment to avoid matching context IDs (like tag/1/...)
+    const isChanUrl = /^\/4\/([a-z0-9_]+)\/(\d+)\/(\d+)/i.test(new URL(url, window.location.origin).pathname);
+    if (isChanUrl) inheritContext = false;
+    const keySegments = new URL(url, window.location.origin).pathname.split('/').filter(s => /^\d+$/.test(s) || /^[a-zA-Z0-9_-]{11}$/.test(s));
+    const itemid = keySegments.length ? keySegments[keySegments.length - 1] : null;
+
+    // Extract context from Target URL first
+    let tag = null, user = null, isFavs = false, mime = null, hall = null, userHall = null, userHallOwner = null, tagger = null;
+    const tagMatch = url.match(/\/tag\/([^/?]+)/);
+    if (tagMatch) tag = decodeURIComponent(tagMatch[1]);
+
+    // Tagger filter from query string
+    const taggerUrlObj = new URL(url, window.location.origin);
+    const taggerParam = taggerUrlObj.searchParams.get('tagger');
+    if (taggerParam) tagger = decodeURIComponent(taggerParam);
+
+    // User hall: /user/:owner/hall/:slug/:id
+    const userHallMatch = url.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
+    if (userHallMatch) {
+      userHallOwner = decodeURIComponent(userHallMatch[1]);
+      userHall = decodeURIComponent(userHallMatch[2]);
+    }
+
+    const userMatch = url.match(/\/user\/([^/]+)/);
+    if (userMatch && !userHall) {
+      user = decodeURIComponent(userMatch[1]);
+      if (url.match(/\/user\/[^/]+\/favs(\/|$|\?)/)) isFavs = true;
+    } else if (url.match(/^\/favs(\/|$|\?)/)) {
+      isFavs = true;
+    }
+    
+    const hallMatch = url.match(/\/h\/([^/?]+)/);
+    if (hallMatch) hall = decodeURIComponent(hallMatch[1]);
+
+    const mimeMatch = url.match(/\/((?:video|audio|image|,)+)(\/|$|\?)/);
+    if (mimeMatch) mime = mimeMatch[1];
+    
+    // Check query params in the provided url too
+    if (!mime && url.includes('mime=')) {
+        const qMatch = url.match(/[?&]mime=([^&#]+)/);
+        if (qMatch) mime = decodeURIComponent(qMatch[1]);
+    }
+
+    // If missing and inheritContext is true, check Window Location
+    // IMPORTANT: Skip inheritance when target is a bare item URL like /1234 with no context
+    // prefix (/h/, /tag/, /user/). Such URLs come from comment/notification sidebar links and
+    // are explicitly context-free — they must not steal the current page's tag/hall/user.
+    // Prev/next arrows in item view always use explicit /h/foo/<id> or /tag/foo/<id> hrefs
+    // (via link.main), so they are unaffected by this guard.
+    // Note: Notification links call loadItemAjax(href, false) to skip inheritance directly.
+    const targetUrlObj = new URL(url, window.location.origin);
+    const targetPath = targetUrlObj.pathname;
+    const hasContextPrefix = /^\/(?:tag|h|user|favs|4)\//.test(targetPath);
+    const isBareItem = !hasContextPrefix;
+
+    if (inheritContext && !isChanUrl && !isBareItem && !options.skipInherit) {
+      if (!tag) {
+        const wTagMatch = window.location.href.match(/\/tag\/([^/?]+)/);
+        if (wTagMatch) tag = decodeURIComponent(wTagMatch[1]);
+      }
+      if (!tagger) {
+        const wTaggerParam = new URL(window.location.href).searchParams.get('tagger');
+        if (wTaggerParam) tagger = decodeURIComponent(wTaggerParam);
+      }
+      if (!user && !userHall) {
+        const wUserMatch = window.location.href.match(/\/user\/([^/?]+)/);
+        if (wUserMatch && !window.location.href.match(/\/user\/[^/]+\/hall\//) ) {
+          user = decodeURIComponent(wUserMatch[1]);
+          if (window.location.href.match(/\/user\/[^/]+\/favs(\/|$|\?)/)) isFavs = true;
+        } else if (window.location.href.match(/\/favs(\/|$|\?)/)) {
+          isFavs = true;
+        }
+      }
+      if (!userHall) {
+        const wUserHallMatch = window.location.href.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
+        if (wUserHallMatch) {
+          userHallOwner = decodeURIComponent(wUserHallMatch[1]);
+          userHall = decodeURIComponent(wUserHallMatch[2]);
+        }
+      }
+      if (!hall) {
+        const wHallMatch = window.location.href.match(/\/h\/([^/?]+)/);
+        if (wHallMatch) hall = decodeURIComponent(wHallMatch[1]);
+      }
+    }
+    // </context-preservation>
+
+    // Construct AJAX URL
+    let ajaxUrl = `/ajax/item/${itemid}`;
+    if (isChanUrl) {
+      const urlObj = new URL(url, window.location.origin);
+      ajaxUrl = urlObj.pathname + (urlObj.search ? urlObj.search + '&ajax=1' : '?ajax=1');
+    } else {
+      const params = new URLSearchParams();
+      params.append('mode', window.activeMode);
+      const targetHash = new URL(url, window.location.origin).hash.replace(/^#/, '').trim();
+      if (targetHash && !targetHash.startsWith('c')) params.append('subf0ck', targetHash);
+      if (tag) params.append('tag', tag);
+      if (hall) params.append('hall', hall);
+      if (userHall && userHallOwner) {
+        params.append('userHall', userHall);
+        params.append('userHallOwner', userHallOwner);
+      } else if (user) {
+        params.append('user', user);
+      }
+      if (tagger) params.append('tagger', tagger);
+      if (isFavs) {
+        params.append('fav', 'true');
+        if (!user && window.f0ckGuestFavs) {
+          const guestIds = window.f0ckGuestFavs.get();
+          if (guestIds.length > 0) {
+            params.append('ids', guestIds.slice(0, 100).join(','));
+          }
+        }
+      }
+
+      const isStrict = window.f0ckSession?.strict_mode || (localStorage.getItem('search_strict') === 'true');
+
+      if (isStrict || url.includes('strict=1') || window.location.search.includes('strict=1')) {
+        params.append('strict', '1');
+      }
+      
+      // Note: mime is no longer appended to params, server reads from cookie automatically
+      // _t cache-buster removed — stable URL enables both HTTP and in-memory caching.
+
+      const isRandom = document.cookie.includes('random_mode=1') || url.includes('random=1') || window.location.search.includes('random=1');
+      if (isRandom) {
+        params.append('random', '1');
+      }
+
+      // Explicit overrides for context (used for immediate mode switches)
+      if (options.forceParams) {
+        Object.keys(options.forceParams).forEach(key => {
+          params.set(key, options.forceParams[key]);
+        });
+      }
+
+      if (useOnara) {
+        params.append('onara', '1');
+      }
+
+      if (params.toString() !== '') {
+        ajaxUrl += (ajaxUrl.includes('?') ? '&' : '?') + params.toString();
+      }
+    }
+    return { itemid, isChanUrl, ajaxUrl, tag, user, isFavs, mime, hall, userHall, userHallOwner, tagger };
+  };
+
+  // Item URL for a random pick, in the feed the visitor is in (user hall, user favs, tag, hall or global)
+  const randomTargetUrl = (key) => {
+    const loc = window.location.href;
+    const userHallM = loc.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
+    if (userHallM) {
+      return `/user/${encodeURIComponent(decodeURIComponent(userHallM[1]))}/hall/${encodeURIComponent(decodeURIComponent(userHallM[2]))}/${key}`;
+    }
+    const userM = loc.match(/\/user\/([^/]+)/);
+    if (userM && loc.match(/\/favs(\/|$|\?)/)) return `/user/${encodeURIComponent(decodeURIComponent(userM[1]))}/favs/${key}`;
+    const tagM = loc.match(/\/tag\/([^/]+)/);
+    if (tagM) return `/tag/${encodeURIComponent(decodeURIComponent(tagM[1])).replace(/%2C/g, ',').replace(/%20/g, ' ')}/${key}`;
+    const hallM = loc.match(/\/h\/([^/]+)/);
+    if (hallM) return `/h/${encodeURIComponent(decodeURIComponent(hallM[1])).replace(/%20/g, ' ')}/${key}`;
+    return `/${key}`;
+  };
+
+  // ── Random prefetch ───────────────────────────────────────────────
+  // The next random pick is already known (the shuffled pool's cursor), so its item HTML is fetched
+  // ahead into itemCacheMap and its image preloaded. Once the visitor has used random in this tab,
+  // its video also starts buffering in a detached <video> that the navigation swaps in for the
+  // freshly rendered one: pressing random then shows the item and plays it right away.
+  const RANDOM_USED_KEY = 'f0ck_random_used';
+  const markRandomUsed = () => { try { sessionStorage.setItem(RANDOM_USED_KEY, '1'); } catch (_) {} };
+  const randomUsed = () => { try { return sessionStorage.getItem(RANDOM_USED_KEY) === '1'; } catch (_) { return false; } };
+  let _warmVideo = null; // { src, el }
+  let _randomPrefetchUrl = null; // ajaxUrl being fetched right now
+
+  const releaseWarmVideo = () => {
+    if (!_warmVideo) return;
+    try { _warmVideo.el.removeAttribute('src'); _warmVideo.el.load(); } catch (_) {}
+    _warmVideo = null;
+  };
+
+  const warmVideoFromHtml = (html) => {
+    if (!html || !randomUsed() || navigator.connection?.saveData) return;
+    const v = new DOMParser().parseFromString(html, 'text/html').querySelector('video#my-video[src]');
+    const src = v && v.getAttribute('src');
+    if (!src || src.startsWith('blob:')) return;
+    if (_warmVideo && _warmVideo.src === src) return;
+    releaseWarmVideo();
+    const el = document.createElement('video');
+    // Same attributes as the rendered element (crossorigin included, so the fetch mode matches);
+    // no autoplay: it must not start playing while detached
+    for (const a of v.attributes) {
+      if (a.name !== 'src' && a.name !== 'autoplay') el.setAttribute(a.name, a.value);
+    }
+    el.muted = true;
+    el.preload = 'auto';
+    el.src = src;
+    _warmVideo = { src, el };
+    window.f0ckDebug('[random-prefetch] Buffering video', src);
+  };
+
+  // Called right after an item's HTML is inserted, before setupMedia: if its video is the one
+  // buffered ahead, use that element instead of starting the download over
+  const adoptWarmVideo = (container) => {
+    if (!_warmVideo || !container) return;
+    const v = container.querySelector('video#my-video');
+    if (!v || v.getAttribute('src') !== _warmVideo.src) return;
+    const { el } = _warmVideo;
+    _warmVideo = null;
+    for (const a of [...el.attributes]) {
+      if (!v.hasAttribute(a.name)) el.removeAttribute(a.name);
+    }
+    for (const a of v.attributes) {
+      if (a.name !== 'src' && el.getAttribute(a.name) !== a.value) el.setAttribute(a.name, a.value);
+    }
+    el.muted = v.muted;
+    // Abort the rendered element's own load before it hits the network
+    v.removeAttribute('src');
+    try { v.load(); } catch (_) {}
+    v.replaceWith(el);
+    window.f0ckDebug('[random-prefetch] Using buffered video', el.getAttribute('src'));
+  };
+
+  // The item pickFromPool would return next, without moving the cursor (null when unknown, e.g. a reshuffle)
+  const peekRandomPick = () => {
+    const pool = window._randomPool;
+    if (!pool || !pool.items || pool.items.length < 2) return null;
+    const curSlug = window.getCurrentItemSlug ? window.getCurrentItemSlug() : null;
+    const curId = window.getCurrentItemId ? String(window.getCurrentItemId()) : null;
+    for (let i = window._randomPoolCursor; i < pool.items.length && i < window._randomPoolCursor + 2; i++) {
+      const pick = pool.items[i];
+      if (pick !== curSlug && pick !== curId) return pick;
+    }
+    return null;
+  };
+
+  // /ajax/item JSON → itemCacheMap entry (the fields loadItemAjax stores); null for failures
+  const itemCacheEntry = (rawText) => {
+    let data;
+    try { data = JSON.parse(rawText); } catch (_) { return null; }
+    if (!data || data.success === false || typeof data.html !== 'string') return null;
+    const numericId = data.numeric_id || data.id || data.item?.id || null;
+    return {
+      html: data.html,
+      slug: data.slug || data.item?.slug || null,
+      page: data.page || null,
+      numericId,
+      thumb: data.thumb || data.item?.thumb || (numericId ? `/t/${numericId}.webp` : null),
+      mode: data.mode ?? data.tag_id ?? data.item?.tag_id ?? null,
+      mime: data.mime || data.item?.matching_sub_mime || data.item?.mime || null,
+      user: data.user || data.username || data.item?.author_display_name || data.item?.display_name || data.item?.username || null,
+      dest: data.dest || data.file || data.item?.matching_sub_dest || data.item?.dest || null,
+      ts: Date.now()
+    };
+  };
+
+  const prefetchRandomNext = () => {
+    // Guest favourites pick from the local list, not the pool
+    if (/^\/favs(\/|$)/.test(window.location.pathname)) return;
+    const pick = peekRandomPick();
+    if (!pick) return;
+    const { ajaxUrl } = buildItemRequest(randomTargetUrl(pick), true, {});
+    const cached = itemCacheMap.get(ajaxUrl);
+    if (cached) {
+      preloadMediaFromHtml(cached.html);
+      warmVideoFromHtml(cached.html);
+      return;
+    }
+    if (_randomPrefetchUrl === ajaxUrl) return;
+    _randomPrefetchUrl = ajaxUrl;
+    fetch(ajaxUrl, {
+      credentials: 'include',
+      priority: 'low',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Sec-Purpose': 'prefetch', 'Purpose': 'prefetch' }
+    })
+      .then(r => r.ok ? r.text() : null)
+      .then(rawText => {
+        const entry = rawText && itemCacheEntry(rawText);
+        if (!entry) return;
+        itemCacheMap.set(ajaxUrl, entry);
+        if (itemCacheMap.size > ITEM_CACHE_MAX) itemCacheMap.delete(itemCacheMap.keys().next().value);
+        window.f0ckDebug('[random-prefetch] Cached next random item', pick);
+        preloadMediaFromHtml(entry.html);
+        warmVideoFromHtml(entry.html);
+      })
+      .catch(() => {})
+      .finally(() => { if (_randomPrefetchUrl === ajaxUrl) _randomPrefetchUrl = null; });
+  };
+  window._prefetchRandomNext = prefetchRandomNext;
+
   const loadItemAjax = async (url, inheritContext = true, options = {}) => {
 
     // Anything other than a next/prev step (random, thumbnail, back...) ends a queued burst
@@ -12657,15 +12956,8 @@ window.cancelAnimFrame = (function () {
     const errorWrapper = document.querySelector('._error_wrapper');
     if (errorWrapper) errorWrapper.remove();
 
-    // Extract item ID from URL. Use the last numeric segment to avoid matching context IDs (like tag/1/...)
-    // Split path, filter numeric, pop last.
-    const isChanUrl = /^\/4\/([a-z0-9_]+)\/(\d+)\/(\d+)/i.test(new URL(url, window.location.origin).pathname);
-    if (isChanUrl) {
-      inheritContext = false;
-    }
-
-    const pathSegments = new URL(url, window.location.origin).pathname.split('/');
-    const keySegments = pathSegments.filter(s => /^\d+$/.test(s) || /^[a-zA-Z0-9_-]{11}$/.test(s));
+    const itemReq = buildItemRequest(url, inheritContext, options);
+    const { isChanUrl } = itemReq;
 
     // Clear and Hide navbar pagination for Item View (Never show grid pagination on item view)
     // document.querySelectorAll('.pagination-wrapper').forEach(el => el.innerHTML = ''); // Don't destroy content (cached grid needs it)
@@ -12680,14 +12972,14 @@ window.cancelAnimFrame = (function () {
       });
     }
 
-    if (keySegments.length === 0) {
+    const { itemid } = itemReq;
+    if (!itemid) {
       console.warn("loadItemAjax: No ID or slug match found in URL", url);
       // fallback for weird/external links
       window.location.href = url;
       return;
     }
-    const itemid = keySegments.pop();
-    if (itemid) {
+    {
       if (window.NotificationSystemInstance) {
         window.NotificationSystemInstance.markItemRead(itemid);
       }
@@ -12696,146 +12988,9 @@ window.cancelAnimFrame = (function () {
       });
     }
 
-    // Extract context from Target URL first
-    let tag = null, user = null, isFavs = false, mime = null, hall = null, userHall = null, userHallOwner = null, tagger = null;
-    const tagMatch = url.match(/\/tag\/([^/?]+)/);
-    if (tagMatch) tag = decodeURIComponent(tagMatch[1]);
-
-    // Tagger filter from query string
-    const taggerUrlObj = new URL(url, window.location.origin);
-    const taggerParam = taggerUrlObj.searchParams.get('tagger');
-    if (taggerParam) tagger = decodeURIComponent(taggerParam);
-
-    // User hall: /user/:owner/hall/:slug/:id
-    const userHallMatch = url.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
-    if (userHallMatch) {
-      userHallOwner = decodeURIComponent(userHallMatch[1]);
-      userHall = decodeURIComponent(userHallMatch[2]);
-    }
-
-    const userMatch = url.match(/\/user\/([^/]+)/);
-    if (userMatch && !userHall) {
-      user = decodeURIComponent(userMatch[1]);
-      if (url.match(/\/user\/[^/]+\/favs(\/|$|\?)/)) isFavs = true;
-    } else if (url.match(/^\/favs(\/|$|\?)/)) {
-      isFavs = true;
-    }
-    
-    const hallMatch = url.match(/\/h\/([^/?]+)/);
-    if (hallMatch) hall = decodeURIComponent(hallMatch[1]);
-
-    const mimeMatch = url.match(/\/((?:video|audio|image|,)+)(\/|$|\?)/);
-    if (mimeMatch) mime = mimeMatch[1];
-    
-    // Check query params in the provided url too
-    if (!mime && url.includes('mime=')) {
-        const qMatch = url.match(/[?&]mime=([^&#]+)/);
-        if (qMatch) mime = decodeURIComponent(qMatch[1]);
-    }
-
-    // If missing and inheritContext is true, check Window Location
-    // IMPORTANT: Skip inheritance when target is a bare item URL like /1234 with no context
-    // prefix (/h/, /tag/, /user/). Such URLs come from comment/notification sidebar links and
-    // are explicitly context-free — they must not steal the current page's tag/hall/user.
-    // Prev/next arrows in item view always use explicit /h/foo/<id> or /tag/foo/<id> hrefs
-    // (via link.main), so they are unaffected by this guard.
-    // Note: Notification links call loadItemAjax(href, false) to skip inheritance directly.
-    const targetUrlObj = new URL(url, window.location.origin);
-    const targetPath = targetUrlObj.pathname;
-    const hasContextPrefix = /^\/(?:tag|h|user|favs|4)\//.test(targetPath);
-    const isBareItem = !hasContextPrefix;
-
-    if (inheritContext && !isChanUrl && !isBareItem && !options.skipInherit) {
-      if (!tag) {
-        const wTagMatch = window.location.href.match(/\/tag\/([^/?]+)/);
-        if (wTagMatch) tag = decodeURIComponent(wTagMatch[1]);
-      }
-      if (!tagger) {
-        const wTaggerParam = new URL(window.location.href).searchParams.get('tagger');
-        if (wTaggerParam) tagger = decodeURIComponent(wTaggerParam);
-      }
-      if (!user && !userHall) {
-        const wUserMatch = window.location.href.match(/\/user\/([^/?]+)/);
-        if (wUserMatch && !window.location.href.match(/\/user\/[^/]+\/hall\//) ) {
-          user = decodeURIComponent(wUserMatch[1]);
-          if (window.location.href.match(/\/user\/[^/]+\/favs(\/|$|\?)/)) isFavs = true;
-        } else if (window.location.href.match(/\/favs(\/|$|\?)/)) {
-          isFavs = true;
-        }
-      }
-      if (!userHall) {
-        const wUserHallMatch = window.location.href.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
-        if (wUserHallMatch) {
-          userHallOwner = decodeURIComponent(wUserHallMatch[1]);
-          userHall = decodeURIComponent(wUserHallMatch[2]);
-        }
-      }
-      if (!hall) {
-        const wHallMatch = window.location.href.match(/\/h\/([^/?]+)/);
-        if (wHallMatch) hall = decodeURIComponent(wHallMatch[1]);
-      }
-    }
-    // </context-preservation>
+    const { tag, user, isFavs, mime, hall, userHall, userHallOwner, tagger, ajaxUrl } = itemReq;
 
     try {
-      // Construct AJAX URL
-      let ajaxUrl = `/ajax/item/${itemid}`;
-      if (isChanUrl) {
-        const urlObj = new URL(url, window.location.origin);
-        ajaxUrl = urlObj.pathname + (urlObj.search ? urlObj.search + '&ajax=1' : '?ajax=1');
-      } else {
-        const params = new URLSearchParams();
-        params.append('mode', window.activeMode);
-        const targetHash = new URL(url, window.location.origin).hash.replace(/^#/, '').trim();
-        if (targetHash && !targetHash.startsWith('c')) params.append('subf0ck', targetHash);
-        if (tag) params.append('tag', tag);
-        if (hall) params.append('hall', hall);
-        if (userHall && userHallOwner) {
-          params.append('userHall', userHall);
-          params.append('userHallOwner', userHallOwner);
-        } else if (user) {
-          params.append('user', user);
-        }
-        if (tagger) params.append('tagger', tagger);
-        if (isFavs) {
-          params.append('fav', 'true');
-          if (!user && window.f0ckGuestFavs) {
-            const guestIds = window.f0ckGuestFavs.get();
-            if (guestIds.length > 0) {
-              params.append('ids', guestIds.slice(0, 100).join(','));
-            }
-          }
-        }
-
-        const isStrict = window.f0ckSession?.strict_mode || (localStorage.getItem('search_strict') === 'true');
-
-        if (isStrict || url.includes('strict=1') || window.location.search.includes('strict=1')) {
-          params.append('strict', '1');
-        }
-        
-        // Note: mime is no longer appended to params, server reads from cookie automatically
-        // _t cache-buster removed — stable URL enables both HTTP and in-memory caching.
-
-        const isRandom = document.cookie.includes('random_mode=1') || url.includes('random=1') || window.location.search.includes('random=1');
-        if (isRandom) {
-          params.append('random', '1');
-        }
-
-        // Explicit overrides for context (used for immediate mode switches)
-        if (options.forceParams) {
-          Object.keys(options.forceParams).forEach(key => {
-            params.set(key, options.forceParams[key]);
-          });
-        }
-
-        if (useOnara) {
-          params.append('onara', '1');
-        }
-
-        if (params.toString() !== '') {
-          ajaxUrl += (ajaxUrl.includes('?') ? '&' : '?') + params.toString();
-        }
-      }
 
       // ── Stale-while-revalidate item cache ──────────────────────────────────
       // cacheKey is the stable ajaxUrl (no _t), scoped to mode+context.
@@ -12844,6 +12999,20 @@ window.cancelAnimFrame = (function () {
       }
       const _itemCacheKey = ajaxUrl;
       const _cachedItem = !options.skipCache ? itemCacheMap.get(_itemCacheKey) : null;
+
+      // Cache miss: send the request now, so it runs during the slide/fade-out below instead of after it
+      const tStart = performance.now();
+      let tHeaders = tStart;
+      const _itemResponse = (_cachedItem || options.prefetchedData) ? null : fetch(ajaxUrl, {
+        credentials: 'include',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+      }).then(response => {
+        tHeaders = performance.now();
+        if (!response.ok) throw new Error(`Network response was not ok: ${response.status}`);
+        return response.text();
+      });
+      // handled where it's awaited; this only keeps a failure during the wait from being reported as unhandled
+      if (_itemResponse) _itemResponse.catch(() => {});
 
       // Allow slide-out or fade-out animation to visibly start before content swap
       if ((options.direction || options.transition === 'fade-zoom') && document.querySelector('.content')) {
@@ -12931,6 +13100,7 @@ window.cancelAnimFrame = (function () {
             document.body.classList.remove('sidebar-left-hidden', 'comments-hidden');
           }
           _container.insertAdjacentHTML('beforeend', _html);
+          adoptWarmVideo(_container);
           if (isCommentsHidden) {
             const _newLayout = _container.querySelector('.item-layout-container');
             if (_newLayout) _newLayout.classList.add('sidebar-hidden');
@@ -13046,7 +13216,6 @@ window.cancelAnimFrame = (function () {
       // ── END CACHE HIT ───────────────────────────────────────────────────────
 
       window.f0ckDebug("[itemCache] MISS — fetching:", ajaxUrl);
-      const tStart = performance.now();
 
       let html, paginationHtml, responseSlug = null, responsePage = null;
       let responseNumericId = null, responseThumb = null, responseMode = null;
@@ -13075,15 +13244,7 @@ window.cancelAnimFrame = (function () {
         window.f0ckDebug(`[CLIENT_DEBUG] Using pre-fetched data (skipped network fetch)`);
       } else {
         // ── Normal fetch path ────────────────────────────────────────────
-        const response = await fetch(ajaxUrl, {
-          credentials: 'include',
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-        });
-        const tHeaders = performance.now();
-
-        if (!response.ok) throw new Error(`Network response was not ok: ${response.status}`);
-
-        const rawText = await response.text();
+        const rawText = await _itemResponse;
         const tBody = performance.now();
 
         window.f0ckDebug(`[CLIENT_DEBUG] Fetch timing for ${ajaxUrl}:
@@ -13248,6 +13409,7 @@ window.cancelAnimFrame = (function () {
           document.body.classList.remove('sidebar-left-hidden', 'comments-hidden');
         }
         container.insertAdjacentHTML('beforeend', html);
+        adoptWarmVideo(container);
         if (isCommentsHidden) {
           const newLayout = container.querySelector('.item-layout-container');
           if (newLayout) newLayout.classList.add('sidebar-hidden');
@@ -13535,6 +13697,7 @@ window.cancelAnimFrame = (function () {
       // Special check for random
       if (link.id === 'random' || link.id === 'nav-random') {
         e.preventDefault();
+        markRandomUsed();
         document.dispatchEvent(new CustomEvent('f0ck:randomTriggered'));
 
         const outEls = document.querySelectorAll('.content, ._204863, .item_title');
@@ -13566,12 +13729,10 @@ window.cancelAnimFrame = (function () {
           wUserHallOwner = decodeURIComponent(wUserHallMatch[1]);
           wUserHall = decodeURIComponent(wUserHallMatch[2]);
         }
-        let wFavsUser = null;
         if (!wUserHall) {
+          // Guest favourites (/favs without a user): pick from the local list
           const wUserM = window.location.href.match(/\/user\/([^/]+)/);
-          if (wUserM && window.location.href.match(/\/favs(\/|$|\?)/)) {
-            wFavsUser = decodeURIComponent(wUserM[1]);
-          } else if (window.location.href.match(/\/favs(\/|$|\?)/)) {
+          if (!wUserM && window.location.href.match(/\/favs(\/|$|\?)/)) {
             const guestIds = window.f0ckGuestFavs ? window.f0ckGuestFavs.get() : [];
             if (guestIds.length > 0) {
               const currentId = window.getCurrentItemId();
@@ -13614,20 +13775,7 @@ window.cancelAnimFrame = (function () {
           window._isPoolRandomNav = true;
 
           // Build URL preserving context
-          let targetUrl;
-          if (wUserHall && wUserHallOwner) {
-            targetUrl = `/user/${encodeURIComponent(wUserHallOwner)}/hall/${encodeURIComponent(wUserHall)}/${pick}`;
-          } else if (wFavsUser) {
-            targetUrl = `/user/${encodeURIComponent(wFavsUser)}/favs/${pick}`;
-          } else if (wTagMatch) {
-            const wTag = decodeURIComponent(wTagMatch[1]);
-            targetUrl = `/tag/${encodeURIComponent(wTag).replace(/%2C/g, ',').replace(/%20/g, ' ')}/${pick}`;
-          } else if (wHallMatch) {
-            const wHall = decodeURIComponent(wHallMatch[1]);
-            targetUrl = `/h/${encodeURIComponent(wHall).replace(/%20/g, ' ')}/${pick}`;
-          } else {
-            targetUrl = `/${pick}`;
-          }
+          const targetUrl = randomTargetUrl(pick);
 
           loadItemAjax(targetUrl, true, { transition: 'fade-zoom' });
 
@@ -13692,20 +13840,7 @@ window.cancelAnimFrame = (function () {
           .then(data => {
             if (data && typeof data.html === 'string' && !data.error) {
               const targetKey = data.slug || data.id;
-              let targetUrl;
-              if (wUserHall && wUserHallOwner) {
-                targetUrl = `/user/${encodeURIComponent(wUserHallOwner)}/hall/${encodeURIComponent(wUserHall)}/${targetKey}`;
-              } else if (wFavsUser) {
-                targetUrl = `/user/${encodeURIComponent(wFavsUser)}/favs/${targetKey}`;
-              } else if (wTagMatch) {
-                const wTag = decodeURIComponent(wTagMatch[1]);
-                targetUrl = `/tag/${encodeURIComponent(wTag).replace(/%2C/g, ',').replace(/%20/g, ' ')}/${targetKey}`;
-              } else if (wHallMatch) {
-                const wHall = decodeURIComponent(wHallMatch[1]);
-                targetUrl = `/h/${encodeURIComponent(wHall).replace(/%20/g, ' ')}/${targetKey}`;
-              } else {
-                targetUrl = `/${targetKey}`;
-              }
+              const targetUrl = randomTargetUrl(targetKey);
               loadItemAjax(targetUrl, true, { transition: 'fade-zoom', prefetchedData: data });
               if (isOnaraActive() && data.id) {
                 syncOnaraBackgroundGrid(data.id, targetUrl, data.page || null, targetKey, {
