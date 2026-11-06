@@ -54,6 +54,7 @@
                             <i class="fa fa-cloud-upload"></i><br>
                             Drop or select a file!
                             <small class="w0bm-ul-dndmax">max {{ max_file_size }}</small>
+                            {% if upload_types %}<small class="w0bm-ul-dndtypes">{% for g in upload_types %}<span class="w0bm-ul-dndtype">{% if g.exts != [g.kind] %}<b>{{ g.kind }}</b> {% endif %}{{ g.exts|join(" ") }}</span>{% endfor %}</small>{% endif %}
                         </span>
                     </span>
                 </label>
@@ -70,7 +71,7 @@
             <span class="upload-info"><span id="upload-stats"></span></span>
         </div>
         <p class="w0bm-ulnote">Before you fire the laz0r make sure you have read the <a href="/rules">Rules</a>!<br><i>With great power comes great responsibility</i></p>
-        <p class="w0bm-ulnote w0bm-ul-limits">{% if uploads_remaining is none %}<b>Unlimited</b> uploads{% else %}<b>{{ uploads_remaining }}</b> uploads left for the next <b>12 hours</b>{% endif %} – Maximum filesize: <b>{{ max_file_size }}</b>{% if min_tags %} – At least <b>{{ min_tags }} tags</b>{% endif %}</p>
+        <p class="w0bm-ulnote w0bm-ul-limits">{% if uploads_remaining is none %}<b>Unlimited</b> uploads{% else %}<b>{{ uploads_remaining }}</b> uploads left for the next <b>12 hours</b>{% endif %}{% if min_tags %} – At least <b>{{ min_tags }} tag{% if min_tags != 1 %}s{% endif %}</b>{% endif %}{% if require_video_sound %} – Video must have <b>sound</b>{% endif %}</p>
     </form>
 </div>
 {% endblock %}

@@ -751,6 +751,18 @@ async fn file_upload(
         actual = m.to_string();
         tracing::info!("[UPLOAD] Reclassified to {m}");
     }
+    if media::sound_required(cfg, &actual) && media::video_has_no_sound(&tmp.path).await {
+        return fail(400, media::NO_SOUND_MSG);
+    }
+    // Album files after the first: one silent video rejects the whole upload, before anything is stored
+    if ctx.is_album && cfg.truthy("websrv.require_video_sound") {
+        for (i, sub) in raw_files.iter().enumerate().skip(1) {
+            let detected = mime::detect(&sub.path).await.unwrap_or_default();
+            if media::sound_required(cfg, &detected) && media::video_has_no_sound(&sub.path).await {
+                return fail(400, &format!("Album item #{}: {}", i + 1, media::NO_SOUND_MSG));
+            }
+        }
+    }
     let ext = mime::ext_for(cfg, &actual).unwrap_or_else(|| "bin".into());
     let filename = format!("{uuid}.{ext}");
     let dest_path = cfg.paths.pending.join("b").join(&filename);

@@ -39,6 +39,59 @@ pub fn is_flash(mime: &str) -> bool {
     mime == "application/x-shockwave-flash" || mime == "application/vnd.adobe.flash.movie"
 }
 
+/// What the upload forms list as accepted files: the allowed MIME types as the extensions people
+/// pick (not `cfg.mimes`' stored extension: a .mov is stored as mp4), grouped by kind in the order
+/// video, image, audio, flash, pdf, archive. Flash and archives only with `websrv.enable_swf` /
+/// `websrv.enable_archive` on, PDF only when `pdf` (the admin setting), like the upload form's checks.
+pub fn upload_types(cfg: &Config, pdf: bool) -> Vec<(&'static str, Vec<String>)> {
+    let swf = cfg.truthy("websrv.enable_swf");
+    let archive = cfg.truthy("websrv.enable_archive");
+    let mut groups: Vec<(&'static str, Vec<String>)> =
+        ["video", "image", "audio", "flash", "pdf", "archive"].into_iter().map(|k| (k, Vec::new())).collect();
+    for m in allowed_mimes(cfg) {
+        let kind = if is_flash(&m) {
+            if !swf {
+                continue;
+            }
+            "flash"
+        } else if m == "application/pdf" {
+            if !pdf {
+                continue;
+            }
+            "pdf"
+        } else if is_archive_mime(cfg, &m) {
+            if !archive {
+                continue;
+            }
+            "archive"
+        } else {
+            match m.split('/').next() {
+                Some("video") => "video",
+                Some("image") => "image",
+                Some("audio") => "audio",
+                _ => continue,
+            }
+        };
+        let picked: Vec<String> = match m.as_str() {
+            "image/jpeg" | "image/jpg" => vec!["jpg".into(), "jpeg".into()],
+            "video/quicktime" => vec!["mov".into()],
+            "video/x-m4v" => vec!["m4v".into()],
+            "video/mpeg" => vec!["mpg".into(), "mpeg".into()],
+            "audio/mpeg" | "audio/mp3" => vec!["mp3".into()],
+            "audio/aac" => vec!["aac".into()],
+            _ => ext_for(cfg, &m).into_iter().collect(),
+        };
+        let group = &mut groups.iter_mut().find(|(k, _)| *k == kind).expect("known kind").1;
+        for e in picked {
+            if !group.contains(&e) {
+                group.push(e);
+            }
+        }
+    }
+    groups.retain(|(_, exts)| !exts.is_empty());
+    groups
+}
+
 /// `file --mime-type` results that get re-encoded to MP4 (transcode.mjs).
 pub fn needs_transcode(mime: &str) -> bool {
     mime == "video/mpeg"
@@ -66,6 +119,17 @@ mod tests {
 
     fn s(v: &[&str]) -> Vec<String> {
         v.iter().map(|x| x.to_string()).collect()
+    }
+
+    #[test]
+    fn upload_types_lists_picked_extensions_of_enabled_kinds() {
+        let mimes = "mimes: { video/webm: webm, video/quicktime: mp4, video/mp4: mp4, image/jpeg: jpeg, image/png: png, \
+                     audio/mpeg: mpg, application/x-shockwave-flash: swf, application/pdf: pdf, application/zip: zip }";
+        let names = |t: Vec<(&'static str, Vec<String>)>| t.into_iter().map(|(k, e)| format!("{k}: {}", e.join(" "))).collect::<Vec<_>>();
+        let off = crate::media::test_cfg(mimes);
+        assert_eq!(names(upload_types(&off, false)), ["video: webm mov mp4", "image: jpg jpeg png", "audio: mp3"]);
+        let on = crate::media::test_cfg(&format!("{mimes}\nwebsrv: {{ enable_swf: true, enable_archive: true }}"));
+        assert_eq!(names(upload_types(&on, true)), ["video: webm mov mp4", "image: jpg jpeg png", "audio: mp3", "flash: swf", "pdf: pdf", "archive: zip"]);
     }
 
     #[test]

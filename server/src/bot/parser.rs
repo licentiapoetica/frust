@@ -496,7 +496,7 @@ pub async fn run(rt: Arc<Runtime>, e: Message) -> Result<()> {
                 return Ok(());
             }
             WArgs::TooFewTags(n) => {
-                e.reply(&format!("at least {} tags required (got {n}): {usage}", rules.min_tags)).await;
+                e.reply(&format!("at least {} tag{} required (got {n}): {usage}", rules.min_tags, if rules.min_tags == 1 { "" } else { "s" })).await;
                 return Ok(());
             }
         }
@@ -798,6 +798,11 @@ impl Upload {
         if !allowed.iter().any(|a| a == &mime || a == category) {
             let _ = tokio::fs::remove_file(&source).await;
             progress.say(&format!("lol, go f0ck yourself (blocked type: {mime})")).await;
+            return Ok(false);
+        }
+        if crate::media::sound_required(cfg, &mime) && crate::media::video_has_no_sound(&source).await {
+            let _ = tokio::fs::remove_file(&source).await;
+            progress.say("this video has no sound").await;
             return Ok(false);
         }
 

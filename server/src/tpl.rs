@@ -739,6 +739,13 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("captcha_enabled", json!(crate::cap::enabled(cfg)));
     put("show_background_cfg", json!(cfg.enabled("websrv.background")));
     put("allowed_mimes", json!(allowed_mimes));
+    // the drop zones list these: [{kind: "video", exts: ["webm", "mp4", …]}, …]
+    let upload_types: Vec<Value> = crate::media::mime::upload_types(cfg, s.enable_pdf)
+        .into_iter()
+        .map(|(kind, exts)| json!({ "kind": kind, "exts": exts }))
+        .collect();
+    put("upload_types", json!(upload_types));
+    put("require_video_sound", json!(cfg.truthy("websrv.require_video_sound")));
     put("mimes_json", json!(json_script(&Value::Object(mimes))));
     put("development", json!(cfg.development()));
     put("show_mime_picker", json!(cfg.enabled("websrv.show_mime_picker")));
@@ -1140,6 +1147,29 @@ mod tests {
                 assert!(fresh.contains("href=\"/4/wsg/6250450/6250458\" class=\"id-link\" data-item-id=\"6250458\">6250458</a>"));
             }
         }
+    }
+
+    /// The upload forms (w0bm's page, f0ckm's form snippet) list the accepted file types, "1 tag"
+    /// in the singular, and the sound rule only while `require_video_sound` is on.
+    #[test]
+    fn upload_forms_list_types_and_rules() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let ctx = |min_tags: i64, sound: bool| serde_json::json!({ "session": { "user": "bob" }, "max_file_size": "350 MB", "min_tags": min_tags,
+            "upload_types": [{ "kind": "video", "exts": ["webm", "mov"] }, { "kind": "pdf", "exts": ["pdf"] }], "require_video_sound": sound });
+        let w0bm = |min_tags: i64, sound: bool| env.get_template("frontends/w0bm/upload.html").unwrap().render(to_jvalue(&ctx(min_tags, sound))).unwrap();
+        let one = w0bm(1, true);
+        assert!(one.contains("<span class=\"w0bm-ul-dndtype\"><b>video</b> webm mov</span><span class=\"w0bm-ul-dndtype\">pdf</span>"));
+        assert!(one.contains("At least <b>1 tag</b>"));
+        assert!(one.contains("Video must have <b>sound</b>"));
+        let three = w0bm(3, false);
+        assert!(three.contains("At least <b>3 tags</b>"));
+        assert!(!three.contains("must have"));
+        let form = |sound: bool| env.get_template("snippets/upload-form.html").unwrap().render(to_jvalue(&ctx(1, sound))).unwrap();
+        let f = form(true);
+        assert!(f.contains("<p class=\"upload-form-drop-types\"><span>.webm</span><span>.mov</span><span>.pdf</span></p>"));
+        assert!(f.contains("upload-form-drop-sound"));
+        assert!(!form(false).contains("upload-form-drop-sound"));
     }
 
     #[test]

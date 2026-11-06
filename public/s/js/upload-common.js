@@ -99,7 +99,7 @@ window.F0ckUpload = class {
         }
 
         if (this.tags.length < this.minTags) {
-            this.onError(`At least ${this.minTags} tags are required`);
+            this.onError(`At least ${this.minTags} tag${this.minTags === 1 ? ' is' : 's are'} required`);
             return;
         }
 

@@ -2183,6 +2183,29 @@
   opacity: 0.6;
 }
 
+/* the accepted file types (upload_types) and the sound rule under the drop title */
+.upload-form-drop-types {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 6px;
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  opacity: 0.55;
+}
+
+.upload-form-drop-types > span {
+  padding: 1px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-family: monospace;
+}
+
+.upload-form-drop-sound {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
 .upload-form-drop-boost {
   font-size: 0.8em;
   font-weight: 400;

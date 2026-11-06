@@ -2318,7 +2318,7 @@
       if (!currentFile && !url) { flash('error', 'Select a file first'); return; }
       if (!fd.get('rating')) { flash('error', 'Choose a rating (SFW/NSFW)'); return; }
       const minTags = +ulForm.dataset.minTags || 0;
-      if (tagsUl.items().length < minTags) { flash('error', 'Add at least ' + minTags + ' tags'); return; }
+      if (tagsUl.items().length < minTags) { flash('error', 'Add at least ' + minTags + (minTags === 1 ? ' tag' : ' tags')); return; }
       fd.set('tags', tagsUl.items().join(','));
       if (currentFile && !url) fd.set('file', currentFile, currentFile.name);
       const btn = $('#btn-upload');

@@ -815,6 +815,10 @@ async fn process(st: &AppState, cfg: &Config, job: &UrlJob, job_id: &str, uuid: 
         let _ = tokio::fs::remove_file(&source).await;
         return Err(CmdErr::plain(format!("Unsupported file type: {mime_t}")));
     }
+    if media::sound_required(cfg, &mime_t) && media::video_has_no_sound(&source).await {
+        let _ = tokio::fs::remove_file(&source).await;
+        return Err(CmdErr::plain(media::NO_SOUND_MSG));
+    }
 
     let checksum = queue::sha256_file(&source).await?;
     let bypass = st.settings.bypass_duplicate_check();

@@ -32,6 +32,8 @@
                 <input type="file" class="file-input" name="file" accept="{{ allowed_mimes }}"{% if albums_enabled or shitpost_mode %} multiple{% endif %}>
                 <div class="drop-zone-prompt">
                     <p class="drop-zone-title upload-form-drop-title">{{ t("upload.drop_here") }} <span class="drop-zone-max upload-form-drop-max">(max {{ max_file_size }})</span>{% if session.admin %} <span class="upload-form-drop-boost">{{ t("upload.admin_boost") }}</span>{% endif %}</p>
+                    {% if upload_types %}<p class="upload-form-drop-types">{% for g in upload_types %}{% for e in g.exts %}<span>.{{ e }}</span>{% endfor %}{% endfor %}</p>{% endif %}
+                    {% if require_video_sound %}<p class="upload-form-drop-sound"><i class="fa-solid fa-volume-high"></i> {{ t("upload.video_needs_sound") }}</p>{% endif %}
                 </div>
                 <!-- Preview Container -->
                 <div class="file-preview upload-form-hidden">

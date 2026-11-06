@@ -249,6 +249,7 @@ websrv:
   swf_thumb: /s/img/swf.png
   enable_archive: false
   archive_thumb: /s/img/archive.webp
+  require_video_sound: false   # reject video uploads without sound (no audio track, or a silent one)
   enable_item_title: true
   open_registration: false
   open_registration_web_toggle: false

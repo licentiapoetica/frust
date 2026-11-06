@@ -2771,7 +2771,7 @@ window.initUploadForm = (selector) => {
                 return;
             }
             if (tags.length < minTags) {
-                if (window.showFlash) window.showFlash(`At least ${minTags} tags are required`, 'error');
+                if (window.showFlash) window.showFlash(`At least ${minTags} tag${minTags === 1 ? ' is' : 's are'} required`, 'error');
                 return;
             }
         }

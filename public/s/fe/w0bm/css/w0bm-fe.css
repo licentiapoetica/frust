@@ -1346,6 +1346,30 @@ span#halls-user > a {
     font-weight: normal;
     color: #5f5f62;
 }
+/* the accepted file types by kind ("VIDEO webm mp4 mov  IMAGE png jpg …"), wrapping as needed */
+.w0bm-ul-dndtypes {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 18px;
+    max-width: 640px;
+    margin: 14px auto 0;
+    font-size: 12px;
+    font-weight: normal;
+    color: #6d6d70;
+}
+.w0bm-ul-dndtype > b {
+    margin-right: 4px;
+    font-family: monospace;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8a8a8d;
+}
+#dragndrop:hover .w0bm-ul-dndtype > b,
+#dragndrop.w0bm-dnd-over .w0bm-ul-dndtype > b {
+    color: #1fb2b0;
+}
 #dragndrop-text img#video_preview,
 #dragndrop-text video#video_preview {
     max-width: 100%;

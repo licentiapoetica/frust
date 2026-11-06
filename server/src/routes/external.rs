@@ -425,6 +425,9 @@ async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSou
 
     let mime_type = mime::detect(&tmp.path).await?;
     let Some(ext) = mime::ext_for(&cfg, &mime_type) else { anyhow::bail!("Unsupported file type: {mime_type}") };
+    if media::sound_required(&cfg, &mime_type) && media::video_has_no_sound(&tmp.path).await {
+        return Ok(fail(400, media::NO_SOUND_MSG));
+    }
     let final_tmp = TempPath::new(cfg.paths.tmp.join(format!("{uuid}.{ext}")));
     tokio::fs::rename(&tmp.path, &final_tmp.path).await?;
     drop(tmp);

@@ -177,6 +177,49 @@ pub fn is_plain_name(name: &str) -> bool {
     !name.is_empty() && name != "." && name != ".." && !name.contains('/') && !name.contains('\\') && !name.contains('\0')
 }
 
+/// Upload error when `websrv.require_video_sound` is on and a video has no sound.
+pub const NO_SOUND_MSG: &str = "This video has no sound.";
+
+/// Below this peak level (dB) an audio track counts as silent (digital silence reads -91 dB).
+const SILENCE_DB: f64 = -90.0;
+
+/// `websrv.require_video_sound`: a video upload (not a YouTube embed) needs an audible audio track.
+pub fn sound_required(cfg: &Config, mime: &str) -> bool {
+    cfg.truthy("websrv.require_video_sound") && mime.starts_with("video/") && mime != "video/youtube"
+}
+
+/// True when the video has no audio stream, or only a silent one. When ffprobe/ffmpeg can't tell,
+/// the file is let through.
+pub async fn video_has_no_sound(path: &Path) -> bool {
+    use crate::proc::{spawn_with, Opts};
+    let p = path.to_string_lossy().into_owned();
+    let probe = spawn_with("ffprobe", &["-v", "error", "-select_streams", "a", "-show_entries", "stream=codec_type", "-of", "csv=p=0", &p], Opts { quiet: true, ..Default::default() }).await;
+    match probe {
+        Ok(o) if o.stdout_str().trim().is_empty() => return true,
+        Ok(_) => {}
+        Err(_) => return false,
+    }
+    let detect = spawn_with(
+        "ffmpeg",
+        &["-hide_banner", "-nostats", "-i", &p, "-map", "0:a", "-vn", "-sn", "-dn", "-af", "volumedetect", "-f", "null", "-"],
+        Opts { quiet: true, ignore_exit_code: true, ..Default::default() },
+    )
+    .await;
+    match detect {
+        Ok(o) => max_volume_db(&o.stderr).is_some_and(|db| db <= SILENCE_DB),
+        Err(_) => false,
+    }
+}
+
+/// Peak level from ffmpeg's `volumedetect` output (`max_volume: -91.0 dB`; `-inf` for no samples).
+fn max_volume_db(stderr: &str) -> Option<f64> {
+    let v = stderr.lines().rev().find_map(|l| l.split("max_volume:").nth(1))?.trim().trim_end_matches("dB").trim();
+    if v == "-inf" {
+        return Some(f64::NEG_INFINITY);
+    }
+    v.parse().ok()
+}
+
 /// Config built from YAML for unit tests (storage paths point into the system temp dir).
 #[cfg(test)]
 pub fn test_cfg(yaml: &str) -> Config {
@@ -233,6 +276,26 @@ mod tests {
         assert_eq!(configured_proxy(&cfg("main: { socks: '127.0.0.1:9050' }")).as_deref(), Some("socks5h://127.0.0.1:9050"));
         assert_eq!(configured_proxy(&cfg("main: { socks: 'socks5://h:1' }")).as_deref(), Some("socks5://h:1"));
         assert_eq!(configured_proxy(&cfg("main: { socks: 'undefined' }")), None);
+    }
+
+    #[test]
+    fn sound_requirement() {
+        let on = cfg("websrv: { require_video_sound: true }");
+        assert!(sound_required(&on, "video/mp4"));
+        assert!(sound_required(&on, "video/webm"));
+        assert!(!sound_required(&on, "video/youtube"));
+        assert!(!sound_required(&on, "image/gif"));
+        assert!(!sound_required(&on, "audio/mpeg"));
+        assert!(!sound_required(&cfg("websrv: {}"), "video/mp4"));
+    }
+
+    #[test]
+    fn volumedetect_output() {
+        let out = "[Parsed_volumedetect_0 @ 0x1] n_samples: 88200\n[Parsed_volumedetect_0 @ 0x1] mean_volume: -91.0 dB\n[Parsed_volumedetect_0 @ 0x1] max_volume: -91.0 dB\n";
+        assert_eq!(max_volume_db(out), Some(-91.0));
+        assert_eq!(max_volume_db("[x] max_volume: -3.5 dB"), Some(-3.5));
+        assert_eq!(max_volume_db("[x] max_volume: -inf dB"), Some(f64::NEG_INFINITY));
+        assert_eq!(max_volume_db("nothing here"), None);
     }
 }
 
