@@ -1,5 +1,5 @@
 {#- upload.blade.php -> POST /api/v2/upload (multipart, sent by w0bm.js with the CSRF header).
-    The original's single column (title, rating, visibility, tags, then a URL OR a file in one box, first comment, laz0r)
+    The original's single column (title, tags, rating, visibility, then a URL OR a file in one box, first comment, laz0r)
     in reworked colours: w0bm-fe.css "Upload". -#}
 {% extends "frontends/w0bm/layout.html" %}
 {% block mainclass %}w0bm-main-profile{% endblock %}
@@ -14,6 +14,9 @@
         {% if enable_item_title %}
         <input id="videotitle" class="form-control" placeholder="Title (optional)" name="title" type="text" maxlength="500" autocomplete="off" aria-label="Title">
         {% endif %}
+        <div class="ultags">
+            <input id="tags_upload" class="form-control" placeholder="Tags..." name="tags" data-role="tagsinput" type="text" autocomplete="off" aria-label="Tags">
+        </div>
         <div class="w0bm-ul-row">
             <span class="w0bm-ul-label">Rating</span>
             <div class="w0bm-ul-seg" role="radiogroup" aria-label="Rating">
@@ -38,9 +41,6 @@
             </div>
         </div>
         {% endif %}
-        <div class="ultags">
-            <input id="tags_upload" class="form-control" placeholder="Tags..." name="tags" data-role="tagsinput" type="text" autocomplete="off" aria-label="Tags">
-        </div>
         {% include "frontends/w0bm/partials/flash.html" %}
         <div class="w0bm-ul-source">
             {% if web_url_upload %}
@@ -61,7 +61,21 @@
             </div>
             <input id="w0bm-file" name="file" type="file" class="w0bm-ul-fileinput" accept="{{ allowed_mimes }}">
         </div>
-        <textarea id="ulcomment" class="form-control" placeholder="First comment (optional)" name="comment" rows="2" aria-label="First comment"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+        {#- the first comment with the item page's tools (w0bm.js commentTools): effects and emojis -#}
+        <div class="w0bm-ul-comment">
+            <textarea id="ulcomment" class="form-control" placeholder="First comment (optional)" name="comment" rows="2" aria-label="First comment"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+            <div class="w0bm-ul-ctools textmodifierss w0bm-js-only">
+                <a class="rainbow w0bm-fmt" href="#" data-fmt="rb">[rb]</a>
+                <a class="reich w0bm-fmt" href="#" data-fmt="reich">[reich]</a>
+                <a class="anim w0bm-fmt" href="#" data-fmt="krebs">[krebs]</a>
+                <a class="cfx-glitch w0bm-fmt" href="#" data-fmt="glitch" data-glitch="0.5">[glitch]</a>
+                <a class="spoiler w0bm-fmt w0bm-white" href="#" data-fmt="spoiler">[spoiler]</a>
+                <button type="button" class="emoji-shit" title="Emojis" aria-label="Emojis" aria-expanded="false"><span>😂</span></button>
+            </div>
+            <div class="emojis-box w0bm-hidden">
+                <div class="emojis"></div>
+            </div>
+        </div>
         <button id="btn-upload" type="submit" class="btn btn-primary btn-sm w0bm-btn-upload"><span class="laz0r">Fire the laz0r</span>
             <span class="" id="laz0r-fire"></span>
             <span class="hidden-xs" id="shoop-laz0r"></span>

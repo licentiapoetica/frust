@@ -1390,6 +1390,69 @@ html.w0bm-nojs .w0bm-ul input.w0bm-ul-fileinput {
     color: #c8c8c8;
 }
 
+/* the first comment: the field, its tools ([rb] … [spoiler], emojis, w0bm.js commentTools) as a
+   bar under it and the emoji box below, all in one frame */
+.w0bm-ul-comment {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: border-color .15s, box-shadow .15s;
+}
+.w0bm-ul-comment:focus-within {
+    border-color: #1fb2b0;
+    box-shadow: 0 0 8px rgba(31, 178, 176, 0.25);
+}
+.w0bm-ul .w0bm-ul-comment > textarea.form-control,
+.w0bm-ul .w0bm-ul-comment > textarea.form-control:focus {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+.w0bm-ul-ctools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px 12px;
+    padding: 5px 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+/* the effects at text size, like the item page's comment toolbar */
+.w0bm-ul-ctools > * {
+    white-space: nowrap;
+    line-height: 1.5;
+    text-decoration: none;
+}
+.w0bm-ul-ctools > .rainbow {
+    font-size: 1em;
+    letter-spacing: 0.08em;
+}
+.w0bm-ul-ctools > .reich {
+    font-size: 1.1em;
+}
+.w0bm-ul-ctools > .spoiler {
+    padding: 0 4px;
+}
+.w0bm-ul-ctools > button.emoji-shit {
+    padding: 0;
+    background: none;
+    border: 0;
+    font-size: 1.15em;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity .15s, transform .15s;
+}
+.w0bm-ul-ctools > button.emoji-shit:hover,
+.w0bm-ul-ctools > button.emoji-shit[aria-expanded="true"] {
+    opacity: 1;
+    transform: scale(1.15);
+}
+.w0bm-ul-comment > .emojis-box {
+    max-height: 15rem;
+    overflow-y: auto;
+    padding: 6px 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 /* the laz0r and the notes under it */
 .w0bm-btn-upload {
     width: 100%;
@@ -2323,13 +2386,15 @@ table.w0bm-ranking > thead > tr > th:first-child {
 
 /* Emoji picker: one tile per emoji, side by side (the themes' flex-grow stretched a lone emoji
    across the whole box) */
-#child.emojis > .w0bm_emoji_anchor {
+#child.emojis > .w0bm_emoji_anchor,
+.w0bm-ul-comment .emojis > .w0bm_emoji_anchor {
     flex: 0 0 auto;
     align-items: center;
     min-width: 60px;
     height: 60px;
 }
-#child.emojis > .w0bm_emoji_anchor > .comment_emoji_small {
+#child.emojis > .w0bm_emoji_anchor > .comment_emoji_small,
+.w0bm-ul-comment .emojis > .w0bm_emoji_anchor > .comment_emoji_small {
     max-width: 50px;
     max-height: 50px;
     object-fit: contain;

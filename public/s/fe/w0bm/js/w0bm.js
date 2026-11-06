@@ -1992,6 +1992,49 @@
     }
   });
 
+  // Comment tools of a form: [rb] [reich] [krebs] [glitch] [spoiler] (.w0bm-fmt, formatText) and the
+  // emoji box (.emoji-shit opens .emojis-box). Used by the item's comment form and the upload's
+  // first comment.
+  function commentTools(root, ta) {
+    $$('.w0bm-fmt', root).forEach((a) => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tag = a.dataset.fmt;
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      const sel = ta.value.slice(start, end);
+      ta.setRangeText('[' + tag + ']' + sel + '[/' + tag + ']', start, end, 'end');
+      if (!sel) ta.setSelectionRange(start + tag.length + 2, start + tag.length + 2);
+      ta.focus();
+    }));
+    const emojiBtn = $('.emoji-shit', root);
+    const emojiBox = $('.emojis-box', root);
+    if (!emojiBtn || !emojiBox) return;
+    emojiBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const list = await loadEmojis();
+      const child = $('.emojis', emojiBox);
+      if (!child.childElementCount) {
+        const names = Object.keys(list);
+        if (!names.length) child.textContent = 'No emojis yet';
+        names.forEach((n) => {
+          const a = document.createElement('a');
+          a.className = 'w0bm_emoji_anchor';
+          a.title = ':' + n + ':';
+          a.href = '#';
+          a.innerHTML = '<img class="comment_emoji_small" loading="lazy" alt="">';
+          a.firstChild.src = list[n];
+          a.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ta.setRangeText(':' + n + ': ', ta.selectionStart, ta.selectionEnd, 'end');
+            ta.focus();
+          });
+          child.appendChild(a);
+        });
+      }
+      const open = !emojiBox.classList.toggle('w0bm-hidden');
+      emojiBtn.setAttribute('aria-expanded', String(open));
+    });
+  }
+
   const commentForm = $('#commentForm > form');
   if (commentForm) {
     let lastComment = '';
@@ -2036,42 +2079,7 @@
         flash('error', r.msg || 'Error saving comment');
       }
     });
-    // [rb] [reich] [krebs] [glitch] [spoiler] (formatText)
-    $$('.w0bm-fmt', commentForm).forEach((a) => a.addEventListener('click', (e) => {
-      e.preventDefault();
-      const tag = a.dataset.fmt;
-      const start = ta.selectionStart, end = ta.selectionEnd;
-      const sel = ta.value.slice(start, end);
-      ta.setRangeText('[' + tag + ']' + sel + '[/' + tag + ']', start, end, 'end');
-      if (!sel) ta.setSelectionRange(start + tag.length + 2, start + tag.length + 2);
-      ta.focus();
-    }));
-    // emoji box
-    const emojiBtn = $('.emoji-shit', commentForm);
-    const emojiBox = $('#parent', commentForm);
-    emojiBtn?.addEventListener('click', async () => {
-      const list = await loadEmojis();
-      const child = $('#child', emojiBox);
-      if (!child.childElementCount) {
-        const names = Object.keys(list);
-        if (!names.length) child.textContent = 'No emojis yet';
-        names.forEach((n) => {
-          const a = document.createElement('a');
-          a.className = 'w0bm_emoji_anchor';
-          a.title = ':' + n + ':';
-          a.href = '#';
-          a.innerHTML = '<img class="comment_emoji_small" loading="lazy" alt="">';
-          a.firstChild.src = list[n];
-          a.addEventListener('click', (e) => {
-            e.preventDefault();
-            ta.setRangeText(':' + n + ': ', ta.selectionStart, ta.selectionEnd, 'end');
-            ta.focus();
-          });
-          child.appendChild(a);
-        });
-      }
-      emojiBox.classList.toggle('w0bm-hidden');
-    });
+    commentTools(commentForm, ta);
   }
 
   // ════════════════════════════════════════════════════════════════════════════════════
@@ -2214,6 +2222,8 @@
   const ulForm = $('#w0bm-upload');
   if (ulForm) {
     const tagsUl = tagsinput($('#tags_upload'));
+    const ulComment = $('#ulcomment');
+    if (ulComment) commentTools(ulForm, ulComment);
     const fileInput = $('#w0bm-file');
     const dnd = $('#dragndrop');
     const dndText = $('#dragndrop-text');
