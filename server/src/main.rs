@@ -190,6 +190,9 @@ fn spawn_background_tasks(st: &state::AppState) {
     // Expired DM attachments (every 6 hours)
     routes::messages::spawn_cleanup(st);
 
+    // Unused invite tokens older than 7 days (hourly)
+    routes::register::spawn_invite_expiry(st);
+
     // Private/unavailable item index, every 30 s
     let s = st.clone();
     tokio::spawn(async move {

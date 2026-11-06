@@ -831,6 +831,7 @@
     "delete_btn": "Löschen",
     "delete_confirm": "Diesen Einladungskot löschen?",
     "slot_refreshes_on": "Platz erneuert sich am {date}",
+    "expires_on": "verfällt am {date}",
     "slot_refreshed": "Platz erneuert",
     "admin_desc": "Du bist Admin, mach weiter."
   },

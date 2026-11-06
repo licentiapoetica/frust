@@ -937,6 +937,7 @@ async fn invites_get(st: AppState, req: Req) -> Res {
             "slots_consumed": nul(consumed),
             "slots_available": nul(available),
             "refresh_days": refresh_days,
+            "expire_days": crate::routes::register::INVITE_TOKEN_TTL_SECS / 86400,
         }))
     }
     .await;
@@ -1069,16 +1070,19 @@ async fn invite_request_status(st: AppState, req: Req) -> Res {
     let r: anyhow::Result<Value> = async {
         let Some(fp) = session_fingerprint(&req) else { return Ok(json!({ "success": true, "status": null })) };
         let row = sql!(
-            "SELECT ir.id, ir.status, ir.created_at, ir.reviewed_at, it.token, it.is_used FROM invite_requests ir
+            "SELECT ir.id, ir.status, ir.created_at, ir.reviewed_at, it.token, it.is_used, it.created_at AS token_created_at FROM invite_requests ir
              LEFT JOIN invite_tokens it ON it.id = ir.token_id WHERE ir.fingerprint = ", fp,
             " ORDER BY ir.created_at DESC LIMIT 1"
         )
         .fetch_optional(&st.db)
         .await?;
         let Some(row) = row else { return Ok(json!({ "success": true, "status": null })) };
-        // Auto-revoke if the token was deleted or already used but the status still says approved
+        // Auto-revoke if the token was deleted, used or expired but the status still says approved
         let mut status = row.val("status").clone();
-        if status == json!("approved") && (!row.bool("token") || row.bool("is_used")) {
+        let expired = row
+            .i64("token_created_at")
+            .is_some_and(|c| c <= crate::util::now_secs() - crate::routes::register::INVITE_TOKEN_TTL_SECS);
+        if status == json!("approved") && (!row.bool("token") || row.bool("is_used") || expired) {
             sql!("UPDATE invite_requests SET status = 'revoked' WHERE id = ", row.i64("id").unwrap_or(0) as i32).execute(&st.db).await?;
             status = json!("revoked");
         }

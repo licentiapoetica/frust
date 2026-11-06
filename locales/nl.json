@@ -837,6 +837,7 @@
     "delete_btn": "Verwijderen",
     "delete_confirm": "Dit uitnodigingstoken verwijderen?",
     "slot_refreshes_on": "slot vernieuwd op {date}",
+    "expires_on": "verloopt op {date}",
     "slot_refreshed": "slot vernieuwd",
     "admin_desc": "Je bent admin, ga je gang."
   },

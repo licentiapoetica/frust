@@ -841,6 +841,7 @@
     "delete_btn": "Löschen",
     "delete_confirm": "Diesen Einladungstoken löschen?",
     "slot_refreshes_on": "Slot erneuert sich am {date}",
+    "expires_on": "läuft am {date} ab",
     "slot_refreshed": "Slot erneuert",
     "admin_desc": "Du bist Admin, leg los."
   },

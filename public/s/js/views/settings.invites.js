@@ -84,12 +84,17 @@
                       : T('slotRefreshed')) +
                     '</span>';
                 }
+                let expiryNote = '';
+                if (!isUsed && tok.created_at && data.expire_days) {
+                  const expiresAt = new Date(parseInt(tok.created_at) * 1000 + data.expire_days * 24 * 60 * 60 * 1000);
+                  expiryNote = '<span class="invite-refresh-note"> — ' + T('expiresOn', { date: expiresAt.toLocaleDateString() }) + '</span>';
+                }
                 const userLink = tok.used_by_name
                   ? '<a href="/user/' + encodeURIComponent(tok.used_by_name.toLowerCase()) + '" class="settings-invite-user">' + tok.used_by_name + '</a>'
                   : '?';
                 const statusHtml = isUsed
                   ? '<span class="invite-token-status-used">' + T('statusUsedBy', { user: userLink }) + ' (' + (usedAt || '?') + ')</span>' + refreshNote
-                  : '<span class="invite-token-status-unused">' + T('statusUnused') + '</span>';
+                  : '<span class="invite-token-status-unused">' + T('statusUnused') + '</span>' + expiryNote;
                 const deleteBtn = !isUsed
                   ? '<button class="button button-danger settings-invite-delete" data-invite-delete="' + tok.id + '">' + T('deleteBtn') + '</button>'
                   : '';

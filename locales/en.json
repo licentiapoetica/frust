@@ -840,6 +840,7 @@
     "delete_btn": "Delete",
     "delete_confirm": "Delete this invite token?",
     "slot_refreshes_on": "slot refreshes on {date}",
+    "expires_on": "expires on {date}",
     "slot_refreshed": "slot refreshed",
     "admin_desc": "You are an admin, go ahead."
   },

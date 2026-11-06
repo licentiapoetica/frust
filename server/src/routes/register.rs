@@ -196,6 +196,41 @@ async fn login(st: AppState, mut req: Req) -> Res {
 // so a link can't put its own words into the modals.
 
 /// `?login_error=` / `?register_error=`
+/// Invite tokens nobody registered with expire this long after they were created.
+pub const INVITE_TOKEN_TTL_SECS: i64 = 7 * 24 * 3600;
+
+/// Deletes unused invite tokens older than [`INVITE_TOKEN_TTL_SECS`] (a minute after boot, then
+/// hourly). Approved invite requests whose token expires become `revoked`, as when an admin
+/// deletes the token. Registration checks the age itself, so a token is refused the moment it
+/// expires even before this runs.
+pub fn spawn_invite_expiry(st: &AppState) {
+    let st = st.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        loop {
+            if let Err(e) = purge_expired_invites(&st).await {
+                tracing::error!("[INVITE EXPIRY] Failed: {e}");
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(3600)).await;
+        }
+    });
+}
+
+async fn purge_expired_invites(st: &AppState) -> anyhow::Result<()> {
+    let cutoff = crate::util::now_secs() - INVITE_TOKEN_TTL_SECS;
+    sql!(
+        "UPDATE invite_requests SET status = 'revoked' WHERE status = 'approved' AND token_id IN
+         (SELECT id FROM invite_tokens WHERE is_used IS NOT TRUE AND created_at <= ", cutoff, ")"
+    )
+    .execute(&st.db)
+    .await?;
+    let n = sql!("DELETE FROM invite_tokens WHERE is_used IS NOT TRUE AND created_at <= ", cutoff).execute(&st.db).await?;
+    if n > 0 {
+        tracing::info!("[INVITE EXPIRY] Deleted {n} unused invite token(s) older than 7 days");
+    }
+    Ok(())
+}
+
 const AUTH_ERRORS: &[(&str, &str)] = &[
     ("invalid", "Invalid username or password."),
     ("wrong", "user doesn't exist or wrong password"),
@@ -512,9 +547,14 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
         render_error!("Invite token is required for registration.");
     }
     if let Some(t) = &token {
-        let ok = sql!("select id from invite_tokens where token = ", t.clone(), " and is_used = false").fetch_optional(&st.db).await?;
+        let ok = sql!(
+            "select id from invite_tokens where token = ", t.clone(), " and is_used = false and created_at > ",
+            crate::util::now_secs() - INVITE_TOKEN_TTL_SECS
+        )
+        .fetch_optional(&st.db)
+        .await?;
         if ok.is_none() {
-            render_error!("Invalid or used invite token");
+            render_error!("Invalid, used or expired invite token");
         }
     } else if crate::settings::registration_require_mail_andor_token(&cfg) {
         if !email.as_deref().is_some_and(|e| e.contains('@')) {
