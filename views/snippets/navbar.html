@@ -137,19 +137,6 @@
       {% if (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
       <a href="#" id="nav-filter-btn" class="navbar-filter-btn" title="Filter">
         <i class="fa-solid fa-filter"></i>
-        {% if session.mode == 0 %}
-        <span id="nav-filter-badge" class="filter-badge filter-badge-sfw">SFW</span>
-        {% elif session.mode == 1 %}
-        <span id="nav-filter-badge" class="filter-badge filter-badge-nsfw">NSFW</span>
-        {% elif session.mode == 4 %}
-        <span id="nav-filter-badge" class="filter-badge filter-badge-nsfl">NSFL</span>
-        {% elif session.mode == 2 %}
-        <span id="nav-filter-badge" class="filter-badge filter-badge-unt">UNT</span>
-        {% elif session.mode == 3 %}
-        <span id="nav-filter-badge" class="filter-badge filter-badge-all">ALL</span>
-        {% else %}
-        <span id="nav-filter-badge" class="filter-badge filter-badge-sfw">SFW</span>
-        {% endif %}
       </a>
       {% endif %}
 
@@ -315,7 +302,6 @@
     <!-- Filter: guests stay on SFW, the modal keeps random mode, mime types and grid size -->
     <a href="#" id="nav-filter-btn" class="navbar-filter-btn" title="Filter">
       <i class="fa-solid fa-filter"></i>
-      <span id="nav-filter-badge" class="filter-badge filter-badge-sfw">SFW</span>
     </a>
     <button class="navbar-toggler" type="button" id="nav-toggler"
       data-on="click:toggleNavbar">
