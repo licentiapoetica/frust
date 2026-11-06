@@ -1123,27 +1123,228 @@ span#halls-user > a {
     color: #888;
 }
 
-/* Upload */
-.w0bm-dnd-table {
-    display: table;
-    width: 100%;
-    height: 100%;
-    min-height: 150px;
+/* Upload (views/frontends/w0bm/upload.html): the original's single column in reworked colours.
+   Fields share one translucent surface (so the themes' page colours show through), teal on focus;
+   rating and visibility are rows of toggles. */
+.w0bm-ul {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 900px;
+    margin: 0 auto 30px;
+    padding: 0 15px;
+    white-space: normal;
 }
-#dragndrop-text {
-    display: table-cell;
-    vertical-align: middle;
+.w0bm-ul .form-control,
+.w0bm-ul .ultags > .bootstrap-tagsinput,
+.w0bm-ul-row {
+    margin: 0;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+    color: #c8c8c8;
+}
+.w0bm-ul .form-control {
+    height: auto;
+    padding: 10px 14px;
+}
+.w0bm-ul .form-control::placeholder,
+.w0bm-ul .bootstrap-tagsinput input::placeholder {
+    color: #6d6d70;
+}
+.w0bm-ul .form-control:focus,
+.w0bm-ul .ultags > .bootstrap-tagsinput:focus-within {
+    border-color: #1fb2b0;
+    outline: 0;
+    box-shadow: 0 0 8px rgba(31, 178, 176, 0.25);
+}
+.w0bm-ul textarea.form-control {
+    resize: vertical;
+    min-height: 64px;
+}
+.w0bm-ul .ultags > .bootstrap-tagsinput {
+    padding: 7px 10px;
+}
+/* without JavaScript the tag field is the plain input */
+.w0bm-ul .ultags > .form-control {
+    height: auto;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.w0bm-ul .flashcontainer:empty,
+.w0bm-ul .flashcontainer:has(> .flash-inner:empty) {
+    display: none;
+}
+
+/* option rows: label, then toggles */
+.w0bm-ul-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 14px;
+}
+.w0bm-ul-label {
+    flex: 0 0 76px;
+    color: #888;
+}
+.w0bm-ul-seg {
+    position: relative;
+    display: inline-flex;
+    flex-wrap: wrap;
+}
+.w0bm-ul-seg > input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+.w0bm-ul-seg > label {
+    margin: 0 0 0 -1px;
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #9a9a9d;
+    font-weight: normal;
+    cursor: pointer;
+    user-select: none;
+    transition: color .15s, border-color .15s, background-color .15s;
+}
+.w0bm-ul-seg > label:first-of-type {
+    margin-left: 0;
+}
+.w0bm-ul-seg > label:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+.w0bm-ul-seg > input:focus-visible + label {
+    outline: 1px dotted #1fb2b0;
+    outline-offset: 2px;
+}
+.w0bm-ul-seg > input:checked + label {
+    position: relative;
+    border-color: #1fb2b0;
+    background: rgba(31, 178, 176, 0.15);
+    color: #1fb2b0;
+}
+/* the ratings in their tag colours (.w0bm-tag-*), lit up when chosen */
+.w0bm-ul-seg > label.w0bm-ul-sfw { color: #23ff00; }
+.w0bm-ul-seg > label.w0bm-ul-nsfw { color: #ff3030; }
+.w0bm-ul-seg > label.w0bm-ul-nsfl { color: #b84dff; }
+.w0bm-ul-seg > input:checked + label.w0bm-ul-sfw {
+    border-color: #23ff00;
+    background: rgba(35, 255, 0, 0.12);
+    color: #23ff00;
+    text-shadow: 0 0 6px rgba(35, 255, 0, 0.6);
+}
+.w0bm-ul-seg > input:checked + label.w0bm-ul-nsfw {
+    border-color: #ff3030;
+    background: rgba(255, 48, 48, 0.15);
+    color: #ff5c5c;
+    text-shadow: 0 0 6px rgba(255, 48, 48, 0.6);
+}
+.w0bm-ul-seg > input:checked + label.w0bm-ul-nsfl {
+    border-color: #b84dff;
+    background: rgba(184, 77, 255, 0.18);
+    color: #c77dff;
+    text-shadow: 0 0 6px rgba(184, 77, 255, 0.6);
+}
+
+/* the source: a URL OR a file, one box with an "or" divider. Whichever isn't used dims (a typed URL
+   wins over a picked file: w0bm.js sends the file only without a URL). */
+.w0bm-ul-source {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.w0bm-ul-or {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.w0bm-ul-or::before,
+.w0bm-ul-or::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.w0bm-ul-or > span {
+    padding: 2px 10px;
+    border: 1px solid #1fb2b0;
+    background: rgba(31, 178, 176, 0.1);
+    color: #1fb2b0;
+    font-family: monospace;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 0 6px rgba(31, 178, 176, 0.6);
+}
+.w0bm-ul-source #ulurl {
+    transition: opacity .2s, border-color .15s, box-shadow .15s;
+}
+.w0bm-ul-source:has(#ulurl:not(:placeholder-shown)) #dragndrop,
+.w0bm-ul-source:has(#dragndrop.w0bm-dnd-has-file) #ulurl:placeholder-shown {
+    opacity: 0.35;
+}
+
+/* the drop zone */
+.w0bm-ul #dragndrop {
+    display: flex;
+    min-height: 190px;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.45);
+    border: 2px dashed rgba(255, 255, 255, 0.14);
+    color: #7d7d80;
+    transition: opacity .2s, color .15s, border-color .15s, background-color .15s;
+}
+.w0bm-ul #dragndrop:hover,
+.w0bm-ul #dragndrop.w0bm-dnd-over {
+    border-color: #1fb2b0;
+    background: rgba(31, 178, 176, 0.06);
+    color: #1fb2b0;
+}
+.w0bm-ul #dragndrop.w0bm-dnd-has-file {
+    border-style: solid;
+    border-color: rgba(31, 178, 176, 0.5);
 }
 #dragndrop-link {
-    display: block;
+    display: flex;
+    flex: 1;
     width: 100%;
+    /* w0bmcustom.css: height 100%, which keeps it from stretching to the zone's height */
+    height: auto;
     margin: 0;
     cursor: pointer;
     font-weight: bold;
 }
-#dragndrop.w0bm-dnd-over {
-    border-color: #1fb2b0;
-    color: #1fb2b0;
+.w0bm-dnd-table {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+}
+#dragndrop-text {
+    display: block;
+    min-height: 0;
+    padding: 15px;
+}
+#dragndrop-text > .fa-cloud-upload {
+    font-size: 44px;
+}
+.w0bm-ul-dndmax {
+    display: block;
+    margin-top: 6px;
+    font-size: 13px;
+    font-weight: normal;
+    color: #5f5f62;
 }
 #dragndrop-text img#video_preview,
 #dragndrop-text video#video_preview {
@@ -1153,36 +1354,47 @@ span#halls-user > a {
 #dragndrop-text .upload-info {
     display: block;
     font-size: 14px;
+    color: #c8c8c8;
 }
+/* the real file field: the drop zone's label opens it; shown without JavaScript (no preview then) */
+.w0bm-ul input.w0bm-ul-fileinput {
+    display: none;
+}
+html.w0bm-nojs .w0bm-ul input.w0bm-ul-fileinput {
+    display: block;
+    width: 100%;
+    color: #c8c8c8;
+}
+
+/* the laz0r and the notes under it */
 .w0bm-btn-upload {
     width: 100%;
-    height: 40px;
+}
+#btn-upload.w0bm-btn-upload {
+    margin-top: 6px;
+    background-color: rgba(31, 178, 176, 0.08);
+    border: 1px solid #1fb2b0;
+    color: #e6e6e6;
+    box-shadow: 0 0 12px rgba(31, 178, 176, 0.15);
+}
+.w0bm-btn-upload > span.laz0r {
+    font-family: monospace;
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+/* no gap for the upload stats until an upload runs */
+.w0bm-ul > .w0bm-upload-status:has(#upload-stats:empty) {
+    display: none;
 }
 .w0bm-ulnote {
+    margin: 0;
     text-align: center;
-    padding-top: 5px;
-    white-space: normal;
+    color: #808083;
 }
-.w0bm-uploadform {
-    white-space: nowrap;
-    padding: 0;
-    height: 100%;
-}
-.w0bm-uploadform textarea,
-.w0bm-uploadform input {
-    white-space: normal;
-}
-.w0bm-ratings label {
-    font-weight: normal;
-    margin-right: 10px;
-}
-.w0bm-label-inline {
-    margin-right: 8px;
-    color: #888;
-}
-.w0bm-sep {
-    color: #555;
-    margin: 0 6px;
+.w0bm-ul-limits b {
+    color: #fff;
 }
 /* Progress of an upload: its own full-width row above the button (w0bm.js sets --progress 0…1) */
 .w0bm-upload-status {
