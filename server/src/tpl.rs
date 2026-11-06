@@ -949,9 +949,22 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     // Actions this visitor must solve a captcha for (cap.uploads / cap.comments): loads the popup
     ctx.insert("captcha_scopes".into(), json!(req.map(|r| crate::cap::scopes_needed(&cfg, r)).unwrap_or_default()));
     ctx.insert("csp_nonce".into(), json!(req.map(|r| r.csp_nonce.as_str()).unwrap_or("")));
-    // @font-face rules (one per weight) for the visitor's font, else the site's default font
-    let chosen_font = session.and_then(|s| s.font.clone()).filter(|f| !f.is_empty()).or_else(|| cfg.str("websrv.default_font").map(str::to_string));
-    ctx.insert("font_faces".into(), crate::fonts::faces_json(&cfg, chosen_font.as_deref()));
+    // The visitor's own font: a stylesheet (#user-font-css), so settings.js can swap it live and
+    // no older @font-face rules stay behind. Without one (or when it is gone), the site's default
+    // font: its @font-face rules (one per weight) go into snippets/header.html's <style>.
+    let user_font = session.and_then(|s| s.font.as_deref()).filter(|f| crate::fonts::exists(&cfg, f));
+    let user_weight = user_font.and_then(|f| crate::fonts::weight_for(&cfg, f, session.and_then(|s| s.font_weight)));
+    ctx.insert("user_font_css".into(), json!(user_font.map(|f| crate::fonts::user_css_url(f, user_weight)).unwrap_or_default()));
+    // The weight select's value (settings): the chosen weight, else the font's own
+    let shown_weight = user_font.and_then(|f| crate::fonts::effective_weight(&cfg, f, session.and_then(|s| s.font_weight)));
+    ctx.insert("user_font_weight".into(), json!(shown_weight));
+    // Text size: a class on <html> (user-fs-<percent>, rules in f0ckm.css / the frontends' CSS)
+    let user_size = crate::fonts::size_for(session.and_then(|s| s.font_size));
+    ctx.insert("user_font_size".into(), json!(user_size));
+    ctx.insert("font_sizes".into(), json!(crate::fonts::SIZES));
+    let site_font = if user_font.is_some() { None } else { cfg.str("websrv.default_font").filter(|f| crate::fonts::exists(&cfg, f)) };
+    ctx.insert("site_font".into(), json!(site_font.unwrap_or("")));
+    ctx.insert("font_faces".into(), crate::fonts::faces_json(&cfg, site_font, None));
     ctx.insert("is_anonymized".into(), json!(is_anonymized));
     ctx.insert("anon_anonymize".into(), json!(crate::settings::anon_anonymize(&cfg)));
     ctx.insert("can_chan".into(), json!(can_chan));
@@ -1331,15 +1344,67 @@ mod tests {
         let all = render(None);
         let w0bm = render(Some("frontends/w0bm/settings-prefs.html"));
         // what w0bm uses stays
-        for id in ["language_select", "show_motd_toggle", "disable_autoplay_toggle", "favorites_private_toggle", "hide_fav_badge_toggle", "default_upload_visibility_select", "chk-do-not-disturb"] {
+        for id in ["language_select", "website_font_select", "show_motd_toggle", "disable_autoplay_toggle", "favorites_private_toggle", "hide_fav_badge_toggle", "default_upload_visibility_select", "chk-do-not-disturb"] {
             assert!(all.contains(&format!("id=\"{id}\"")), "{id}");
             assert!(w0bm.contains(&format!("id=\"{id}\"")), "w0bm {id}");
         }
         // f0ckm's own preferences go
-        for id in ["website_theme_select", "website_font_select", "show_background_toggle", "use_new_layout_toggle", "hide_infobox_toggle", "wheel_nav_toggle", "comment_display_mode_select", "blur_nsfw_toggle", "hide_item_ratings_toggle", "ruffle_background_toggle"] {
+        for id in ["website_theme_select", "show_background_toggle", "use_new_layout_toggle", "hide_infobox_toggle", "wheel_nav_toggle", "comment_display_mode_select", "blur_nsfw_toggle", "hide_item_ratings_toggle", "ruffle_background_toggle"] {
             assert!(all.contains(&format!("id=\"{id}\"")), "{id}");
             assert!(!w0bm.contains(&format!("id=\"{id}\"")), "w0bm {id}");
         }
+    }
+
+    /// The font weight select lists the chosen family's weights, with the stored one selected; the
+    /// text size select its sizes.
+    #[test]
+    fn settings_font_weight_and_size_selects() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let empty = "frontends/w0bm/settings-prefs.html";
+        let fonts = serde_json::json!([
+            { "name": "Hack", "file": "Hack.woff", "files": ["Hack.woff"], "weights": [{ "weight": 400, "name": "Regular" }] },
+            { "name": "S", "file": "S-Regular.ttf", "files": ["S-Regular.ttf"], "variable": true,
+              "weights": [{ "weight": 300, "name": "Light" }, { "weight": 400, "name": "Regular" }, { "weight": 700, "name": "Bold" }] },
+        ]);
+        let render = |font: &str, weight: u16, size: Option<u16>| {
+            let ctx = serde_json::json!({ "shell_header": empty, "shell_footer": empty, "session": { "user": "bob", "id": 1, "font": font }, "csrf_token": "tok",
+                "themes": ["f0ck"], "fonts": fonts, "user_font_weight": weight, "user_font_size": size, "font_sizes": crate::fonts::SIZES });
+            env.get_template("settings.html").unwrap().render(to_jvalue(&ctx)).unwrap()
+        };
+        let html = render("S-Regular.ttf", 300, Some(120));
+        assert!(html.contains("name=\"font_weight\""));
+        assert!(html.contains("<option value=\"300\" selected>300 Light</option>"));
+        assert!(html.contains("<option value=\"700\">700 Bold</option>"));
+        assert!(html.contains("name=\"font_size\""));
+        assert!(html.contains("<option value=\"120\" selected>120%</option>"));
+        let one = render("Hack.woff", 400, None);
+        let sel = one.split("id=\"website_font_weight_select\"").nth(1).unwrap().split('>').next().unwrap();
+        assert!(sel.contains(" hidden"), "one weight: no weight select");
+    }
+
+    /// Every text size has its rule in f0ckm.css and w0bm-fe.css.
+    #[test]
+    fn text_sizes_have_css() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let f0ckm = std::fs::read_to_string(root.join("public/s/css/f0ckm.css")).unwrap();
+        let w0bm = std::fs::read_to_string(root.join("public/s/fe/w0bm/css/w0bm-fe.css")).unwrap();
+        for n in crate::fonts::SIZES {
+            assert!(f0ckm.contains(&format!("html.user-fs-{n} {{")), "f0ckm.css {n}");
+            assert!(w0bm.contains(&format!("html.user-fs-{n} {{\n    --fs-zoom: ")), "w0bm-fe.css {n}");
+        }
+    }
+
+    /// w0bm loads the visitor's website font as a stylesheet (its pages have no f0ckm header <style>).
+    #[test]
+    fn w0bm_loads_the_users_font() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let head = |css: &str| env.get_template("frontends/w0bm/partials/head-assets.html").unwrap().render(to_jvalue(&serde_json::json!({ "user_font_css": css }))).unwrap();
+        assert!(head("/user-font.css?f=Inter-Bold.woff2").contains("<link rel=\"stylesheet\" id=\"user-font-css\" href=\"/user-font.css?f=Inter-Bold.woff2\">"));
+        assert!(!head("").contains("user-font-css"));
+        assert_eq!(crate::fonts::user_css_url("My Font-Bold.woff2", None), "/user-font.css?f=My%20Font-Bold.woff2");
+        assert_eq!(crate::fonts::user_css_url("X.ttf", Some(300)), "/user-font.css?f=X.ttf&w=300");
     }
 
     #[test]

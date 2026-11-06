@@ -1526,7 +1526,9 @@ CREATE TABLE public.user_options (
     favorites_private boolean DEFAULT false,
     hide_fav_badge boolean DEFAULT false,
     default_upload_visibility smallint DEFAULT 0,
-    banner_repeat character varying(50) DEFAULT 'repeat'::character varying
+    banner_repeat character varying(50) DEFAULT 'repeat'::character varying,
+    font_weight smallint,
+    font_size smallint
 );
 
 

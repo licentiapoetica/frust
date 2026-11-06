@@ -222,6 +222,8 @@
     "reset": "Zurücksetzen",
     "website_font": "Website-Schrift",
     "font_default": "Standard",
+    "font_weight": "Schriftstärke",
+    "font_size": "Textgröße",
     "theme": "Thema",
     "frontend": "Frontend",
     "frontend_hint": "Das Layout der ganzen Seite. w0bm und f0ckv2 sind die alten Layouts.",

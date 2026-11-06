@@ -174,7 +174,14 @@ async fn save(st: AppState, mut req: Req) -> Res {
         }
         if let Some(font) = field("font") {
             let font = Some(font).filter(|f| !f.is_empty() && crate::fonts::exists(&cfg, f));
+            // The weight select (families with several weights): kept when the family has it
+            let weight = font.as_deref().and_then(|f| crate::fonts::weight_for(&cfg, f, field("font_weight").and_then(|w| w.trim().parse().ok())));
             q.push(", font = ").bind(font);
+            q.push(", font_weight = ").bind(weight.map(i32::from));
+        }
+        if let Some(size) = field("font_size") {
+            let size = crate::fonts::size_for(size.trim().parse().ok());
+            q.push(", font_size = ").bind(size.map(i32::from));
         }
         if let Some(l) = &language {
             q.push(", language = ").bind(Some(l.clone()).filter(|l| !l.is_empty()));

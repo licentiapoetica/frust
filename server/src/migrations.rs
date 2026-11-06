@@ -257,6 +257,9 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"DROP INDEX IF EXISTS idx_user_halls_assign_user_id"#,
     // /b/<dest> lookups (media_gate)
     r#"CREATE INDEX IF NOT EXISTS idx_items_dest ON items(dest)"#,
+    // Website font weight (100-900, NULL: the font's own) and text size (percent, NULL: 100)
+    r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_weight smallint"#,
+    r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_size smallint"#,
 ];
 
 #[cfg(test)]

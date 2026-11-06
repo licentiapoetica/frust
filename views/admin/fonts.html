@@ -48,7 +48,7 @@
                         <li class="adm-font-face">
                             <span class="adm-font-sample adm-font-sample-{{ fam.key }} adm-font-w{{ f.weight }}">The quick brown fox jumps over the lazy dog 0123456789</span>
                             <span class="adm-font-meta">
-                                <span class="adm-font-weight">{{ f.weight }} {{ f.weight_name }}</span>
+                                <span class="adm-font-weight">{% if f.variable %}Variable {{ f.variable }}{% else %}{{ f.weight }} {{ f.weight_name }}{% endif %}</span>
                                 <code class="adm-font-filename">{{ f.file }}</code>
                                 {% if f.uploaded %}
                                 <span class="adm-font-tag adm-font-tag-uploaded">{{ ("Replaces built-in" if f.builtin else "Uploaded") }}</span>

@@ -47,7 +47,8 @@ pub fn register(r: &mut Router) {
     g.put_g(r"\/email", RegisteredUser, email);
     g.put_g(r"\/display_name", RegisteredUser, display_name);
     g.put_g(r"\/description", RegisteredUser, description);
-    g.put_g(r"\/font", LoggedIn, font);
+    g.put_g(r"\/font$", LoggedIn, font);
+    g.put_g(r"\/font_size$", LoggedIn, font_size);
     g.get_g(r"\/me$", LoggedIn, me);
 
     g.put_g(r"\/background", LoggedIn, |st, req| bool_pref(st, req, "show_background", "show_background", "show_background", "Update background"));
@@ -568,11 +569,25 @@ async fn font(st: AppState, mut req: Req) -> Res {
             return fail("Invalid font selection", 400);
         }
     }
-    if let Err(e) = sql!("update user_options set font = ", font.clone(), " where user_id = ", uid(&req)).execute(&st.db).await {
+    // Optional weight (families with several weights), kept only when the family has it
+    let weight = font.as_deref().and_then(|f| crate::fonts::weight_for(&st.cfg(), f, body.get("weight").and_then(crate::config::as_int)));
+    if let Err(e) = sql!("update user_options set font = ", font.clone(), ", font_weight = ", weight.map(i32::from), " where user_id = ", uid(&req)).execute(&st.db).await {
         return logged_500("Update Font", e, "Error updating font");
     }
     refresh_session(&st, &req);
-    j(json!({ "success": true, "font": font }), 200)
+    let css = font.as_deref().map(|f| crate::fonts::user_css_url(f, weight)).unwrap_or_default();
+    j(json!({ "success": true, "font": font, "weight": weight, "css": css }), 200)
+}
+
+/// `PUT /api/v2/settings/font_size` (`size`: a percent of crate::fonts::SIZES, anything else = 100)
+async fn font_size(st: AppState, mut req: Req) -> Res {
+    let body = req.post_value().await;
+    let size = crate::fonts::size_for(body.get("size").and_then(crate::config::as_int));
+    if let Err(e) = sql!("update user_options set font_size = ", size.map(i32::from), " where user_id = ", uid(&req)).execute(&st.db).await {
+        return logged_500("Update Font Size", e, "Error updating text size");
+    }
+    refresh_session(&st, &req);
+    j(json!({ "success": true, "size": size }), 200)
 }
 
 async fn me(st: AppState, req: Req) -> Res {

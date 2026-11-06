@@ -215,6 +215,8 @@
     "reset": "Zurücksetzen",
     "website_font": "Schriftart der Weltnetzpräsenz",
     "font_default": "Standard",
+    "font_weight": "Schriftstärke",
+    "font_size": "Textgröße",
     "theme": "Thema",
     "flash_section": "Blitz",
     "flash_bg": "Blitz im Hintergrund weiterlaufen lassen",

@@ -35,6 +35,14 @@ pub fn register(r: &mut Router) {
         let css = crate::fonts::brand_css(&st.cfg(), &font);
         Ok(crate::http::with_header(reply(200, "text/css; charset=utf-8", css), "cache-control", "public, max-age=86400"))
     });
+    // A visitor's chosen font as 'CustomUserFont' (#user-font-css in f0ckm and w0bm; settings.js
+    // swaps it live), see crate::fonts::user_css.
+    r.get(r"^\/user-font\.css$", |st: AppState, req: Req| async move {
+        let weight = req.query("w").and_then(|w| w.parse::<u16>().ok());
+        let css = crate::fonts::user_css(&st.cfg(), req.query("f").unwrap_or(""), weight);
+        // Short: the admin can replace a family's files (font manager)
+        Ok(crate::http::with_header(reply(200, "text/css; charset=utf-8", css), "cache-control", "public, max-age=300"))
+    });
     r.get(r"^\/sw\.js$", |st: AppState, _req: Req| async move { public_file(&st, "sw.js", "application/javascript").await });
 }
 

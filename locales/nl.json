@@ -220,6 +220,8 @@
     "reset": "Resetten",
     "website_font": "Website Lettertype",
     "font_default": "Standaard",
+    "font_weight": "Letterdikte",
+    "font_size": "Tekstgrootte",
     "theme": "Thema",
     "frontend": "Frontend",
     "frontend_hint": "De lay-out van de hele site. w0bm en f0ckv2 zijn de oude lay-outs.",

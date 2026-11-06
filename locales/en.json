@@ -222,6 +222,8 @@
     "reset": "Reset",
     "website_font": "Website Font",
     "font_default": "Default",
+    "font_weight": "Font weight",
+    "font_size": "Text size",
     "theme": "Theme",
     "frontend": "Frontend",
     "frontend_hint": "The whole site layout. w0bm and f0ckv2 are the old layouts.",

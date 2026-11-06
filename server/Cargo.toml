@@ -21,6 +21,9 @@ sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio",
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 serde_yaml = "0.9"
+# Variable font weight axes (crate::fonts): woff tables, woff2 stream
+flate2 = "1"
+brotli-decompressor = "6"
 minijinja = { version = "3", features = ["serde", "json", "urlencode", "speedups", "builtins", "debug"] }
 minijinja-contrib = { version = "3", features = ["pycompat", "datetime"] }
 chrono = { version = "0.4", features = ["serde"] }

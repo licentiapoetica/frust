@@ -35602,6 +35602,45 @@ html[theme] #settings-quicknav a.active {
   flex: 1;
 }
 
+/* Text size (settings → text size): header.html puts user-fs-<percent> on <html>. Most text is in
+   rem/em, so the root size scales it; body's own size follows the root. */
+html.user-fs-80 {
+  font-size: 80%;
+}
+
+html.user-fs-90 {
+  font-size: 90%;
+}
+
+html.user-fs-110 {
+  font-size: 110%;
+}
+
+html.user-fs-120 {
+  font-size: 120%;
+}
+
+html.user-fs-130 {
+  font-size: 130%;
+}
+
+html.user-fs-140 {
+  font-size: 140%;
+}
+
+html.user-fs-150 {
+  font-size: 150%;
+}
+
+html[class*="user-fs-"] body {
+  font-size: 1rem;
+}
+
+/* Font weight select: only for families with several weights */
+.settings .settings-select-row > .settings-select[hidden] {
+  display: none;
+}
+
 /* Hint under a checkbox row, lined up with the label text */
 .settings .settings-hint {
   margin-left: 25px;

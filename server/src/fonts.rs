@@ -3,8 +3,10 @@
 //! an uploaded file with the same name wins.
 //!
 //! Files named `<Family>-<Weight>.<ext>` (Manrope-Bold.woff2, Manrope-Regular.woff2, …) form one
-//! family with a `@font-face` per weight. A user's choice is stored as one file name (the family's
-//! regular weight); any file of a family selects the whole family.
+//! family with a `@font-face` per weight. A variable font (one file with a `wght` axis, read from
+//! the file) offers every weight of its range. A user's choice is stored as one file name (any
+//! file selects its whole family) plus an optional weight (`user_options.font_weight`): the weight
+//! plain text is drawn in, see [`Family::faces_at`].
 
 use crate::config::Config;
 use serde_json::{Value, json};
@@ -59,12 +61,77 @@ pub struct Family {
     pub name: String,
     /// (file, weight), lightest first
     pub faces: Vec<(String, u16)>,
+    /// A variable font of the family: (file, lightest, heaviest weight of its `wght` axis)
+    pub variable: Option<(String, u16, u16)>,
 }
 
 impl Family {
     /// File stored as the user's choice: the regular weight, else the one closest to it.
     pub fn primary(&self) -> &str {
+        if let Some((f, _, _)) = &self.variable {
+            return f;
+        }
         self.faces.iter().min_by_key(|(_, w)| (*w as i32 - 400).abs()).map(|(f, _)| f.as_str()).unwrap_or("")
+    }
+
+    /// The weights a user can pick: every hundred of a variable font's range, else one per file.
+    pub fn weights(&self) -> Vec<u16> {
+        match &self.variable {
+            Some((_, lo, hi)) => WEIGHTS.iter().copied().filter(|w| w >= lo && w <= hi).collect(),
+            None => self.faces.iter().map(|(_, w)| *w).collect(),
+        }
+    }
+
+    /// Weight plain text uses when the user picked none: the stored file's (a non-regular file
+    /// was how a weight was chosen before `font_weight`), 400 for a variable font.
+    pub fn default_weight(&self, file: &str) -> u16 {
+        let ws = self.weights();
+        let want = match &self.variable {
+            Some(_) => 400,
+            None => self.faces.iter().find(|(f, _)| f == file).map(|(_, w)| *w).unwrap_or(400),
+        };
+        ws.iter().copied().min_by_key(|w| (*w as i32 - want as i32).abs()).unwrap_or(want)
+    }
+
+    /// The `@font-face` (file, weight) list for plain text in `weight`; light and bold text
+    /// keep lighter / heavier faces.
+    ///
+    /// Separate files: the file of `weight` is declared as the normal weight (400); faces lighter
+    /// and heavier than both stay, the ones in between go (they would take the 400 slot or sit
+    /// between it and bold). A variable font renders at the weight its rule declares, so it gets
+    /// one rule per hundred, and the slots the browser would pick for normal text before
+    /// `weight` are left out (CSS font matching: 400 looks at 400–500, then lighter, then heavier).
+    pub fn faces_at(&self, weight: u16) -> Vec<(String, u16)> {
+        if let Some((file, _, _)) = &self.variable {
+            let w = weight;
+            return self
+                .weights()
+                .into_iter()
+                .filter(|s| match w {
+                    0..400 => *s <= w || *s >= 600,
+                    400 => true,
+                    401..=500 => *s != 400,
+                    _ => *s >= w,
+                })
+                .map(|s| (file.clone(), s))
+                .collect();
+        }
+        let file = self.faces.iter().min_by_key(|(_, w)| (*w as i32 - weight as i32).abs()).map(|(f, _)| f.clone()).unwrap_or_default();
+        self.faces_for(&file)
+    }
+
+    /// [`Family::faces_at`] for separate files: `file` is declared as the normal weight.
+    pub fn faces_for(&self, file: &str) -> Vec<(String, u16)> {
+        let Some(&(_, chosen)) = self.faces.iter().find(|(f, _)| f == file) else { return self.faces.clone() };
+        let (lo, hi) = (chosen.min(400), chosen.max(400));
+        let mut out: Vec<(String, u16)> = self.faces.iter().filter(|(f, w)| f != file && (*w < lo || *w > hi)).cloned().collect();
+        out.push((file.to_string(), 400));
+        out.sort_by_key(|(_, w)| *w);
+        out
+    }
+
+    fn has(&self, file: &str) -> bool {
+        self.faces.iter().any(|(f, _)| f == file)
     }
 
     fn to_json(&self) -> Value {
@@ -72,7 +139,8 @@ impl Family {
             "name": self.name,
             "file": self.primary(),
             "files": self.faces.iter().map(|(f, _)| f).collect::<Vec<_>>(),
-            "faces": self.faces.iter().map(|(f, w)| json!({ "file": f, "weight": w })).collect::<Vec<_>>(),
+            "variable": self.variable.is_some(),
+            "weights": self.weights().into_iter().map(|w| json!({ "weight": w, "name": weight_name(w) })).collect::<Vec<_>>(),
         })
     }
 }
@@ -88,7 +156,7 @@ fn group(files: Vec<String>) -> Vec<Family> {
                     fam.faces.push((f, weight));
                 }
             }
-            None => families.push(Family { name, faces: vec![(f, weight)] }),
+            None => families.push(Family { name, faces: vec![(f, weight)], variable: None }),
         }
     }
     for fam in &mut families {
@@ -110,23 +178,59 @@ fn all_files(cfg: &Config) -> Vec<String> {
     files
 }
 
-pub fn families(cfg: &Config) -> Vec<Family> {
-    group(all_files(cfg))
+/// Path of a font file (an upload wins over a built-in file of the same name).
+fn path_of(cfg: &Config, file: &str) -> PathBuf {
+    serve_root(cfg, file).join(file)
 }
 
-/// Font list for templates: `[{ name, file, files, faces: [{ file, weight }] }]`.
+pub fn families(cfg: &Config) -> Vec<Family> {
+    let mut fams = group(all_files(cfg));
+    for fam in &mut fams {
+        fam.variable = fam.faces.iter().find_map(|(f, _)| wght_range(&path_of(cfg, f)).map(|(lo, hi)| (f.clone(), lo, hi)));
+    }
+    fams
+}
+
+fn family_of(cfg: &Config, file: &str) -> Option<Family> {
+    families(cfg).into_iter().find(|fam| fam.has(file))
+}
+
+/// Font list for templates: `[{ name, file, files, variable, weights: [{ weight, name }] }]`.
 pub fn families_json(cfg: &Config) -> Value {
     Value::Array(families(cfg).iter().map(Family::to_json).collect())
 }
 
-/// Faces of the family a stored choice belongs to (`[{ file, weight }]`), empty when unknown.
-pub fn faces_json(cfg: &Config, file: Option<&str>) -> Value {
+/// `@font-face` list (`[{ file, weight }]`) for a stored choice in `weight` (None: the family's
+/// default, see [`Family::default_weight`]). Empty when unknown.
+pub fn faces_json(cfg: &Config, file: Option<&str>, weight: Option<u16>) -> Value {
     let Some(file) = file.filter(|f| !f.is_empty()) else { return json!([]) };
-    families(cfg)
-        .into_iter()
-        .find(|fam| fam.faces.iter().any(|(f, _)| f == file))
-        .map(|fam| fam.to_json()["faces"].clone())
-        .unwrap_or_else(|| json!([]))
+    let Some(fam) = family_of(cfg, file) else { return json!([]) };
+    let w = valid_weight(&fam, weight).unwrap_or_else(|| fam.default_weight(file));
+    Value::Array(fam.faces_at(w).into_iter().map(|(f, w)| json!({ "file": f, "weight": w })).collect())
+}
+
+fn valid_weight(fam: &Family, weight: Option<u16>) -> Option<u16> {
+    weight.filter(|w| fam.weights().contains(w))
+}
+
+/// A user's weight choice for the font `file`: Some when the family offers it.
+pub fn weight_for(cfg: &Config, file: &str, weight: Option<i64>) -> Option<u16> {
+    let w = weight.and_then(|w| u16::try_from(w).ok())?;
+    family_of(cfg, file).and_then(|fam| valid_weight(&fam, Some(w)))
+}
+
+/// The weight plain text is drawn in for a stored choice (the weight select's value).
+pub fn effective_weight(cfg: &Config, file: &str, weight: Option<i64>) -> Option<u16> {
+    let fam = family_of(cfg, file)?;
+    Some(valid_weight(&fam, weight.and_then(|w| u16::try_from(w).ok())).unwrap_or_else(|| fam.default_weight(file)))
+}
+
+/// Text sizes (percent) a user can pick besides 100 (stored as NULL).
+pub const SIZES: [u16; 7] = [80, 90, 110, 120, 130, 140, 150];
+
+/// A user's text size choice: Some when it is one of [`SIZES`].
+pub fn size_for(size: Option<i64>) -> Option<u16> {
+    size.and_then(|s| u16::try_from(s).ok()).filter(|s| SIZES.contains(s))
 }
 
 /// URL of the navbar brand font's stylesheet (see [`brand_css`]); versioned by the font's name.
@@ -141,14 +245,33 @@ pub fn brand_css_url(file: &str) -> String {
 /// `.brand-font` class on the navbar brand text uses it; the frontends' CSS files hold that rule).
 /// Empty when no font is set or the font is gone.
 pub fn brand_css(cfg: &Config, file: &str) -> String {
-    let enc = url_enc;
-    let faces = faces_json(cfg, Some(file));
+    family_css(cfg, file, None, "BrandFont")
+}
+
+/// URL of the stylesheet declaring a visitor's chosen font as 'CustomUserFont' (see
+/// [`user_css`]), linked as `#user-font-css` in the page head (settings.js swaps it live).
+pub fn user_css_url(file: &str, weight: Option<u16>) -> String {
+    match weight {
+        Some(w) => format!("/user-font.css?f={}&w={w}", url_enc(file)),
+        None => format!("/user-font.css?f={}", url_enc(file)),
+    }
+}
+
+/// `/user-font.css?f=<file>&w=<weight>`: the family of `file` as 'CustomUserFont', plain text in
+/// `weight` ([`faces_json`]). Empty for an unknown font.
+pub fn user_css(cfg: &Config, file: &str, weight: Option<u16>) -> String {
+    family_css(cfg, file, weight, "CustomUserFont")
+}
+
+/// The `@font-face` rules of [`faces_json`], named `alias`.
+fn family_css(cfg: &Config, file: &str, weight: Option<u16>, alias: &str) -> String {
+    let faces = faces_json(cfg, Some(file), weight);
     faces
         .as_array()
         .map(|a| {
             a.iter()
                 .filter_map(|f| Some((f["file"].as_str()?, f["weight"].as_u64()?)))
-                .map(|(f, w)| format!("@font-face {{ font-family: 'BrandFont'; src: url('/s/fonts/{}'); font-weight: {w}; font-display: swap; }}\n", enc(f)))
+                .map(|(f, w)| format!("@font-face {{ font-family: '{alias}'; src: url('/s/fonts/{}'); font-weight: {w}; font-display: swap; }}\n", url_enc(f)))
                 .collect()
         })
         .unwrap_or_default()
@@ -255,8 +378,8 @@ fn url_enc(f: &str) -> String {
     f.bytes().map(|b| if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") }).collect()
 }
 
-/// Families for the font manager: `[{ name, key, files, faces: [{ file, weight, weight_name, uploaded,
-/// builtin }] }]`. `uploaded` and `builtin` together: an upload replacing a built-in file.
+/// Families for the font manager: `[{ name, key, files, faces: [{ file, weight, weight_name,
+/// variable ("100–900" or null), uploaded, builtin }] }]`. `uploaded` and `builtin` together: an upload replacing a built-in file.
 pub fn admin_json(cfg: &Config) -> Value {
     let uploaded = list(&cfg.paths.fonts);
     let builtin = list(&builtin_dir(cfg));
@@ -278,13 +401,18 @@ pub fn admin_json(cfg: &Config) -> Value {
                     "name": fam.name,
                     "key": preview_key(&fam.name),
                     "files": fam.faces.iter().map(|(f, _)| f).collect::<Vec<_>>(),
-                    "faces": fam.faces.iter().map(|(f, w)| json!({
-                        "file": f,
-                        "weight": w,
-                        "weight_name": weight_name(*w),
-                        "uploaded": uploaded.contains(f),
-                        "builtin": builtin.contains(f),
-                    })).collect::<Vec<_>>(),
+                    "faces": fam.faces.iter().map(|(f, w)| {
+                        // A variable font: its weight range instead of one weight
+                        let range = fam.variable.as_ref().filter(|(vf, _, _)| vf == f).map(|(_, lo, hi)| format!("{lo}–{hi}"));
+                        json!({
+                            "file": f,
+                            "weight": w,
+                            "weight_name": weight_name(*w),
+                            "variable": range,
+                            "uploaded": uploaded.contains(f),
+                            "builtin": builtin.contains(f),
+                        })
+                    }).collect::<Vec<_>>(),
                 })
             })
             .collect(),
@@ -298,14 +426,161 @@ pub fn preview_css(cfg: &Config) -> String {
     for fam in families(cfg) {
         let key = preview_key(&fam.name);
         for (f, w) in &fam.faces {
+            // A variable font covers its whole range (the samples are drawn in each weight)
+            let weight = match &fam.variable {
+                Some((vf, lo, hi)) if vf == f => format!("{lo} {hi}"),
+                _ => w.to_string(),
+            };
             css.push_str(&format!(
-                "@font-face {{ font-family: 'FontPreview-{key}'; src: url('/s/fonts/{}'); font-weight: {w}; font-display: swap; }}\n",
+                "@font-face {{ font-family: 'FontPreview-{key}'; src: url('/s/fonts/{}'); font-weight: {weight}; font-display: swap; }}\n",
                 url_enc(f)
             ));
         }
         css.push_str(&format!(".adm-font-sample-{key} {{ font-family: 'FontPreview-{key}', monospace; }}\n"));
     }
     css
+}
+
+
+// ── variable fonts: the `wght` axis of a font file ──────────────────────────
+
+/// Weight range of a variable font's `wght` axis, None for a static font. Read from the file
+/// (ttf/otf, woff, woff2) once per file version.
+pub fn wght_range(path: &Path) -> Option<(u16, u16)> {
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+    /// path → (modified, size, range)
+    type Cache = HashMap<PathBuf, (std::time::SystemTime, u64, Option<(u16, u16)>)>;
+    static CACHE: once_cell::sync::Lazy<Mutex<Cache>> = once_cell::sync::Lazy::new(Default::default);
+    let meta = std::fs::metadata(path).ok()?;
+    let stamp = (meta.modified().ok()?, meta.len());
+    if let Some((m, l, r)) = CACHE.lock().ok()?.get(path)
+        && (*m, *l) == stamp
+    {
+        return *r;
+    }
+    let r = std::fs::read(path).ok().and_then(|d| fvar_table(&d)).and_then(|t| wght_axis(&t));
+    if let Ok(mut c) = CACHE.lock() {
+        c.insert(path.to_path_buf(), (stamp.0, stamp.1, r));
+    }
+    r
+}
+
+fn be16(d: &[u8], o: usize) -> Option<usize> {
+    Some(u16::from_be_bytes(d.get(o..o + 2)?.try_into().ok()?) as usize)
+}
+
+fn be32(d: &[u8], o: usize) -> Option<usize> {
+    Some(u32::from_be_bytes(d.get(o..o + 4)?.try_into().ok()?) as usize)
+}
+
+/// `(lightest, heaviest)` of the `wght` axis in an `fvar` table.
+fn wght_axis(t: &[u8]) -> Option<(u16, u16)> {
+    let (axes, count, size) = (be16(t, 4)?, be16(t, 8)?, be16(t, 10)?);
+    (0..count).find_map(|i| {
+        let a = t.get(axes + i * size..axes + i * size + 16)?;
+        if &a[0..4] != b"wght" {
+            return None;
+        }
+        let fixed = |o: usize| i32::from_be_bytes(a[o..o + 4].try_into().unwrap()) / 65536;
+        let (lo, hi) = (fixed(4).clamp(1, 1000) as u16, fixed(12).clamp(1, 1000) as u16);
+        (lo < hi).then_some((lo, hi))
+    })
+}
+
+/// The `fvar` table of a font file (uncompressed), if it has one.
+fn fvar_table(d: &[u8]) -> Option<Vec<u8>> {
+    const MAX: u64 = 1 << 20;
+    match d.get(..4)? {
+        b"wOFF" => {
+            for i in 0..be16(d, 12)? {
+                let e = 44 + i * 20;
+                if d.get(e..e + 4)? != b"fvar" {
+                    continue;
+                }
+                let (off, comp, orig) = (be32(d, e + 4)?, be32(d, e + 8)?, be32(d, e + 12)?);
+                let data = d.get(off..off + comp)?;
+                if comp >= orig {
+                    return Some(data.to_vec());
+                }
+                let mut out = Vec::new();
+                std::io::Read::read_to_end(&mut std::io::Read::take(flate2::read::ZlibDecoder::new(data), MAX), &mut out).ok()?;
+                return Some(out);
+            }
+            None
+        }
+        b"wOF2" => woff2_fvar(d, MAX),
+        b"ttcf" => None,
+        _ => {
+            for i in 0..be16(d, 4)? {
+                let r = 12 + i * 16;
+                if d.get(r..r + 4)? == b"fvar" {
+                    let (off, len) = (be32(d, r + 8)?, be32(d, r + 12)?);
+                    return d.get(off..off + len).map(<[u8]>::to_vec);
+                }
+            }
+            None
+        }
+    }
+}
+
+/// WOFF2: the table directory gives each table's length in the brotli stream (tables follow each
+/// other unpadded, in directory order); only the stream up to the end of `fvar` is decompressed.
+fn woff2_fvar(d: &[u8], max: u64) -> Option<Vec<u8>> {
+    if d.get(4..8)? == b"ttcf" {
+        return None;
+    }
+    let base128 = |pos: &mut usize| -> Option<usize> {
+        let mut acc: u32 = 0;
+        for i in 0..5 {
+            let b = *d.get(*pos)?;
+            *pos += 1;
+            if (i == 0 && b == 0x80) || acc & 0xFE00_0000 != 0 {
+                return None;
+            }
+            acc = (acc << 7) | u32::from(b & 0x7f);
+            if b & 0x80 == 0 {
+                return Some(acc as usize);
+            }
+        }
+        None
+    };
+    let (num, compressed) = (be16(d, 12)?, be32(d, 20)?);
+    let mut pos = 48;
+    let mut offset = 0usize;
+    let mut found = None;
+    for _ in 0..num {
+        let flags = *d.get(pos)?;
+        pos += 1;
+        let tag: [u8; 4] = match flags & 0x3f {
+            63 => {
+                let t = d.get(pos..pos + 4)?.try_into().ok()?;
+                pos += 4;
+                t
+            }
+            10 => *b"glyf",
+            11 => *b"loca",
+            47 => *b"fvar",
+            _ => *b"    ",
+        };
+        let version = flags >> 6;
+        let orig = base128(&mut pos)?;
+        let transformed = if &tag == b"glyf" || &tag == b"loca" { version == 0 } else { version != 0 };
+        let len = if transformed { base128(&mut pos)? } else { orig };
+        if &tag == b"fvar" && found.is_none() {
+            found = Some((offset, len));
+        }
+        offset += len;
+    }
+    let (off, len) = found?;
+    if (off + len) as u64 > max * 64 {
+        return None;
+    }
+    let stream = d.get(pos..pos + compressed)?;
+    let mut out = Vec::new();
+    let reader = brotli_decompressor::Decompressor::new(stream, 4096);
+    std::io::Read::read_to_end(&mut std::io::Read::take(reader, (off + len) as u64), &mut out).ok()?;
+    out.get(off..off + len).map(<[u8]>::to_vec)
 }
 
 #[cfg(test)]
@@ -323,6 +598,68 @@ mod tests {
         assert_eq!(manrope.faces.iter().map(|(_, w)| *w).collect::<Vec<_>>(), [300, 400, 700]);
         assert_eq!(manrope.primary(), "Manrope-Regular.woff2");
         assert_eq!(fams[0].primary(), "Hack.woff");
+    }
+
+    #[test]
+    fn chosen_weight_becomes_normal() {
+        let fams = group(["M-ExtraLight.woff2", "M-Light.woff2", "M-Regular.woff2", "M-Medium.woff2", "M-Bold.woff2", "M-ExtraBold.woff2"].map(String::from).to_vec());
+        let m = &fams[0];
+        let w = |file: &str| m.faces_for(file).iter().map(|(f, w)| format!("{f}:{w}")).collect::<Vec<_>>().join(" ");
+        // the regular face: everything as it is
+        assert_eq!(w("M-Regular.woff2"), "M-ExtraLight.woff2:200 M-Light.woff2:300 M-Regular.woff2:400 M-Medium.woff2:500 M-Bold.woff2:700 M-ExtraBold.woff2:800");
+        // light text: Light takes 400, bold stays bold
+        assert_eq!(w("M-Light.woff2"), "M-ExtraLight.woff2:200 M-Light.woff2:400 M-Medium.woff2:500 M-Bold.woff2:700 M-ExtraBold.woff2:800");
+        // heavy text: Bold takes 400, bold text gets ExtraBold
+        assert_eq!(w("M-Bold.woff2"), "M-ExtraLight.woff2:200 M-Light.woff2:300 M-Bold.woff2:400 M-ExtraBold.woff2:800");
+    }
+
+    /// A minimal sfnt with an `fvar` table (wdth 75–100, wght 200–800).
+    fn fvar_font() -> Vec<u8> {
+        let mut fvar = vec![0, 1, 0, 0, 0, 16, 0, 2, 0, 2, 0, 20, 0, 0, 0, 0];
+        for (tag, lo, def, hi) in [(b"wdth", 75, 100, 100), (b"wght", 200, 400, 800)] {
+            fvar.extend_from_slice(tag);
+            for v in [lo, def, hi] {
+                fvar.extend_from_slice(&((v as i32) << 16).to_be_bytes());
+            }
+            fvar.extend_from_slice(&[0, 0, 1, 0]);
+        }
+        let mut d = vec![0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0];
+        d.extend_from_slice(b"fvar");
+        d.extend_from_slice(&[0; 4]);
+        d.extend_from_slice(&28u32.to_be_bytes());
+        d.extend_from_slice(&(fvar.len() as u32).to_be_bytes());
+        d.extend_from_slice(&fvar);
+        d
+    }
+
+    #[test]
+    fn reads_the_weight_axis() {
+        let font = fvar_font();
+        assert_eq!(fvar_table(&font).and_then(|t| wght_axis(&t)), Some((200, 800)));
+        // no fvar: a static font
+        let mut plain = font.clone();
+        plain[12..16].copy_from_slice(b"name");
+        assert_eq!(fvar_table(&plain).and_then(|t| wght_axis(&t)), None);
+        assert_eq!(fvar_table(b"wOF2"), None);
+    }
+
+    #[test]
+    fn variable_weights_and_slots() {
+        let fam = Family { name: "S".into(), faces: vec![("S-Regular.ttf".into(), 400)], variable: Some(("S-Regular.ttf".into(), 100, 900)) };
+        assert_eq!(fam.weights(), WEIGHTS);
+        assert_eq!(fam.default_weight("S-Regular.ttf"), 400);
+        let slots = |w: u16| fam.faces_at(w).iter().map(|(_, s)| *s).collect::<Vec<_>>();
+        assert_eq!(slots(400), WEIGHTS);
+        // light: normal text falls to 300 (nothing at 400-500), bold still 700
+        assert_eq!(slots(300), [100, 200, 300, 600, 700, 800, 900]);
+        assert_eq!(slots(500), [100, 200, 300, 500, 600, 700, 800, 900]);
+        // heavy: normal text goes up to 600 (nothing lighter), bold 700
+        assert_eq!(slots(600), [600, 700, 800, 900]);
+        // separate files: the chosen weight's file, the closest one for others
+        let fams = group(["M-Light.woff2", "M-Regular.woff2", "M-Bold.woff2"].map(String::from).to_vec());
+        assert_eq!(fams[0].weights(), [300, 400, 700]);
+        assert_eq!(fams[0].default_weight("M-Light.woff2"), 300);
+        assert!(fams[0].faces_at(300).contains(&("M-Light.woff2".to_string(), 400)));
     }
 
     #[test]
@@ -355,3 +692,4 @@ mod tests {
         assert_eq!(fams[0].primary(), "X-Light.woff2");
     }
 }
+

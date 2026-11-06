@@ -30,6 +30,8 @@
     <link rel="stylesheet" href="/s/css/glitchfx.css?v={{ mtime("/public/s/css/glitchfx.css") }}">
     <link rel="stylesheet" href="/s/css/comment-fx.css?v={{ mtime("/public/s/css/comment-fx.css") }}">
     {% if brand_font_css %}<link rel="stylesheet" id="brand-font-css" href="{{ brand_font_css }}">{% endif %}
+    {#- the visitor's font (settings → website font): its @font-face rules, .w0bm-user-font in w0bm-fe.css uses it -#}
+    {% if user_font_css %}<link rel="stylesheet" id="user-font-css" href="{{ user_font_css }}">{% endif %}
     <link rel="alternate stylesheet" disabled href="/s/fe/w0bm/css/w0bm_override.css?v={{ mtime("/public/s/fe/w0bm/css/w0bm_override.css") }}" title="DARK">
     <link rel="alternate stylesheet" disabled href="/s/fe/w0bm/css/chilledblue.css?v={{ mtime("/public/s/fe/w0bm/css/chilledblue.css") }}" title="Chilledblue">
     <link rel="alternate stylesheet" disabled href="/s/fe/w0bm/css/glitch.css?v={{ mtime("/public/s/fe/w0bm/css/glitch.css") }}" title="Glitch">

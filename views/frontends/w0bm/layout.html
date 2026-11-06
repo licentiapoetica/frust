@@ -5,7 +5,7 @@
 {%- set loggedin = session and session.user -%}
 {%- set is_mod = loggedin and (session.admin or session.is_moderator) -%}
 <!DOCTYPE html>
-<html lang="{{ (lang or "en") }}" class="w0bm-nojs">
+<html lang="{{ (lang or "en") }}" data-user-font-class="w0bm-user-font" class="w0bm-nojs{% if user_font_css %} w0bm-user-font{% endif %}{% if user_font_size %} user-fs-{{ user_font_size }}{% endif %}">
 <head>
     {% include "frontends/w0bm/partials/head-assets.html" %}
     <title>{% block title %}{% if item is defined and item and item.id %}{{ (item.slug if (enable_item_slugs and item.slug) else item.id) }} - {% elif (page_meta is defined and page_meta.title) %}{{ page_meta.title }} - {% endif %}{{ domain }}{% endblock %}</title>

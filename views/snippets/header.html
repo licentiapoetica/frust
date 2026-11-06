@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ (lang or "en") }}" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}" res="{% if fullscreen is defined %}{{ ("fullscreen" if fullscreen == 1 else "") }}{% endif %}" data-thumb-size="{{ (default_thumb_size or "m") }}" class="no-js{% if nojs_pref_classes %} {{ nojs_pref_classes }}{% endif %}{% if (session and session.font) %} header-font-user{% elif ((default_font is defined and default_font) and (default_font|length > 0)) %} header-font-site{% endif %}">
+<html lang="{{ (lang or "en") }}" data-user-font-class="header-font-user" data-site-font="{{ (default_font or "") }}" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}" res="{% if fullscreen is defined %}{{ ("fullscreen" if fullscreen == 1 else "") }}{% endif %}" data-thumb-size="{{ (default_thumb_size or "m") }}" class="no-js{% if nojs_pref_classes %} {{ nojs_pref_classes }}{% endif %}{% if user_font_css %} header-font-user{% elif site_font %} header-font-site{% endif %}{% if user_font_size %} user-fs-{{ user_font_size }}{% endif %}">
 
 <head>
   {% if (page_meta is defined and page_meta.title) %}<title>{{ domain }} - {{ page_meta.title }}</title>{% elif item is defined %}<title>{{ domain }} - {{ (item.slug if (enable_item_slugs and item.slug) else item.id) }}</title>{% else %}<title>{{ domain }}</title>{% endif %}
@@ -16,23 +16,18 @@
      pages that load no site CSS (see the stylesheet links below). Static rules live in f0ckm.css. #}
   <style>
     html { background-color: #000; color: #fff; }
-    {# One @font-face per weight of the chosen family (font_faces: crate::fonts) #}
-    {% if (session and session.font) %}
-    {% for f in font_faces %}
-    @font-face { font-family: 'CustomUserFont'; src: url('/s/fonts/{{ f.file }}'); font-weight: {{ f.weight }}; font-display: swap; }
-    {% endfor %}
-    {% elif ((default_font is defined and default_font) and (default_font|length > 0)) %}
+    {# The site's default font, one @font-face per weight (font_faces: crate::fonts). A visitor's own
+       font comes from #user-font-css below, which settings.js swaps when it is changed. #}
     {% for f in font_faces %}
     @font-face { font-family: 'SiteDefaultFont'; src: url('/s/fonts/{{ f.file }}'); font-weight: {{ f.weight }}; font-display: swap; }
     {% endfor %}
-    {% endif %}
     :root {
       --comment-banner-display: {% if comment_banner_enabled %} block {% else %} none {% endif %};
       --comment-banner-max-height: {% if comment_banner_max_height is defined %}{{ comment_banner_max_height }}px{% else %} 300px {% endif %};
       --favicon-url: url('{% if (custom_favicon and (custom_favicon|length > 0)) %}{{ custom_favicon }}{% else %}/s/img/favicon.gif{% endif %}');
-      {% if (session and session.font) %}
+      {% if user_font_css %}
       --font: 'CustomUserFont', monospace !important;
-      {% elif ((default_font is defined and default_font) and (default_font|length > 0)) %}
+      {% elif site_font %}
       --font: 'SiteDefaultFont', monospace !important;
       {% endif %}
     }
@@ -59,6 +54,8 @@
   {% endif %}
   {#- navbar brand font (admin panel → branding) -#}
   {% if brand_font_css %}<link rel="stylesheet" id="brand-font-css" href="{{ brand_font_css }}">{% endif %}
+  {#- the visitor's website font (settings): @font-face rules as 'CustomUserFont', see .header-font-user -#}
+  {% if user_font_css %}<link rel="stylesheet" id="user-font-css" href="{{ user_font_css }}">{% endif %}
   {% include "snippets/header-data.html" %}
   {% if (not private_society or session) %}
   {% if enable_comments %}

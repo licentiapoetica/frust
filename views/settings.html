@@ -97,7 +97,27 @@
               <select id="website_font_select" name="font" class="input settings-select">
                 <option value="">{{ t("settings.font_default") }}</option>
                 {% for key, font in fonts|entries %}
-                <option value="{{ font.file }}" data-faces='{{ font.faces|tojson }}' {% if session.font in font.files %} selected {% endif %}>{{ font.name }}</option>
+                <option value="{{ font.file }}" data-weights='{{ font.weights|tojson }}' {% if session.font in font.files %} selected {% endif %}>{{ font.name }}</option>
+                {% endfor %}
+              </select>
+              {#- The chosen family's weights (separate files or a variable font's range), hidden with
+                  fewer than two; settings.js refills it when the family changes -#}
+              {% set cur = namespace(weights=[]) %}
+              {% for key, font in fonts|entries %}{% if session.font in font.files %}{% set cur.weights = font.weights %}{% endif %}{% endfor %}
+              <select id="website_font_weight_select" name="font_weight" class="input settings-select" aria-label="{{ t("settings.font_weight") }}" title="{{ t("settings.font_weight") }}"{% if cur.weights|length < 2 %} hidden{% endif %}>
+                {% for w in cur.weights %}
+                <option value="{{ w.weight }}"{% if w.weight == user_font_weight %} selected{% endif %}>{{ w.weight }} {{ w.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="setting-item settings-row-spaced">
+            <label for="website_font_size_select" class="settings-field-label">{{ t("settings.font_size") }}</label>
+            <div class="settings-select-row">
+              <select id="website_font_size_select" name="font_size" class="input settings-select">
+                <option value="">100% ({{ t("settings.font_default") }})</option>
+                {% for size in font_sizes %}
+                <option value="{{ size }}"{% if size == user_font_size %} selected{% endif %}>{{ size }}%</option>
                 {% endfor %}
               </select>
             </div>

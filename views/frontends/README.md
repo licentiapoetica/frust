@@ -110,6 +110,19 @@ The navbar brand (image and text from the admin panel, templates get `custom_bra
 inside `.navbar-brand`, and `f0ck-core.js` keeps them up to date. The text sits next to the image;
 with neither, the site name shows.
 
+The visitor's website font (settings, key `font` in `settings-prefs.html`): templates get
+`user_font_css`, a stylesheet declaring the chosen family as `'CustomUserFont'` (empty without a
+choice). Link it in the head with `id="user-font-css"`, put a class on `<html>` when it is set, and
+give that class a `font-family: 'CustomUserFont'` rule that spares the frontend's icon fonts (w0bm:
+`.w0bm-user-font` in w0bm-fe.css). Name the class in `<html data-user-font-class="…">`: settings.js
+swaps the stylesheet and sets that class when the font or its weight is changed live. Without the
+attribute nothing is applied live (never add f0ckm's `header-font-user`: f0ckm.css is layered into
+the shell and its rule would force Font Awesome 6 onto the frontend's icons). The chosen weight is
+declared as the normal weight (crate::fonts::Family::faces_at), so no CSS weight changes are needed.
+The text size (`user_font_size`, a percent) is a `user-fs-<percent>` class on `<html>`: give each
+size in crate::fonts::SIZES a rule (f0ckm scales the root font size, w0bm zooms the body;
+`tpl::tests::text_sizes_have_css` checks both).
+
 ## Rules
 
 - **Shared client code.** It lives in `public/s/js/f0ck-core.js`: CSRF token, `escHTML`,

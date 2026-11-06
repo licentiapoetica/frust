@@ -1,7 +1,7 @@
 {#- w0bm shell, top half: shared pages (settings, messages, admin, mod, …) open with this inside the
     w0bm chrome. Contract: views/frontends/README.md. Same partials as layout.html. -#}
 <!DOCTYPE html>
-<html lang="{{ (lang or "en") }}" class="w0bm-nojs f0ck-shell">
+<html lang="{{ (lang or "en") }}" data-user-font-class="w0bm-user-font" class="w0bm-nojs f0ck-shell{% if user_font_css %} w0bm-user-font{% endif %}{% if user_font_size %} user-fs-{{ user_font_size }}{% endif %}">
 <head>
     {% include "frontends/w0bm/partials/head-assets.html" %}
     <title>{% if (page_meta is defined and page_meta.title) %}{{ page_meta.title }} - {% endif %}{{ domain }}</title>

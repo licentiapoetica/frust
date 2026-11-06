@@ -2008,78 +2008,119 @@
         });
     }
 
-    // Website Font Selection
+    // Website Font Selection: family + weight + text size. The weight select lists the family's
+    // weights (separate files or a variable font's range, see crate::fonts). Applied live by
+    // swapping the one stylesheet that holds the visitor's @font-face rules (#user-font-css: no
+    // older rules stay behind) and putting the frontend's font class on <html>
+    // (data-user-font-class: f0ckm header-font-user, w0bm w0bm-user-font), whose CSS spares that
+    // frontend's icon fonts. The text size is a user-fs-<percent> class on <html>.
     const fontSelect = document.getElementById('website_font_select');
+    const weightSelect = document.getElementById('website_font_weight_select');
+    const sizeSelect = document.getElementById('website_font_size_select');
+    const fontRoot = document.documentElement;
+    const fontClass = fontRoot.dataset.userFontClass || '';
+    const siteFontAtLoad = fontRoot.classList.contains('header-font-site');
 
-    const applyFontLive = async (fontFile) => {
-        let style = document.getElementById('live-font-style');
-        if (!fontFile) {
-            // Revert to default: remove injected style
-            if (style) style.remove();
+    const familyWeights = () => {
+        const opt = fontSelect && fontSelect.selectedOptions[0];
+        try {
+            const weights = JSON.parse((opt && opt.dataset.weights) || '[]');
+            return Array.isArray(weights) ? weights : [];
+        } catch (e) {
+            return [];
+        }
+    };
+
+    // The selected family's weights; keeps `keep` when the family has it, else regular (400)
+    const fillWeights = (keep) => {
+        if (!weightSelect) return;
+        const weights = familyWeights();
+        weightSelect.replaceChildren(...weights.map((w) => {
+            const o = document.createElement('option');
+            o.value = String(w.weight);
+            o.textContent = `${w.weight} ${w.name || ''}`.trim();
+            return o;
+        }));
+        const pick = weights.find((w) => String(w.weight) === String(keep))
+            || weights.slice().sort((a, b) => Math.abs(a.weight - 400) - Math.abs(b.weight - 400))[0];
+        if (pick) weightSelect.value = String(pick.weight);
+        weightSelect.hidden = weights.length < 2;
+    };
+
+    // `css`: the stylesheet URL of the new font (from the server), '' for the default font.
+    // "Default" in f0ckm loads the site's default font the same way (data-site-font on <html>).
+    const applyFontLive = (css) => {
+        const siteFont = fontRoot.dataset.siteFont || '';
+        const href = css || (siteFont ? '/user-font.css?f=' + encodeURIComponent(siteFont) : '');
+        let link = document.getElementById('user-font-css');
+        if (!href) {
+            if (link) link.remove();
+            if (fontClass) fontRoot.classList.remove(fontClass);
+            if (siteFontAtLoad) fontRoot.classList.add('header-font-site');
             return;
         }
-        // Every weight of the family (data-faces on the option, see crate::fonts), else just the file
-        let faces = [{ file: fontFile, weight: 400 }];
-        try {
-            const opt = fontSelect && Array.from(fontSelect.options).find(o => o.value === fontFile);
-            const parsed = opt && JSON.parse(opt.dataset.faces || '[]');
-            if (Array.isArray(parsed) && parsed.length) faces = parsed;
-        } catch (e) {}
-        const safe = (f) => encodeURIComponent(f);
-        // Preload via the FontFace API so it's available immediately
-        try {
-            await Promise.all(faces.map(async (f) => {
-                const face = new FontFace('CustomUserFont', `url(/s/fonts/${safe(f.file)})`, { weight: String(f.weight) });
-                await face.load();
-                document.fonts.add(face);
-            }));
-        } catch (e) {
-            console.warn('[font] FontFace preload failed, continuing anyway:', e);
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.id = 'user-font-css';
+            document.head.appendChild(link);
         }
-        // Inject/update the same style rules that header.html uses
-        if (!style) {
-            style = document.createElement('style');
-            style.id = 'live-font-style';
-            document.head.appendChild(style);
+        link.href = href;
+        fontRoot.classList.remove('header-font-site');
+        if (fontClass) fontRoot.classList.add(fontClass);
+    };
+
+    const putSetting = async (path, body) => {
+        try {
+            const res = await fetch('/api/v2/settings/' + path, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': window.f0ckSession?.csrf_token
+                },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.msg || 'Error saving font preference');
+                return null;
+            }
+            return data;
+        } catch (err) {
+            console.error(err);
+            alert('Failed to save font preference');
+            return null;
         }
-        style.textContent = faces.map(f =>
-            `@font-face { font-family: 'CustomUserFont'; src: url('/s/fonts/${safe(f.file)}'); font-weight: ${Number(f.weight) || 400}; }`
-        ).join('\n') + `
-          :root { --font: 'CustomUserFont', monospace !important; }
-          *:not(canvas):not(.meme-title):not(.force-impact):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not([class*=" fa-"]):not([class^="fa-"]) {
-            font-family: 'CustomUserFont', monospace !important;
-          }
-          .fa-solid::before, .fa-regular::before, .fa-brands::before,
-          .fas::before, .far::before, .fab::before, .fa::before {
-            font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
-          }
-        `;
+    };
+
+    const saveFont = async () => {
+        const font = fontSelect ? fontSelect.value : '';
+        const weight = font && weightSelect && !weightSelect.hidden ? Number(weightSelect.value) || null : null;
+        const data = await putSetting('font', { font, weight });
+        if (!data) return;
+        applyFontLive(data.css || '');
+        if (window.flashMessage) {
+            window.flashMessage('Website font updated!', 2500, 'success');
+        }
     };
 
     if (fontSelect) {
-        fontSelect.addEventListener('change', async () => {
-            const font = fontSelect.value;
-            try {
-                const res = await fetch('/api/v2/settings/font', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': window.f0ckSession?.csrf_token
-                    },
-                    body: JSON.stringify({ font })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    await applyFontLive(font);
-                    if (window.flashMessage) {
-                        window.flashMessage('Website font updated!', 2500, 'success');
-                    }
-                } else {
-                    alert(data.msg || 'Error saving font preference');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Failed to save font preference');
+        fontSelect.addEventListener('change', () => {
+            fillWeights(weightSelect ? weightSelect.value : '');
+            saveFont();
+        });
+    }
+    if (weightSelect) {
+        weightSelect.addEventListener('change', saveFont);
+    }
+    if (sizeSelect) {
+        sizeSelect.addEventListener('change', async () => {
+            const data = await putSetting('font_size', { size: Number(sizeSelect.value) || null });
+            if (!data) return;
+            Array.from(fontRoot.classList).filter((c) => c.startsWith('user-fs-')).forEach((c) => fontRoot.classList.remove(c));
+            if (data.size) fontRoot.classList.add('user-fs-' + data.size);
+            if (window.flashMessage) {
+                window.flashMessage('Text size updated!', 2500, 'success');
             }
         });
     }
