@@ -7220,12 +7220,11 @@ body.layout-modern.sidebar-right-hidden .pagination-container-fluid {
 .bottom-pagination.fixed-pagination {
   margin: 10px auto;
   pointer-events: auto;
-  background: rgba(15, 15, 15, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 2px;
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border-color);
+  border-radius: 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  padding: 0;
   max-width: fit-content;
 }
 
@@ -13471,6 +13470,58 @@ html[theme="orange"] .image-brand {
 
 .pagination>a {
   background: #232323b2;
+}
+
+/* Pagination buttons (snippets/pagination.html), style guide: square, flat, theme colours, the
+   current page filled with the accent. Beats the older theme rules above (several of them reach
+   every theme through a selector-list slip); the Win95 themes keep their bevelled buttons.
+   No display here: the narrow-screen rule hides some of the links with display: none. */
+html:not([theme="95"]):not([theme="f0ck95"]):not([theme="f0ck95d"]) nav.pagination {
+  gap: 4px;
+  padding: 4px;
+}
+
+html:not([theme="95"]):not([theme="f0ck95"]):not([theme="f0ck95d"]) nav.pagination > :is(a, span) {
+  box-sizing: border-box;
+  min-width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0 0.6rem;
+  border: 1px solid var(--nav-border-color);
+  border-radius: 0;
+  background: var(--navigation-links-bg);
+  box-shadow: none;
+  text-shadow: none;
+  color: var(--white);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: calc(2rem - 2px);
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+html:not([theme="95"]):not([theme="f0ck95"]):not([theme="f0ck95d"]) nav.pagination > span {
+  display: inline-block;
+}
+
+html:not([theme="95"]):not([theme="f0ck95"]):not([theme="f0ck95d"]) nav.pagination > a:hover {
+  background: var(--nav-link-hover-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* the current page */
+html:not([theme="95"]):not([theme="f0ck95"]):not([theme="f0ck95d"]) nav.pagination > span {
+  background: var(--accent);
+  border-color: var(--accent) !important;
+  color: var(--black);
+}
+
+/* first / previous on page 1, next / last on the last page */
+html:not([theme="95"]):not([theme="f0ck95"]):not([theme="f0ck95d"]) nav.pagination > a.disabled {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 html[theme="paper"] .pagination {
