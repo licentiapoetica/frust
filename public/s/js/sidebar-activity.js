@@ -1607,9 +1607,58 @@
     let isReCenteringFeed = false;
     let lastAttemptedTagCenterKey = null;
 
-    // instant: jump to the card without the smooth scroll (used right after the list was swapped)
-    const highlightActiveTagCard = (scrollIntoView = false, instant = false) => {
-        const identifiers = getCurrentItemIdentifiers();
+    // ── Eased scrolling of the tag feed ──
+    // One rAF glide with a fixed-feel duration. A long way (or a freshly swapped list) first cuts to
+    // half a sidebar short of the target, under a quick fade, and glides the rest: no slow crawl
+    // through the whole list, and no thumbnail loads for every card passed on the way.
+    let tagGlide = null; // { target, raf }
+    const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+    const glideTagFeed = (container, target, cut = false) => {
+        const max = Math.max(0, container.scrollHeight - container.clientHeight);
+        target = Math.max(0, Math.min(Math.round(target), max));
+        // already heading there (the click-time and the after-load pass ask for the same card)
+        if (tagGlide && Math.abs(tagGlide.target - target) < 2) return;
+        if (tagGlide) cancelAnimationFrame(tagGlide.raf);
+        tagGlide = null;
+        let from = container.scrollTop;
+        if (Math.abs(target - from) < 2) return;
+        if (reduceMotion.matches) {
+            container.scrollTop = target;
+            return;
+        }
+        const lead = container.clientHeight * 0.5;
+        if (cut || Math.abs(target - from) > container.clientHeight * 1.5) {
+            const dir = cut ? -1 : Math.sign(target - from);
+            from = target - dir * lead;
+            if (from < 0 || from > max) from = target + dir * lead;
+            from = Math.max(0, Math.min(from, max));
+            container.scrollTop = from;
+            const items = container.querySelector('.sidebar-tag-items-container');
+            if (items) {
+                items.classList.remove('tag-feed-cut');
+                void items.offsetWidth; // restart the fade
+                items.classList.add('tag-feed-cut');
+            }
+        }
+        const dist = target - from;
+        const duration = Math.min(420, 200 + Math.abs(dist) * 0.2);
+        // clock starts at the first frame: rAF timestamps are frame start times and can lie before a
+        // performance.now() taken here, and a negative t would ease the wrong way
+        let t0 = null;
+        const step = (now) => {
+            if (t0 === null) t0 = now;
+            const t = Math.max(0, Math.min(1, (now - t0) / duration));
+            container.scrollTop = from + dist * (1 - Math.pow(1 - t, 3)); // ease-out cubic
+            if (t < 1) tagGlide.raf = requestAnimationFrame(step);
+            else tagGlide = null;
+        };
+        tagGlide = { target, raf: requestAnimationFrame(step) };
+    };
+
+    // cut: the list was just swapped, so glide in from close by instead of from the old position.
+    // ids: the item to mark (default: the one on the page) — random passes the next item at click time.
+    const highlightActiveTagCard = (scrollIntoView = false, cut = false, ids = null) => {
+        const identifiers = ids || getCurrentItemIdentifiers();
         const container = document.getElementById('sidebar-tag-container');
         if (!container) return;
 
@@ -1640,16 +1689,10 @@
             const isTagTabActive = document.querySelector('.sidebar-tab.active')?.dataset.tab === 'tag' &&
                                   container.style.display !== 'none';
             if (isTagTabActive) {
-                try {
-                    const containerRect = container.getBoundingClientRect();
-                    const cardRect = matchedCard.getBoundingClientRect();
-                    const targetScrollTop = container.scrollTop + (cardRect.top - containerRect.top) - (container.clientHeight / 2) + (cardRect.height / 2);
-                    // long jumps (e.g. random) land at once; short moves (next/prev) glide
-                    const far = Math.abs(targetScrollTop - container.scrollTop) > container.clientHeight;
-                    container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: (instant || far) ? 'instant' : 'smooth' });
-                } catch (_) {
-                    matchedCard.scrollIntoView({ behavior: instant ? 'instant' : 'smooth', block: 'center' });
-                }
+                const containerRect = container.getBoundingClientRect();
+                const cardRect = matchedCard.getBoundingClientRect();
+                const targetScrollTop = container.scrollTop + (cardRect.top - containerRect.top) - (container.clientHeight / 2) + (cardRect.height / 2);
+                glideTagFeed(container, targetScrollTop, cut);
             }
         } else if (!matchedCard && identifiers.length > 0 && currentTag && !isReCenteringFeed && !tagFeedLoading) {
             // Active item belongs to current tag context but is not in currently rendered slice
@@ -1660,7 +1703,7 @@
             }
             lastAttemptedTagCenterKey = centerKey;
             isReCenteringFeed = true;
-            loadTagFeed(true, identifiers[0], { quiet: true }).finally(() => {
+            loadTagFeed(true, identifiers[0], { quiet: true, ids }).finally(() => {
                 isReCenteringFeed = false;
             });
         }
@@ -1724,7 +1767,7 @@
 
     // Short-lived cache of focused tag-feed slices (url → Promise<data>), filled ahead by
     // prefetchTagFeedFocus so jumping to a random item re-centers the feed without waiting
-    const TAG_FEED_CACHE_TTL_MS = 60 * 1000;
+    const TAG_FEED_CACHE_TTL_MS = 10 * 60 * 1000;
     const tagFeedCache = new Map();
     const fetchTagFeedData = (url) => {
         const hit = tagFeedCache.get(url);
@@ -1743,17 +1786,33 @@
         if (!tag || !key) return;
         const url = tagFeedUrl(tag, 0, key);
         fetchTagFeedData(url).then(data => {
-            const v = (data?.items || []).find(i => String(i.id) === String(key) || String(i.slug || '') === String(key));
+            const items = data?.items || [];
+            const idx = items.findIndex(i => String(i.id) === String(key) || String(i.slug || '') === String(key));
             const entry = tagFeedCache.get(url);
-            if (!v || !entry) return;
+            if (idx < 0 || !entry) return;
+            const v = items[idx];
             for (const alias of [v.id, v.slug]) {
                 if (alias && String(alias) !== String(key)) tagFeedCache.set(tagFeedUrl(tag, 0, alias), entry);
             }
+            // thumbnails of the cards that will be on screen around it, so they don't pop in after the jump
+            const tpl = document.createElement('template');
+            tpl.innerHTML = items.slice(Math.max(0, idx - 4), idx + 5).map(i => renderVideoCard(i, { isTagFeed: true, tag })).join('');
+            tpl.content.querySelectorAll('img.sidebar-video-thumb').forEach(img => {
+                const src = img.getAttribute('src');
+                if (src) new Image().src = src;
+            });
         }).catch(() => {});
     };
 
+    // Random knows its next item at click time: mark it and start the glide while the item still loads
+    window.sidebarFocusTagItem = (ids) => {
+        if (!currentTag || !ids || !ids.length) return;
+        if (document.querySelector('.sidebar-tab.active')?.dataset.tab !== 'tag') return;
+        highlightActiveTagCard(true, false, ids.map(String));
+    };
+
     // quiet: keep the current cards until the new ones are in (no loading state), then jump to the active one
-    const loadTagFeed = async (reset = false, focusId = null, { quiet = false } = {}) => {
+    const loadTagFeed = async (reset = false, focusId = null, { quiet = false, ids = null } = {}) => {
         const container = document.getElementById('sidebar-tag-container');
         const itemsContainer = container?.querySelector('.sidebar-tag-items-container');
         if (!container || !itemsContainer || tagFeedLoading) return;
@@ -1803,7 +1862,7 @@
 
             if (data.success && items.length > 0) {
                 tagFeedLoaded = true;
-                const identifiers = getCurrentItemIdentifiers();
+                const identifiers = ids || getCurrentItemIdentifiers();
 
                 let html = '';
                 items.forEach(v => {
@@ -1818,7 +1877,7 @@
 
                 if (reset && quiet) {
                     itemsContainer.innerHTML = html;
-                    highlightActiveTagCard(true, true);
+                    highlightActiveTagCard(true, true, ids);
                 } else if (reset) {
                     itemsContainer.innerHTML = html;
                     setTimeout(() => highlightActiveTagCard(true), 60);
@@ -2581,12 +2640,8 @@
     const handleRandomAction = () => {
         // If pool-based random is active, the context hasn't changed — skip reload
         if (window._randomPool && window._randomPool.items && window._randomPool.items.length > 1) {
-            // Context is stable (same tag/hall/user) — just highlight the new item in tag feed
-            const tag = getCurrentTag();
-            if (tag && !userManuallySelectedNonTagTab) {
-                // Refresh highlight in tag feed without re-fetching
-                setTimeout(() => highlightActiveTagCard(true), 100);
-            }
+            // Context is stable (same tag/hall/user): f0ckm.js focuses the picked item in the tag feed
+            // (sidebarFocusTagItem) — highlighting here would still see the old item
             return;
         }
         // Fallback: server-side random may change context, so reload

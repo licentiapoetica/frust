@@ -13777,6 +13777,12 @@ window.cancelAnimFrame = (function () {
           // Build URL preserving context
           const targetUrl = randomTargetUrl(pick);
 
+          // Tag feed in the sidebar: start moving to the picked item now, during the fade-out
+          if (window.sidebarFocusTagItem) {
+            const entry = itemCacheMap.get(buildItemRequest(targetUrl, true, {}).ajaxUrl);
+            window.sidebarFocusTagItem([entry?.numericId, pick].filter(Boolean));
+          }
+
           loadItemAjax(targetUrl, true, { transition: 'fade-zoom' });
 
           // Background grid sync: pass targetUrl and null so actual page is looked up and synced

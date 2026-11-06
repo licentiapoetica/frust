@@ -3145,6 +3145,16 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
 }
 
 /* Recommendation Video Cards (YouTube-style) */
+/* Tag feed: a long jump cuts close to the target card and glides the rest; the list fades back in over the cut */
+.sidebar-tag-items-container.tag-feed-cut {
+  animation: tagFeedCut 0.22s ease-out;
+}
+
+@keyframes tagFeedCut {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+
 .sidebar-video-card {
   margin-bottom: 5px;
   padding: 2px 2px 2px 2px;
