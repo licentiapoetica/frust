@@ -2011,6 +2011,11 @@ html[data-w0bm-theme="Glitch"] .navbar .dropdown-menu {
     padding-bottom: 0;
     line-height: 32px;
 }
+/* Page headers with only the title (halls, a user's tags): the index's and the tag list's search
+   box ends 4px below their h3#index, so the line under the header sits that much lower there */
+.page-header > h3#index:only-child {
+    margin-bottom: 4px;
+}
 /* The main page's header row (pagination + search box, no title) as high as the index's and the
    tag list's (title + search box): there the 28px h3#index (line-height 1.1; its 20px top margin
    collapses into .page-header's own) sets the height and the search box, pulled 30px up, ends

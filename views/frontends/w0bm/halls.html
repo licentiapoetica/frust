@@ -6,7 +6,8 @@
 {% block title %}Halls - {{ domain }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h3>Halls</h3>
+    {#- id="index": the heading size and spacing of index / search / tags (w0bmcustom.css h3#index) -#}
+    <h3 id="index">Halls</h3>
 </div>
 <div class="extraction_point w0bm-hallgrid" id="categories">
     {% for hall in hallsList %}
