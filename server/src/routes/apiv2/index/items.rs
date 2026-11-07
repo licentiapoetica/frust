@@ -129,6 +129,7 @@ pub(super) async fn delete_post(st: AppState, mut req: Req) -> Res {
         return j(json!({ "success": false, "msg": format!("f0ck {}: f0ck not found", crate::util::js_num(n)) }), 200);
     };
     sql!(r#"update "items" set active = 'false', is_deleted = true where id = "#, id).execute(&st.db).await?;
+    crate::routes::reports::resolve_for_deleted_items(&st, vec![id], Some(session.id as i32)).await;
     let dest = f0ck.string("dest");
     // keeps reposts that symlink to the file working (the old code just copied and unlinked)
     mdel::move_to_deleted(&st, &dest, id as i64).await;
@@ -228,6 +229,7 @@ pub(super) async fn delete_album_item(st: AppState, mut req: Req) -> Res {
         let _ = sql!("DELETE FROM album_items_tags_assign WHERE album_item_id = ", tid).execute(&st.db).await;
         let _ = sql!("DELETE FROM album_items WHERE id = ", tid).execute(&st.db).await;
         sql!("UPDATE items SET active = false, is_deleted = true WHERE id = ", postid).execute(&st.db).await?;
+        crate::routes::reports::resolve_for_deleted_items(&st, vec![postid], Some(session.id as i32)).await;
         audit_log(&st, session.id, "delete_item", "item", &postid.to_string(), Some(json!({ "filename": item.string("dest"), "reason": reason }))).await;
         notify(&st, "delete_item", &json!({ "id": postid })).await;
         return j(json!({ "success": true, "post_deleted": true, "msg": "Last album item removed, post deleted" }), 200);

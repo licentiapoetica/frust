@@ -575,9 +575,14 @@ async fn bulk_delete_items(st: AppState, mut req: Req) -> Res {
             names = Some((username.clone(), username.clone()));
         }
         let (login, user) = names.ok_or_else(|| anyhow::anyhow!("User not found"))?;
-        let count = sql!("UPDATE items SET is_deleted = true, active = false WHERE username ILIKE ", like(&login), " OR username ILIKE ", like(&user))
-            .execute(&st.db)
-            .await?;
+        let ids: Vec<i32> = sql!("UPDATE items SET is_deleted = true, active = false WHERE username ILIKE ", like(&login), " OR username ILIKE ", like(&user), " RETURNING id")
+            .fetch_all(&st.db)
+            .await?
+            .iter()
+            .filter_map(|r| r.i64("id").map(|i| i as i32))
+            .collect();
+        let count = ids.len() as u64;
+        crate::routes::reports::resolve_for_deleted_items(&st, ids, Some(sid(&req) as i32)).await;
         crate::audit::log(&st, sid(&req), "admin_bulk_delete_items", "user", uid.map(|i| i.to_string()), json!({ "target_login": login, "count": count })).await;
         Ok(json!({ "success": true, "count": count, "msg": format!("Successfully marked {count} items as deleted.") }))
     }

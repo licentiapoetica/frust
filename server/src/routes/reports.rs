@@ -211,6 +211,32 @@ async fn list(st: AppState, req: Req) -> Res {
     }
 }
 
+/// Deleting an item is action taken on its reports: mark the pending ones `resolved` (by `by`,
+/// when a site user did it) and their notifications read. Errors are logged, never returned —
+/// the delete itself already succeeded.
+pub async fn resolve_for_deleted_items(st: &AppState, ids: Vec<i32>, by: Option<i32>) {
+    if ids.is_empty() {
+        return;
+    }
+    let by = by.filter(|b| *b > 0); // no session → no resolver (0 would break the foreign key)
+    let r = async {
+        let resolved: Vec<i32> = sql!("UPDATE reports SET status = 'resolved', resolved_by = ", by, " WHERE status = 'pending' AND item_id = ANY(", ids, ") RETURNING id")
+            .fetch_all(&st.db)
+            .await?
+            .iter()
+            .filter_map(|r| r.i64("id").map(|i| i as i32))
+            .collect();
+        if !resolved.is_empty() {
+            sql!("UPDATE notifications SET is_read = true WHERE type = 'report' AND reference_id = ANY(", resolved, ")").execute(&st.db).await?;
+        }
+        anyhow::Ok(())
+    }
+    .await;
+    if let Err(e) = r {
+        tracing::error!("[REPORT] Failed to resolve reports of deleted items: {e:#}");
+    }
+}
+
 // ── POST /api/v2/mod/reports/:id/resolve ────────────────────────────────────
 
 async fn resolve(st: AppState, mut req: Req) -> Res {

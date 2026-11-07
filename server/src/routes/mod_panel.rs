@@ -591,6 +591,7 @@ async fn deny(st: AppState, mut req: Req) -> Res {
     crate::hidden_items::invalidate();
     update_private_index(&st, &item, id64, false);
     let _ = sql!("UPDATE notifications SET is_read = true WHERE type = 'admin_pending' AND item_id = ", id).execute(&st.db).await;
+    super::reports::resolve_for_deleted_items(&st, vec![id], Some(sid(&req) as i32)).await;
 
     let info = uploader_info(&st, &item.string("username")).await;
     if let Some(uid) = info.get("uploader_id").and_then(crate::config::as_int) {
@@ -647,6 +648,7 @@ async fn deny_multi(st: AppState, mut req: Req) -> Res {
             crate::hidden_items::invalidate();
             update_private_index(&st, &item, id64, false);
             let _ = sql!("UPDATE notifications SET is_read = true WHERE type = 'admin_pending' AND item_id = ", id).execute(&st.db).await;
+            super::reports::resolve_for_deleted_items(&st, vec![id], Some(sid(&req) as i32)).await;
             let info = uploader_info(&st, &item.string("username")).await;
             audit_log(&st, sid(&req), "deny_item_multi", "item", &id.to_string(), Some(details(json!({ "filename": item.val("dest") }), info))).await;
         }

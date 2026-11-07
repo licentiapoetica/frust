@@ -236,7 +236,13 @@ window.adminDeleteItem = function(id) {
         params.append('postid', id); params.append('reason', reason);
         var res = await fetch('/api/v2/admin/deletepost', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
         var data = await res.json();
-        if (data.success) { if (window.showFlash) window.showFlash('item deleted', 'success'); }
+        if (data.success) {
+            if (window.showFlash) window.showFlash('item deleted', 'success');
+            // The server resolved the item's pending reports: refresh the list and the badge
+            window.loadReports(window.currentPage);
+            if (window.NotificationSystemInstance && typeof window.NotificationSystemInstance.pollDebounced === 'function')
+                window.NotificationSystemInstance.pollDebounced();
+        }
         else throw new Error(data.msg || 'Unknown error');
     });
 };

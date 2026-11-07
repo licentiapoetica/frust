@@ -321,7 +321,7 @@ a.w0bm-iconbtn {
 /* "Log in to comment" / locked: apart from the message of the day above, the same width as the
    comment boxes under it (.comments' 2px side padding) */
 .panel.w0bm-locked {
-    margin: 6px 2px 5px;
+    margin: 2px 2px 5px;
 }
 .w0bm-media {
     background: #000;

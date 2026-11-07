@@ -119,6 +119,7 @@ async fn delete(rt: Arc<Runtime>, e: Message) -> Result<()> {
             continue;
         };
         sql!("UPDATE items SET active = false, is_deleted = true WHERE id = ", id).execute(&st.db).await?;
+        crate::routes::reports::resolve_for_deleted_items(st, vec![id], None).await;
         pipeline::move_to_deleted(st, &item.string("dest"), id as i64).await?;
         let thumb = format!("{id}.webp");
         pipeline::move_file(&cfg.paths.t.join(&thumb), &cfg.paths.deleted.join("t").join(&thumb)).await;
