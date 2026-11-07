@@ -846,8 +846,9 @@
   });
 
   // ── Rating mode (filter dialog, partials/filterselect.html) ──────────────────────────────
-  // Saved in the background (/mode/N as XHR), no reload: the page stays as it is and the next
-  // page loaded shows the new mode. Without JavaScript the links go through /mode/N?back=….
+  // Saved in the background (/mode/N as XHR) with a toast, never a full reload: a listing swaps in
+  // its new items, an item page updates ← prev / next →, any other page shows the new mode on the
+  // next page loaded. Without JavaScript the links go through /mode/N?back=….
   $('.w0bm-mode-group')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('a.btn[href^="/mode/"]');
     if (!btn || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -865,6 +866,13 @@
     prefetched.clear();
     $$('a.btn', btn.parentElement).forEach((b) => b.classList.toggle('active', b === btn));
     flash('success', btn.textContent.trim() + ' mode activated', 'w0bm-mode');
+    // a listing (front page, /tag/…, profiles) shows the new mode's items at once, swapped in
+    // like the media filter does; other pages pick it up on the next page loaded
+    if ($('.items')) {
+      closeModal($('#filterselectmodal'));
+      reloadPage();
+      return;
+    }
     // an item page's ← prev / next → lead through the new mode's items
     if ($('#prev') || $('#next')) {
       const page = await fetchPage(location.href).catch(() => null);
