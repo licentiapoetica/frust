@@ -845,6 +845,38 @@
     reloadPage();
   });
 
+  // ── Rating mode (filter dialog, partials/filterselect.html) ──────────────────────────────
+  // Saved in the background (/mode/N as XHR), no reload: the page stays as it is and the next
+  // page loaded shows the new mode. Without JavaScript the links go through /mode/N?back=….
+  $('.w0bm-mode-group')?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('a.btn[href^="/mode/"]');
+    if (!btn || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    const m = /^\/mode\/(\d)/.exec(btn.getAttribute('href'));
+    if (!m || btn.classList.contains('active')) return;
+    const r = await api('/mode/' + m[1], { method: 'GET' });
+    if (!r.ok) { flash('error', r.msg || 'Could not change the mode'); return; }
+    const mode = Number(r.data?.mode ?? m[1]);
+    // the listings filter by a `ratings` cookie before the mode (the server drops it for the plain link)
+    document.cookie = 'ratings=; path=/; max-age=0; SameSite=Lax';
+    DATA.mode = mode;
+    if (window.f0ckSession) window.f0ckSession.mode = mode;
+    // pages loaded ahead still show the old mode
+    prefetched.clear();
+    $$('a.btn', btn.parentElement).forEach((b) => b.classList.toggle('active', b === btn));
+    flash('success', btn.textContent.trim() + ' mode activated', 'w0bm-mode');
+    // an item page's ← prev / next → lead through the new mode's items
+    if ($('#prev') || $('#next')) {
+      const page = await fetchPage(location.href).catch(() => null);
+      const doc = page && new DOMParser().parseFromString(page.html, 'text/html');
+      if (!doc || Number((readJSON('w0bm-data', doc) || {}).mode ?? mode) !== DATA.mode) return;
+      ['prev', 'next'].forEach((id) => {
+        const cur = document.getElementById(id), fresh = doc.getElementById(id);
+        if (cur && fresh) cur.replaceWith(document.importNode(fresh, true));
+      });
+    }
+  });
+
   // ── Generic JSON forms (report …) ─────────────────────────────────────────────────────
   // Report a comment: the item's report modal (partials/report.html, f0ckm's reasons and the
   // captcha), sending comment_id instead of item_id while it is open for the comment
