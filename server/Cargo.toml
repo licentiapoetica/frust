@@ -77,6 +77,6 @@ p256 = { version = "0.14", features = ["ecdsa", "pkcs8"] }
 ciborium = "0.2"
 httpdate = "1"
 webauthn-rs = { version = "0.5", features = ["conditional-ui", "danger-allow-state-serialisation"] }
-argon2 = "0.5"
+argon2 = "0.6"
 unicode-normalization = "0.1"
 multer = "3"
