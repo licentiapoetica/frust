@@ -318,6 +318,10 @@ a.w0bm-iconbtn {
     color: #1fb2b0;
     text-decoration: none;
 }
+/* guest heart (links to the login modal): same box as the logged-in fav button */
+a.w0bm-favbtn {
+    text-decoration: none;
+}
 .w0bm-favbtn:hover,
 .w0bm-iconbtn:hover,
 .w0bm-favbtn:focus,

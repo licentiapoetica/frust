@@ -98,7 +98,7 @@
                         <button id="fav" type="submit" class="w0bm-favbtn" aria-label="Favorite" data-faved="{{ ("1" if user_has_favorited else "0") }}"><i class="fa {{ ("fa-heart" if user_has_favorited else "fa-heart-o") }} w0bm-pink"></i></button>
                     </form>
                 {% else %}
-                    <a href="#login-modal" data-toggle="modal" data-target="#login-modal" aria-label="Login to favorite"><i class="fa fa-heart-o"></i></a>
+                    <a href="#login-modal" class="w0bm-favbtn" data-toggle="modal" data-target="#login-modal" aria-label="Login to favorite"><i class="fa fa-heart-o w0bm-pink"></i></a>
                 {% endif %}
                 </div>
                 <span id="uploader">{% if not is_anonymized %}contributed by <a class="w0bm-white{% if item.author_color %} w0bm-usercolor{% endif %}" href="/user/{{ (item.username or "")|lower }}"{% if item.author_color %} style="--user-color: {{ item.author_color }}"{% endif %}>{{ (item.author_display_name or item.username) }}</a>{% endif %}</span>
