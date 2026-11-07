@@ -1324,6 +1324,7 @@
         case 80: cycleRating(); break; // p
         case 73: if (openTagInput()) e.preventDefault(); break; // i (no "i" typed into the field)
         case 67: if (typeof toggleComments === 'function') toggleComments(); break; // c
+        case 89: if (!e.repeat) $('.copylink[data-clipboard-text]')?.click(); break; // y: copy the item URL
         case 88: if ($('#w0bm-delmodal')) { e.preventDefault(); openModal($('#w0bm-delmodal')); } break; // x (mods: delete)
         case 87: case 38: if (player) { e.preventDefault(); player.volume(player.volume() + 0.1); } else if (flashPlayer && window.w0bmFlashVolume) { e.preventDefault(); window.w0bmFlashVolume(flashPlayer.volume + 0.1); } break; // w ↑
         case 83: case 40: if (player) { e.preventDefault(); player.volume(player.volume() - 0.1); } else if (flashPlayer && window.w0bmFlashVolume) { e.preventDefault(); window.w0bmFlashVolume(flashPlayer.volume - 0.1); } break; // s ↓
