@@ -929,11 +929,13 @@ async fn mode(st: AppState, req: Req) -> Res {
     let cfg = st.cfg();
     let mode: i64 = req.path.strip_prefix("/mode/").and_then(|r| r.chars().next()).and_then(|c| c.to_digit(10)).map(i64::from).unwrap_or(0);
     let session = req.session();
+    // plain links (w0bm, no JavaScript) come back to the page they were clicked on
+    let back = req.query("back").and_then(crate::nojs::safe_back).unwrap_or_else(|| "/".to_string());
     let forbidden = |msg: &str| -> Response {
         if req.is_xhr() {
             reply(403, "application/json", json!({ "success": false, "msg": msg }).to_string())
         } else {
-            redirect("/")
+            redirect(&back)
         }
     };
     if session.map(|s| s.user.is_empty()).unwrap_or(true) {
@@ -968,11 +970,20 @@ async fn mode(st: AppState, req: Req) -> Res {
     } else {
         let mut r = raw(302, "");
         r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store, no-cache, must-revalidate, proxy-revalidate"));
-        r.headers_mut().insert(header::LOCATION, HeaderValue::from_static("/"));
+        if let Ok(v) = HeaderValue::from_str(&back) {
+            r.headers_mut().insert(header::LOCATION, v);
+        }
+        // The listings filter by the `ratings` cookie before the mode (f0ckm.js keeps it in step
+        // with its rating buttons; guests get `sfw`). A plain mode link has no such buttons, so a
+        // left-over `ratings=sfw` would keep showing SFW whatever mode was picked: drop it.
+        let clear = format!("ratings=; {}; Max-Age=0", cookie_options(&cfg, CookieExpiry::None, false));
+        if let Ok(v) = HeaderValue::from_str(&clear) {
+            r.headers_mut().append(header::SET_COOKIE, v);
+        }
         r
     };
     if let Ok(v) = HeaderValue::from_str(&cookie) {
-        r.headers_mut().insert(header::SET_COOKIE, v);
+        r.headers_mut().append(header::SET_COOKIE, v);
     }
     Ok(r)
 }

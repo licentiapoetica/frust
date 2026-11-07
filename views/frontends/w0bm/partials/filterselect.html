@@ -49,21 +49,22 @@
                     {% if not _mimeLocked %}<button type="submit" class="btn btn-primary w0bm-nojs-only">Apply</button>{% endif %}
                 </form>
                 {% endif %}
+                {%- set _modeBack = (((url.pathname ~ url.search) if url else "/")|encode_uri_component) %}
                 <div class="w0bm-modes">
                     <h5>Mode</h5>
                     <div class="btn-group w0bm-mode-group" role="group">
-                        <a class="btn btn-primary{% if mode == 0 %} active{% endif %}" href="/mode/0">SFW</a>
+                        <a class="btn btn-primary{% if mode == 0 %} active{% endif %}" href="/mode/0?back={{ _modeBack }}">SFW</a>
                         {% if (not session.is_anon or not anon_permissions or not anon_permissions.allowed_modes or "nsfw" in anon_permissions.allowed_modes) %}
-                        <a class="btn btn-primary{% if mode == 1 %} active{% endif %}" href="/mode/1">NSFW</a>
+                        <a class="btn btn-primary{% if mode == 1 %} active{% endif %}" href="/mode/1?back={{ _modeBack }}">NSFW</a>
                         {% endif %}
                         {% if (enable_nsfl and (not session.is_anon or not anon_permissions or not anon_permissions.allowed_modes or "nsfl" in anon_permissions.allowed_modes)) %}
-                        <a class="btn btn-primary{% if mode == 4 %} active{% endif %}" href="/mode/4">NSFL</a>
+                        <a class="btn btn-primary{% if mode == 4 %} active{% endif %}" href="/mode/4?back={{ _modeBack }}">NSFL</a>
                         {% endif %}
                         {% if (session.admin or session.is_moderator) %}
-                        <a class="btn btn-primary{% if mode == 2 %} active{% endif %}" href="/mode/2">Untagged</a>
+                        <a class="btn btn-primary{% if mode == 2 %} active{% endif %}" href="/mode/2?back={{ _modeBack }}">Untagged</a>
                         {% endif %}
                         {% if (not session.is_anon or not anon_permissions or not anon_permissions.allowed_modes or "all" in anon_permissions.allowed_modes) %}
-                        <a class="btn btn-primary{% if mode == 3 %} active{% endif %}" href="/mode/3">All</a>
+                        <a class="btn btn-primary{% if mode == 3 %} active{% endif %}" href="/mode/3?back={{ _modeBack }}">All</a>
                         {% endif %}
                     </div>
                 </div>
