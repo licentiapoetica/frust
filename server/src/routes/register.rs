@@ -249,16 +249,27 @@ const AUTH_ERRORS: &[(&str, &str)] = &[
     ("captcha_needed", "Too many failed logins, please complete the captcha."),
     ("captcha_missing", "Please complete the captcha."),
     ("captcha_invalid", "Captcha expired or invalid. Please try again."),
+    // password reset (`?forgot_error=` / `?reset_error=`)
+    ("email_missing", "Email is required"),
+    ("reset_limited", "Too many attempts. Please try again later."),
+    ("reset_daily", "Only one reset request per 24 hours is allowed for this account."),
+    ("reset_missing", "Missing data"),
+    ("reset_mismatch", "Passwords do not match"),
+    ("reset_short", "Password must be at least 20 characters long"),
+    ("reset_locked", "Too many reset attempts. Please try again later."),
+    ("reset_token", "Invalid or expired reset token."),
 ];
 
 /// `?login_done=` / `?register_done=`
 const AUTH_DONE: &[(&str, &str)] = &[
     ("registered", "Registration successful! You can now login."),
     ("activate", "Registration successful! Please check your email to activate your account."),
+    ("reset_sent", "If an account with that email exists, we have sent a reset link."),
+    ("pw_reset", "Password reset successfully! You can now login with your new password."),
 ];
 
 /// Query keys of the modal messages, so `return_to` drops the ones of an earlier try
-const AUTH_QUERY_KEYS: [&str; 4] = ["login_error", "login_done", "register_error", "register_done"];
+const AUTH_QUERY_KEYS: [&str; 7] = ["login_error", "login_done", "register_error", "register_done", "forgot_error", "forgot_done", "reset_error"];
 /// `?login_captcha=1`: the login modal shows the image captcha (cap_image.rs)
 const LOGIN_CAPTCHA_KEY: &str = "login_captcha";
 
@@ -311,8 +322,9 @@ async fn logout(st: AppState, req: Req) -> Res {
 
 // ── Password reset ──────────────────────────────────────────────────────────
 
+/// The forgot-password form is a modal (w0bm: `#forgot-modal`; f0ckm: a view of its login modal)
 async fn forgot_password_page(_st: AppState, _req: Req) -> Res {
-    Ok(redirect("/"))
+    Ok(redirect("/#forgot-modal"))
 }
 
 async fn forgot_password(st: AppState, mut req: Req) -> Res {
@@ -320,7 +332,15 @@ async fn forgot_password(st: AppState, mut req: Req) -> Res {
     let ip = req.real_ip();
     let ajax = is_ajax(&req);
     let email = req.post_str("email").await.filter(|e| !e.is_empty());
-    let page = |code: u16, key: &str, msg: &str| html_code(crate::tpl::render(&st, None, "forgot-password", json!({ key: msg })), code);
+    // A modal's plain form post (w0bm without JavaScript): back to that page with the modal open
+    let return_to = if ajax { None } else { req.post_str("return_to").await.and_then(|p| modal_return_path(&p)) };
+    let page = |code: u16, key: &str, msg: &str| {
+        let (qkey, table) = if key == "success" { ("forgot_done", AUTH_DONE) } else { ("forgot_error", AUTH_ERRORS) };
+        if let (Some(path), Some(c)) = (return_to.as_deref(), auth_code(table, msg)) {
+            return back_to_modal(path, qkey, c, "forgot-modal");
+        }
+        html_code(crate::tpl::render(&st, None, "forgot-password", json!({ key: msg })), code)
+    };
 
     let Some(email) = email else {
         let msg = "Email is required";
@@ -383,25 +403,48 @@ async fn reset_password(st: AppState, mut req: Req) -> Res {
     let token = req.post_str("token").await.filter(|v| !v.is_empty());
     let password = req.post_str("password").await.filter(|v| !v.is_empty());
     let confirm = req.post_str("password_confirm").await.filter(|v| !v.is_empty());
+    // A modal's plain form post (w0bm without JavaScript): back to that page with the reset modal
+    // open (the token goes back into the URL, only if it is a token at all), or the forgot modal
+    // when the token is no good
+    let return_to = if ajax { None } else { req.post_str("return_to").await.and_then(|p| modal_return_path(&p)) };
+    let to_reset_modal = |token: &str, msg: &str| {
+        let (path, code) = (return_to.as_deref()?, auth_code(AUTH_ERRORS, msg)?);
+        let tok = if !token.is_empty() && token.chars().all(|c| c.is_ascii_hexdigit()) { token } else { "" };
+        let sep = if path.contains('?') { '&' } else { '?' };
+        Some(back_to_modal(&format!("{path}{sep}token={tok}"), "reset_error", code, "reset-modal"))
+    };
     let page = |view: &str, data: Value| html(crate::tpl::render(&st, None, view, data));
 
+    let token_raw = token.clone();
     let (Some(token), Some(password), Some(confirm)) = (token, password, confirm) else {
-        return Ok(if ajax { json_msg(false, "Missing data", 400) } else { redirect("/login") });
+        let msg = "Missing data";
+        if ajax {
+            return Ok(json_msg(false, msg, 400));
+        }
+        return Ok(to_reset_modal(token_raw.as_deref().unwrap_or(""), msg).unwrap_or_else(|| redirect("/login")));
     };
     if password != confirm {
         let msg = "Passwords do not match";
-        return Ok(if ajax { json_msg(false, msg, 200) } else { page("reset-password", json!({ "token": token, "error": msg })) });
+        return Ok(if ajax {
+            json_msg(false, msg, 200)
+        } else {
+            to_reset_modal(&token, msg).unwrap_or_else(|| page("reset-password", json!({ "token": token, "error": msg })))
+        });
     }
     if password.encode_utf16().count() < 20 {
         let msg = "Password must be at least 20 characters long";
-        return Ok(if ajax { json_msg(false, msg, 200) } else { page("reset-password", json!({ "token": token, "error": msg })) });
+        return Ok(if ajax {
+            json_msg(false, msg, 200)
+        } else {
+            to_reset_modal(&token, msg).unwrap_or_else(|| page("reset-password", json!({ "token": token, "error": msg })))
+        });
     }
     if crate::security::is_rate_limited(&st, &ip, None, "password_reset_execution").await {
         let msg = "Too many reset attempts. Please try again later.";
         return Ok(if ajax {
             json_msg(false, msg, 429)
         } else {
-            html_code(crate::tpl::render(&st, None, "forgot-password", json!({ "error": msg })), 429)
+            to_reset_modal(&token, msg).unwrap_or_else(|| html_code(crate::tpl::render(&st, None, "forgot-password", json!({ "error": msg })), 429))
         });
     }
 
@@ -410,6 +453,10 @@ async fn reset_password(st: AppState, mut req: Req) -> Res {
         .await?;
     let Some(user) = user else {
         let msg = "Invalid or expired reset token.";
+        // without JavaScript from a modal: the forgot modal, to ask for a new link
+        if let (false, Some(path), Some(code)) = (ajax, return_to.as_deref(), auth_code(AUTH_ERRORS, msg)) {
+            return Ok(back_to_modal(path, "forgot_error", code, "forgot-modal"));
+        }
         return Ok(if ajax { json_msg(false, msg, 200) } else { page("forgot-password", json!({ "error": msg })) });
     };
     let user_id = user.i64("id").unwrap_or(0);
@@ -420,6 +467,9 @@ async fn reset_password(st: AppState, mut req: Req) -> Res {
     crate::security::record_attempt(&st, &ip, user.str("login"), "password_reset_execution", true).await;
 
     let msg = "Password reset successfully! You can now login with your new password.";
+    if let (false, Some(path), Some(code)) = (ajax, return_to.as_deref(), auth_code(AUTH_DONE, msg)) {
+        return Ok(back_to_modal(path, "login_done", code, "login-modal"));
+    }
     Ok(if ajax { json_msg(true, msg, 200) } else { page("reset-password", json!({ "success": msg })) })
 }
 
@@ -717,5 +767,22 @@ mod modal_return_tests {
         assert_eq!(auth_message("login_error", "registered"), None);
         assert_eq!(auth_message("login_done", "wrong"), None);
         assert_eq!(auth_message("login_error", "<b>made up</b>"), None);
+    }
+
+    #[test]
+    fn password_reset_codes() {
+        assert_eq!(modal_return_path("/?forgot_error=email_missing&forgot_done=reset_sent&reset_error=reset_short").as_deref(), Some("/"));
+        assert_eq!(auth_code(AUTH_ERRORS, "Passwords do not match"), Some("reset_mismatch"));
+        assert_eq!(auth_code(AUTH_ERRORS, "Invalid or expired reset token."), Some("reset_token"));
+        assert_eq!(auth_message("forgot_done", "reset_sent"), Some("If an account with that email exists, we have sent a reset link."));
+        assert_eq!(auth_message("login_done", "pw_reset"), Some("Password reset successfully! You can now login with your new password."));
+        assert_eq!(auth_message("reset_error", "reset_short"), Some("Password must be at least 20 characters long"));
+        assert_eq!(auth_message("forgot_error", "reset_sent"), None);
+        // every message has its own code (auth_code finds the first)
+        for table in [AUTH_ERRORS, AUTH_DONE] {
+            for (i, (c, m)) in table.iter().enumerate() {
+                assert!(table[i + 1..].iter().all(|(c2, m2)| c2 != c && m2 != m), "{c} twice");
+            }
+        }
     }
 }

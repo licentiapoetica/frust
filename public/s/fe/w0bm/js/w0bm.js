@@ -156,9 +156,12 @@
     if (location.hash === '#' + m.id) history.replaceState(null, '', location.pathname + location.search);
     // /?login=1 opened the login modal: drop the parameter once it is closed
     // /?login=1 or a no-JS form answer (?login_error=…) opened it: drop those parameters
-    if (/[?&](login|login_error|login_done|login_captcha|register_error|register_done)=/.test(location.search)) {
+    // (and the password reset modals': ?forgot_error=… / ?reset_error=…, the mail link's ?token=…)
+    const resetLink = m.id === 'reset-modal' && /[?&]token=/.test(location.search);
+    if (resetLink || /[?&](login|login_error|login_done|login_captcha|register_error|register_done|forgot_error|forgot_done|reset_error)=/.test(location.search)) {
       const u = new URL(location.href);
-      ['login', 'login_error', 'login_done', 'login_captcha', 'register_error', 'register_done'].forEach((k) => u.searchParams.delete(k));
+      ['login', 'login_error', 'login_done', 'login_captcha', 'register_error', 'register_done', 'forgot_error', 'forgot_done', 'reset_error'].forEach((k) => u.searchParams.delete(k));
+      if (resetLink) u.searchParams.delete('token');
       history.replaceState(null, '', u.pathname + u.search + u.hash);
     }
   }
@@ -675,11 +678,58 @@
     if (r.data && r.data.redirect) { location.href = r.data.redirect; return; }
     if (r.data && r.data.captcha) showCap(f);
     if (err) {
+      err.classList.replace('alert-success', 'alert-danger'); // after a password reset it said "done"
       err.textContent = r.msg || 'Login failed';
       err.hidden = false;
     } else {
       flash('error', r.msg || 'Login failed');
     }
+  }));
+
+  // ── Password reset (partials/forgotmodal.html, resetmodal.html) ───────────────────────
+  // The answer shows in the modal; the alerts of a no-JS post (server-rendered) go first
+  function pwresetMsg(f, ok, text) {
+    $$('.alert:not(.w0bm-pwreset-msg)', f).forEach((a) => a.remove());
+    const box = f.querySelector('.w0bm-pwreset-msg');
+    box.textContent = text;
+    box.classList.toggle('alert-success', ok);
+    box.classList.toggle('alert-danger', !ok);
+    box.hidden = false;
+  }
+  $$('form.w0bm-forgotform').forEach((f) => f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    const r = await api('/forgot-password', { body: new FormData(f) });
+    btn.disabled = false;
+    pwresetMsg(f, r.ok, r.msg || (r.ok ? 'Check your email.' : 'Error sending link.'));
+    if (r.ok) f.reset();
+  }));
+  $$('form.w0bm-resetform').forEach((f) => f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (f.elements.password.value !== f.elements.password_confirm.value) {
+      pwresetMsg(f, false, 'Passwords do not match');
+      return;
+    }
+    const btn = f.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    const r = await api('/reset-password', { body: new FormData(f) });
+    btn.disabled = false;
+    if (!r.ok) {
+      pwresetMsg(f, false, r.msg || 'Error resetting password.');
+      return;
+    }
+    // Done (the token is used up): on to the login modal, with the message
+    f.reset();
+    const login = $('#login-modal');
+    const box = login && login.querySelector('.w0bm-login-error');
+    if (box) {
+      box.textContent = r.msg;
+      box.classList.replace('alert-danger', 'alert-success');
+      box.hidden = false;
+    }
+    closeModal(f.closest('.modal'));
+    if (login) openModal(login); else flash('success', r.msg);
   }));
 
   // ── Navbar badges (unread notifications / DMs) ────────────────────────────────────────

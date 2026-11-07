@@ -13,8 +13,11 @@
     {% if (login_captcha or captcha) %}{% include "frontends/w0bm/partials/capimage.html" %}{% endif %}
     {% endif %}
     <div class="w0bm-login-error alert alert-danger" hidden></div>
-    <button type="submit" class="btn btn-primary">Login</button> <input id="rememberme" checked type="checkbox" name="kmsi"> <label for="rememberme" id="rember">Remember me?</label>
-    {% if smtp_enabled %}<br><a href="/forgot-password" class="w0bm-forgot">Forgot password?</a>{% endif %}
+    <div class="w0bm-login-row">
+        <button type="submit" class="btn btn-primary">Login</button> <input id="rememberme" checked type="checkbox" name="kmsi"> <label for="rememberme" id="rember">Remember me?</label>
+        {#- partials/forgotmodal.html (navigation.html, guests with SMTP on) -#}
+        {% if smtp_enabled %}<a href="#forgot-modal" class="w0bm-forgot" data-toggle="modal" data-target="#forgot-modal">Forgot password?</a>{% endif %}
+    </div>
 </form>
 {#- Passkey login (WebAuthn needs JavaScript: f0ckPasskeyLogin in f0ck-core.js, w0bm.js) -#}
 <div class="w0bm-passkey w0bm-js-only">

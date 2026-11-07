@@ -1,0 +1,32 @@
+{#- "Forgot password?" in the login form (SMTP on): asks for the reset link (POST /forgot-password).
+    w0bm.js sends it with fetch; without JavaScript the answer comes back to this page with the
+    modal open and ?forgot_done=… / ?forgot_error=… (routes/register.rs). -#}
+{% set forgot_open = (forgot_error_msg or forgot_done_msg) %}
+<div class="modal fade f0ck-shell-chrome{% if forgot_open %} w0bm-modal-open{% endif %}" id="forgot-modal" tabindex="-1" role="dialog" aria-labelledby="forgotModalTitle">
+    <a href="{% if forgot_open %}{{ url.pathname }}{% else %}#_{% endif %}" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a href="{% if forgot_open %}{{ url.pathname }}{% else %}#_{% endif %}" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                <h4 class="modal-title" id="forgotModalTitle">Forgot password</h4>
+            </div>
+            <div class="login_wrapper">
+                <div class="col-md-9">
+                    <form action="/forgot-password" method="post" class="navbar-form w0bm-pwreset-form w0bm-forgotform">
+                        <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+                        {% if url %}<input type="hidden" name="return_to" value="{{ url.pathname }}{{ url.search }}">{% endif %}
+                        <p class="w0bm-pwreset-desc">Enter the email address of your account and we'll send you a link to set a new password.</p>
+                        {% if forgot_error_msg %}<div class="alert alert-danger w0bm-form-msg">{{ forgot_error_msg }}</div>{% endif %}
+                        {% if forgot_done_msg %}<div class="alert alert-success w0bm-form-msg">{{ forgot_done_msg }}</div>{% endif %}
+                        <div class="w0bm-pwreset-msg alert w0bm-form-msg" hidden></div>
+                        <input type="email" name="email" placeholder="Email address" class="form-control" autocomplete="email" required><br>
+                        <button type="submit" class="btn btn-primary">Send reset link</button>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <p>Back to <a href="#login-modal" data-toggle="modal" data-target="#login-modal">Login?</a></p>
+            </div>
+        </div>
+    </div>
+</div>

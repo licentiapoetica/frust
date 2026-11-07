@@ -179,8 +179,37 @@ ul.navbar-right > li > a > span.badge.message-badge[hidden] {
     margin: 5px 0;
     padding: 5px 10px;
 }
+/* Login button + "Remember me?" on the left, "Forgot password?" on the right (as wide as the inputs) */
+.w0bm-login-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    width: 300px;
+    max-width: 100%;
+}
+.w0bm-login-row #rember {
+    margin: 0;
+}
 a.w0bm-forgot {
+    margin-left: auto;
     font-size: 12px;
+}
+/* Forgot / reset password modals (partials/forgotmodal.html, resetmodal.html), like the login form */
+.w0bm-pwreset-form .form-control {
+    width: 300px;
+    max-width: 100%;
+}
+.w0bm-pwreset-desc {
+    width: 300px;
+    max-width: 100%;
+    margin: 0 0 10px;
+    color: #888;
+}
+.w0bm-pwreset-form .w0bm-form-msg {
+    width: 300px;
+    max-width: 100%;
+    margin: 0 0 10px;
 }
 
 /* ── Popovers / tooltips (positioned by CSS around their button) ────────────────────────── */

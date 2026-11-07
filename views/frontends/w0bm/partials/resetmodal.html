@@ -1,0 +1,33 @@
+{#- The link in the reset mail (/?token=…) opens this modal: a new password (POST /reset-password).
+    w0bm.js sends it with fetch; without JavaScript the answer comes back here with ?reset_error=…,
+    or to the login modal with ?login_done=pw_reset (routes/register.rs). -#}
+{% set reset_token = ((url and url.qs and url.qs.token) or "") %}
+{% set reset_open = (reset_token or reset_error_msg) %}
+<div class="modal fade f0ck-shell-chrome{% if reset_open %} w0bm-modal-open{% endif %}" id="reset-modal" tabindex="-1" role="dialog" aria-labelledby="resetModalTitle">
+    <a href="{% if reset_open %}{{ url.pathname }}{% else %}#_{% endif %}" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a href="{% if reset_open %}{{ url.pathname }}{% else %}#_{% endif %}" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                <h4 class="modal-title" id="resetModalTitle">Set a new password</h4>
+            </div>
+            <div class="login_wrapper">
+                <div class="col-md-9">
+                    <form action="/reset-password" method="post" class="navbar-form w0bm-pwreset-form w0bm-resetform">
+                        <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+                        {% if url %}<input type="hidden" name="return_to" value="{{ url.pathname }}">{% endif %}
+                        <input type="hidden" name="token" value="{{ reset_token }}">
+                        {% if reset_error_msg %}<div class="alert alert-danger w0bm-form-msg">{{ reset_error_msg }}</div>{% endif %}
+                        <div class="w0bm-pwreset-msg alert w0bm-form-msg" hidden></div>
+                        <input type="password" name="password" placeholder="New password (min. 20 characters)" class="form-control" autocomplete="new-password" minlength="20" required><br>
+                        <input type="password" name="password_confirm" placeholder="Confirm new password" class="form-control" autocomplete="new-password" minlength="20" required><br>
+                        <button type="submit" class="btn btn-primary">Update password</button>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <p>Back to <a href="#login-modal" data-toggle="modal" data-target="#login-modal">Login?</a></p>
+            </div>
+        </div>
+    </div>
+</div>

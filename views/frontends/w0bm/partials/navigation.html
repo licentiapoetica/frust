@@ -79,4 +79,8 @@
 {% if not session %}
 {% include "frontends/w0bm/partials/loginmodal.html" %}
 {% include "frontends/w0bm/partials/registermodal.html" %}
+{% if smtp_enabled %}
+{% include "frontends/w0bm/partials/forgotmodal.html" %}
+{% include "frontends/w0bm/partials/resetmodal.html" %}
+{% endif %}
 {% endif %}
