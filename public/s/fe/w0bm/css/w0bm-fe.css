@@ -318,8 +318,10 @@ a.w0bm-iconbtn {
 #sidebar.w0bm-sidebar-nocomments ~ .w0bm-main .vertical-align {
     min-height: calc(90vh - 50px);
 }
-.w0bm-locked {
-    margin: 0 5px 5px;
+/* "Log in to comment" / locked: apart from the message of the day above, the same width as the
+   comment boxes under it (.comments' 2px side padding) */
+.panel.w0bm-locked {
+    margin: 6px 2px 5px;
 }
 .w0bm-media {
     background: #000;
@@ -1860,10 +1862,9 @@ html:not(.w0bm-nojs) .w0bm-nojs-only {
 .panel.panel-default.w0bm-motd {
     border-bottom: 0;
 }
-/* the comment form (or "log in") sits right under it */
+/* the comment form sits right under it; a "log in" / locked panel is its own box, with a gap */
 .panel.w0bm-motd + #commentForm,
-.panel.w0bm-motd + #commentForm .sees.panel,
-.panel.w0bm-motd + .panel {
+.panel.w0bm-motd + #commentForm .sees.panel {
     margin-top: 0;
 }
 .w0bm-motd .panel-body {
@@ -3419,14 +3420,15 @@ html[class*="user-fs-"] .f0ck-shell-page {
 
 /* Sidebar footer links ([+Add Tag] About Rules Terms Privacy Stats): always one line, whatever
    the text size or website font. The row's font shrinks when it would not fit (container query
-   units: 4cqi is about the most these 37 characters + padding take); spread over the whole width, the same space between all links. Beats w0bm-mobile.css's wrapping version. */
+   units: 4cqi is about the most these 37 characters + padding take); left-aligned, the same
+   space between all links. Beats w0bm-mobile.css's wrapping version. */
 html body.w0bm-item-page #sidebar > .tags .tagtest {
     container-type: inline-size;
 }
 html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav {
     display: flex;
     flex-wrap: nowrap;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 0;
     float: none;
     margin: 0;
