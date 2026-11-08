@@ -6412,14 +6412,19 @@ html[theme="f0ck95d"] ._204863 {
 html[theme="f0ck95d"] ._204863 .location {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.375em;
 }
 
+/* Favicon in the title bar: as tall as the text (16px at the default size), so it grows and shrinks
+   with Text size and the browser font size; rounded to whole pixels so it never lands between two and
+   blurs (the plain 1em is the fallback for browsers without round()) */
 html[theme="f0ck95d"] ._204863 .location::before {
   content: "";
   display: inline-block;
-  width: 16px;
-  height: 16px;
+  width: 1em;
+  height: 1em;
+  width: round(nearest, 1em, 1px);
+  height: round(nearest, 1em, 1px);
   background-image: var(--favicon-url, url('/s/img/favicon.gif'));
   background-size: contain;
   background-repeat: no-repeat;
