@@ -11395,9 +11395,28 @@ window.cancelAnimFrame = (function () {
     // page in place with margin-top: var(--navbar-h). A rounded value (78 vs 78.19px) shifted the whole
     // page by that fraction on every open/close.
     if (nav) document.documentElement.style.setProperty('--navbar-h', nav.getBoundingClientRect().height + 'px');
+    // The MOTD row (0 while hidden): the right sidebar reaches up beside it to the nav row (html.motd-on,
+    // f0ckm.css "MOTD: wraps to its own row")
+    const motd = nav && nav.querySelector('.motd-container');
+    const motdH = motd && getComputedStyle(motd).display !== 'none' ? motd.getBoundingClientRect().height : 0;
+    document.documentElement.style.setProperty('--motd-h', motdH + 'px');
+    document.documentElement.classList.toggle('motd-on', motdH > 0);
   };
   window.syncNavbarHeight();
   window.addEventListener('resize', window.syncNavbarHeight);
+
+  // The right sidebar starts sliding (toggle, swipe, mouse drag): its end state goes on <body> right away
+  // (sidebar-right-closing / sidebar-right-opening, plus sidebar-right-swipe for the short 0.3s slide),
+  // so what follows the sidebar in CSS (the MOTD's width, f0ckm.css --motd-room) moves along with it
+  // instead of jumping when the slide ends and sidebar-right-hidden flips. Returns the cleanup, to call
+  // once sidebar-right-hidden is set.
+  const SIDEBAR_SLIDE_CLASSES = ['sidebar-right-closing', 'sidebar-right-opening', 'sidebar-right-swipe'];
+  window.sidebarSlideStart = (toHidden, swipe = false) => {
+    document.body.classList.remove(...SIDEBAR_SLIDE_CLASSES);
+    document.body.classList.add(toHidden ? 'sidebar-right-closing' : 'sidebar-right-opening');
+    if (swipe) document.body.classList.add('sidebar-right-swipe');
+    return () => document.body.classList.remove(...SIDEBAR_SLIDE_CLASSES);
+  };
   const _navEl = document.querySelector('.navbar');
   if (_navEl && window.ResizeObserver) {
     new ResizeObserver(window.syncNavbarHeight).observe(_navEl);
@@ -16945,6 +16964,7 @@ window.cancelAnimFrame = (function () {
 
       // Use !important to override the CSS's own "transition: right 0.3s !important"
       // so that our transform animation actually plays.
+      const slideDone = stateChanging ? window.sidebarSlideStart(!shouldOpen, true) : null;
       sidebar.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
       sidebar.style.transform = `translateX(${targetTranslate}px)`;
 
@@ -16964,6 +16984,7 @@ window.cancelAnimFrame = (function () {
           document.body.classList.toggle('sidebar-right-hidden', toHidden);
           localStorage.setItem('sidebarRightHidden', toHidden);
         }
+        slideDone?.();
 
         // Force reflow so class change commits with no transition
         void sidebar.offsetWidth;
@@ -17212,6 +17233,7 @@ window.cancelAnimFrame = (function () {
       ? (shouldOpen ? -mouseRT.sidebarWidth : 0)
       : (shouldOpen ? 0 : mouseRT.sidebarWidth);
 
+    const slideDone = stateChanging ? window.sidebarSlideStart(!shouldOpen, true) : null;
     sidebar.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
     sidebar.style.transform = `translateX(${targetTranslate}px)`;
 
@@ -17230,6 +17252,7 @@ window.cancelAnimFrame = (function () {
         document.body.classList.toggle('sidebar-right-hidden', toHidden);
         localStorage.setItem('sidebarRightHidden', toHidden);
       }
+      slideDone?.();
 
       void sidebar.offsetWidth;
       sidebar.style.transform = '';
@@ -17676,6 +17699,7 @@ window.cancelAnimFrame = (function () {
 
     sidebar.style.willChange = 'transform';
     void sidebar.offsetWidth; // commit the start state before transitions begin
+    const slideDone = window.sidebarSlideStart(!isHidden);
     sidebar.style.setProperty('transition', `transform ${DURATION}ms ${EASING}`, 'important');
     sidebar.style.transform = `translateX(${targetTranslate}px)`;
 
@@ -17702,6 +17726,7 @@ window.cancelAnimFrame = (function () {
       if (toHidden) applyLayout(false);
       document.body.classList.toggle('sidebar-right-hidden', toHidden);
       localStorage.setItem('sidebarRightHidden', toHidden);
+      slideDone();
       void sidebar.offsetWidth;
       sidebar.style.transform = '';
       requestAnimationFrame(() => {

@@ -15,6 +15,8 @@
   --accent: #9f0;
   --accent-rgb: 153, 255, 0;
   --sidebar-w: 300px;
+  /* the open sidebar's width, also while it is hidden (--sidebar-w is 0 then) */
+  --sidebar-open-w: 300px;
   --emoji-fav-color: #f5c518;
   --nav-bg: #2b2b2b;
   --nav-brand-border: inset 1px #242424;
@@ -1950,6 +1952,10 @@ html[theme="xd"] {
   --maximize_button: #1fb2b0;
   --bg-gradient: linear-gradient(0deg, rgba(0, 0, 0, 0.94) 0%, rgb(6, 6, 6) 10%, rgb(43, 43, 43) 100%);
   --comment-bg: #101010;
+}
+
+html[theme="xd"] {
+  --motd-line: 2px;
 }
 
 html[theme="xd"] .motd-container {
@@ -10813,12 +10819,14 @@ body:not(:has(.global-sidebar-right)):not(:has(.item-sidebar-right)):not(:has(.i
 @media (min-width: 600px) and (max-width: 999px) {
   :root {
     --sidebar-w: min(280px, 80vw);
+    --sidebar-open-w: min(280px, 80vw);
   }
 }
 
 @media (max-width: 599px) {
   :root {
     --sidebar-w: 0px !important;
+    --sidebar-open-w: 0px;
   }
   #bg {
     width: 100vw !important;
@@ -13691,11 +13699,102 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
   padding-right: 15px;
 }
 
-/* MOTD: wraps to its own full-width row below brand+links+right-group */
+/* MOTD: wraps to its own row below brand+links+right-group. It ends where the right sidebar begins
+   (--motd-room, below); its right border lies on the sidebar's left border (hence the width + 1px;
+   min(…, 1px) is 0 without a sidebar). */
 .motd-container {
   order: 999;
-  width: 100%;
+  width: calc(100% - var(--motd-room, 0px) + min(var(--motd-room, 0px), 1px));
+  border-right: min(var(--motd-room, 0px), 1px) solid var(--nav-border-color);
+  box-sizing: border-box;
   flex-shrink: 0;
+  /* Its lines on the navbar's colour, like the sidebar's (most themes' --nav-border-color is
+     see-through, on --motd-bg it came out darker); themes without --motd-bg: the navbar's */
+  background: var(--motd-bg, var(--nav-bg)) padding-box;
+}
+
+/* --motd-room: the room the right sidebar takes beside the MOTD: --sidebar-w (0 when it is hidden or
+   missing). While it slides (f0ckm.js sidebarSlideStart) it is already the end state, and the MOTD
+   (and the navbar's colour behind it) glides there with the sidebar's own timing: toggle 0.6s with its
+   easing, swipe / mouse drag 0.3s ease-in-out. Only then: other changes of the sidebar state (page
+   load, crossing 599px) are instant like the sidebar. */
+body {
+  --motd-room: var(--sidebar-w, 0px);
+}
+
+body.sidebar-right-closing {
+  --motd-room: 0px;
+}
+
+body.sidebar-right-opening {
+  --motd-room: var(--sidebar-open-w, 0px);
+}
+
+body:is(.sidebar-right-closing, .sidebar-right-opening) .motd-container {
+  transition: width 0.6s cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+html.motd-on body:is(.sidebar-right-closing, .sidebar-right-opening) > nav.navbar {
+  transition: background-size 0.6s cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+body.sidebar-right-swipe .motd-container,
+html.motd-on body.sidebar-right-swipe > nav.navbar {
+  transition-duration: 0.3s;
+  transition-timing-function: ease-in-out;
+}
+
+/* Beside the MOTD the right sidebar reaches up to the nav row (its tabs right under the icons).
+   html.motd-on and --motd-h (the MOTD row's height) come from syncNavbarHeight in f0ckm.js. The
+   sidebar stays below the navbar (its dropdowns open over it), so the navbar leaves that strip to
+   it: its background only behind the nav row (the MOTD paints its own row, the MOTD's border is the
+   bottom line), and clicks there go through to the sidebar. The navbar itself takes no clicks; its
+   children and ::before (the nav row's empty space, behind them) do. Phones: the MOTD is full width. */
+html.motd-on body > nav.navbar,
+html.motd-on body > nav.navbar.scrolled {
+  /* the nav row, and the MOTD's column down to the bottom: all but the strip */
+  background:
+    linear-gradient(var(--nav-bg), var(--nav-bg)) top left / 100% calc(100% - var(--motd-h, 0px)) no-repeat padding-box,
+    linear-gradient(var(--nav-bg), var(--nav-bg)) top left / calc(100% - var(--motd-room, 0px) + min(var(--motd-room, 0px), 1px)) 100% no-repeat border-box !important;
+  /* the MOTD's bottom line is the navbar's last row */
+  border-bottom-width: 0 !important;
+  pointer-events: none;
+}
+
+html.motd-on body > nav.navbar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(100% - var(--motd-h, 0px));
+  z-index: -1;
+  pointer-events: auto;
+}
+
+html.motd-on body > nav.navbar > * {
+  pointer-events: auto;
+}
+
+/* The sidebar starts on the MOTD's top line with a top border
+   like the MOTD's (--motd-line: its width, 2px in xd), and its tab row is as high as the MOTD row:
+   both bottom lines meet. */
+@media (min-width: 600px) {
+  html.motd-on .item-sidebar-right,
+  html.motd-on .index-sidebar-right,
+  html.motd-on .global-sidebar-right {
+    top: calc(var(--navbar-h, 50px) - var(--motd-h, 0px)) !important;
+    border-top: var(--motd-line, 1px) solid var(--nav-border-color);
+  }
+
+  html.motd-on .global-sidebar-right .sidebar-tabs {
+    box-sizing: border-box;
+    height: calc(var(--motd-h, 0px) - var(--motd-line, 1px));
+  }
+
+  html.motd-on .global-sidebar-right .sidebar-tab {
+    padding-block: 0;
+  }
 }
 
 /* Uniform size for all Font Awesome icons in the navbar (rem: follows the user's text size) */
