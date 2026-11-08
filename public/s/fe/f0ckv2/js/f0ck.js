@@ -33,18 +33,20 @@ const isTyping = e => ["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)
 const v2On = (target, type, fn, opts) => target.addEventListener(type, fn,
   Object.assign(typeof opts === 'boolean' ? { capture: opts } : { ...(opts || {}) }, { signal: window.v2Page.signal }));
 
+// <thumbs> grid thumbnails are a CSS background (--thumb on each tile): a missing one gets the
+// f0ckv2 placeholder (.v2-thumb-missing, f0ckv2.css). Same URL as the background, so the browser
+// loads it once.
+const v2CheckThumb = a => {
+  const m = a.style.getPropertyValue('--thumb').match(/url\(\s*(['"]?)(.*?)\1\s*\)/);
+  if(!m || !m[2]) return;
+  const img = new Image();
+  img.onerror = () => a.classList.add('v2-thumb-missing');
+  img.src = m[2];
+};
+// </thumbs>
+
 window.v2Page.onPage(() => {
-  // <thumbs> grid thumbnails are a CSS background (--thumb on each tile): a missing one gets the
-  // f0ckv2 placeholder (.v2-thumb-missing, f0ckv2.css). Same URL as the background, so the browser
-  // loads it once.
-  document.querySelectorAll('div.posts > a').forEach(a => {
-    const m = a.style.getPropertyValue('--thumb').match(/url\(\s*(['"]?)(.*?)\1\s*\)/);
-    if(!m || !m[2]) return;
-    const img = new Image();
-    img.onerror = () => a.classList.add('v2-thumb-missing');
-    img.src = m[2];
-  });
-  // </thumbs>
+  document.querySelectorAll('div.posts > a').forEach(v2CheckThumb);
 
   // Onara viewer: the item over its grid page (index.html), closed by a link to that page
   const onara = document.getElementById('v2-onara');
@@ -231,6 +233,59 @@ window.v2Page.onPage(() => {
   }
   // </image-responsive>
 
+  // <infinite> grid pages (main page, tag, user, hall) load on endlessly: when the end of the grid
+  // comes near, the next page is fetched and its tiles appended, until the last page. The address
+  // stays the page that was opened; the navbar's page links keep working, and without JavaScript
+  // they are the way through.
+  let infinite = false;
+  const infGrid = document.querySelector('.index-container > div.posts');
+  const infEnd = document.getElementById('footbar');
+  const firstNext = document.querySelector('.pagination > a.next:not(.disabled)');
+  if(infGrid && infEnd && firstNext && !onara && 'IntersectionObserver' in window) {
+    infinite = true;
+    let nextUrl = firstNext.href;
+    let busy = false;
+    const seen = new Set([...infGrid.children].map(a => a.getAttribute('href')));
+    const AHEAD = 800; // px below the screen at which the next page is fetched
+    const near = () => infEnd.getBoundingClientRect().top < window.innerHeight + AHEAD;
+    let io = null;
+    const more = async () => {
+      if(busy || !nextUrl) return;
+      busy = true;
+      infEnd.classList.add('v2-loading');
+      const url = nextUrl;
+      try {
+        const res = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html' }, signal: window.v2Page.signal });
+        if(!res.ok) throw new Error(res.status);
+        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        doc.querySelectorAll('.index-container > div.posts > a').forEach(a => {
+          const href = a.getAttribute('href');
+          if(seen.has(href)) return;
+          seen.add(href);
+          a.classList.remove('v2-onara-active');
+          infGrid.appendChild(document.adoptNode(a));
+          v2CheckThumb(a);
+        });
+        const n = doc.querySelector('.pagination > a.next:not(.disabled)');
+        nextUrl = n ? new URL(n.getAttribute('href'), url).href : null;
+      } catch(err) {
+        if(err && err.name === 'AbortError') return; // page left
+        nextUrl = null; // the page links still go on
+      } finally {
+        busy = false;
+        infEnd.classList.remove('v2-loading');
+      }
+      if(!nextUrl) { io?.disconnect(); infEnd.classList.add('v2-end'); return; }
+      // still near the end (tall screen, few tiles): the observer won't fire again by itself
+      if(near()) more();
+    };
+    io = new IntersectionObserver(entries => { if(entries.some(e => e.isIntersecting)) more(); },
+      { rootMargin: `0px 0px ${AHEAD}px 0px` });
+    io.observe(infEnd);
+    window.v2Page.onLeave(() => io.disconnect());
+  }
+  // </infinite>
+
   // <scroller>
   let tts = 0;
   const scroll_treshold = 1;
@@ -243,7 +298,8 @@ window.v2Page.onPage(() => {
       if(!wheelNavOn() || onara) return;
       const main = document.querySelector('#main');
       if(main && Math.ceil(window.innerHeight + window.scrollY) >= main.offsetHeight && e.deltaY > 0) { // down
-        const el = document.querySelector(".pagination > .next:not(.disabled)");
+        // the grid loads on endlessly (<infinite>): no jumping to the next page
+        const el = infinite ? null : document.querySelector(".pagination > .next:not(.disabled)");
         if(el) {
           if(tts < scroll_treshold) {
             footbar.classList.add("v2-armed");

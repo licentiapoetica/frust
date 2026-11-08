@@ -34,6 +34,21 @@ div.posts>a.v2-thumb-missing {
   background-image: url("/s/fe/f0ckv2/img/200.gif");
 }
 
+/* Endless grid (f0ck.js <infinite>): the arrow under the grid pulses while the next page loads and
+   goes once the last one is in */
+#footbar.v2-loading {
+  animation: v2-footbar-pulse 0.8s ease-in-out infinite alternate;
+}
+
+#footbar.v2-end {
+  visibility: hidden;
+}
+
+@keyframes v2-footbar-pulse {
+  from { opacity: 1; }
+  to { opacity: 0.3; }
+}
+
 div.posts>a[data-mode="nsfl"]>p:before {
   background-color: #7a1fa2;
 }
