@@ -1487,6 +1487,15 @@
         });
     }
 
+    // Magnetic thumbnail hover (f0ckm.js), off unless switched on here
+    const thumbMagnetToggle = document.getElementById('thumb_magnet_toggle');
+    if (thumbMagnetToggle) {
+        try { thumbMagnetToggle.checked = localStorage.getItem('thumbMagnet') === 'true'; } catch (_) {}
+        thumbMagnetToggle.addEventListener('change', () => {
+            try { localStorage.setItem('thumbMagnet', thumbMagnetToggle.checked); } catch (_) {}
+        });
+    }
+
     const imageExpandToggle = document.getElementById('image_expand_toggle');
     if (imageExpandToggle) {
         imageExpandToggle.checked = localStorage.getItem('imageExpandOnClick') !== 'false';

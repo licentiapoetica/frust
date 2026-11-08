@@ -24931,9 +24931,12 @@ window.BulkSelection = (() => {
 // One ring per grid glides from thumbnail to thumbnail (slight spring overshoot) instead of each thumb
 // switching its own box-shadow on and off, and the hovered thumbnail leans a few px toward the cursor.
 // Only transform/translate animate (compositor only, no layout). Mouse/trackpad devices only.
+// Opt-in: off unless the visitor switched on "Magnetic thumbnails" in the settings (localStorage
+// thumbMagnet), read on every gesture so the toggle applies without a reload.
 (() => {
   if (!window.matchMedia || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const enabled = () => { try { return localStorage.getItem('thumbMagnet') === 'true'; } catch (_) { return false; } };
 
   const THUMB_SEL = 'div.posts > a.thumb:not(.notif-item)';
   const PULL = 3; // max px a thumbnail leans toward the cursor
@@ -24983,6 +24986,7 @@ window.BulkSelection = (() => {
 
   document.addEventListener('mouseover', (e) => {
     if (drag && drag.moved) return; // the ring stays on the thumbnail being dragged
+    if (!enabled()) return;
     hoverTo(e.target.closest && e.target.closest(THUMB_SEL));
   }, { passive: true });
 
@@ -25009,6 +25013,7 @@ window.BulkSelection = (() => {
 
   document.addEventListener('mousedown', (e) => {
     if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (!enabled()) return;
     const thumb = e.target.closest && e.target.closest(THUMB_SEL);
     if (!thumb) return;
     drag = { thumb, x0: e.clientX, y0: e.clientY, moved: false };
@@ -25016,6 +25021,7 @@ window.BulkSelection = (() => {
 
   // Native "drag this link" would take the gesture over
   document.addEventListener('dragstart', (e) => {
+    if (!enabled()) return;
     if (e.target && e.target.closest && e.target.closest(THUMB_SEL)) e.preventDefault();
   });
 
@@ -25106,7 +25112,7 @@ window.BulkSelection = (() => {
   // thumbnail the same way it follows the mouse
   document.addEventListener('focusin', (e) => {
     const thumb = e.target && e.target.closest && e.target.closest(THUMB_SEL);
-    if (!thumb || thumb === current) return;
+    if (!thumb || thumb === current || !enabled()) return;
     let kbd = true;
     try { kbd = thumb.matches(':focus-visible'); } catch (_) {}
     if (!kbd) return; // mouse click focus: mouseover already placed it

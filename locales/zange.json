@@ -176,6 +176,8 @@
     "image_expand_on_click_hint": "Anstatt dat Scroll-Zoom-Moped aufzumache, wird n Bild beim Klickle uff volle Größ im Bereich uffgepumpt.",
     "enable_bg_blur": "Hintergrundunschärfe aktivieren",
     "enable_bg_blur_hint": "Gefalteten Hintergrund auf Elementen anzeigen",
+    "thumb_magnet": "Magnetische Vorschaubildchen",
+    "thumb_magnet_hint": "Beim Überfahren gleitet ein Rahmen von Vorschaubildchen zu Vorschaubildchen, selbiges neigt sich dem Mauszeiger zu und lässt sich mit der Maus ziehen.",
     "blur_nsfw": "NSFW verwischen",
     "blur_nsfw_hint": "Verwischt NSFW-Vorschaubilder.",
     "blur_nsfl": "NSFL verwischen",

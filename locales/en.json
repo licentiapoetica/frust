@@ -181,6 +181,8 @@
     "image_expand_on_click_hint": "Instead of opening the scroll zoom modal, clicking an image will expand it to full size within the page.",
     "enable_bg_blur": "Enable Background blur",
     "enable_bg_blur_hint": "Show blurred background on items",
+    "thumb_magnet": "Magnetic thumbnails",
+    "thumb_magnet_hint": "A ring glides between thumbnails on hover, the hovered thumbnail leans toward the cursor and can be pulled with the mouse.",
     "blur_nsfw": "Blur NSFW",
     "blur_nsfw_hint": "Blur NSFW-rated thumbnails.",
     "blur_nsfl": "Blur NSFL",

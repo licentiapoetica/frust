@@ -179,6 +179,8 @@
     "image_expand_on_click_hint": "In plaats van de scroll-zoom-modal te openen, wordt een afbeelding bij klikken vergroot tot volledige grootte binnen de pagina.",
     "enable_bg_blur": "Achtergrondvervaging inschakelen",
     "enable_bg_blur_hint": "Vervaagde achtergrond tonen bij items",
+    "thumb_magnet": "Magnetische thumbnails",
+    "thumb_magnet_hint": "Bij hoveren glijdt een rand van thumbnail naar thumbnail, de thumbnail leunt naar de cursor en kan met de muis worden getrokken.",
     "blur_nsfw": "NSFW vervagen",
     "blur_nsfw_hint": "Vervaagt NSFW-thumbnails.",
     "blur_nsfl": "NSFL vervagen",

@@ -169,6 +169,17 @@
           </div>
           {% endif %}
 
+          {#- the magnetic hover lives in f0ckm.js, which only the default frontend loads -#}
+          {% if frontend == "f0ckm" %}
+          <div class="setting-item settings-row settings-js-only">
+            <label for="thumb_magnet_toggle" class="settings-check">
+              <input type="checkbox" id="thumb_magnet_toggle">
+              <span>{{ (t("settings.thumb_magnet") or "Magnetic thumbnails") }}</span>
+            </label>
+            <small class="text-muted settings-hint">{{ (t("settings.thumb_magnet_hint") or "A ring glides between thumbnails on hover, the hovered thumbnail leans toward the cursor and can be pulled with the mouse.") }}</small>
+          </div>
+          {% endif %}
+
           {% if not guest %}
           {% if fe_prefs is none or "show_motd" in fe_prefs %}
           <div class="setting-item settings-row">

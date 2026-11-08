@@ -181,6 +181,8 @@
     "image_expand_on_click_hint": "Anstatt das Scroll-Zoom-Modal zu öffnen, wird ein Bild beim Klicken innerhalb der Seite auf volle Größe erweitert.",
     "enable_bg_blur": "Hintergrundunschärfe aktivieren",
     "enable_bg_blur_hint": "Unscharfen Hintergrund bei Beiträgen anzeigen",
+    "thumb_magnet": "Magnetische Thumbnails",
+    "thumb_magnet_hint": "Beim Überfahren gleitet ein Rahmen von Thumbnail zu Thumbnail, das Thumbnail neigt sich zum Mauszeiger und lässt sich mit der Maus ziehen.",
     "blur_nsfw": "NSFW weichzeichnen",
     "blur_nsfw_hint": "Zeichnet NSFW-Vorschaubilder weich.",
     "blur_nsfl": "NSFL weichzeichnen",
