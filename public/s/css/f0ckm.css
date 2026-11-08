@@ -4940,6 +4940,16 @@ body.layout-legacy .comment-input {
   border-radius: 0;
 }
 
+/* The main comment box: as much space between the text field and its buttons as under the buttons
+   (the box's 5px padding); a block textarea leaves no extra baseline gap under it */
+.comment-input.main-input textarea {
+  display: block;
+}
+
+.comment-input.main-input .input-actions {
+  margin-top: 5px;
+}
+
 .comment-input textarea {
   width: 100%;
   background: rgba(0, 0, 0, 0.2);
