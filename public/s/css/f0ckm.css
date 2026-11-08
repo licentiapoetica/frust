@@ -5657,20 +5657,12 @@ body.layout-legacy .scroll-to-bottom svg {
 }
 
 /* Comment headers (item comments, profile comments, sidebar activity): the name and the >>backlinks
-   start exactly at the avatar top. Only the space above the letters is trimmed (descenders keep
-   their room); the clip margin keeps letter tops that rise a hair above the trim line from being
-   cut by the name's ellipsis overflow. */
+   sit at the top of the header. */
 .comment-header-left .comment-author,
 .comment-header-left .comment-backlinks a {
   display: block;
   align-self: flex-start;
   line-height: 1;
-  text-box: trim-start cap alphabetic;
-}
-
-.comment-header-left .comment-author {
-  overflow: clip;
-  overflow-clip-margin: 0.25em;
 }
 
 .pinned-badge {
