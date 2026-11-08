@@ -555,7 +555,7 @@
                 `;
             } else {
                 mediaHtml = `
-                    <img src="${thumbUrl}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 2px;" loading="lazy" data-on="error:sidebar-thumb-fail" />
+                    <img src="${thumbUrl}" class="sidebar-thumb-img" loading="lazy" data-on="error:sidebar-thumb-fail" />
                     <div class="sidebar-media-placeholder ${isAudio ? 'audio' : ''} hidden">
                         <i class="${isAudio ? 'fa-solid fa-music' : 'fa-solid fa-image'}"></i>
                     </div>

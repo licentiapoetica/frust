@@ -15829,8 +15829,8 @@ nav.navbar a.desktop-only[data-page-modal].is-active {
 
 .item-preview .sidebar-thumb-link {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -15841,11 +15841,20 @@ nav.navbar a.desktop-only[data-page-modal].is-active {
   text-decoration: none;
 }
 
+/* The thumbnail fills the link (was an inline 32px size in sidebar-activity.js) */
+.item-preview .sidebar-thumb-link > img.sidebar-thumb-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+}
+
 .item-preview .sidebar-media-placeholder {
   position: absolute;
   inset: 0;
-  width: 32px;
-  height: 32px;
+  width: 100%;
+  height: 100%;
   font-size: 14px;
   border-radius: inherit;
   display: flex;
@@ -36453,8 +36462,10 @@ body.activity-frame .comment-time {
 }
 
 body.activity-frame .item-preview a img.activity-frame-thumb {
-  width: 32px;
-  height: 32px;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   object-fit: cover;
   border-radius: 0;
 }
