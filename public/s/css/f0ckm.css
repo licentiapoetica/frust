@@ -11948,7 +11948,8 @@ video.autoplay-gif {
 .comment-content {
   line-height: 1.4;
   word-break: break-word;
-  overflow: auto;
+  /* no overflow: auto here: a pixel of overhang (emoji, effects, rounding) gave every such
+     comment its own scrollbar. Code blocks scroll on their own, .comment clips the rest. */
   white-space: pre-wrap;
 }
 
