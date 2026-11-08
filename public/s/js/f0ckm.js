@@ -17407,7 +17407,13 @@ window.cancelAnimFrame = (function () {
     items.forEach(el => {
       const g = el.parentElement;
       if (grids.has(g)) return;
-      grids.set(g, { before: g.getBoundingClientRect(), gap: parseFloat(getComputedStyle(g).rowGap) || 0 });
+      // Ancestors up to the wrapper, for grids that keep their width and only move (centred columns)
+      const wrapper = gridWrappers.find(w => w.contains(g));
+      const chain = [];
+      for (let a = g.parentElement; a && a !== wrapper && a !== document.body; a = a.parentElement) {
+        chain.push({ el: a, before: a.getBoundingClientRect() });
+      }
+      grids.set(g, { before: g.getBoundingClientRect(), gap: parseFloat(getComputedStyle(g).rowGap) || 0, chain });
       // No hover while tiles move under the cursor (see .sidebar-flipping in f0ckm.css)
       g.classList.add('sidebar-flipping');
       flip.cleanup.push(() => g.classList.remove('sidebar-flipping'));
@@ -17436,11 +17442,33 @@ window.cancelAnimFrame = (function () {
       if (Math.abs(shift) > 0.5) scroller.scrollTop += shift;
     }
 
+    const movers = new Map();
     grids.forEach((info, g) => {
       info.after = g.getBoundingClientRect();
       const dw = info.after.width - info.before.width;
       // Narrower grid: fewer columns, tiles flow forward (wrap off the right, in from the left); wider: backward
       info.dir = dw < -1 ? 1 : dw > 1 ? -1 : 0;
+
+      // Same width, new place: the grid sits in a centred column (profile page) that just moved over.
+      // Glide the whole column (head, grids, backgrounds) instead of the tiles, so nothing jumps ahead.
+      const dx = info.before.left - info.after.left;
+      if (info.dir === 0 && Math.abs(dx) > 0.5) {
+        let mover = g;
+        for (const { el, before: b } of info.chain) {
+          const r = el.getBoundingClientRect();
+          if (Math.abs(r.width - b.width) > 1 || Math.abs((b.left - r.left) - dx) > 1) break;
+          mover = el;
+        }
+        info.mover = mover;
+        if (!movers.has(mover)) movers.set(mover, { dx, dy: info.before.top - info.after.top });
+      }
+    });
+
+    movers.forEach(({ dx, dy }, el) => {
+      flip.anims.push(el.animate(
+        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+        { duration, easing }
+      ));
     });
 
     const layerFor = (g, info) => {
@@ -17469,6 +17497,7 @@ window.cancelAnimFrame = (function () {
       const s = b.width / a.width;
       const g = el.parentElement;
       const info = grids.get(g);
+      if (info.mover) return;
       const dir = info.dir;
       const wraps = dir !== 0 && g.classList.contains('posts')
         && (dir === 1 ? a.left < b.left - a.width / 2 : a.left > b.left + a.width / 2);
