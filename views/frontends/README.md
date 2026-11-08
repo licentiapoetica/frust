@@ -122,8 +122,8 @@ declared as the normal weight (crate::fonts::Family::faces_at), so no CSS weight
 The text size (`user_font_size`, a percent) is chosen per frontend (`user_options.font_sizes`, keyed
 by frontend name; the settings page saves it for the frontend it is shown in). It is a
 `user-fs-<percent>` class on `<html>`: give each
-size in crate::fonts::SIZES a rule (f0ckm scales the root font size, w0bm zooms the body;
-`tpl::tests::text_sizes_have_css` checks both).
+size in crate::fonts::SIZES a rule (f0ckm scales the root font size, w0bm and f0ckv2 zoom the
+body; `tpl::tests::text_sizes_have_css` checks all three).
 
 ## Rules
 

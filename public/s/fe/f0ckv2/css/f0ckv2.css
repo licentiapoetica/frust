@@ -1906,3 +1906,65 @@ div.posts > a.v2-onara-active {
 [data-brand-text].brand-size-200 {
   zoom: 2;
 }
+
+/* Text size (settings → text size): user-fs-<percent> on <html>. f0ckv2's CSS sizes text in px,
+   so the page is zoomed (like the w0bm frontend). Zoom also scales viewport units, so the vh/vw
+   rules of f0ckv2's CSS are repeated below with the viewport part divided by the zoom. A new vh/vw
+   rule in f0ck.css / f0ckv2.css / f0ckv2-shell.css needs its line here too. */
+html.user-fs-80 {
+  --fs-zoom: 0.8;
+}
+html.user-fs-90 {
+  --fs-zoom: 0.9;
+}
+html.user-fs-110 {
+  --fs-zoom: 1.1;
+}
+html.user-fs-120 {
+  --fs-zoom: 1.2;
+}
+html.user-fs-130 {
+  --fs-zoom: 1.3;
+}
+html.user-fs-140 {
+  --fs-zoom: 1.4;
+}
+html.user-fs-150 {
+  --fs-zoom: 1.5;
+}
+
+html[class*="user-fs-"] body {
+  zoom: var(--fs-zoom);
+}
+/* f0ck.css */
+html[class*="user-fs-"] body[type='login'] {
+  min-height: calc(100vh / var(--fs-zoom));
+}
+/* f0ckv2-shell.css */
+html[class*="user-fs-"].f0ck-shell body {
+  min-height: calc(100vh / var(--fs-zoom));
+}
+/* f0ckv2.css */
+html[class*="user-fs-"] .v2-toasts {
+  max-width: calc(100vw / var(--fs-zoom) - 20px);
+}
+html[class*="user-fs-"] #anon-setup-modal .navbar-anon-modal-box,
+html[class*="user-fs-"] #privacy-consent-modal .pc-content {
+  width: min(380px, 92vw / var(--fs-zoom));
+  max-height: calc(90vh / var(--fs-zoom));
+}
+html[class*="user-fs-"] #privacy-consent-modal .pc-content {
+  width: min(620px, 94vw / var(--fs-zoom));
+}
+@media (max-width: 768px) {
+  /* f0ck.css */
+  html[class*="user-fs-"] .dropdown-menu {
+    min-width: calc(25vw / var(--fs-zoom));
+  }
+  /* f0ckv2.css (the navbar's dropdowns keep their own min-width) */
+  html[class*="user-fs-"] .navbar .dropdown-menu {
+    min-width: 170px;
+    max-width: calc(100vw / var(--fs-zoom) - 12px);
+    max-height: calc(100vh / var(--fs-zoom) - 120px);
+  }
+}

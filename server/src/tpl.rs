@@ -1486,13 +1486,15 @@ mod tests {
         }
     }
 
-    /// Every text size has its rule in f0ckm.css and w0bm-fe.css.
+    /// Every text size has its rule in f0ckm.css, w0bm-fe.css and f0ckv2.css.
     #[test]
     fn text_sizes_have_css() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
         let f0ckm = std::fs::read_to_string(root.join("public/s/css/f0ckm.css")).unwrap();
         let w0bm = std::fs::read_to_string(root.join("public/s/fe/w0bm/css/w0bm-fe.css")).unwrap();
+        let v2 = std::fs::read_to_string(root.join("public/s/fe/f0ckv2/css/f0ckv2.css")).unwrap();
         for n in crate::fonts::SIZES {
+            assert!(v2.contains(&format!("html.user-fs-{n} {{\n  --fs-zoom: ")), "f0ckv2.css {n}");
             assert!(f0ckm.contains(&format!("html.user-fs-{n} {{")), "f0ckm.css {n}");
             assert!(w0bm.contains(&format!("html.user-fs-{n} {{\n    --fs-zoom: ")), "w0bm-fe.css {n}");
         }

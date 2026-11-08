@@ -1,7 +1,7 @@
 {#- f0ckv2 login page. Shown on /?login=1 (GET /login redirects there) and when POST /login fails. -#}
 {%- set v2_themes = ["f0ck", "p1nk", "orange", "amoled", "paper", "atmos", "term", "iced", "f0ck95", "f0ck95d"] -%}
 <!doctype html>
-<html lang="{{ (lang or "en") }}" class="no-js" theme="{{ (theme if theme in v2_themes else "f0ck") }}">
+<html lang="{{ (lang or "en") }}" class="no-js{% if user_font_size %} user-fs-{{ user_font_size }}{% endif %}" theme="{{ (theme if theme in v2_themes else "f0ck") }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
