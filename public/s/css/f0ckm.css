@@ -13807,12 +13807,26 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
   z-index: 10000 !important;
 }
 
-/* Shift arrow to sit directly under the bell icon */
-.nav-right-group .notif-dropdown::before,
-.nav-right-group .notif-dropdown::after {
-  left: auto;
-  right: 0;
-  transform: none;
+/* Desktop: the dropdown's right edge sits 20px right of the bell's centre (50% of its container),
+   and the arrow's centre 20px in from that edge, so it points at the middle of the bell.
+   (Mobile: fixed position from JS, arrow hidden.) */
+@media (min-width: 769px) {
+  .nav-right-group .notif-dropdown,
+  #notif-dropdown {
+    right: calc(50% - 20px);
+  }
+
+  .nav-right-group .notif-dropdown::before {
+    left: auto;
+    right: 14px;
+    transform: none;
+  }
+
+  .nav-right-group .notif-dropdown::after {
+    left: auto;
+    right: 15px;
+    transform: none;
+  }
 }
 
 /* Bell active state: lights up when notification dropdown is open */
