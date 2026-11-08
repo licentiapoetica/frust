@@ -234,9 +234,10 @@ window.v2Page.onPage(() => {
   // </image-responsive>
 
   // <infinite> grid pages (main page, tag, user, hall) load on endlessly: when the end of the grid
-  // comes near, the next page is fetched and its tiles appended, until the last page. The address
-  // stays the page that was opened; the navbar's page links keep working, and without JavaScript
-  // they are the way through.
+  // comes near, the next page is fetched and its tiles appended, until the last page. Like f0ckm, the
+  // address and the navbar's page links follow the page in view (each fetched page's first tile marks
+  // where it starts; its address and page links are kept with it). Without JavaScript the page links
+  // are the way through.
   let infinite = false;
   const infGrid = document.querySelector('.index-container > div.posts');
   const infEnd = document.getElementById('footbar');
@@ -246,6 +247,32 @@ window.v2Page.onPage(() => {
     let nextUrl = firstNext.href;
     let busy = false;
     const seen = new Set([...infGrid.children].map(a => a.getAttribute('href')));
+    // where each loaded page starts in the grid, with its address and page links
+    const pagerBox = document.querySelector('.pagination-wrapper');
+    const pages = [{ el: infGrid.firstElementChild, url: location.href, pager: pagerBox ? pagerBox.innerHTML : '' }];
+    let shownPage = pages[0];
+    const showPage = () => {
+      // the page whose tiles reach the upper third of the screen; at the very bottom the last one in view
+      const line = window.innerHeight / 3;
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      let cur = pages[0];
+      for(const p of pages) {
+        const top = p.el.getBoundingClientRect().top;
+        if(top <= line || (atBottom && top < window.innerHeight)) cur = p;
+      }
+      if(cur === shownPage || onara) return;
+      shownPage = cur;
+      try { history.replaceState(history.state, '', cur.url); } catch { return; }
+      window.v2Nav?.setShown(cur.url);
+      const box = document.querySelector('.pagination-wrapper');
+      if(box && cur.pager) box.innerHTML = cur.pager;
+    };
+    let showQueued = false;
+    v2On(window, 'scroll', () => {
+      if(showQueued) return;
+      showQueued = true;
+      requestAnimationFrame(() => { showQueued = false; showPage(); });
+    }, { passive: true });
     const AHEAD = 800; // px below the screen at which the next page is fetched
     const near = () => infEnd.getBoundingClientRect().top < window.innerHeight + AHEAD;
     let io = null;
@@ -258,6 +285,7 @@ window.v2Page.onPage(() => {
         const res = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'text/html' }, signal: window.v2Page.signal });
         if(!res.ok) throw new Error(res.status);
         const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        let first = null;
         doc.querySelectorAll('.index-container > div.posts > a').forEach(a => {
           const href = a.getAttribute('href');
           if(seen.has(href)) return;
@@ -265,7 +293,9 @@ window.v2Page.onPage(() => {
           a.classList.remove('v2-onara-active');
           infGrid.appendChild(document.adoptNode(a));
           v2CheckThumb(a);
+          first = first || a;
         });
+        if(first) pages.push({ el: first, url: new URL(url, location.href).href, pager: doc.querySelector('.pagination-wrapper')?.innerHTML || '' });
         const n = doc.querySelector('.pagination > a.next:not(.disabled)');
         nextUrl = n ? new URL(n.getAttribute('href'), url).href : null;
       } catch(err) {
@@ -811,7 +841,10 @@ window.v2Page.onPage(() => {
     document.dispatchEvent(new CustomEvent('v2:page', { detail: { url: location.href } }));
   };
 
-  window.v2Nav = { go, reload: () => go(location.href, { replace: true, keepScroll: true }), navigable, prefetch };
+  window.v2Nav = { go, reload: () => go(location.href, { replace: true, keepScroll: true }), navigable, prefetch,
+    // the address was changed in place (the endless grid shows another page's number): back / forward
+    // compare against it
+    setShown: href => { shownPath = pathKey(href); } };
 
   window.addEventListener('click', e => {
     if(e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
