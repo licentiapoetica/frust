@@ -11405,6 +11405,38 @@ window.cancelAnimFrame = (function () {
   window.syncNavbarHeight();
   window.addEventListener('resize', window.syncNavbarHeight);
 
+  // Modern item layout: the middle column is as high as the window and the player gets the height the
+  // rest leaves (title, prev / random / next, metadata, padding): --item-chrome-h on the column, used by
+  // f0ckm.css ("The player as big as in the legacy layout ... but it always fits"). Re-measured when any
+  // of them changes size and after an in-page navigation.
+  const fitItemColumn = (() => {
+    let ro = null;
+    const measure = (col) => {
+      const cs = getComputedStyle(col);
+      let h = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      for (const el of col.children) {
+        if (el.classList.contains('content')) continue;
+        const es = getComputedStyle(el);
+        if (es.display === 'none' || es.position === 'absolute' || es.position === 'fixed') continue;
+        h += el.getBoundingClientRect().height + parseFloat(es.marginTop) + parseFloat(es.marginBottom);
+      }
+      const val = Math.ceil(h) + 1 + 'px'; // + 1: fractional sizes must not tip the column into scrolling
+      if (col.style.getPropertyValue('--item-chrome-h') !== val) col.style.setProperty('--item-chrome-h', val);
+    };
+    return () => {
+      if (ro) ro.disconnect();
+      ro = null;
+      const col = document.querySelector('body.layout-modern .item-layout-container .item-main-content');
+      if (!col || !window.ResizeObserver) return;
+      ro = new ResizeObserver(() => measure(col));
+      ro.observe(col);
+      for (const el of col.children) if (!el.classList.contains('content')) ro.observe(el);
+      measure(col);
+    };
+  })();
+  fitItemColumn();
+  document.addEventListener('f0ck:contentLoaded', fitItemColumn);
+
   // The right sidebar starts sliding (toggle, swipe, mouse drag): its end state goes on <body> right away
   // (sidebar-right-closing / sidebar-right-opening, plus sidebar-right-swipe for the short 0.3s slide),
   // so what follows the sidebar in CSS (the MOTD's width, f0ckm.css --motd-room) moves along with it

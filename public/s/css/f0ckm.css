@@ -2862,17 +2862,26 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
     overflow: visible;
   }
 
-  /* The player as big as in the legacy layout (same widths, see "LAYOUT: LEGACY" below)
-     instead of the 800px cap above */
+  /* The player as big as in the legacy layout (same widths, see "LAYOUT: LEGACY" below) instead of
+     the 800px cap above, but it always fits: the column is as high as the window and must show the
+     title, the player, prev / random / next and the metadata without scrolling, at any browser zoom.
+     --item-chrome-h: the height of all but the player (padding included), measured by f0ckm.js
+     (fitItemColumn); the fallback without JavaScript is an estimate. */
   body.layout-modern .item-layout-container .item-main-content {
-    /* never under 640 x 360: a short window (high browser zoom: 300% on a 1233px tall screen leaves
-       411px) scrolls instead of shrinking the player to a thumbnail; max-width: 100% still applies */
-    --legacy-item-w: min(1140px, max(calc((100vh - 310px) * 16 / 9), 640px));
-    --legacy-meta-w: calc(var(--legacy-item-w) * 0.75);
+    --item-media-h: max(calc(100vh - var(--navbar-h, 50px) - var(--item-chrome-h, 240px)), 90px);
+    --legacy-item-w: min(1140px, calc(var(--item-media-h) * 16 / 9));
+    /* the rows around a small player keep a readable width (narrower they would wrap, grow taller
+       and leave the player even less) */
+    --legacy-meta-w: max(calc(var(--legacy-item-w) * 0.75), min(100%, 480px));
   }
 
-  body.layout-modern .item-layout-container .item-main-content > :is(._204863, .item_title, .item-title, .content) {
+  body.layout-modern .item-layout-container .item-main-content > .content {
     width: var(--legacy-item-w);
+    max-width: 100%;
+  }
+
+  body.layout-modern .item-layout-container .item-main-content > :is(._204863, .item_title, .item-title) {
+    width: max(var(--legacy-item-w), min(100%, 480px));
     max-width: 100%;
   }
 
@@ -2888,7 +2897,7 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   body.layout-modern .item-layout-container .item-main-content .embed-responsive-16by9 {
     aspect-ratio: 16 / 9;
     height: auto;
-    max-height: max(calc(100vh - 310px), 360px);
+    max-height: var(--item-media-h);
   }
 
   body.layout-modern .item-layout-container .item-main-content span#favs {
