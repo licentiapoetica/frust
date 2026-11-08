@@ -74,7 +74,7 @@
           <a href="/user/{{ ((session.login if (session.is_anon and session.login) else session.user))|lower }}/favs" class="mobile-only">{{ t("nav.favs") }}</a>
           <a href="/settings" class="mobile-only" data-page-modal title="{{ t("nav.settings") }}">{{ t("nav.settings") }}</a>
           <div class="nav-user-divider"></div>
-          <a href="/logout" class="mobile-only">{{ t("nav.logout") }}</a>
+          <a href="/logout" class="nav-menu-logout"><i class="fa-solid fa-right-from-bracket"></i> {{ t("nav.logout") }}</a>
         </div>
       </div>
 
@@ -139,9 +139,6 @@
         <i class="fa-solid fa-filter"></i>
       </a>
       {% endif %}
-
-      <!-- Logout -->
-      <a href="/logout" title="Logout" class="desktop-only"><i class="fa-solid fa-right-from-bracket"></i></a>
 
       <!-- Hamburger: mobile only -->
       <button class="navbar-toggler" type="button" id="nav-toggler"

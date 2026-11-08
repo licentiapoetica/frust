@@ -11658,16 +11658,27 @@ input#s_avatar {
 }
 
 .nav-user-divider {
-  display: none;
   height: 1px;
   background: var(--nav-border-color);
   margin: 5px 0;
 }
 
-@media (max-width: 768px) {
-  .nav-user-divider {
-    display: block;
-  }
+/* Avatar menu: entries on one line, wider than the avatar button */
+#nav-user-menu {
+  box-sizing: border-box;
+  min-width: max(100%, 170px);
+  width: max-content;
+  white-space: nowrap;
+}
+
+#nav-user-menu a {
+  padding: 7px 14px;
+}
+
+.nav-user-menu a.nav-menu-logout i {
+  width: 1em;
+  margin-right: 6px;
+  opacity: .8;
 }
 
 /* as wide as avatar + name + caret: short names give a small button, long ones stop at
