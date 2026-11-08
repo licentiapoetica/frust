@@ -794,14 +794,20 @@
   if (filterInput) {
     const tags = tagsinput(filterInput);
     let initial = [];
-    const load = async () => {
-      const r = await api('/api/v2/settings/excluded_tags', { method: 'GET' });
-      if (!r.ok) return;
+    const show = (list) => {
       tags.removeAll();
-      initial = (r.data.tags || []).map((t) => ({ name: t.tag, key: t.normalized || t.tag, id: t.id }));
+      initial = (list || []).map((t) => ({ name: t.tag, key: t.normalized || t.tag, id: t.id }));
       initial.forEach((t) => tags.add(t.name));
     };
+    const load = async () => {
+      const r = await api('/api/v2/settings/excluded_tags', { method: 'GET' });
+      if (r.ok) show(r.data.tags);
+    };
     load();
+    // a tag's exclude button changed the list (f0ck-core.js f0ckSyncExcluded)
+    const onExcluded = (e) => show(e.detail);
+    document.addEventListener('f0ck:excludedTags', onExcluded);
+    onLeave(() => document.removeEventListener('f0ck:excludedTags', onExcluded));
     $('#submitfilter')?.addEventListener('click', async (e) => {
       e.preventDefault();
       tags.flush();
@@ -810,28 +816,35 @@
       const removed = initial.filter((t) => !lower.includes(t.name.toLowerCase()));
       const added = now.filter((t) => !initial.some((i) => i.name.toLowerCase() === t.toLowerCase()));
       let failed = [];
+      let latest = null; // the list as the server has it after the last change that went through
       for (const t of removed) {
         const r = await api('/api/v2/settings/excluded_tags/' + encodeURIComponent(t.key), { method: 'DELETE' });
         if (!r.ok) failed.push(t.name + ': ' + r.msg);
+        else latest = r.data?.tags || latest;
       }
       for (const t of added) {
         const r = await api('/api/v2/settings/excluded_tags', { body: { tagname: t } });
         if (!r.ok) failed.push(t + ': ' + r.msg);
+        else latest = r.data?.tags || latest;
       }
+      // Live, no reload: the tags' exclude buttons, this list and an item's ← prev / next → follow
+      // (f0ckSyncExcluded -> f0ck:excludedTags -> refreshItemNav); a listing swaps in its new items
+      if (latest) window.f0ckSyncExcluded?.(latest);
       if (failed.length) {
         flash('error', 'Error updating filter (' + failed.join(', ') + ')');
         load();
       } else {
         flash('success', 'Filter successfully updated');
         closeModal($('#filterselectmodal'));
-        if (removed.length || added.length) setTimeout(() => reloadPage(), 600);
+        if ((removed.length || added.length) && $('.items')) reloadPage();
       }
     });
   }
 
   // ── Media filter (filter dialog, partials/filterselect.html) ─────────────────────────────
-  // The same "mime" cookie as f0ckm's mime picker; a change applies at once (page reload). Without
-  // JavaScript the form's "Apply" goes through /mime.
+  // The same "mime" cookie as f0ckm's mime picker; a change applies at once, without a reload: a
+  // listing swaps in its new items, an item page updates ← prev / next →. Without JavaScript the
+  // form's "Apply" goes through /mime.
   const mimeForm = $('#w0bm-mime-form');
   // Ticked = shown. All ticked is no filter (cookie cleared); the last ticked type stays ticked.
   mimeForm?.addEventListener('change', (e) => {
@@ -841,8 +854,12 @@
     document.cookie = picked.length < boxes.length
       ? 'mime=' + picked.join(',') + '; path=/; max-age=31536000; SameSite=Lax'
       : 'mime=; path=/; max-age=0; SameSite=Lax';
-    closeModal($('#filterselectmodal'));
-    reloadPage();
+    if ($('.items')) {
+      closeModal($('#filterselectmodal'));
+      reloadPage();
+    } else {
+      refreshItemNav();
+    }
   });
 
   // ── Rating mode (filter dialog, partials/filterselect.html) ──────────────────────────────
@@ -2741,6 +2758,27 @@
     prefetched.delete(key);
     return hit && Date.now() - hit.at < PREFETCH_TTL ? hit.page : null;
   }
+
+  // A filter changed (excluded tags, media types): the kept pages and this item's ← prev / next →
+  // were picked with the old one. Take fresh links from the page as the server has it now.
+  async function refreshItemNav() {
+    prefetched.clear();
+    if (!$('#prev') && !$('#next')) return;
+    const at = location.href;
+    const page = await fetchPage(at, { prefetch: true }).catch(() => null);
+    if (!page || location.href !== at) return;
+    const doc = new DOMParser().parseFromString(page.html, 'text/html');
+    ['#prev', '#next'].forEach((sel) => {
+      const cur = $(sel);
+      const fresh = doc.querySelector(sel);
+      if (!cur || !fresh) return;
+      Array.from(cur.attributes).forEach((a) => { if (!fresh.hasAttribute(a.name)) cur.removeAttribute(a.name); });
+      Array.from(fresh.attributes).forEach((a) => cur.setAttribute(a.name, a.value));
+      if (!cur.classList.contains('w0bm-invisible') && navigable(cur)) prefetch(cur.href);
+    });
+  }
+  // excluded tags changed (f0ck-core.js f0ckSyncExcluded: a tag's exclude button, the filter dialog)
+  document.addEventListener('f0ck:excludedTags', refreshItemNav);
 
   // Hovering a link for a moment loads its page already (a click follows in most cases)
   let hoverTimer = null;

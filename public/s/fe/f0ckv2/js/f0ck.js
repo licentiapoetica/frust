@@ -728,6 +728,24 @@ window.v2Page.onPage(() => {
     return nativeFetch(input, init);
   };
 
+  // excluded tags changed (f0ck-core.js f0ckSyncExcluded): the kept pages and this item's arrows
+  // were picked with the old filter; take fresh ones from the page as the server has it now
+  document.addEventListener('f0ck:excludedTags', async () => {
+    prefetched.clear();
+    if(!document.querySelector('#prev, #next')) return;
+    const at = location.href;
+    const page = await fetchPage(at, { prefetch: true }).catch(() => null);
+    if(!page || location.href !== at) return;
+    const doc = new DOMParser().parseFromString(page.html, 'text/html');
+    ['#prev', '#next'].forEach(sel => {
+      const cur = document.querySelector(sel), fresh = doc.querySelector(sel);
+      if(!cur || !fresh) return;
+      [...cur.attributes].forEach(a => { if(!fresh.hasAttribute(a.name)) cur.removeAttribute(a.name); });
+      [...fresh.attributes].forEach(a => cur.setAttribute(a.name, a.value));
+      if(navigable(cur)) prefetch(cur.href);
+    });
+  });
+
   // hovering a link for a moment loads its page already
   let hoverTimer = null;
   window.addEventListener('mouseover', e => {
