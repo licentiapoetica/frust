@@ -2855,7 +2855,9 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   /* The player as big as in the legacy layout (same widths, see "LAYOUT: LEGACY" below)
      instead of the 800px cap above */
   body.layout-modern .item-layout-container .item-main-content {
-    --legacy-item-w: min(1140px, calc((100vh - 310px) * 16 / 9));
+    /* never under 640 x 360: a short window (high browser zoom: 300% on a 1233px tall screen leaves
+       411px) scrolls instead of shrinking the player to a thumbnail; max-width: 100% still applies */
+    --legacy-item-w: min(1140px, max(calc((100vh - 310px) * 16 / 9), 640px));
     --legacy-meta-w: calc(var(--legacy-item-w) * 0.75);
   }
 
@@ -2876,7 +2878,7 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   body.layout-modern .item-layout-container .item-main-content .embed-responsive-16by9 {
     aspect-ratio: 16 / 9;
     height: auto;
-    max-height: calc(100vh - 310px);
+    max-height: max(calc(100vh - 310px), 360px);
   }
 
   body.layout-modern .item-layout-container .item-main-content span#favs {
@@ -2972,7 +2974,9 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
        but never so wide that a 16:9 player pushes prev / random / next below the window (zoomed in,
        short windows: about 240px of navbar, title and that row above and below it); metadata and
        comments keep their old 3:4 ratio to it */
-    --legacy-item-w: min(1140px, calc((100vh - 310px) * 16 / 9));
+    /* never under 640 x 360: a short window (high browser zoom: 300% on a 1233px tall screen leaves
+       411px) scrolls instead of shrinking the player to a thumbnail; max-width: 100% still applies */
+    --legacy-item-w: min(1140px, max(calc((100vh - 310px) * 16 / 9), 640px));
     --legacy-meta-w: calc(var(--legacy-item-w) * 0.75);
     grid-column: 1;
     display: flex !important;
@@ -3006,7 +3010,7 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   body.layout-legacy .item-layout-container .item-main-content .embed-responsive-16by9 {
     aspect-ratio: 16 / 9;
     height: auto;
-    max-height: calc(100vh - 310px);
+    max-height: max(calc(100vh - 310px), 360px);
   }
 
   body.layout-legacy .item-layout-container .item-main-content .metadata {
