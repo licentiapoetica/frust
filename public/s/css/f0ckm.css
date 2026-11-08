@@ -13814,6 +13814,7 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
   .nav-right-group .notif-dropdown,
   #notif-dropdown {
     right: calc(50% - 21px);
+    margin-top: 8px;
   }
 
   .nav-right-group .notif-dropdown::before {
