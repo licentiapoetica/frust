@@ -151,6 +151,9 @@
       a.href = `/tag/${encodeURIComponent(tag.normalized ?? tag.tag)}`;
       a.textContent = tag.tag;
       span.appendChild(a);
+      const excl = window.f0ckAddExcludeButton?.(span, tag, { off: '&#8856;', on: '&#10003;' });
+      // f0ckv2 puts &nbsp; between a tag and its buttons
+      if(excl && excl.previousSibling?.nodeType === Node.TEXT_NODE) excl.previousSibling.textContent = '\u00a0';
       if(data.mod) {
         span.insertAdjacentHTML('beforeend', '&nbsp;');
         const del = document.createElement('a');

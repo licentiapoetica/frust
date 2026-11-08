@@ -745,6 +745,62 @@ a.w0bm-tag-nsfl {
     font-family: 'UnifrakturCook', 'Old English Text MT', serif;
 }
 
+/* ── Exclude-tag button next to each tag (form .f0ck-exclude-form, f0ck-core.js) ─────────── */
+#tag-display .f0ck-exclude-form {
+    display: inline;
+    margin: 0;
+}
+
+#tag-display .f0ck-exclude-btn {
+    background: none;
+    border: 0;
+    padding: 0 0 0 3px;
+    margin: 0;
+    font: inherit;
+    line-height: 1;
+    color: #1fb2b0;
+    cursor: pointer;
+}
+
+#tag-display .f0ck-exclude-btn:hover,
+#tag-display .f0ck-exclude-btn:focus-visible {
+    color: #ff4757;
+    filter: drop-shadow(0 0 6px rgba(255, 71, 87, 0.75));
+}
+
+#tag-display .f0ck-excl-on,
+#tag-display .is-excluded .f0ck-excl-off {
+    display: none;
+}
+
+#tag-display .is-excluded .f0ck-excl-on {
+    display: inline;
+}
+
+/* excluded: like f0ckm's .tag-badge.tag-is-excluded */
+#tag-display .f0ck-tag-excluded {
+    opacity: 0.75;
+    box-shadow: inset 0 0 0 1px rgba(255, 71, 87, 0.55), 0 0 8px rgba(255, 71, 87, 0.2);
+    background-color: rgba(255, 71, 87, 0.15) !important;
+}
+
+#tag-display .f0ck-tag-excluded > a:first-child {
+    text-decoration: line-through;
+    text-decoration-color: rgba(255, 71, 87, 0.8);
+    text-decoration-thickness: 1.5px;
+}
+
+#tag-display .is-excluded .f0ck-exclude-btn {
+    opacity: 0.95;
+    color: #ff4757;
+}
+
+#tag-display .is-excluded .f0ck-exclude-btn:hover,
+#tag-display .is-excluded .f0ck-exclude-btn:focus-visible {
+    color: #2ed573;
+    filter: drop-shadow(0 0 6px rgba(46, 213, 115, 0.75));
+}
+
 /* ── Index / main ──────────────────────────────────────────────────────────────────────── */
 /* thumbnails dim on hover in the default theme too, as in DARK (w0bm_override.css); without
    JavaScript no theme is marked on <html>, which is the default theme */

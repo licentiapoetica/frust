@@ -12,6 +12,7 @@
  * f0ckCommentFx (comment text effects [rb] [reich] [krebs] [glitch], see the end of the file),
  * f0ckLoadEmojis / f0ckEmojify (custom emojis :name: in comments, for the frontends' renderers),
  * updateBrandImage / updateBrandText / updateBrandStyle / applyBrandEvent (the navbar brand, see below),
+ * the exclude-tag buttons of the frontends' tag lists (f0ckAddExcludeButton, f0ckSyncExcluded, see below),
  * and fallbacks for what f0ckm.js provides on the default frontend (showFlash, flashMessage,
  * loadPageAjax, updateMotdUI). A fallback is only set when nothing defined the
  * name yet; f0ckm.js (loaded after this file) and the frontends' own scripts replace them. The
@@ -437,6 +438,126 @@ window.F0ckLive = (() => {
   // No AJAX navigation outside the default frontend: a normal page load
   def('loadPageAjax', (url) => { location.assign(url || location.href); return Promise.resolve(); });
   def('updateMotdUI', (text) => { if (typeof fe().motd === 'function') fe().motd(text); });
+})();
+
+// ── Exclude-tag buttons (alternative frontends) ───────────────────────────────────────────
+// Next to each tag of an item: a plain form, so it also works without JavaScript (nojs.rs sends
+// the visitor back). It posts the wanted state: `remove=1` when the tag is excluded already.
+//   <span data-tag="…" class="… [f0ck-tag-excluded]">
+//     <a>tag</a>
+//     <form method="post" action="/api/v2/settings/excluded_tags" data-tag-id="…"
+//           class="f0ck-exclude-form [is-excluded]">
+//       csrf_token, back, tag_id, [remove=1]
+//       <button type="submit" class="f0ck-exclude-btn"><… class="f0ck-excl-off"><… class="f0ck-excl-on"></button>
+//     </form>
+//   </span>
+// With JavaScript the post goes through fetch and every such form on the page gets the new state.
+// The frontend's CSS shows .f0ck-excl-off or .f0ck-excl-on (.is-excluded). Tag lists rebuilt by a
+// frontend's script get the button from f0ckAddExcludeButton(span, tag, { off, on }).
+(() => {
+  const RATINGS = ['sfw', 'nsfw', 'nsfl'];
+  const i18n = () => window.f0ckI18n || {};
+  const title = (on) => (on
+    ? (i18n().unexclude_tag || 'Excluded (click to unexclude)')
+    : (i18n().exclude_tag || 'Exclude tag'));
+
+  const setState = (form, on) => {
+    form.classList.toggle('is-excluded', on);
+    let rm = form.querySelector('input[name="remove"]');
+    if (on && !rm) {
+      rm = document.createElement('input');
+      rm.type = 'hidden';
+      rm.name = 'remove';
+      rm.value = '1';
+      form.appendChild(rm);
+    } else if (!on && rm) {
+      rm.remove();
+    }
+    const btn = form.querySelector('.f0ck-exclude-btn');
+    if (btn) {
+      btn.title = title(on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    form.closest('[data-tag]')?.classList.toggle('f0ck-tag-excluded', on);
+  };
+
+  const excludedIds = () => new Set((window.f0ckSession?.excluded_tags || []).map(Number));
+
+  // tags: the excluded tags as the API returns them ([{id, tag, normalized}]). Other lists of them
+  // (w0bm's filter dialog) listen for the `f0ck:excludedTags` event (detail: the tags).
+  window.f0ckSyncExcluded = (tags) => {
+    const ids = new Set((tags || []).map((t) => Number(t.id)));
+    if (window.f0ckSession) window.f0ckSession.excluded_tags = [...ids];
+    document.querySelectorAll('form.f0ck-exclude-form').forEach((f) => setState(f, ids.has(Number(f.dataset.tagId))));
+    document.dispatchEvent(new CustomEvent('f0ck:excludedTags', { detail: tags || [] }));
+  };
+
+  // Appends the button to a tag badge the frontend built (tag: as /api/v2/tags returns it).
+  // icons: HTML of the "exclude" and "excluded" symbols in the frontend's style.
+  window.f0ckAddExcludeButton = (span, tag, icons) => {
+    const norm = String(tag.normalized ?? tag.tag ?? '').toLowerCase();
+    if (!span || !tag || !tag.id || !tag.can_exclude || RATINGS.includes(norm) || !window.f0ckSession?.logged_in) return null;
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/api/v2/settings/excluded_tags';
+    form.className = 'f0ck-exclude-form';
+    form.dataset.tagId = String(tag.id);
+    const hidden = (name, value) => {
+      const i = document.createElement('input');
+      i.type = 'hidden';
+      i.name = name;
+      i.value = value;
+      form.appendChild(i);
+    };
+    hidden('csrf_token', window.getCsrfToken());
+    hidden('back', location.pathname + location.search);
+    hidden('tag_id', String(tag.id));
+    const btn = document.createElement('button');
+    btn.type = 'submit';
+    btn.className = 'f0ck-exclude-btn';
+    btn.innerHTML = `<span class="f0ck-excl-off">${icons?.off || '&#8856;'}</span><span class="f0ck-excl-on">${icons?.on || '&#10003;'}</span>`;
+    form.appendChild(btn);
+    span.append(' ', form);
+    setState(form, excludedIds().has(Number(tag.id)));
+    return form;
+  };
+
+  document.addEventListener('submit', async (e) => {
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement) || !form.classList.contains('f0ck-exclude-form')) return;
+    e.preventDefault();
+    if (form.dataset.busy) return;
+    form.dataset.busy = '1';
+    const remove = form.classList.contains('is-excluded');
+    const name = form.closest('[data-tag]')?.dataset.tag || '';
+    const csrf = window.getCsrfToken();
+    const headers = { 'X-CSRF-Token': csrf, 'X-Requested-With': 'XMLHttpRequest' };
+    try {
+      // removing goes through the DELETE endpoint (`remove=1` is for the plain form)
+      const res = remove
+        ? await fetch(`${form.getAttribute('action')}/${encodeURIComponent(form.dataset.tagId)}`, { method: 'DELETE', headers })
+        : await fetch(form.getAttribute('action'), {
+          method: 'POST',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tag_id: Number(form.dataset.tagId), csrf_token: csrf }),
+        });
+      const data = await res.json().catch(() => ({}));
+      if (!data.success) {
+        window.flashMessage(data.msg || 'Failed to update excluded tags', 3000, 'error');
+        return;
+      }
+      window.f0ckSyncExcluded(data.tags);
+      const tpl = remove
+        ? (i18n().tag_unexcluded_msg || 'Tag "{tag}" removed from excluded tags')
+        : (i18n().tag_excluded_msg || 'Tag "{tag}" added to excluded tags');
+      window.flashMessage(tpl.replace('{tag}', name), 2500, 'info');
+    } catch (err) {
+      console.error(err);
+      window.flashMessage('Failed to update excluded tags', 3000, 'error');
+    } finally {
+      delete form.dataset.busy;
+    }
+  });
 })();
 
 // ── Navbar brand ──────────────────────────────────────────────────────────────────────────

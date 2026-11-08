@@ -140,6 +140,12 @@ body; `tpl::tests::text_sizes_have_css` checks all three).
     `/s/js/glitchfx.js` for `[glitch]`. GlitchFX picks up comments added later by itself.
   - A new effect goes into all three places: `F0CK_COMMENT_FX`, `COMMENT_FX` and comment-fx.css.
   - w0bm keeps its own classes for the first three (its theme CSS); `[glitch]` is shared.
+- **Exclude-tag button** next to each tag of an item (not the rating tags): a plain form
+  `.f0ck-exclude-form` posting to `/api/v2/settings/excluded_tags` (`remove=1` when the tag is
+  excluded already), so it works without JavaScript. f0ck-core.js sends it with fetch and updates
+  every such form on the page; tag lists a script rebuilds get it from `f0ckAddExcludeButton`.
+  Markup in f0ck-core.js; the frontend's CSS shows `.f0ck-excl-off` / `.f0ck-excl-on`
+  (w0bm: partials/tags.html, f0ckv2: snippets/item-body.html).
 - **Quick upload** ("u", a file dropped anywhere) is f0ckm's upload dropdown in every frontend:
   `snippets/upload-modal-frontend.html` (from frontend-scripts.html) with upload.css,
   upload-modal.css and Font Awesome 6 in a layer (fa-layered.css). The frontend's CSS gives

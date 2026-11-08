@@ -136,8 +136,8 @@
       {%- set v2_rating = (item.tags or [])|selectattr("normalized", "in", ["sfw", "nsfw", "nsfl"])|list %}
       {% if not v2_rating %}<span class="badge badge-untagged mr-2" data-rating="untagged" tooltip="unrated">?</span>{% endif %}
       {% for tag in (item.tags or []) %}
-      <span{% if (session and tag.user) %} tooltip="{{ tag.user }}"{% endif %} class="badge {{ tag.badge }} mr-2" data-tag="{{ tag.tag }}">
-        <a href="/tag/{{ tag.normalized|encode_uri_component }}">{{ tag.tag }}</a>{% if is_mod_or_admin %}&nbsp;<a class="removetag js-only" href="#" title="remove tag">&#215;</a>{% endif %}
+      <span{% if (session and tag.user) %} tooltip="{{ tag.user }}"{% endif %} class="badge {{ tag.badge }} mr-2{% if tag.is_excluded %} f0ck-tag-excluded{% endif %}" data-tag="{{ tag.tag }}">
+        <a href="/tag/{{ tag.normalized|encode_uri_component }}">{{ tag.tag }}</a>{% if (session and tag.can_exclude and tag.normalized not in ["sfw", "nsfw", "nsfl"]) %}&nbsp;<form method="post" action="/api/v2/settings/excluded_tags" class="f0ck-exclude-form{% if tag.is_excluded %} is-excluded{% endif %}" data-tag-id="{{ tag.id }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ here }}#tags"><input type="hidden" name="tag_id" value="{{ tag.id }}">{% if tag.is_excluded %}<input type="hidden" name="remove" value="1">{% endif %}<button type="submit" class="f0ck-exclude-btn" title="{% if tag.is_excluded %}{{ (t("filter.unexclude_tag") or "Excluded (click to unexclude)") }}{% else %}{{ (t("filter.exclude_tag") or "Exclude tag") }}{% endif %}" aria-pressed="{{ ("true" if tag.is_excluded else "false") }}"><span class="f0ck-excl-off">&#8856;</span><span class="f0ck-excl-on">&#10003;</span></button></form>{% endif %}{% if is_mod_or_admin %}&nbsp;<a class="removetag js-only" href="#" title="remove tag">&#215;</a>{% endif %}
       </span>
       {% endfor %}
       {% if session %}

@@ -292,6 +292,64 @@ form.v2-addtag button:hover,
   height: 100%;
 }
 
+/* ── exclude-tag button next to each tag (form .f0ck-exclude-form, f0ck-core.js) ─ */
+#tags .f0ck-exclude-form {
+  display: inline;
+  margin: 0;
+}
+
+#tags .f0ck-exclude-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  line-height: 1;
+  color: inherit;
+  text-shadow: 1px 1px black;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+#tags .f0ck-exclude-btn:hover,
+#tags .f0ck-exclude-btn:focus-visible {
+  color: #ff4757;
+  filter: drop-shadow(0 0 6px rgba(255, 71, 87, 0.75));
+}
+
+#tags .f0ck-excl-on,
+#tags .is-excluded .f0ck-excl-off {
+  display: none;
+}
+
+#tags .is-excluded .f0ck-excl-on {
+  display: inline;
+}
+
+/* excluded: like f0ckm's .tag-badge.tag-is-excluded */
+#tags .f0ck-tag-excluded {
+  opacity: 0.75;
+  box-shadow: inset 0 0 0 1px rgba(255, 71, 87, 0.55), 0 0 8px rgba(255, 71, 87, 0.2);
+  background-color: rgba(255, 71, 87, 0.15) !important;
+}
+
+#tags .f0ck-tag-excluded > a:first-child {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 71, 87, 0.8);
+  text-decoration-thickness: 1.5px;
+}
+
+#tags .is-excluded .f0ck-exclude-btn {
+  opacity: 0.95;
+  color: #ff4757;
+}
+
+#tags .is-excluded .f0ck-exclude-btn:hover,
+#tags .is-excluded .f0ck-exclude-btn:focus-visible {
+  color: #2ed573;
+  filter: drop-shadow(0 0 6px rgba(46, 213, 115, 0.75));
+}
+
 /* ── comments ──────────────────────────────────────────────────────────────── */
 .v2-comments {
   /* right under the metadata box */

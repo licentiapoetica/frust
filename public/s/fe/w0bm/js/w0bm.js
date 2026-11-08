@@ -1766,6 +1766,7 @@
       a.className = 'default-link' + (ratings.includes(norm) ? ' w0bm-tag-' + norm : '');
       a.textContent = t.tag;
       span.appendChild(a);
+      window.f0ckAddExcludeButton?.(span, t, { off: '<i class="fa fa-ban"></i>', on: '<i class="fa fa-check-circle"></i>' })?.querySelector('button')?.classList.add('default-link');
       if (canDelete && !ratings.includes(norm)) {
         span.append(' ');
         const d = document.createElement('a');
