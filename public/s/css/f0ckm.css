@@ -1960,7 +1960,17 @@ html[theme="xd"] {
 
 html[theme="xd"] .motd-container {
   border-top: 2px solid var(--nav-border-color);
-  border-bottom: 1px solid var(--nav-border-color);
+  border-bottom: 2px solid var(--nav-border-color);
+}
+
+/* the sidebar's tab row: the same 2px line as the MOTD's bottom, which it meets; the active tab's
+   underline on it */
+html[theme="xd"] .sidebar-tabs {
+  border-bottom-width: 2px;
+}
+
+html[theme="xd"] .sidebar-tab::after {
+  bottom: -2px;
 }
 
 html[theme="xd"] .item-sidebar-right,
