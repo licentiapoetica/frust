@@ -671,7 +671,8 @@ window.v2Page.onPage(() => {
 // Without JavaScript all of this is plain links and forms.
 (() => {
   const html = document.documentElement;
-  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|theme\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|mime(?:\/|$))/;
+  // (and never loaded ahead: /mode/N, /tfull/ and /theme/ change a setting on a plain GET)
+  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|theme\/|mode\/|tfull\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|mime(?:\/|$))/;
   const pathKey = href => { const u = new URL(href, location.href); return u.pathname + u.search; };
   let shownPath = pathKey(location.href);
   const readData = (doc = document) => {

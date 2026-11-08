@@ -10,6 +10,14 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/frontend\/(?<name>[A-Za-z0-9_-]{1,32})\/?$", frontend);
 }
 
+/// These GET links change a setting: a prefetch (a hovered link loaded ahead) gets nothing and
+/// changes nothing, only the real click does.
+pub(crate) fn prefetch_ignored() -> axum::response::Response {
+    let mut r = raw(204, "");
+    r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    r
+}
+
 fn redirect_301(target: &str, cookie: &str) -> axum::response::Response {
     let mut r = raw(301, "");
     let h = r.headers_mut();
@@ -22,6 +30,9 @@ fn redirect_301(target: &str, cookie: &str) -> axum::response::Response {
 }
 
 async fn theme(st: AppState, req: Req) -> Res {
+    if req.is_prefetch() {
+        return Ok(prefetch_ignored());
+    }
     let cfg = st.cfg();
     let themes = cfg.str_list("websrv.themes").unwrap_or_default();
     let first = themes.first().cloned().unwrap_or_default();
@@ -34,6 +45,9 @@ async fn theme(st: AppState, req: Req) -> Res {
 }
 
 async fn tfull(st: AppState, req: Req) -> Res {
+    if req.is_prefetch() {
+        return Ok(prefetch_ignored());
+    }
     let cfg = st.cfg();
     let current = req.session().map(|s| crate::config::as_int(&s.fullscreen).unwrap_or(0)).unwrap_or(0);
     let full = if current == 1 { 0 } else { 1 };
@@ -44,6 +58,9 @@ async fn tfull(st: AppState, req: Req) -> Res {
 /// `/frontend/<name>`: remember the visitor's frontend in a cookie (see `tpl::frontend_cookie`)
 /// and go back. 303, so browsers don't cache the switch.
 async fn frontend(st: AppState, req: Req) -> Res {
+    if req.is_prefetch() {
+        return Ok(prefetch_ignored());
+    }
     let cfg = st.cfg();
     let name = req.param("name").unwrap_or_default();
     let back = req.header("referer").unwrap_or("/");

@@ -926,6 +926,11 @@ fn invalidate_own_session(st: &AppState, req: &Req) {
 }
 
 async fn mode(st: AppState, req: Req) -> Res {
+    // a hovered mode link loaded ahead (f0ckv2 / w0bm navigation, the browser) must not switch the
+    // mode: sliding over NSFW on the way to "all" saved NSFW
+    if req.is_prefetch() {
+        return Ok(crate::routes::theme::prefetch_ignored());
+    }
     let cfg = st.cfg();
     let mode: i64 = req.path.strip_prefix("/mode/").and_then(|r| r.chars().next()).and_then(|c| c.to_digit(10)).map(i64::from).unwrap_or(0);
     let session = req.session();

@@ -242,6 +242,15 @@ impl Req {
         self.header("x-requested-with") == Some("XMLHttpRequest")
     }
 
+    /// A page loaded ahead of a click (the frontends' hover prefetch sends `X-Purpose`/`Purpose`;
+    /// browsers' own speculative loads `Sec-Purpose: prefetch` or `prefetch;prerender`). GET routes
+    /// that change something must not act on these.
+    pub fn is_prefetch(&self) -> bool {
+        [self.header("x-purpose"), self.header("purpose"), self.header("sec-purpose")]
+            .iter()
+            .any(|h| h.is_some_and(|v| v.split(';').any(|p| p.trim().eq_ignore_ascii_case("prefetch"))))
+    }
+
     pub fn is_api(&self) -> bool {
         self.path.starts_with("/api/")
     }

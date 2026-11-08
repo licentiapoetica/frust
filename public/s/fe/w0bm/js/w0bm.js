@@ -2688,8 +2688,9 @@
   // frontend, someone else logged in (login, logout: the footer data changes), not HTML, or the
   // request fails. Without JavaScript all of this is plain links and forms.
   // Pages that never load in place: session changes, frontend switch, files, the upload page (its
-  // own form instead of the quick upload)
-  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|mime(?:\/|$))/;
+  // own form instead of the quick upload), settings changed by a plain GET (/mode/N, /theme/,
+  // /tfull/: loading one ahead on hover would already switch it)
+  const FULL_LOAD = /^\/(?:logout|login|register|frontend\/|theme\/|mode\/|tfull\/|api\/|ajax\/|s\/|b\/|t\/|c\/|a\/|upload\/?$|mime(?:\/|$))/;
   const pathKey = (href) => { const u = new URL(href, location.href); return u.pathname + u.search; };
   let shownPath = pathKey(location.href);
 
