@@ -259,9 +259,16 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"CREATE INDEX IF NOT EXISTS idx_items_dest ON items(dest)"#,
     // Website font weight (100-900, NULL: the font's own) and text size (percent, NULL: 100)
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_weight smallint"#,
-    r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_size smallint"#,
-    // Text size per frontend ({"<frontend>": percent, 100 = default}); font_size is the fallback
+    // Text size per frontend ({"<frontend>": percent, 100 = default}). The old single font_size
+    // (one size for every frontend) becomes the default frontend's (f0ckm) entry, then goes.
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_sizes jsonb"#,
+    r#"DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_options' AND column_name = 'font_size') THEN
+            UPDATE user_options SET font_sizes = jsonb_build_object('f0ckm', font_size) || coalesce(font_sizes, '{}'::jsonb)
+                WHERE font_size IS NOT NULL;
+            ALTER TABLE user_options DROP COLUMN font_size;
+        END IF;
+    END $$"#,
 ];
 
 #[cfg(test)]

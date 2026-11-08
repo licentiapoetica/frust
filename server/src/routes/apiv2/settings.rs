@@ -229,6 +229,7 @@ async fn excluded_tags_get(st: AppState, req: Req) -> Res {
     j(json!({ "success": true, "tags": rows_value(tags) }), 200)
 }
 
+/// Add a tag to the visitor's excluded tags (`tagname` or `tag_id`), or remove it with `remove=1`.
 async fn excluded_tags_add(st: AppState, mut req: Req) -> Res {
     if exclude_forbidden(&st, &req) {
         return fail("Tag exclusion is disabled for anonymous users", 403);
@@ -250,12 +251,20 @@ async fn excluded_tags_add(st: AppState, mut req: Req) -> Res {
     };
     let Some(tag) = tag else { return fail("Tag not found", 404) };
     let tag_id = tag.i64("id").unwrap_or(0) as i32;
-    sql!(
-        "update user_options set excluded_tags = array_append(coalesce(excluded_tags, '{}'), ", tag_id,
-        ") where user_id = ", uid(&req), " and not (", tag_id, " = any(coalesce(excluded_tags, '{}')))"
-    )
-    .execute(&st.db)
-    .await?;
+    // `remove`: take it out again. Plain forms (no JavaScript) can't send DELETE, so they post the
+    // wanted state here (the exclude buttons of the old frontends).
+    if truthy("remove").is_some() {
+        sql!("update user_options set excluded_tags = array_remove(coalesce(excluded_tags, '{}'), ", tag_id, ") where user_id = ", uid(&req))
+            .execute(&st.db)
+            .await?;
+    } else {
+        sql!(
+            "update user_options set excluded_tags = array_append(coalesce(excluded_tags, '{}'), ", tag_id,
+            ") where user_id = ", uid(&req), " and not (", tag_id, " = any(coalesce(excluded_tags, '{}')))"
+        )
+        .execute(&st.db)
+        .await?;
+    }
     refresh_session(&st, &req);
     let tags = excluded_tag_rows(&st, uid(&req)).await?;
     j(json!({ "success": true, "tags": rows_value(tags), "tag": tag }), 200)
