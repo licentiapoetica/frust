@@ -579,11 +579,13 @@ async fn font(st: AppState, mut req: Req) -> Res {
     j(json!({ "success": true, "font": font, "weight": weight, "css": css }), 200)
 }
 
-/// `PUT /api/v2/settings/font_size` (`size`: a percent of crate::fonts::SIZES, anything else = 100)
+/// `PUT /api/v2/settings/font_size` (`size`: a percent of crate::fonts::SIZES, anything else = 100).
+/// Saved for the frontend the request comes from (each frontend has its own text size).
 async fn font_size(st: AppState, mut req: Req) -> Res {
     let body = req.post_value().await;
     let size = crate::fonts::size_for(body.get("size").and_then(crate::config::as_int));
-    if let Err(e) = sql!("update user_options set font_size = ", size.map(i32::from), " where user_id = ", uid(&req)).execute(&st.db).await {
+    let entry = json!({ crate::tpl::frontend_for(&st, &st.cfg(), Some(&req)): size.unwrap_or(100) });
+    if let Err(e) = sql!("update user_options set font_sizes = coalesce(font_sizes, '{}'::jsonb) || ", entry, " where user_id = ", uid(&req)).execute(&st.db).await {
         return logged_500("Update Font Size", e, "Error updating text size");
     }
     refresh_session(&st, &req);

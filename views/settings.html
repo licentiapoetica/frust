@@ -112,7 +112,7 @@
             </div>
           </div>
           <div class="setting-item settings-row-spaced">
-            <label for="website_font_size_select" class="settings-field-label">{{ t("settings.font_size") }}</label>
+            <label for="website_font_size_select" class="settings-field-label">{{ t("settings.font_size") }}{% if (frontend_switch is defined and frontend_switch and frontends|length > 1) %} ({{ frontend }}){% endif %}</label>
             <div class="settings-select-row">
               <select id="website_font_size_select" name="font_size" class="input settings-select">
                 <option value="">100% ({{ t("settings.font_default") }})</option>

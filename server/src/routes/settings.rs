@@ -180,8 +180,10 @@ async fn save(st: AppState, mut req: Req) -> Res {
             q.push(", font_weight = ").bind(weight.map(i32::from));
         }
         if let Some(size) = field("font_size") {
+            // saved for the frontend the form was sent from (each frontend has its own text size)
             let size = crate::fonts::size_for(size.trim().parse().ok());
-            q.push(", font_size = ").bind(size.map(i32::from));
+            let entry = json!({ crate::tpl::frontend_for(&st, &cfg, Some(&req)): size.unwrap_or(100) });
+            q.push(", font_sizes = coalesce(font_sizes, '{}'::jsonb) || ").bind(entry);
         }
         if let Some(l) = &language {
             q.push(", language = ").bind(Some(l.clone()).filter(|l| !l.is_empty()));

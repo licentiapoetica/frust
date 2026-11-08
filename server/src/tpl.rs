@@ -973,8 +973,9 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     // The weight select's value (settings): the chosen weight, else the font's own
     let shown_weight = user_font.and_then(|f| crate::fonts::effective_weight(&cfg, f, session.and_then(|s| s.font_weight)));
     ctx.insert("user_font_weight".into(), json!(shown_weight));
-    // Text size: a class on <html> (user-fs-<percent>, rules in f0ckm.css / the frontends' CSS)
-    let user_size = crate::fonts::size_for(session.and_then(|s| s.font_size));
+    // Text size: a class on <html> (user-fs-<percent>, rules in f0ckm.css / the frontends' CSS),
+    // chosen per frontend
+    let user_size = session.and_then(|s| s.font_size_for(&frontend_for(st, &cfg, req)));
     ctx.insert("user_font_size".into(), json!(user_size));
     ctx.insert("font_sizes".into(), json!(crate::fonts::SIZES));
     let site_font = if user_font.is_some() { None } else { cfg.str("websrv.default_font").filter(|f| crate::fonts::exists(&cfg, f)) };

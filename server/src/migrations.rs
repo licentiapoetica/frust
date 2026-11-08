@@ -260,6 +260,8 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     // Website font weight (100-900, NULL: the font's own) and text size (percent, NULL: 100)
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_weight smallint"#,
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_size smallint"#,
+    // Text size per frontend ({"<frontend>": percent, 100 = default}); font_size is the fallback
+    r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_sizes jsonb"#,
 ];
 
 #[cfg(test)]
