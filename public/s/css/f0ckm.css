@@ -2836,10 +2836,16 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
     align-items: center;
     overflow-x: hidden;
     overflow-y: auto;
+    /* it still scrolls when it must, without a visible scrollbar */
+    scrollbar-width: none;
     padding: 20px;
     min-height: 0;
     min-width: 0;
     gap: 0;
+  }
+
+  body.layout-modern .item-layout-container .item-main-content::-webkit-scrollbar {
+    display: none;
   }
 
   /* Flex spacers: absorb remaining space to vertically center content when it fits,
@@ -2914,7 +2920,7 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
 
   /* Sidebar toggle: hide left sidebar (e.g. keybind toggle) */
   body.layout-modern .item-layout-container.sidebar-hidden {
-    grid-template-columns: 0px minmax(0, 1fr) 400px;
+    grid-template-columns: 0px minmax(0, 1fr) 300px;
   }
 
   body.layout-modern.sidebar-right-hidden .item-layout-container.sidebar-hidden {
@@ -2935,7 +2941,7 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
      but activates from the body class so it works before the container element exists. */
   body.layout-modern.sidebar-left-hidden .item-layout-container,
   body.layout-modern.comments-hidden .item-layout-container {
-    grid-template-columns: 0px minmax(0, 1fr) 400px;
+    grid-template-columns: 0px minmax(0, 1fr) 300px;
   }
 
   body.layout-modern.sidebar-left-hidden.sidebar-right-hidden .item-layout-container,
