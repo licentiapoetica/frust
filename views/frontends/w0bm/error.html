@@ -10,12 +10,12 @@
     <a href="/random" class="w0bm-errbox-img" title="Random"><img src="/s/fe/w0bm/img/404.gif" alt="ZOMG"></a>
     <h1 class="w0bm-errbox-title">{% if message %}{{ message }}{% else %}404 - NOT FOUND{% endif %}</h1>
     {% if w0bm_hint %}<p class="w0bm-errbox-hint">{{ error_filter_hint|safe }}</p>{% endif %}
+    {%- set w0bm_see = (error_filter_hint is defined and error_filter_hint and error_see_anyways) %}
+    {% if (w0bm_hint or w0bm_see) %}
     <div class="w0bm-errbox-actions">
         {% if w0bm_hint %}<a href="#filterselectmodal" data-toggle="modal" data-target="#filterselectmodal" class="btn btn-primary"><i class="fa fa-filter"></i> Change filter</a>{% endif %}
-        {% if (error_filter_hint is defined and error_filter_hint and error_see_anyways) %}
-        <a href="{{ (url.pathname if url else ("/" ~ (item_slug or item_id))) }}?bypass=1" class="btn btn-primary"><i class="fa fa-eye"></i> {{ error_see_anyways }}</a>
-        {% endif %}
-        <a href="/random" class="btn btn-primary"><i class="fa fa-random"></i> Random</a>
+        {% if w0bm_see %}<a href="{{ (url.pathname if url else ("/" ~ (item_slug or item_id))) }}?bypass=1" class="btn btn-primary"><i class="fa fa-eye"></i> {{ error_see_anyways }}</a>{% endif %}
     </div>
+    {% endif %}
 </div>
 {% endblock %}
