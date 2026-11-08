@@ -7665,6 +7665,11 @@ body.layout-modern.sidebar-right-hidden .pagination-container-fluid {
   color: #fff;
 }
 
+/* 2px in from the left edge, under the path text above */
+.item_title_text {
+  margin-left: 2px;
+}
+
 .item_title_text.no-title,
 .item_title_text em {
   font-style: italic;
