@@ -18222,9 +18222,8 @@ body.layout-modern .user-infobox-block .gapRight > #a_favo.fa-regular::before {
   text-decoration: none;
 }
 
-/* Pin the name to the top edge of the header (level with the avatar top):
-   trim the font's built-in space above the capitals. #a_username is in the
-   selector so it beats the global `#a_username { display: inline }`. */
+/* Pin the name to the top edge of the header (level with the avatar top).
+   #a_username is in the selector so it beats the global `#a_username { display: inline }`. */
 .user-infobox-header .user-infobox-username-container {
   align-self: start;
 }
@@ -18233,7 +18232,6 @@ body.layout-modern .user-infobox-block .gapRight > #a_favo.fa-regular::before {
 .user-infobox-header span.user-infobox-username {
   display: block;
   line-height: 1;
-  text-box: trim-both cap alphabetic;
 }
 
 
