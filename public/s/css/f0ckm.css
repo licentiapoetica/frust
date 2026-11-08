@@ -13807,13 +13807,13 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
   z-index: 10000 !important;
 }
 
-/* Desktop: the dropdown's right edge sits 20px right of the bell's centre (50% of its container),
-   and the arrow's centre 20px in from that edge, so it points at the middle of the bell.
+/* Desktop: the dropdown's outer right edge sits 21px right of the bell's centre (50% of its container),
+   and the arrow's centre 21px in from it (1px border + 14px + half the 12px arrow), so it points at the middle of the bell.
    (Mobile: fixed position from JS, arrow hidden.) */
 @media (min-width: 769px) {
   .nav-right-group .notif-dropdown,
   #notif-dropdown {
-    right: calc(50% - 20px);
+    right: calc(50% - 21px);
   }
 
   .nav-right-group .notif-dropdown::before {
