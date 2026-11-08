@@ -359,15 +359,34 @@ a.w0bm-favbtn {
 .w0bm-media {
     background: #000;
 }
-/* The item page's 16:9 player takes its height from the column width (bootstrap's fixed-width
-   container), so in a short window (high browser zoom: 200% on a 1233px tall screen leaves 616px) it
-   pushed the prev/next row and the item bar out of it. Cap the width so player + navbar, title and
-   those rows (about 190px) fit the window height, with some room left (.vertical-align centres it).
-   A normal window never reaches the cap (the container is narrower). The text-size zoom has its own
-   version below (html[class*="user-fs-"]). */
+/* Bootstrap's .container width comes from the window width; beside the sidebar, with the text-size
+   zoom, it ran past the column (the item page's player sat off to the right) */
+.w0bm-main > .container {
+    max-width: 100%;
+}
+/* The item page always fits the window, at any browser / text zoom: the 16:9 player is as high as
+   the window leaves after the navbar, the title, prev / next and the item bar (--w0bm-media-h,
+   measured by w0bm.js; the fallback without JavaScript is an estimate, the text-size zoom's below).
+   The title and the item bar keep a readable width (narrower they would wrap, grow taller and leave
+   the player even less), prev / next spans the player's width; the player box takes its height from
+   its own width (aspect-ratio instead of bootstrap's padding, which follows the row's). A normal
+   window never needs it (the container is narrower). */
 @media (min-width: 768px) {
     body.w0bm-item-page .vertical-align > .wrapper {
-        max-width: calc((100vh - 250px) * 16 / 9);
+        --w0bm-media-h: calc(100vh - 250px);
+        max-width: max(calc(var(--w0bm-media-h) * 16 / 9), min(100%, 640px));
+        margin-inline: auto;
+    }
+    body.w0bm-item-page .vertical-align > .wrapper > .w0bm-media.embed-responsive-16by9 {
+        max-width: calc(var(--w0bm-media-h) * 16 / 9);
+        margin-inline: auto;
+        height: auto;
+        padding-bottom: 0;
+        aspect-ratio: 16 / 9;
+    }
+    /* ← first and last → stay within the player's edges */
+    body.w0bm-item-page .vertical-align > .wrapper > .w0bm-itemnav {
+        max-width: calc(var(--w0bm-media-h) * 16 / 9);
         margin-inline: auto;
     }
 }
@@ -3520,14 +3539,11 @@ html[class*="user-fs-"] #sidebar {
 html[class*="user-fs-"] .webchat > iframe {
     min-height: calc(70vh / var(--fs-zoom));
 }
-/* The item page's 16:9 player takes its height from the column width (bootstrap's fixed-width
-   container), so zoomed it pushes the prev/next row and the item bar out of the window: cap the
-   width so player + navbar, title and those rows (about 190px) fit the window height, with
-   some room left (.vertical-align centres it: about 30px above and below). */
+/* The item page's player height without JavaScript (see .w0bm-media above): the window height in
+   the zoomed body's px */
 @media (min-width: 768px) {
     html[class*="user-fs-"] body.w0bm-item-page .vertical-align > .wrapper {
-        max-width: calc((100vh / var(--fs-zoom) - 250px) * 16 / 9);
-        margin-inline: auto;
+        --w0bm-media-h: calc(100vh / var(--fs-zoom) - 250px);
     }
 }
 /* this file */

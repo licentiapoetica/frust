@@ -68,6 +68,37 @@
   };
   const isMobile = matchMedia('(max-width: 767px)').matches || /Mobi|Android/i.test(navigator.userAgent);
 
+  // ── Item page: the player fits the window ─────────────────────────────────────────────
+  // The player gets the height the window leaves after the navbar, the title, prev / next and the
+  // item bar (w0bm-fe.css --w0bm-media-h), at any browser or text zoom. Measured in screen px
+  // (getBoundingClientRect), set in the wrapper's own px (its CSS zoom from the text size).
+  const fitWrap = $('body.w0bm-item-page .vertical-align > .wrapper');
+  const fitMedia = fitWrap && fitWrap.querySelector(':scope > .w0bm-media');
+  if (fitWrap && fitMedia && window.ResizeObserver) {
+    const fit = () => {
+      if (innerWidth < 768) { fitWrap.style.removeProperty('--w0bm-media-h'); return; }
+      // .vertical-align centres the wrapper in the window below the navbar by the wrapper's height;
+      // the item bar's margin sticks out below it (counted twice: centring halves it)
+      const room = innerHeight - fitWrap.parentElement.getBoundingClientRect().top;
+      const wrap = fitWrap.getBoundingClientRect();
+      let last = wrap.bottom;
+      for (const c of fitWrap.children) {
+        const b = c.getBoundingClientRect();
+        if (b.height) last = Math.max(last, b.bottom);
+      }
+      const rest = wrap.height - fitMedia.getBoundingClientRect().height;
+      const zoom = fitWrap.currentCSSZoom || 1;
+      // - 80: the centring leaves about 40px under the item bar (and above the title)
+      const h = Math.floor(Math.max(90, (room - rest - 2 * (last - wrap.bottom) - 80) / zoom)) + 'px';
+      if (fitWrap.style.getPropertyValue('--w0bm-media-h') !== h) fitWrap.style.setProperty('--w0bm-media-h', h);
+    };
+    const ro = new ResizeObserver(fit);
+    Array.from(fitWrap.children).forEach((c) => { if (c !== fitMedia) ro.observe(c); });
+    on(window, 'resize', fit);
+    onLeave(() => ro.disconnect());
+    fit();
+  }
+
   function escapeHTML(str) {
     return String(str ?? '').replace(/[&<>"'`=\/]/g, (s) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;',
