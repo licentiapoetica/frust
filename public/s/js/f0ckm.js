@@ -17849,6 +17849,17 @@ window.cancelAnimFrame = (function () {
       layout: document.querySelector('.item-layout-container'),
     });
 
+    // The handle sticks to the column's edge while it slides or is dragged: `leftSliding` from prepareDrag
+    // until settleLeft is done (syncLeftEdgeZone leaves the handle alone meanwhile), handleAt(x) puts it
+    // at the column's visible edge, settleLeft glides it along with the column.
+    // The open column's width while it is hidden (f0ckm.css: grid track min(350px, 30vw))
+    const leftOpenWidth = () => Math.round(Math.min(350, window.innerWidth * 0.30));
+    let leftSliding = false;
+    const handleAt = (x) => {
+      leftEdgeZone.style.setProperty('transition', 'none', 'important');
+      leftEdgeZone.style.left = x + 'px';
+    };
+
     const isLSActive = () =>
       document.body.classList.contains('layout-modern') &&
       !!document.querySelector('.item-sidebar-left') &&
@@ -17858,6 +17869,11 @@ window.cancelAnimFrame = (function () {
     // OPEN: removes sidebar-hidden/display:none, places sidebar at translateX(-sw), reflows twice.
     // CLOSE: sidebar is already visible; sets translateX(0), reflows so transition has a start state.
     const prepareDrag = (sb, layout, isHidden, sw) => {
+      leftSliding = true;
+      handleAt(isHidden ? 0 : sw);
+      // the grid track jumps to its width, only the column slides (with the track's own transition both
+      // moved it at once: it lagged behind the handle, then caught up)
+      layout.style.setProperty('transition', 'none', 'important');
       sb.style.setProperty('transition', 'none', 'important');
       if (isHidden) {
         layout.classList.remove('sidebar-hidden');
@@ -17888,10 +17904,15 @@ window.cancelAnimFrame = (function () {
       sb.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
       void sb.offsetWidth;
       sb.style.transform = `translateX(${shouldOpen ? 0 : -sw}px)`;
+      leftEdgeZone.style.setProperty('transition', 'left 0.3s ease-in-out', 'important');
+      leftEdgeZone.style.left = (shouldOpen ? sw : 0) + 'px';
 
       let done = false;
       const finish = () => {
         if (done) return; done = true;
+        leftSliding = false;
+        leftEdgeZone.style.removeProperty('transition');
+        layout.style.removeProperty('transition');
         sb.style.removeProperty('transition');
         if (shouldOpen) {
           sb.style.removeProperty('transform');
@@ -17947,7 +17968,7 @@ window.cancelAnimFrame = (function () {
       mL.active = true; mL.isDragging = false; mL.isCandidate = true;
       mL.xDown = e.clientX; mL.yDown = e.clientY; mL.xDiff = 0; mL.yDiff = 0;
       mL.timeDown = Date.now(); mL.sb = sb; mL.layout = layout;
-      mL.sw = isHidden ? Math.round(Math.min(400, window.innerWidth * 0.30)) : sb.offsetWidth;
+      mL.sw = isHidden ? leftOpenWidth() : sb.offsetWidth;
       mL.wasHidden = isHidden;
     });
 
@@ -17980,6 +18001,7 @@ window.cancelAnimFrame = (function () {
       }
       mL.sb.style.setProperty('transition', 'none', 'important');
       mL.sb.style.transform = `translateX(${tx}px)`;
+      handleAt(mL.sw + tx);
       document.body.style.cursor = 'grabbing';
     });
 
@@ -18033,7 +18055,7 @@ window.cancelAnimFrame = (function () {
         if (touch.clientX < 60) {
           swipeRT.isLeftSidebarCandidate = true;
           swipeRT.leftSB = sb; swipeRT.leftLayout = layout;
-          swipeRT.leftSW = Math.round(Math.min(400, window.innerWidth * 0.30));
+          swipeRT.leftSW = leftOpenWidth();
           swipeRT.leftWasHidden = true;
         }
       } else {
@@ -18075,6 +18097,7 @@ window.cancelAnimFrame = (function () {
         }
         swipeRT.leftSB.style.setProperty('transition', 'none', 'important');
         swipeRT.leftSB.style.transform = `translateX(${tx}px)`;
+        handleAt(sw + tx);
       }
     }, { passive: false });
 
@@ -18099,6 +18122,7 @@ window.cancelAnimFrame = (function () {
 
     // ── Edge zone & sync ────────────────────────────────────────────────────
     const syncLeftEdgeZone = () => {
+      if (leftSliding) return;
       const { sb, layout } = getLS();
       // The left drag zone only applies to the 3-column desktop grid (≥1000px).
       // On mobile the sidebar becomes in-flow, so hide the zone to avoid it
@@ -18131,7 +18155,7 @@ window.cancelAnimFrame = (function () {
                        document.body.classList.contains('comments-hidden') ||
                        localStorage.getItem('comments_hidden') === 'true';
       localStorage.setItem('comments_hidden', isHidden ? 'false' : 'true');
-      const sw = isHidden ? Math.round(Math.min(400, window.innerWidth * 0.30)) : sb.offsetWidth;
+      const sw = isHidden ? leftOpenWidth() : sb.offsetWidth;
       prepareDrag(sb, layout, isHidden, sw);
       // rAF ensures the initial transform state is painted before the transition starts
       requestAnimationFrame(() => settleLeft(sb, layout, isHidden, sw));

@@ -2735,41 +2735,46 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   }
 }
 
-/* Left sidebar edge zone drag handle — mirrors #sidebar-drag-zone */
+/* Left sidebar edge zone drag handle (modern layout's comments column): the same pill as
+   #sidebar-drag-zone above, mirrored, tucked against the column's right edge */
 #sidebar-left-drag-zone {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  overflow: clip;
   top: var(--navbar-h, 50px) !important;
-  padding-left: 10px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  opacity: 1;
+  /* click-through strip, only the pill takes pointer events (its events still target the zone) */
+  pointer-events: none !important;
 }
 
 #sidebar-left-drag-zone::after {
   content: '';
   display: block;
-  width: 4px;
+  flex-shrink: 0;
+  width: 5px;
   height: 40px;
   border-radius: 2px;
   background: var(--accent, #888);
-  transition: height 0.2s ease, opacity 0.2s ease;
+  pointer-events: auto;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: height 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
 }
 
-#sidebar-left-drag-zone:hover {
-  opacity: 1;
+body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
+  opacity: 0.7;
 }
 
 #sidebar-left-drag-zone:hover::after {
+  opacity: 1;
   height: 56px;
 }
 
-/* Always show the handle on touch devices (no hover state available) */
+/* Touch devices: no hover, so the handle stays fully visible */
 @media (pointer: coarse) {
-  #sidebar-left-drag-zone {
+  #sidebar-left-drag-zone::after {
     opacity: 0.7;
-    justify-content: flex-start;
-    padding-left: 6px;
   }
 }
 
