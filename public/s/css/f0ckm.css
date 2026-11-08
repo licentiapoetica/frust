@@ -4938,6 +4938,9 @@ body.layout-legacy .comment-input {
   justify-content: center;
   height: 30px;
   position: relative;
+  /* a button, not text: dragging across the comment box doesn't select "Post" */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .submit-comment .submit-spinner {
