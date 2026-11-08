@@ -50,7 +50,7 @@
                 </span>
                 {% else %}
                 <span {% if (((not is_anonymized and session) and not session.is_anon) and (tag.display_name or tag.user)) %} tooltip="{{ (tag.display_name or tag.user) }}" {% endif %} class="badge {{ tag.badge }} tag-badge {% if tag.is_excluded %} tag-is-excluded {% endif %}" data-tag-id="{{ tag.id }}" data-tag="{{ tag.tag }}" data-tag-normalized="{{ tag.normalized }}">
-                    <a href="/tag/{{ tag.normalized }}" class="tag-name">{{ tag.tag }}</a>{% if tag.can_exclude %}<button type="button" class="tag-exclude-btn" title="{% if tag.is_excluded %}{{ (t("filter.unexclude_tag") or "Excluded (click to unexclude)") }}{% else %}{{ (t("filter.exclude_tag") or "Exclude tag") }}{% endif %}" aria-label="Exclude tag"><i class="fa-solid {% if tag.is_excluded %} fa-circle-check {% else %} fa-ban {% endif %}"></i></button>{% endif %}{% if is_mod_or_admin %}&nbsp;<a class="removetag" href="#"><i class="fa-solid fa-xmark"></i></a>{% endif %}
+                    <a href="/tag/{{ tag.normalized }}" class="tag-name" title="{{ tag.tag }}">{{ tag.tag }}</a>{% if tag.can_exclude %}<button type="button" class="tag-exclude-btn" title="{% if tag.is_excluded %}{{ (t("filter.unexclude_tag") or "Excluded (click to unexclude)") }}{% else %}{{ (t("filter.exclude_tag") or "Exclude tag") }}{% endif %}" aria-label="Exclude tag"><i class="fa-solid {% if tag.is_excluded %} fa-circle-check {% else %} fa-ban {% endif %}"></i></button>{% endif %}{% if is_mod_or_admin %}&nbsp;<a class="removetag" href="#"><i class="fa-solid fa-xmark"></i></a>{% endif %}
                 </span>
                 {% endif %}
                 {% endfor %}

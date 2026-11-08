@@ -20076,6 +20076,7 @@ class NotificationSystem {
           contentEl.href = `/tag/${tag.normalized}`;
           contentEl.className = 'tag-name';
           contentEl.textContent = tag.tag;
+          contentEl.title = tag.tag; // the full name when it is cut off (f0ckm.css .tag-badge a.tag-name)
           span.appendChild(contentEl);
 
           const exclBtn = document.createElement('button');

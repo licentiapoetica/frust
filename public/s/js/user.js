@@ -89,6 +89,7 @@
         contentEl.href = "/tag/" + tag.normalized;
         contentEl.className = "tag-name";
         contentEl.textContent = tag.tag;
+        contentEl.title = tag.tag;
       }
 
       const span = document.createElement("span");

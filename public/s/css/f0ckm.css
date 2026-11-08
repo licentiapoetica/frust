@@ -8607,6 +8607,7 @@ a.removetag i {
 .tag-badge {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
   position: relative;
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
   vertical-align: middle;
@@ -8616,6 +8617,14 @@ a.removetag i {
   color: inherit;
   text-decoration: none;
   transition: opacity 0.15s ease;
+  /* One line: a long name (a hash, say) is cut off with "…" (full name in its title) instead of
+     breaking mid-word (the general .tag-name rule allows that) and pushing the buttons out of line */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .tag-badge .tag-exclude-btn {
