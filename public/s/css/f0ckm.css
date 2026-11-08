@@ -29104,13 +29104,13 @@ body.onara-modal-open #page-modal {
   height: var(--pgm-header-h);
   padding-top: 0;
   padding-bottom: 0;
-  /* the close button is 12px shorter than the bar: 6px above, below and to its right */
-  padding-right: 6px;
+  /* the close button is 16px shorter than the bar: 8px above, below and to its right */
+  padding-right: 8px;
 }
 
 :is(#page-modal, #pgm-page-header).pgm-header-synced .pgm-close {
-  width: calc(var(--pgm-header-h) - 12px);
-  height: calc(var(--pgm-header-h) - 12px);
+  width: calc(var(--pgm-header-h) - 16px);
+  height: calc(var(--pgm-header-h) - 16px);
   font-size: 1.3em;
 }
 
@@ -29137,8 +29137,8 @@ body.onara-modal-open #page-modal {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   margin: 0;
   padding: 0;
   background: none;
