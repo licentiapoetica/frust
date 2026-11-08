@@ -6788,6 +6788,12 @@ div.posts>a:not(.notif-item).touch-active {
   box-shadow: 0 0 0 1px var(--white);
 }
 
+/* No browser focus outline (Firefox draws a dotted one after a click, or when Onara hands focus back to
+   the active thumbnail): keyboard focus shows the ring above via :focus-visible instead */
+div.posts>a:not(.notif-item):focus {
+  outline: none;
+}
+
 div.posts>a:not(.notif-item)::after {
   position: absolute;
   right: 0;
