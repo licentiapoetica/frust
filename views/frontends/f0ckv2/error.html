@@ -12,10 +12,12 @@
             <span>Error</span>
             <code>{{ message }}</code>
             {% if (error_filter_hint is defined and error_filter_hint) %}
+            {#- the filter hint only for visitors who can change their filter (guests can't) -#}
+            {%- set can_filter = session and (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
+            {% if can_filter %}
             <span class="v2-error-hint">{{ error_filter_hint|safe }}</span>
-            {% if session %}
             <span class="v2-error-hint">switch the mode: {% for m in modes %}{% if m != "nsfl" or enable_nsfl %}<a href="/mode/{{ loop.index0 }}">{{ m }}</a> {% endif %}{% endfor %}</span>
-            {% else %}
+            {% elif not session %}
             <span class="v2-error-hint"><a href="/?login=1">login</a> to see more</span>
             {% endif %}
             {% if (error_see_anyways and (item_id or item_slug)) %}

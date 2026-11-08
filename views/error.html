@@ -14,10 +14,14 @@
             <span>{{ t("error.label") }}</span>
             <code>{{ message }}</code>
           </div>
-          {% if (error_filter_hint is defined and error_filter_hint) %}
+          {#- the filter hint only for visitors who can change their filter (guests can't) -#}
+          {%- set can_filter = session and (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
+          {% if (error_filter_hint is defined and error_filter_hint and (can_filter or error_see_anyways)) %}
           <div class="_error_filter_hint">
+            {% if can_filter %}
             <div class="_error_filter_hint_text">{{ error_filter_hint|safe }}</div>
             <a href="#" data-action="open-filter-modal" class="_error_filter_hint_link">{{ error_filter_hint_link }}</a>
+            {% endif %}
             {% if error_see_anyways %}
             <div class="_error_filter_actions">
               <button type="button" class="btn _error_see_anyways_btn" data-action="see-anyways" data-item-id="{{ (item_id or "") }}" data-item-slug="{{ (item_slug or "") }}">
