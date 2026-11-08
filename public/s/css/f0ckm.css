@@ -9674,7 +9674,7 @@ div.posts>a>p::before {
   right: 0;
   bottom: 0;
   height: 7px;
-  width: 15%;
+  width: 8%;
 }
 
 div.posts>a[data-mode="sfw"]>p::before {
