@@ -131,7 +131,9 @@
     if (vw <= 599) right = 0;
     // Left (comments) sidebar on item pages
     const ls = visibleRect('.item-sidebar-left');
-    const left = ls && ls.right > 1 && ls.right < vw / 2 ? Math.round(ls.right) : 0;
+    // exact, not rounded: the column is min(350px, 30vw) wide, rounding its edge up left a gap where the
+    // background canvas showed through
+    const left = ls && ls.right > 1 && ls.right < vw / 2 ? ls.right : 0;
     // Desktop, sidebar beside the content: the header takes the exact height of the sidebar's tab row,
     // so the two form one continuous bar under the navbar
     const tabs = right > 0 && rsEl ? rsEl.querySelector('.sidebar-tabs') : null;

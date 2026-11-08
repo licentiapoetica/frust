@@ -2829,6 +2829,10 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
     overflow-y: auto;
     overflow-x: hidden;
     border-right: 1px solid var(--nav-border-color);
+    /* the navbar colour under the border only (the column itself stays see-through): most themes'
+       border colour is see-through, on the background canvas it showed as a tinted line (next to the
+       settings modal, say); now it looks like the right sidebar's border, which sits on --nav-bg */
+    background: linear-gradient(var(--nav-bg), var(--nav-bg)) right top / 1px 100% no-repeat border-box;
     z-index: 1;
     box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5) !important;
   }
