@@ -115,10 +115,14 @@
   border-radius: 0 !important;
 }
 
+/* Header grid (all in --u-rem, like the form below): the 32px close button sits 1 unit from the top and
+   right edge, and the title row is exactly 32px + 2 units tall (+ its 1px bottom border), so the button,
+   the title and the upload limit share one centre line; the title starts 1 unit from the left edge,
+   level with the form */
 #upload-drag-modal .modal-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: calc(1 * var(--u-rem, 1rem));
+  right: calc(1 * var(--u-rem, 1rem));
   z-index: 10;
   display: inline-flex;
   align-items: center;
@@ -174,7 +178,12 @@
   /* Above everything the form layers inside the panel (badges 5-100, tag input 9998, emoji picker 10000);
      all of it lives in the panel's own stacking context, so these numbers don't leak outside */
   z-index: 10001;
-  padding: 16px 62px 12px 18px;
+  box-sizing: border-box;
+  min-height: calc(32px + 2 * var(--u-rem, 1rem) + 1px);
+  align-items: center;
+  align-content: center;
+  /* right: room for the close button (32px + 1 unit on each side) */
+  padding: calc(0.5 * var(--u-rem, 1rem)) calc(32px + 2 * var(--u-rem, 1rem)) calc(0.5 * var(--u-rem, 1rem)) calc(1 * var(--u-rem, 1rem));
   background: var(--bg, #111);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 1.05em;
