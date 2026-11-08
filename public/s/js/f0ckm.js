@@ -20806,6 +20806,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.dispatchEvent(new CustomEvent('f0ck:mimeChanged', { detail: { mime: newMime } }));
 
+    // Grids kept from before show the old media types (like a mode change: gridCacheMap.clear())
+    if (typeof gridCacheMap !== 'undefined') gridCacheMap.clear();
+
     // Trigger reload context-aware
     const fromModal = !!menu.closest('#excluded-tags-overlay');
     const postsEl = window.isFilterReloadableView();
@@ -20816,9 +20819,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (isOnaraOpen) {
         const bgUrl = window._onaraReturnUrl || getOnaraBaseUrl();
-        reloadPromise = window.loadPageAjax ? window.loadPageAjax(bgUrl, { skipPush: true, skipCache: true }) : null;
+        reloadPromise = window.loadPageAjax ? window.loadPageAjax(bgUrl, true, { skipPush: true, skipCache: true }) : null;
     } else if (postsEl) {
-        reloadPromise = window.loadPageAjax ? window.loadPageAjax(url.toString(), { skipPush: true }) : null;
+        // (url, replace, options): the options went in as `replace` before, so none of them applied
+        reloadPromise = window.loadPageAjax ? window.loadPageAjax(url.toString(), true, { skipPush: true, bypassCache: true }) : null;
     } else if (document.getElementById('main')?.classList.contains('item-view') || document.querySelector('.item-layout-container, .item-main-content')) {
         // On item view, refresh the context but KEEP media playing
         reloadPromise = window.loadItemAjax ? window.loadItemAjax(url.toString(), true, { keepMedia: true }) : null;

@@ -885,6 +885,8 @@
     document.cookie = picked.length < boxes.length
       ? 'mime=' + picked.join(',') + '; path=/; max-age=31536000; SameSite=Lax'
       : 'mime=; path=/; max-age=0; SameSite=Lax';
+    // pages loaded ahead still show the old media types
+    prefetched.clear();
     if ($('.items')) {
       closeModal($('#filterselectmodal'));
       reloadPage();
