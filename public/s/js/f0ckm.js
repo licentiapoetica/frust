@@ -24672,6 +24672,23 @@ window.BulkSelection = (() => {
   function init() {
     ensureDOMElements();
 
+    // The dashed "holding" outline only shows once a press has lasted a moment, so a plain click
+    // (or tap) on a thumbnail never flashes it
+    const HOLD_HINT_DELAY = 200;
+    let holdHintTimer = null;
+    const showHoldHint = (thumb) => {
+      clearTimeout(holdHintTimer);
+      holdHintTimer = setTimeout(() => {
+        holdHintTimer = null;
+        thumb.classList.add('thumb-longpressing');
+      }, HOLD_HINT_DELAY);
+    };
+    const hideHoldHint = (thumb) => {
+      clearTimeout(holdHintTimer);
+      holdHintTimer = null;
+      if (thumb) thumb.classList.remove('thumb-longpressing');
+    };
+
     // 1. Mouse Long-Press (Left Button Hold for ~600ms)
     let mouseHoldTimer = null;
     let holdThumb = null;
@@ -24687,13 +24704,13 @@ window.BulkSelection = (() => {
       holdThumb = thumb;
       startX = e.clientX;
       startY = e.clientY;
-      thumb.classList.add('thumb-longpressing');
+      showHoldHint(thumb);
 
       if (mouseHoldTimer) clearTimeout(mouseHoldTimer);
       mouseHoldTimer = setTimeout(() => {
         mouseHoldTimer = null;
         if (holdThumb) {
-          holdThumb.classList.remove('thumb-longpressing');
+          hideHoldHint(holdThumb);
           suppressNextClick = true;
           if (typeof window.clearHoverPreview === 'function') {
             window.clearHoverPreview();
@@ -24716,7 +24733,7 @@ window.BulkSelection = (() => {
         mouseHoldTimer = null;
       }
       if (holdThumb) {
-        holdThumb.classList.remove('thumb-longpressing');
+        hideHoldHint(holdThumb);
         holdThumb = null;
       }
     };
@@ -24738,13 +24755,13 @@ window.BulkSelection = (() => {
       touchHoldThumb = thumb;
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
-      thumb.classList.add('thumb-longpressing');
+      showHoldHint(thumb);
 
       if (touchHoldTimer) clearTimeout(touchHoldTimer);
       touchHoldTimer = setTimeout(() => {
         touchHoldTimer = null;
         if (touchHoldThumb) {
-          touchHoldThumb.classList.remove('thumb-longpressing');
+          hideHoldHint(touchHoldThumb);
           suppressNextClick = true;
           if (typeof window.clearHoverPreview === 'function') {
             window.clearHoverPreview();
@@ -24767,7 +24784,7 @@ window.BulkSelection = (() => {
         touchHoldTimer = null;
       }
       if (touchHoldThumb) {
-        touchHoldThumb.classList.remove('thumb-longpressing');
+        hideHoldHint(touchHoldThumb);
         touchHoldThumb = null;
       }
     };
