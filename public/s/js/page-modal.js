@@ -357,7 +357,7 @@
     bar.id = 'pgm-page-header';
     bar.className = 'pgm-header';
     bar.dataset.path = path;
-    bar.innerHTML = '<h3 class="pgm-title"></h3><div class="pgm-actions"><button type="button" class="pgm-close" title="Close" aria-label="Close">&times;</button></div>';
+    bar.innerHTML = '<h3 class="pgm-title"></h3><div class="pgm-actions"><button type="button" class="pgm-close" title="Close" aria-label="Close"><i class="fa-solid fa-xmark"></i></button></div>';
     bar.querySelector('.pgm-title').textContent = titleFor(path);
     bar.querySelector('.pgm-close').addEventListener('click', leavePage);
     const spacer = document.createElement('div');

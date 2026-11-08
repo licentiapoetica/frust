@@ -29159,6 +29159,13 @@ body.onara-modal-open #page-modal {
   border-color: var(--accent);
 }
 
+/* Font Awesome X (a text "×" sat off-centre in the site font); same size as the upload modal's */
+:is(#page-modal, #pgm-page-header) .pgm-close i {
+  display: block;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 #page-modal .pgm-body {
   flex: 1 1 auto;
   min-height: 0;
