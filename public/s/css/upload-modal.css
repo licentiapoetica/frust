@@ -129,10 +129,16 @@
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: var(--text-color, var(--white, #fff));
-  font-size: calc(1.375 * var(--u-rem, 1rem));
+  font-size: calc(1 * var(--u-rem, 1rem));
   line-height: 1;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
+}
+
+/* Font Awesome X (a text "×" sits off-centre in the site font) */
+#upload-drag-modal .modal-close i {
+  display: block;
+  line-height: 1;
 }
 
 #upload-drag-modal .modal-close:hover {
