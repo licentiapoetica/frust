@@ -5911,7 +5911,9 @@ body.layout-legacy .scroll-to-bottom svg {
   box-shadow: 0 20px 50px #000000;
   /* Fully opaque black shadow */
   padding: 15px;
-  max-width: min(600px, calc(100vw - 30px));
+  /* --preview-max-w: the room on the side it opens to (comments.js showCommentPreview) */
+  box-sizing: border-box;
+  max-width: min(600px, calc(100vw - 30px), var(--preview-max-w, 600px));
   max-height: 500px;
   overflow-y: auto;
   pointer-events: auto;

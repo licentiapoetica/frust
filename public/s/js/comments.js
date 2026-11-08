@@ -1151,33 +1151,37 @@ class CommentSystem {
             }
         }
 
-        const previewRect = preview.getBoundingClientRect();
-
-        // Default: position preview to the right of the link
-        let left = rect.right + 10;
-        let top = rect.top;
-
-        // If there's NOT enough space on the right, open to the left
-        if (left + previewRect.width > window.innerWidth - 10) {
-            left = rect.left - previewRect.width - 10;
+        // Side: decided from the room there is, not from the preview's current width (its images
+        // usually haven't loaded yet, so it measures narrow and then grows off the screen). Right of
+        // the link if the widest preview fits there, else the side with more room. On the left it is
+        // anchored by its right edge, so it grows away from the link; either way it is never wider
+        // than its side (--preview-max-w, f0ckm.css).
+        const GAP = 10;
+        const maxW = Math.min(600, window.innerWidth - 30);
+        const roomRight = window.innerWidth - rect.right - 2 * GAP;
+        const roomLeft = rect.left - 2 * GAP;
+        const openLeft = roomRight < maxW && roomLeft > roomRight;
+        preview.style.setProperty('--preview-max-w', Math.max(160, openLeft ? roomLeft : roomRight) + 'px');
+        if (openLeft) {
+            preview.style.left = 'auto';
+            preview.style.right = (window.innerWidth - rect.left + GAP) + 'px';
+        } else {
+            preview.style.right = 'auto';
+            preview.style.left = (rect.right + GAP) + 'px';
         }
 
-        // Clamp to screen boundaries if left/right are both tight
-        if (left < 10) {
-            left = 10;
-        }
-        if (left + previewRect.width > window.innerWidth - 10) {
-            left = Math.max(10, window.innerWidth - previewRect.width - 10);
-        }
-
-        // Clamp top & bottom boundary
-        if (top + previewRect.height > window.innerHeight - 10) {
-            top = window.innerHeight - previewRect.height - 10;
-        }
-        if (top < 10) top = 10;
-
-        preview.style.left = left + 'px';
-        preview.style.top = top + 'px';
+        // Height: next to the link, kept on the screen; again once images / videos inside have loaded
+        const placeTop = () => {
+            if (!preview.isConnected) return;
+            const h = preview.getBoundingClientRect().height;
+            let top = rect.top;
+            if (top + h > window.innerHeight - GAP) top = window.innerHeight - h - GAP;
+            if (top < GAP) top = GAP;
+            preview.style.top = top + 'px';
+        };
+        placeTop();
+        preview.addEventListener('load', placeTop, true);
+        preview.addEventListener('loadedmetadata', placeTop, true);
     }
 
     async fetchCommentForPreview(id, link, level) {
