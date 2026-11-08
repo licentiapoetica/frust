@@ -2071,6 +2071,24 @@ html[data-w0bm-theme="Glitch"] .navbar .dropdown-menu {
         float: none;
         margin-top: 0;
     }
+    /* Page links and search box on the same lines: the themes push the links down beside the
+       floated search box (w0bmcustom.css bottom: -5px, glitch.css -10px), which this row doesn't
+       need, and the links (38px) are taller than the box (34px). Links back in place, the box
+       stretched to the row's height (not Glitch's: it keeps its own 40px round pair). */
+    .w0bm-index-page .page-header > .page {
+        align-items: stretch;
+    }
+    .w0bm-index-page .page-header > .page > .pagination {
+        bottom: 0;
+        margin: 0;
+    }
+    html:not([data-w0bm-theme="Glitch"]) .w0bm-index-page .page-header > .page > .w0bm-searchform > .suchleiste,
+    html:not([data-w0bm-theme="Glitch"]) .w0bm-index-page .page-header > .page > .w0bm-searchform > .suchbutton {
+        height: auto;
+    }
+    html:not([data-w0bm-theme="Glitch"]) .w0bm-index-page .page-header > .page > .w0bm-searchform > .suchbutton {
+        line-height: 1;
+    }
 }
 /* Search modal: field and button one row over the full width, the button as tall as the field
    (the themes below may still set their own fixed height for both) */
