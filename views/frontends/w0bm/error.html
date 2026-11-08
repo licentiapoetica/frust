@@ -6,16 +6,29 @@
 {#- The filter hint only makes sense for visitors who can change their filter (same rule as the navbar's Filter link) -#}
 {%- set w0bm_can_filter = session and (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
 {%- set w0bm_hint = (error_filter_hint is defined and error_filter_hint and w0bm_can_filter) %}
-<div class="w0bm-errbox">
-    <a href="/random" class="w0bm-errbox-img" title="Random"><img src="/s/fe/w0bm/img/404.gif" alt="ZOMG"></a>
-    <h1 class="w0bm-errbox-title">{% if message %}{{ message }}{% else %}404 - NOT FOUND{% endif %}</h1>
-    {% if w0bm_hint %}<p class="w0bm-errbox-hint">{{ error_filter_hint|safe }}</p>{% endif %}
-    {%- set w0bm_see = (error_filter_hint is defined and error_filter_hint and error_see_anyways) %}
-    {% if (w0bm_hint or w0bm_see) %}
-    <div class="w0bm-errbox-actions">
-        {% if w0bm_hint %}<a href="#filterselectmodal" data-toggle="modal" data-target="#filterselectmodal" class="btn btn-primary"><i class="fa fa-filter"></i> Change filter</a>{% endif %}
-        {% if w0bm_see %}<a href="{{ (url.pathname if url else ("/" ~ (item_slug or item_id))) }}?bypass=1" class="btn btn-primary"><i class="fa fa-eye"></i> {{ error_see_anyways }}</a>{% endif %}
+{#- same layout as the default error page (views/error.html): a small window with a title bar -#}
+<div class="w0bm-err-wrap">
+    <div class="w0bm-err">
+        <div class="w0bm-err-bar"><span>(Ͼ˳Ͽ)..!!!</span></div>
+        <a href="/random" class="w0bm-err-img"><img src="/s/fe/w0bm/img/404.gif" alt="ZOMG"></a>
+        <div class="w0bm-err-msg">
+            <span>Error</span>
+            <code>{% if message %}{{ message }}{% else %}404 - NOT FOUND{% endif %}</code>
+        </div>
+        {%- set w0bm_see = (error_filter_hint is defined and error_filter_hint and error_see_anyways) %}
+        {% if (w0bm_hint or w0bm_see) %}
+        <div class="w0bm-err-hint">
+            {% if w0bm_hint %}
+            <div>{{ error_filter_hint|safe }}</div>
+            <a href="#filterselectmodal" data-toggle="modal" data-target="#filterselectmodal">{{ error_filter_hint_link }}</a>
+            {% endif %}
+            {% if w0bm_see %}
+            <div class="w0bm-err-actions">
+                <a href="{{ (url.pathname if url else ("/" ~ (item_slug or item_id))) }}?bypass=1" class="btn btn-primary"><i class="fa fa-eye"></i> {{ error_see_anyways }}</a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 {% endblock %}
