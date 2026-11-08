@@ -13680,7 +13680,8 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 0 5px;
+  /* right: 12px from the edge, like the brand on the left */
+  padding: 0 12px 0 5px;
   flex-shrink: 0;
   margin-left: auto;
 }
