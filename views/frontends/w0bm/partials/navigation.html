@@ -63,9 +63,10 @@
                         <li><a href="/admin"><i class="fa fa-wrench"></i> Admin{% if session.pending_count %} <span class="badge">{{ session.pending_count }}</span>{% endif %}</a></li>
                         {% endif %}
                         {% endif %}
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/logout"><i class="fa fa-sign-out"></i> Logout</a></li>
                     </ul>
                 </li>
-                <li><a href="/logout"><i class="fa fa-sign-out"></i><span class="hidden-sm"> Logout</span></a></li>
             </ul>
             {% else %}
             <ul class="nav navbar-nav navbar-right">
