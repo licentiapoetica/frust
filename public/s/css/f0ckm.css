@@ -9673,8 +9673,8 @@ div.posts>a>p::before {
   position: absolute;
   right: 0;
   bottom: 0;
-  height: 4px;
-  width: 30%;
+  height: 7px;
+  width: 15%;
 }
 
 div.posts>a[data-mode="sfw"]>p::before {
