@@ -24,8 +24,14 @@ html:not(.no-js) .nojs-only {
 
 /* ── grid thumbnails (was an inline background-image) ─────────────────────── */
 div.posts>a {
-  /* the f0ckv2 placeholder shows through when the thumbnail is missing */
-  background-image: var(--thumb), url("/s/fe/f0ckv2/img/200.gif");
+  background-image: var(--thumb);
+}
+
+/* The f0ckv2 placeholder only for a thumbnail that failed to load (f0ck.js <thumbs> sets the class).
+   Not as a second background layer: that one paints while the thumbnail is still loading, so the
+   whole grid showed the placeholder first. */
+div.posts>a.v2-thumb-missing {
+  background-image: url("/s/fe/f0ckv2/img/200.gif");
 }
 
 div.posts>a[data-mode="nsfl"]>p:before {

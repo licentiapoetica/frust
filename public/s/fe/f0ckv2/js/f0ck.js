@@ -34,6 +34,18 @@ const v2On = (target, type, fn, opts) => target.addEventListener(type, fn,
   Object.assign(typeof opts === 'boolean' ? { capture: opts } : { ...(opts || {}) }, { signal: window.v2Page.signal }));
 
 window.v2Page.onPage(() => {
+  // <thumbs> grid thumbnails are a CSS background (--thumb on each tile): a missing one gets the
+  // f0ckv2 placeholder (.v2-thumb-missing, f0ckv2.css). Same URL as the background, so the browser
+  // loads it once.
+  document.querySelectorAll('div.posts > a').forEach(a => {
+    const m = a.style.getPropertyValue('--thumb').match(/url\(\s*(['"]?)(.*?)\1\s*\)/);
+    if(!m || !m[2]) return;
+    const img = new Image();
+    img.onerror = () => a.classList.add('v2-thumb-missing');
+    img.src = m[2];
+  });
+  // </thumbs>
+
   // Onara viewer: the item over its grid page (index.html), closed by a link to that page
   const onara = document.getElementById('v2-onara');
   let video;
