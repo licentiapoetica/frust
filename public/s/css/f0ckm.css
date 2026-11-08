@@ -4243,34 +4243,6 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   font-size: 0.9em;
 }
 
-.sidebar-dev-score {
-  font-size: 0.85em;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  background: rgba(255, 170, 0, 0.16);
-  color: #ffaa00;
-  border: 1px solid rgba(255, 170, 0, 0.4);
-  letter-spacing: 0.02em;
-  font-family: monospace, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;
-  flex-shrink: 0;
-}
-
-.sidebar-dev-score i {
-  font-size: 0.85em;
-  opacity: 0.85;
-}
-
-html[theme='light'] .sidebar-dev-score,
-html[theme='paper'] .sidebar-dev-score {
-  background: rgba(217, 119, 6, 0.14);
-  color: #b45309;
-  border-color: rgba(217, 119, 6, 0.35);
-}
-
 /* Light / Paper themes */
 html[theme='light'] .sidebar-tabs,
 html[theme='paper'] .sidebar-tabs {

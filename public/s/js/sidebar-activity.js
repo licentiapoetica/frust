@@ -1257,19 +1257,6 @@
             ? `<span class="sidebar-personalized-pill" title="Personalized recommendation based on your interests"><i class="fa-solid fa-wand-magic-sparkles"></i> For You</span>` 
             : '';
 
-        const isDev = !!(window.f0ckSession && window.f0ckSession.development);
-        const rawScore = (typeof video.score === 'number') 
-            ? video.score 
-            : (typeof video.rank_score === 'number' ? video.rank_score : 0);
-        const formattedScore = (typeof rawScore === 'number')
-            ? (Number.isInteger(rawScore) ? rawScore : +(rawScore.toFixed(1)))
-            : rawScore;
-
-        const devScoreAttr = isDev ? ` data-score="${escapeHtml(String(formattedScore))}"` : '';
-        const devScoreBadge = isDev
-            ? `<span class="sidebar-video-score sidebar-dev-score" title="Development Score: ${formattedScore} (Algo: ${video.score ?? video.rank_score ?? 0})"><i class="fa-solid fa-code"></i> score: ${formattedScore}</span>`
-            : '';
-
         const isTagFeed = options.isTagFeed || false;
         const tagContext = options.tag || null;
         const isFavsFeed = options.isFavsFeed || false;
@@ -1286,7 +1273,7 @@
 
 
         return `
-            <div class="sidebar-video-card${activeClass}" data-id="${video.id}" data-slug="${escapeHtml(video.slug || '')}" data-file="${escapeHtml(activeDest)}" data-mime="${escapeHtml(activeMime)}" data-ext="${escapeHtml(ext ? ext.toLowerCase() : '')}" data-mode="${rClass}" data-target-subf0ck="${escapeHtml(video.target_subf0ck_slug || '')}" data-personalized="${video.personalized ? 'true' : 'false'}"${devScoreAttr}>
+            <div class="sidebar-video-card${activeClass}" data-id="${video.id}" data-slug="${escapeHtml(video.slug || '')}" data-file="${escapeHtml(activeDest)}" data-mime="${escapeHtml(activeMime)}" data-ext="${escapeHtml(ext ? ext.toLowerCase() : '')}" data-mode="${rClass}" data-target-subf0ck="${escapeHtml(video.target_subf0ck_slug || '')}" data-personalized="${video.personalized ? 'true' : 'false'}">
                 <a href="${targetHref}" class="sidebar-video-link" data-mode="${rClass}" data-inherit-context="false">
                     <div class="sidebar-video-thumb-wrap" data-file="${escapeHtml(activeDest)}" data-mime="${escapeHtml(activeMime)}" data-ext="${escapeHtml(ext ? ext.toLowerCase() : '')}" data-mode="${rClass}">
                         ${thumbContentHtml}
@@ -1305,8 +1292,6 @@
                                 ${timeStr ? `<span class="sidebar-video-time" title="${escapeHtml(fullDate)}">${escapeHtml(timeStr)}</span>` : ''}
                                 ${(timeStr && forYouBadge) ? `&bull;` : ''}
                                 ${forYouBadge}
-                                ${((timeStr || forYouBadge) && devScoreBadge) ? `&bull;` : ''}
-                                ${devScoreBadge}
                             </div>
                         </div>
                     </div>
