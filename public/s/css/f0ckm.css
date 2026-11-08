@@ -1335,6 +1335,7 @@ html[theme='paper'] .info-title-input {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
+  border-right: 0 !important;
 }
 
 html[theme='light'] .infobox-modal-body::-webkit-scrollbar-track,
@@ -20027,48 +20028,78 @@ body.scroller-active #gchat-reopen-bubble {
   font-family: var(--font-mono, monospace);
 }
 
-/* Title Input */
+/* Title Input: input + save button as one control, same height, one border (the button sits inside it
+   and turns accent with it on focus); no focus glow, no hover growth */
 .info-title-edit-wrap {
+  --title-edit-h: 2.25rem;
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  width: 100%;
   margin-top: 2px;
+  box-sizing: border-box;
 }
 
 .info-title-input {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  height: var(--title-edit-h);
+  margin: 0;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
   background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.14);
+  border-right: 0;
   color: #fff;
-  padding: 7px 10px;
+  font: inherit;
   font-size: 0.88rem;
+  line-height: normal;
   outline: none;
-  transition: all 0.18s ease;
+  box-shadow: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.info-title-input::placeholder {
+  color: var(--text-muted, rgba(255, 255, 255, 0.45));
+  font-style: italic;
 }
 
 .info-title-input:focus {
   border-color: var(--accent, #9f0);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #9f0) 25%, transparent);
   background: rgba(0, 0, 0, 0.5);
+  box-shadow: none;
 }
 
 .info-title-save-btn {
-  background: var(--accent, #9f0);
-  color: #111;
-  border: none;
-  width: 32px;
-  height: 32px;
+  flex: 0 0 var(--title-edit-h);
+  width: var(--title-edit-h);
+  height: var(--title-edit-h);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
   font-size: 0.9rem;
-  transition: transform 0.12s ease, opacity 0.15s ease;
-  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.info-title-save-btn:hover {
-  transform: scale(1.04);
-  opacity: 0.9;
+/* Typing: the button joins the accent border; hover/keyboard focus fills it */
+.info-title-input:focus + .info-title-save-btn {
+  border-color: var(--accent, #9f0);
+  color: var(--accent, #9f0);
+}
+
+.info-title-save-btn:hover,
+.info-title-save-btn:focus-visible {
+  background: var(--accent, #9f0);
+  border-color: var(--accent, #9f0);
+  color: #111;
+  outline: none;
 }
 
 .info-title-status {
