@@ -29092,7 +29092,8 @@ body.onara-modal-open #page-modal {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 20px;
+  /* right gap = the gap above/below the close button, so it sits in the corner */
+  padding: 12px 12px 12px 20px;
   border-bottom: 1px solid var(--accent);
 }
 
@@ -29103,6 +29104,8 @@ body.onara-modal-open #page-modal {
   height: var(--pgm-header-h);
   padding-top: 0;
   padding-bottom: 0;
+  /* the close button is 12px shorter than the bar: 6px above, below and to its right */
+  padding-right: 6px;
 }
 
 :is(#page-modal, #pgm-page-header).pgm-header-synced .pgm-close {
