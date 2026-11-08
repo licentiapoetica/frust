@@ -11410,12 +11410,38 @@ window.cancelAnimFrame = (function () {
   // so what follows the sidebar in CSS (the MOTD's width, f0ckm.css --motd-room) moves along with it
   // instead of jumping when the slide ends and sidebar-right-hidden flips. Returns the cleanup, to call
   // once sidebar-right-hidden is set.
-  const SIDEBAR_SLIDE_CLASSES = ['sidebar-right-closing', 'sidebar-right-opening', 'sidebar-right-swipe'];
+  // A swipe / mouse drag also glides the drag handle (#sidebar-drag-zone) from where the drag left it;
+  // the toggle moves the handle itself.
+  const SIDEBAR_SLIDE_CLASSES = ['sidebar-right-closing', 'sidebar-right-opening', 'sidebar-right-swipe', 'sidebar-right-dragging'];
   window.sidebarSlideStart = (toHidden, swipe = false) => {
     document.body.classList.remove(...SIDEBAR_SLIDE_CLASSES);
     document.body.classList.add(toHidden ? 'sidebar-right-closing' : 'sidebar-right-opening');
-    if (swipe) document.body.classList.add('sidebar-right-swipe');
-    return () => document.body.classList.remove(...SIDEBAR_SLIDE_CLASSES);
+    const handle = swipe ? document.getElementById('sidebar-drag-zone') : null;
+    if (swipe) {
+      document.body.classList.add('sidebar-right-swipe');
+      const sb = document.querySelector('.global-sidebar-right, .item-sidebar-right, .index-sidebar-right');
+      if (handle) {
+        handle.style.setProperty('transition', 'right 0.3s ease-in-out', 'important');
+        handle.style.right = (toHidden ? 0 : (sb ? sb.offsetWidth : 300)) + 'px';
+      }
+    }
+    return () => {
+      if (handle) handle.style.removeProperty('transition');
+      document.body.classList.remove(...SIDEBAR_SLIDE_CLASSES);
+    };
+  };
+
+  // While the sidebar is dragged (touch / mouse): `visible` px of it show. What follows the sidebar
+  // goes along frame by frame: the MOTD's width (f0ckm.css body.sidebar-right-dragging,
+  // --sidebar-visible) and the drag handle. Ends with sidebarSlideStart on release.
+  window.sidebarDragFollow = (visible) => {
+    document.body.classList.add('sidebar-right-dragging');
+    document.documentElement.style.setProperty('--sidebar-visible', visible + 'px');
+    const handle = document.getElementById('sidebar-drag-zone');
+    if (handle) {
+      handle.style.setProperty('transition', 'none', 'important');
+      handle.style.right = visible + 'px';
+    }
   };
   const _navEl = document.querySelector('.navbar');
   if (_navEl && window.ResizeObserver) {
@@ -16916,6 +16942,7 @@ window.cancelAnimFrame = (function () {
       const transform = `translateX(${-dragX}px)`;
       swipeRT.sidebarEl.style.transition = 'none';
       swipeRT.sidebarEl.style.transform = transform;
+      window.sidebarDragFollow(isHidden ? dragX : swipeRT.sidebarWidth + dragX);
       return;
     }
 
@@ -16964,7 +16991,8 @@ window.cancelAnimFrame = (function () {
 
       // Use !important to override the CSS's own "transition: right 0.3s !important"
       // so that our transform animation actually plays.
-      const slideDone = stateChanging ? window.sidebarSlideStart(!shouldOpen, true) : null;
+      // also when it snaps back: the MOTD and the handle glide back from where the drag left them
+      const slideDone = window.sidebarSlideStart(!shouldOpen, true);
       sidebar.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
       sidebar.style.transform = `translateX(${targetTranslate}px)`;
 
@@ -16984,7 +17012,7 @@ window.cancelAnimFrame = (function () {
           document.body.classList.toggle('sidebar-right-hidden', toHidden);
           localStorage.setItem('sidebarRightHidden', toHidden);
         }
-        slideDone?.();
+        slideDone();
 
         // Force reflow so class change commits with no transition
         void sidebar.offsetWidth;
@@ -17195,6 +17223,7 @@ window.cancelAnimFrame = (function () {
 
     mouseRT.sidebarEl.style.setProperty('transition', 'none', 'important');
     mouseRT.sidebarEl.style.transform = `translateX(${-dragX}px)`;
+    window.sidebarDragFollow(isHidden ? dragX : mouseRT.sidebarWidth + dragX);
     document.body.style.cursor = 'grabbing';
   });
 
@@ -17233,7 +17262,8 @@ window.cancelAnimFrame = (function () {
       ? (shouldOpen ? -mouseRT.sidebarWidth : 0)
       : (shouldOpen ? 0 : mouseRT.sidebarWidth);
 
-    const slideDone = stateChanging ? window.sidebarSlideStart(!shouldOpen, true) : null;
+    // also when it snaps back: the MOTD and the handle glide back from where the drag left them
+    const slideDone = window.sidebarSlideStart(!shouldOpen, true);
     sidebar.style.setProperty('transition', 'transform 0.3s ease-in-out', 'important');
     sidebar.style.transform = `translateX(${targetTranslate}px)`;
 
@@ -17252,7 +17282,7 @@ window.cancelAnimFrame = (function () {
         document.body.classList.toggle('sidebar-right-hidden', toHidden);
         localStorage.setItem('sidebarRightHidden', toHidden);
       }
-      slideDone?.();
+      slideDone();
 
       void sidebar.offsetWidth;
       sidebar.style.transform = '';
@@ -17308,6 +17338,9 @@ window.cancelAnimFrame = (function () {
   document.body.appendChild(edgeZone);
 
   const syncEdgeZone = () => {
+    // While the sidebar slides or is dragged (sidebarSlideStart, sidebarDragFollow) that moves the handle;
+    // snapping it to the current state here would hold it in place until the end
+    if (['sidebar-right-closing', 'sidebar-right-opening', 'sidebar-right-dragging'].some(c => document.body.classList.contains(c))) return;
     const hidden = document.body.classList.contains('sidebar-right-hidden');
     if (hidden) {
       // Sidebar hidden: show 30px zone at the right edge for open gesture (all devices)

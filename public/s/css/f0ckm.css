@@ -13692,8 +13692,8 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
 /* --motd-room: the room the right sidebar takes beside the MOTD: --sidebar-w (0 when it is hidden or
    missing). While it slides (f0ckm.js sidebarSlideStart) it is already the end state, and the MOTD
    (and the navbar's colour behind it) glides there with the sidebar's own timing: toggle 0.6s with its
-   easing, swipe / mouse drag 0.3s ease-in-out. Only then: other changes of the sidebar state (page
-   load, crossing 599px) are instant like the sidebar. */
+   easing, swipe / mouse drag 0.3s ease-in-out (from where the drag left it). Only then: other changes
+   of the sidebar state (page load, crossing 599px) are instant like the sidebar. */
 body {
   --motd-room: var(--sidebar-w, 0px);
 }
@@ -13704,6 +13704,12 @@ body.sidebar-right-closing {
 
 body.sidebar-right-opening {
   --motd-room: var(--sidebar-open-w, 0px);
+}
+
+/* dragged (touch / mouse): as much as shows of it, frame by frame (f0ckm.js sidebarDragFollow); never on
+   phones, where the MOTD stays full width (--sidebar-open-w: 0) */
+body.sidebar-right-dragging {
+  --motd-room: min(var(--sidebar-visible, 0px), var(--sidebar-open-w, 0px));
 }
 
 body:is(.sidebar-right-closing, .sidebar-right-opening) .motd-container {
