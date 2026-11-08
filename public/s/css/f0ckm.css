@@ -18409,11 +18409,6 @@ body.layout-modern .user-infobox-block .gapRight > #a_favo.fa-regular::before {
   opacity: 1;
 }
 
-#metadata-modal .f0ck-modal-body {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
 /* Selection-edit popover for meta-suggestion pills */
 .sel-tag-popover {
   position: fixed;
@@ -29203,43 +29198,265 @@ body.onara-modal-open #page-modal {
   display: none;
 }
 
+/* Same look as the info modal: square, flat, accent frame */
 #metadata-modal .metadata-modal-content {
-  max-width: 500px;
+  --mm-accent: var(--accent, #0096ff);
+  --mm-text: var(--text-color, #fff);
+  --mm-muted: var(--text-muted, #8a8f98);
+  --mm-surface: rgba(255, 255, 255, 0.04);
+  --mm-border: rgba(255, 255, 255, 0.1);
+  width: calc(100% - 32px);
+  max-width: 560px;
+  min-width: 0;
+  max-height: min(85vh, 85dvh);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--mm-accent);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  color: var(--mm-text);
+  overflow: hidden;
 }
 
+#metadata-modal .metadata-modal-content * {
+  border-radius: 0 !important;
+}
+
+/* Header */
+#metadata-modal .metadata-modal-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+#metadata-modal .metadata-modal-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1.25em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--mm-text);
+}
+
+#metadata-modal .metadata-modal-header h3 i {
+  color: var(--mm-accent);
+  font-size: 0.85em;
+}
+
+#metadata-modal .metadata-modal-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.8em;
+  color: var(--mm-muted);
+}
+
+#metadata-modal .metadata-modal-close-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  margin: -4px -8px 0 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--mm-muted);
+  font-size: 1.05em;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+#metadata-modal .metadata-modal-close-icon:hover {
+  color: var(--mm-text);
+  background: var(--mm-surface);
+  border-color: var(--mm-border);
+}
+
+/* Body: only this part scrolls */
 #metadata-modal .metadata-modal-body {
-  padding: 20px 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 24px;
 }
 
 #metadata-modal .metadata-modal-loading {
+  padding: 24px 0;
   text-align: center;
-  padding: 20px;
+  color: var(--mm-muted);
+  font-size: 0.9em;
+}
+
+#metadata-modal .metadata-modal-loading i {
+  margin-right: 8px;
+  color: var(--mm-accent);
 }
 
 #metadata-modal .metadata-modal-found {
-  font-size: 0.9em;
-  color: var(--accent);
-  margin-bottom: 12px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 0.72em;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--mm-muted);
+}
+
+#metadata-modal .metadata-modal-found i {
+  color: var(--mm-accent);
+}
+
+#metadata-modal .metadata-modal-found::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--mm-border);
+}
+
+/* Suggestions: one per row, square, full text */
+#metadata-modal .meta-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+#metadata-modal .meta-suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border);
+  border-left: 2px solid var(--mm-border);
+  color: var(--mm-text);
+  font-size: 0.88em;
+  line-height: 1.4;
+  cursor: pointer;
+  transform: none;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, opacity 0.15s;
+}
+
+#metadata-modal .meta-suggestion span {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+#metadata-modal .meta-suggestion i {
+  flex-shrink: 0;
+  margin-top: 0.2em;
+  font-size: 0.85em;
+  color: var(--mm-muted);
+  opacity: 1;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+#metadata-modal .meta-suggestion:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  border-left-color: var(--mm-accent);
+  transform: none;
+}
+
+#metadata-modal .meta-suggestion:hover i {
+  color: var(--mm-accent);
+}
+
+/* Already a tag */
+#metadata-modal .meta-suggestion.selected {
+  opacity: 0.5;
+  background: transparent;
+  border-color: var(--mm-border);
+  border-left-color: var(--mm-accent);
+  color: var(--mm-muted) !important;
+}
+
+#metadata-modal .meta-suggestion.selected i {
+  color: var(--mm-accent);
+}
+
+/* Tag request in flight */
+#metadata-modal .meta-suggestion.is-busy {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 #metadata-modal .metadata-modal-empty {
+  padding: 12px;
   text-align: center;
-  color: #888;
-  padding: 10px;
+  font-size: 0.9em;
+  color: var(--mm-muted);
+  background: var(--mm-surface);
+  border: 1px dashed var(--mm-border);
 }
 
 #metadata-modal .metadata-modal-error {
-  color: #e74c3c;
-  padding: 10px;
-  text-align: center;
+  padding: 10px 12px;
+  font-size: 0.9em;
+  color: var(--color-danger, #ff4444);
+  background: rgba(255, 68, 68, 0.08);
+  border: 1px solid rgba(255, 68, 68, 0.3);
 }
 
-#metadata-modal .metadata-modal-actions {
+/* Footer */
+#metadata-modal .metadata-modal-footer {
+  flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.25);
+  border-top: 1px solid var(--mm-border);
+}
+
+#metadata-modal .metadata-modal-close-btn {
+  height: 40px;
+  margin: 0;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--mm-accent);
+  border: 1px solid var(--mm-accent);
+  color: #000;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+#metadata-modal .metadata-modal-close-btn:hover {
+  background: transparent;
+  color: var(--mm-accent);
+}
+
+#metadata-modal :is(button, .meta-suggestion):focus-visible {
+  outline: 2px solid var(--mm-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  #metadata-modal .metadata-modal-header,
+  #metadata-modal .metadata-modal-body,
+  #metadata-modal .metadata-modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  #metadata-modal .metadata-modal-close-btn {
+    flex: 1;
+  }
 }
 
 /* ---- snippets/info-modal.html (was a <style> block + inline styles) ---- */

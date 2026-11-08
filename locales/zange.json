@@ -605,7 +605,8 @@
     "title": "Metadaten-Vorschläge",
     "loading": "Metadaten werden aus der Datei extrahiert...",
     "found": "In den Metadaten gefunden:",
-    "no_results": "Keine weiteren Metadatenfelder in dieser Datei gefunden."
+    "no_results": "Keine weiteren Metadatenfelder in dieser Datei gefunden.",
+    "hint": "Klick auf einen Vorschlag fügt ihn als Tag hinzu; markier einen Teil, um nur den hinzuzufügen."
   },
   "info_modal": {
     "title": "Pfosten- & Datei-Informationen",

@@ -22955,7 +22955,7 @@ document.addEventListener('click', (e) => {
                             pill.className = 'meta-suggestion';
                             const isSelected = currentTags.includes(field.toLowerCase());
                             if (isSelected) pill.classList.add('selected');
-                            pill.innerHTML = `<i class="fa-solid ${isSelected ? 'fa-check-circle' : 'fa-plus-circle'}" style="user-select:none"></i> <span></span>`;
+                            pill.innerHTML = `<i class="fa-solid ${isSelected ? 'fa-check-circle' : 'fa-plus-circle'}"></i> <span></span>`;
                             pill.querySelector('span').textContent = field;
 
                             pill.addEventListener('mouseup', (ev) => {
@@ -22987,8 +22987,7 @@ document.addEventListener('click', (e) => {
                             pill.onclick = async (ev) => {
                                 ev.stopPropagation();
                                 if (pill.classList.contains('selected')) return;
-                                pill.style.opacity = '0.5';
-                                pill.style.pointerEvents = 'none';
+                                pill.classList.add('is-busy');
                                 try {
                                     const addResp = await fetch(`/api/v2/tags/${newItemId}`, {
                                         method: 'POST',
@@ -23007,8 +23006,7 @@ document.addEventListener('click', (e) => {
                                 } catch (_) {
                                     if (window.showFlash) window.showFlash('Network error', 'error');
                                 } finally {
-                                    pill.style.opacity = '';
-                                    pill.style.pointerEvents = '';
+                                    pill.classList.remove('is-busy');
                                 }
                             };
                             list.appendChild(pill);
@@ -23066,7 +23064,7 @@ document.addEventListener('click', (e) => {
                         const isSelected = currentTags.includes(field.toLowerCase());
                         if (isSelected) pill.classList.add('selected');
                         
-                        pill.innerHTML = `<i class="fa-solid ${isSelected ? 'fa-check-circle' : 'fa-plus-circle'}" style="user-select:none"></i> <span></span>`;
+                        pill.innerHTML = `<i class="fa-solid ${isSelected ? 'fa-check-circle' : 'fa-plus-circle'}"></i> <span></span>`;
                         pill.querySelector('span').textContent = field;
                         
                         // mouseup fires after a drag-select; click only fires for plain clicks
@@ -23103,8 +23101,7 @@ document.addEventListener('click', (e) => {
                         pill.onclick = async (ev) => {
                             ev.stopPropagation();
                             if (pill.classList.contains('selected')) return;
-                            pill.style.opacity = '0.5';
-                            pill.style.pointerEvents = 'none';
+                            pill.classList.add('is-busy');
                             try {
                                 const addResp = await fetch(`/api/v2/tags/${itemid}`, {
                                     method: 'POST',
@@ -23126,8 +23123,7 @@ document.addEventListener('click', (e) => {
                             } catch (_) {
                                 if (window.showFlash) window.showFlash('Network error', 'error');
                             } finally {
-                                pill.style.opacity = '';
-                                pill.style.pointerEvents = '';
+                                pill.classList.remove('is-busy');
                             }
                         };
                         list.appendChild(pill);

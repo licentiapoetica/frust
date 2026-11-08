@@ -615,7 +615,8 @@
     "title": "Metadaten-Vorschläge",
     "loading": "Metadaten werden extrahiert...",
     "found": "Gefundene Metadaten:",
-    "no_results": "Keine weiteren Metadaten in dieser Datei gefunden."
+    "no_results": "Keine weiteren Metadaten in dieser Datei gefunden.",
+    "hint": "Klick auf einen Vorschlag fügt ihn als Tag hinzu; markier einen Teil, um nur den hinzuzufügen."
   },
   "info_modal": {
     "title": "Post- & Datei-Informationen",

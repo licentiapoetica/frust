@@ -613,7 +613,8 @@
     "title": "Metadata-suggesties",
     "loading": "Metadata uit bestand extraheren...",
     "found": "Gevonden in metadata:",
-    "no_results": "Geen extra metadata-velden gevonden in dit bestand."
+    "no_results": "Geen extra metadata-velden gevonden in dit bestand.",
+    "hint": "Klik op een suggestie om die als tag toe te voegen, of selecteer een deel om alleen dat toe te voegen."
   },
   "info_modal": {
     "title": "Post- & Bestandsinformatie",

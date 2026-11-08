@@ -616,7 +616,8 @@
     "title": "Metadata Suggestions",
     "loading": "Extracting metadata from file...",
     "found": "Found in metadata:",
-    "no_results": "No additional metadata fields found in this file."
+    "no_results": "No additional metadata fields found in this file.",
+    "hint": "Click a suggestion to add it as a tag, or select part of it to add just that."
   },
   "info_modal": {
     "title": "Post & File Information",
