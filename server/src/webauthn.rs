@@ -445,7 +445,7 @@ mod backend {
         }))
         .map_err(|_| "Malformed credential".to_string())?;
         let res = wa
-            .finish_discoverable_authentication(&pkc, *state, &[DiscoverableKey::from(&passkey)])
+            .finish_discoverable_authentication_v2(&pkc, *state, &passkey)
             .map_err(|e| e.to_string())?;
         Ok(match passkey.update_credential(&res) {
             Some(true) => serde_json::to_value(&passkey).ok(),
@@ -599,6 +599,17 @@ mod tests {
             Assertion { credential_id: &id, client_data_json: &cdj, authenticator_data: &ad, signature: &sig, user_handle: uh.as_deref() },
             Stored { passkey, user_handle: Some(&stored_handle) },
         )
+    }
+
+    /// A passkey as webauthn-rs 0.5 stored it (fixed key 0x07.., credential id 0x09..): rows written
+    /// before the 0.6 upgrade must still deserialize and log in.
+    #[test]
+    fn login_with_passkey_stored_by_v05() {
+        let mut a = Authenticator { key: SigningKey::from_slice(&[7u8; 32]).unwrap(), cred_id: vec![9u8; 32], counter: 0 };
+        let handle = Uuid::parse_str("11111111-2222-4333-8444-555555555555").unwrap();
+        let stored: Value = serde_json::from_str(r#"{"cred":{"cred_id":"CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk","cred":{"type_":"ES256","key":{"EC_EC2":{"curve":"SECP256R1","x":"HhhTL9R1TALzBB2cdc6zO4P_2BrHzk_ogsyxyYvFiW4","y":"pGwxHE4v9A3ZajZT5uRURdMt_khuztdcepDGoYiBwKM"}}},"counter":0,"transports":null,"user_verified":true,"backup_eligible":false,"backup_state":false,"registration_policy":"required","extensions":{"cred_protect":"Ignored","hmac_create_secret":"NotRequested","appid":"NotRequested","cred_props":"Ignored"},"attestation":{"data":"None","metadata":"None"},"attestation_format":"none"}}"#).unwrap();
+        let updated = login(&mut a, &stored, &handle, ORIGIN, UP_UV, |_| {}).expect("login with a 0.5 passkey");
+        login(&mut a, &updated.expect("counter update is reported"), &handle, ORIGIN, UP_UV, |_| {}).expect("second login");
     }
 
     #[test]

@@ -144,7 +144,7 @@ impl Slack {
                 Err(_) if !pinged => {
                     // keepalive; Slack pings us regularly, so silence means a dead connection
                     pinged = true;
-                    sink.send(WsMsg::Ping(Vec::new())).await?;
+                    sink.send(WsMsg::Ping(Default::default())).await?;
                     continue;
                 }
                 Err(_) => anyhow::bail!("connection timed out"),
@@ -164,7 +164,7 @@ impl Slack {
                     }
                     let (envelope, event) = parse_envelope(&v);
                     if let Some(id) = envelope {
-                        sink.send(WsMsg::Text(json!({ "envelope_id": id }).to_string())).await?;
+                        sink.send(WsMsg::text(json!({ "envelope_id": id }).to_string())).await?;
                     }
                     if let (Some(ev), Some(this)) = (event, self.arc()) {
                         tokio::spawn(async move {

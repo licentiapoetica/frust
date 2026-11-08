@@ -351,9 +351,9 @@ fn scrypt_derive(password: &str, salt: &str) -> Option<Vec<u8>> {
 /// Argon2id (default parameters), PHC string format.
 pub async fn hash_password(password: String) -> String {
     tokio::task::spawn_blocking(move || {
-        use argon2::password_hash::{PasswordHasher, SaltString};
-        let salt = SaltString::encode_b64(&random_bytes(argon2::password_hash::Salt::RECOMMENDED_LENGTH)).expect("16 bytes is a valid salt");
-        argon2::Argon2::default().hash_password(password.as_bytes(), &salt).map(|h| h.to_string()).unwrap_or_default()
+        // random 16-byte salt from the OS RNG (password-hash's `getrandom` feature)
+        use argon2::password_hash::PasswordHasher;
+        argon2::Argon2::default().hash_password(password.as_bytes()).map(|h| h.to_string()).unwrap_or_default()
     })
     .await
     .unwrap_or_default()
@@ -364,7 +364,7 @@ pub async fn hash_password(password: String) -> String {
 pub async fn verify_password(password: String, hash: String) -> bool {
     tokio::task::spawn_blocking(move || {
         if hash.starts_with("$argon2") {
-            use argon2::password_hash::{PasswordHash, PasswordVerifier};
+            use argon2::password_hash::{PasswordVerifier, phc::PasswordHash};
             let Ok(parsed) = PasswordHash::new(&hash) else { return false };
             return argon2::Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok();
         }
@@ -574,6 +574,10 @@ mod password_tests {
         assert!(verify_password("correct horse battery staple!".into(), h.clone()).await);
         assert!(!verify_password("wrong".into(), h.clone()).await);
         assert!(!password_needs_rehash(&h));
+        // a hash made by argon2 0.5 (before the 0.6 upgrade) still verifies
+        let v05 = "$argon2id$v=19$m=19456,t=2,p=1$zgZCghzUa+TbmwhQQH2DXg$aivV7/y30whY0IQC/za7nfS/BPgL94LdpyVn2eS79Fk";
+        assert!(verify_password("hunter2 ü".into(), v05.into()).await);
+        assert!(!verify_password("hunter2 u".into(), v05.into()).await);
 
         // Same key as Node's crypto.scryptSync(password, salt, 64) (N=16384, r=8, p=1), so old hashes verify
         assert_eq!(
