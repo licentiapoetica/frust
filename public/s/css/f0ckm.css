@@ -11503,6 +11503,10 @@ input#s_avatar {
   display: flex;
   align-items: center;
   gap: 6px;
+  /* no vertical padding: the avatar fills the button's height */
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0;
   transition: border-color 0.2s, background 0.2s;
 }
 
@@ -11531,8 +11535,8 @@ input#s_avatar {
 
 .nav-avatar-img {
   display: block;
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.875rem;
+  height: 1.875rem;
   object-fit: cover;
   flex-shrink: 0;
   cursor: pointer;
