@@ -5881,6 +5881,13 @@ body.layout-legacy .scroll-to-bottom svg {
   text-decoration: underline;
 }
 
+/* >>id quote links: the same size, font and baseline as the comment text around them */
+.comment-context-link {
+  font-family: inherit;
+  font-size: 1em;
+  vertical-align: baseline;
+}
+
 .linear-view .comment {
   margin-left: 0 !important;
 }
