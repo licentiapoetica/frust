@@ -20187,48 +20187,6 @@ body.scroller-active #gchat-reopen-bubble {
   text-decoration: underline;
 }
 
-/* Hash Codeblock & Copy Button */
-.copy-hash-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #bbb;
-  border-radius: 4px;
-  padding: 2px 8px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-}
-
-.copy-hash-btn:hover {
-  background: var(--accent, #9f0);
-  border-color: var(--accent, #9f0);
-  color: #111;
-}
-
-.info-hash-codeblock {
-  margin: 2px 0 0 0;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.8rem;
-  color: #ddd;
-  user-select: all;
-}
-
-.info-hash-codeblock code {
-  border: none !important;
-  background: transparent !important;
-  padding: 0 !important;
-}
-
 /* Repost Badges */
 .infobox-reposts-list {
   display: flex;
@@ -29503,8 +29461,7 @@ body.onara-modal-open #page-modal {
 }
 
 /* Small controls inside cards */
-#info-modal .infobox-modal-content .infobox-action-btn,
-#info-modal .infobox-modal-content .copy-hash-btn {
+#info-modal .infobox-modal-content .infobox-action-btn {
   height: 28px;
   margin: 0;
   padding: 0 10px;
@@ -29521,8 +29478,7 @@ body.onara-modal-open #page-modal {
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
-#info-modal .infobox-modal-content .infobox-action-btn:hover,
-#info-modal .infobox-modal-content .copy-hash-btn:hover {
+#info-modal .infobox-modal-content .infobox-action-btn:hover {
   color: var(--im-accent);
   border-color: var(--im-accent);
   background: transparent;
@@ -29579,25 +29535,6 @@ body.onara-modal-open #page-modal {
   text-underline-offset: 3px;
 }
 
-#info-modal .infobox-modal-content .info-hash-codeblock {
-  margin: 0;
-  padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--im-border);
-  border-left: 2px solid var(--im-accent);
-  font-size: 0.8em;
-  line-height: 1.5;
-  color: var(--im-text);
-  word-break: break-all;
-}
-
-#info-modal .infobox-modal-content .info-hash-codeblock code {
-  background: none;
-  border: 0;
-  padding: 0;
-  color: inherit;
-}
-
 /* Reposts */
 #info-modal .infobox-modal-content .infobox-reposts-list {
   display: flex;
@@ -29625,6 +29562,13 @@ body.onara-modal-open #page-modal {
 
 #info-modal .infobox-modal-content .repost-pill.exact i {
   color: var(--im-accent);
+}
+
+/* Tools (moderation buttons, script-driven) */
+#info-modal .infobox-modal-content .infobox-tools-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* Footer */
@@ -29737,6 +29681,9 @@ body.onara-modal-open #page-modal {
 }
 
 @media (max-width: 520px) {
+  #info-modal .infobox-modal-content .infobox-tools-row > * {
+    flex: 1 1 auto;
+  }
   #info-modal .infobox-modal-content .infobox-modal-header,
   #info-modal .infobox-modal-content .infobox-modal-body,
   #info-modal .infobox-modal-content .infobox-modal-footer {
@@ -29749,7 +29696,7 @@ body.onara-modal-open #page-modal {
 }
 
 
-/* Dimensions / hash cards without data (beats the .infobox-card display above; f0ckm.js shows them with display:flex) */
+/* Dimensions card without data (beats the .infobox-card display above; f0ckm.js shows it with display:flex) */
 #info-modal .infobox-modal-content .infobox-card.info-modal-hidden {
   display: none;
 }
@@ -36466,7 +36413,7 @@ html.no-js #subscribe-btn,
 html.no-js .report-item-btn,
 html.no-js #info-modal-close-icon,
 html.no-js #info-modal-close,
-html.no-js #info-modal :is(.infobox-action-btn, .info-expiry-edit-controls, .copy-hash-btn, #info-rethumb-btn, #a_metadata),
+html.no-js #info-modal :is(.infobox-action-btn, .info-expiry-edit-controls, #info-section-tools),
 html.no-js #report-modal button.modal-x,
 html.no-js #report-cancel,
 html.no-js #report-submit,

@@ -133,16 +133,6 @@
                         </div>
                     </div>
                     {% endif %}
-
-                    <div class="infobox-card full-width{% if not item.checksum %} info-modal-hidden{% endif %}" id="info-card-hash">
-                        <div class="infobox-card-label-row">
-                            <label class="infobox-card-label"><i class="fa-solid fa-fingerprint"></i> SHA-256 Hash</label>
-                            <button type="button" class="copy-hash-btn" id="info-copy-hash-btn" data-hash="{% if item.checksum %}{{ (item.checksum.split("_bypass_"))[0] }}{% endif %}" title="Copy SHA-256 Hash">
-                                <i class="fa-solid fa-copy"></i> Copy
-                            </button>
-                        </div>
-                        <div class="info-hash-codeblock font-mono"><code id="info-file-hash">{% if item.checksum %}{{ (item.checksum.split("_bypass_"))[0] }}{% endif %}</code></div>
-                    </div>
                 </div>
             </div>
 
@@ -164,20 +154,30 @@
             </div>
             {% endif %}
 
+            <!-- Section 4: Tools (needs JavaScript; hidden without it) -->
+            {% if can_manage_item %}
+            <div class="infobox-section" id="info-section-tools">
+                <div class="infobox-section-header">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <span>Tools</span>
+                </div>
+                <div class="infobox-tools-row">
+                    <button type="button" class="btn-infobox-action" id="info-rethumb-btn" data-item-id="{{ item.id }}">
+                        <i class="fa-solid fa-arrows-rotate"></i> Regenerate Thumbnail
+                    </button>
+                    {% if (can_extract_meta is defined and can_extract_meta) %}
+                    <button type="button" class="btn-infobox-action" id="a_metadata" data-item-id="{{ item.id }}" {% if item.mime == "video/youtube" %} data-src="https://www.youtube.com/watch?v={{ item.dest.replace("yt:", "", 1) }}" {% endif %}>
+                        <i class="fa-solid fa-magic"></i> {{ t("metadata_modal.title") }}
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
         </div>
 
         <!-- Footer -->
         <div class="infobox-modal-footer">
-            {% if can_manage_item %}
-            <button type="button" class="btn-infobox-action" id="info-rethumb-btn" data-item-id="{{ item.id }}">
-                <i class="fa-solid fa-arrows-rotate"></i> Regenerate Thumbnail
-            </button>
-            {% if (can_extract_meta is defined and can_extract_meta) %}
-            <button type="button" class="btn-infobox-action" id="a_metadata" data-item-id="{{ item.id }}" {% if item.mime == "video/youtube" %} data-src="https://www.youtube.com/watch?v={{ item.dest.replace("yt:", "", 1) }}" {% endif %}>
-                <i class="fa-solid fa-magic"></i> {{ t("metadata_modal.title") }}
-            </button>
-            {% endif %}
-            {% endif %}
             <button type="button" class="btn-infobox-close" id="info-modal-close">{{ (t("common.close") or "Close") }}</button>
             <a href="#_" class="btn-infobox-close nojs-close-link">{{ (t("common.close") or "Close") }}</a>
         </div>

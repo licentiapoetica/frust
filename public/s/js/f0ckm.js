@@ -4029,20 +4029,6 @@ window.cancelAnimFrame = (function () {
       if (sourceCard) {
         sourceCard.style.display = 'none';
       }
-
-      const hashCard = modal.querySelector('#info-card-hash');
-      const hashEl = modal.querySelector('#info-file-hash');
-      const copyHashBtn = modal.querySelector('#info-copy-hash-btn');
-      if (hashCard) {
-        const cleanHash = sub.checksum ? String(sub.checksum).split('_bypass_')[0] : '';
-        if (cleanHash) {
-          if (hashEl) hashEl.textContent = cleanHash;
-          if (copyHashBtn) copyHashBtn.setAttribute('data-hash', cleanHash);
-          hashCard.style.display = 'flex';
-        } else {
-          hashCard.style.display = 'none';
-        }
-      }
     };
 
     if (imgEl) {
@@ -23220,21 +23206,6 @@ document.addEventListener('click', (e) => {
       }
       return;
     }
-
-    const copyHashBtn = e.target.closest('#info-copy-hash-btn');
-    if (copyHashBtn) {
-      e.preventDefault();
-      const hash = copyHashBtn.dataset.hash;
-      if (hash && navigator.clipboard) {
-        navigator.clipboard.writeText(hash).then(() => {
-          const origText = copyHashBtn.innerHTML;
-          copyHashBtn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
-          setTimeout(() => { copyHashBtn.innerHTML = origText; }, 2000);
-        }).catch(err => console.error('Copy failed', err));
-      }
-      return;
-    }
-
 
     const visCancelBtn = e.target.closest('#visibility-modal-cancel');
     if (visCancelBtn || e.target.id === 'visibility-modal') {
