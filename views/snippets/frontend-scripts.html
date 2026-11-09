@@ -9,8 +9,9 @@
 {% if enable_anonymous_access %}
 {#- "Login as anonymous": any element with class trigger-login-anon opens it (passkey.js) -#}
 {% include "snippets/anon-login.html" %}
-<script src="/s/js/passkey.js?v={{ mtime("/public/s/js/passkey.js") }}"></script>
 {% endif %}
+{#- always: the settings page adds passkeys through window.f0ckPasskeyManager (passkey.js) -#}
+<script src="/s/js/passkey.js?v={{ mtime("/public/s/js/passkey.js") }}"></script>
 {% if (session and private_messages) %}<script src="/s/js/messages.js?v={{ mtime("/public/s/js/messages.js") }}"></script>{% endif %}
 {#- quick upload ("u", drag & drop): f0ckm's upload dropdown -#}
 {% include "snippets/upload-modal-frontend.html" %}
