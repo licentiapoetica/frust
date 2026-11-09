@@ -21463,9 +21463,12 @@ a.lazy-thumb.filtered-upload-ghost:hover::after {
   opacity: 0.9;
 }
 
-.item-main-content {
-  padding-left: 15px;
-  padding-right: 15px;
+/* Side padding only on wider screens; on phones (stacked item view, ≤599px) the media runs edge to edge. */
+@media (min-width: 600px) {
+  .item-main-content {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
 }
 
 /* ==========================================================================
