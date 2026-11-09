@@ -14063,6 +14063,33 @@ html.motd-on body > nav.navbar > * {
     margin-left: auto;
   }
 
+  /* Narrow phones: never let a long name push the bell/DM/hamburger off screen. The group
+     may shrink to the row width; only the avatar dropdown gives way, the name ellipsizes
+     (and its font scales down a little first). */
+  .nav-right-group {
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .nav-right-group > * {
+    flex-shrink: 0;
+  }
+
+  .nav-right-group > .nav-user-dropdown {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  #nav-user-toggle {
+    max-width: 100%;
+    grid-template-columns: auto minmax(0, auto) auto;
+  }
+
+  .nav-avatar-name {
+    font-size: clamp(0.8rem, 4.2vw, 1rem);
+  }
+
   /* nav-collapse: hidden by default, opens as full-width row below brand+right */
   .nav-collapse {
     display: none;
