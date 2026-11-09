@@ -6,9 +6,10 @@ use std::process::Stdio;
 use std::sync::OnceLock;
 use std::time::Duration;
 
-/// ImageMagick policy for user files (config/magick-policy-uploads): no SVG/MVG/MSL/TEXT/URL/PS/PDF
+/// ImageMagick policy for user files (src/magick-policy-uploads.xml, inside the crate so builds of
+/// server/ alone, like the Dockerfile's, have it): no SVG/MVG/MSL/TEXT/URL/PS/PDF
 /// coders, no `@file` or `/etc` reads, resource limits. A file named `.png` can still be an SVG.
-const UPLOAD_MAGICK_POLICY: &str = include_str!("../../config/magick-policy-uploads/policy.xml");
+const UPLOAD_MAGICK_POLICY: &str = include_str!("magick-policy-uploads.xml");
 
 static MAGICK_POLICY_DIR: OnceLock<PathBuf> = OnceLock::new();
 
