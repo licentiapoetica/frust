@@ -420,6 +420,42 @@ async fn main() -> Result<()> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr).await.with_context(|| format!("cannot listen on {addr}"))?;
     tracing::info!("[BOOT] listening on {addr}");
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
-    Ok(())
+    serve(listener, app).await
+}
+
+/// Seconds a client gets to send its request headers. axum::serve builds hyper without a timer, so
+/// hyper's header timeout never applied: a connection that never finished its headers stayed
+/// open forever (slowloris) when f0ckm is reachable without nginx in front.
+const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// `axum::serve` with [`HEADER_READ_TIMEOUT`]; requests carry `ConnectInfo<SocketAddr>` as before.
+async fn serve(listener: tokio::net::TcpListener, app: axum::Router) -> Result<()> {
+    use hyper_util::rt::{TokioIo, TokioTimer};
+    use hyper_util::service::TowerToHyperService;
+    use tower::ServiceExt;
+    loop {
+        let (stream, remote) = match listener.accept().await {
+            Ok(c) => c,
+            Err(e) => {
+                // Out of file descriptors and the like: back off instead of spinning
+                tracing::warn!("[HTTP] accept failed: {e}");
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                continue;
+            }
+        };
+        let _ = stream.set_nodelay(true);
+        let svc = app.clone().map_request(move |mut req: axum::http::Request<hyper::body::Incoming>| {
+            req.extensions_mut().insert(axum::extract::ConnectInfo(remote));
+            req.map(axum::body::Body::new)
+        });
+        tokio::spawn(async move {
+            // HTTP/1 only, like axum::serve was built here (no http2 feature)
+            let mut builder = hyper::server::conn::http1::Builder::new();
+            builder.timer(TokioTimer::new()).header_read_timeout(HEADER_READ_TIMEOUT);
+            let conn = builder.serve_connection(TokioIo::new(stream), TowerToHyperService::new(svc)).with_upgrades();
+            if let Err(e) = conn.await {
+                tracing::trace!("[HTTP] connection {remote}: {e:#}");
+            }
+        });
+    }
 }

@@ -1085,6 +1085,8 @@ dependencies = [
  "hmac",
  "http-body-util",
  "httpdate",
+ "hyper",
+ "hyper-util",
  "lettre",
  "md-5",
  "mime_guess",

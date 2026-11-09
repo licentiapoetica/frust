@@ -29,6 +29,9 @@ axum = { version = "0.8", features = ["multipart", "macros", "ws"] }
 tower = "0.5"
 tower-http = { version = "0.7", features = ["fs"] }
 http-body-util = "0.1"
+# The server loop in main.rs (axum::serve has no header read timeout)
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio", "service"] }
 bytes = "1"
 futures = "0.3"
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "chrono", "json", "uuid", "macros", "migrate"] }
