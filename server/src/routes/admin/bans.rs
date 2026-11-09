@@ -53,6 +53,20 @@ fn ban_expiry(duration: Option<&str>) -> anyhow::Result<Option<DateTime<Utc>>> {
     }
 }
 
+/// Moderators can ban for at most 48 hours; admins without limit.
+fn mod_duration_error(is_admin: bool, duration: Option<&str>) -> Option<&'static str> {
+    if is_admin {
+        return None;
+    }
+    let hours = duration.and_then(crate::social::helpers::js_parse_int);
+    (duration == Some("permanent") || hours.map(|h| h > 48).unwrap_or(true)).then_some("Moderators can only issue bans for up to 48 hours.")
+}
+
+/// 403 `{ success: false, msg }` for a refused ban.
+fn refuse(msg: &str) -> Res {
+    Ok(json_resp(&json!({ "success": false, "msg": msg }), 403))
+}
+
 fn iso(d: Option<DateTime<Utc>>) -> Value {
     d.map(|d| json!(d.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string())).unwrap_or(Value::Null)
 }
@@ -125,6 +139,29 @@ async fn bans_page(st: AppState, req: Req) -> Res {
     Ok(html(crate::tpl::render(&st, Some(&req), "admin/bans", data)))
 }
 
+/// Why a fingerprint / hardware ban with `user_id` is refused: the id has to be an anonymous
+/// identity (registered accounts go through `user_ban` with its checks), never staff for a moderator.
+async fn anon_ban_target_error(st: &AppState, req: &Req, user_id: i64) -> anyhow::Result<Option<&'static str>> {
+    let Some(target) = sql!(
+        r#"select u.admin, u.is_moderator, exists(select 1 from anon_identities ai where ai.user_id = u.id) as is_anon from "user" u where u.id = "#,
+        user_id as i32,
+        " limit 1"
+    )
+    .fetch_optional(&st.db)
+    .await?
+    else {
+        return Ok(Some("User not found"));
+    };
+    if !target.bool("is_anon") {
+        return Ok(Some("Only anonymous identities can be banned by fingerprint; use the user ban for accounts."));
+    }
+    let is_admin = req.session().map(|s| s.admin).unwrap_or(false);
+    if !is_admin && (target.bool("admin") || target.bool("is_moderator")) {
+        return Ok(Some("Moderators cannot ban staff."));
+    }
+    Ok(None)
+}
+
 async fn anon_ban(st: &AppState, req: &Req, body: &Value, hardware: bool) -> anyhow::Result<Value> {
     let field = if hardware { "hw_fingerprint" } else { "fingerprint" };
     let fp = body_str(body, field).filter(|s| !s.is_empty()).ok_or_else(|| {
@@ -136,7 +173,7 @@ async fn anon_ban(st: &AppState, req: &Req, body: &Value, hardware: bool) -> any
     let result = ban_anonymous_user(
         st,
         AnonBan {
-            user_id: if body_truthy(body, "user_id") { body_id(body, "user_id") } else { None },
+            user_id: anon_ban_user_id(body),
             fingerprint: (!hardware).then(|| fp.clone()),
             hw_fingerprint: hardware.then(|| fp.clone()),
             banned_by: Some(sid(req)),
@@ -152,14 +189,38 @@ async fn anon_ban(st: &AppState, req: &Req, body: &Value, hardware: bool) -> any
     Ok(json!({ "success": true, "result": result }))
 }
 
+fn anon_ban_user_id(body: &Value) -> Option<i64> {
+    if body_truthy(body, "user_id") { body_id(body, "user_id") } else { None }
+}
+
+/// Role and duration checks of a fingerprint / hardware ban; `Some(msg)` refuses it.
+async fn check_anon_ban(st: &AppState, req: &Req, body: &Value) -> anyhow::Result<Option<&'static str>> {
+    let is_admin = req.session().map(|s| s.admin).unwrap_or(false);
+    if let Some(msg) = mod_duration_error(is_admin, body_str(body, "duration").as_deref()) {
+        return Ok(Some(msg));
+    }
+    match anon_ban_user_id(body) {
+        Some(uid) => anon_ban_target_error(st, req, uid).await,
+        None => Ok(None),
+    }
+}
+
 async fn fingerprint_ban(st: AppState, mut req: Req) -> Res {
     let body = req.post().await?.clone();
-    answer(anon_ban(&st, &req, &body, false).await)
+    match check_anon_ban(&st, &req, &body).await {
+        Ok(Some(msg)) => refuse(msg),
+        Ok(None) => answer(anon_ban(&st, &req, &body, false).await),
+        Err(e) => answer(Err(e)),
+    }
 }
 
 async fn hardware_ban(st: AppState, mut req: Req) -> Res {
     let body = req.post().await?.clone();
-    answer(anon_ban(&st, &req, &body, true).await)
+    match check_anon_ban(&st, &req, &body).await {
+        Ok(Some(msg)) => refuse(msg),
+        Ok(None) => answer(anon_ban(&st, &req, &body, true).await),
+        Err(e) => answer(Err(e)),
+    }
 }
 
 async fn fingerprint_unban(st: AppState, mut req: Req) -> Res {
@@ -194,6 +255,9 @@ async fn hardware_unban(st: AppState, mut req: Req) -> Res {
 async fn ip_ban(st: AppState, mut req: Req) -> Res {
     let body = req.post().await?.clone();
     let cfg = st.cfg();
+    if let Some(msg) = mod_duration_error(req.session().map(|s| s.admin).unwrap_or(false), body_str(&body, "duration").as_deref()) {
+        return refuse(msg);
+    }
     let r = async {
         let ip = body_str(&body, "ip").filter(|s| !s.is_empty()).ok_or_else(|| anyhow::anyhow!("Missing IP address"))?;
         let expires = ban_expiry(body_str(&body, "duration").as_deref())?;
@@ -268,12 +332,8 @@ async fn user_ban(st: AppState, mut req: Req) -> Res {
         if target.bool("admin") && !session.admin {
             return Ok(Err("Moderators cannot ban administrators."));
         }
-        // Moderators can ban for at most 48 hours
-        if !session.admin {
-            let hours = duration.as_deref().and_then(crate::social::helpers::js_parse_int);
-            if duration.as_deref() == Some("permanent") || hours.map(|h| h > 48).unwrap_or(false) || hours.is_none() {
-                return Ok(Err("Moderators can only issue bans for up to 48 hours."));
-            }
+        if let Some(msg) = mod_duration_error(session.admin, duration.as_deref()) {
+            return Ok(Err(msg));
         }
         // A missing duration used to become an invalid date; treat it as an error, not a permanent ban.
         if duration.as_deref().map(str::trim).unwrap_or("").is_empty() {
