@@ -292,7 +292,7 @@ fn sweep(now: i64) {
 }
 
 fn rate_limited(ip: &str, now: i64) -> bool {
-    let mut e = IP_HITS.entry(ip.to_string()).or_insert((now, 0));
+    let mut e = IP_HITS.entry(crate::security::rate_key(ip)).or_insert((now, 0));
     if now - e.0 >= 60_000 {
         *e = (now, 0);
     }

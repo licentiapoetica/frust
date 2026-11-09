@@ -69,6 +69,18 @@ pub fn hash_ip_candidates(cfg: &Config, ip: &str) -> Vec<String> {
     std::iter::once(s.current).chain(s.legacy).filter(|x| !x.is_empty()).map(|sec| hash_ip_with(ip, &sec)).collect()
 }
 
+/// Key for per-client rate limits: the IPv4 address, or the /64 of an IPv6 address (one client
+/// usually gets a whole /64 and can pick a fresh address from it for every request).
+pub fn rate_key(ip: &str) -> String {
+    match ip.parse::<std::net::IpAddr>() {
+        Ok(std::net::IpAddr::V6(v6)) if v6.to_ipv4_mapped().is_none() => {
+            let s = v6.segments();
+            format!("{:x}:{:x}:{:x}:{:x}::/64", s[0], s[1], s[2], s[3])
+        }
+        _ => ip.to_string(),
+    }
+}
+
 /// The form in which an IP may be stored: `None` when logging is off, hashed or raw otherwise.
 pub fn storable_ip(cfg: &Config, ip: &str) -> Option<String> {
     if !cfg.truthy("websrv.log_user_ips") || ip.is_empty() || ip == "unknown" {
@@ -457,4 +469,14 @@ pub fn ban_response(req: &crate::http::Req, reason: Option<&str>, expires: Optio
     let mut r = crate::http::raw(307, "");
     r.headers_mut().insert(axum::http::header::LOCATION, axum::http::HeaderValue::from_static("/banned"));
     r
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn rate_key_groups_ipv6_by_64() {
+        assert_eq!(super::rate_key("2001:db8:1:2:aaaa::1"), super::rate_key("2001:db8:1:2:bbbb::9"));
+        assert_ne!(super::rate_key("2001:db8:1:2::1"), super::rate_key("2001:db8:1:3::1"));
+        assert_eq!(super::rate_key("198.51.100.7"), "198.51.100.7");
+    }
 }

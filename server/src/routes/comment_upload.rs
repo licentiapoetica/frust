@@ -103,10 +103,36 @@ async fn probe_duration(p: &Path) -> Option<f64> {
 
 // ── Upload ──────────────────────────────────────────────────────────────────
 
+/// Comment files per user in [`UPLOAD_RATE_WINDOW_MS`] (staff unlimited). Files are public under /c/
+/// at once, so without a limit the endpoint is free file hosting that can fill the disk.
+const UPLOAD_RATE_LIMIT: usize = 30;
+const UPLOAD_RATE_WINDOW_MS: i64 = 10 * 60_000;
+static UPLOAD_RATE: once_cell::sync::Lazy<parking_lot::Mutex<std::collections::HashMap<i64, Vec<i64>>>> =
+    once_cell::sync::Lazy::new(Default::default);
+
+fn upload_rate_limited(user_id: i64) -> bool {
+    let now = crate::util::now_ms();
+    let start = now - UPLOAD_RATE_WINDOW_MS;
+    let mut map = UPLOAD_RATE.lock();
+    if map.len() > 5000 {
+        map.retain(|_, ts| ts.iter().any(|t| *t > start));
+    }
+    let ts = map.entry(user_id).or_default();
+    ts.retain(|t| *t > start);
+    if ts.len() >= UPLOAD_RATE_LIMIT {
+        return true;
+    }
+    ts.push(now);
+    false
+}
+
 async fn upload(st: AppState, mut req: Req) -> Res {
     let Some(session) = req.session.clone() else { return fail(401, "Unauthorized") };
     if !crate::routes::uploads::csrf_header_ok(&req, &session) {
         return fail(403, "Invalid CSRF token");
+    }
+    if !session.is_admin_or_mod() && upload_rate_limited(session.id) {
+        return fail(429, "Too many uploads, please wait a few minutes.");
     }
     if !crate::cap::allowed(&st.cfg(), &req, &session, crate::cap::Scope::Comment) {
         return send(json!({ "success": false, "msg": "Please complete the captcha.", "captcha_required": "comment" }), 403);

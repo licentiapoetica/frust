@@ -279,6 +279,8 @@ async fn active(_st: AppState, _req: Req) -> Res {
 // ── Live clients ────────────────────────────────────────────────────────────
 
 /// Per-tab limit for one session cookie; the oldest connection is closed beyond it.
+/// Guest connections per IPv4 address / IPv6 /64 (households and NATs share one).
+const MAX_GUEST_CONNECTIONS_PER_CLIENT: usize = 50;
 const MAX_TABS_PER_SESSION: usize = 10;
 /// Queued events per client; a client that falls this far behind loses events.
 const CLIENT_QUEUE: usize = 512;
@@ -497,6 +499,14 @@ async fn socket(st: AppState, mut req: Req) -> Res {
     if !is_guest {
         let same: Vec<Arc<Client>> = HUB.snapshot().into_iter().filter(|c| c.session_key == session_key).collect();
         if same.len() >= MAX_TABS_PER_SESSION {
+            same[0].close();
+        }
+    } else {
+        // Guests pick their own tabId, so cap them per client network instead (each connection costs
+        // a task, ban lookups and a slot every broadcast walks); the oldest makes room
+        let key = crate::security::rate_key(&req.real_ip());
+        let same: Vec<Arc<Client>> = HUB.snapshot().into_iter().filter(|c| c.is_guest && crate::security::rate_key(&c.ip) == key).collect();
+        if same.len() >= MAX_GUEST_CONNECTIONS_PER_CLIENT {
             same[0].close();
         }
     }
