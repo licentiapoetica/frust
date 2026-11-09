@@ -17,6 +17,7 @@
     <meta property="og:title" content="{% if (page_meta is defined and page_meta.title) %}{{ page_meta.title }} - {% endif %}{{ domain }}">
     {% endif %}
     <meta name="description" content="{% if (page_meta is defined and page_meta.description) %}{{ page_meta.description }}{% else %}{{ site_description }}{% endif %}">
+    <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="{% if (custom_favicon and (custom_favicon|length > 0)) %}{{ custom_favicon }}{% else %}/s/fe/w0bm/img/favicon.png{% endif %}">
     <script src="/s/fe/w0bm/js/early.js?v={{ mtime("/public/s/fe/w0bm/js/early.js") }}"></script>
     <link rel="stylesheet" href="/s/fe/w0bm/css/style.css?v={{ mtime("/public/s/fe/w0bm/css/style.css") }}">
