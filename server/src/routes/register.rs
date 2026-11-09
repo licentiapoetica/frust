@@ -55,6 +55,15 @@ async fn login_page(st: AppState, req: Req) -> Res {
     Ok(redirect("/?login=1"))
 }
 
+/// Reset requests per account and day (see `forgot_password`).
+const RESET_REQUESTS_PER_ACCOUNT: i64 = 3;
+
+/// Something that can be an email address: `local@domain`, no spaces or control characters.
+fn valid_email(e: &str) -> bool {
+    let Some((local, domain)) = e.rsplit_once('@') else { return false };
+    e.len() <= 254 && !local.is_empty() && !domain.is_empty() && !e.chars().any(|c| c.is_whitespace() || c.is_control())
+}
+
 /// Verified against when the account doesn't exist, so both paths cost one Argon2 run.
 static DUMMY_HASH: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_new();
 
@@ -139,9 +148,14 @@ async fn login(st: AppState, mut req: Req) -> Res {
         }
     }
 
+    // By email only when the input looks like one, and a login match always wins: someone else's
+    // email set to "admin" must not shadow the account "admin"
+    let login = username.to_lowercase();
+    let by_email = username.contains('@');
     let user = sql!(
         r#"select id, password, activated, banned, ban_reason, ban_expires, force_password_change from "user" where "login" = "#,
-        username.to_lowercase(), " or lower(email) = lower(", username.trim().to_string(), ") limit 1"
+        login.clone(), " or (", by_email, " and lower(email) = lower(", username.trim().to_string(), r#")) order by ("login" = "#, login,
+        ") desc, id limit 1"
     )
     .fetch_optional(&st.db)
     .await?;
@@ -152,6 +166,12 @@ async fn login(st: AppState, mut req: Req) -> Res {
         fail!("user doesn't exist or wrong password");
     };
     let stored_hash = user.string("password");
+    if stored_hash == "!" {
+        // Passkey-only account: cost the same Argon2 run, so the answer time doesn't tell
+        let dummy = DUMMY_HASH.get_or_init(|| crate::util::hash_password(crate::util::random_hex(16))).await;
+        let _ = crate::util::verify_password(password, dummy.clone()).await;
+        fail!("user doesn't exist or wrong password");
+    }
     if !crate::util::verify_password(password.clone(), stored_hash.clone()).await {
         fail!("user doesn't exist or wrong password");
     }
@@ -275,7 +295,7 @@ const AUTH_ERRORS: &[(&str, &str)] = &[
     // password reset (`?forgot_error=` / `?reset_error=`)
     ("email_missing", "Email is required"),
     ("reset_limited", "Too many attempts. Please try again later."),
-    ("reset_daily", "Only one reset request per 24 hours is allowed for this account."),
+    ("reset_daily", "Too many reset requests for this account. Please try again tomorrow."),
     ("reset_missing", "Missing data"),
     ("reset_mismatch", "Passwords do not match"),
     ("reset_short", "Password must be at least 20 characters long"),
@@ -392,13 +412,19 @@ async fn forgot_password(st: AppState, mut req: Req) -> Res {
         return Ok(if ajax { json_msg(false, msg, 429) } else { page(429, "error", msg) });
     }
 
-    let user = sql!(r#"select id, login, password from "user" where lower(email) = lower("#, email.trim().to_string(), ") limit 1")
-        .fetch_optional(&st.db)
-        .await?;
+    let user = sql!(
+        r#"select id, login, password, email, (reset_token is not null and reset_expires > now()) as token_valid, reset_token from "user" where lower(email) = lower("#,
+        email.trim().to_string(),
+        ") order by id limit 1"
+    )
+    .fetch_optional(&st.db)
+    .await?;
     let identity = user.as_ref().map(|u| u.string("login")).unwrap_or_else(|| email.clone());
 
-    if crate::security::is_rate_limited(&st, &ip, Some(&identity), "password_reset_request").await {
-        let msg = "Only one reset request per 24 hours is allowed for this account.";
+    // Per account a few a day (the per-IP limit above is one): with one, anyone could use up the
+    // owner's request for the day by asking first
+    if crate::security::failed_attempts_for_user(&st, &identity, "password_reset_request").await >= RESET_REQUESTS_PER_ACCOUNT {
+        let msg = "Too many reset requests for this account. Please try again tomorrow.";
         return Ok(if ajax { json_msg(false, msg, 429) } else { page(429, "error", msg) });
     }
     crate::security::record_attempt(&st, &ip, Some(&identity), "password_reset_request", true).await;
@@ -409,20 +435,34 @@ async fn forgot_password(st: AppState, mut req: Req) -> Res {
         return Ok(if ajax { json_msg(true, neutral, 200) } else { page(200, "success", neutral) });
     };
 
-    let token = crate::util::random_hex(32);
-    let expires = chrono::Utc::now() + chrono::Duration::hours(1);
-    sql!(r#"update "user" set reset_token = "#, token.clone(), ", reset_expires = ", expires, " where id = ", user.i64("id").unwrap_or(0) as i32)
-        .execute(&st.db)
-        .await?;
+    // A still valid link is sent again instead of replaced, so a request by someone else doesn't
+    // void the link the owner already has
+    let token = match user.str("reset_token").filter(|_| user.bool("token_valid")) {
+        Some(t) => t.to_string(),
+        None => {
+            let token = crate::util::random_hex(32);
+            let expires = chrono::Utc::now() + chrono::Duration::hours(1);
+            sql!(r#"update "user" set reset_token = "#, token.clone(), ", reset_expires = ", expires, " where id = ", user.i64("id").unwrap_or(0) as i32)
+                .execute(&st.db)
+                .await?;
+            token
+        }
+    };
 
     let link = format!("{}/?token={token}", cfg.url_full());
     let body = format!(
         "Hello,\n\nYou requested a password reset for your account. Please click the link below to set a new password:\n\n{link}\n\nThis link will expire in 1 hour.\n\nIf you did not request this, please ignore this email."
     );
     if cfg.truthy("smtp.enabled") {
-        if let Err(e) = crate::smtp::send_mail(&cfg, crate::smtp::Mail { to: &email, subject: "Password Reset Request", body: &body }).await {
-            tracing::error!("[SMTP] Send failed: {e}");
-        }
+        // To the stored address (not the typed spelling), and in the background: waiting for the
+        // mail server made the answer slower for registered addresses than for unknown ones
+        let to = user.string("email");
+        let cfg = cfg.clone();
+        tokio::spawn(async move {
+            if let Err(e) = crate::smtp::send_mail(&cfg, crate::smtp::Mail { to: &to, subject: "Password Reset Request", body: &body }).await {
+                tracing::error!("[SMTP] Send failed: {e}");
+            }
+        });
     } else {
         tracing::info!("[SMTP] No configuration found. Reset link: {link}");
     }
@@ -656,9 +696,14 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
         activation_token = Some(crate::util::random_hex(32));
     }
 
+    // Any email given has to look like one (login matches an email only when the input has an `@`)
+    if email.as_deref().is_some_and(|e| !valid_email(e)) {
+        render_error!("A valid email is required for registration.");
+    }
+
     let mut q = sql!(r#"select id, login, email from "user" where "login" = "#, username.to_lowercase(), r#" or "user" = "#, username.clone());
     if let Some(e) = &email {
-        q.push(r#" or ("email" is not null and "email" = "#).bind(e.clone()).push(")");
+        q.push(r#" or ("email" is not null and lower("email") = lower("#).bind(e.clone()).push("))");
     }
     let existing = q.fetch_all(&st.db).await?;
     if !existing.is_empty() {
@@ -826,5 +871,25 @@ mod modal_return_tests {
                 assert!(table[i + 1..].iter().all(|(c2, m2)| c2 != c && m2 != m), "{c} twice");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod low_severity_tests {
+    #[test]
+    fn emails() {
+        assert!(super::valid_email("a@b.example"));
+        for bad in ["admin", "@x", "a@", "a b@c.d", "a@b\n"] {
+            assert!(!super::valid_email(bad), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn logout_links_need_the_session_token() {
+        let t = crate::auth::logout_token("csrf-a");
+        assert_eq!(t.len(), 16);
+        assert_ne!(t, crate::auth::logout_token("csrf-b"));
+        assert_eq!(crate::auth::logout_url(""), "/logout");
+        assert_eq!(crate::auth::logout_url("csrf-a"), format!("/logout?t={t}"));
     }
 }
