@@ -896,6 +896,12 @@ html[theme='paper'] .user-infobox-block {
   color: #1e293b;
 }
 
+/* the dark themes' black shadow under the time smeared it on white */
+html[theme='light'] .timestamp-link,
+html[theme='paper'] .timestamp-link {
+  text-shadow: none;
+}
+
 /* Video Player Controls */
 html[theme='light'] .v0ck_player_controls,
 html[theme='paper'] .v0ck_player_controls {
@@ -1855,6 +1861,54 @@ html[theme="f0ck95"] #prev {
 
 html[theme="f0ck95"] #next {
   color: white !important;
+}
+
+/* The uploader box as a Win95 panel: the theme's --comment-bg is black and its text black (the time
+   was invisible) */
+html[theme="f0ck95"] .blahlol:has(.user-infobox-block),
+html[theme="f0ck95"] .user-infobox-block {
+  background: silver;
+}
+
+html[theme="f0ck95"] .user-infobox-block {
+  border: 2px outset silver;
+  color: #000;
+}
+
+/* uploaders without a colour of their own (item-partial-legacy.html falls back to --author-default):
+   navy, not the silver accent */
+html[theme="f0ck95"] {
+  --author-default: #000080;
+}
+
+/* the message of the day on the silver navbar */
+html[theme="f0ck95"] #motd-display {
+  color: #000;
+}
+
+html[theme="f0ck95"] .timestamp-link {
+  text-shadow: none;
+}
+
+/* prev / random / next sit on the teal background: white like the arrows */
+html[theme="f0ck95"] .steuerung a,
+html[theme="f0ck95"] .steuerung span {
+  color: #fff;
+}
+
+/* The accent (silver) on the silver sidebar hid the active tab and its underline: Win95 navy */
+html[theme="f0ck95"] .sidebar-tab.active,
+html[theme="f0ck95"] .sidebar-tab:hover {
+  color: #000080;
+}
+
+html[theme="f0ck95"] .sidebar-tab.active::after {
+  background: #000080;
+}
+
+/* the visitor menu button on the silver navbar */
+html[theme="f0ck95"] .nav-user-btn {
+  color: #000;
 }
 
 html[theme="4d"] {
