@@ -160,7 +160,8 @@ async fn magick(sub: Option<&str>, args: &[&str]) -> anyhow::Result<crate::proc:
     let mut all: Vec<&str> = sub.into_iter().collect();
     all.extend(["-limit", "memory", "512MiB", "-limit", "map", "1GiB", "-limit", "width", "32KP", "-limit", "height", "32KP"]);
     all.extend_from_slice(args);
-    let opts = crate::proc::Opts { timeout: Duration::from_secs(60), ..Default::default() };
+    // The admin's own favicon, which may be an SVG (the upload policy refuses SVG)
+    let opts = crate::proc::Opts { timeout: Duration::from_secs(60), trusted_input: true, ..Default::default() };
     crate::proc::spawn_with("magick", &all, opts).await
 }
 

@@ -948,12 +948,17 @@ async fn custom_flash_thumb(cfg: &Config, thumb: &FilePart, item_id: i64, pendin
 /// Detected MIME of an album sub-file, or `None` if it isn't allowed. A client-declared type is
 /// only trusted when libmagic agrees on the top-level type (the old code took any declared type
 /// that appeared in `cfg.mimes`, so the content check could be bypassed).
+/// Type of an album entry: the detected one when allowed. The declared type only stands in for an
+/// audio/video detection libmagic names differently (`audio/x-hx-aac-adts` for `audio/aac`), never
+/// for images (an SVG declared as `image/png` would reach ImageMagick) or playlists (`.m3u`).
 fn sub_mime(allowed: &[String], detected: &str, declared: &str) -> Option<String> {
     if allowed.iter().any(|a| a == detected) {
         return Some(detected.to_string());
     }
     let top = |m: &str| m.split('/').next().unwrap_or("").to_string();
-    (allowed.iter().any(|a| a == declared) && top(detected) == top(declared) && !detected.is_empty()).then(|| declared.to_string())
+    let av = matches!(top(detected).as_str(), "audio" | "video");
+    let playlist = ["mpegurl", "scpls", "x-ms-asx", "xspf", "smil"].iter().any(|p| detected.contains(p));
+    (av && !playlist && allowed.iter().any(|a| a == declared) && top(detected) == top(declared)).then(|| declared.to_string())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -992,6 +997,13 @@ async fn album_items(
             tracing::warn!("[UPLOAD] Skipping album item #{} ({detected})", i + 1);
             continue;
         };
+        // The same switches as for the album's first file
+        let disabled = (sub_mime == "application/pdf" && !st.settings.enable_pdf())
+            || (mime::is_archive_mime(cfg, &sub_mime) && cfg.is_false("websrv.enable_archive"));
+        if disabled {
+            tracing::warn!("[UPLOAD] Skipping album item #{} ({sub_mime} uploads are disabled)", i + 1);
+            continue;
+        }
         let (sum, sub_phash, sub_dims) = analyse_sub(&sub_tmp.path, &sub_mime).await;
         let sum = sum?;
         let sub_ext = mime::ext_for(cfg, &sub_mime).unwrap_or_else(|| "webp".into());
@@ -1122,6 +1134,8 @@ mod tests {
         assert_eq!(sub_mime(&allowed, "audio/x-hx-aac-adts", "audio/aac").as_deref(), Some("audio/aac"));
         assert_eq!(sub_mime(&allowed, "text/html", "image/png"), None, "declared type can't override content");
         assert_eq!(sub_mime(&allowed, "image/svg+xml", "image/svg+xml"), None);
+        assert_eq!(sub_mime(&allowed, "image/svg+xml", "image/png"), None, "images never take the declared type");
+        assert_eq!(sub_mime(&allowed, "audio/x-mpegurl", "audio/mpeg"), None, "no playlists");
     }
 
     #[test]

@@ -168,6 +168,8 @@ fn tab_lines(text: &str) -> String {
 
 async fn state(base: &Path) -> Result<AppState> {
     let cfg = Config::load(base)?;
+    let _ = std::fs::create_dir_all(&cfg.paths.tmp);
+    crate::proc::install_magick_policy(&cfg.paths.tmp);
     let pool = crate::db::connect(&cfg).await?;
     let i18n = Arc::new(crate::i18n::I18n::new(crate::locales_dir(base)));
     let tpl = crate::tpl::Templates::new(base.join("views"), i18n.clone());

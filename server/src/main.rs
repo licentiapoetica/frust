@@ -349,6 +349,10 @@ async fn main() -> Result<()> {
     }
     let cfg = config::Config::load(&base)?;
 
+    // Before anything can run ImageMagick on a user file (the tmp dir is created just below)
+    let _ = std::fs::create_dir_all(&cfg.paths.tmp);
+    proc::install_magick_policy(&cfg.paths.tmp);
+
     for dir in [
         &cfg.paths.a,
         &cfg.paths.b,
