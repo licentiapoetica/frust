@@ -3137,27 +3137,6 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   /* Slide the legacy sidebar off-screen — handled by universal rule */
 }
 
-/* Legacy layout: the prev / random / next row and the uploader box (avatar, actions, tags) grow with the
-   player: at its usual 1000-1140px they kept the sizes made for a ~840px player and looked tiny under
-   it. Zoom: item width / 840px, 1 to 1.4; the box's width is divided by it so it stays 3/4 of the
-   player. Needs CSS typed arithmetic (a length divided by a length); without it they keep their size.
-   Not in the modern layout, whose player gets the height these leave (a loop). */
-@media (min-width: 1000px) {
-  @supports (width: calc(1px * (2px / 1px))) {
-    body.layout-legacy .item-layout-container .item-main-content {
-      --item-zoom: clamp(1, calc(var(--legacy-item-w) / 840px), 1.4);
-    }
-
-    body.layout-legacy .item-layout-container .item-main-content :is(.kontrollelement, .metadata) {
-      zoom: var(--item-zoom);
-    }
-
-    body.layout-legacy .item-layout-container .item-main-content .metadata {
-      width: calc(var(--legacy-meta-w) / var(--item-zoom));
-    }
-  }
-}
-
 .sidebar-activity {
   display: flex;
   flex-direction: column;
