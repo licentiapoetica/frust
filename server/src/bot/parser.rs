@@ -844,12 +844,17 @@ impl Upload {
         Ok(true)
     }
 
-    /// Name the item is stored under: the linked website account, else the chat name.
+    /// Name the item is stored under: the linked website account, else the chat name prefixed with
+    /// the network (`tg:name`). A chat name is chosen freely (a Telegram first name can be "admin"),
+    /// and `:` never occurs in a site login, so an unlinked upload can't be credited to an account.
     fn username(&self, e: &Message) -> String {
+        let chat_name = match e.kind {
+            Kind::Tg => e.user.username.clone().filter(|u| !u.is_empty()).unwrap_or_else(|| e.user.nick.clone()),
+            _ => if e.user.nick.is_empty() { e.user.username.clone().unwrap_or_default() } else { e.user.nick.clone() },
+        };
         match &self.website_user {
             Some((_, u)) => u.clone(),
-            None if e.kind == Kind::Tg => e.user.username.clone().filter(|u| !u.is_empty()).unwrap_or_else(|| e.user.nick.clone()),
-            None => if e.user.nick.is_empty() { e.user.username.clone().unwrap_or_default() } else { e.user.nick.clone() },
+            None => format!("{}:{chat_name}", e.kind.as_str()),
         }
     }
 
