@@ -14081,12 +14081,28 @@ html.motd-on body > nav.navbar > * {
     min-width: 0;
   }
 
+  /* flex, packed to the right: avatar, name and caret stay together next to the icons */
   #nav-user-toggle {
+    display: flex;
+    justify-content: flex-end;
     max-width: 100%;
-    grid-template-columns: auto minmax(0, auto) auto;
+    margin-left: auto;
+  }
+
+  .nav-right-group > .nav-user-dropdown {
+    display: flex;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+
+  /* about the height of the icons beside it */
+  .nav-avatar-img {
+    width: 1.5rem;
+    height: 1.5rem;
   }
 
   .nav-avatar-name {
+    min-width: 0;
     font-size: clamp(0.8rem, 4.2vw, 1rem);
   }
 
