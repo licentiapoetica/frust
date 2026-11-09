@@ -5,7 +5,8 @@
 //! migrations/rust_webauthn.sql); the old `passkey_credentials` table is not used.
 //!
 //! Ceremony state stays on the server: `start_*` stores it in memory keyed by the challenge it sent
-//! (5-minute expiry, single use, bounded), `take` removes it again. The HTTP API keeps the old flat
+//! (5-minute expiry, single use, bounded), `take_for` removes it again (found by the challenge in the
+//! signed clientDataJSON, falling back to the body's `challenge`). The HTTP API keeps the old flat
 //! JSON shapes (`options.challenge`, `options.rp`, …; finish bodies with `challenge`, `credentialId`,
 //! `clientDataJSON`, …); logins additionally send `userHandle`, which is checked when present.
 //!
@@ -92,8 +93,35 @@ fn remember(challenge: String, p: Pending) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// The challenge the authenticator signed: `challenge` of the base64url `clientDataJSON`.
+fn signed_challenge(client_data_json: &str) -> Option<String> {
+    use base64::Engine;
+    let raw = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(client_data_json.trim().trim_end_matches('=')).ok()?;
+    let v: Value = serde_json::from_slice(&raw).ok()?;
+    let c = v.get("challenge")?.as_str()?.trim_end_matches('=');
+    // the spec says base64url; normalise a plain-base64 one
+    Some(c.chars().map(|ch| match ch { '+' => '-', '/' => '_', ch => ch }).collect())
+}
+
+/// The ceremony a finish body answers, found by the challenge inside its signed `clientDataJSON`
+/// (falling back to the body's `challenge` field). Some passkey apps (Bitwarden on Android) can hand
+/// the browser an answer to an earlier request of the same page; that ceremony is still a valid,
+/// single-use one of ours, while the body's `challenge` names the newest request.
+pub fn take_for(body: &Value) -> Result<Pending, &'static str> {
+    let sent = body.get("challenge").and_then(Value::as_str).unwrap_or("");
+    let signed = body.get("clientDataJSON").and_then(Value::as_str).and_then(signed_challenge);
+    match signed {
+        Some(c) if c != sent => {
+            tracing::warn!("[PASSKEYS] client answered challenge {c}, page sent {sent}");
+            take(&c)
+        }
+        Some(c) => take(&c),
+        None => take(sent),
+    }
+}
+
 /// Remove and return the ceremony started with `challenge` (single use).
-pub fn take(challenge: &str) -> Result<Pending, &'static str> {
+fn take(challenge: &str) -> Result<Pending, &'static str> {
     let Some((_, (exp, p))) = PENDING.remove(challenge) else { return Err("Challenge not found or expired") };
     if Instant::now() > exp {
         return Err("Challenge expired");
@@ -737,6 +765,26 @@ mod tests {
             (std::time::Instant::now() - std::time::Duration::from_secs(1), super::Pending { kind: "x".into(), user_id: None, user_handle: None, rp_id: RP.into(), state }),
         );
         assert!(super::take("old").is_err(), "expired");
+    }
+
+    /// The ceremony is found by the challenge the authenticator signed, not the page's field.
+    #[test]
+    fn take_for_follows_signed_challenge() {
+        let start = |kind: &str| {
+            let (opts, state) = backend::start_authentication(&rp()).unwrap();
+            let c = opts["challenge"].as_str().unwrap().to_string();
+            super::remember(c.clone(), super::Pending { kind: kind.into(), user_id: None, user_handle: None, rp_id: RP.into(), state }).unwrap();
+            c
+        };
+        let cdj = |c: &str| B64.encode(json!({ "type": "webauthn.get", "challenge": c, "origin": ORIGIN }).to_string());
+        let old = start("take-for-old");
+        let new = start("take-for-new");
+        // an answer to the earlier request, sent along with the newer challenge
+        let body = json!({ "challenge": new, "clientDataJSON": cdj(&old) });
+        assert_eq!(super::take_for(&body).ok().map(|p| p.kind).as_deref(), Some("take-for-old"));
+        assert!(super::take_for(&body).is_err(), "single use");
+        // no usable clientDataJSON: the body's field
+        assert_eq!(super::take_for(&json!({ "challenge": new })).ok().map(|p| p.kind).as_deref(), Some("take-for-new"));
     }
 }
 

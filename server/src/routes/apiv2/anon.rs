@@ -266,7 +266,7 @@ async fn register_finish(st: AppState, mut req: Req) -> Res {
     if required.iter().any(|k| body_str(&body, k).is_none()) {
         return j(json!({ "success": false, "msg": "Missing required WebAuthn fields" }), 400);
     }
-    let Ok(pending) = wa::take(&body_str(&body, "challenge").unwrap_or_default()) else {
+    let Ok(pending) = wa::take_for(&body) else {
         return j(json!({ "success": false, "msg": "Challenge expired or invalid" }), 400);
     };
     if pending.kind != "anon-register" {
@@ -343,7 +343,7 @@ async fn auth_finish(st: AppState, mut req: Req) -> Res {
         return j(json!({ "success": false, "msg": "Missing required WebAuthn fields" }), 400);
     }
     let cred_id = body_str(&body, "credentialId").unwrap_or_default();
-    let Ok(pending) = wa::take(&body_str(&body, "challenge").unwrap_or_default()) else {
+    let Ok(pending) = wa::take_for(&body) else {
         return j(json!({ "success": false, "msg": "Challenge expired or invalid" }), 400);
     };
     if pending.kind != "anon-auth" {
@@ -457,7 +457,7 @@ async fn add_finish(st: AppState, mut req: Req) -> Res {
     if required.iter().any(|k| body_str(&body, k).is_none()) {
         return j(json!({ "success": false, "msg": "Missing required WebAuthn fields" }), 400);
     }
-    let Ok(pending) = wa::take(&body_str(&body, "challenge").unwrap_or_default()) else {
+    let Ok(pending) = wa::take_for(&body) else {
         return j(json!({ "success": false, "msg": "Challenge expired or invalid" }), 400);
     };
     if pending.kind != "anon-add" || pending.user_id != Some(user_id) {

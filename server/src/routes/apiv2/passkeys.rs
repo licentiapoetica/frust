@@ -127,7 +127,7 @@ async fn register_finish(st: AppState, mut req: Req) -> Res {
     if ["challenge", "clientDataJSON", "attestationObject", "credentialId"].iter().any(|k| body_str(&body, k).is_none()) {
         return fail("Missing required WebAuthn fields", 400);
     }
-    let Ok(pending) = wa::take(&body_str(&body, "challenge").unwrap_or_default()) else { return fail("Challenge expired or invalid", 400) };
+    let Ok(pending) = wa::take_for(&body) else { return fail("Challenge expired or invalid", 400) };
     if pending.kind != "user-register" || pending.user_id != Some(uid) {
         return fail("Challenge mismatch", 400);
     }
@@ -193,7 +193,7 @@ async fn confirm_finish(st: AppState, mut req: Req) -> Res {
         return fail("Missing required WebAuthn fields", 400);
     }
     let cred_id = body_str(&body, "credentialId").unwrap_or_default();
-    let Ok(pending) = wa::take(&body_str(&body, "challenge").unwrap_or_default()) else { return fail("Challenge expired or invalid", 400) };
+    let Ok(pending) = wa::take_for(&body) else { return fail("Challenge expired or invalid", 400) };
     if pending.kind != "user-confirm" {
         return fail("Wrong challenge type", 400);
     }
@@ -232,7 +232,7 @@ async fn login_finish(st: AppState, mut req: Req) -> Res {
         return fail("Missing required WebAuthn fields", 400);
     }
     let cred_id = body_str(&body, "credentialId").unwrap_or_default();
-    let Ok(pending) = wa::take(&body_str(&body, "challenge").unwrap_or_default()) else { return fail("Challenge expired or invalid", 400) };
+    let Ok(pending) = wa::take_for(&body) else { return fail("Challenge expired or invalid", 400) };
     if pending.kind != "user-login" {
         return fail("Wrong challenge type", 400);
     }
