@@ -200,6 +200,20 @@ async fn upload(st: AppState, mut req: Req) -> Res {
         }
         detected.push(m);
     }
+    // Files waiting to be attached count against a per-user quota until a comment uses them (or
+    // purge_unattached removes them): /c/ is public at once, so it can't serve as free file hosting
+    if !session.is_admin_or_mod() {
+        let pending: i64 = sql!("SELECT COALESCE(SUM(size), 0)::bigint FROM comment_files WHERE user_id = ", session.id as i32, " AND comment_id IS NULL")
+            .fetch_scalar(&st.db)
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or(0);
+        let incoming: u64 = files.iter().map(|f| f.size).sum();
+        if pending.max(0) as u64 + incoming > UNATTACHED_QUOTA_BYTES {
+            return fail(413, "Too many files waiting to be posted. Post your comment or wait a day for unused uploads to expire.");
+        }
+    }
     for d in [&cfg.paths.c, &cfg.paths.tmp, &cfg.paths.t] {
         let _ = tokio::fs::create_dir_all(d).await;
     }
@@ -216,6 +230,85 @@ async fn upload(st: AppState, mut req: Req) -> Res {
     }
     drop(form);
     send(json!({ "success": true, "files": results }), 200)
+}
+
+// ── Unattached files ────────────────────────────────────────────────────────
+
+/// Bytes of uploaded but not yet attached comment files a user may have (staff unlimited).
+const UNATTACHED_QUOTA_BYTES: u64 = 200 * 1024 * 1024;
+/// Hours an upload may wait for its comment before [`purge_unattached`] removes it.
+const UNATTACHED_HOURS: i32 = 24;
+/// Rows looked at per run (each one checks the comment and chat texts).
+const PURGE_BATCH: i64 = 100;
+
+/// Remove comment files that were uploaded but never attached to a comment within
+/// [`UNATTACHED_HOURS`]: row, file in c/ and thumbnail t/cf_<name>.webp. Kept when a comment or
+/// a global chat message mentions the file name (pasted link), and when another file in c/ is a
+/// symlink to it (identical or similar later uploads link instead of copying, see `process_file`).
+/// A file that is itself a symlink is only unlinked. Returns how many rows were removed.
+pub async fn purge_unattached(st: &AppState) -> u64 {
+    let cfg = st.cfg();
+    let rows = sql!(
+        "SELECT cf.id, cf.dest FROM comment_files cf WHERE cf.comment_id IS NULL AND cf.created_at < now() - make_interval(hours => ",
+        UNATTACHED_HOURS,
+        ") AND NOT EXISTS (SELECT 1 FROM comments c WHERE strpos(c.content, cf.dest) > 0)
+           AND NOT EXISTS (SELECT 1 FROM global_chat g WHERE strpos(g.message, cf.dest) > 0)
+         ORDER BY cf.id LIMIT ",
+        PURGE_BATCH
+    )
+    .fetch_all(&st.db)
+    .await;
+    let rows = match rows {
+        Ok(r) if !r.is_empty() => r,
+        Ok(_) => return 0,
+        Err(e) => {
+            tracing::error!("[COMMENT_UPLOAD] Unattached lookup failed: {e}");
+            return 0;
+        }
+    };
+    let link_targets = symlink_targets(&cfg.paths.c).await;
+    let mut removed = 0;
+    for r in rows {
+        let (id, dest) = (r.i64("id").unwrap_or(0), r.string("dest"));
+        if !crate::media::is_plain_name(&dest) {
+            continue;
+        }
+        let path = cfg.paths.c.join(&dest);
+        match tokio::fs::symlink_metadata(&path).await {
+            Ok(m) if m.file_type().is_symlink() => {
+                let _ = tokio::fs::remove_file(&path).await;
+            }
+            Ok(_) => {
+                let real = tokio::fs::canonicalize(&path).await.unwrap_or_else(|_| path.clone());
+                if link_targets.contains(&real) {
+                    continue; // another comment file links here
+                }
+                let _ = tokio::fs::remove_file(&path).await;
+            }
+            Err(_) => {} // already gone: just the row
+        }
+        let stem = dest.split('.').next().unwrap_or("");
+        let _ = tokio::fs::remove_file(cfg.paths.t.join(format!("cf_{stem}.webp"))).await;
+        match sql!("DELETE FROM comment_files WHERE id = ", id as i32, " AND comment_id IS NULL").execute(&st.db).await {
+            Ok(n) => removed += n,
+            Err(e) => tracing::error!("[COMMENT_UPLOAD] Removing unattached file {id} failed: {e}"),
+        }
+    }
+    removed
+}
+
+/// Real paths that symlinks in `dir` point to.
+async fn symlink_targets(dir: &Path) -> std::collections::HashSet<PathBuf> {
+    let mut out = std::collections::HashSet::new();
+    let Ok(mut rd) = tokio::fs::read_dir(dir).await else { return out };
+    while let Ok(Some(e)) = rd.next_entry().await {
+        if e.file_type().await.is_ok_and(|t| t.is_symlink()) {
+            if let Ok(real) = tokio::fs::canonicalize(e.path()).await {
+                out.insert(real);
+            }
+        }
+    }
+    out
 }
 
 /// Symlink `dest` to the real file behind `existing` (relative link).

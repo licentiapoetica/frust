@@ -8,6 +8,9 @@
 //!   `retention_sessions_days`        sessions unused for this long are deleted
 //!   `retention_fingerprint_days`     hardware fingerprint is cleared from anonymous identities inactive this long
 //!
+//! Each run also removes comment uploads never attached to a comment within a day
+//! (`comment_upload::purge_unattached`).
+//!
 //! Unless `websrv.anon_hw_fingerprint` is true, every stored device fingerprint (identities and
 //! activity log) is cleared on each run, regardless of age. Active bans are not touched.
 
@@ -109,6 +112,12 @@ pub async fn run_retention(st: &AppState) {
     } else if r.fingerprint > 0 {
         let c = before(r.fingerprint);
         step!("anon.hw_fingerprint", sql!("update anon_identities set hw_fingerprint = null where hw_fingerprint is not null and last_seen < ", @c));
+    }
+
+    // Comment uploads nobody posted (not personal data as such, but storage anyone could fill)
+    let unattached = crate::routes::comment_upload::purge_unattached(st).await;
+    if unattached > 0 {
+        counts.push(("comment_files.unattached", unattached));
     }
 
     if !counts.is_empty() {
