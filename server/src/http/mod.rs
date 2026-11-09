@@ -40,8 +40,12 @@ impl AppError {
     }
 }
 
-/// Default body size limit for ordinary (non-upload) requests.
-pub const DEFAULT_BODY_LIMIT: usize = 32 * 1024 * 1024;
+/// Body size limit for parsed (JSON / form) bodies of ordinary requests. Uploads read their body
+/// themselves with their own limit. Kept small: a JSON body grows ~30x as a `serde_json::Value`.
+pub const DEFAULT_BODY_LIMIT: usize = 4 * 1024 * 1024;
+
+/// Most fields a form body may have; the rest are ignored.
+const MAX_FORM_FIELDS: usize = 10_000;
 
 /// Loopback or private-network address (RFC 1918, IPv6 unique-local), the places a reverse proxy
 /// in front of f0ckm connects from.
@@ -426,10 +430,16 @@ pub fn parse_body(content_type: &str, bytes: &[u8]) -> Value {
     }
     let mut map: Map<String, Value> = Map::new();
     let mut order: Vec<(String, Vec<String>)> = Vec::new();
+    // Key → position in `order`, so many fields don't cost a linear search each
+    let mut index: HashMap<String, usize> = HashMap::new();
     for (k, v) in form_urlencoded::parse(bytes) {
-        match order.iter_mut().find(|(key, _)| *key == k) {
-            Some((_, vals)) => vals.push(v.into_owned()),
-            None => order.push((k.into_owned(), vec![v.into_owned()])),
+        match index.get(k.as_ref()) {
+            Some(&i) => order[i].1.push(v.into_owned()),
+            None if order.len() < MAX_FORM_FIELDS => {
+                index.insert(k.to_string(), order.len());
+                order.push((k.into_owned(), vec![v.into_owned()]));
+            }
+            None => {}
         }
     }
     for (k, vals) in order {
@@ -679,4 +689,60 @@ async fn api_key_auth(st: &AppState, req: &mut Req) -> Option<Response> {
     s.api_key_auth = true;
     req.session = Some(s);
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn req(peer: &str, headers: &[(&str, &str)]) -> Req {
+        let mut h = HeaderMap::new();
+        for (k, v) in headers {
+            h.insert(axum::http::HeaderName::from_bytes(k.as_bytes()).unwrap(), HeaderValue::from_str(v).unwrap());
+        }
+        Req::new(Method::GET, &"/".parse().unwrap(), h, Body::empty(), Some(peer.parse().unwrap()))
+    }
+
+    #[test]
+    fn direct_clients_cant_choose_their_ip() {
+        let r = req("203.0.113.9:5000", &[("cf-connecting-ip", "1.2.3.4"), ("x-forwarded-for", "1.2.3.4"), ("x-real-ip", "1.2.3.4")]);
+        assert_eq!(r.real_ip(), "203.0.113.9");
+    }
+
+    #[test]
+    fn behind_a_proxy() {
+        // nginx-proxy passes the client's own CF-Connecting-IP through and appends to X-Forwarded-For
+        let r = req("172.18.0.5:5000", &[("cf-connecting-ip", "1.2.3.4"), ("x-real-ip", "198.51.100.7"), ("x-forwarded-for", "1.2.3.4, 198.51.100.7")]);
+        assert_eq!(r.real_ip(), "198.51.100.7");
+        let r = req("127.0.0.1:5000", &[("x-forwarded-for", "1.2.3.4, 198.51.100.7")]);
+        assert_eq!(r.real_ip(), "198.51.100.7", "the entry the proxy added, not the client's");
+        let mut r = req("10.0.0.2:5000", &[("cf-connecting-ip", "198.51.100.8"), ("x-real-ip", "172.64.0.1")]);
+        r.trust_cdn_headers = true;
+        assert_eq!(r.real_ip(), "198.51.100.8", "websrv.behind_cloudflare");
+    }
+
+    #[test]
+    fn forwarded_host_only_from_a_proxy() {
+        let r = req("203.0.113.9:5000", &[("host", "example.com"), ("x-forwarded-host", "abc.onion")]);
+        assert!(!r.is_onion());
+        let r = req("127.0.0.1:5000", &[("host", "example.com"), ("x-forwarded-host", "abc.onion")]);
+        assert!(r.is_onion());
+    }
+
+    #[test]
+    fn encoded_dot_segments_are_resolved() {
+        assert_eq!(remove_dot_segments("/t/%2e/1.webp"), "/t/1.webp");
+        assert_eq!(remove_dot_segments("/b/x/%2E%2e/a.mp4"), "/b/a.mp4");
+    }
+
+    #[test]
+    fn form_bodies() {
+        let v = parse_body("application/x-www-form-urlencoded", b"a=1&b=2&a=3");
+        assert_eq!(v["a"], "1,3");
+        assert_eq!(v["b"], "2");
+        // Many distinct keys: linear, capped
+        let big: String = (0..MAX_FORM_FIELDS + 50).map(|i| format!("k{i}=&")).collect();
+        let v = parse_body("", big.as_bytes());
+        assert_eq!(v.as_object().unwrap().len(), MAX_FORM_FIELDS);
+    }
 }
