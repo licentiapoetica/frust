@@ -3,6 +3,7 @@
 
 use crate::auth::{SessionSpec, is_ajax};
 use crate::cap::Captcha;
+use crate::security::Settle;
 use crate::db::RowExt;
 use crate::http::{Req, Res, Router, html, html_code, json_raw, raw, redirect, reply};
 use crate::sql;
@@ -69,9 +70,13 @@ async fn login(st: AppState, mut req: Req) -> Res {
     let return_to = if ajax { None } else { req.post_str("return_to").await.and_then(|p| modal_return_path(&p)) };
     let captcha_on = crate::cap::required(&cfg, &req);
 
+    // Counted as a failure from here on unless settled below (see security::begin_attempt)
+    let attempt = crate::security::begin_attempt(&st, &ip, username.as_deref(), "login").await;
+    let pending = attempt.is_some();
     // After repeated failures from this IP a (hard) captcha is needed, much later a lockout
-    let (captcha_needed, failures) = match crate::security::auth_gate(&st, &ip, "login", captcha_on).await {
+    let (captcha_needed, failures) = match crate::security::auth_gate(&st, &ip, "login", captcha_on, pending).await {
         crate::security::AuthGate::Locked => {
+            crate::security::settle_attempt(&st, attempt, Settle::Withdraw).await;
             let msg = "Too many attempts.";
             if ajax {
                 return Ok(json_msg(false, msg, 429));
@@ -80,8 +85,15 @@ async fn login(st: AppState, mut req: Req) -> Res {
         }
         crate::security::AuthGate::Open { captcha, failures } => (captcha, failures),
     };
-    // Whether the next try needs the captcha, counting the failure about to be recorded
-    let captcha_next = captcha_on && failures + 1 >= crate::security::CAPTCHA_AFTER_FAILURES;
+    // Failures at this account from any IP: guessing one password from many addresses also needs
+    // the captcha (no lockout here, that would let anyone lock a victim out)
+    let account_failures = match username.as_deref().filter(|u| !u.is_empty()) {
+        Some(u) => (crate::security::failed_attempts_for_user(&st, u, "login").await - i64::from(pending)).max(0),
+        None => 0,
+    };
+    let captcha_needed = captcha_needed || (captcha_on && account_failures >= crate::security::CAPTCHA_AFTER_FAILURES);
+    // Whether the next try needs the captcha, counting this one as failed
+    let captcha_next = captcha_on && failures.max(account_failures) + 1 >= crate::security::CAPTCHA_AFTER_FAILURES;
 
     let respond = |msg: &str, captcha: bool| {
         if ajax {
@@ -97,7 +109,8 @@ async fn login(st: AppState, mut req: Req) -> Res {
 
     macro_rules! fail {
         ($msg:expr) => {{
-            crate::security::record_attempt(&st, &ip, username.as_deref(), "login", false).await;
+            // The attempt is already recorded as failed (begin_attempt)
+            crate::security::log_failed_attempt(&st, &ip, username.as_deref(), "login").await;
             // Slows down brute force and evens out timing
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             return Ok(respond($msg, captcha_next));
@@ -113,8 +126,14 @@ async fn login(st: AppState, mut req: Req) -> Res {
     if captcha_needed {
         match crate::cap::verify_form(captcha_token.as_deref(), cap_image_id.as_deref(), cap_image_answer.as_deref(), true) {
             Captcha::Ok => {}
-            Captcha::Missing => return Ok(respond("Too many failed logins, please complete the captcha.", true)),
-            Captcha::Failed => return Ok(respond("Captcha expired or invalid. Please try again.", true)),
+            Captcha::Missing => {
+                crate::security::settle_attempt(&st, attempt, Settle::Withdraw).await;
+                return Ok(respond("Too many failed logins, please complete the captcha.", true));
+            }
+            Captcha::Failed => {
+                crate::security::settle_attempt(&st, attempt, Settle::Withdraw).await;
+                return Ok(respond("Captcha expired or invalid. Please try again.", true));
+            }
         }
     }
 
@@ -145,6 +164,8 @@ async fn login(st: AppState, mut req: Req) -> Res {
         if expires.is_some_and(|e| e < chrono::Utc::now()) {
             sql!(r#"update "user" set banned = false, ban_reason = null, ban_expires = null where id = "#, user_id as i32).execute(&st.db).await?;
         } else {
+            // Right password: not a failed guess
+            crate::security::settle_attempt(&st, attempt, Settle::Withdraw).await;
             let reason = user.str("ban_reason").filter(|r| !r.is_empty()).unwrap_or("none");
             let exp_text = expires
                 .map(|e| e.with_timezone(&chrono::Utc).format("%Y-%m-%d %H:%M").to_string())
@@ -159,8 +180,8 @@ async fn login(st: AppState, mut req: Req) -> Res {
         }
     }
 
-    crate::security::record_attempt(&st, &ip, Some(&username), "login", true).await;
-    crate::security::clear_attempts(&st, &ip, Some(&username)).await;
+    crate::security::settle_attempt(&st, attempt, Settle::Success).await;
+    crate::security::clear_attempts(&st, Some(&ip), &username).await;
 
     // Upgrade old (scrypt) hashes to Argon2id
     if crate::util::password_needs_rehash(&stored_hash) {
@@ -548,7 +569,7 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
 
     // Register always needs the captcha (when on); after repeated failures from this IP a hard one
     let captcha_on = crate::cap::required(&cfg, &req);
-    let hard_captcha = match crate::security::auth_gate(&st, &ip, "register", captcha_on).await {
+    let hard_captcha = match crate::security::auth_gate(&st, &ip, "register", captcha_on, false).await {
         crate::security::AuthGate::Locked => {
             let msg = "Too many attempts.";
             return Ok(if ajax { json_msg(false, msg, 200) } else { page("error", msg) });

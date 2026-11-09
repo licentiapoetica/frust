@@ -108,23 +108,74 @@ pub async fn record_attempt(st: &AppState, ip: &str, username: Option<&str>, kin
         tracing::error!("[SECURITY] Failed to record {kind} attempt: {e}");
     }
     if !success {
-        let (_, max, _) = window(kind);
-        let count = count_attempts(st, "ip_hash", &ip_hash, kind).await;
-        tracing::warn!(
-            "[SECURITY] Failed {kind} attempt: user={}, ip_hash={ip_hash}, ip_banned={} ({count}/{max})",
-            username.unwrap_or(""),
-            count >= max
-        );
+        log_failed_attempt(st, ip, username, kind).await;
     }
 }
 
-pub async fn clear_attempts(st: &AppState, ip: &str, username: Option<&str>) {
+/// Warn about a failed `kind` attempt (already recorded) with the IP's count.
+pub async fn log_failed_attempt(st: &AppState, ip: &str, username: Option<&str>, kind: &str) {
+    let ip_hash = hash_ip(&st.cfg(), ip);
+    let (_, max, _) = window(kind);
+    let count = count_attempts(st, "ip_hash", &ip_hash, kind).await;
+    tracing::warn!(
+        "[SECURITY] Failed {kind} attempt: user={}, ip_hash={ip_hash}, ip_banned={} ({count}/{max})",
+        username.unwrap_or(""),
+        count >= max
+    );
+}
+
+/// Forget failed attempts at `username`. With `ip`, only the ones from that IP: a successful login
+/// clears its own typos, never the IP's failures at other accounts (logging into an own account
+/// between guesses at someone else's would otherwise reset the IP's count every time).
+pub async fn clear_attempts(st: &AppState, ip: Option<&str>, username: &str) {
     let cfg = st.cfg();
-    let ip_hash = hash_ip(&cfg, ip);
-    let uname = username.map(str::to_lowercase).unwrap_or_default();
-    if let Err(e) = sql!("delete from login_attempts where (ip_hash = ", ip_hash, " OR username = ", uname, ")").execute(&st.db).await {
+    let mut q = sql!("delete from login_attempts where username = ", username.to_lowercase());
+    if let Some(ip) = ip {
+        q.push(" and ip_hash = ").bind(hash_ip(&cfg, ip));
+    }
+    if let Err(e) = q.execute(&st.db).await {
         tracing::error!("[SECURITY] Failed to clear attempts: {e}");
     }
+}
+
+/// Record a `kind` attempt as failed *before* checking it, so parallel requests see each other in
+/// their counts (counting first and recording after the check let a burst of guesses all pass as
+/// "under the limit"). [`settle_attempt`] turns it into a success or takes it back.
+pub async fn begin_attempt(st: &AppState, ip: &str, username: Option<&str>, kind: &str) -> Option<i64> {
+    let cfg = st.cfg();
+    let uname = username.map(str::to_lowercase).filter(|u| !u.is_empty());
+    let q = sql!("insert into login_attempts (ip_hash, username, type, success) values (", hash_ip(&cfg, ip), ", ", uname, ", ", kind, ", false) returning id");
+    match q.fetch_scalar::<i32, _>(&st.db).await {
+        Ok(id) => id.map(i64::from),
+        Err(e) => {
+            tracing::error!("[SECURITY] Failed to record {kind} attempt: {e}");
+            None
+        }
+    }
+}
+
+pub enum Settle {
+    /// The attempt succeeded.
+    Success,
+    /// The attempt never got to the check (missing captcha, lockout): don't count it.
+    Withdraw,
+}
+
+pub async fn settle_attempt(st: &AppState, id: Option<i64>, how: Settle) {
+    let Some(id) = id.and_then(|i| i32::try_from(i).ok()) else { return };
+    let q = match how {
+        Settle::Success => sql!("update login_attempts set success = true where id = ", id),
+        Settle::Withdraw => sql!("delete from login_attempts where id = ", id),
+    };
+    if let Err(e) = q.execute(&st.db).await {
+        tracing::error!("[SECURITY] Failed to settle attempt: {e}");
+    }
+}
+
+/// `kind` attempts at one account (any IP) within the kind's window: failed ones for login and
+/// register, all of them for the password-reset kinds.
+pub async fn failed_attempts_for_user(st: &AppState, username: &str, kind: &str) -> i64 {
+    count_attempts(st, "username", &username.to_lowercase(), kind).await
 }
 
 pub async fn is_rate_limited(st: &AppState, ip: &str, username: Option<&str>, kind: &str) -> bool {
@@ -171,8 +222,9 @@ pub enum AuthGate {
 
 /// Rate limit for login / register (`kind`) from this IP. `captcha_on`: Cap is required for this
 /// request (`cap::required`). Without a captcha the old lockout after `MAX_ATTEMPTS` failures stays.
-pub async fn auth_gate(st: &AppState, ip: &str, kind: &str, captcha_on: bool) -> AuthGate {
-    let failures = failed_attempts(st, ip, kind).await;
+/// `pending`: this request's own attempt, already recorded by [`begin_attempt`] (not counted).
+pub async fn auth_gate(st: &AppState, ip: &str, kind: &str, captcha_on: bool, pending: bool) -> AuthGate {
+    let failures = (failed_attempts(st, ip, kind).await - i64::from(pending)).max(0);
     let lockout = if captcha_on { LOCKOUT_WITH_CAPTCHA } else { MAX_ATTEMPTS };
     if failures >= lockout {
         tracing::warn!("[SECURITY] Rate limit hit for {kind}: ip_hash={}, attempts={failures}/{lockout}", hash_ip(&st.cfg(), ip));

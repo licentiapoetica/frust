@@ -606,7 +606,7 @@ async fn reset_login_attempts(st: AppState, mut req: Req) -> Res {
     let body = req.post().await?.clone();
     let r = async {
         let username = body_str(&body, "username").filter(|u| !u.is_empty()).ok_or_else(|| anyhow::anyhow!("Missing username"))?;
-        crate::security::clear_attempts(&st, "", Some(&username)).await;
+        crate::security::clear_attempts(&st, None, &username).await;
         let target = sql!(r#"SELECT id FROM "user" WHERE login = "#, username.clone(), " LIMIT 1").fetch_optional(&st.db).await?;
         crate::audit::log(&st, sid(&req), "admin_reset_login_attempts", "user", target.and_then(|t| t.i64("id")).map(|i| i.to_string()), json!({ "target_login": username }))
             .await;
