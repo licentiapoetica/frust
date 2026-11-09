@@ -720,6 +720,11 @@
           <p class="settings-muted settings-small-note">Loading...</p>
         </div>
 
+        {% if not password_disabled %}
+        <!-- A new passkey needs the current password (a stolen session alone can't add one) -->
+        <input type="password" id="settings-passkey-current-password" class="input settings-reauth-input"
+          placeholder="{{ t("settings.current_password") }}" autocomplete="current-password">
+        {% endif %}
         <div class="settings-button-row">
           <button type="button" class="button button-primary" id="settings-passkey-add-btn" data-on="click:settingsPasskeyAdd">
             <i class="fa-solid fa-plus"></i> Add a passkey
@@ -803,6 +808,10 @@
             <form id="email-update-form" class="settings-account-form">
               <input type="email" id="email_input" class="input" placeholder="{{ t("settings.new_email") }}"
                 value="{{ email }}" required>
+              {% if not password_disabled %}
+              <input type="password" id="email_current_password" class="input"
+                placeholder="{{ t("settings.current_password") }}" required autocomplete="current-password">
+              {% endif %}
               <button type="submit" id="btn-update-email" class="button">{{ t("settings.update_email_btn") }}</button>
             </form>
             {% if smtp_enabled %}
@@ -840,6 +849,11 @@
           </div>
         </div>
 
+        {% if not password_disabled %}
+        <!-- A new key needs the current password (a stolen session alone can't make one) -->
+        <input type="password" id="api-key-current-password" class="input settings-reauth-input"
+          placeholder="{{ t("settings.current_password") }}" autocomplete="current-password">
+        {% endif %}
         <div class="settings-button-row settings-button-row-center">
           <button type="button" id="btn-regen-api-key" class="button button-primary">Generate / Regenerate Key</button>
           <a id="btn-sharex-download" href="/api/v2/settings/api-key/sharex-config" download class="button settings-sharex-btn settings-hidden">&#11123; ShareX Config</a>

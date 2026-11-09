@@ -39,9 +39,46 @@ pub struct Pending {
 
 static PENDING: once_cell::sync::Lazy<DashMap<String, (Instant, Pending)>> = once_cell::sync::Lazy::new(DashMap::new);
 
+/// Ceremonies a client (IPv4 address / IPv6 /64) may start per minute. Without it anyone could fill
+/// [`PENDING`] and lock everybody out of passkey login and anonymous sign-up.
+const STARTS_PER_CLIENT_MINUTE: u32 = 20;
+static STARTS: once_cell::sync::Lazy<DashMap<String, (Instant, u32)>> = once_cell::sync::Lazy::new(DashMap::new);
+
+fn start_allowed(req: &Req) -> anyhow::Result<()> {
+    let now = Instant::now();
+    let mut e = STARTS.entry(crate::security::rate_key(&req.real_ip())).or_insert((now, 0));
+    if now.duration_since(e.0) >= Duration::from_secs(60) {
+        *e = (now, 0);
+    }
+    e.1 += 1;
+    if e.1 > STARTS_PER_CLIENT_MINUTE {
+        anyhow::bail!("Too many passkey requests, try again in a minute");
+    }
+    Ok(())
+}
+
+/// How long a passkey confirmation (`/passkeys/confirm`) lets a session make account changes that
+/// otherwise need the current password (see `apiv2::settings::reauth_check`).
+const CONFIRM_TTL: Duration = Duration::from_secs(5 * 60);
+/// Session id (`user_sessions.id`) → when its passkey confirmation expires. In memory: a restart
+/// only means confirming again.
+static CONFIRMED: once_cell::sync::Lazy<DashMap<i64, Instant>> = once_cell::sync::Lazy::new(DashMap::new);
+
+pub fn mark_confirmed(sess_id: i64) {
+    if sess_id != 0 {
+        CONFIRMED.insert(sess_id, Instant::now() + CONFIRM_TTL);
+    }
+}
+
+pub fn recently_confirmed(sess_id: i64) -> bool {
+    sess_id != 0 && CONFIRMED.get(&sess_id).is_some_and(|e| *e > Instant::now())
+}
+
 fn prune() {
     let now = Instant::now();
     PENDING.retain(|_, (exp, _)| *exp > now);
+    CONFIRMED.retain(|_, exp| *exp > now);
+    STARTS.retain(|_, (start, _)| now.duration_since(*start) < Duration::from_secs(60));
 }
 
 fn remember(challenge: String, p: Pending) -> anyhow::Result<()> {
@@ -124,6 +161,7 @@ pub struct StartRegistration<'a> {
 
 /// Begin a registration; returns the `publicKey` creation options for the browser.
 pub fn start_registration(cfg: &Config, req: &Req, s: StartRegistration) -> anyhow::Result<Value> {
+    start_allowed(req)?;
     let rp = rp_for(cfg, req);
     let (options, state) = backend::start_registration(&rp, s.user_handle, s.user_name, s.display_name, &s.exclude)?;
     let challenge = options["challenge"].as_str().ok_or_else(|| anyhow::anyhow!("options without challenge"))?.to_string();
@@ -133,6 +171,7 @@ pub fn start_registration(cfg: &Config, req: &Req, s: StartRegistration) -> anyh
 
 /// Begin a discoverable (username-less) login; returns the `publicKey` request options.
 pub fn start_authentication(cfg: &Config, req: &Req, kind: &str) -> anyhow::Result<Value> {
+    start_allowed(req)?;
     let rp = rp_for(cfg, req);
     let (options, state) = backend::start_authentication(&rp)?;
     let challenge = options["challenge"].as_str().ok_or_else(|| anyhow::anyhow!("options without challenge"))?.to_string();
@@ -698,5 +737,18 @@ mod tests {
             (std::time::Instant::now() - std::time::Duration::from_secs(1), super::Pending { kind: "x".into(), user_id: None, user_handle: None, rp_id: RP.into(), state }),
         );
         assert!(super::take("old").is_err(), "expired");
+    }
+}
+
+#[cfg(test)]
+mod confirm_tests {
+    #[test]
+    fn confirmation_is_per_session() {
+        assert!(!super::recently_confirmed(424242));
+        super::mark_confirmed(424242);
+        assert!(super::recently_confirmed(424242));
+        assert!(!super::recently_confirmed(424243));
+        super::mark_confirmed(0);
+        assert!(!super::recently_confirmed(0), "no session id, no confirmation");
     }
 }

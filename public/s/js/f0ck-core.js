@@ -250,14 +250,14 @@ class ModAction {
 window.ModAction = ModAction;
 
 // ── Passkey login (registered users) ─────────────────────────────────────────────────────
-// The WebAuthn round trip of /api/v2/settings/passkeys/login/{begin,finish}. Resolves when the
-// session is set (reload the page then), rejects with an Error whose message can be shown.
-// Each frontend has its own button for it.
-window.f0ckPasskeyLogin = async () => {
+// The WebAuthn round trip of /api/v2/settings/passkeys/{login,confirm}/{begin,finish}: resolves when
+// the server accepted the passkey, rejects with an Error whose message can be shown.
+const f0ckPasskeyAssert = async (base, headers) => {
   if (!window.PublicKeyCredential || !navigator.credentials) throw new Error('Passkeys are not supported in this browser.');
   const b64urlToArr = (s) => Uint8Array.from(atob(s.split('-').join('+').split('_').join('/')), (c) => c.charCodeAt(0));
   const arrToB64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).split('+').join('-').split('/').join('_').replace(/=+$/, '');
-  const beginRes = await fetch('/api/v2/settings/passkeys/login/begin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const hdrs = Object.assign({ 'Content-Type': 'application/json' }, headers || {});
+  const beginRes = await fetch(base + '/begin', { method: 'POST', headers: hdrs, body: '{}' });
   const beginData = await beginRes.json();
   if (!beginData.success) throw new Error(beginData.msg || 'Server error');
   const opts = beginData.options;
@@ -276,9 +276,9 @@ window.f0ckPasskeyLogin = async () => {
     }
     throw e;
   }
-  const finishRes = await fetch('/api/v2/settings/passkeys/login/finish', {
+  const finishRes = await fetch(base + '/finish', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: hdrs,
     body: JSON.stringify({
       challenge: opts.challenge,
       credentialId: arrToB64url(cred.rawId),
@@ -290,6 +290,28 @@ window.f0ckPasskeyLogin = async () => {
   });
   const finishData = await finishRes.json();
   if (!finishData.success) throw new Error(finishData.msg || 'Authentication failed');
+};
+
+// Login: the session is set when this resolves (reload the page then). Each frontend has its own
+// button for it.
+window.f0ckPasskeyLogin = () => f0ckPasskeyAssert('/api/v2/settings/passkeys/login');
+
+// Confirm the signed-in owner with one of the account's passkeys (account changes of passkey-only
+// accounts, which have no password to give).
+window.f0ckPasskeyConfirm = () => {
+  const csrf = (window.f0ckSession && window.f0ckSession.csrf_token) || document.querySelector('meta[name="csrf-token"]')?.content || '';
+  return f0ckPasskeyAssert('/api/v2/settings/passkeys/confirm', { 'X-CSRF-Token': csrf });
+};
+
+// `doFetch()` returns a fetch promise. When the server answers `{ reauth: "passkey" }`, confirm with
+// a passkey and send the request once more. Resolves with the JSON answer.
+window.f0ckWithReauth = async (doFetch) => {
+  let data = await (await doFetch()).json();
+  if (data && data.reauth === 'passkey') {
+    await window.f0ckPasskeyConfirm();
+    data = await (await doFetch()).json();
+  }
+  return data;
 };
 
 // ── Live connection (/api/notifications/ws) ───────────────────────────────────────────────

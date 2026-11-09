@@ -2328,15 +2328,15 @@
             btn.textContent = 'Updating...';
 
             try {
-                const res = await fetch('/api/v2/settings/email', {
+                // Passkey-only accounts confirm with a passkey instead of the password (f0ck-core.js)
+                const data = await window.f0ckWithReauth(() => fetch('/api/v2/settings/email', {
                     method: 'PUT',
                     headers: { 
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': window.f0ckSession?.csrf_token
                     },
-                    body: JSON.stringify({ email })
-                });
-                const data = await res.json();
+                    body: JSON.stringify({ email, current_password: document.getElementById('email_current_password')?.value || '' })
+                }));
                 if (data.success) {
                     showAccountStatus(emailStatus, data.msg || 'Email updated correctly', 'success');
                     if (displayEmail) displayEmail.textContent = email;
@@ -2344,7 +2344,7 @@
                     showAccountStatus(emailStatus, data.msg || 'Failed to update email', 'error');
                 }
             } catch (err) {
-                showAccountStatus(emailStatus, 'Request failed', 'error');
+                showAccountStatus(emailStatus, (err && err.message) || 'Request failed', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Update Email';
@@ -2901,11 +2901,14 @@
             showApiKeyStatus('', '');
 
             try {
-                const res = await fetch('/api/v2/settings/api-key/regenerate', {
+                const pwInput = document.getElementById('api-key-current-password');
+                const pw = pwInput ? pwInput.value : '';
+                if (pwInput) pwInput.value = '';
+                const data = await window.f0ckWithReauth(() => fetch('/api/v2/settings/api-key/regenerate', {
                     method: 'POST',
-                    headers: { 'X-CSRF-Token': window.f0ckSession?.csrf_token }
-                });
-                const data = await res.json();
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
+                    body: JSON.stringify({ current_password: pw })
+                }));
 
                 if (data.success) {
                     // Show one-time reveal box
@@ -2920,7 +2923,7 @@
                     showApiKeyStatus(data.msg || 'Failed to generate key.', 'error');
                 }
             } catch (e) {
-                showApiKeyStatus('Request failed.', 'error');
+                showApiKeyStatus((e && e.message) || 'Request failed.', 'error');
             } finally {
                 btnRegenApiKey.disabled = false;
                 btnRegenApiKey.textContent = 'Generate / Regenerate Key';

@@ -32,7 +32,9 @@
           if (btn) btn.disabled = true;
           if (status) status.style.display = 'none';
           try {
-            await window.f0ckPasskeyManager.addPasskey(name);
+            var pw = document.getElementById('settings-passkey-current-password');
+            await window.f0ckPasskeyManager.addPasskey(name, pw ? pw.value : '');
+            if (pw) pw.value = '';
             if (status) { status.style.display = 'block'; status.style.color = '#98c379'; status.textContent = 'Passkey added!'; }
             await loadPasskeys();
           } catch (err) {

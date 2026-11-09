@@ -485,6 +485,8 @@ async fn reset_password(st: AppState, mut req: Req) -> Res {
     let hash = crate::util::hash_password(password).await;
     sql!(r#"update "user" set password = "#, hash, ", reset_token = NULL, reset_expires = NULL where id = ", user_id as i32).execute(&st.db).await?;
     crate::auth::destroy_user_sessions(&st, user_id).await?;
+    // A reset is the way back into a lost account: an API key someone else made stops working too
+    sql!("DELETE FROM user_api_keys WHERE user_id = ", user_id as i32).execute(&st.db).await?;
     crate::security::record_attempt(&st, &ip, user.str("login"), "password_reset_execution", true).await;
 
     let msg = "Password reset successfully! You can now login with your new password.";

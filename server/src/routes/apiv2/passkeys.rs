@@ -22,6 +22,9 @@ pub fn register(r: &mut Router) {
     g.post_g(r"\/passkeys\/register\/finish$", Guard::RegisteredUser, |st, req| guarded("register/finish", register_finish(st, req)));
     g.post_g(r"\/passkeys\/delete$", Guard::RegisteredUser, |st, req| guarded("Delete", delete_post(st, req)));
     g.delete_g(r"\/passkeys\/([^/]+)$", Guard::RegisteredUser, |st, req| guarded("Delete", delete_legacy(st, req)));
+    // Confirm the signed-in owner with one of the account's passkeys (CSRF-checked, not exempt)
+    g.post_g(r"\/passkeys\/confirm\/begin$", Guard::RegisteredUser, |st, req| guarded("confirm/begin", confirm_begin(st, req)));
+    g.post_g(r"\/passkeys\/confirm\/finish$", Guard::RegisteredUser, |st, req| guarded("confirm/finish", confirm_finish(st, req)));
     g.post(r"\/passkeys\/login\/begin$", |st, req| guarded("login/begin", login_begin(st, req)));
     g.post(r"\/passkeys\/login\/finish$", |st, req| guarded("login/finish", login_finish(st, req)));
 }
@@ -89,6 +92,9 @@ async fn register_begin(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
     let uid = session_id(&req);
     let body = req.post_value().await;
+    if let Some(r) = super::settings::reauth_check(&st, &req, &body).await? {
+        return Ok(r);
+    }
     let name = passkey_name(&body);
     let s = req.session().cloned().unwrap_or_default();
     let user_name = if s.login.is_empty() { s.user.clone() } else { s.login.clone() };
@@ -171,6 +177,47 @@ async fn delete_legacy(st: AppState, req: Req) -> Res {
     let last = req.path.rsplit('/').next().unwrap_or("");
     let cred_id = crate::util::decode_uri_component(last).unwrap_or_else(|| last.to_string());
     delete_credential(&st, &req, &cred_id).await
+}
+
+async fn confirm_begin(st: AppState, req: Req) -> Res {
+    let options = wa::start_authentication(&st.cfg(), &req, "user-confirm")?;
+    j(json!({ "success": true, "options": options }), 200)
+}
+
+/// A passkey of the signed-in account (not just any account's) confirms this session for a few
+/// minutes, see `settings::reauth_check`.
+async fn confirm_finish(st: AppState, mut req: Req) -> Res {
+    let cfg = st.cfg();
+    let body = req.post_value().await;
+    if ["challenge", "clientDataJSON", "authenticatorData", "signature", "credentialId"].iter().any(|k| body_str(&body, k).is_none()) {
+        return fail("Missing required WebAuthn fields", 400);
+    }
+    let cred_id = body_str(&body, "credentialId").unwrap_or_default();
+    let Ok(pending) = wa::take(&body_str(&body, "challenge").unwrap_or_default()) else { return fail("Challenge expired or invalid", 400) };
+    if pending.kind != "user-confirm" {
+        return fail("Wrong challenge type", 400);
+    }
+    let Some(s) = req.session().cloned() else { return fail("Unauthorized", 401) };
+    let row = sql!(
+        "SELECT wc.passkey, wc.user_handle::text AS user_handle FROM webauthn_credentials wc WHERE wc.cred_id = ",
+        cred_id.clone(),
+        " AND wc.user_id = ",
+        s.id as i32,
+        " LIMIT 1"
+    )
+    .fetch_optional(&st.db)
+    .await?;
+    let Some(row) = row else { return fail("This passkey doesn't belong to your account.", 401) };
+    let updated = match wa::finish_authentication(&cfg, &req, pending, &body, wa::Stored { passkey: row.val("passkey"), user_handle: row.str("user_handle") }) {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::warn!("[PASSKEYS] confirm/finish verification failed: {e}");
+            return fail(&format!("Authentication failed: {e}"), 401);
+        }
+    };
+    wa::touch(&st, &cred_id, updated).await?;
+    wa::mark_confirmed(s.sess_id);
+    j(json!({ "success": true }), 200)
 }
 
 async fn login_begin(st: AppState, req: Req) -> Res {

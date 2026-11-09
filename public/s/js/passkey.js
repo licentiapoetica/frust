@@ -676,14 +676,13 @@
       return (await res.json()).passkeys || [];
     }
 
-    async addPasskey(name) {
-      // 1. Begin
-      const beginRes = await fetch('/api/v2/settings/passkeys/register/begin', {
+    async addPasskey(name, currentPassword) {
+      // 1. Begin (accounts with a password confirm it)
+      const beginData = await window.f0ckWithReauth(() => fetch('/api/v2/settings/passkeys/register/begin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name || 'Passkey' })
-      });
-      const beginData = await beginRes.json();
+        body: JSON.stringify({ name: name || 'Passkey', current_password: currentPassword || '' })
+      }));
       if (!beginData.success) throw new Error(beginData.msg || 'Server error');
 
       const rawChallenge = beginData.options.challenge;

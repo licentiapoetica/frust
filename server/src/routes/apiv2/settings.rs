@@ -102,6 +102,54 @@ fn refresh_session(st: &AppState, req: &Req) {
     }
 }
 
+/// Changes that let someone holding a stolen session keep the account after the owner changes the
+/// password (another email for resets, an API key, a passkey) need the account's owner: the current
+/// password, or a passkey confirmation of this session in the last minutes
+/// (`/api/v2/settings/passkeys/confirm`). Passkey-only accounts confirm with a passkey; the answer
+/// `{ reauth: "passkey" }` tells the page to ask for one and retry. `Some(response)` refuses.
+pub(crate) async fn reauth_check(st: &AppState, req: &Req, body: &Value) -> anyhow::Result<Option<axum::response::Response>> {
+    let refuse = |msg: &str, code: u16| Some(json_resp(&json!({ "success": false, "msg": msg }), code));
+    let Some(s) = req.session() else { return Ok(refuse("Unauthorized", 401)) };
+    if crate::webauthn::recently_confirmed(s.sess_id) {
+        return Ok(None);
+    }
+    let Some(user) = sql!(
+        r#"select password, (select count(*)::int from webauthn_credentials wc where wc.user_id = u.id) as passkeys from "user" u where u.id = "#,
+        s.id as i32
+    )
+    .fetch_optional(&st.db)
+    .await?
+    else {
+        return Ok(refuse("User not found", 404));
+    };
+    let hash = user.string("password");
+    if hash.is_empty() || hash == PASSWORD_DISABLED {
+        // No password: a passkey of the account confirms (none at all: nothing to confirm with)
+        if user.i64("passkeys").unwrap_or(0) == 0 {
+            return Ok(None);
+        }
+        return Ok(Some(json_resp(&json!({ "success": false, "msg": "Please confirm with your passkey.", "reauth": "passkey" }), 403)));
+    }
+    match reauth_error_password(&hash, body).await {
+        Some((msg, code)) => Ok(refuse(msg, code)),
+        None => Ok(None),
+    }
+}
+
+/// The current-password part of [`reauth_check`].
+async fn reauth_error_password(hash: &str, body: &Value) -> Option<(&'static str, u16)> {
+    let hash = hash.to_string();
+    let Some(current) = post_string(body, "current_password").filter(|p| !p.is_empty()) else {
+        return Some(("Current password is required", 400));
+    };
+    if !crate::util::verify_password(current, hash).await {
+        // Slows down guessing through a session that isn't the owner's
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        return Some(("Incorrect current password", 401));
+    }
+    None
+}
+
 /// `x === true || x === 'true'`
 fn post_bool(body: &Value, k: &str) -> bool {
     matches!(body.get(k), Some(Value::Bool(true))) || matches!(body.get(k), Some(Value::String(s)) if s == "true")
@@ -495,7 +543,10 @@ async fn password_change(st: AppState, mut req: Req) -> Res {
     if hash.is_empty() {
         return Err(anyhow::anyhow!("password hashing failed").into());
     }
-    sql!(r#"update "user" set password = "#, hash, ", force_password_change = false where id = ", s.id as i32).execute(&st.db).await?;
+    // A pending reset link (maybe requested by whoever had the account) stops working too
+    sql!(r#"update "user" set password = "#, hash, ", force_password_change = false, reset_token = NULL, reset_expires = NULL where id = ", s.id as i32)
+        .execute(&st.db)
+        .await?;
     // Invalidate all other sessions (Issue 21 fix); this one keeps working with the new flag
     end_other_sessions(&st, s.id as i32, s.sess_id).await?;
     refresh_session(&st, &req);
@@ -513,11 +564,15 @@ async fn email(st: AppState, mut req: Req) -> Res {
     if !clean.contains('@') || clean.len() > 254 {
         return fail("Invalid email address", 400);
     }
+    if let Some(r) = reauth_check(&st, &req, &body).await? {
+        return Ok(r);
+    }
     let existing = sql!(r#"select id from "user" where lower(email) = lower("#, clean, ") and id != ", uid(&req), " limit 1").fetch_optional(&st.db).await?;
     if existing.is_some() {
         return fail("Email already in use", 400);
     }
-    sql!(r#"update "user" set email = "#, clean, " where id = ", uid(&req)).execute(&st.db).await?;
+    // A reset link sent before the change must not work any more
+    sql!(r#"update "user" set email = "#, clean, ", reset_token = NULL, reset_expires = NULL where id = ", uid(&req)).execute(&st.db).await?;
     j(json!({ "success": true, "msg": "Email updated successfully" }), 200)
 }
 
@@ -752,9 +807,13 @@ async fn api_key_get(st: AppState, req: Req) -> Res {
     j(json!({ "success": true, "has_key": true, "preview": format!("****{tail}"), "created_at": row.val("created_at") }), 200)
 }
 
-async fn api_key_regenerate(st: AppState, req: Req) -> Res {
+async fn api_key_regenerate(st: AppState, mut req: Req) -> Res {
     if api_keys_disabled(&st) {
         return fail("API keys are disabled", 403);
+    }
+    let body = req.post_value().await;
+    if let Some(r) = reauth_check(&st, &req, &body).await? {
+        return Ok(r);
     }
     let key = crate::util::random_hex(32);
     let r = sql!(
