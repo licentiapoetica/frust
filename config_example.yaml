@@ -280,6 +280,7 @@ manifest:
   # short_name: f0ckm           # default: main.url.domain
   # description: ""             # default: websrv.description
   # display: standalone
+  # handle_links: preferred   # installed app opens links to the site (null: off)
   # background_color: "#000000"
   # theme_color: "#0096ff"      # also used for <meta name="theme-color">
   # categories: [entertainment, social, memes]

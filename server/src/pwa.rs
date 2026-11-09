@@ -50,6 +50,8 @@ pub fn manifest(cfg: &Config, favicon: &str, icons: Option<&IconSet>) -> Value {
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
+        // installed app opens links into its scope (Chromium desktop; Android: WebAPK does it anyway)
+        "handle_links": "preferred",
         "background_color": "#000000",
         "theme_color": DEFAULT_THEME_COLOR,
         "icons": icon_list,
@@ -225,6 +227,7 @@ mod tests {
         let m = manifest(&cfg(json!({ "main": { "url": { "domain": "f0ck.me" } }, "websrv": { "description": "d" } })), "/s/img/x.webp", None);
         assert_eq!(m["name"], "f0ck.me");
         assert_eq!(m["description"], "d");
+        assert_eq!(m["handle_links"], "preferred");
         assert_eq!(m["icons"][0]["type"], "image/webp");
     }
 
