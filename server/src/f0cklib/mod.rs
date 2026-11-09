@@ -603,6 +603,33 @@ pub(crate) fn tag_filter_sql(tag: &str, is_strict: bool, tagger: Option<&str>, w
     q
 }
 
+/// Whether `session` may see item `postid`: public and unlisted items for everyone, private ones for
+/// their owner and staff, unavailable (takedown) ones for admins. A missing item counts as accessible
+/// (the caller reports "not found" itself).
+pub(crate) async fn may_access_item(st: &AppState, session: Option<&Session>, postid: i32) -> anyhow::Result<bool> {
+    let Some(item) = sql!("SELECT username, active, is_deleted, COALESCE(visibility, 0) AS visibility FROM items WHERE id = ", postid, " LIMIT 1")
+        .fetch_optional(&st.db)
+        .await?
+    else {
+        return Ok(true);
+    };
+    let visibility = item.i64("visibility").unwrap_or(0);
+    let public = item.bool("active") && !item.bool("is_deleted") && visibility <= 1;
+    if public {
+        return Ok(true);
+    }
+    let Some(s) = session else { return Ok(false) };
+    if visibility == 3 {
+        return Ok(s.admin);
+    }
+    if s.admin || s.is_moderator {
+        return Ok(true);
+    }
+    let owner = session_owner_name(session).map(|o| o.to_lowercase());
+    let item_user = item.str("username").unwrap_or("").to_lowercase();
+    Ok(!item_user.is_empty() && owner.as_deref() == Some(item_user.as_str()) && !item.bool("is_deleted"))
+}
+
 pub(crate) fn visibility_filter(session: Option<&Session>) -> Sql {
     if session.map(|s| s.admin).unwrap_or(false) {
         return Sql::empty();

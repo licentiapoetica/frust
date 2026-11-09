@@ -591,6 +591,10 @@ pub(super) async fn set_visibility(st: AppState, mut req: Req) -> Res {
     if visibility == 3 && !staff {
         return j(json!({ "success": false, "msg": "Only moderators or administrators can make an item unavailable" }), 403);
     }
+    // An item staff made unavailable (takedown) stays that way until staff change it
+    if item.i64("visibility") == Some(3) && !staff {
+        return j(json!({ "success": false, "msg": "This item was made unavailable by a moderator" }), 403);
+    }
     let id = item.i64("id").unwrap_or(0);
     sql!("UPDATE items SET visibility = ", visibility as i16, " WHERE id = ", id as i32).execute(&st.db).await?;
     apply_visibility_cache(&st, id, &item.string("dest"), &item.string("username"), visibility);
@@ -725,10 +729,14 @@ pub(super) async fn set_expiry(st: AppState, mut req: Req) -> Res {
         return j(json!({ "success": false, "msg": "Expiring uploads feature is disabled" }), 403);
     }
     let post = req.post_value().await;
-    let item = match owned_item(&st, &req, "id, username, expires_at").await? {
+    let item = match owned_item(&st, &req, "id, username, expires_at, COALESCE(visibility, 0) AS visibility").await? {
         Ok(i) => i,
         Err(res) => return res,
     };
+    // An unavailable item (takedown) can't be made to expire, or purged, by its uploader
+    if item.i64("visibility") == Some(3) && !req.session().is_some_and(|s| s.is_admin_or_mod()) {
+        return j(json!({ "success": false, "msg": "This item was made unavailable by a moderator" }), 403);
+    }
     let id = item.i64("id").unwrap_or(0);
     let raw = present(post.get("expiry")).or_else(|| present(post.get("expires_at"))).and_then(|v| js_str(Some(v)));
     let now = crate::util::now_secs();

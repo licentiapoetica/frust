@@ -87,7 +87,11 @@ pub(super) async fn extract_item(st: AppState, req: Req) -> Res {
         None => return j(json!({ "success": false, "msg": "Item not found" }), 404),
     };
     let r: anyhow::Result<Res> = async {
-        let Some(item) = sql!("SELECT dest, mime, original_filename FROM items WHERE id = ", id).fetch_optional(&st.db).await? else {
+        // Private / unavailable items: only for those who may see them (EXIF can hold GPS)
+        if !crate::f0cklib::may_access_item(&st, req.session(), id).await? {
+            return Ok(j(json!({ "success": false, "msg": "Item not found" }), 404));
+        }
+        let Some(item) = sql!("SELECT dest, mime, original_filename FROM items WHERE id = ", id, " AND is_deleted = false").fetch_optional(&st.db).await? else {
             return Ok(j(json!({ "success": false, "msg": "Item not found" }), 404));
         };
         let mime = item.string("mime");

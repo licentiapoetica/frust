@@ -879,6 +879,31 @@ async fn dispatch_json(st: &AppState, channel: &str, mut data: Value) {
             }
             HUB.broadcast(&json!({ "type": "brand_image", "data": d }));
         }
+        "comments" => {
+            // Comments on a private / unavailable item reach only its owner, the author and staff
+            let iid = crate::config::as_int(&data["item_id"]).and_then(|i| i32::try_from(i).ok());
+            let item = match iid {
+                Some(i) => sql!("SELECT COALESCE(visibility, 0) AS visibility, LOWER(username) AS username FROM items WHERE id = ", i)
+                    .fetch_optional(&st.db)
+                    .await
+                    .unwrap_or_else(|e| {
+                        tracing::error!("Comment broadcast error: {e}");
+                        None
+                    }),
+                None => None,
+            };
+            let vis = item.as_ref().and_then(|r| r.i64("visibility")).unwrap_or(0);
+            let owner = item.as_ref().map(|r| r.string("username")).unwrap_or_default();
+            let ev = json!({ "type": "comments", "data": data });
+            for c in HUB.snapshot() {
+                let allowed = vis <= 1
+                    || c.admin
+                    || (vis != 3 && (c.is_moderator || same_user(&c, &ev["data"]["user_id"]) || lower_eq(c.username.as_deref(), Some(owner.as_str()))));
+                if allowed {
+                    c.send(&ev);
+                }
+            }
+        }
         "new_item" => {
             let vis = data["visibility"].as_i64().unwrap_or(0);
             let ev = json!({ "type": "new_item", "data": data });
@@ -916,7 +941,7 @@ async fn dispatch_json(st: &AppState, channel: &str, mut data: Value) {
             }
             HUB.broadcast(&json!({ "type": "global_chat", "data": data }));
         }
-        // tags, comments, delete_item, global_chat_delete, global_chat_background, rethumb, global_chat_topic
+        // tags, delete_item, global_chat_delete, global_chat_background, rethumb, global_chat_topic
         other => HUB.broadcast(&json!({ "type": other, "data": data })),
     }
 }

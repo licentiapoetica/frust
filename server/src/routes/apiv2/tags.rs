@@ -126,30 +126,6 @@ fn raw_tags(body: &Value) -> Option<Vec<Value>> {
 /// pending and deleted items are limited to their owner and moderators — the old routes exposed
 /// and changed their tags for every logged-in user. Unlisted (1) items stay taggable, their item
 /// page is reachable by link.
-async fn may_access_item(st: &AppState, session: Option<&Session>, postid: i32) -> anyhow::Result<bool> {
-    let Some(item) = sql!("SELECT username, active, is_deleted, COALESCE(visibility, 0) AS visibility FROM items WHERE id = ", postid, " LIMIT 1")
-        .fetch_optional(&st.db)
-        .await?
-    else {
-        return Ok(true);
-    };
-    let visibility = item.i64("visibility").unwrap_or(0);
-    let public = item.bool("active") && !item.bool("is_deleted") && visibility <= 1;
-    if public {
-        return Ok(true);
-    }
-    let Some(s) = session else { return Ok(false) };
-    if visibility == 3 {
-        return Ok(s.admin);
-    }
-    if s.admin || s.is_moderator {
-        return Ok(true);
-    }
-    let owner = s::session_owner_name(session).map(|o| o.to_lowercase());
-    let item_user = item.str("username").unwrap_or("").to_lowercase();
-    Ok(!item_user.is_empty() && owner.as_deref() == Some(item_user.as_str()) && !item.bool("is_deleted"))
-}
-
 fn item_not_found() -> Res {
     j(json!({ "success": false, "msg": "Item not found" }), 404)
 }
@@ -361,7 +337,7 @@ async fn get_item_tags(st: AppState, req: Req) -> Res {
     let Some(id) = postid(&req) else {
         return j(json!({ "success": false, "msg": "missing postid" }), 200);
     };
-    if !may_access_item(&st, req.session(), id).await? {
+    if !crate::f0cklib::may_access_item(&st, req.session(), id).await? {
         return item_not_found();
     }
     let sub = req.query("subf0ck_id").filter(|v| !v.is_empty()).or_else(|| req.query("subf0ck").filter(|v| !v.is_empty()));
@@ -392,7 +368,7 @@ async fn add_tag(st: AppState, mut req: Req) -> Res {
     if tagname.is_empty() {
         return j(json!({ "success": false, "msg": "missing postid or tag" }), 200);
     }
-    if !may_access_item(&st, req.session(), postid).await? {
+    if !crate::f0cklib::may_access_item(&st, req.session(), postid).await? {
         return item_not_found();
     }
 

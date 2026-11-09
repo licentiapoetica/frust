@@ -48,6 +48,8 @@ async fn search(st: AppState, req: Req) -> Res {
     let mut pag: Value = Value::Null;
     let mut link: Value = Value::Null;
 
+    // Private items only for their owner, unavailable ones only for admins
+    let vis = crate::f0cklib::visibility_filter(req.session());
     if !tag.is_empty() {
         if let Some(s) = req.session().filter(|s| s.id != 0) {
             if !tag.starts_with("src:") && !tag.starts_with("title:") {
@@ -56,14 +58,14 @@ async fn search(st: AppState, req: Req) -> Res {
         }
         if let Some(src) = tag.strip_prefix("src:") {
             let pattern = format!("%{src}%");
-            total = sql!(r#"select count(*) from "items" where src ilike "#, pattern.as_str(), " and active = true")
+            total = sql!(r#"select count(*) from "items" where src ilike "#, pattern.as_str(), " and active = true ", @vis)
                 .fetch_scalar::<i64, _>(&st.db)
                 .await?
                 .unwrap_or(0);
             let pages = pages_of(total);
             let act = pages.min(page);
             let rows: Vec<Row> = sql!(
-                r#"select * from "items" where src ilike "#, pattern.as_str(), r#" and active = true order by "items".id desc offset "#,
+                r#"select * from "items" where src ilike "#, pattern.as_str(), " and active = true ", @vis, r#" order by "items".id desc offset "#,
                 offset_of(act), " limit ", EPS
             )
             .fetch_all(&st.db)
@@ -73,14 +75,14 @@ async fn search(st: AppState, req: Req) -> Res {
             link = json!({ "main": format!("/search/?tag={tag}"), "path": "&page=" });
         } else if let Some(title) = tag.strip_prefix("title:") {
             let pattern = format!("%{}%", title.trim());
-            total = sql!(r#"select count(*) from "items" where title ilike "#, pattern.as_str(), " and active = true")
+            total = sql!(r#"select count(*) from "items" where title ilike "#, pattern.as_str(), " and active = true ", @vis)
                 .fetch_scalar::<i64, _>(&st.db)
                 .await?
                 .unwrap_or(0);
             let pages = pages_of(total);
             let act = pages.max(1).min(page);
             let rows: Vec<Row> = sql!(
-                r#"select * from "items" where title ilike "#, pattern.as_str(), " and active = true order by id desc offset ", offset_of(act), " limit ", EPS
+                r#"select * from "items" where title ilike "#, pattern.as_str(), " and active = true ", @vis, " order by id desc offset ", offset_of(act), " limit ", EPS
             )
             .fetch_all(&st.db)
             .await?;
@@ -102,7 +104,9 @@ async fn search(st: AppState, req: Req) -> Res {
                       where "tags".normalized = ANY(ARRAY(SELECT slugify(x) FROM unnest("#,
                     tags.clone(),
                     r#"::text[]) AS x))
-                        and "items".active = true
+                        and "items".active = true "#,
+                    @vis,
+                    r#"
                       group by "items".id
                       having count(distinct "tags".normalized) = "#,
                     n,
@@ -121,7 +125,9 @@ async fn search(st: AppState, req: Req) -> Res {
                     where "tags".normalized = ANY(ARRAY(SELECT slugify(x) FROM unnest("#,
                     tags,
                     r#"::text[]) AS x))
-                      and "items".active = true
+                      and "items".active = true "#,
+                    @vis,
+                    r#"
                     group by "items".id
                     having count(distinct "tags".normalized) = "#,
                     n,
@@ -155,7 +161,9 @@ async fn search(st: AppState, req: Req) -> Res {
                 r#" or "tags".normalized like '%' || slugify("#,
                 tag.as_str(),
                 r#") || '%')
-                    and "items".active = true
+                    and "items".active = true "#,
+                @vis,
+                r#"
                   group by "items".id
                 ) sub"#
             )
@@ -174,7 +182,9 @@ async fn search(st: AppState, req: Req) -> Res {
                 r#" or "tags".normalized like '%' || slugify("#,
                 tag.as_str(),
                 r#") || '%')
-                  and "items".active = true
+                  and "items".active = true "#,
+                @vis,
+                r#"
                 group by "items".id
                 order by "items".id desc
                 offset "#,

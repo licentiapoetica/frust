@@ -81,6 +81,15 @@ async fn get_item_comments(st: AppState, req: Req) -> Res {
     let raw_id = req.param("itemid").unwrap_or("").to_string();
     let sort = sc::Sort::from_query(req.query("sort").filter(|s| !s.is_empty()));
 
+    // Comments of a private / unavailable item only for those who may see the item
+    match crate::f0cklib::may_access_item(&st, session, item_id).await {
+        Ok(true) => {}
+        Ok(false) => return j(json!({ "success": false, "message": "Item not found" }), 404),
+        Err(e) => {
+            tracing::error!("{e:#}");
+            return db_error();
+        }
+    }
     let r: anyhow::Result<Value> = async {
         let item = sql!("SELECT is_comments_locked FROM items WHERE id = ", item_id).fetch_optional(&st.db).await?;
         let is_locked = item.map(|i| i.val("is_comments_locked").clone()).unwrap_or(Value::Bool(false));
@@ -151,7 +160,13 @@ async fn get_single_comment(st: AppState, req: Req) -> Res {
     }
     // getComment swallowed the query error for ids beyond int4 → "not found".
     let id = param_i32(&req, "id").map(i64::from).unwrap_or(0);
-    match sc::get_comment(&st, id, true).await {
+    let comment = sc::get_comment(&st, id, true).await;
+    let item_id = comment.as_ref().and_then(|c| c.i64("item_id")).and_then(|i| i32::try_from(i).ok());
+    let visible = match item_id {
+        Some(i) => crate::f0cklib::may_access_item(&st, req.session(), i).await.unwrap_or(false),
+        None => true,
+    };
+    match comment.filter(|_| visible) {
         Some(c) => j(json!({ "success": true, "comment": c }), 200),
         None => j(json!({ "success": false, "message": "Comment not found" }), 404),
     }
@@ -219,6 +234,14 @@ async fn user_comments_inner(st: &AppState, req: &Req, user: &str) -> anyhow::Re
         " AND c.is_deleted = false AND i.active = true AND i.is_deleted = false AND "
     );
     q.push(&modequery);
+    // Comments on private items only for their owner, on unavailable ones only for admins
+    if !session.is_some_and(|s| s.admin) {
+        q.push(" AND (COALESCE(i.visibility, 0) = 0");
+        if let Some(owner) = crate::settings::session_owner_name(session) {
+            q.push(" OR (lower(i.username) = ").bind(owner.to_lowercase()).push(" AND i.visibility != 3)");
+        }
+        q.push(")");
+    }
     if is_anon_session(session) && !global_tags.is_empty() {
         q.push(" and not exists (select 1 from tags_assign where item_id = i.id and (").push(&global_tag_sql(&global_tags)).push("))");
     }
@@ -424,6 +447,10 @@ async fn post_comment_inner(
         None => None,
     };
     let me = session.id as i32;
+
+    if !crate::f0cklib::may_access_item(st, Some(session), item_id).await? {
+        return Ok(json_resp(&json!({ "success": false, "message": "Item not found" }), 404));
+    }
 
     if !is_admin_or_mod(session) {
         let lock = sql!("SELECT COALESCE(is_comments_locked, false) as is_locked FROM items WHERE id = ", item_id).fetch_optional(&st.db).await?;
@@ -696,6 +723,9 @@ async fn subscribe_toggle(st: AppState, mut req: Req) -> Res {
     };
     let Some(s) = req.session() else { return unauthorized() };
     let Some(item_id) = param_i32(&req, "itemid") else { return j(json!({ "success": false }), 500) };
+    if !crate::f0cklib::may_access_item(&st, Some(s), item_id).await.unwrap_or(false) {
+        return j(json!({ "success": false, "msg": "Item not found" }), 404);
+    }
     let me = s.id as i32;
     let r: anyhow::Result<bool> = async {
         let existing = sql!("SELECT is_subscribed FROM comment_subscriptions WHERE user_id = ", me, " AND item_id = ", item_id).fetch_optional(&st.db).await?;

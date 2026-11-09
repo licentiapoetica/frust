@@ -319,7 +319,13 @@ async fn process_file(st: &AppState, session: &Session, file: &FilePart, mut mim
             }
             if !linked {
                 if let Some(item) = crate::media::queue::check_repost_phash(st, phash.as_deref()).await? {
-                    if let Some(dest) = sql!("SELECT dest FROM items WHERE id = ", item as i32, " LIMIT 1").fetch_optional(&st.db).await?.map(|r| r.string("dest")) {
+                    // Only a public, live item: the similar (not identical) upload is served as that
+                    // item's original under /c/, which no private/unavailable gate covers
+                    let public = sql!(
+                        "SELECT dest FROM items WHERE id = ", item as i32,
+                        " AND active = true AND is_deleted = false AND COALESCE(visibility, 0) = 0 LIMIT 1"
+                    );
+                    if let Some(dest) = public.fetch_optional(&st.db).await?.map(|r| r.string("dest")) {
                         if let Some(p) = existing_in(&cfg.paths.b, &dest) {
                             linked = link_to(&p, &dest_path).await;
                         }
