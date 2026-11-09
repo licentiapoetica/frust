@@ -104,6 +104,10 @@ websrv:
   port: "1337"
   # Extra origins allowed to call /api/ with cookies (CORS). The site URL and main.onion are always allowed.
   # cors_origins: ["https://tools.example.com"]
+  # Client IPs (bans, rate limits) come from X-Real-IP / X-Forwarded-For only when the connection comes
+  # from loopback or a private network (the reverse proxy); direct clients are taken by their socket address.
+  # Behind Cloudflare, set this so its CF-Connecting-IP header is used (the proxy must not strip it).
+  # behind_cloudflare: false
   # Site default language (en, de, nl, zange)
   language: en
   # Let visitors pick their own language in the settings

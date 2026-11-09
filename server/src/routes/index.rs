@@ -594,6 +594,7 @@ fn req_with_session(req: &Req, session: Option<Session>) -> Req {
         req.remote,
     );
     r.path = req.path.clone();
+    r.trust_cdn_headers = req.trust_cdn_headers;
     r.cookies = req.cookies.clone();
     r.params = req.params.clone();
     r.session = session;

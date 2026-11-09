@@ -43,6 +43,19 @@ impl AppError {
 /// Default body size limit for ordinary (non-upload) requests.
 pub const DEFAULT_BODY_LIMIT: usize = 32 * 1024 * 1024;
 
+/// Loopback or private-network address (RFC 1918, IPv6 unique-local), the places a reverse proxy
+/// in front of f0ckm connects from.
+fn is_proxy_addr(ip: std::net::IpAddr) -> bool {
+    use std::net::IpAddr;
+    match ip {
+        IpAddr::V4(v4) => v4.is_loopback() || v4.is_private(),
+        IpAddr::V6(v6) => match v6.to_ipv4_mapped() {
+            Some(v4) => v4.is_loopback() || v4.is_private(),
+            None => v6.is_loopback() || (v6.segments()[0] & 0xfe00) == 0xfc00,
+        },
+    }
+}
+
 /// Headers and cookies queued by middleware/handlers for the final response
 /// (the old `res.setHeader(...)` before `writeHead`).
 #[derive(Default, Debug)]
@@ -62,6 +75,8 @@ pub struct Req {
     pub cookies: HashMap<String, String>,
     pub params: HashMap<String, String>,
     pub remote: Option<SocketAddr>,
+    /// `websrv.behind_cloudflare`: believe `CF-Connecting-IP` / `True-Client-IP` from the proxy.
+    pub trust_cdn_headers: bool,
     pub session: Option<Session>,
     pub mode: i64,
     pub theme: String,
@@ -181,6 +196,7 @@ impl Req {
             cookies,
             params: HashMap::new(),
             remote,
+            trust_cdn_headers: false,
             session: None,
             mode: 0,
             theme: String::new(),
@@ -341,8 +357,10 @@ impl Req {
     }
 
     pub fn host_without_port(&self) -> String {
+        // X-Forwarded-Host only from a proxy: a direct client could claim `.onion` and skip the captcha
         let raw = self
             .header("x-forwarded-host")
+            .filter(|_| self.from_proxy())
             .or_else(|| self.header("host"))
             .or_else(|| self.header("x-forwarded-server"))
             .unwrap_or("");
@@ -358,12 +376,31 @@ impl Req {
         matches!(self.host_without_port().as_str(), "localhost" | "127.0.0.1" | "::1")
     }
 
-    /// Client IP from proxy headers or the socket (security.getRealIP).
+    /// The connection comes from a proxy on this host or the private network (nginx, Docker, Tor).
+    /// Only then are forwarding headers believed: a client that connects directly can send any
+    /// `X-Forwarded-For` / `CF-Connecting-IP` it likes. A request built in code (no socket) counts as one.
+    pub fn from_proxy(&self) -> bool {
+        match self.remote.map(|r| r.ip()) {
+            None => true,
+            Some(ip) => is_proxy_addr(ip),
+        }
+    }
+
+    /// Client IP (security.getRealIP). From a proxy: `CF-Connecting-IP` / `True-Client-IP` only with
+    /// `websrv.behind_cloudflare` (a proxy that doesn't set them passes the client's own through),
+    /// then `X-Real-IP` (set by nginx-proxy and own-proxy.example.conf), then the last
+    /// `X-Forwarded-For` entry (the one the proxy added; earlier ones come from the client).
+    /// Otherwise the socket address.
     pub fn real_ip(&self) -> String {
-        let raw = ["cf-connecting-ip", "true-client-ip", "x-client-ip", "x-real-ip", "x-forwarded-for"]
-            .iter()
-            .find_map(|h| self.header(h).filter(|v| !v.is_empty()).map(str::to_string))
-            .or_else(|| self.remote.map(|r| r.ip().to_string()));
+        let header = |h: &str| self.header(h).map(str::trim).filter(|v| !v.is_empty()).map(str::to_string);
+        let forwarded = if self.from_proxy() {
+            let cdn = if self.trust_cdn_headers { header("cf-connecting-ip").or_else(|| header("true-client-ip")) } else { None };
+            cdn.or_else(|| header("x-real-ip"))
+                .or_else(|| header("x-forwarded-for").and_then(|v| v.rsplit(',').map(str::trim).find(|s| !s.is_empty()).map(str::to_string)))
+        } else {
+            None
+        };
+        let raw = forwarded.or_else(|| self.remote.map(|r| r.ip().to_string()));
         let Some(raw) = raw else { return "unknown".into() };
         let mut ip = raw.split(',').next().unwrap_or("").trim().to_string();
         if ip == "::1" {

@@ -23,6 +23,7 @@ pub async fn handle(State(st): State<AppState>, ConnectInfo(addr): ConnectInfo<S
     let start = Instant::now();
     let (parts, body) = request.into_parts();
     let mut req = Req::new(parts.method, &parts.uri, parts.headers, body, Some(addr));
+    req.trust_cdn_headers = st.cfg().truthy("websrv.behind_cloudflare");
     req.version = parts.version;
     req.extensions = parts.extensions;
     let out = req.out.clone();
