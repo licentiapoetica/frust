@@ -35,6 +35,11 @@ nav.navbar .navbar-collapse {
     top: 100%;
     left: 0;
     right: 0;
+    /* Bootstrap's phone rule gives .container-fluid > .navbar-collapse -15px side margins (reset
+       only from 768px): with left/right 0 the panel stuck out 15px on both sides and the page
+       panned sideways */
+    margin-left: 0;
+    margin-right: 0;
     z-index: 1031;
     max-height: calc(100vh - 51px);
     max-height: calc(100dvh - 51px);
