@@ -219,6 +219,7 @@
                     title = href.title; text = href.text || text; href = href.href;
                 }
                 if (!href) return text || '';
+                text = text || '';
                 const titleAttr = title ? ` title="${title}"` : '';
                 const isExternal = href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//');
                 let isSameSite = false;
@@ -451,7 +452,8 @@
             // Strip #gif from final text if it leaked through
             return md.replace(/#gif/g, '');
         } catch (e) {
-            return content;
+            // Never the raw comment: it goes into innerHTML
+            return escapeHtml(content);
         }
     };
 

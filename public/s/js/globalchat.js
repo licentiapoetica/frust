@@ -123,10 +123,11 @@
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+    // Also quotes: the result goes into attribute values (src="…", alt="…")
     function esc(str) {
         const d = document.createElement('div');
         d.textContent = str || '';
-        return d.innerHTML;
+        return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     function avatarSrc(msg) {

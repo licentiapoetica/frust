@@ -651,7 +651,8 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     } else {
         actitem.val("userchannel").clone()
     };
-    let album_json = serde_json::to_string(&album).unwrap_or_else(|_| "[]".into());
+    // Printed raw into <script type="application/json">: `</script>` in a tag name must not end it
+    let album_json = crate::util::json_for_script(&json!(album));
     let album_count = if !album.is_empty() {
         json!(album.len())
     } else if actitem.bool("album_count") {

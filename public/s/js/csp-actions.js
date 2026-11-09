@@ -26,6 +26,16 @@
   const actions = Object.create(null);
   const bound = new WeakMap(); // element -> data-on value it was bound with
 
+  // A URL on this site (relative, or absolute with this origin), else null
+  const sameSiteHref = (href) => {
+    if (!href) return null;
+    try {
+      return new URL(href, window.location.href).origin === window.location.origin ? href : null;
+    } catch (_) {
+      return null;
+    }
+  };
+
   const define = (name, fn) => {
     if (typeof name === 'object') {
       for (const [k, v] of Object.entries(name)) define(k, v);
@@ -111,14 +121,15 @@
     },
     // Navigate to data-href (or href) through PJAX when available
     'ajax-nav': (el, e) => {
-      const href = el.getAttribute('data-href') || el.getAttribute('href');
+      // Same-site only: markup that slipped into a comment or name must not send visitors elsewhere
+      const href = sameSiteHref(el.getAttribute('data-href') || el.getAttribute('href'));
       if (!href) return;
       e.preventDefault();
       if (typeof window.loadPageAjax === 'function') window.loadPageAjax(href, true);
       else window.location.href = href;
     },
     go: (el) => {
-      const href = el.getAttribute('data-href');
+      const href = sameSiteHref(el.getAttribute('data-href'));
       if (href) window.location.href = href;
     },
     // <img data-on="error:img-fallback" data-fallback="/a.webp /b.webp" [data-fallback-hide]>

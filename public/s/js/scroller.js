@@ -3772,7 +3772,7 @@
         }
         const i18n = window.f0ckI18n || {};
         sNotifList.innerHTML = notifs.map(n => {
-          let link = `/${n.item_id}`, msg = '', user = n.from_display_name || n.from_user || 'System';
+          let link = `/${n.item_id}`, msg = '', user = esc(n.from_display_name || n.from_user || 'System');
           if (n.type === 'approve') {
             msg = i18n.notif_upload_approved || 'Your Upload has been approved';
             user = i18n.notif_system || 'System';

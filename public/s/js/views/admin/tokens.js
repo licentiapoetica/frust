@@ -5,6 +5,9 @@ F0ckActions.define({
 });
 window.f0ckDebug = window.f0ckDebug || (() => {});
 
+// Invite requests are written by visitors: everything from them goes into innerHTML escaped
+const escHtml = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
 // ═══════════════════ Invite Requests ═══════════════════
 window.loadInviteRequests = async () => {
     const tbody = document.getElementById('invite-req-list');
@@ -32,7 +35,7 @@ window.loadInviteRequests = async () => {
 
             tbody.innerHTML = data.requests.map(r => {
 
-                const reason = r.reason ? '<span title="' + r.reason.replace(/"/g, '&quot;') + '">' + (r.reason.length > 60 ? r.reason.slice(0, 60) + '…' : r.reason) + '</span>' : '<span class="adm-tokens-no-reason">No reason given</span>';
+                const reason = r.reason ? '<span title="' + escHtml(r.reason) + '">' + escHtml(r.reason.length > 60 ? r.reason.slice(0, 60) + '…' : r.reason) + '</span>' : '<span class="adm-tokens-no-reason">No reason given</span>';
 
                 let statusBadge;
                 if (r.status === 'pending') {
@@ -58,15 +61,15 @@ window.loadInviteRequests = async () => {
 
                 const username = r.requester_login || r.requester_name || (r.fingerprint ? r.fingerprint.slice(0, 12) + '…' : '—');
                 const userCell = r.requester_login
-                    ? '<a href="/user/' + r.requester_login + '" class="adm-tokens-user-link">' + username + '</a>'
-                    : '<span class="adm-tokens-user-anon">' + username + '</span>';
+                    ? '<a href="/user/' + encodeURIComponent(r.requester_login) + '" class="adm-tokens-user-link">' + escHtml(username) + '</a>'
+                    : '<span class="adm-tokens-user-anon">' + escHtml(username) + '</span>';
 
                 return '<tr' + (r.status === 'pending' ? ' class="adm-tokens-req-pending"' : '') + '>' +
                     '<td data-label="User">' + userCell + '</td>' +
                     '<td data-label="Reason" class="adm-tokens-reason">' + reason + '</td>' +
                     '<td data-label="Status">' + statusBadge + '</td>' +
                     '<td data-label="Submitted">' + new Date(r.created_at).toLocaleString() + '</td>' +
-                    '<td data-label="Reviewed By">' + (r.reviewed_by_name || '—') + '</td>' +
+                    '<td data-label="Reviewed By">' + escHtml(r.reviewed_by_name || '—') + '</td>' +
                     '<td data-label="Actions">' + actions + '</td>' +
                     '</tr>';
             }).join('');
