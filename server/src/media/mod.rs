@@ -145,6 +145,21 @@ pub fn proxy_url(cfg: &Config) -> Option<String> {
     configured_proxy(cfg).or_else(crate::net_guard::proxy_url)
 }
 
+/// `main.socks` takes the SSRF guard's place for user-supplied URLs. Tor can't reach this host's
+/// network, any other proxy may (a redirect or a name resolving to 10.x would go through): warn at
+/// startup when the proxy doesn't look like Tor (port 9050/9150 or a host named tor).
+pub fn warn_if_socks_not_tor(cfg: &Config) {
+    let Some(p) = configured_proxy(cfg) else { return };
+    let Ok(u) = url::Url::parse(&p) else { return };
+    let tor_like = matches!(u.port(), Some(9050 | 9150)) || u.host_str().is_some_and(|h| h.eq_ignore_ascii_case("tor"));
+    if !tor_like {
+        tracing::warn!(
+            "[BOOT] main.socks ({}) is used instead of the SSRF guard for user-supplied URLs. Use Tor, or a proxy that can't reach your internal network.",
+            u.host_str().unwrap_or("?")
+        );
+    }
+}
+
 /// `calculateExpiresAt` (routes/apiv2/upload.mjs): expiry value → unix timestamp or `None`.
 pub fn calculate_expires_at(cfg: &Config, expiry: Option<&str>, base: i64) -> Option<i64> {
     if !crate::settings::enable_expiring_uploads(cfg) {

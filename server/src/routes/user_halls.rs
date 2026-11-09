@@ -675,8 +675,8 @@ async fn image_upload(st: AppState, mut req: Req) -> Res {
     match upload_inner(&st, &mut req, &session, &slug, hall.i64("id").unwrap_or(0)).await {
         Ok(r) => Ok(r),
         Err(e) => {
-            tracing::error!("[USER_HALL_IMG] Upload error: {e:#}");
-            jr(json!({ "success": false, "msg": e.to_string() }), 500)
+            // The error can hold SQL or paths: only a reference goes to the client
+            jr(json!({ "success": false, "msg": crate::util::log_error(&format!("{e:#}"), "[USER_HALL_IMG] Upload error") }), 500)
         }
     }
 }

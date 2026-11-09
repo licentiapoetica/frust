@@ -352,6 +352,11 @@ async fn main() -> Result<()> {
     // Before anything can run ImageMagick on a user file (the tmp dir is created just below)
     let _ = std::fs::create_dir_all(&cfg.paths.tmp);
     proc::install_magick_policy(&cfg.paths.tmp);
+    media::warn_if_socks_not_tor(&cfg);
+    if security::ip_hash_secrets(&cfg).current == "YOUR_SECRET_HERE" || cfg.str("main.invite_secret") == Some("YOUR_SECRET_HERE") {
+        // The example value is public: hashed IPs could be reversed by trying all addresses
+        tracing::warn!("[BOOT] main.invite_secret is still YOUR_SECRET_HERE from config_example.yaml. Set a random secret (and IP_HASH_SECRET).");
+    }
 
     for dir in [
         &cfg.paths.a,

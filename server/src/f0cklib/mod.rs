@@ -414,11 +414,14 @@ pub(crate) async fn check_favorites_access(st: &AppState, raw_user: &str, o: &Fe
         r#"select u.id, u."user", u.admin, uo.favorites_private
     from "user" u
     left join user_options uo on uo.user_id = u.id
-    where u."user" ilike "#,
+    where lower(u."user") = lower("#,
         decoded.as_str(),
-        " or u.login ilike ",
+        ") or u.login = lower(",
         decoded.as_str(),
-        " limit 1"
+        // Exact name (an unescaped ILIKE let `bob_x` resolve to a public `bobax`): `user` first
+        r#") order by (lower(u."user") = lower("#,
+        decoded.as_str(),
+        ")) desc limit 1"
     )
     .fetch_optional(&st.db)
     .await?;

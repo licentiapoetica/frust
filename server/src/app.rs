@@ -878,7 +878,8 @@ async fn csrf_middleware(st: &AppState, req: &mut Req) -> Result<Option<Response
         return Ok(None);
     }
     static USER_HALL_IMG: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"^/api/v2/me/halls/[^/]+/image$").unwrap());
-    if cfg.enabled("websrv.userhalls_enabled") && cfg.enabled("websrv.enable_userhall_image_upload") && USER_HALL_IMG.is_match(p) {
+    // The upload checks its token itself; DELETE of the image doesn't, so it stays checked here
+    if req.method == Method::POST && cfg.enabled("websrv.userhalls_enabled") && cfg.enabled("websrv.enable_userhall_image_upload") && USER_HALL_IMG.is_match(p) {
         return Ok(None);
     }
     if !validate_csrf(req).await {
