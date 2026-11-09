@@ -13175,6 +13175,20 @@ html[theme="f0ck95d"] .badge-dark {
   -webkit-user-select: none;
 }
 
+/* prev / random / next: the same space above the letters as below them. With the font's own line
+   box (body's line-height 2, the font's tall ascent) they sat low, with the empty part above and
+   the descenders on the box under them. text-box trims the line box to cap height and baseline,
+   so the padding is measured from the letters; the bottom one is larger by the descenders (p). */
+.steuerung:not(.steuerung-icon) {
+  line-height: 1;
+  padding-block: 0.32em 0.73em;
+}
+
+.steuerung:not(.steuerung-icon),
+.steuerung:not(.steuerung-icon) > :is(a, span) {
+  text-box: trim-both cap alphabetic;
+}
+
 .steuerung a,
 .steuerung button {
   color: white;
