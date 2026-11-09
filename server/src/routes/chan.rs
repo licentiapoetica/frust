@@ -788,7 +788,7 @@ async fn thread_item_inner(st: &AppState, req: &Req, board: &str, tid_raw: &str,
             item_tags = crate::util::get_tags(st, lid, session, None).await?;
             item_rating = item_tags.iter().filter_map(|t| t["normalized"].as_str()).find(|n| matches!(*n, "sfw" | "nsfw" | "nsfl")).map(str::to_string);
             let rows = sql!(
-                r#"select "favorites".user_id, "user".user, "user".login, "user_options".avatar, "user_options".avatar_file, "user_options".display_name, "user_options".username_color, "user_options".hide_fav_badge, "anon_identities".fingerprint as anon_fingerprint
+                r#"select "favorites".user_id, "user".user, "user".login, "user_options".avatar, "user_options".avatar_file, "user_options".display_name, "user_options".username_color, "user_options".hide_fav_badge, ("anon_identities".fingerprint is not null) as anon_fingerprint
             from "favorites"
             left join "user" on "user".id = "favorites".user_id
             left join "user_options" on "user_options".user_id = "favorites".user_id

@@ -71,6 +71,8 @@ async fn fetch_comments(st: &AppState, item_id: i64, sort: Sort) -> anyhow::Resu
             c.insert("display_name".into(), json!("Anonymous"));
             c.insert("anon_short_fingerprint".into(), json!(js_slice(&fp, 7, 15)));
         }
+        // The full fingerprint is the ban key of the identity: only the short form leaves the server
+        c.remove("anon_fingerprint");
     }
 
     if !comments.is_empty() {

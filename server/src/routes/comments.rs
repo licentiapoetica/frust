@@ -659,7 +659,6 @@ async fn post_comment_inner(
         "video_time": new_comment.val("video_time"),
         "files": activity_files,
         "is_anon": session.is_anon,
-        "anon_fingerprint": fp,
         "anon_short_fingerprint": short_fp,
     });
     notify(st, "comments", &live).await;
@@ -690,7 +689,6 @@ async fn post_comment_inner(
         "files": activity_files,
         "is_long": is_long(&content, activity_files.len()),
         "is_anon": session.is_anon,
-        "anon_fingerprint": fp,
         "anon_short_fingerprint": short_fp,
     });
     notify(st, "activity", &activity).await;

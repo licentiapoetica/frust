@@ -378,7 +378,7 @@ pub(super) async fn toggle_fav(st: AppState, mut req: Req) -> Res {
     let favorited = should_fav;
 
     let favs = sql!(
-        r#"select "favorites".user_id, "user".user, "user".login, "user_options".avatar, "user_options".avatar_file, "user_options".display_name, "user_options".username_color, "user_options".hide_fav_badge, "anon_identities".fingerprint as anon_fingerprint
+        r#"select "favorites".user_id, "user".user, "user".login, "user_options".avatar, "user_options".avatar_file, "user_options".display_name, "user_options".username_color, "user_options".hide_fav_badge, ("anon_identities".fingerprint is not null) as anon_fingerprint
         from "favorites"
         left join "user" on "user".id = "favorites".user_id
         left join "user_options" on "user_options".user_id = "favorites".user_id
