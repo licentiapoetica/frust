@@ -40,7 +40,7 @@
           {% if manual_approval %}<li><a href="/mod/approve">approve{% if session.pending_count %} ({{ session.pending_count }}){% endif %}</a></li>{% endif %}
           <li class="v2-dd-sep" role="separator"></li>
           {% endif %}
-          <li><a href="/logout">logout</a></li>
+          <li><a href="{{ logout_url or "/logout" }}">logout</a></li>
         </ul>
       </li>
       <li class="nav-item dropdown" id="notifs">

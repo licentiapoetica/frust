@@ -419,7 +419,9 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
             if let Ok(v) = HeaderValue::from_str(&format!("session=; {}", cookie_options(&cfg, CookieExpiry::Expires(EXPIRED), true))) {
                 h.insert(header::SET_COOKIE, v);
             }
-            let loc = HeaderValue::from_str(&req.original_url).unwrap_or(HeaderValue::from_static("/"));
+            // Same URL again, but never `//host` or `/\host`: browsers read those as another site
+            let same_page = format!("/{}", req.original_url.trim_start_matches(['/', '\\']));
+            let loc = HeaderValue::from_str(&same_page).unwrap_or(HeaderValue::from_static("/"));
             h.insert(header::LOCATION, loc);
             return Ok(Some(r));
         };
@@ -854,6 +856,14 @@ async fn csrf_middleware(st: &AppState, req: &mut Req) -> Result<Option<Response
     }
     let p = req.path.as_str();
     if CSRF_EXEMPT.contains(&p) {
+        // No session token to check (login, register, anon sessions, ...), but a browser always sends
+        // Origin on a cross-site POST: refuse other sites, so they can't log a visitor into an
+        // account of theirs (login CSRF) or start sessions. The sandboxed Flash frame posts with
+        // `Origin: null`, CSP reports carry none of the site's state.
+        if p != "/flash-frame" && p != crate::csp::REPORT_PATH && !origin_allowed(st, req) {
+            tracing::warn!("[CSRF] Blocked {} {} from origin {:?}", req.method, p, req.header("origin"));
+            return Ok(Some(json_raw(&json!({ "success": false, "msg": "Invalid origin" }), 403)));
+        }
         return Ok(None);
     }
     static SKIP: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {

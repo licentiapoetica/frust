@@ -125,7 +125,7 @@
           </form>
           
           <div class="force-pw-logout">
-              <a href="/logout" class="force-pw-logout-link">{{ t("auth.or_logout") }}</a>
+              <a href="{{ logout_url or "/logout" }}" class="force-pw-logout-link">{{ t("auth.or_logout") }}</a>
           </div>
       </div>
   </div>

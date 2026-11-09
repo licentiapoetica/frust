@@ -17,6 +17,8 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/login(\/)?$", login_page);
     r.post(r"^\/login(\/)?$", login);
     r.get(r"^\/logout$", logout);
+    // POST (CSRF-checked by the middleware) for clients that log out without a logout link
+    r.post(r"^\/logout$", logout_post);
     r.get(r"^\/forgot-password(\/)?$", forgot_password_page);
     r.post(r"^\/forgot-password(\/)?$", forgot_password);
     r.get(r"^\/reset-password(\/)?$", reset_password_page);
@@ -330,8 +332,25 @@ fn back_to_modal(path: &str, key: &str, code: &str, modal: &str) -> Response {
     location(303, &format!("{path}{sep}{key}={code}#{modal}"))
 }
 
+/// `GET /logout?t=<logout token>` (the links in the navbars, see `auth::logout_url`). Without a valid
+/// token (a link or `<img>` on another site) nothing happens: back to the front page, still logged in.
 async fn logout(st: AppState, req: Req) -> Res {
-    crate::auth::destroy_session(&st, &req).await?;
+    let expected = req.session().and_then(|s| s.csrf_token.clone()).filter(|t| !t.is_empty());
+    if let Some(csrf) = expected {
+        let given = req.query("t").unwrap_or("");
+        if !crate::util::ct_eq(given, &crate::auth::logout_token(&csrf)) {
+            return Ok(location(303, "/"));
+        }
+    }
+    end_session(&st, &req).await
+}
+
+async fn logout_post(st: AppState, req: Req) -> Res {
+    end_session(&st, &req).await
+}
+
+async fn end_session(st: &AppState, req: &Req) -> Res {
+    crate::auth::destroy_session(st, req).await?;
     let mut r = location(301, "/");
     let h = r.headers_mut();
     h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache, public"));

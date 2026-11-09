@@ -1047,6 +1047,7 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
                 .and_then(|s| s.csrf_token.clone())
                 .or_else(|| ctx.get("csrf_token").and_then(Value::as_str).map(str::to_string))
                 .unwrap_or_default();
+            ctx.insert("logout_url".into(), json!(crate::auth::logout_url(&csrf)));
             ctx.insert("csrf_token".into(), json!(csrf));
             let mult = if session.map(|s| s.admin).unwrap_or(false) { cfg.f64("main.adminmultiplier").unwrap_or(1.0) } else { 1.0 };
             let max = cfg.f64("main.maxfilesize").unwrap_or(0.0) * mult;

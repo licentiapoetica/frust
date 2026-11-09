@@ -626,7 +626,7 @@
         if (e.target.closest('#nav-login-anon-btn, #modal-login-as-anon-btn, .trigger-login-anon')) {
           e.preventDefault(); this.loginAsAnonymous(); return;
         }
-        const logoutTarget = e.target.closest('#nav-anon-logout-btn, a[href="/logout"]');
+        const logoutTarget = e.target.closest('#nav-anon-logout-btn, a[href^="/logout"]');
         if (logoutTarget && window.f0ckSession && window.f0ckSession.is_anon && window.f0ckSession.logged_in) {
           e.preventDefault(); this.logoutAnonymous(); return;
         }

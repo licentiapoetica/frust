@@ -42,6 +42,17 @@ pub async fn insert_session(st: &AppState, req: &Req, spec: SessionSpec<'_>) -> 
     Ok(NewSession { session, csrf_token })
 }
 
+/// Token in logout links (`/logout?t=…`), derived from the session's CSRF token: another site can't
+/// build a working logout link, and a leaked one reveals nothing about the CSRF token.
+pub fn logout_token(csrf_token: &str) -> String {
+    crate::util::sha256(&format!("logout:{csrf_token}"))[..16].to_string()
+}
+
+/// The logout link for a session with this CSRF token.
+pub fn logout_url(csrf_token: &str) -> String {
+    if csrf_token.is_empty() { "/logout".into() } else { format!("/logout?t={}", logout_token(csrf_token)) }
+}
+
 /// `Set-Cookie` value for a session cookie: persistent with kmsi, a browser-session cookie without.
 pub fn session_cookie(cfg: &Config, session: &str, persistent: bool) -> String {
     let exp = if persistent { CookieExpiry::Expires(FOREVER) } else { CookieExpiry::None };
