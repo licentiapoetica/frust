@@ -278,6 +278,12 @@
     if (a.hasAttribute('data-page-modal')) {
       e.preventDefault();
       e.stopPropagation();
+      // stopPropagation also skips the navbar dropdown's own link listener, so close it here
+      const navMenu = a.closest('.nav-user-menu');
+      if (navMenu) {
+        navMenu.classList.remove('show', 'show-mobile');
+        navMenu.parentElement?.querySelector('.nav-user-btn')?.classList.remove('is-active');
+      }
       // Already on that page (e.g. the gear on /settings): its entry is highlighted, never open the same page twice
       if (!isOpen && pathOf(a.getAttribute('href')) === pathOf(location.pathname)) return;
       // Same page already open: the entry works as a toggle
