@@ -776,7 +776,7 @@ window.cancelAnimFrame = (function () {
       flash.textContent = text;
     }
 
-    let baseStyle = 'color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;opacity:0;transition:opacity 0.3s,transform 0.3s;box-shadow:0 4px 12px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);transform:translateY(6px);pointer-events:auto;';
+    let baseStyle = 'color:#fff;padding:10px 18px;border-radius:6px;font-size:0.8125rem;opacity:0;transition:opacity 0.3s,transform 0.3s;box-shadow:0 4px 12px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);transform:translateY(6px);pointer-events:auto;';
     if (type === 'error') {
       baseStyle += 'background:rgba(200,30,30,0.95);';
     } else if (type === 'success') {
@@ -6938,7 +6938,7 @@ window.cancelAnimFrame = (function () {
       <div id="f0ck-tuner-pane-background" class="f0ck-tuner-subtab-pane" style="display: none;">
         <div class="f0ck-tuner-body">
           <div class="f0ck-tuner-presets-bar">
-            <div style="font-size: 11px; opacity: 0.85; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <div style="font-size: 0.6875rem; opacity: 0.85; font-weight: 700; display: flex; align-items: center; gap: 6px;">
               <i class="fa-solid fa-film"></i> Background Settings
             </div>
             <div class="f0ck-tuner-presets-actions">
@@ -6947,15 +6947,15 @@ window.cancelAnimFrame = (function () {
             </div>
           </div>
           <div class="f0ck-tuner-mode-bar" style="display: flex; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.08);">
-            <button type="button" id="bg-mode-btn-standard" class="f0ck-tuner-mode-btn active" style="flex: 1; padding: 6px 10px; font-size: 11px; text-align: center;">Standard View</button>
-            <button type="button" id="bg-mode-btn-onara" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 11px; text-align: center;"><i class="fa-solid fa-expand"></i> Onara Mode Only</button>
-            <button type="button" id="bg-mode-btn-audio" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 11px; text-align: center;"><i class="fa-solid fa-music"></i> Audio</button>
+            <button type="button" id="bg-mode-btn-standard" class="f0ck-tuner-mode-btn active" style="flex: 1; padding: 6px 10px; font-size: 0.6875rem; text-align: center;">Standard View</button>
+            <button type="button" id="bg-mode-btn-onara" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 0.6875rem; text-align: center;"><i class="fa-solid fa-expand"></i> Onara Mode Only</button>
+            <button type="button" id="bg-mode-btn-audio" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 0.6875rem; text-align: center;"><i class="fa-solid fa-music"></i> Audio</button>
           </div>
           <!-- Simple / Advanced toggle -->
           <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.06);">
-            <span style="font-size: 11px; opacity: 0.6;">Ansicht:</span>
-            <button type="button" id="bg-view-basic" class="f0ck-tuner-mode-btn active" style="padding: 4px 12px; font-size: 11px;"><i class="fa-solid fa-sliders"></i> Einfach</button>
-            <button type="button" id="bg-view-advanced" class="f0ck-tuner-mode-btn" style="padding: 4px 12px; font-size: 11px;"><i class="fa-solid fa-gear"></i> Erweitert</button>
+            <span style="font-size: 0.6875rem; opacity: 0.6;">Ansicht:</span>
+            <button type="button" id="bg-view-basic" class="f0ck-tuner-mode-btn active" style="padding: 4px 12px; font-size: 0.6875rem;"><i class="fa-solid fa-sliders"></i> Einfach</button>
+            <button type="button" id="bg-view-advanced" class="f0ck-tuner-mode-btn" style="padding: 4px 12px; font-size: 0.6875rem;"><i class="fa-solid fa-gear"></i> Erweitert</button>
           </div>
           <div id="f0ck-bg-basic-rows">${bgRowsHtml}</div>
           <div id="f0ck-bg-advanced-rows" style="display:none;">${bgRowsAdvancedHtml}</div>
@@ -6966,7 +6966,7 @@ window.cancelAnimFrame = (function () {
       <div id="f0ck-tuner-pane-flashyank" class="f0ck-tuner-subtab-pane" style="display: none;">
         <div class="f0ck-tuner-body">
           <div class="f0ck-tuner-presets-bar">
-            <div style="font-size: 11px; opacity: 0.85; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <div style="font-size: 0.6875rem; opacity: 0.85; font-weight: 700; display: flex; align-items: center; gap: 6px;">
               <i class="fa-solid fa-bolt-lightning"></i> Flash Yank
             </div>
             <div class="f0ck-tuner-presets-actions">
@@ -6974,8 +6974,8 @@ window.cancelAnimFrame = (function () {
             </div>
           </div>
           <div class="f0ck-tuner-mode-bar" style="display: flex; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.08);">
-            <button type="button" id="fy-btn-off" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 11px; text-align: center;">Off</button>
-            <button type="button" id="fy-btn-on" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 11px; text-align: center;"><i class="fa-solid fa-bolt-lightning"></i> On</button>
+            <button type="button" id="fy-btn-off" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 0.6875rem; text-align: center;">Off</button>
+            <button type="button" id="fy-btn-on" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 0.6875rem; text-align: center;"><i class="fa-solid fa-bolt-lightning"></i> On</button>
           </div>
           <div class="f0ck-tuner-row" data-key="flashyank-yank">
             <div class="f0ck-tuner-row-label">
@@ -6984,8 +6984,8 @@ window.cancelAnimFrame = (function () {
             </div>
             <input type="range" id="fy-yank-slider" min="0" max="100" step="1" value="0" />
           </div>
-          <div id="fy-info" style="padding: 4px 12px 8px; font-size: 11px; opacity: 0.7;"></div>
-          <div style="padding: 0 12px 12px; font-size: 11px; opacity: 0.55; line-height: 1.4;">
+          <div id="fy-info" style="padding: 4px 12px 8px; font-size: 0.6875rem; opacity: 0.7;"></div>
+          <div style="padding: 0 12px 12px; font-size: 0.6875rem; opacity: 0.55; line-height: 1.4;">
             Degrades the video to a retro look: lower resolution, fewer frames and fewer colours the higher the yank.
             Toggle it on item pages with the <strong>S</strong> key.
           </div>
@@ -6996,7 +6996,7 @@ window.cancelAnimFrame = (function () {
       <div id="f0ck-tuner-pane-laser" class="f0ck-tuner-subtab-pane" style="display: none;">
         <div class="f0ck-tuner-body">
           <div class="f0ck-tuner-presets-bar">
-            <div style="font-size: 11px; opacity: 0.85; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <div style="font-size: 0.6875rem; opacity: 0.85; font-weight: 700; display: flex; align-items: center; gap: 6px;">
               <i class="fa-solid fa-wand-magic-sparkles"></i> Laser cursor
             </div>
             <div class="f0ck-tuner-presets-actions">
@@ -7004,11 +7004,11 @@ window.cancelAnimFrame = (function () {
             </div>
           </div>
           <div class="f0ck-tuner-mode-bar" style="display: flex; gap: 6px; padding: 6px 12px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.08);">
-            <button type="button" id="laser-btn-off" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 11px; text-align: center;">Off</button>
-            <button type="button" id="laser-btn-on" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 11px; text-align: center;"><i class="fa-solid fa-wand-magic-sparkles"></i> On</button>
+            <button type="button" id="laser-btn-off" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 0.6875rem; text-align: center;">Off</button>
+            <button type="button" id="laser-btn-on" class="f0ck-tuner-mode-btn" style="flex: 1; padding: 6px 10px; font-size: 0.6875rem; text-align: center;"><i class="fa-solid fa-wand-magic-sparkles"></i> On</button>
           </div>
           <div id="laser-tuner-rows"></div>
-          <div id="laser-tuner-info" style="padding: 4px 12px 12px; font-size: 11px; opacity: 0.6; line-height: 1.4;"></div>
+          <div id="laser-tuner-info" style="padding: 4px 12px 12px; font-size: 0.6875rem; opacity: 0.6; line-height: 1.4;"></div>
         </div>
       </div>
     `;
@@ -7111,8 +7111,8 @@ window.cancelAnimFrame = (function () {
             html += '<div class="f0ck-tuner-row" data-laser-key="' + row.key + '">' +
               '<div class="f0ck-tuner-row-label"><span>' + esc(row.label) + '</span></div>' +
               '<div style="display: flex; gap: 6px;">' +
-                '<button type="button" class="f0ck-tuner-mode-btn" data-laser-toggle="0" style="flex: 1; padding: 4px 8px; font-size: 11px;">Off</button>' +
-                '<button type="button" class="f0ck-tuner-mode-btn" data-laser-toggle="1" style="flex: 1; padding: 4px 8px; font-size: 11px;">On</button>' +
+                '<button type="button" class="f0ck-tuner-mode-btn" data-laser-toggle="0" style="flex: 1; padding: 4px 8px; font-size: 0.6875rem;">Off</button>' +
+                '<button type="button" class="f0ck-tuner-mode-btn" data-laser-toggle="1" style="flex: 1; padding: 4px 8px; font-size: 0.6875rem;">On</button>' +
               '</div></div>';
           } else if (row.type === 'color') {
             html += '<div class="f0ck-tuner-row" data-laser-key="' + row.key + '">' +

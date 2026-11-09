@@ -2288,7 +2288,7 @@ html[theme='95'] .item-main-content ._204863 {
   color: #fff !important;
   font-family: var(--font) !important;
   font-weight: bold !important;
-  font-size: 13px !important;
+  font-size: 0.8125rem !important;
   padding: 2px 4px !important;
   display: flex !important;
   justify-content: space-between !important;
@@ -2305,7 +2305,7 @@ html[theme='95'] .item-main-content ._204863 {
 html[theme='95'] .item-main-content ._204863::after {
   content: " _ ❐ ✕ ";
   font-family: 'Arial', sans-serif;
-  font-size: 10px;
+  font-size: 0.625rem;
   background: #c0c0c0;
   color: #000;
   border: 2px outset #dfdfdf;
@@ -2503,10 +2503,10 @@ html[theme='95'] .item-main-content .metadata {
   display: inline-block;
   background: var(--badge-nsfw);
   color: #fff;
-  font-size: 9px;
-  min-width: 14px;
-  height: 14px;
-  line-height: 14px;
+  font-size: 0.5625rem;
+  min-width: 0.875rem;
+  height: 0.875rem;
+  line-height: 0.875rem;
   text-align: center;
   border-radius: 7px;
   padding: 0 3px;
@@ -3638,7 +3638,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   border: 1.5px solid var(--accent, #99ff00);
   border-radius: 20px;
   padding: 6px 13px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65);
@@ -3671,7 +3671,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   padding: 14px 16px;
   color: #e6e6e6;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .f0ck-audio-tuner-panel.hidden {
@@ -3730,7 +3730,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
 }
 
 .f0ck-tuner-section-title {
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -3746,7 +3746,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
 
 .f0ck-tuner-title {
   font-weight: 700;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--accent, #99ff00);
   display: flex;
   align-items: center;
@@ -3757,7 +3757,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   background: none;
   border: none;
   color: #888;
-  font-size: 14px;
+  font-size: 0.875rem;
   cursor: pointer;
   padding: 2px 6px;
 }
@@ -3775,7 +3775,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   justify-content: space-between;
   margin-bottom: 4px;
   color: #bbb;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .f0ck-tuner-row-label span:last-child {
@@ -3804,7 +3804,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
 .f0ck-tuner-footer button {
   flex: 1;
   padding: 8px 10px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   border-radius: 6px;
   cursor: pointer;
@@ -3864,7 +3864,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   border-radius: 6px;
   color: #fff;
   padding: 6px 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-family: inherit;
   cursor: pointer;
   outline: none;
@@ -3891,7 +3891,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   color: #bbb;
   border-radius: 6px;
   padding: 6px 9px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
@@ -3923,7 +3923,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   border-radius: 6px;
   color: #fff;
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-family: inherit;
   outline: none;
 }
@@ -3939,7 +3939,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   color: #eee;
   border-radius: 6px;
   padding: 5px 10px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -3961,7 +3961,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   color: var(--accent, #99ff00);
   border-radius: 6px;
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -3984,7 +3984,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   color: #aaa;
   border-radius: 6px;
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
@@ -4044,7 +4044,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   background: transparent;
   border: none;
   color: #8e8e93;
-  font-size: 10.5px;
+  font-size: 0.65625rem;
   font-weight: 600;
   padding: 5px 5px;
   border-radius: 6px;
@@ -4114,7 +4114,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   color: #ddd;
   padding: 6px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -4949,7 +4949,7 @@ body.layout-legacy .comment-input {
   color: var(--white);
   padding: 0 10px;
   height: 24px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   font-weight: 600;
   border-radius: 3px;
@@ -5090,7 +5090,7 @@ body.layout-legacy .comment-input {
 }
 
 .char-counter {
-  font-size: 9px;
+  font-size: 0.5625rem;
   color: rgba(255, 255, 255, 0.35);
   font-family: monospace;
   margin-right: auto;
@@ -5114,7 +5114,7 @@ body.layout-legacy .comment-input {
 
 .comment-attach-btn {
   cursor: pointer;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .cf-spoiler-btn {
@@ -5123,7 +5123,7 @@ body.layout-legacy .comment-input {
   color: #888;
   cursor: pointer;
   padding: 2px 4px;
-  font-size: 12px;
+  font-size: 0.75rem;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -5142,7 +5142,7 @@ body.layout-legacy .comment-input {
 }
 
 .spoiler-attach-badge {
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 800;
   line-height: 1;
   color: #f0a500;
@@ -5187,7 +5187,7 @@ body.layout-legacy .comment-input {
   justify-content: center;
   background: rgba(255, 255, 255, 0.05);
   color: var(--accent);
-  font-size: 20px;
+  font-size: 1.25rem;
   flex-shrink: 0;
 }
 
@@ -5206,7 +5206,7 @@ body.layout-legacy .comment-input {
   color: #888;
   cursor: pointer;
   padding: 2px;
-  font-size: 12px;
+  font-size: 0.75rem;
   flex-shrink: 0;
   transition: color 0.15s;
 }
@@ -5225,7 +5225,7 @@ body.layout-legacy .comment-input {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--accent);
 }
 
@@ -5262,7 +5262,7 @@ body.layout-legacy .comment-input {
 
 .comment-poll-btn {
   cursor: pointer;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 /* ─── Poll Builder ────────────────────────────────────────────────────────── */
@@ -6832,7 +6832,7 @@ a.btn.disabled {
 
 h5 {
   margin: 0;
-  font-size: x-large;
+  font-size: 1.5rem;
 }
 
 .mr-2 {
@@ -6914,7 +6914,7 @@ div.posts>a:not(.notif-item)::after {
   content: attr(data-ext) " / " attr(data-user);
   color: var(--white);
   text-shadow: 0px 1px var(--black);
-  font-size: 10px;
+  font-size: 0.625rem;
   background: var(--posts-meta-bg);
   visibility: hidden;
   width: 100%;
@@ -6963,7 +6963,7 @@ div.posts>a:not(.notif-item).touch-active::after {
 /* Brand text: the same size as in the w0bm frontend (w0bm-fe.css .w0bm-brand-text) */
 span.f0ck {
   font-family: 'VCR', monospace;
-  font-size: 26px;
+  font-size: 1.625rem;
   letter-spacing: 1px;
   padding: 0 4px;
   line-height: 1;
@@ -7363,7 +7363,7 @@ body.layout-modern.sidebar-right-hidden .pagination-container-fluid {
   float: left;
   padding: 0 5px;
   min-width: 17px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--accent);
   text-align: center;
@@ -7376,7 +7376,7 @@ body.layout-modern.sidebar-right-hidden .pagination-container-fluid {
 @media (max-width: 768px) {
   .pagination>a,
   .pagination>span {
-    font-size: 19px;
+    font-size: 1.1875rem;
     min-width: 26px;
     padding: 2px 7px;
   }
@@ -7618,7 +7618,7 @@ body.layout-modern.sidebar-right-hidden .pagination-container-fluid {
   padding: 0 2px;
   border: 1px outset #221d1d;
   color: var(--white);
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   line-height: normal;
   transition: all 0.1s ease;
@@ -8275,7 +8275,7 @@ html[data-dpr="dpr-110"] body.layout-legacy .embed-responsive-16by9::before {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: rgba(255, 255, 255, 0.45);
-  font-size: 16px;
+  font-size: 1rem;
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
@@ -8353,7 +8353,7 @@ html[data-dpr="dpr-110"] body.layout-legacy .embed-responsive-16by9::before {
 
 #prev {
   z-index: 1;
-  font-size: 30px;
+  font-size: 1.875rem;
   opacity: 0.6;
   text-shadow: 2px 2px 2px var(--black);
   padding: 25px;
@@ -8369,7 +8369,7 @@ html[data-dpr="dpr-110"] body.layout-legacy .embed-responsive-16by9::before {
 
 #next {
   z-index: 1;
-  font-size: 30px;
+  font-size: 1.875rem;
   opacity: 0.6;
   text-shadow: 2px 2px 2px var(--black);
   padding: 25px;
@@ -8419,7 +8419,7 @@ html[data-dpr="dpr-110"] body.layout-legacy .embed-responsive-16by9::before {
   border: none;
   background: none;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 22px;
+  font-size: 1.375rem;
   cursor: pointer;
   z-index: 10;
   opacity: 1;
@@ -9402,7 +9402,7 @@ body[type='login'] {
   position: absolute;
   top: 2px;
   right: 2px;
-  font-size: 9px;
+  font-size: 0.5625rem;
   color: var(--emoji-fav-color, #f5c518);
   pointer-events: none;
   line-height: 1;
@@ -9683,13 +9683,13 @@ input {
 }
 
 .tag-suggestion-name {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--accent, #e0e0e0);
   font-weight: 500;
 }
 
 .tag-suggestion-meta {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: rgba(255, 255, 255, 0.35);
   margin-left: 12px;
   white-space: nowrap;
@@ -9698,7 +9698,7 @@ input {
 /* Section headers inside the suggestion dropdown (e.g. "Tags" / "Titles") */
 .tag-suggestion-header {
   padding: 5px 12px 3px;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -9710,7 +9710,7 @@ input {
 /* Icon prefix for title-type suggestion items */
 .tag-suggestion-icon {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.4);
   margin-right: 8px;
 }
@@ -9743,11 +9743,11 @@ input {
   }
 
   .tag-suggestion-name {
-    font-size: 16px;
+    font-size: 1rem;
   }
 
   .tag-suggestion-meta {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 }
 
@@ -10419,7 +10419,7 @@ i.iconset {
   justify-content: center;
   height: 20px;
   width: 23px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   cursor: pointer;
   background: #312c2c;
   margin: 1px;
@@ -10528,7 +10528,7 @@ span#favs[hidden] {
   font-weight: bold;
   text-align: center;
   align-self: baseline;
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 ._error_filter_hint {
@@ -10829,7 +10829,7 @@ ul.navbar-nav-guests li.nav-item {
 
 .search-title {
   text-align: center;
-  font-size: xxx-large;
+  font-size: 3rem;
 }
 
 .admin-search input {
@@ -11145,7 +11145,7 @@ input#s_avatar {
 /* Infinite scroll loading indicator */
 .loading-spinner {
   display: inline-block;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--footbar-color);
   animation: pulse 1s ease-in-out infinite;
 }
@@ -12126,7 +12126,7 @@ video.autoplay-gif {
   box-shadow: none;
   text-shadow: none;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: bold;
   line-height: 1;
   cursor: pointer;
@@ -12137,7 +12137,7 @@ video.autoplay-gif {
 }
 
 .input-actions button i {
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1;
 }
 
@@ -12424,7 +12424,7 @@ html[theme='paper'] .char-counter,
   border-radius: 3px;
   padding: 3px 6px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-family: monospace;
   z-index: 10;
   opacity: 0;
@@ -12718,7 +12718,7 @@ html[theme='paper'] .char-counter,
 
 span.badge.badge-current {
   font-weight: bold;
-  font-size: 12.5px;
+  font-size: 0.78125rem;
   margin: 5px;
   padding: 2px;
   text-transform: uppercase;
@@ -12981,7 +12981,7 @@ span.badge.badge-current {
 }
 
 .git-hash {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: #666;
   user-select: none;
   text-align: center;
@@ -13190,7 +13190,7 @@ html[theme="f0ck95d"] .badge-dark {
 }
 
 .steuerung {
-  font-size: large;
+  font-size: 1.125rem;
   font-family: monospace;
   user-select: none;
   -webkit-user-select: none;
@@ -13243,7 +13243,7 @@ html[theme="f0ck95d"] .badge-dark {
 }
 
 .steuerung.steuerung-icon {
-  font-size: x-large;
+  font-size: 1.5rem;
 }
 
 .steuerung.steuerung-icon a,
@@ -13326,14 +13326,14 @@ html[theme='paper'] .steuerung.steuerung-icon button:hover,
 /* "Back to top" below the comments, all screen sizes; f0ckm.js toggles .is-visible once the
    container it sits in is scrolled far enough (class name kept from when it was mobile-only) */
 .mobile-scroll-to-top {
-  /* Same size as the steuerung chevrons (.steuerung-icon: x-large, 1.6em wide, icon at 0.85em) */
+  /* Same size as the steuerung chevrons (.steuerung-icon: 1.5rem, 1.6em wide, icon at 0.85em) */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 1.6em;
   height: 1.6em;
   padding: 0;
-  font-size: x-large;
+  font-size: 1.5rem;
   line-height: 1;
   visibility: hidden;
   opacity: 0;
@@ -13754,7 +13754,7 @@ html.hide-navbar-active #navbar-unhide-btn {
   border: 1px solid transparent;
   background: transparent;
   color: var(--white);
-  font-size: 12px;
+  font-size: 0.75rem;
   opacity: .2;
   cursor: pointer;
   transition: opacity .15s ease, border-color .15s ease;
@@ -14227,7 +14227,7 @@ input:checked+.slider:before {
 
 .switch-label {
   margin-right: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: rgba(255, 255, 255, 0.7);
 }
 
@@ -14246,11 +14246,11 @@ input:checked+.slider:before {
   color: rgba(255, 255, 255, 0.7);
   border: none;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   cursor: pointer;
   text-decoration: none;
   transition: all 0.2s;
-  line-height: 18px;
+  line-height: 1.125rem;
 }
 
 .mode-btn:hover {
@@ -14291,11 +14291,11 @@ input:checked+.slider:before {
   border: none;
   border-right: 1px solid rgba(255, 255, 255, 0.15);
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   cursor: pointer;
   text-decoration: none;
   transition: all 0.15s;
-  line-height: 18px;
+  line-height: 1.125rem;
   font-family: inherit;
   user-select: none;
 }
@@ -14413,7 +14413,7 @@ input:checked+.slider:before {
 
 .view-all-notifs {
   color: var(--accent) !important;
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-transform: uppercase;
   font-weight: bold;
   letter-spacing: 0.5px;
@@ -14625,7 +14625,7 @@ textarea.mod-reason:focus {
   padding: 3px 10px;
   border-radius: 3px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 0.625rem;
   text-transform: uppercase;
   transition: all 0.2s;
 }
@@ -14743,7 +14743,7 @@ textarea.mod-reason:focus {
 }
 
 .approval-card-info {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--white);
 }
 
@@ -15025,7 +15025,7 @@ div.posts>a.thumb.has-notif p::after {
   content: "!" !important;
   position: static !important;
   color: var(--accent) !important;
-  font-size: 40px !important;
+  font-size: 2.5rem !important;
   font-weight: 900 !important;
   text-shadow: 0 0 10px #000, 0 0 20px rgba(var(--accent-rgb), 0.5) !important;
   z-index: 200 !important;
@@ -15087,7 +15087,7 @@ div.posts>a::after {
 .pin-indicator {
   position: relative;
   left: 5px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   fill: var(--accent);
   color: var(--accent);
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
@@ -15203,7 +15203,7 @@ body.layout-legacy .navbar-header {
 }
 
 .subf0ck-tag-scope {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -15215,7 +15215,7 @@ body.layout-legacy .navbar-header {
 }
 
 .subf0ck-tag-scope code {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #fff;
   background: rgba(255, 255, 255, 0.1);
   padding: 1px 4px;
@@ -15372,7 +15372,7 @@ body.layout-modern>.pagewrapper:not(:has(.index-layout-wrapper)):not(:has(.item-
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   background: #535050;
   color: #fff;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -15741,7 +15741,7 @@ span#tags :is(.tag-btn, .rating-tag, .badge a):focus-visible {
   }
 
   .shortcut-item {
-    font-size: 12px;
+    font-size: 0.75rem;
     gap: 8px;
   }
 }
@@ -15782,7 +15782,7 @@ span#tags :is(.tag-btn, .rating-tag, .badge a):focus-visible {
   top: 20px;
   right: 30px;
   color: #fff;
-  font-size: 32px;
+  font-size: 2rem;
   font-weight: bold;
   cursor: pointer;
   z-index: 10002;
@@ -15851,7 +15851,7 @@ span#tags :is(.tag-btn, .rating-tag, .badge a):focus-visible {
     right: 15px;
     width: 40px;
     height: 40px;
-    font-size: 28px;
+    font-size: 1.75rem;
     background: rgba(0, 0, 0, 0.8);
     /* Higher contrast on mobile */
   }
@@ -15908,7 +15908,7 @@ body.layout-modern .tag-ac-input {
 
 .phrase {
   text-align: center;
-  font-size: small;
+  font-size: 0.8125rem;
   background: rgba(0, 0, 0, 0.2);
 }
 
@@ -16049,7 +16049,7 @@ nav.navbar a.desktop-only[data-page-modal].is-active {
 
 .git-hash {
   font-family: monospace;
-  font-size: 10px;
+  font-size: 0.625rem;
   opacity: 0.5;
   text-align: right;
   padding-right: 5px;
@@ -16103,7 +16103,7 @@ nav.navbar a.desktop-only[data-page-modal].is-active {
   inset: 0;
   width: 100%;
   height: 100%;
-  font-size: 14px;
+  font-size: 0.875rem;
   border-radius: inherit;
   display: flex;
   align-items: center;
@@ -16117,7 +16117,7 @@ nav.navbar a.desktop-only[data-page-modal].is-active {
 
 .item-preview .sidebar-media-placeholder.audio > i {
   display: flex !important;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -17816,7 +17816,7 @@ body.layout-legacy .gapRight>.iconset {
   background: var(--navigation-links-bg, rgba(255, 255, 255, 0.08));
   color: var(--white, #fff);
   fill: var(--white, #fff);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: bold;
   line-height: 1;
   cursor: pointer;
@@ -18244,7 +18244,7 @@ i.iconset#a_oc {
   width: 30px;
   height: 30px;
   padding: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1;
   background: var(--dropdown-bg, #232323);
   border: 1px solid var(--nav-border-color, rgba(255, 255, 255, 0.15));
@@ -18443,7 +18443,7 @@ textarea#profile_description {
   background: black;
   padding: 4px;
   margin: 2px;
-  font-size: 6px;
+  font-size: 0.375rem;
   border-radius: 3px;
   font-weight: bold;
   text-transform: uppercase;
@@ -18455,7 +18455,7 @@ textarea#profile_description {
 .user-infobox-actions i {
     background: none;
     border: none;
-    font-size: 20px;
+    font-size: 1.25rem;
     align-self: baseline;
     margin: 1px 10px 0px 0px;
     padding: 0;
@@ -18518,7 +18518,7 @@ body.layout-modern .user-infobox-block .gapRight > #a_favo.fa-regular::before {
   color: inherit;
   text-decoration: none;
   text-shadow: 1px 1px 1px black;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .timestamp-link:hover {
@@ -18797,7 +18797,7 @@ body.layout-modern .user-infobox-block .gapRight > #a_favo.fa-regular::before {
   color: #fff;
   border: none;
   border-radius: 50%;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1;
   cursor: pointer;
   opacity: 0;
@@ -19010,7 +19010,7 @@ body.scroller-active #gchat-reopen-bubble {
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 0.75rem;
   transition: color 0.15s, background 0.15s;
   line-height: 1;
 }
@@ -19256,7 +19256,7 @@ body.scroller-active #gchat-reopen-bubble {
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   transition: color 0.15s, background 0.15s;
   line-height: 1.3;
   user-select: none;
@@ -19309,7 +19309,7 @@ body.scroller-active #gchat-reopen-bubble {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 0.875rem;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   flex-shrink: 0;
 }
@@ -19514,7 +19514,7 @@ body.scroller-active #gchat-reopen-bubble {
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: 0.625rem;
   line-height: 1;
   transition: background 0.12s, color 0.12s;
 }
@@ -20605,7 +20605,7 @@ body.scroller-active #gchat-reopen-bubble {
   justify-content: center !important;
   color: #ffffff !important;
   font-weight: 800 !important;
-  font-size: 14px !important;
+  font-size: 0.875rem !important;
   letter-spacing: 2px !important;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9) !important;
   background: rgba(10, 10, 12, 0.65) !important;
@@ -20624,7 +20624,7 @@ body.scroller-active #gchat-reopen-bubble {
   justify-content: center !important;
   color: #ff3b30 !important;
   font-weight: 800 !important;
-  font-size: 14px !important;
+  font-size: 0.875rem !important;
   letter-spacing: 2px !important;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9) !important;
   background: rgba(10, 10, 12, 0.75) !important;
@@ -20643,7 +20643,7 @@ body.scroller-active #gchat-reopen-bubble {
   justify-content: center !important;
   color: #30d158 !important;
   font-weight: 800 !important;
-  font-size: 14px !important;
+  font-size: 0.875rem !important;
   letter-spacing: 2px !important;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9) !important;
   background: rgba(10, 10, 12, 0.6) !important;
@@ -20662,7 +20662,7 @@ body.scroller-active #gchat-reopen-bubble {
   justify-content: center !important;
   color: #ff9f0a !important;
   font-weight: 800 !important;
-  font-size: 14px !important;
+  font-size: 0.875rem !important;
   letter-spacing: 2px !important;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9) !important;
   background: rgba(10, 10, 12, 0.65) !important;
@@ -20686,7 +20686,7 @@ body.scroller-active #gchat-reopen-bubble {
 .blur-untagged-active div.posts > a.thumb[data-mode="null"].has-notif p::after {
   content: "!" !important;
   color: var(--accent) !important;
-  font-size: 40px !important;
+  font-size: 2.5rem !important;
   font-weight: 900 !important;
   text-shadow: 0 0 10px #000, 0 0 20px rgba(var(--accent-rgb), 0.5) !important;
   background: rgba(255, 0, 0, 0.28) !important;
@@ -20734,7 +20734,7 @@ body.scroller-active #gchat-reopen-bubble {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
   transition: background 0.2s, transform 0.2s, border-color 0.2s, color 0.2s !important;
   padding: 0 !important;
-  font-size: 11px !important;
+  font-size: 0.6875rem !important;
   line-height: 1 !important;
 }
 
@@ -20792,25 +20792,25 @@ body.scroller-active #gchat-reopen-bubble {
 
 .blur-detail-active.blur-nsfw-active .media-object[data-mode="nsfw"]:not(.revealed)::after {
   content: "NSFW\A \A Click to reveal" !important;
-  font-size: 18px !important;
+  font-size: 1.125rem !important;
   color: #ffffff !important;
   background: rgba(10, 10, 12, 0.45) !important;
 }
 .blur-detail-active.blur-nsfl-active .media-object[data-mode="nsfl"]:not(.revealed)::after {
   content: "NSFL\A \A Click to reveal" !important;
-  font-size: 18px !important;
+  font-size: 1.125rem !important;
   color: #ff3b30 !important;
   background: rgba(10, 10, 12, 0.55) !important;
 }
 .blur-detail-active.blur-sfw-active .media-object[data-mode="sfw"]:not(.revealed)::after {
   content: "SFW\A \A Click to reveal" !important;
-  font-size: 18px !important;
+  font-size: 1.125rem !important;
   color: #30d158 !important;
   background: rgba(10, 10, 12, 0.4) !important;
 }
 .blur-detail-active.blur-untagged-active .media-object[data-mode="untagged"]:not(.revealed)::after {
   content: "UNTAGGED\A \A Click to reveal" !important;
-  font-size: 18px !important;
+  font-size: 1.125rem !important;
   color: #ff9f0a !important;
   background: rgba(10, 10, 12, 0.45) !important;
 }
@@ -20843,7 +20843,7 @@ body.scroller-active #gchat-reopen-bubble {
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 10px;
+  font-size: 0.625rem;
   letter-spacing: 1.5px;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
   background: rgba(10, 10, 12, 0.45);
@@ -20969,17 +20969,17 @@ body.scroller-active #gchat-reopen-bubble {
 .nsfp-search-result-item:hover { background: rgba(255,255,255,0.1); }
 .nsfp-search-result-item .result-id {
   font-family: monospace;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: rgba(255,255,255,0.35);
   flex-shrink: 0;
   margin-right: 4px;
 }
-.nsfp-search-result-item .result-tag { font-size: 14px; font-weight: 500; color: var(--accent); }
-.nsfp-search-result-item .result-norm { font-size: 11px; color: rgba(255,255,255,0.35); margin-left: 12px; white-space: nowrap; }
+.nsfp-search-result-item .result-tag { font-size: 0.875rem; font-weight: 500; color: var(--accent); }
+.nsfp-search-result-item .result-norm { font-size: 0.6875rem; color: rgba(255,255,255,0.35); margin-left: 12px; white-space: nowrap; }
 .nsfp-search-result-item.already-added { opacity: 0.55; cursor: default; }
 .nsfp-search-result-item.already-added::after {
   content: 'added';
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: rgba(255,255,255,0.35);
   margin-left: auto;
   white-space: nowrap;
@@ -21014,7 +21014,7 @@ body.scroller-active #gchat-reopen-bubble {
 }
 
 .archive-download-icon {
-  font-size: 64px;
+  font-size: 4rem;
   color: var(--accent);
   opacity: 0.9;
 }
@@ -22107,7 +22107,7 @@ div#flash,
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-family: var(--font, monospace);
   z-index: 25;
   pointer-events: none;
@@ -22186,7 +22186,7 @@ div#flash,
   align-items: center;
   gap: 6px;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--white, #fff);
   padding-right: 10px;
   border-right: 1px solid var(--nav-border-color, #444);
@@ -22200,7 +22200,7 @@ div#flash,
   border: 1px solid var(--accent, #9f0);
   border-radius: 0 !important;
   padding: 1px 6px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: bold;
   box-shadow: none !important;
 }
@@ -22232,7 +22232,7 @@ div#flash,
   margin: 0;
   padding: 0 10px;
   border-radius: 0 !important;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: normal !important;
   font-family: var(--font, monospace) !important;
   line-height: 1;
@@ -22274,7 +22274,7 @@ div#flash,
 }
 
 .bulk-btn .bulk-chevron {
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .bulk-dropdown-wrap {
@@ -22313,7 +22313,7 @@ div#flash,
   gap: 6px;
   padding: 5px 8px;
   border-radius: 0 !important;
-  font-size: 11.5px;
+  font-size: 0.71875rem;
   font-family: var(--font, monospace);
   background: transparent;
   border: none;
@@ -22396,7 +22396,7 @@ div#flash,
 
 .bulk-modal-header h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: bold;
   font-family: var(--font, monospace);
   display: flex;
@@ -22409,7 +22409,7 @@ div#flash,
   background: none;
   border: none;
   color: var(--white, #fff);
-  font-size: 16px;
+  font-size: 1rem;
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 0 !important;
@@ -22421,7 +22421,7 @@ div#flash,
 }
 
 .bulk-modal-desc {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #aaa;
   margin-bottom: 12px;
   line-height: 1.4;
@@ -22442,7 +22442,7 @@ div#flash,
   color: var(--white, #fff);
   border-radius: 0 !important;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-family: var(--font, monospace);
   display: inline-flex;
   align-items: center;
@@ -22453,7 +22453,7 @@ div#flash,
 .bulk-tag-chip .remove-chip-btn {
   cursor: pointer;
   opacity: 0.7;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .bulk-tag-chip .remove-chip-btn:hover {
@@ -22474,7 +22474,7 @@ div#flash,
   box-shadow: none !important;
   padding: 8px 10px;
   color: var(--white, #fff);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-family: var(--font, monospace);
   outline: none;
   box-sizing: border-box;
@@ -22504,7 +22504,7 @@ div#flash,
 
 .bulk-suggestion-item {
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-family: var(--font, monospace);
   cursor: pointer;
   display: flex;
@@ -22522,7 +22522,7 @@ div#flash,
 }
 
 .bulk-suggestion-count {
-  font-size: 10px;
+  font-size: 0.625rem;
   opacity: 0.7;
 }
 
@@ -22535,7 +22535,7 @@ div#flash,
 .bulk-modal-btn {
   padding: 6px 14px;
   border-radius: 0 !important;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-family: var(--font, monospace) !important;
   cursor: pointer;
   border: 1px solid var(--nav-border-color, #444);
@@ -22580,7 +22580,7 @@ div#flash,
 
   .bulk-count-box {
     padding-right: 6px;
-    font-size: 11.5px;
+    font-size: 0.71875rem;
     gap: 4px;
   }
 
@@ -26446,7 +26446,7 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 
 #main .adm-users-stat-icon {
   opacity: 0.6;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 #main .adm-users-registered {
@@ -26924,7 +26924,7 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   border: none;
   padding: 10px 15px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 #main .adm-approve-thumb {
@@ -28803,7 +28803,7 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: bold;
 }
 
@@ -32546,9 +32546,9 @@ body:has(#admin-bar) .pagination-container-fluid {
   font-size: 0.65rem;
   font-weight: 700;
   padding: 0 5px;
-  min-width: 16px;
+  min-width: 1rem;
   text-align: center;
-  line-height: 16px;
+  line-height: 1rem;
   display: inline-block;
 }
 
@@ -33028,7 +33028,7 @@ body.preview-as-mod .btn-infobox-action {
 }
 
 #unbanned-view .banned-ok-badge i {
-  font-size: 38px;
+  font-size: 2.375rem;
   color: #2ecc71;
 }
 
@@ -36087,6 +36087,13 @@ html.user-fs-150 {
 
 html[class*="user-fs-"] body {
   font-size: 1rem;
+}
+
+/* Form controls don't inherit the page's text size: the browser gives them a fixed 13.33px. The
+   same size in rem, so controls without a size of their own follow the text size too. :where()
+   keeps it at zero specificity, so every rule that sizes a control still wins. */
+:where(button, input, select, textarea) {
+  font-size: calc(1rem / 1.2);
 }
 
 /* Font weight select: only for families with several weights */

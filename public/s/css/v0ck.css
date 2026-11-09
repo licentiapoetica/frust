@@ -383,7 +383,7 @@
   background: rgba(0, 0, 0, 0.88);
   border-left: 2px solid var(--accent);
   color: #fff;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.35;
   pointer-events: none;
   opacity: 0;
@@ -408,7 +408,7 @@
 .danmaku-marker-preview .dmp-time {
   color: rgba(255, 255, 255, 0.55);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .danmaku-marker-preview .dmp-user {
@@ -725,7 +725,7 @@
   justify-content: space-between;
   padding: 0 8px;
   font-family: monospace;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: rgba(255, 255, 255, 0.6);
   background: rgba(0, 0, 0, 0.04);
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -746,7 +746,7 @@
 }
 
 .danmaku-lane-status {
-  font-size: 9px;
+  font-size: 0.5625rem;
   opacity: 0.9;
 }
 
@@ -763,7 +763,7 @@
   border-radius: 8px;
   padding: 8px 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #e0e0e0;
   pointer-events: none;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
@@ -777,7 +777,7 @@
 .danmaku-debug-hud .hud-title {
   color: var(--accent, #99ff00);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 0.6875rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   padding-bottom: 3px;
   margin-bottom: 2px;
@@ -818,7 +818,7 @@
   color: #fff;
   padding: 8px 16px;
   border-radius: 20px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -910,7 +910,7 @@
   border: 0;
   color: var(--text-color, #fff);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1.2;

@@ -32,7 +32,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 4px 14px;
-  font-size: x-large;
+  font-size: calc(1.5 * var(--u-rem, 1rem));
 }
 
 /* Upload Limit Info (inside the title line; keeps its own small, normal-case text) */

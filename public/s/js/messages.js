@@ -2054,7 +2054,7 @@ if (window.__dmLoaded) {
             favsTab.dataset.packId = '__favs__';
             favsTab.title = 'Favorites';
             favsTab.type = 'button';
-            favsTab.innerHTML = '<i class="fa-solid fa-star" style="font-size:14px;color:var(--emoji-fav-color,#f5c518);"></i>';
+            favsTab.innerHTML = '<i class="fa-solid fa-star" style="font-size:0.875rem;color:var(--emoji-fav-color,#f5c518);"></i>';
             favsTab.addEventListener('mousedown', e => e.preventDefault());
             favsTab.addEventListener('click', () => showDmTab('__favs__', packs));
             addDmTabTouch(favsTab, () => showDmTab('__favs__', packs), () => toggleDmFavDefault(favsTab));
