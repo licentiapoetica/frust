@@ -116,26 +116,27 @@ fn normalize_path(p: &str) -> String {
 
 /// Resolve `.` / `..` segments like the WHATWG URL parser.
 fn remove_dot_segments(p: &str) -> String {
-    if !p.contains("/.") {
+    // `%2e` is a dot too: `/t/%2e/1.webp` has to become `/t/1.webp` before the media gates look at it
+    if !p.contains("/.") && !p.to_ascii_lowercase().contains("/%2e") {
         return p.to_string();
     }
     let mut out: Vec<&str> = Vec::new();
     let segs: Vec<&str> = p.split('/').collect();
     for (i, seg) in segs.iter().enumerate().skip(1) {
         let last = i == segs.len() - 1;
-        match *seg {
-            "." | "%2e" | "%2E" => {
+        match seg.to_ascii_lowercase().as_str() {
+            "." | "%2e" => {
                 if last {
                     out.push("");
                 }
             }
-            ".." | ".%2e" | "%2e." | "%2e%2e" | ".%2E" | "%2E." | "%2E%2E" => {
+            ".." | ".%2e" | "%2e." | "%2e%2e" => {
                 out.pop();
                 if last {
                     out.push("");
                 }
             }
-            s => out.push(s),
+            _ => out.push(seg),
         }
     }
     format!("/{}", out.join("/"))

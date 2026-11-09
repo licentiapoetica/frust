@@ -1,13 +1,19 @@
 //! Media and asset files (port of src/inc/routes/static.mjs).
 
-use crate::http::files::{not_found, safe_join, serve_dir, serve_file};
+use crate::http::files::{not_found, plain_name, safe_join, serve_dir, serve_file};
 use crate::http::{Req, Res, Router, reply};
 use crate::sql;
 use crate::state::AppState;
 use axum::response::Response;
 
 pub fn register(r: &mut Router) {
-    r.get(r"^\/b\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.b, "/b/").await) });
+    // Item media: one plain file name, exactly the one the private/rating gates checked (app.rs)
+    r.get(r"^\/b\/", |st: AppState, req: Req| async move {
+        match plain_name(req.path.strip_prefix("/b/").unwrap_or("")) {
+            Some(name) => Ok(serve_file(&req, &st.cfg().paths.b.join(name), None).await),
+            None => Ok(not_found()),
+        }
+    });
     r.get(r"^\/c\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.c, "/c/").await) });
     r.get(r"^\/s\/emojis\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.emojis, "/s/emojis/").await) });
     r.get(r"^\/s\/koepfe\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.koepfe, "/s/koepfe/").await) });
@@ -85,24 +91,28 @@ async fn image(req: &Req, path: &std::path::Path, file: &str) -> Response {
     serve_file(req, path, Some(img_mime(file))).await
 }
 
+/// The file name of a /t/ or /ca/ request, decoded once: the hidden check and the file served
+/// use the same name (`%31.webp` is `1.webp` for both).
+fn media_file(req: &Req) -> Option<String> {
+    plain_name(req.param("file").unwrap_or(""))
+}
+
 async fn cover(st: AppState, req: Req) -> Res {
-    let file = req.param("file").unwrap_or("").to_string();
+    let Some(file) = media_file(&req) else { return Ok(not_found_plain()) };
     if is_hidden_media(&st, &file).await {
         return Ok(not_found_plain());
     }
-    match safe_join(&st.cfg().paths.ca, &file) {
-        Some(p) if p.is_file() => Ok(image(&req, &p, &file).await),
-        _ => Ok(not_found_plain()),
-    }
+    let p = st.cfg().paths.ca.join(&file);
+    if p.is_file() { Ok(image(&req, &p, &file).await) } else { Ok(not_found_plain()) }
 }
 
 async fn thumb(st: AppState, req: Req) -> Res {
     let cfg = st.cfg();
-    let file = req.param("file").unwrap_or("").to_string();
+    let Some(file) = media_file(&req) else { return Ok(not_found_plain()) };
     if is_hidden_media(&st, &file).await {
         return Ok(not_found_plain());
     }
-    let Some(path) = safe_join(&cfg.paths.t, &file) else { return Ok(not_found()) };
+    let path = cfg.paths.t.join(&file);
     if path.is_file() {
         return Ok(image(&req, &path, &file).await);
     }

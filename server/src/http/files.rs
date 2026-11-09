@@ -8,21 +8,28 @@ use std::path::{Component, Path, PathBuf};
 use tower::ServiceExt;
 
 /// Join a URL-supplied relative path onto `dir`, refusing anything that could escape it.
+/// Only plain segments: `.`, `..`, empty segments (`a//b`, a trailing `/`) and absolute paths are
+/// refused, so the file served is exactly the name the access checks (private items, media gate)
+/// looked at; `./1.webp` or `1.webp/` would otherwise reach the same file under another name.
 pub fn safe_join(dir: &Path, rel: &str) -> Option<PathBuf> {
     let decoded = crate::util::decode_uri_component(rel)?;
     if decoded.contains('\0') {
         return None;
     }
-    let p = Path::new(&decoded);
     let mut out = dir.to_path_buf();
-    for c in p.components() {
-        match c {
-            Component::Normal(s) => out.push(s),
-            Component::CurDir => {}
+    for seg in decoded.split('/') {
+        let mut c = Path::new(seg).components();
+        match (c.next(), c.next()) {
+            (Some(Component::Normal(s)), None) if s == seg => out.push(s),
             _ => return None,
         }
     }
     Some(out)
+}
+
+/// A single file name from the URL (decoded once), for directories without subdirectories.
+pub fn plain_name(rel: &str) -> Option<String> {
+    crate::util::decode_uri_component(rel).filter(|n| crate::media::is_plain_name(n) && !n.starts_with('.'))
 }
 
 pub fn not_found() -> Response {
@@ -87,5 +94,18 @@ mod tests {
         assert!(safe_join(d, "%2e%2e/etc/passwd").is_none());
         assert!(safe_join(d, "/etc/passwd").is_none());
         assert_eq!(safe_join(d, "a%20b.png").unwrap(), Path::new("/srv/b/a b.png"));
+        assert_eq!(safe_join(d, "js/a.js").unwrap(), Path::new("/srv/b/js/a.js"));
+    }
+
+    #[test]
+    fn refuses_other_names_for_the_same_file() {
+        let d = Path::new("/srv/b");
+        for rel in ["./1.webp", "%2e/1.webp", ".%2F1.webp", "1.webp/", "a//1.webp", "%2F1.webp"] {
+            assert!(safe_join(d, rel).is_none(), "{rel}");
+        }
+        assert_eq!(plain_name("1.webp").as_deref(), Some("1.webp"));
+        for rel in [".%2F1.webp", "a%2F1.webp", "..", "%2e", ".htaccess"] {
+            assert!(plain_name(rel).is_none(), "{rel}");
+        }
     }
 }
