@@ -59,6 +59,41 @@ pub fn mode_param(req: &Req) -> (Option<i64>, String) {
     }
 }
 
+/// The rating mode (0 sfw, 1 nsfw, other: everything) a mosaic may show this viewer. Mosaic URLs
+/// don't pass the media gate, so `?m=` alone must not unlock what the listings hide: members any
+/// mode, guests sfw (nsfw with `websrv.public_nsfw`), anon users what their modes include.
+/// Anything not allowed becomes sfw.
+pub fn mosaic_mode_for(cfg: &crate::config::Config, req: &Req, wanted: Option<i64>) -> i64 {
+    let wanted = wanted.unwrap_or(0);
+    let s = req.session().filter(|s| !s.user.is_empty());
+    let allowed = match s {
+        Some(s) if !s.is_anon && !s.user.starts_with("anon_") => true,
+        Some(_) => {
+            let modes = crate::settings::anon_allowed_modes(cfg);
+            let has = |m: &str| modes.iter().any(|x| x == m);
+            match wanted {
+                0 => has("sfw"),
+                1 => has("nsfw"),
+                _ => has("sfw") && has("nsfw") && has("nsfl") && has("untagged"),
+            }
+        }
+        None => match wanted {
+            0 => true,
+            1 => cfg.truthy("websrv.public_nsfw"),
+            _ => false,
+        },
+    };
+    if allowed { wanted } else { 0 }
+}
+
+/// Mosaics other than sfw stay out of shared caches: the URL is the same for everyone.
+pub fn mosaic_cache(mut r: Response, mode: i64) -> Response {
+    if mode != 0 {
+        r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("private, max-age=3600"));
+    }
+    r
+}
+
 pub fn custom_dir(st: &AppState) -> PathBuf {
     st.cfg().paths.s.join("../hall_custom")
 }
@@ -137,7 +172,8 @@ pub fn mosaic_mode_join(mode: Option<i64>) -> &'static str {
 
 async fn hall_image(st: AppState, req: Req) -> Res {
     let slug = basename(&crate::util::decode_lossy(req.param("hallSlug").unwrap_or("")));
-    let (mode, mode_str) = mode_param(&req);
+    let m = mosaic_mode_for(&st.cfg(), &req, mode_param(&req).0);
+    let (mode, mode_str) = (Some(m), m.to_string());
     let r: anyhow::Result<Option<Response>> = async {
         if let Some(r) = serve_custom(&req, &custom_dir(&st).join(format!("{slug}.webp"))).await {
             return Ok(Some(r));
@@ -148,7 +184,10 @@ async fn hall_image(st: AppState, req: Req) -> Res {
             return Ok(Some(r));
         }
         let mut q = crate::db::Sql::new("SELECT i.id FROM items i JOIN halls_assign ha ON ha.item_id = i.id JOIN halls h ON h.id = ha.hall_id ");
-        q.push(mosaic_mode_join(mode)).push(" WHERE h.slug = ").bind(slug.as_str()).push(" AND i.active = true ORDER BY RANDOM() LIMIT 3");
+        q.push(mosaic_mode_join(mode))
+            .push(" WHERE h.slug = ")
+            .bind(slug.as_str())
+            .push(" AND i.active = true AND i.is_deleted = false AND COALESCE(i.visibility, 0) = 0 ORDER BY RANDOM() LIMIT 3");
         let ids: Vec<i64> = q.fetch_all(&st.db).await?.iter().filter_map(|r| crate::db::RowExt::i64(r, "id")).collect();
         if ids.is_empty() {
             return Ok(None);
@@ -157,7 +196,7 @@ async fn hall_image(st: AppState, req: Req) -> Res {
     }
     .await;
     match r {
-        Ok(Some(resp)) => Ok(resp),
+        Ok(Some(resp)) => Ok(mosaic_cache(resp, m)),
         Ok(None) => Ok(placeholder()),
         Err(e) => {
             tracing::error!("[HALL_IMAGE] Error: {e:#}");

@@ -205,11 +205,13 @@ fn fallback_svg(tag: &str) -> String {
     )
 }
 
-fn image_response(content_type: &'static str, body: impl Into<axum::body::Body>) -> axum::response::Response {
+/// `mode`: other than sfw stays out of shared caches (the URL is the same for every viewer).
+fn image_response(content_type: &'static str, body: impl Into<axum::body::Body>, mode: i64) -> axum::response::Response {
     let mut r = axum::response::Response::new(body.into());
     let h = r.headers_mut();
     h.insert(axum::http::header::CONTENT_TYPE, axum::http::HeaderValue::from_static(content_type));
-    if let Ok(v) = axum::http::HeaderValue::from_str(&format!("public, max-age={CACHE_MAX_AGE}")) {
+    let scope = if norm_mode(mode) == 0 { "public" } else { "private" };
+    if let Ok(v) = axum::http::HeaderValue::from_str(&format!("{scope}, max-age={CACHE_MAX_AGE}")) {
         h.insert(axum::http::header::CACHE_CONTROL, v);
     }
     r
@@ -217,24 +219,26 @@ fn image_response(content_type: &'static str, body: impl Into<axum::body::Body>)
 
 async fn tag_image(st: AppState, req: Req) -> Res {
     let tag = crate::util::decode_lossy(req.param("tag").unwrap_or(""));
-    let mode = match req.query("m").filter(|m| !m.is_empty()) {
+    let wanted = match req.query("m").filter(|m| !m.is_empty()) {
         Some(m) => crate::social::helpers::js_parse_int(m).unwrap_or(3),
         None => req.mode,
     };
+    // `?m=` can't show a guest what the listings hide from them (see halls::mosaic_mode_for)
+    let mode = super::halls::mosaic_mode_for(&st.cfg(), &req, Some(wanted));
     let path = cache_path(&st, &tag, mode);
     if let Ok(meta) = tokio::fs::metadata(&path).await {
         if meta.len() > 0 {
             if let Ok(bytes) = tokio::fs::read(&path).await {
-                return Ok(image_response("image/webp", bytes));
+                return Ok(image_response("image/webp", bytes, mode));
             }
         }
     }
     if let Some(p) = regenerate_tag_image(&st, &tag, mode).await {
         if let Ok(bytes) = tokio::fs::read(&p).await {
-            return Ok(image_response("image/webp", bytes));
+            return Ok(image_response("image/webp", bytes, mode));
         }
     }
-    Ok(image_response("image/svg+xml", fallback_svg(&tag)))
+    Ok(image_response("image/svg+xml", fallback_svg(&tag), 0))
 }
 
 async fn regenerate_all(st: AppState, _req: Req) -> Res {

@@ -374,21 +374,35 @@ async fn hall_item(st: AppState, req: Req) -> Res {
 
 // ── Thumbnail ───────────────────────────────────────────────────────────────
 
+/// [`halls::mosaic_cache`], and never a shared cache for a private hall.
+fn mosaic_cache_private(r: Response, mode: i64, private: bool) -> Response {
+    let mut r = crate::routes::halls::mosaic_cache(r, mode);
+    if private {
+        r.headers_mut().insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static("private, max-age=3600"));
+    }
+    r
+}
+
 async fn user_hall_image(st: AppState, req: Req) -> Res {
     let user_id: i64 = req.param("userId").and_then(|u| u.parse().ok()).unwrap_or(0);
     let slug = decode(req.param("slug"));
     let safe = basename(&slug);
-    let (mode, mode_str) = mode_param(&req);
+    let m = crate::routes::halls::mosaic_mode_for(&st.cfg(), &req, mode_param(&req).0);
+    let (mode, mode_str) = (Some(m), m.to_string());
     let r: anyhow::Result<Option<Response>> = async {
+        // A private hall's picture only for its owner and staff (checked before any cached copy)
+        let Some(hall) = halls::get_user_hall(&st, user_id, &slug).await else { return Ok(None) };
+        if hall.bool("is_private") && !req.session().is_some_and(|s| s.id == user_id || s.is_admin_or_mod()) {
+            return Ok(None);
+        }
         if let Some(r) = serve_custom(&req, &custom_dir(&st).join(format!("u_{user_id}_{safe}.webp"))).await {
             return Ok(Some(r));
         }
         let hash = crate::util::md5(&format!("uh_{user_id}_{safe}_{mode_str}"));
         let cache_path = cache_dir(&st).join(format!("{hash}.webp"));
         if let Some(r) = serve_cached(&cache_path).await {
-            return Ok(Some(r));
+            return Ok(Some(mosaic_cache_private(r, m, hall.bool("is_private"))));
         }
-        let Some(hall) = halls::get_user_hall(&st, user_id, &slug).await else { return Ok(None) };
         let mut q = crate::db::Sql::new("SELECT i.id FROM items i JOIN user_halls_assign uha ON uha.item_id = i.id ");
         q.push(mosaic_mode_join(mode))
             .push(" WHERE uha.hall_id = ")
@@ -398,7 +412,8 @@ async fn user_hall_image(st: AppState, req: Req) -> Res {
         if ids.is_empty() {
             return Ok(None);
         }
-        build_mosaic(&st, &ids, &cache_path).await
+        let private = hall.bool("is_private");
+        Ok(build_mosaic(&st, &ids, &cache_path).await?.map(|r| mosaic_cache_private(r, m, private)))
     }
     .await;
     match r {
