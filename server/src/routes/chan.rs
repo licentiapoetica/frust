@@ -17,7 +17,7 @@ use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 
 pub fn register(r: &mut Router) {
-    r.get_g(r"^\/4\/?$", Guard::ChanAuth, chan_root);
+    // No route for a bare `/4` (or `/4/`, the router strips trailing slashes): that is item 4.
     r.get_g(r"^\/4\/(?<board>[a-z0-9]+)\/(?:catalogue|catalog)\/?$", Guard::ChanAuth, catalogue);
     r.get_g(r"^\/4\/(?<board>[a-z0-9]+)\/(?<thread>\d+)\/?$", Guard::ChanAuth, thread);
     r.get_g(r"^\/4\/(?<board>[a-z0-9]+)\/(?<thread>\d+)\/(?<post>\d+)\/?$", Guard::ChanAuth, thread_item);
@@ -556,10 +556,6 @@ pub(crate) fn short_reason(e: &anyhow::Error) -> String {
 }
 
 // ── Routes ──────────────────────────────────────────────────────────────────
-
-async fn chan_root(_st: AppState, _req: Req) -> Res {
-    Ok(redirect("/4/wsg/catalogue"))
-}
 
 async fn catalogue(st: AppState, req: Req) -> Res {
     let board = board_param(&req);

@@ -2320,7 +2320,7 @@ window.cancelAnimFrame = (function () {
     try {
       const p = new URL(pathOrUrl, window.location.origin).pathname;
       const parts = p.split('/').filter(Boolean);
-      if (parts[0] === '4') {
+      if (parts[0] === '4' && parts.length > 1) {
         return parts.length >= 4 && /^\d+$/.test(parts[3]);
       }
       return !p.match(/\/p\//) && (

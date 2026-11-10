@@ -1563,7 +1563,7 @@
                 ids.add(decodeURIComponent(segments[2]).trim());
             }
         } else if (segments.length === 1) {
-            const forbidden = ['s', 'b', 't', 'ca', 'a', '4', 'login', 'register', 'settings', 'about', 'terms', 'rules', 'api', 'logout', 'auth', 'admin', 'mod', 'comments', 'notifications', 'feed', 'upload', 'tags', 'halls', 'ranking', 'abyss', 'random', 'scroller', 'p'];
+            const forbidden = ['s', 'b', 't', 'ca', 'a', 'login', 'register', 'settings', 'about', 'terms', 'rules', 'api', 'logout', 'auth', 'admin', 'mod', 'comments', 'notifications', 'feed', 'upload', 'tags', 'halls', 'ranking', 'abyss', 'random', 'scroller', 'p'];
             if (!forbidden.includes(segments[0])) {
                 ids.add(decodeURIComponent(segments[0]).trim());
             }
