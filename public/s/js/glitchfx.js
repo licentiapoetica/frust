@@ -8,8 +8,8 @@
  * glitchfx.css), so it works on any element and needs no canvas access to the content.
  * A small displacement map (canvas → data: URL) drives the tearing:
  *   red = x shift, green = y shift (128 = none), blue = colour-corruption mask.
- * All maps of an element sit stacked in one sprite image (frame 0 = neutral), loaded once and
- * renewed every few seconds; a frame is picked by moving the feImage, not by swapping its href
+ * All maps of an element sit stacked in one sprite image (frame 0 = neutral), drawn and loaded
+ * once (again only when the element's size or the options change); a frame is picked by moving the feImage, not by swapping its href
  * (every href change is a new image load, which at 20 fps flooded the network log with data: URLs).
  *
  * Usage:
@@ -39,7 +39,6 @@
   var SVGNS = "http://www.w3.org/2000/svg";
   var SLOTS = 32;
   var POOL = 24; // torn displacement maps per element (sprite frames 1..POOL; frame 0 is neutral)
-  var RENEW = [4000, 8000]; // ms until the sprite is redrawn with fresh maps
   var used = [];
   var defs = null;
   var instances = new Map();
@@ -127,7 +126,6 @@
     this.nextIdle = 0;
     this.last = 0;
     this.sprite = null;
-    this.renewAt = 0;
     this.raf = 0;
     this.tick = this.tick.bind(this);
 
@@ -184,7 +182,7 @@
   };
 
   // Draws the neutral frame and POOL torn frames into one image and loads it into the filter
-  Glitch.prototype.renew = function (now) {
+  Glitch.prototype.renew = function () {
     if (!this.cv) {
       this.cv = document.createElement("canvas");
       this.cx = this.cv.getContext("2d");
@@ -195,7 +193,6 @@
     this.cx.fillRect(0, 0, this.cv.width, this.cv.height);
     for (var i = 1; i <= POOL; i++) this.makeMap(i * this.mh);
     this.sprite = this.cv.toDataURL();
-    this.renewAt = now + rnd(RENEW[0], RENEW[1]);
     if (this.f) this.f.n.map.setAttribute("href", this.sprite);
   };
 
@@ -233,12 +230,12 @@
     if (this.o.corrupt && chance(0.08 * k)) rect(0, irnd(0, H >> 1), irnd(W >> 3, W >> 1), irnd(H >> 2, H), 0, 0, true);
   };
 
-  Glitch.prototype.frame = function (now) {
+  Glitch.prototype.frame = function () {
     var n = this.f.n, k = this.o.intensity;
     var shift = this.o.shift || clamp(this.w * 0.08, 6, 80);
     var split = this.o.split || clamp(this.h * 0.03, 1.5, 8);
     var clean = chance(0.55 - 0.4 * k);
-    if (!this.sprite || now >= this.renewAt) this.renew(now);
+    if (!this.sprite) this.renew();
     if (clean) {
       this.placeMap(0);
       n.disp.setAttribute("scale", 0);
@@ -315,7 +312,7 @@
     this.last = now;
     if (this.active(now)) {
       if (this.slot < 0) this.attach();
-      if (this.slot >= 0) this.frame(now);
+      if (this.slot >= 0) this.frame();
     } else if (this.slot >= 0) {
       this.detach(); // still between bursts / not hovered: no filter cost at all
     }
