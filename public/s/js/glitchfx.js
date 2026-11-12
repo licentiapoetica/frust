@@ -8,6 +8,9 @@
  * glitchfx.css), so it works on any element and needs no canvas access to the content.
  * A small displacement map (canvas → data: URL) drives the tearing:
  *   red = x shift, green = y shift (128 = none), blue = colour-corruption mask.
+ * All maps of an element sit stacked in one sprite image (frame 0 = neutral), loaded once and
+ * renewed every few seconds; a frame is picked by moving the feImage, not by swapping its href
+ * (every href change is a new image load, which at 20 fps flooded the network log with data: URLs).
  *
  * Usage:
  *   <link rel="stylesheet" href="/s/css/glitchfx.css">
@@ -35,7 +38,8 @@
 
   var SVGNS = "http://www.w3.org/2000/svg";
   var SLOTS = 32;
-  var POOL = 24; // displacement maps kept per element, refreshed a few at a time
+  var POOL = 24; // torn displacement maps per element (sprite frames 1..POOL; frame 0 is neutral)
+  var RENEW = [4000, 8000]; // ms until the sprite is redrawn with fresh maps
   var used = [];
   var defs = null;
   var instances = new Map();
@@ -122,8 +126,8 @@
     this.burstUntil = 0;
     this.nextIdle = 0;
     this.last = 0;
-    this.pool = [];
-    this.neutral = null;
+    this.sprite = null;
+    this.renewAt = 0;
     this.raf = 0;
     this.tick = this.tick.bind(this);
 
@@ -164,36 +168,40 @@
     this.eh = Math.ceil(h / this.cell);
     this.mw = this.ew + 2 * this.ox;
     this.mh = this.eh + 2 * this.oy;
-    this.pool = [];
-    this.neutral = null;
-    this.placeMap();
+    this.sprite = null;
+    if (this.f) this.f.n.map.removeAttribute("href");
+    this.placeMap(0);
   };
 
-  Glitch.prototype.placeMap = function () {
+  // Shows sprite frame `i` in the filter region (the rest of the sprite lies outside it)
+  Glitch.prototype.placeMap = function (i) {
     if (!this.f) return;
     var m = this.f.n.map, c = this.cell;
     m.setAttribute("x", -this.ox * c);
-    m.setAttribute("y", -this.oy * c);
+    m.setAttribute("y", -(this.oy + i * this.mh) * c);
     m.setAttribute("width", this.mw * c);
-    m.setAttribute("height", this.mh * c);
+    m.setAttribute("height", this.mh * (POOL + 1) * c);
   };
 
-  Glitch.prototype.canvas = function () {
+  // Draws the neutral frame and POOL torn frames into one image and loads it into the filter
+  Glitch.prototype.renew = function (now) {
     if (!this.cv) {
       this.cv = document.createElement("canvas");
       this.cx = this.cv.getContext("2d");
     }
     this.cv.width = this.mw;
-    this.cv.height = this.mh;
-    var c = this.cx;
-    c.fillStyle = "rgb(128,128,0)";
-    c.fillRect(0, 0, this.mw, this.mh);
-    return c;
+    this.cv.height = this.mh * (POOL + 1);
+    this.cx.fillStyle = "rgb(128,128,0)";
+    this.cx.fillRect(0, 0, this.cv.width, this.cv.height);
+    for (var i = 1; i <= POOL; i++) this.makeMap(i * this.mh);
+    this.sprite = this.cv.toDataURL();
+    this.renewAt = now + rnd(RENEW[0], RENEW[1]);
+    if (this.f) this.f.n.map.setAttribute("href", this.sprite);
   };
 
-  // One torn frame. Shifts are in map units: 127 = full `shift` px.
-  Glitch.prototype.makeMap = function () {
-    var c = this.canvas(), W = this.ew, H = this.eh, k = this.o.intensity, ox = this.ox, oy = this.oy;
+  // One torn frame, drawn at row `top` of the sprite. Shifts are in map units: 127 = full `shift` px.
+  Glitch.prototype.makeMap = function (top) {
+    var c = this.cx, W = this.ew, H = this.eh, k = this.o.intensity, ox = this.ox, oy = this.oy + top;
     var amt = function (s) { return clamp(Math.round(128 + s * 127), 0, 255); };
     var sgn = function () { return chance(0.5) ? -1 : 1; };
     function rect(x, y, w, h, dx, dy, corrupt) {
@@ -223,29 +231,19 @@
     for (i = 0; i < streaks; i++) rect(0, irnd(0, H - 1), W, 1, sgn() * rnd(0.5, 1), 0, false);
     // now and then a big corrupted area (the bear going pink)
     if (this.o.corrupt && chance(0.08 * k)) rect(0, irnd(0, H >> 1), irnd(W >> 3, W >> 1), irnd(H >> 2, H), 0, 0, true);
-    return this.cv.toDataURL();
   };
 
-  Glitch.prototype.neutralMap = function () {
-    if (!this.neutral) {
-      this.canvas();
-      this.neutral = this.cv.toDataURL();
-    }
-    return this.neutral;
-  };
-
-  Glitch.prototype.frame = function () {
+  Glitch.prototype.frame = function (now) {
     var n = this.f.n, k = this.o.intensity;
     var shift = this.o.shift || clamp(this.w * 0.08, 6, 80);
     var split = this.o.split || clamp(this.h * 0.03, 1.5, 8);
     var clean = chance(0.55 - 0.4 * k);
+    if (!this.sprite || now >= this.renewAt) this.renew(now);
     if (clean) {
-      n.map.setAttribute("href", this.neutralMap());
+      this.placeMap(0);
       n.disp.setAttribute("scale", 0);
     } else {
-      if (this.pool.length < POOL) this.pool.push(this.makeMap());
-      else if (chance(0.25)) this.pool[irnd(0, POOL - 1)] = this.makeMap();
-      n.map.setAttribute("href", pick(this.pool));
+      this.placeMap(irnd(1, POOL));
       n.disp.setAttribute("scale", (shift * 2).toFixed(1));
       n.corrupt.setAttribute("values", pick(CORRUPT));
     }
@@ -294,8 +292,9 @@
     var old = document.getElementById(id);
     if (old) old.remove();
     this.f = buildFilter(id);
-    this.w = 0;
-    this.measure();
+    this.measure(); // a new size drops the sprite; otherwise the last one is reused
+    if (this.sprite) this.f.n.map.setAttribute("href", this.sprite);
+    this.placeMap(0);
     this.el.classList.add("glitchfx", id);
   };
 
@@ -316,7 +315,7 @@
     this.last = now;
     if (this.active(now)) {
       if (this.slot < 0) this.attach();
-      if (this.slot >= 0) this.frame();
+      if (this.slot >= 0) this.frame(now);
     } else if (this.slot >= 0) {
       this.detach(); // still between bursts / not hovered: no filter cost at all
     }
@@ -348,7 +347,7 @@
   };
   Glitch.prototype.set = function (opts) {
     Object.assign(this.o, opts || {});
-    this.pool = [];
+    this.sprite = null;
     this.update();
     return this;
   };
