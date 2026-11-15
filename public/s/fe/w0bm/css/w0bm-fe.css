@@ -2696,6 +2696,12 @@ html[data-w0bm-theme="Glitch"] body:not(.w0bm-item-page) {
     height: auto;
     min-height: 100%;
 }
+/* Glitch gives the tag box beside the comments a fixed 900px height (glitch.css, shared with the
+   comment list), so it always stood at its max-height, empty space under a single row of tags.
+   As high as its tags instead, up to that max-height, like the other themes. */
+html[data-w0bm-theme="Glitch"] #tag-display {
+    height: auto;
+}
 /* stats page: the label / link column on the left reads left-aligned */
 table.w0bm-ranking > tbody > tr > td:first-child,
 table.w0bm-ranking > thead > tr > th:first-child {
