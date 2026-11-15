@@ -36050,6 +36050,12 @@ html[theme] #settings-quicknav a.active {
   box-sizing: border-box;
 }
 
+/* Form controls don't inherit the text size by themselves (browsers give them about 13px): the
+   size of the text around them. In :where(), so a field's own size still wins. */
+.settings :where(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]):not([type=hidden]), select, textarea) {
+  font-size: 1em;
+}
+
 .settings :is(input, select, textarea):focus {
   border-color: var(--st-accent) !important;
 }
@@ -36100,13 +36106,14 @@ html[theme] #settings-quicknav a.active {
   color: var(--st-accent);
 }
 
-.settings .button-danger {
+/* (submit buttons too: the primary rule above matches them more specifically) */
+.settings :is(.button-danger, button[type=submit].button-danger) {
   background: transparent;
   border-color: rgba(255, 107, 107, 0.5);
   color: #ff6b6b;
 }
 
-.settings .button-danger:hover:not(:disabled) {
+.settings :is(.button-danger, button[type=submit].button-danger):hover:not(:disabled) {
   background: #ff6b6b;
   border-color: #ff6b6b;
   color: #000;
@@ -36825,13 +36832,6 @@ html[class*="user-fs-"] body {
 }
 
 /* Current password before adding a passkey / generating an API key */
-/* Delete account: the confirmation checkbox on its own line */
-.settings .settings-delete-account-confirm {
-  margin: 10px 0;
-}
-
-.settings .settings-reauth-input {
-  display: block;
 /* Delete account: "this cannot be undone", and the last question before it is sent */
 .settings .settings-delete-warning {
   margin: 10px 0;
@@ -36846,9 +36846,17 @@ html[class*="user-fs-"] body {
   margin-top: 10px;
 }
 
+/* Delete account: the confirmation checkbox on its own line */
+.settings .settings-delete-account-confirm {
+  margin: 10px 0;
+}
+
+/* Left-aligned like every other field of the page */
+.settings .settings-reauth-input {
+  display: block;
   width: 100%;
   max-width: 360px;
-  margin: 0 auto 10px;
+  margin: 0 0 10px;
 }
 
 /* ---- settings.html: API key ---- */
