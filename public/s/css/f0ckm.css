@@ -14001,7 +14001,9 @@ html.motd-on body > nav.navbar > * {
   padding: 7px 14px;
 }
 
+/* 1.25rem: the widest glyph (user-plus) fits, so the labels line up */
 #nav-visitor-menu a > i {
+  width: 1.25rem;
   margin-right: 6px;
 }
 
@@ -14209,8 +14211,8 @@ html.motd-on body > nav.navbar > * {
   display: none;
 }
 
-/* ── Guests on phones: one row (brand | filter, hamburger) and one menu ──
-   The hamburger opens a single labelled list: the nav links, then the visitor entries
+/* ── Guests on phones: one row (brand | hamburger) and one menu ──
+   The hamburger opens a single labelled list: the nav links, the filter, then the visitor entries
    (settings, login, register, ...) under a "guest" heading. The visitor dropdown is laid out
    as part of that list instead of floating beside the hamburger. */
 @media (max-width: 800px) {
@@ -14220,10 +14222,10 @@ html.motd-on body > nav.navbar > * {
     display: contents;
   }
 
-  /* Brand takes what the two buttons leave (its text ellipsizes), so the row never wraps */
+  /* Brand takes what the hamburger leaves (its text ellipsizes), so the row never wraps */
   .navbar:has(> .nav-right-group-guest) > .navbar-brand {
     /* !important: over the image + text brand's own max-width further down */
-    max-width: min(360px, calc(100% - 110px)) !important;
+    max-width: min(360px, calc(100% - 64px)) !important;
     min-width: 0;
     margin-right: auto;
   }
@@ -14232,8 +14234,34 @@ html.motd-on body > nav.navbar > * {
     padding: 8px;
   }
 
+  /* Filter: an entry of the list, right after the nav links (same order, later in the markup) */
+  .nav-right-group-guest > #nav-filter-btn.navbar-filter-btn {
+    display: none;
+    order: 10;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 11px 16px;
+    font-size: 1rem;
+    text-align: left;
+    text-decoration: none;
+    color: var(--white);
+    opacity: 0.8;
+    background: var(--nav-bg);
+  }
+
+  .nav-collapse-guest.show ~ .nav-right-group-guest > #nav-filter-btn.navbar-filter-btn {
+    display: block;
+    animation: navFadeIn 0.2s ease-out;
+  }
+
+  .nav-right-group-guest > .navbar-filter-btn .nav-link-label {
+    display: inline;
+  }
+
   .nav-right-group-guest > .navbar-toggler {
     margin: 0 12px 0 8px;
+    order: 1;
   }
 
   /* The list: nav links ... */
@@ -14324,6 +14352,7 @@ html.motd-on body > nav.navbar > * {
 
   /* Icons in one column, labels lined up after them */
   .nav-collapse-guest .nav-links a > i,
+  .nav-right-group-guest > .navbar-filter-btn > i,
   .nav-right-group-guest #nav-visitor-toggle > i,
   .nav-right-group-guest #nav-visitor-menu a > i {
     display: inline-block;
