@@ -36825,6 +36825,11 @@ html[class*="user-fs-"] body {
 }
 
 /* Current password before adding a passkey / generating an API key */
+/* Delete account: the confirmation checkbox on its own line */
+.settings .settings-delete-account-confirm {
+  margin: 10px 0;
+}
+
 .settings .settings-reauth-input {
   display: block;
   width: 100%;

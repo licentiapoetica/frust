@@ -39,6 +39,9 @@
         {% if enable_data_export %}
         <a href="#export"><i class="fa-solid fa-file-export"></i> {{ t("settings.export_data_title") }}</a>
         {% endif %}
+        {% if not session.is_anon %}
+        <a href="#delete-account"><i class="fa-solid fa-user-slash"></i> {{ t("settings.delete_account_title") }}</a>
+        {% endif %}
         {% endif %}
       </nav>
       <script src="/s/js/views/settings.quicknav.js?v={{ mtime("/public/s/js/views/settings.quicknav.js") }}"></script>
@@ -1014,6 +1017,39 @@
         <button type="button" id="btn-start-export" class="button button-primary">
           <i class="fa-solid fa-download settings-export-icon"></i> {{ (t("settings.start_export") or "Generate Export (ZIP)") }}
         </button>
+      </div>
+      {% endif %}
+
+      {% if (not guest and not session.is_anon) %}
+      <!-- ═══════════════════════════════ DELETE ACCOUNT ═══════════════════════════════ -->
+      {#- Uploads and comments stay under deleted_user (routes/admin/users.rs delete_account). A plain
+          form, so it works without JavaScript; settings.account-delete.js adds the passkey confirmation. -#}
+      <h2 id="delete-account"><i class="fa-solid fa-user-slash"></i> {{ t("settings.delete_account_title") }}</h2>
+      <div class="account-settings-wrapper settings-delete-account">
+        <p class="settings-muted">{{ t("settings.delete_account_desc") }}</p>
+        {% if session.admin %}
+        <p class="settings-muted">{{ t("settings.delete_account_admin") }}</p>
+        {% else %}
+        <form id="account-delete-form" method="post" action="/api/v2/settings/account/delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="back" value="/settings#delete-account">
+          {% if not password_disabled %}
+          <input type="password" name="current_password" class="input settings-reauth-input"
+            placeholder="{{ t("settings.current_password") }}" aria-label="{{ t("settings.current_password") }}" required autocomplete="current-password">
+          {% else %}
+          <p class="settings-muted settings-small-note">{{ t("settings.delete_account_passkey") }}</p>
+          {% endif %}
+          <label class="checkbox-container settings-check settings-delete-account-confirm">
+            <input type="checkbox" name="confirm" value="1" required>
+            <span>{{ t("settings.delete_account_confirm") }}</span>
+          </label>
+          <div class="settings-button-row">
+            <button type="submit" class="button button-danger"><i class="fa-solid fa-user-slash"></i> {{ t("settings.delete_account_btn") }}</button>
+          </div>
+          <div id="account-delete-status" class="avatar-status"></div>
+        </form>
+        <script src="/s/js/views/settings.account-delete.js?v={{ mtime("/public/s/js/views/settings.account-delete.js") }}"></script>
+        {% endif %}
       </div>
       {% endif %}
 

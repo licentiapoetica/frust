@@ -18,6 +18,7 @@ mod dashboard;
 mod maintenance;
 mod upload_page;
 mod users;
+pub(crate) use users::delete_account;
 
 use crate::config::Config;
 use crate::db::RowExt;

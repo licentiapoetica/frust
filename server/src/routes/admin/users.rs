@@ -410,14 +410,34 @@ async fn delete_user(st: AppState, mut req: Req) -> Res {
     let body = req.post().await?.clone();
     let r = async {
         let uid = require_id(&body, "user_id")?;
-        let target = target_user(&st, uid).await.map_err(|_| anyhow::anyhow!("User not found"))?;
+        let login = delete_account(&st, uid).await?;
+        crate::audit::log(&st, sid(&req), "admin_delete_user", "user", uid.to_string(), json!({ "target_login": login })).await;
+        Ok(json!({ "success": true, "msg": format!("User {login} deleted and content reassigned to deleted_user.") }))
+    }
+    .await;
+    if let Err(e) = &r {
+        tracing::error!("[ADMIN] Deletion failed: {e:#}");
+    }
+    answer(r, 500)
+}
+
+/// Delete an account and keep what it gave the site: uploads, comments, tags, halls and the like
+/// move to the `deleted_user` ghost; everything personal (options, avatar and banner, sessions,
+/// passkeys, favourites, notifications, the email with the row itself) goes. Used by the admin
+/// panel and by users deleting their own account (apiv2/settings.rs). The deleted login.
+pub(crate) async fn delete_account(st: &AppState, uid: i32) -> anyhow::Result<String> {
+    {
+        let target = target_user(st, uid).await.map_err(|_| anyhow::anyhow!("User not found"))?;
         if target.str("login") == Some("deleted_user") {
             anyhow::bail!("The deleted_user account is protected and cannot be deleted.");
         }
         // Created on first use, so it never takes an id before the admin
-        let ghost = ensure_ghost_user(&st).await?;
+        let ghost = ensure_ghost_user(st).await?;
         let (login, user) = (target.string("login"), target.string("user"));
-        let custom = hall_custom_dir(&st);
+        let custom = hall_custom_dir(st);
+        // Open logins end now (also their cached lookups), and the profile images leave the disk
+        crate::auth::destroy_user_sessions(st, uid as i64).await?;
+        crate::routes::profile_media::remove_profile_files(st, uid).await;
 
         let mut tx = st.db.begin().await?;
         // 1. Content (items, comments, tags)
@@ -488,18 +508,14 @@ async fn delete_user(st: AppState, mut req: Req) -> Res {
             q.execute(&mut *tx).await?;
         }
         sql!("DELETE FROM user_conversation_states WHERE user_id = ", uid, " OR other_id = ", uid).execute(&mut *tx).await?;
+        // The application the account came from (name, email, message) and its login history
+        sql!("DELETE FROM account_applications WHERE user_id = ", uid).execute(&mut *tx).await?;
+        sql!("DELETE FROM login_attempts WHERE username = ", login.clone()).execute(&mut *tx).await?;
         // 4. The account itself
         sql!(r#"DELETE FROM "user" WHERE id = "#, uid).execute(&mut *tx).await?;
         tx.commit().await?;
-
-        crate::audit::log(&st, sid(&req), "admin_delete_user", "user", uid.to_string(), json!({ "target_login": login })).await;
-        Ok(json!({ "success": true, "msg": format!("User {login} deleted and content reassigned to deleted_user.") }))
+        Ok(login)
     }
-    .await;
-    if let Err(e) = &r {
-        tracing::error!("[ADMIN] Deletion failed: {e:#}");
-    }
-    answer(r, 500)
 }
 
 async fn reassign_uploads(st: AppState, mut req: Req) -> Res {

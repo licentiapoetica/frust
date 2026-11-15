@@ -44,6 +44,7 @@ pub fn register(r: &mut Router) {
     g.put_g(r"\/username_color", RegisteredUser, username_color);
     g.post_g(r"\/password\/disable$", RegisteredUser, password_disable);
     g.put_g(r"\/password", RegisteredUser, password_change);
+    g.post_g(r"\/account\/delete$", RegisteredUser, account_delete);
     g.put_g(r"\/email", RegisteredUser, email);
     g.put_g(r"\/display_name", RegisteredUser, display_name);
     g.put_g(r"\/description", RegisteredUser, description);
@@ -474,6 +475,42 @@ async fn username_color(st: AppState, mut req: Req) -> Res {
 }
 
 // ── password / email ────────────────────────────────────────────────────────
+
+/// A user deletes their own account. Needs the current password (passkey-only accounts confirm
+/// with a passkey, see [`reauth_check`]) and `confirm`. Uploads and comments stay on the site
+/// under `deleted_user` (routes/admin/users.rs `delete_account`, the same as an admin's delete).
+async fn account_delete(st: AppState, mut req: Req) -> Res {
+    let body = req.post_value().await;
+    let ajax = crate::auth::is_ajax(&req);
+    let s = req.session().cloned().unwrap_or_default();
+    // An admin leaving this way could leave the site without one
+    if s.admin {
+        return fail("Admins can't delete their own account. Hand over the admin role first.", 403);
+    }
+    if !crate::config::truthy(body.get("confirm").unwrap_or(&Value::Null)) {
+        return fail("Please confirm that you want to delete your account.", 400);
+    }
+    match reauth_check(&st, &req, &body).await {
+        Ok(None) => {}
+        Ok(Some(refused)) => return Ok(refused),
+        Err(e) => return logged_500("[SETTINGS] Delete account", e, "Failed to delete the account"),
+    }
+    let login = match crate::routes::admin::delete_account(&st, s.id as i32).await {
+        Ok(login) => login,
+        Err(e) => return logged_500("[SETTINGS] Delete account", format!("{e:#}"), "Failed to delete the account"),
+    };
+    tracing::info!("[SETTINGS] {login} deleted their account");
+    // Without the name: the account asked to be gone
+    crate::audit::log(&st, 0, "self_delete_user", "user", s.id.to_string(), json!({})).await;
+    req.set_cookie(crate::auth::clear_session_cookie(&st.cfg()));
+    if ajax {
+        return j(json!({ "success": true, "msg": "Your account was deleted.", "redirect": "/" }), 200);
+    }
+    // A plain form post (no JavaScript): to the front page, logged out
+    let mut r = crate::http::raw(303, "");
+    r.headers_mut().insert(axum::http::header::LOCATION, axum::http::HeaderValue::from_static("/"));
+    Ok(r)
+}
 
 async fn password_disable(st: AppState, mut req: Req) -> Res {
     let r: anyhow::Result<Res> = async {

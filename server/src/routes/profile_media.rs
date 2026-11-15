@@ -218,6 +218,20 @@ async fn avatar_upload(st: AppState, mut req: Req) -> Res {
     send(json!({ "success": true, "avatar_file": final_name, "msg": "Avatar uploaded successfully" }), 200)
 }
 
+/// The custom avatar and banner files of an account that is being deleted (best effort).
+pub(crate) async fn remove_profile_files(st: &AppState, user_id: i32) {
+    let row = sql!("select avatar_file, banner_file from user_options where user_id = ", user_id).fetch_optional(&st.db).await;
+    let Ok(Some(row)) = row else { return };
+    let a = st.cfg().paths.a.clone();
+    if let Some(avatar) = row.str("avatar_file").filter(|c| !c.is_empty() && *c != "default.png") {
+        remove_in(&a, avatar).await;
+    }
+    if let Some(banner) = row.str("banner_file").filter(|c| !c.is_empty()) {
+        remove_in(&a, banner).await;
+        remove_in(&a, &orig_name(banner)).await;
+    }
+}
+
 async fn avatar_delete(st: AppState, req: Req) -> Res {
     let s = match registered_session(&req, "AVATAR") {
         Ok(s) => s,
