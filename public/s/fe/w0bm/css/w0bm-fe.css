@@ -2233,6 +2233,35 @@ html[data-w0bm-theme="Glitch"] .navbar .dropdown-menu {
         line-height: 1;
     }
 }
+/* Page headers with a search box (main grid, index table, tag list, search) stay under the navbar
+   while the page scrolls, so the search box is always at hand. The 10px that kept the header off
+   the navbar move from its margin into its padding, so stuck it keeps that gap. It needs the
+   page's own background to cover the grid passing below it: per theme, as the themes paint
+   <body> (Glitch a gradient fixed to the window, Epilepsie the flashing). */
+.page-header:has(.w0bm-searchform) {
+    position: sticky;
+    top: 50px;
+    z-index: 100;
+    margin-top: 30px;
+    padding-top: 10px;
+    background-color: #161618;
+}
+/* the title's 20px top margin collapsed into the header's margin; the padding ends that */
+.page-header:has(.w0bm-searchform) > h3#index {
+    margin-top: 0;
+}
+html[data-w0bm-theme="DARK"] .page-header:has(.w0bm-searchform) {
+    background-color: #080808;
+}
+html[data-w0bm-theme="Chilledblue"] .page-header:has(.w0bm-searchform) {
+    background-color: #171d21;
+}
+html[data-w0bm-theme="Glitch"] .page-header:has(.w0bm-searchform) {
+    background: linear-gradient(to top, #08161f 0%, #1c0e2d 100%) no-repeat fixed;
+}
+html[data-w0bm-theme="Epilepsie"] .page-header:has(.w0bm-searchform) {
+    animation: epilepsie 0.1s infinite;
+}
 /* Search modal: field and button one row over the full width, the button as tall as the field
    (the themes below may still set their own fixed height for both) */
 .searchbar form.w0bm-searchform {

@@ -149,6 +149,16 @@ html.w0bm-nojs .navbar-collapse .navbar-nav > li.w0bm-dropdown:focus-within {
     margin: 8px 0;
     padding-bottom: 8px;
 }
+/* the sticky ones (w0bm-fe.css): the 8px above as padding, so they keep it under the navbar. The
+   column's own 5px top margin used to collapse into the header's 8px; -5px takes it out again. */
+.page-header:has(.w0bm-searchform) {
+    margin-top: -5px;
+    padding-top: 8px;
+}
+/* a title in one keeps its 20px above (8px of it the padding) */
+.page-header:has(.w0bm-searchform) > h3#index {
+    margin-top: 12px;
+}
 
 /* ── Grid pages ──────────────────────────────────────────────────────────────────────────── */
 /* The search box first, full width; the page numbers under the grid (.w0bm-phone-pager, without
