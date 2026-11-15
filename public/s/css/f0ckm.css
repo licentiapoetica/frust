@@ -32454,7 +32454,7 @@ body:has(#force-password-modal) {
 
 
 /* Privacy consent modal (was a <style> block) */
-#privacy-consent-modal {
+:is(#privacy-consent-modal, #tos-consent-modal) {
   position: fixed;
   inset: 0;
   z-index: 100000;
@@ -32465,7 +32465,7 @@ body:has(#force-password-modal) {
   backdrop-filter: blur(4px);
 }
 
-#privacy-consent-modal .pc-content {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-content {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
@@ -32477,7 +32477,7 @@ body:has(#force-password-modal) {
   border-radius: 0;
 }
 
-#privacy-consent-modal .pc-header {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-header {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -32487,7 +32487,7 @@ body:has(#force-password-modal) {
   border-bottom: 1px solid var(--accent);
 }
 
-#privacy-consent-modal .pc-header h3 {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-header h3 {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -32498,11 +32498,11 @@ body:has(#force-password-modal) {
   letter-spacing: 0.06em;
 }
 
-#privacy-consent-modal .pc-header h3 i {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-header h3 i {
   color: var(--accent);
 }
 
-#privacy-consent-modal .pc-close {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-close {
   width: 36px;
   height: 36px;
   margin: 0;
@@ -32521,29 +32521,29 @@ body:has(#force-password-modal) {
   transition: color 0.15s, border-color 0.15s;
 }
 
-#privacy-consent-modal .pc-close:hover {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-close:hover {
   color: var(--accent);
   border-color: var(--accent);
 }
 
-#privacy-consent-modal .pc-body {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-#privacy-consent-modal .pc-body .pv {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-body .pv {
   padding-top: 20px;
 }
 
-#privacy-consent-modal .pc-loading {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-loading {
   padding: 40px 20px;
   text-align: center;
   color: var(--text-muted, #aaa);
 }
 
-#privacy-consent-modal .pc-footer {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-footer {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -32554,12 +32554,12 @@ body:has(#force-password-modal) {
   background: rgba(0, 0, 0, 0.2);
 }
 
-#privacy-consent-modal .pc-hint {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-hint {
   font-size: 0.85em;
   color: var(--text-muted, #aaa);
 }
 
-#privacy-consent-modal .pc-accept {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-accept {
   height: 42px;
   padding: 0 22px;
   margin: 0;
@@ -32579,26 +32579,48 @@ body:has(#force-password-modal) {
   transition: background 0.18s, color 0.18s;
 }
 
-#privacy-consent-modal .pc-accept:hover:not(:disabled) {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-accept:hover:not(:disabled) {
   background: transparent;
   color: var(--accent);
 }
 
-#privacy-consent-modal .pc-accept:disabled {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-accept:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
 @media (max-width: 600px) {
-  #privacy-consent-modal .pc-footer {
+  :is(#privacy-consent-modal, #tos-consent-modal) .pc-footer {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
     text-align: center;
   }
-  #privacy-consent-modal .pc-accept {
+  :is(#privacy-consent-modal, #tos-consent-modal) .pc-accept {
     justify-content: center;
   }
+}
+
+/* Rules and terms before registering (snippets/tos-consent.html): the same dialog, closed through
+   the hidden attribute */
+#tos-consent-modal[hidden] {
+  display: none;
+}
+
+/* its text: the admin-edited Markdown, as plain text until marked.js has rendered it */
+#tos-consent-modal .pc-md {
+  padding: 16px 20px;
+  overflow-wrap: anywhere;
+}
+
+#tos-consent-modal .pc-md-plain {
+  white-space: pre-wrap;
+}
+
+/* a text the admins have not written yet */
+#tos-consent-modal .pc-md-empty {
+  font-style: italic;
+  opacity: 0.7;
 }
 
 

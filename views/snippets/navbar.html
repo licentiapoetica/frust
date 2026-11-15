@@ -85,6 +85,9 @@
         </div>
       </div>
 
+      <!-- Quick Favs -->
+      <a href="/user/{{ ((session.login if (session.is_anon and session.login) else session.user))|lower }}/favs" title="Favorites" class="desktop-only"><i class="fa-solid fa-heart"></i></a>
+
       <!-- Filter -->
       {% if (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
       <a href="#" id="nav-filter-btn" class="navbar-filter-btn" title="Filter">
@@ -130,9 +133,6 @@
           {% endif %}
         </div>
       </div>
-
-      <!-- Quick Favs -->
-      <a href="/user/{{ ((session.login if (session.is_anon and session.login) else session.user))|lower }}/favs" title="Favorites" class="desktop-only"><i class="fa-solid fa-heart"></i></a>
 
       <!-- DM -->
       {% if (private_messages and not session.is_anon) %}
@@ -628,6 +628,8 @@
     </div>
   </div>
 </div>
+{#- the rules and terms have to be read before the register form's checkbox gets ticked -#}
+{% include "snippets/tos-consent.html" %}
 
 {% include "snippets/upload-modal.html" %}
 

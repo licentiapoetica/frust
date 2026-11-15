@@ -27,6 +27,7 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/(terms)$", terms);
     r.get(r"^\/privacy\/?$", privacy);
     r.get(r"^\/(rules)$", rules);
+    r.get(r"^\/api\/v2\/tos\/?$", tos_texts);
     r.get(r"^\/mode\/(\d)", mode);
     r.get(r"^\/strict\/(0|1)$", strict);
     r.get(r"^\/mime\/?$", mime_pick);
@@ -837,6 +838,13 @@ async fn terms(st: AppState, req: Req) -> Res {
     let cfg = st.cfg();
     let data = json!({ "tmp": null, "session": member_session(&req), "page_meta": page_meta(&cfg, "terms", "Terms of service", "terms") });
     Ok(html(crate::tpl::render(&st, Some(&req), "terms", data)))
+}
+
+/// The admin-edited rules and terms (Markdown), for the dialog that has them read before
+/// registering (snippets/tos-consent.html, tos-consent.js).
+async fn tos_texts(st: AppState, _req: Req) -> Res {
+    let s = st.settings.get();
+    Ok(crate::http::json_resp(&json!({ "success": true, "rules": s.rules_text, "terms": s.terms_text }), 200))
 }
 
 async fn rules(st: AppState, req: Req) -> Res {

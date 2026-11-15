@@ -1320,6 +1320,13 @@ mod tests {
             assert!(html.contains("name=\"token\""), "{view}");
         }
 
+        // The dialog that has the rules and terms read comes with the forms (not under private_society)
+        for view in ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/w0bm/partials/navigation.html"] {
+            assert_eq!(render(view, &ctx).matches("<div id=\"tos-consent-modal\" hidden>").count(), 1, "{view}");
+        }
+        ctx["private_society"] = serde_json::json!(true);
+        assert!(!render("snippets/navbar.html", &ctx).contains("tos-consent"));
+
         let page = serde_json::json!({ "csrf_token": "tok", "pending_count": 1, "applications_on": true, "applications": [
             { "id": 7, "username": "Neu", "email": "n@example.org", "message": "<b>hi</b> please let me in", "status": "pending", "created_at": "2026-11-15T10:00:00Z" },
             { "id": 6, "username": "Alt", "message": "let me in, I upload a lot", "status": "denied", "created_at": "2026-11-14T10:00:00Z",

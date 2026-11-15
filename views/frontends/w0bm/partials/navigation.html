@@ -80,6 +80,8 @@
 {% if not session %}
 {% include "frontends/w0bm/partials/loginmodal.html" %}
 {% include "frontends/w0bm/partials/registermodal.html" %}
+{#- the rules and terms have to be read before the register form's checkbox gets ticked -#}
+{% include "snippets/tos-consent.html" %}
 {% if smtp_enabled %}
 {% include "frontends/w0bm/partials/forgotmodal.html" %}
 {% include "frontends/w0bm/partials/resetmodal.html" %}

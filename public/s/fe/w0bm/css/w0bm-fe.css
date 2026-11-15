@@ -2354,7 +2354,7 @@ html[data-w0bm-theme="Glitch"] nav.navbar.navbar-inverse {
 /* "Login as anonymous" dialogs (snippets/anon-login.html, shared with f0ckm; passkey.js shows them
    with display: flex) in the w0bm look. Their icons are Font Awesome 6 (w0bm has 4): hidden. */
 #anon-setup-modal,
-#privacy-consent-modal {
+:is(#privacy-consent-modal, #tos-consent-modal) {
     position: fixed;
     inset: 0;
     z-index: 1060;
@@ -2363,15 +2363,15 @@ html[data-w0bm-theme="Glitch"] nav.navbar.navbar-inverse {
     background: rgba(0, 0, 0, 0.6);
     font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
-#privacy-consent-modal {
+:is(#privacy-consent-modal, #tos-consent-modal) {
     z-index: 1070;
 }
 #anon-setup-modal i[class*="fa-solid"],
-#privacy-consent-modal i[class*="fa-solid"] {
+:is(#privacy-consent-modal, #tos-consent-modal) i[class*="fa-solid"] {
     display: none;
 }
 #anon-setup-modal .navbar-anon-modal-box,
-#privacy-consent-modal .pc-content {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-content {
     position: relative;
     width: min(420px, 92vw);
     max-height: 90vh;
@@ -2382,11 +2382,11 @@ html[data-w0bm-theme="Glitch"] nav.navbar.navbar-inverse {
     box-shadow: 0 0 9px rgba(31, 178, 176, 0.4);
     color: #c8c8c8;
 }
-#privacy-consent-modal .pc-content {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-content {
     width: min(640px, 94vw);
 }
 #anon-setup-modal .navbar-anon-modal-close,
-#privacy-consent-modal .pc-close {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-close {
     position: absolute;
     top: 6px;
     right: 10px;
@@ -2399,14 +2399,14 @@ html[data-w0bm-theme="Glitch"] nav.navbar.navbar-inverse {
     cursor: pointer;
 }
 #anon-setup-modal .navbar-anon-modal-close:hover,
-#privacy-consent-modal .pc-close:hover {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-close:hover {
     opacity: 1;
 }
 #anon-setup-modal .lm-panel {
     padding: 20px;
 }
 #anon-setup-modal .lm-title,
-#privacy-consent-modal .pc-header h3 {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-header h3 {
     margin: 0 0 15px;
     font-family: Oswald, sans-serif;
     font-size: 22px;
@@ -2425,11 +2425,11 @@ html[data-w0bm-theme="Glitch"] nav.navbar.navbar-inverse {
     display: none;
 }
 #anon-setup-modal .lm-link,
-#privacy-consent-modal a {
+:is(#privacy-consent-modal, #tos-consent-modal) a {
     color: #1fb2b0;
 }
 #anon-setup-modal .lm-btn,
-#privacy-consent-modal .pc-accept {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-accept {
     width: 100%;
     padding: 6px 12px;
     background: #222;
@@ -2438,12 +2438,12 @@ html[data-w0bm-theme="Glitch"] nav.navbar.navbar-inverse {
     cursor: pointer;
 }
 #anon-setup-modal .lm-btn:hover:not(:disabled),
-#privacy-consent-modal .pc-accept:hover:not(:disabled) {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-accept:hover:not(:disabled) {
     background: #1fb2b0;
     color: #161618;
 }
 #anon-setup-modal .lm-btn:disabled,
-#privacy-consent-modal .pc-accept:disabled {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-accept:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -2468,10 +2468,10 @@ html[data-w0bm-theme="Glitch"] nav.navbar.navbar-inverse {
 #anon-setup-modal .lm-textbtn:hover {
     color: #1fb2b0;
 }
-#privacy-consent-modal .pc-header {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-header {
     padding: 15px 20px 0;
 }
-#privacy-consent-modal .pc-body {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -2479,22 +2479,22 @@ html[data-w0bm-theme="Glitch"] nav.navbar.navbar-inverse {
     border-top: 1px solid #353434;
     border-bottom: 1px solid #353434;
 }
-#privacy-consent-modal .pc-footer {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-footer {
     display: flex;
     gap: 12px;
     align-items: center;
     padding: 12px 20px;
 }
-#privacy-consent-modal .pc-hint {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-hint {
     flex: 1;
     color: #888;
     font-size: 12px;
 }
-#privacy-consent-modal .pc-accept {
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-accept {
     width: auto;
 }
 /* the privacy text in the consent dialog (privacy.css) in w0bm's accent */
-#privacy-consent-modal {
+:is(#privacy-consent-modal, #tos-consent-modal) {
     --accent: #1fb2b0;
     --text-color: #c8c8c8;
     --text-muted: #888;
@@ -3561,12 +3561,33 @@ html[class*="user-fs-"] #sidebar.w0bm-sidebar-nocomments ~ .w0bm-main .vertical-
     }
 }
 html[class*="user-fs-"] #anon-setup-modal .navbar-anon-modal-box,
-html[class*="user-fs-"] #privacy-consent-modal .pc-content {
+html[class*="user-fs-"] :is(#privacy-consent-modal, #tos-consent-modal) .pc-content {
     max-height: calc(90vh / var(--fs-zoom));
     width: min(420px, 92vw / var(--fs-zoom));
 }
-html[class*="user-fs-"] #privacy-consent-modal .pc-content {
+html[class*="user-fs-"] :is(#privacy-consent-modal, #tos-consent-modal) .pc-content {
     width: min(640px, 94vw / var(--fs-zoom));
+}
+
+/* Rules and terms before registering (snippets/tos-consent.html): the same dialog, opened and
+   closed through the hidden attribute */
+#tos-consent-modal {
+    display: flex;
+}
+#tos-consent-modal[hidden] {
+    display: none;
+}
+#tos-consent-modal .pc-md {
+    padding: 15px 20px;
+    overflow-wrap: anywhere;
+}
+#tos-consent-modal .pc-md-plain {
+    white-space: pre-wrap;
+}
+/* a text the admins have not written yet */
+#tos-consent-modal .pc-md-empty {
+    font-style: italic;
+    opacity: 0.7;
 }
 html[class*="user-fs-"] .w0bm-popover-host > .popover,
 html[class*="user-fs-"] .popover.w0bm-target-popover {
