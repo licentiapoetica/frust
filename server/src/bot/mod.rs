@@ -1,9 +1,9 @@
-//! Chat bots (IRC, Telegram, Matrix, Slack) — native replacement for the `cuffeo` package plus the
+//! Chat bots (IRC, Telegram, Matrix) — native replacement for the `cuffeo` package plus the
 //! bot runtime of `src/index.mjs` (`self._trigger`, event registration), `src/inc/events/*` and
 //! `src/inc/trigger/*`.
 //!
 //! Layout:
-//! * `irc.rs`, `telegram.rs`, `matrix.rs`, `slack.rs` — protocol clients (`cuffeo/src/clients/*`).
+//! * `irc.rs`, `telegram.rs`, `matrix.rs` — protocol clients (`cuffeo/src/clients/*`).
 //!   Each client runs its own reconnect loop with backoff and never blocks or crashes the web server.
 //! * `net.rs` (TCP/TLS for IRC).
 //! * `events.rs` — `src/inc/events/*` (message dispatch, CTCP, logging).
@@ -19,7 +19,6 @@ pub mod matrix;
 pub mod net;
 pub mod parser;
 pub mod pipeline;
-pub mod slack;
 pub mod telegram;
 pub mod triggers;
 
@@ -38,7 +37,6 @@ pub enum Kind {
     Irc,
     Tg,
     Matrix,
-    Slack,
 }
 
 impl Kind {
@@ -47,7 +45,6 @@ impl Kind {
             Kind::Irc => "irc",
             Kind::Tg => "tg",
             Kind::Matrix => "matrix",
-            Kind::Slack => "slack",
         }
     }
 
@@ -56,13 +53,12 @@ impl Kind {
             "irc" => Some(Kind::Irc),
             "tg" => Some(Kind::Tg),
             "matrix" => Some(Kind::Matrix),
-            "slack" => Some(Kind::Slack),
             _ => None,
         }
     }
 
-    /// Default `clients` of a trigger (`["irc", "tg", "slack", "matrix"]`).
-    pub const ALL: &'static [Kind] = &[Kind::Irc, Kind::Tg, Kind::Slack, Kind::Matrix];
+    /// Default `clients` of a trigger (`["irc", "tg", "matrix"]`).
+    pub const ALL: &'static [Kind] = &[Kind::Irc, Kind::Tg, Kind::Matrix];
 }
 
 /// `e.user` of the old message objects.
@@ -73,7 +69,7 @@ pub struct User {
     pub prefix: String,
     pub nick: String,
     pub username: Option<String>,
-    /// IRC services account / Telegram numeric id / Matrix id / Slack user name.
+    /// IRC services account / Telegram numeric id / Matrix id.
     pub account: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hostname: Option<String>,
@@ -93,7 +89,6 @@ pub enum Client {
     Irc(Arc<irc::Irc>),
     Tg(Arc<telegram::Telegram>),
     Matrix(Arc<matrix::Matrix>),
-    Slack(Arc<slack::Slack>),
 }
 
 impl Client {
@@ -102,7 +97,6 @@ impl Client {
             Client::Irc(_) => Kind::Irc,
             Client::Tg(_) => Kind::Tg,
             Client::Matrix(_) => Kind::Matrix,
-            Client::Slack(_) => Kind::Slack,
         }
     }
 
@@ -112,7 +106,6 @@ impl Client {
             Client::Irc(c) => c.network.clone(),
             Client::Tg(_) => "Telegram".into(),
             Client::Matrix(_) => "Matrix".into(),
-            Client::Slack(_) => "Slack".into(),
         }
     }
 
@@ -124,7 +117,6 @@ impl Client {
                 c.send(target, msg, None, &json!({})).await;
             }
             Client::Matrix(c) => c.sendmsg(target, msg).await,
-            Client::Slack(c) => c.send(target, msg).await,
         }
     }
 }
@@ -157,7 +149,7 @@ pub struct Message {
     /// Telegram: URL of an attached file (`e.media`).
     pub media: Option<String>,
     pub reply_to: Option<ReplyTo>,
-    /// Raw protocol data (Telegram message object, Matrix event, Slack event, IRC `{prefix, command, params}`).
+    /// Raw protocol data (Telegram message object, Matrix event, IRC `{prefix, command, params}`).
     pub raw: Value,
     /// Where replies go (channel / chat id / room id; the sender for IRC private messages).
     pub target: String,
@@ -206,10 +198,6 @@ impl Message {
                 c.send(&self.target, &matrix::Outgoing::Text(matrix::format(text)), "text").await;
                 None
             }
-            Client::Slack(c) => {
-                c.send(&self.target, text).await;
-                None
-            }
         }
     }
 
@@ -230,7 +218,6 @@ impl Message {
                 c.send(&self.target, &format!("Uwe {text}"), self.raw["message_id"].as_i64(), &json!({})).await;
             }
             Client::Matrix(c) => c.send(&self.target, &matrix::Outgoing::Text(matrix::format(text)), "emote").await,
-            Client::Slack(c) => c.send(&self.target, &format!("[i]{text}[/i]")).await,
         }
     }
 
@@ -270,7 +257,6 @@ impl Message {
         match &self.client {
             Client::Irc(c) => c.cached_user(name),
             Client::Tg(c) => c.cached_user(name),
-            Client::Slack(c) => c.cached_user(name),
             Client::Matrix(_) => None,
         }
     }
@@ -372,7 +358,7 @@ impl BotHandle {
     }
 
     /// Send a plain-text message to a channel/room on the given network
-    /// (`"matrix"`, `"tg"`, `"irc"`, `"slack"`, or an IRC network name). Errors are logged, never returned.
+    /// (`"matrix"`, `"tg"`, `"irc"`, or an IRC network name). Errors are logged, never returned.
     pub async fn send(&self, network: &str, target: &str, message: &str) {
         let client = {
             let clients = self.clients.read();
@@ -424,11 +410,6 @@ pub fn start(st: &AppState) {
                 let cl = matrix::Matrix::new(&c, tx.clone());
                 tokio::spawn(cl.clone().run());
                 Client::Matrix(cl)
-            }
-            Some(Kind::Slack) => {
-                let cl = slack::Slack::new(&c, st.http.clone(), tx.clone());
-                tokio::spawn(cl.clone().run());
-                Client::Slack(cl)
             }
             None => {
                 tracing::error!("[BOT] not supported client: {ty}");

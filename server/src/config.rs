@@ -205,7 +205,7 @@ impl Config {
         self.get("nsfp").as_array().map(|a| a.iter().filter_map(as_int).collect()).unwrap_or_default()
     }
 
-    /// Bot client config by type (`irc`, `tg`, `matrix`, `slack`).
+    /// Bot client config by type (`irc`, `tg`, `matrix`).
     pub fn client(&self, kind: &str) -> Option<&Value> {
         self.get("clients").as_array()?.iter().find(|c| c["type"].as_str() == Some(kind))
     }

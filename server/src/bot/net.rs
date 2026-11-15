@@ -1,4 +1,4 @@
-//! TCP / TLS connections for the IRC client and the Slack websocket.
+//! TCP / TLS connections for the IRC client.
 
 use anyhow::{Context, Result};
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};

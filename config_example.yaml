@@ -11,7 +11,7 @@ main:
   socks: socks5h://tor:9050
   # JavaScript runtime yt-dlp uses for YouTube (link uploads): deno (default, in the Docker image), node, bun or quickjs
   # ytdlp_js_runtime: deno
-  # Chat bots (IRC/Slack/Telegram/Matrix): YouTube links become embeds like on the web upload.
+  # Chat bots (IRC/Telegram/Matrix): YouTube links become embeds like on the web upload.
   # Set true to download them with yt-dlp instead.
   # bot_youtube_download: false
   mail: admin@example.com
@@ -319,12 +319,6 @@ clients:
     realname: bot
     channels:
       - "#example"
-  # Slack via Socket Mode: token = bot token (xoxb-, scopes chat:write, channels:read, users:read,
-  # event subscriptions message.channels/message.groups), appToken = app-level token (xapp-, connections:write)
-  - type: slack
-    enabled: false
-    token: ""
-    appToken: ""
 sql:
   host: localhost
   port: 5432

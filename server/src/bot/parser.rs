@@ -3,7 +3,7 @@
 //! checks size/mime/reposts and adds the item to the site.
 //!
 //! Flow per platform:
-//! * IRC/Slack: any link in a channel whose name contains `main.upload_channel_keyword` (`w0bm`),
+//! * IRC: any link in a channel whose name contains `main.upload_channel_keyword` (`w0bm`),
 //!   or anywhere with the trigger (`!w`). IRC follows the site's rating/tag rules (tags only after `-t`).
 //! * Telegram/Matrix: `!w -sfw|-nsfw|-nsfl -t tag1, tag2` (site rating/tag rules), account must be linked
 //!   (`!link`); Matrix only in `upload_channel_id` if set; Telegram also forwarded messages and the
@@ -368,7 +368,6 @@ fn trunc(s: &str, n: usize) -> String {
 
 /// The website account (`id`, `user`) linked to the sender's Telegram/Matrix/IRC account
 /// (`!link`). On IRC the account comes from a fresh WHOIS (`irc_identified`), never from the nick.
-/// Always `None` on Slack, which has no account linking.
 pub(crate) async fn linked_user(st: &crate::state::AppState, e: &Message) -> Result<Option<(i64, String)>> {
     let (kind, alias) = match e.kind {
         Kind::Matrix => ("matrix", e.user.account.clone().unwrap_or_default()),
@@ -377,7 +376,6 @@ pub(crate) async fn linked_user(st: &crate::state::AppState, e: &Message) -> Res
             Some(account) => ("irc", super::irc_alias(&account, &e.network)),
             None => return Ok(None),
         },
-        Kind::Slack => return Ok(None),
     };
     alias_user(st, kind, &alias).await
 }
@@ -466,8 +464,8 @@ pub async fn run(rt: Arc<Runtime>, e: Message) -> Result<()> {
     }
 
     // Rating and tags follow the site's upload rules (`Rules::from_site`). They apply to `!w` on
-    // Matrix/Telegram and to every IRC upload (links in upload channels too). Slack and forwarded
-    // Telegram messages upload without them.
+    // Matrix/Telegram and to every IRC upload (links in upload channels too). Forwarded Telegram
+    // messages upload without them.
     let irc = e.kind == Kind::Irc;
     let rules = Rules::from_site(&cfg, st.settings.min_tags(), !irc);
     let usage = rules.usage(&trigger, irc);

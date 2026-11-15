@@ -351,7 +351,6 @@ pub fn help_text(rt: &Runtime, kind: Kind, level: i64, trigger_word: &str) -> St
     cmds.push(match kind {
         Kind::Matrix | Kind::Tg => rules(true).usage(trigger_word, false),
         Kind::Irc => rules(false).usage(trigger_word, true),
-        Kind::Slack => format!("{trigger_word} <url>"),
     });
     cmds.sort();
     cmds.dedup();
