@@ -3026,7 +3026,7 @@
   // ── Filter panel ──────────────────────────────────────────────────────────
   const modeLabels = { 0: 'SFW', 1: 'NSFW', 2: 'Unrated', 3: 'All', 4: 'NSFL' };
 
-  filterOpenBtn.addEventListener('click', () => {
+  filterOpenBtn?.addEventListener('click', () => {
     pending = { ...applied, tags: [...applied.tags] }; syncPanelUI();
     tagInput.value = ''; tagClear.classList.remove('show'); tagSuggestEl.innerHTML = ''; renderActiveTags();
     openPanel(filterPanel, filterBackdrop);
