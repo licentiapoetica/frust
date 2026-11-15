@@ -587,6 +587,21 @@ img.v2-profile-ava {
   font-size: 12px;
 }
 
+/* Register page: the application message, like the inputs (f0ck.css .login-form input) */
+.login-form .v2-register-application {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 80px;
+  margin: 6px 0;
+  padding: 5px;
+  background: var(--bg);
+  border: 1px solid var(--black);
+  color: #fff;
+  font: inherit;
+  resize: vertical;
+}
+
 .login-form .register-honeypot {
   position: absolute;
   left: -10000px;

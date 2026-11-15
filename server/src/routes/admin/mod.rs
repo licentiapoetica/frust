@@ -12,6 +12,7 @@
 //! `throw new Error(...)` handlers; database errors only report their first line (the old code
 //! sent `err.message`, our query errors also carry the SQL text).
 
+mod applications;
 mod bans;
 mod dashboard;
 mod maintenance;
@@ -27,6 +28,7 @@ use serde_json::{Value, json};
 
 pub fn register(r: &mut Router) {
     dashboard::register(r);
+    applications::register(r);
     maintenance::register(r);
     bans::register(r);
     users::register(r);

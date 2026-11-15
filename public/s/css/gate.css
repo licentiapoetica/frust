@@ -843,6 +843,13 @@ html:where(.gate-cloudflare),
   font-family: inherit;
 }
 
+/* Application message of the register form */
+#gate-modal .gate-textarea {
+  display: block;
+  min-height: 80px;
+  resize: vertical;
+}
+
 #gate-modal .gate-honeypot {
   display: none !important;
 }

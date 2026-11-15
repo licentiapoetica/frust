@@ -43,7 +43,7 @@ pub fn register(r: &mut Router) {
 const USER_TYPES: [&str; 4] = ["comment_reply", "subscription", "mention", "upload_comment"];
 const SYSTEM_TYPES: [&str; 10] =
     ["approve", "deny", "item_deleted", "upload_success", "upload_error", "admin_pending", "report", "warning", "invite_approved", "invite_denied"];
-const ADMIN_TYPES: [&str; 1] = ["invite_request"];
+const ADMIN_TYPES: [&str; 2] = ["invite_request", "account_application"];
 
 fn type_filter(tab: Option<&str>) -> Option<Vec<String>> {
     let l: &[&str] = match tab? {
@@ -109,7 +109,7 @@ fn unread_filter(s: &Session) -> crate::db::Sql {
         WHERE n.user_id = "#,
         s.id as i32,
         r#" AND n.is_read = false
-        AND (n.type IN ('admin_pending', 'deny', 'item_deleted', 'report', 'approve', 'warning', 'invite_request', 'invite_approved', 'invite_denied')
+        AND (n.type IN ('admin_pending', 'deny', 'item_deleted', 'report', 'approve', 'warning', 'invite_request', 'account_application', 'invite_approved', 'invite_denied')
              OR ("#,
         !dnd,
         r#" AND (
@@ -120,7 +120,7 @@ fn unread_filter(s: &Session) -> crate::db::Sql {
         r#")
              ))
         )
-        AND (n.item_id IS NULL OR (i.active = true AND i.is_deleted = false) OR n.type IN ('admin_pending', 'deny', 'item_deleted', 'report', 'warning', 'invite_request', 'invite_approved', 'invite_denied'))
+        AND (n.item_id IS NULL OR (i.active = true AND i.is_deleted = false) OR n.type IN ('admin_pending', 'deny', 'item_deleted', 'report', 'warning', 'invite_request', 'account_application', 'invite_approved', 'invite_denied'))
         AND (n.type != 'report' OR r.status = 'pending')
         AND (n.type != 'admin_pending' OR (i.active = false AND i.is_deleted = false))"#
     )

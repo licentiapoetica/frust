@@ -1,5 +1,6 @@
 {#- Hidden login/register modal of the private society gate (index.mjs getGateLoginInjection).
-    Static apart from the captcha switch (`captcha`). The login captcha only appears after repeated
+    Static apart from the captcha switch (`captcha`) and the application fields of the register
+    form (`registration_apply`, `registration_apply_email`). The login captcha only appears after repeated
     failed logins (the server answers `captcha: true`). -#}
 <link rel="stylesheet" href="/s/css/gate.css?v={{ mtime("/public/s/css/gate.css") }}">
 <div id="hot-corner"></div>
@@ -42,7 +43,13 @@
         <input type="text" name="username" placeholder="Username" autocomplete="off" required class="gate-input" />
         <input type="password" name="password" placeholder="Password (min. 20 characters)" autocomplete="off" required minlength="20" class="gate-input" />
         <input type="password" name="password_confirm" placeholder="Confirm password" autocomplete="off" required minlength="20" class="gate-input" />
+        {% if registration_apply %}
+        <input type="text" name="token" placeholder="Invite token (if you have one)" autocomplete="off" class="gate-input" />
+        <textarea name="application" maxlength="1000" rows="4" placeholder="No token? Tell us why you want an account (min. 20 characters)" class="gate-input gate-textarea"></textarea>
+        <input type="email" name="email" placeholder="{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}" autocomplete="off" class="gate-input" />
+        {% else %}
         <input type="text" name="token" placeholder="Invite token" autocomplete="off" class="gate-input" />
+        {% endif %}
         <input type="text" name="email_confirm_field" class="gate-honeypot" tabindex="-1" autocomplete="off" />
         {% if captcha %}<cap-widget data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% endif %}
         <button type="submit" id="gate-register-btn" class="gate-submit-btn">Create account</button>

@@ -30,6 +30,7 @@
             {% elif n.type == "report" %}new <a href="/mod/reports">report</a> #{{ n.reference_id }}
             {% elif n.type == "warning" %}you got a warning: {{ n.reason }}
             {% elif n.type == "invite_request" %}new <a href="/admin">invite request</a>
+            {% elif n.type == "account_application" %}new <a href="/admin/applications">account application</a>
             {% elif n.type == "invite_approved" %}your invite request was approved
             {% elif n.type == "invite_denied" %}your invite request was denied
             {% else %}{{ n.type }}{% endif %}

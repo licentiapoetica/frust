@@ -155,15 +155,32 @@ async fn login(st: AppState, mut req: Req) -> Res {
     let by_email = username.contains('@');
     let user = sql!(
         r#"select id, password, activated, banned, ban_reason, ban_expires, force_password_change from "user" where "login" = "#,
-        login.clone(), " or (", by_email, " and lower(email) = lower(", username.trim().to_string(), r#")) order by ("login" = "#, login,
+        login.clone(), " or (", by_email, " and lower(email) = lower(", username.trim().to_string(), r#")) order by ("login" = "#, login.clone(),
         ") desc, id limit 1"
     )
     .fetch_optional(&st.db)
     .await?;
 
     let Some(user) = user else {
-        let dummy = DUMMY_HASH.get_or_init(|| crate::util::hash_password(crate::util::random_hex(16))).await;
-        let _ = crate::util::verify_password(password, dummy.clone()).await;
+        // No account yet: with the password of an application (see `register_post`) the answer is
+        // its state. One Argon2 run, as for the dummy hash.
+        let app = sql!(
+            "select password, status from account_applications where login = ", login,
+            " and status in ('pending', 'denied') and password <> '' order by id desc limit 1"
+        )
+        .fetch_optional(&st.db)
+        .await?;
+        let hash = match &app {
+            Some(a) => a.string("password"),
+            None => DUMMY_HASH.get_or_init(|| crate::util::hash_password(crate::util::random_hex(16))).await.clone(),
+        };
+        let matches = crate::util::verify_password(password, hash).await;
+        if let (true, Some(app)) = (matches, &app) {
+            // Right password: not a failed guess
+            crate::security::settle_attempt(&st, attempt, Settle::Withdraw).await;
+            let msg = if app.str("status") == Some("pending") { APPLICATION_PENDING } else { APPLICATION_DENIED };
+            return Ok(respond(msg, false));
+        }
         fail!("user doesn't exist or wrong password");
     };
     let stored_hash = user.string("password");
@@ -243,6 +260,26 @@ async fn login(st: AppState, mut req: Req) -> Res {
 /// Invite tokens nobody registered with expire this long after they were created.
 pub const INVITE_TOKEN_TTL_SECS: i64 = 7 * 24 * 3600;
 
+// ── Account applications ────────────────────────────────────────────────────
+// With registration closed and applications on (settings: `registration_applications`), the
+// register form also takes a message instead of an invite token. That stores an
+// `account_applications` row (name, password hash, message); the "user" row is created when an admin
+// approves it (routes/admin/applications.rs). The applicant learns the state by logging in.
+
+/// Length of an application message, in characters.
+const APPLICATION_MSG_MIN: usize = 20;
+const APPLICATION_MSG_MAX: usize = 1000;
+/// A declined applicant (same IP hash) can apply again after this many days.
+const APPLICATION_COOLDOWN_DAYS: i32 = 7;
+/// Decided applications are deleted after this many days, unanswered ones after
+/// [`APPLICATION_PENDING_DAYS`].
+const APPLICATION_KEEP_DAYS: i32 = 30;
+const APPLICATION_PENDING_DAYS: i32 = 90;
+
+const APPLICATION_SENT: &str = "Application submitted! Log in with your username and password to see its status.";
+const APPLICATION_PENDING: &str = "Your application is still under review.";
+const APPLICATION_DENIED: &str = "Your application was declined.";
+
 /// Deletes unused invite tokens older than [`INVITE_TOKEN_TTL_SECS`] (a minute after boot, then
 /// hourly). Approved invite requests whose token expires become `revoked`, as when an admin
 /// deletes the token. Registration checks the age itself, so a token is refused the moment it
@@ -272,6 +309,16 @@ async fn purge_expired_invites(st: &AppState) -> anyhow::Result<()> {
     if n > 0 {
         tracing::info!("[INVITE EXPIRY] Deleted {n} unused invite token(s) older than 7 days");
     }
+    // Account applications: decided ones (name, message, IP hash) and ones nobody answered
+    let n = sql!(
+        "DELETE FROM account_applications WHERE (status <> 'pending' AND reviewed_at < now() - make_interval(days => ", APPLICATION_KEEP_DAYS,
+        ")) OR (status = 'pending' AND created_at < now() - make_interval(days => ", APPLICATION_PENDING_DAYS, "))"
+    )
+    .execute(&st.db)
+    .await?;
+    if n > 0 {
+        tracing::info!("[APPLICATIONS] Deleted {n} old account application(s)");
+    }
     Ok(())
 }
 
@@ -286,6 +333,15 @@ const AUTH_ERRORS: &[(&str, &str)] = &[
     ("pw_mismatch", "Passwords do not match."),
     ("token_required", "Invite token is required for registration."),
     ("token_invalid", "Invalid or used invite token"),
+    ("token_expired", "Invalid, used or expired invite token"),
+    ("app_required", "An invite token or a message why you want an account is required."),
+    ("app_length", "Tell us in 20 to 1000 characters why you want an account."),
+    ("app_email", "A valid email is required to apply."),
+    ("app_anon", "Anonymous accounts request an invite in their settings."),
+    ("app_open", "You already have a pending application."),
+    ("app_cooldown", "Your last application was declined. You can apply again later."),
+    ("app_pending", APPLICATION_PENDING),
+    ("app_denied", APPLICATION_DENIED),
     ("email_required", "A valid email is required for registration."),
     ("email_taken", "Email already registered"),
     ("locked", "Too many attempts."),
@@ -308,6 +364,7 @@ const AUTH_ERRORS: &[(&str, &str)] = &[
 const AUTH_DONE: &[(&str, &str)] = &[
     ("registered", "Registration successful! You can now login."),
     ("activate", "Registration successful! Please check your email to activate your account."),
+    ("applied", APPLICATION_SENT),
     ("reset_sent", "If an account with that email exists, we have sent a reset link."),
     ("pw_reset", "Password reset successfully! You can now login with your new password."),
 ];
@@ -596,6 +653,37 @@ enum Created {
     TokenGone,
 }
 
+pub(crate) struct NewUser<'a> {
+    /// As typed; the login is its lower case
+    pub username: &'a str,
+    pub hash: &'a str,
+    pub email: Option<&'a str>,
+    pub activated: bool,
+    pub activation_token: Option<&'a str>,
+}
+
+/// Insert a regular account with its default options (registration, an approved application).
+/// The new user's id.
+pub(crate) async fn insert_user(st: &AppState, conn: &mut sqlx::PgConnection, u: NewUser<'_>) -> anyhow::Result<i32> {
+    let cfg = st.cfg();
+    let id: i32 = sql!(
+        r#"insert into "user" ("login", "password", "user", "created_at", "admin", "is_moderator", "email", "activated", "activation_token") values ("#,
+        u.username.to_lowercase(), ", ", u.hash.to_string(), ", ", u.username.to_string(), ", to_timestamp(", crate::util::now_secs() as f64,
+        "), false, false, ", u.email.map(str::to_string), ", ", u.activated, ", ", u.activation_token.map(str::to_string), ") returning id"
+    )
+    .fetch_scalar::<i32, _>(&mut *conn)
+    .await?
+    .ok_or_else(|| anyhow::anyhow!("user insert returned no id"))?;
+    sql!(
+        "insert into user_options (user_id, mode, theme, fullscreen, avatar, avatar_file, use_new_layout, disable_autoplay, disable_swiping, use_alternative_infobox) values (",
+        id, ", 3, 'amoled', 0, null, 'default.png', ", st.settings.default_layout() == "modern", ", ", cfg.is_false("websrv.enable_autoplay"), ", ",
+        cfg.is_false("websrv.enable_swiping"), ", ", cfg.enabled("websrv.user_alternative_infobox"), ")"
+    )
+    .execute(&mut *conn)
+    .await?;
+    Ok(id)
+}
+
 async fn register_post(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
     let ip = req.real_ip();
@@ -606,7 +694,8 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
     let email = req.post_str("email").await.filter(|e| !e.is_empty());
     let password = req.post_str("password").await.filter(|p| !p.is_empty());
     let password_confirm = req.post_str("password_confirm").await;
-    let token = req.post_str("token").await.filter(|t| !t.is_empty());
+    let token = req.post_str("token").await.map(|t| t.trim().to_string()).filter(|t| !t.is_empty());
+    let application = req.post_str("application").await.map(|m| m.trim().to_string()).unwrap_or_default();
     let honeypot = req.post_str("email_confirm_field").await.filter(|h| !h.is_empty());
     let captcha = req.post_str("cap-token").await;
     let cap_image_id = req.post_str("cap-image-id").await;
@@ -676,8 +765,26 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
 
     let mut activated = true;
     let mut activation_token: Option<String> = None;
-    if !registration_open && token.is_none() {
+    // No token while registration is closed: an application, when the site takes them
+    let applying = !registration_open && token.is_none() && st.settings.registration_applications(&cfg);
+    if !registration_open && token.is_none() && !applying {
         render_error!("Invite token is required for registration.");
+    }
+    if applying {
+        // An anonymous passkey identity has its own way (invite requests in the settings)
+        if req.session().is_some_and(|s| s.is_anon) {
+            render_error!("Anonymous accounts request an invite in their settings.");
+        }
+        let len = application.chars().count();
+        if len == 0 {
+            render_error!("An invite token or a message why you want an account is required.");
+        }
+        if !(APPLICATION_MSG_MIN..=APPLICATION_MSG_MAX).contains(&len) {
+            render_error!("Tell us in 20 to 1000 characters why you want an account.");
+        }
+        if st.settings.applications_require_email() && !email.as_deref().is_some_and(valid_email) {
+            render_error!("A valid email is required to apply.");
+        }
     }
     if let Some(t) = &token {
         let ok = sql!(
@@ -689,7 +796,7 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
         if ok.is_none() {
             render_error!("Invalid, used or expired invite token");
         }
-    } else if crate::settings::registration_require_mail_andor_token(&cfg) {
+    } else if !applying && crate::settings::registration_require_mail_andor_token(&cfg) {
         if !email.as_deref().is_some_and(|e| e.contains('@')) {
             render_error!("A valid email is required for registration.");
         }
@@ -714,8 +821,71 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
         }
         render_error!("Username taken");
     }
+    // Names and emails of applications waiting for an answer are taken as well
+    let mut q = sql!("select email from account_applications where status = 'pending' and (login = ", username.to_lowercase());
+    if let Some(e) = &email {
+        q.push(" or (email is not null and lower(email) = lower(").bind(e.clone()).push("))");
+    }
+    q.push(") limit 1");
+    if let Some(open) = q.fetch_optional(&st.db).await? {
+        let em = email.as_deref().unwrap_or("").to_lowercase();
+        if open.str("email").is_some_and(|e| !e.is_empty() && e.to_lowercase() == em) {
+            render_error!("Email already registered");
+        }
+        render_error!("Username taken");
+    }
 
     let hash = crate::util::hash_password(password).await;
+
+    if applying {
+        let ip_hash = (!ip.is_empty()).then(|| crate::security::hash_ip(&cfg, &ip));
+        // One open application per address, and a pause after a declined one
+        if let Some(h) = &ip_hash {
+            let last = sql!(
+                "select status from account_applications where ip_hash = ", h.clone(),
+                " and (status = 'pending' or (status = 'denied' and reviewed_at > now() - make_interval(days => ", APPLICATION_COOLDOWN_DAYS,
+                "))) order by (status = 'pending') desc limit 1"
+            )
+            .fetch_optional(&st.db)
+            .await?;
+            match last.as_ref().and_then(|r| r.str("status")) {
+                Some("pending") => render_error!("You already have a pending application."),
+                Some(_) => render_error!("Your last application was declined. You can apply again later."),
+                None => {}
+            }
+        }
+        let inserted = sql!(
+            "insert into account_applications (login, username, password, email, message, ip_hash) values (", username.to_lowercase(), ", ",
+            username.clone(), ", ", hash, ", ", email.clone(), ", ", application.clone(), ", ", ip_hash, ")"
+        )
+        .execute(&st.db)
+        .await;
+        if let Err(e) = inserted {
+            // The unique index on pending logins: someone applied with this name a moment ago
+            if pg_code(&e).as_deref() == Some("23505") {
+                render_error!("Username taken");
+            }
+            tracing::error!("[APPLICATIONS] Insert failed: {e:#}");
+            render_error!("An unexpected error occurred. Please try again later.");
+        }
+        // Admins review them under /admin/applications
+        let admins: Vec<i32> = sql!(r#"SELECT id FROM "user" WHERE admin = true"#).fetch_scalar_list(&st.db).await.unwrap_or_default();
+        if !admins.is_empty() {
+            let data = json!({ "username": username, "reason": application.chars().take(100).collect::<String>() });
+            let sent = sql!(
+                "INSERT INTO notifications (user_id, type, reference_id, data) SELECT a, 'account_application', 0, ", data,
+                "::jsonb FROM unnest(", admins, "::int[]) AS a"
+            )
+            .execute(&st.db)
+            .await;
+            if let Err(e) = sent {
+                tracing::error!("[APPLICATIONS] Notifying admins failed: {e:#}");
+            }
+        }
+        tracing::info!("[APPLICATIONS] New application from {username}");
+        crate::security::record_attempt(&st, &ip, Some(&username), "register", true).await;
+        return Ok(if ajax { json_raw(&json!({ "success": true, "msg": APPLICATION_SENT, "applied": true }), 200) } else { page("success", APPLICATION_SENT) });
+    }
     // An anonymous passkey identity registering upgrades its shadow user in place (favs, comments,
     // uploads and passkeys stay); dropping the anon_identities row makes it a regular account.
     let upgrade_id = req.session().filter(|s| s.is_anon).map(|s| s.id);
@@ -740,22 +910,8 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
             sql!("delete from anon_identities where user_id = ", uid as i32).execute(&mut *tx).await?;
             uid
         } else {
-            let id: i32 = sql!(
-                r#"insert into "user" ("login", "password", "user", "created_at", "admin", "is_moderator", "email", "activated", "activation_token") values ("#,
-                username.to_lowercase(), ", ", hash.clone(), ", ", username.clone(), ", to_timestamp(", crate::util::now_secs() as f64, "), false, false, ",
-                email.clone(), ", ", activated, ", ", activation_token.clone(), ") returning id"
-            )
-            .fetch_scalar::<i32, _>(&mut *tx)
-            .await?
-            .ok_or_else(|| anyhow::anyhow!("user insert returned no id"))?;
-            sql!(
-                "insert into user_options (user_id, mode, theme, fullscreen, avatar, avatar_file, use_new_layout, disable_autoplay, disable_swiping, use_alternative_infobox) values (",
-                id, ", 3, 'amoled', 0, null, 'default.png', ", st.settings.default_layout() == "modern", ", ", cfg.is_false("websrv.enable_autoplay"), ", ",
-                cfg.is_false("websrv.enable_swiping"), ", ", cfg.enabled("websrv.user_alternative_infobox"), ")"
-            )
-            .execute(&mut *tx)
-            .await?;
-            id as i64
+            let new = NewUser { username: &username, hash: &hash, email: email.as_deref(), activated, activation_token: activation_token.as_deref() };
+            insert_user(&st, &mut tx, new).await? as i64
         };
         // The invite token is consumed in the same transaction, so a token can't be used twice
         if let Some(t) = &token {

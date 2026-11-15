@@ -776,6 +776,7 @@
   ['comment_reply', 'subscription', 'mention', 'upload_comment'].forEach((t) => { NOTIF_TAB[t] = 'user'; });
   ['approve', 'deny', 'item_deleted', 'upload_success', 'upload_error', 'admin_pending', 'report', 'warning', 'invite_approved', 'invite_denied'].forEach((t) => { NOTIF_TAB[t] = 'system'; });
   NOTIF_TAB.invite_request = 'admin';
+  NOTIF_TAB.account_application = 'admin';
   const tabCount = (tab) => {
     const li = $('.w0bm-tabs > li[data-tab="' + tab + '"]');
     return li ? +(li.querySelector('.w0bm-tab-count')?.textContent || 0) || 0 : 0;

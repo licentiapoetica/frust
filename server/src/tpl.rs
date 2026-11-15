@@ -722,6 +722,8 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("manual_approval", json!(s.manual_approval));
     put("min_tags", json!(s.min_tags));
     put("registration_open", json!(st.settings.registration_open(cfg)));
+    put("registration_apply", json!(st.settings.registration_applications(cfg)));
+    put("registration_apply_email", json!(s.applications_require_email));
     put("hw_fingerprint_enabled", json!(crate::settings::hw_fingerprint_enabled(cfg)));
     put("privacy_ip_mode", json!(privacy_ip_mode));
     put("registration_web_toggle_enabled", json!(cfg.enabled("websrv.open_registration_web_toggle")));
@@ -1291,6 +1293,44 @@ mod tests {
         assert!(f.contains("<p class=\"upload-form-drop-types\"><span>.webm</span><span>.mov</span><span>.pdf</span></p>"));
         assert!(f.contains("upload-form-drop-sound"));
         assert!(!form(false).contains("upload-form-drop-sound"));
+    }
+
+    /// Registration by application (routes/register.rs): every register form gets the message
+    /// field and an optional token, and the admin page lists them as plain forms.
+    #[test]
+    fn register_forms_take_applications() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let render = |view: &str, ctx: &serde_json::Value| env.get_template(view).unwrap().render(to_jvalue(ctx)).unwrap();
+        let forms = ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/w0bm/partials/registerform.html", "gate/login_injection.html"];
+        let mut ctx = serde_json::json!({ "csrf_token": "tok", "domain": "f0ck.test", "registration_open": false, "captcha_enabled": false,
+            "registration_apply": true, "registration_apply_email": false, "url": { "pathname": "/", "search": "", "qs": {} } });
+        for view in forms {
+            let html = render(view, &ctx);
+            assert!(html.contains("name=\"application\""), "{view}: no message field");
+            assert!(html.contains("name=\"email\""), "{view}: no email field");
+            // the token is optional here
+            let token = html.split("name=\"token\"").nth(1).unwrap_or_else(|| panic!("{view}: no token field"));
+            assert!(!token.split('>').next().unwrap().contains("required"), "{view}: token still required");
+        }
+        ctx["registration_apply"] = serde_json::json!(false);
+        for view in forms {
+            let html = render(view, &ctx);
+            assert!(!html.contains("name=\"application\""), "{view}");
+            assert!(html.contains("name=\"token\""), "{view}");
+        }
+
+        let page = serde_json::json!({ "csrf_token": "tok", "pending_count": 1, "applications_on": true, "applications": [
+            { "id": 7, "username": "Neu", "email": "n@example.org", "message": "<b>hi</b> please let me in", "status": "pending", "created_at": "2026-11-15T10:00:00Z" },
+            { "id": 6, "username": "Alt", "message": "let me in, I upload a lot", "status": "denied", "created_at": "2026-11-14T10:00:00Z",
+              "reviewed_at": "2026-11-14T12:00:00Z", "reviewed_by_name": "admin" },
+        ] });
+        let html = render("admin/applications.html", &page);
+        assert!(html.contains("&lt;b&gt;hi&lt;/b&gt; please let me in"));
+        assert_eq!(html.matches("action=\"/api/v2/admin/applications/approve\"").count(), 1);
+        assert_eq!(html.matches("action=\"/api/v2/admin/applications/deny\"").count(), 1);
+        assert_eq!(html.matches("<input type=\"hidden\" name=\"id\" value=\"7\">").count(), 2);
+        assert!(html.contains("Declined by admin"));
     }
 
     #[test]

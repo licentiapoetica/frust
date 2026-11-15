@@ -187,6 +187,25 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"CREATE INDEX IF NOT EXISTS idx_invite_requests_fingerprint ON invite_requests(fingerprint)"#,
     r#"CREATE INDEX IF NOT EXISTS idx_invite_requests_status ON invite_requests(status)"#,
     r#"CREATE INDEX IF NOT EXISTS idx_invite_requests_pending ON invite_requests(created_at) WHERE (status = 'pending')"#,
+    // migrations/add_account_applications.sql: guests applying for an account with a message
+    // instead of an invite token (the "user" row is created when an admin approves)
+    r#"CREATE TABLE IF NOT EXISTS account_applications (
+      id SERIAL PRIMARY KEY,
+      login VARCHAR(255) NOT NULL,
+      username VARCHAR(255) NOT NULL,
+      password TEXT NOT NULL DEFAULT '',
+      email TEXT,
+      message TEXT NOT NULL DEFAULT '',
+      ip_hash VARCHAR(128),
+      status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied')),
+      user_id INTEGER REFERENCES "user"(id) ON DELETE SET NULL,
+      reviewed_by INTEGER REFERENCES "user"(id) ON DELETE SET NULL,
+      reviewed_at TIMESTAMP WITH TIME ZONE,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    )"#,
+    r#"CREATE UNIQUE INDEX IF NOT EXISTS idx_account_applications_pending_login ON account_applications(login) WHERE (status = 'pending')"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_account_applications_login ON account_applications(login)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_account_applications_status ON account_applications(status, created_at)"#,
     // migrations/fix_null_visibility.sql, then make the column NOT NULL (only touches the table once)
     r#"DO $$ BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns

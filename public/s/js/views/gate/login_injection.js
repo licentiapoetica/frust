@@ -97,7 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('gate-register-ok').textContent = d.msg || 'Account created! You can now sign in.';
         document.getElementById('gate-register-ok').style.display = 'block';
         document.getElementById('gate-register-form').reset();
-        setTimeout(function() { gateShowView('login'); }, 2000);
+        // An application: no account to sign in to yet, the message stays
+        if (!d.applied) setTimeout(function() { gateShowView('login'); }, 2000);
       }
     })
     .catch(function() {

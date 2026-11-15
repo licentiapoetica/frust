@@ -80,18 +80,19 @@ async fn dashboard(st: AppState, req: Req) -> Res {
             (SELECT count(*)::int FROM "user" WHERE NOT EXISTS (SELECT 1 FROM anon_identities ai WHERE ai.user_id = "user".id)) AS users,
             (SELECT count(*)::int FROM "user" WHERE EXISTS (SELECT 1 FROM anon_identities ai WHERE ai.user_id = "user".id)) AS anon_users,
             (SELECT count(*)::int FROM items WHERE active = false AND is_deleted = true AND is_purged = false) AS trash,
-            (SELECT count(*)::int FROM invite_requests WHERE status = 'pending') AS invite_requests"#
+            (SELECT count(*)::int FROM invite_requests WHERE status = 'pending') AS invite_requests,
+            (SELECT count(*)::int FROM account_applications WHERE status = 'pending') AS applications"#
     );
     let dash = match q.fetch_optional(&st.db).await {
         Ok(Some(r)) => {
             let n = |k: &str| r.i64(k).unwrap_or(0);
-            json!({ "open_reports": n("open_reports"), "users": n("users"), "anon_users": n("anon_users"), "trash": n("trash"), "invite_requests": n("invite_requests") })
+            json!({ "open_reports": n("open_reports"), "users": n("users"), "anon_users": n("anon_users"), "trash": n("trash"), "invite_requests": n("invite_requests"), "applications": n("applications") })
         }
         other => {
             if let Err(e) = other {
                 tracing::error!("[ADMIN] dashboard counters failed: {}", err_msg(&e));
             }
-            json!({ "open_reports": 0, "users": 0, "anon_users": 0, "trash": 0, "invite_requests": 0 })
+            json!({ "open_reports": 0, "users": 0, "anon_users": 0, "trash": 0, "invite_requests": 0, "applications": 0 })
         }
     };
     let s = st.settings.get();
@@ -104,6 +105,8 @@ async fn dashboard(st: AppState, req: Req) -> Res {
         "trusted_uploads": s.trusted_uploads,
         "registration_open": st.settings.registration_open(&cfg),
         "registration_web_toggle_enabled": cfg.enabled("websrv.open_registration_web_toggle"),
+        "registration_applications": s.registration_applications,
+        "applications_require_email": s.applications_require_email,
         "log_user_ips": crate::settings::log_user_ips(&cfg),
         "hash_user_ips": crate::settings::hash_user_ips(&cfg),
         "enable_cleanup": st.settings.enable_cleanup(&cfg),
@@ -424,6 +427,9 @@ async fn settings_save(st: AppState, mut req: Req) -> Res {
     let body = req.post().await?.clone();
     let manual_approval = body_str(&body, "manual_approval").as_deref() == Some("on");
     let registration_open = body_str(&body, "registration_open").as_deref() == Some("on");
+    // Left out by clients that don't know them: unchanged
+    let applications = body_str(&body, "registration_applications").map(|v| v == "on");
+    let applications_email = body_str(&body, "applications_require_email").map(|v| v == "on");
     let min_tags = parse_int(body_str(&body, "min_tags")).unwrap_or(0).max(0);
     // The old `Math.max(0, parseInt(x) ?? 3)` stored "NaN" for a non-numeric value; default to 3 instead.
     let trusted_uploads = parse_int(body_str(&body, "trusted_uploads")).unwrap_or(0).max(0);
@@ -433,12 +439,24 @@ async fn settings_save(st: AppState, mut req: Req) -> Res {
     if web_toggle {
         save_setting(&st, "registration_open", if registration_open { "true" } else { "false" }).await?;
     }
+    if let Some(on) = applications {
+        save_setting(&st, "registration_applications", if on { "true" } else { "false" }).await?;
+    }
+    if let Some(on) = applications_email {
+        save_setting(&st, "applications_require_email", if on { "true" } else { "false" }).await?;
+    }
     save_setting(&st, "min_tags", &min_tags.to_string()).await?;
     save_setting(&st, "trusted_uploads", &trusted_uploads.to_string()).await?;
     st.settings.update(|s| {
         s.manual_approval = manual_approval;
         if web_toggle {
             s.registration_open = registration_open;
+        }
+        if let Some(on) = applications {
+            s.registration_applications = on;
+        }
+        if let Some(on) = applications_email {
+            s.applications_require_email = on;
         }
         s.min_tags = min_tags;
         s.trusted_uploads = trusted_uploads;
@@ -451,6 +469,8 @@ async fn settings_save(st: AppState, mut req: Req) -> Res {
                 "success": true,
                 "manual_approval": s.manual_approval,
                 "registration_open": st.settings.registration_open(&cfg),
+                "registration_applications": s.registration_applications,
+                "applications_require_email": s.applications_require_email,
                 "min_tags": s.min_tags,
                 "trusted_uploads": s.trusted_uploads,
             }),

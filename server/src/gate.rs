@@ -67,6 +67,9 @@ pub fn build_gate_page(st: &AppState, req: &Req) -> String {
             { "id": "host", "icon": "server", "status": "error", "location": host, "name": "Host" },
         ],
         "captcha": captcha,
+        // The register form also takes an application (routes/register.rs)
+        "registration_apply": st.settings.registration_applications(&cfg),
+        "registration_apply_email": st.settings.applications_require_email(),
         "csp_nonce": req.csp_nonce,
     });
     st.tpl.render("gate/cloudflare", &ctx)

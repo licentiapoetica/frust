@@ -28,7 +28,11 @@
         <input type="text" name="username" placeholder="{{ t("auth.username_placeholder") }}" autocomplete="off" required />
         <input type="password" name="password" placeholder="{{ t("auth.password_placeholder") }}" autocomplete="off" required minlength="20" title="{{ t("auth.password_min_hint") }}" />
         <input type="password" name="password_confirm" placeholder="{{ t("auth.confirm_password") }}" autocomplete="off" required minlength="20" /><br>
-        {% if not registration_open %}
+        {% if registration_apply %}
+        <input type="text" name="token" placeholder="{{ t("auth.invite_token_optional") }}" autocomplete="off" value="{{ (token if token is defined else "") }}" />
+        <textarea name="application" class="register-application" maxlength="1000" rows="4" placeholder="{{ t("auth.application_placeholder") }}"></textarea>
+        <input type="email" name="email" placeholder="{{ t("auth.email_apply_required" if registration_apply_email else "auth.email_apply_optional") }}" autocomplete="off" />
+        {% elif not registration_open %}
         <input type="text" name="token" placeholder="{{ t("auth.invite_token") }}" autocomplete="off" value="{{ (token if token is defined else "") }}" required />
         {% elif registration_require_mail_andor_token %}
         <input type="email" name="email" placeholder="{{ t("auth.email_placeholder") }}" autocomplete="off" required />
@@ -41,7 +45,7 @@
         {% if captcha_enabled %}
         <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
         {% endif %}
-        <input type="submit" value="{{ t("auth.register_title") }}" />
+        <input type="submit" value="{{ t("auth.apply_or_register" if registration_apply else "auth.register_title") }}" />
         {% endif %}
 
         <div class="register-back">

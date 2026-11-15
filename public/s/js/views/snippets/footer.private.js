@@ -218,6 +218,7 @@
         const json = await resp.json();
         if (status) { status.textContent = json.msg || ''; status.className = json.success ? 'flash-success' : 'flash-error'; }
         if (json.success && json.upgraded) setTimeout(() => { location.reload(); }, 1500);
+        else if (json.success && json.applied) regForm.reset(); // an application: no account to log in to yet
         else if (json.success) setTimeout(() => { close(registerModal); open(loginModal); }, 2000);
         else window.f0ckCapReset?.(regForm); // captcha tokens are single-use
       } catch (err) {

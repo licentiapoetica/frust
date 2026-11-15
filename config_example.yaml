@@ -260,6 +260,11 @@ websrv:
   open_registration: false
   open_registration_web_toggle: false
   open_registration_require_mail_andor_token: false
+  # Registration closed: guests can apply for an account with a message instead of an invite token;
+  # admins approve or decline under /admin/applications. Both can be changed in the admin panel,
+  # these are the values until then.
+  registration_applications: false
+  registration_applications_require_email: false
   private_society: false
   private_society_gate: cloudflare
   private_society_gate_location: Frankfurt

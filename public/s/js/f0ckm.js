@@ -2902,6 +2902,8 @@ window.cancelAnimFrame = (function () {
               status.className = 'flash-success';
             }
             registerForm.reset();
+            // An application (no account yet): the message stays, nothing to log in to
+            if (json.applied) return;
             setTimeout(() => {
               const loginToRegister = document.getElementById('login-to-register');
               if (loginToRegister) {
@@ -18228,7 +18230,7 @@ class NotificationSystem {
   // Notification type categorization
   static USER_TYPES = ['comment_reply', 'subscription', 'mention', 'upload_comment'];
   static SYSTEM_TYPES = ['approve', 'deny', 'item_deleted', 'upload_success', 'upload_error', 'admin_pending', 'report', 'warning', 'invite_approved', 'invite_denied'];
-  static ADMIN_TYPES = ['invite_request'];
+  static ADMIN_TYPES = ['invite_request', 'account_application'];
 
   constructor() {
     this.bell = document.getElementById('nav-notif-btn');
@@ -19497,16 +19499,18 @@ class NotificationSystem {
     let msg = '';
     let user = n.from_display_name || n.from_user || 'System';
 
-    if (n.type === 'invite_request') {
-      const reason = n.data?.reason || '';
-      const username = n.data?.username || '???';
+    if (n.type === 'invite_request' || n.type === 'account_application') {
+      // Text typed by the requester: escaped
+      const reason = escHTML(n.data?.reason || '');
+      const username = escHTML(n.data?.username || '???');
+      const isApplication = n.type === 'account_application';
       return `
-        <a href="/admin/tokens" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="">
+        <a href="${isApplication ? '/admin/applications' : '/admin/tokens'}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="">
             <div class="notif-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg-lighter);color:var(--accent);font-size:1.5em;"><i class="fa-solid fa-inbox"></i></div>
             <div class="notif-content">
                 <div class="notif-user"><strong>${username}</strong></div>
                 <div class="notif-msg">
-                    <strong>Invite request</strong>
+                    <strong>${isApplication ? 'Account application' : 'Invite request'}</strong>
                     ${reason ? '<div class="notif-reason">' + reason + '</div>' : ''}
                 </div>
                 <div class="notif-time">${new Date(n.created_at).toLocaleString()}</div>
@@ -19631,15 +19635,17 @@ class NotificationSystem {
   renderItem(n) {
     const itemKey = n.item_slug || n.slug || n.item_id;
 
-    if (n.type === 'invite_request') {
-      const reason = n.data?.reason || '';
-      const username = n.data?.username || '???';
+    if (n.type === 'invite_request' || n.type === 'account_application') {
+      // Text typed by the requester: escaped
+      const reason = escHTML(n.data?.reason || '');
+      const username = escHTML(n.data?.username || '???');
+      const isApplication = n.type === 'account_application';
       return `
-            <a href="/admin/tokens" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="">
+            <a href="${isApplication ? '/admin/applications' : '/admin/tokens'}" class="notif-item ${n.is_read ? '' : 'unread'} notif-with-thumb" data-id="${n.id}" data-item-id="">
                 <div class="notif-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg-lighter);color:var(--accent);font-size:1.3em;"><i class="fa-solid fa-inbox"></i></div>
                 <div class="notif-content">
                     <div>
-                        <strong>Invite request</strong>
+                        <strong>${isApplication ? 'Account application' : 'Invite request'}</strong>
                         <div style="color: var(--text-muted); margin-top: 2px;">from <span style="color: #5bc0be; font-weight: 600;">${username}</span>${reason ? ' — ' + reason : ''}</div>
                     </div>
                     <small class="notif-time">${new Date(n.created_at).toLocaleString()}</small>

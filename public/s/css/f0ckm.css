@@ -8993,6 +8993,22 @@ body[type='login'] {
 
 }
 
+/* register.html: the application message (registration by application) */
+.login-form .register-application {
+  display: block;
+  box-sizing: border-box;
+  width: 300px;
+  max-width: 100%;
+  min-height: 90px;
+  margin: 0 auto 10px;
+  padding: 5px;
+  background: var(--bg);
+  border: 1px solid var(--black);
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+
 /* Markdown Styles */
 .comment-content .greentext {
   color: #789922;
@@ -11766,7 +11782,7 @@ input#s_avatar {
   padding: 7px 14px;
 }
 
-.nav-user-menu a.nav-menu-logout i {
+.nav-user-menu a i {
   width: 1em;
   margin-right: 6px;
   opacity: .8;
@@ -26006,6 +26022,89 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   text-align: right;
 }
 
+/* ---- admin/applications.html (account applications, plain forms) ---- */
+#main .adm-app {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--adm-border);
+}
+
+#main .adm-app:last-child {
+  border-bottom: 0;
+}
+
+#main .adm-app-pending {
+  background: rgba(255, 193, 7, 0.04);
+}
+
+#main .adm-app-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+#main .adm-app-name {
+  font-weight: 700;
+  color: var(--adm-text);
+}
+
+#main a.adm-app-name {
+  color: var(--adm-accent);
+  text-decoration: none;
+}
+
+#main .adm-app-status {
+  font-size: 0.75em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+#main .adm-app-status-pending {
+  color: #ffc107;
+}
+
+#main .adm-app-status-approved {
+  color: #51cf66;
+}
+
+#main .adm-app-status-denied {
+  color: #ff6b6b;
+}
+
+#main .adm-app-meta {
+  color: var(--adm-muted);
+  font-size: 0.82em;
+  overflow-wrap: anywhere;
+}
+
+/* The applicant's own words: line breaks kept, long words wrap */
+#main .adm-app-message {
+  margin: 10px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#main .adm-app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#main .adm-app-actions form {
+  margin: 0;
+}
+
+#main .adm-app-reviewed,
+#main .adm-app-empty {
+  margin: 0;
+  font-size: 0.85em;
+}
+
+#main .adm-app-empty {
+  padding: 16px;
+}
+
 /* ---- admin/tokens.html (table rows are built by the page script) ---- */
 #main .btn-upload.adm-tokens-generate {
   width: auto;
@@ -37067,6 +37166,40 @@ html.no-js #login-modal .lm-anon,
 html.no-js :is(#login-modal, #register-modal) cap-widget,
 html.no-js #register-modal .lm-form-done {
   display: none !important;
+}
+
+/* Register modal: the application message (registration by application), styled like the inputs */
+#register-modal #modal-register-view textarea.lm-textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 96px;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--lm-surface);
+  border: 1px solid var(--lm-border);
+  color: var(--lm-text);
+  font: inherit;
+  font-size: 0.95em;
+  outline: none;
+  box-shadow: none;
+  resize: vertical;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+#register-modal #modal-register-view textarea.lm-textarea::placeholder {
+  color: var(--lm-muted);
+  opacity: 0.8;
+}
+
+#register-modal #modal-register-view textarea.lm-textarea:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+#register-modal #modal-register-view textarea.lm-textarea:focus {
+  border-color: var(--lm-accent);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lm-accent) 22%, transparent);
 }
 
 /* Show-password buttons are gone, so the fields need no room for them */

@@ -1,0 +1,48 @@
+{% include (shell_header or "snippets/header.html") %}
+<div class="pagewrapper">
+<div id="main" class="admin-container">
+    {% include "snippets/admin-back.html" %}
+    <div class="container adm adm-apps">
+        <h2>Account applications</h2>
+        <p class="adm-page-intro">Visitors without an invite token apply with a message. Approving creates the account with the name and password they chose; they see the decision when they log in, and by mail when they gave an address.
+        {% if not applications_on %}<strong>Applications are off</strong> (or registration is open): switch them on under Registration on the <a href="/admin">dashboard</a>.{% endif %}</p>
+
+        <section class="adm-section">
+            <h2 class="adm-section-title"><i class="fa-solid fa-user-plus"></i> Applications <span class="adm-count">{{ pending_count }}</span></h2>
+            <div class="adm-panel" id="applications">
+                {% for a in applications %}
+                <div class="adm-app adm-app-{{ a.status }}" id="application-{{ a.id }}">
+                    <div class="adm-app-head">
+                        {% if a.user_id %}<a class="adm-app-name" href="/user/{{ a.username|lower }}">{{ a.username }}</a>{% else %}<strong class="adm-app-name">{{ a.username }}</strong>{% endif %}
+                        <span class="adm-app-status adm-app-status-{{ a.status }}">{{ ("declined" if a.status == "denied" else a.status) }}</span>
+                        <span class="adm-app-meta">{{ a.created_at|locale_string(lang) }}{% if a.email %} · {{ a.email }}{% endif %}</span>
+                    </div>
+                    <p class="adm-app-message">{{ a.message }}</p>
+                    {% if a.status == "pending" %}
+                    <div class="adm-app-actions">
+                        <form method="post" action="/api/v2/admin/applications/approve">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="back" value="/admin/applications#applications">
+                            <input type="hidden" name="id" value="{{ a.id }}">
+                            <button type="submit" class="adm-btn adm-btn-primary">Approve</button>
+                        </form>
+                        <form method="post" action="/api/v2/admin/applications/deny">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="back" value="/admin/applications#applications">
+                            <input type="hidden" name="id" value="{{ a.id }}">
+                            <button type="submit" class="adm-btn adm-btn-danger">Decline</button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <p class="adm-app-reviewed adm-muted">{{ ("Declined" if a.status == "denied" else "Approved") }}{% if a.reviewed_by_name %} by {{ a.reviewed_by_name }}{% endif %}{% if a.reviewed_at %}, {{ a.reviewed_at|locale_string(lang) }}{% endif %}</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="adm-app-empty adm-muted">No applications.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+</div>
+{% include (shell_footer or "snippets/footer.html") %}

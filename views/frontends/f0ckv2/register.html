@@ -25,7 +25,12 @@
       <input type="text" name="username" placeholder="username" autocomplete="username" required />
       <input type="password" name="password" placeholder="password (min. 20)" autocomplete="new-password" required minlength="20" />
       <input type="password" name="password_confirm" placeholder="confirm password" autocomplete="new-password" required minlength="20" />
-      {% if not registration_open %}
+      {% if registration_apply %}
+      {#- Registration by application: an invite token, or a message for the admins -#}
+      <input type="text" name="token" placeholder="invite token (if you have one)" autocomplete="off" value="{{ (token if token is defined else "") }}" />
+      <textarea name="application" class="v2-register-application" maxlength="1000" rows="4" placeholder="no token? tell us why you want an account (min. 20 characters)"></textarea>
+      <input type="email" name="email" placeholder="{{ ("mail (needed to apply)" if registration_apply_email else "mail (optional)") }}" autocomplete="email" />
+      {% elif not registration_open %}
       <input type="text" name="token" placeholder="invite token" autocomplete="off" value="{{ (token if token is defined else "") }}" required />
       {% elif registration_require_mail_andor_token %}
       <input type="email" name="email" placeholder="mail" autocomplete="email" required />
@@ -36,7 +41,7 @@
       <cap-widget class="cap-dark js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
       {% include "frontends/f0ckv2/snippets/cap-image.html" %}
       {% endif %}
-      <button type="submit">Register</button>
+      <button type="submit">{{ ("Apply / Register" if registration_apply else "Register") }}</button>
       {% endif %}
       <p class="v2-login-links">
         <a href="/?login=1">login</a>

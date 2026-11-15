@@ -73,6 +73,13 @@
           {% endif %}
           <a href="/user/{{ ((session.login if (session.is_anon and session.login) else session.user))|lower }}/favs" class="mobile-only">{{ t("nav.favs") }}</a>
           <a href="/settings" class="mobile-only" data-page-modal title="{{ t("nav.settings") }}">{{ t("nav.settings") }}</a>
+          {% if (session.admin or session.is_moderator) %}
+          <div class="nav-user-divider"></div>
+          {% if session.admin %}
+          <a href="/admin" class="nav-menu-pending"><span><i class="fa-solid fa-cog"></i> {{ t("nav.admin") }}</span>{% if (session.pending_count is defined and (session.pending_count|int > 0)) %}<span class="nav-menu-count" title="{{ session.pending_count }} upload(s) awaiting approval">{{ session.pending_count }}</span>{% endif %}</a>
+          {% endif %}
+          <a href="/mod"><i class="fa-solid fa-gavel"></i> {{ t("nav.mod") }}</a>
+          {% endif %}
           <div class="nav-user-divider"></div>
           <a href="{{ logout_url or "/logout" }}" class="nav-menu-logout"><i class="fa-solid fa-right-from-bracket"></i> {{ t("nav.logout") }}</a>
         </div>
@@ -573,7 +580,20 @@
             <i class="fa-solid fa-eye"></i>
           </button>
         </label>
-        {% if not registration_open %}
+        {% if registration_apply %}
+        {#- Registration by application (routes/register.rs): an invite token, or a message for the admins -#}
+        <label class="lm-field">
+          <i class="fa-solid fa-ticket lm-field-icon"></i>
+          <input class="lm-input" type="text" name="token" placeholder="{{ t("auth.invite_token_optional") }}" aria-label="{{ t("auth.invite_token_optional") }}" autocomplete="off" spellcheck="false"{% if (url is defined and url.qs and url.qs.invite) %} value="{{ url.qs.invite }}"{% endif %} />
+        </label>
+        <label class="lm-field">
+          <textarea class="lm-textarea" name="application" maxlength="1000" rows="4" placeholder="{{ t("auth.application_placeholder") }}" aria-label="{{ t("auth.application_placeholder") }}"></textarea>
+        </label>
+        <label class="lm-field">
+          <i class="fa-solid fa-envelope lm-field-icon"></i>
+          <input class="lm-input" type="email" name="email" placeholder="{{ t("auth.email_apply_required" if registration_apply_email else "auth.email_apply_optional") }}" aria-label="{{ t("auth.email_apply_required" if registration_apply_email else "auth.email_apply_optional") }}" autocomplete="email" />
+        </label>
+        {% elif not registration_open %}
         <label class="lm-field">
           <i class="fa-solid fa-ticket lm-field-icon"></i>
           <input class="lm-input" type="text" name="token" placeholder="{{ t("auth.invite_token") }}" aria-label="{{ t("auth.invite_token") }}" autocomplete="off" spellcheck="false" required{% if (url is defined and url.qs and url.qs.invite) %} value="{{ url.qs.invite }}"{% endif %} />
@@ -599,7 +619,7 @@
         {% include "snippets/cap-image.html" %}
         {% endif %}
 
-        <button type="submit" class="lm-btn lm-btn-primary">{{ t("auth.create_account") }}</button>
+        <button type="submit" class="lm-btn lm-btn-primary">{{ t("auth.apply_or_register" if registration_apply else "auth.create_account") }}</button>
       </form>
 
       <p class="lm-footer">

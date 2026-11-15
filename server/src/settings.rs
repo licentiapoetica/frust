@@ -13,6 +13,11 @@ pub struct SiteSettings {
     pub manual_approval: bool,
     pub min_tags: i64,
     pub registration_open: bool,
+    /// Registration is closed: guests may apply with a message instead of an invite token (admin
+    /// panel, else `websrv.registration_applications`), see routes/register.rs
+    pub registration_applications: bool,
+    /// Applications need an email address (admin panel, else `websrv.registration_applications_require_email`)
+    pub applications_require_email: bool,
     pub trusted_uploads: i64,
     pub bypass_duplicate_check: bool,
     pub protect_files: bool,
@@ -63,6 +68,8 @@ impl Settings {
                 manual_approval: false,
                 min_tags: 0,
                 registration_open: false,
+                registration_applications: cfg.truthy("websrv.registration_applications"),
+                applications_require_email: cfg.truthy("websrv.registration_applications_require_email"),
                 trusted_uploads: 0,
                 bypass_duplicate_check: false,
                 protect_files: false,
@@ -181,6 +188,15 @@ impl Settings {
             return cfg.truthy("websrv.open_registration");
         }
         self.inner.read().registration_open
+    }
+
+    /// Guests can apply for an account: only while registration is closed.
+    pub fn registration_applications(&self, cfg: &Config) -> bool {
+        !self.registration_open(cfg) && self.inner.read().registration_applications
+    }
+
+    pub fn applications_require_email(&self) -> bool {
+        self.inner.read().applications_require_email
     }
 }
 
@@ -435,6 +451,8 @@ pub async fn load_from_db(st: &crate::state::AppState) {
         s.brand_font = String::new();
         s.brand_weight = 0;
         s.brand_size = 0;
+        s.registration_applications = cfg.truthy("websrv.registration_applications");
+        s.applications_require_email = cfg.truthy("websrv.registration_applications_require_email");
         s.private_messages = cfg.enabled("websrv.private_messages");
         s.dm_attachments = cfg.enabled("websrv.dm_attachments");
         s.dm_unencrypted = cfg.truthy("websrv.dm_unencrypted");
@@ -453,6 +471,8 @@ pub async fn load_from_db(st: &crate::state::AppState) {
                 "manual_approval" => s.manual_approval = b,
                 "min_tags" => s.min_tags = as_int(&Value::String(val)).unwrap_or(0).max(0),
                 "registration_open" => s.registration_open = b,
+                "registration_applications" => s.registration_applications = b,
+                "applications_require_email" => s.applications_require_email = b,
                 "trusted_uploads" => s.trusted_uploads = as_int(&Value::String(val)).unwrap_or(0).max(0),
                 "enable_cleanup" => s.enable_cleanup = b,
                 "cleanup_start_date" => s.cleanup_start_date = val,

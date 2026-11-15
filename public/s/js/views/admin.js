@@ -20,6 +20,8 @@ async function saveAdminSettings() {
   const status = document.getElementById('settings-status');
   const approvalToggle = document.getElementById('manual_approval_toggle');
   const registrationToggle = document.getElementById('registration_open_toggle');
+  const applicationsToggle = document.getElementById('registration_applications_toggle');
+  const applicationsEmailToggle = document.getElementById('applications_require_email_toggle');
   const minTagsInput = document.getElementById('min_tags_input');
   const trustedUploadsInput = document.getElementById('trusted_uploads_input');
 
@@ -43,6 +45,8 @@ async function saveAdminSettings() {
       body: new URLSearchParams({
         manual_approval: approvalToggle ? (approvalToggle.checked ? 'on' : 'off') : 'off',
         ...(registrationToggle ? { registration_open: registrationToggle.checked ? 'on' : 'off' } : {}),
+        ...(applicationsToggle ? { registration_applications: applicationsToggle.checked ? 'on' : 'off' } : {}),
+        ...(applicationsEmailToggle ? { applications_require_email: applicationsEmailToggle.checked ? 'on' : 'off' } : {}),
         min_tags: minTagsInput ? minTagsInput.value : '0',
         trusted_uploads: trustedUploadsInput ? trustedUploadsInput.value : '0',
         csrf_token: csrfToken

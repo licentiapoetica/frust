@@ -28,6 +28,7 @@
         <a href="/mod/trash" class="adm-stat adm-stat-link"><span class="adm-stat-num">{{ dash.trash }}</span><span class="adm-stat-label">Soft deleted</span></a>
         <a href="/mod/reports" class="adm-stat adm-stat-link {% if (dash.open_reports > 0) %} is-hot {% endif %}"><span class="adm-stat-num">{{ dash.open_reports }}</span><span class="adm-stat-label">Open reports</span></a>
         <a href="/admin/tokens#invite-requests" class="adm-stat adm-stat-link {% if (dash.invite_requests > 0) %} is-hot {% endif %}"><span class="adm-stat-num">{{ dash.invite_requests }}</span><span class="adm-stat-label">Token requests</span></a>
+        <a href="/admin/applications" class="adm-stat adm-stat-link {% if (dash.applications > 0) %} is-hot {% endif %}"><span class="adm-stat-num">{{ dash.applications }}</span><span class="adm-stat-label">Applications</span></a>
         <a href="/admin/users" class="adm-stat adm-stat-link"><span class="adm-stat-num">{{ dash.users }}</span><span class="adm-stat-label">Users <small>+{{ dash.anon_users }} anon</small></span></a>
       </div>
       {% endif %}
@@ -74,6 +75,10 @@
         <a href="/admin/tokens" class="adm-tool">
           <i class="fa-solid fa-ticket"></i>
           <span class="adm-tool-text"><strong>Invite Tokens {% if (dash.invite_requests > 0) %}<span class="adm-count">{{ dash.invite_requests }}</span>{% endif %}</strong><span>Create and revoke invites, review token requests</span></span>
+        </a>
+        <a href="/admin/applications" class="adm-tool">
+          <i class="fa-solid fa-user-plus"></i>
+          <span class="adm-tool-text"><strong>Applications {% if (dash.applications > 0) %}<span class="adm-count">{{ dash.applications }}</span>{% endif %}</strong><span>Approve or decline account applications</span></span>
         </a>
       </div>
 
@@ -181,9 +186,9 @@
         </div>
       </div>
 
-      {% if registration_web_toggle_enabled %}
       <h3 class="adm-group-title">Registration</h3>
       <div class="adm-panel">
+        {% if registration_web_toggle_enabled %}
         <div class="adm-row">
           <div class="adm-row-text">
             <label for="registration_open_toggle">Open registration</label>
@@ -194,8 +199,28 @@
             <span class="adm-slider"></span>
           </label>
         </div>
+        {% endif %}
+        <div class="adm-row">
+          <div class="adm-row-text">
+            <label for="registration_applications_toggle">Account applications</label>
+            <p>While registration is closed, visitors without an invite token can apply with a message. Review them under <a href="/admin/applications">Applications</a>.</p>
+          </div>
+          <label class="adm-switch">
+            <input type="checkbox" id="registration_applications_toggle" {{ ("checked" if registration_applications else "") }} data-on="change:saveAdminSettings">
+            <span class="adm-slider"></span>
+          </label>
+        </div>
+        <div class="adm-row">
+          <div class="adm-row-text">
+            <label for="applications_require_email_toggle">Applications need an email</label>
+            <p>Applicants have to give an email address. The decision is mailed to it when SMTP is set up.</p>
+          </div>
+          <label class="adm-switch">
+            <input type="checkbox" id="applications_require_email_toggle" {{ ("checked" if applications_require_email else "") }} data-on="change:saveAdminSettings">
+            <span class="adm-slider"></span>
+          </label>
+        </div>
       </div>
-      {% endif %}
 
       <h3 class="adm-group-title">Branding</h3>
       {#- Plain forms (they post back here without JavaScript); admin.js saves them in place -#}
