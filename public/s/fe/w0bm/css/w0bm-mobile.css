@@ -225,10 +225,11 @@ body.w0bm-item-page .vertical-align {
 .videotitle-div:has(> #w0bm-item-title:empty) {
     display: none;
 }
-/* the player: the big play button smaller (70px covered most of an upright video), and the
-   control bar always inside the player, whatever the text size or website font: its font, which
-   sizes the buttons too, shrinks with the player's width (container query units: 4cqi is about
-   the most play, mute, volume, the times, speed and fullscreen take) */
+/* the player: the big play button smaller (70px covered most of an upright video), and a tidy
+   control bar: play, mute, the times as one group ("0:00 / 0:08"), then speed and fullscreen at
+   the right edge. No volume slider (a phone has volume keys; mute stays). The bar stays inside
+   the player whatever the text size or website font: its font, which sizes the buttons too,
+   shrinks with the player's width (container query units: 5cqi is about the most the row takes) */
 body.w0bm-item-page .w0bm-media,
 .w0bm-fs-host > .w0bm-media {
     container-type: inline-size;
@@ -237,14 +238,30 @@ body.w0bm-item-page .w0bm-media,
     font-size: 1.7em;
 }
 .w0bm-media .video-js .vjs-control-bar {
-    font-size: min(13px, 4cqi);
+    font-size: min(13px, 5cqi);
 }
-/* vjsnew.css: 6rem, which doesn't shrink with the bar */
-.w0bm-media .video-js .vjs-volume-control.vjs-control {
-    width: 4.5em;
+.w0bm-media .video-js .vjs-volume-control {
+    display: none;
 }
-/* page links: one row, first and last included (w0bmcustom.css puts those two in tabs over the
-   top corners below 690px) */
+/* the times: no padding of their own (video.js: 1em each side, which tore "0:00 /  0:08" apart),
+   the same small gap on both sides of the divider */
+.w0bm-media .video-js .vjs-time-control {
+    flex: none;
+    min-width: 0;
+    padding: 0;
+}
+.w0bm-media .video-js .vjs-time-control.vjs-current-time {
+    margin-left: 0.5em;
+}
+.w0bm-media .video-js .vjs-time-control.vjs-time-divider {
+    width: auto;
+    padding: 0 0.35em;
+}
+/* the speed in the size of the times (video.js: 1.5em) */
+.w0bm-media .video-js .vjs-playback-rate .vjs-playback-rate-value {
+    font-size: 1.15em;
+    line-height: 2.6;
+}
 /* always one row, whatever the text size or website font: the row's font shrinks when it would
    not fit (container query units, like the sidebar footer links in w0bm-fe.css: 5cqi is about
    the most "← first ← prev | random | next → last →" takes in a wide font), and a long context
