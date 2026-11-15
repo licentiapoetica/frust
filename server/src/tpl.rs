@@ -1151,7 +1151,7 @@ mod tests {
         assert!(out.contains(r#"<video class="mt-video" src="/s/maintenance/video-ab12.webm" autoplay muted loop playsinline></video>"#), "{out}");
         assert!(out.contains(r#"<p class="mt-line">line &lt;one&gt;</p>"#), "{out}");
         assert_eq!(out.matches(r#"<p class="mt-line">"#).count(), 3);
-        assert!(out.contains("expected back: ~16:00") && out.contains("since 2026-11-14 23:46 UTC") && out.contains(r#"href="/login""#), "{out}");
+        assert!(out.contains("expected back: ~16:00") && out.contains("since 2026-11-14 23:46 UTC") && out.contains(r#"href="/login?form""#), "{out}");
         assert!(out.contains(r#"http-equiv="refresh""#));
         // no video: the test card; preview: no refresh, link back to the settings
         let mut ctx = crate::maintenance::page_ctx(&crate::maintenance::Maintenance::default(), true);

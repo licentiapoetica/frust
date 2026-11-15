@@ -49,7 +49,8 @@ async fn login_page(st: AppState, req: Req) -> Res {
     }
     // ?form: the plain login page (no JavaScript needed). Everyone else gets the login modal, which
     // also opens without JavaScript (/#login-modal, see the <noscript> refresh on /?login=1).
-    if req.query("form").is_some() {
+    // (also during maintenance: the page with the modal is locked for everyone who isn't in yet)
+    if req.query("form").is_some() || st.settings.maintenance_on() {
         return Ok(html(crate::tpl::render(&st, Some(&req), "login", json!({ "theme": req.theme, "captcha": false }))));
     }
     Ok(redirect("/?login=1"))

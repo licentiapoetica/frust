@@ -25,7 +25,8 @@
       {% if mt.preview %}
       <a class="mt-login" href="/admin/maintenance">preview <span aria-hidden="true">//</span> back to settings &gt;</a>
       {% else %}
-      <a class="mt-login" href="/login">login &gt;</a>
+      {#- ?form: the standalone login page (plain /login redirects to the site's login modal, which is locked) -#}
+      <a class="mt-login" href="/login?form">login &gt;</a>
       {% endif %}
 {%- endmacro -%}
 {#- the admin's text as plain paragraphs (signal, panel) -#}
