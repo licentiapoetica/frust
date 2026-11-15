@@ -237,11 +237,12 @@
 
   <div class="nav-collapse nav-collapse-guest" id="navbarContent">
     <div class="nav-links">
-      <a href="/tags" title="Tags"><i class="fa-solid fa-tags"></i></a>
+      {#- .nav-link-label: shown on phones only, where the links are a labelled list under the hamburger -#}
+      <a href="/tags" title="{{ t("nav.tags") }}"><i class="fa-solid fa-tags"></i><span class="nav-link-label">{{ t("nav.tags") }}</span></a>
       {% if halls_enabled %}
-      <div class="">
-        <a href="/halls" class="nav-halls-btn" title="Halls">
-          <i class="fa-solid fa-layer-group"></i>
+      <div class="nav-links-item">
+        <a href="/halls" class="nav-halls-btn" title="{{ t("nav.halls") }}">
+          <i class="fa-solid fa-layer-group"></i><span class="nav-link-label">{{ t("nav.halls") }}</span>
         </a>
         <div class="nav-user-menu">
           <a href="/halls" class="navbar-halls-overview"><i class="fa-solid fa-building-columns"></i> Overview</a>
@@ -256,9 +257,9 @@
       </div>
       {% endif %}
       {% if abyss_enabled %}
-      <a href="/abyss" title="Abyss"><i class="fa-solid fa-dice-d6"></i></a>
+      <a href="/abyss" title="{{ t("nav.abyss") }}"><i class="fa-solid fa-dice-d6"></i><span class="nav-link-label">{{ t("nav.abyss") }}</span></a>
       {% endif %}
-      <a href="#" id="nav-search-btn" title="Search"><i class="fa-solid fa-magnifying-glass"></i></a>
+      <a href="#" id="nav-search-btn" title="{{ t("nav.search") }}"><i class="fa-solid fa-magnifying-glass"></i><span class="nav-link-label">{{ t("nav.search") }}</span></a>
 
     </div>
   </div>
@@ -272,21 +273,21 @@
       </button>
       <div class="nav-user-menu" id="nav-visitor-menu">
         {% if ((enable_anonymous_access and session) and session.is_anon) %}
-        <a href="/favs" id="nav-guest-favs-link" class="mobile-only">{{ t("nav.favs") }}</a>
+        <a href="/favs" id="nav-guest-favs-link" class="mobile-only"><i class="fa-solid fa-heart"></i>{{ t("nav.favs") }}</a>
         {% endif %}
         {% if enable_anonymous_access %}
 
-        <a href="#" id="nav-anon-identity-btn" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %} data-on="click:prevent,openAnonPasskey"><i class="fa-solid fa-fingerprint"></i> Passkey Identity</a>
+        <a href="#" id="nav-anon-identity-btn" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %} data-on="click:prevent,openAnonPasskey"><i class="fa-solid fa-fingerprint"></i>Passkey Identity</a>
         {% endif %}
         {# Guests too: /settings shows them the preferences kept in this browser #}
-        <a href="/settings" class="mobile-only" data-page-modal title="{{ t("nav.settings") }}">{{ t("nav.settings") }}</a>
+        <a href="/settings" class="mobile-only" data-page-modal title="{{ t("nav.settings") }}"><i class="fa-solid fa-gear"></i>{{ t("nav.settings") }}</a>
         {# #login-modal: without JavaScript the modal opens through :target (f0ckm.css) #}
-        <a href="#login-modal" id="nav-login-btn">{{ t("nav.login") }}</a>
+        <a href="#login-modal" id="nav-login-btn"><i class="fa-solid fa-right-to-bracket"></i>{{ t("nav.login") }}</a>
         {# Always shown: with registration closed the register modal asks for an invite token #}
-        <a href="#register-modal" id="nav-register-btn">{{ t("nav.register") }}</a>
+        <a href="#register-modal" id="nav-register-btn"><i class="fa-solid fa-user-plus"></i>{{ t("nav.register") }}</a>
         {% if enable_anonymous_access %}
         <div class="nav-user-divider" id="nav-anon-divider" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}></div>
-        <a href="#" id="nav-anon-logout-btn" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}><i class="fa-solid fa-right-from-bracket"></i> Logout (Guest)</a>
+        <a href="#" id="nav-anon-logout-btn" {% if (not session or not session.is_anon) %} style="display:none;" {% endif %}><i class="fa-solid fa-right-from-bracket"></i>Logout (Guest)</a>
         {% endif %}
       </div>
     </div>

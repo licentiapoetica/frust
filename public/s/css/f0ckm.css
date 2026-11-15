@@ -14001,6 +14001,10 @@ html.motd-on body > nav.navbar > * {
   padding: 7px 14px;
 }
 
+#nav-visitor-menu a > i {
+  margin-right: 6px;
+}
+
 .nav-right-group .notif-dropdown,
 #notif-dropdown {
   left: auto;
@@ -14198,6 +14202,139 @@ html.motd-on body > nav.navbar > * {
     display: inline-flex;
   }
 
+}
+
+/* Phone-only text of a nav link (guest navbar) */
+.nav-link-label {
+  display: none;
+}
+
+/* ── Guests on phones: one row (brand | filter, hamburger) and one menu ──
+   The hamburger opens a single labelled list: the nav links, then the visitor entries
+   (settings, login, register, ...) under a "guest" heading. The visitor dropdown is laid out
+   as part of that list instead of floating beside the hamburger. */
+@media (max-width: 800px) {
+
+  /* The group's children become items of the navbar row itself */
+  .nav-right-group.nav-right-group-guest {
+    display: contents;
+  }
+
+  /* Brand takes what the two buttons leave (its text ellipsizes), so the row never wraps */
+  .navbar:has(> .nav-right-group-guest) > .navbar-brand {
+    /* !important: over the image + text brand's own max-width further down */
+    max-width: min(360px, calc(100% - 110px)) !important;
+    min-width: 0;
+    margin-right: auto;
+  }
+
+  .nav-right-group-guest > a {
+    padding: 8px;
+  }
+
+  .nav-right-group-guest > .navbar-toggler {
+    margin: 0 12px 0 8px;
+  }
+
+  /* The list: nav links ... */
+  .nav-collapse.nav-collapse-guest {
+    padding: 0;
+    gap: 0;
+    box-shadow: none;
+    border-top: 1px solid var(--nav-border-color);
+  }
+
+  .nav-collapse-guest .nav-links {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+  }
+
+  .nav-collapse-guest .nav-links > a,
+  .nav-collapse-guest .nav-links-item > a {
+    display: block;
+    padding: 11px 16px;
+    font-size: 1rem;
+    text-align: left;
+  }
+
+  .nav-collapse-guest .nav-link-label {
+    display: inline;
+  }
+
+  /* ... then the visitor entries, shown together with them */
+  .nav-right-group-guest > .nav-user-dropdown {
+    display: none;
+    order: 11;
+    width: 100%;
+    margin: 0;
+    border-top: 1px solid var(--nav-border-color);
+    background: var(--nav-bg);
+  }
+
+  .nav-collapse-guest.show ~ .nav-right-group-guest > .nav-user-dropdown {
+    display: block;
+    animation: navFadeIn 0.2s ease-out;
+  }
+
+  /* The toggle is the heading of that part of the list */
+  .nav-right-group-guest #nav-visitor-toggle {
+    width: 100%;
+    height: auto;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 16px 4px;
+    border: 0;
+    background: none;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .nav-right-group-guest #nav-visitor-toggle::after,
+  .nav-right-group-guest #nav-visitor-toggle .nav-avatar-caret {
+    display: none;
+  }
+
+  .nav-right-group-guest #nav-visitor-menu {
+    display: block;
+    position: static;
+    width: 100%;
+    border: 0;
+    background: none;
+  }
+
+  .nav-right-group-guest #nav-visitor-menu a {
+    padding: 11px 16px;
+    font-size: 1rem;
+    opacity: 0.8;
+  }
+
+  .nav-right-group-guest #nav-visitor-menu a:hover {
+    opacity: 1;
+  }
+
+  .nav-right-group-guest .nav-user-divider {
+    margin: 0;
+  }
+
+  /* Icons in one column, labels lined up after them */
+  .nav-collapse-guest .nav-links a > i,
+  .nav-right-group-guest #nav-visitor-toggle > i,
+  .nav-right-group-guest #nav-visitor-menu a > i {
+    display: inline-block;
+    width: 1.25rem;
+    margin-right: 12px;
+    text-align: center;
+  }
+
+  .nav-right-group-guest #nav-visitor-toggle > i {
+    margin-right: 0;
+  }
 }
 
 @media (max-width: 467px) {
@@ -36754,6 +36891,17 @@ html.no-js .nav-user-dropdown:focus-within>.nav-user-menu {
 @media (max-width: 800px) {
   html.no-js .navbar:has(.navbar-toggler:hover, .navbar-toggler:focus, .nav-collapse:hover, .nav-collapse:focus-within) .nav-collapse {
     display: flex;
+  }
+
+  /* Guests: the visitor entries are part of that list (and keep it open while used) */
+  html.no-js .navbar:has(.nav-right-group-guest > .nav-user-dropdown:hover, .nav-right-group-guest > .nav-user-dropdown:focus-within) .nav-collapse {
+    display: flex;
+  }
+
+  html.no-js .navbar:has(.navbar-toggler:hover, .navbar-toggler:focus, .nav-collapse:hover, .nav-collapse:focus-within) .nav-right-group-guest > .nav-user-dropdown,
+  html.no-js .nav-right-group-guest > .nav-user-dropdown:hover,
+  html.no-js .nav-right-group-guest > .nav-user-dropdown:focus-within {
+    display: block;
   }
 }
 
