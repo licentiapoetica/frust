@@ -1,0 +1,155 @@
+{% include (shell_header or "snippets/header.html") %}
+<div class="pagewrapper">
+<div id="main" class="admin-container">
+    {% include "snippets/admin-back.html" %}
+    <div class="container adm adm-maint">
+        <h2>Maintenance</h2>
+        <p class="adm-page-intro">While maintenance mode is on, everyone but admins gets the maintenance page instead of the site (HTTP 503, uploads and media included). Admins use the site as usual; <a href="/login">/login</a> stays reachable.</p>
+
+        {#- one plain multipart form, works without JavaScript (routes/admin/maintenance.rs) -#}
+        <form method="post" action="/admin/maintenance/save" enctype="multipart/form-data" id="maint-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="/admin/maintenance">
+
+            <section class="adm-section">
+                <h2 class="adm-section-title"><i class="fa-solid fa-power-off"></i> Status</h2>
+                <div class="adm-panel">
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label for="maint-enabled">Maintenance mode</label>
+                            <p>{% if mt.enabled %}<strong class="adm-maint-on">ON</strong>: visitors get the maintenance page right now.{% else %}Off: the site is open. Set the page up below, check the preview, then switch it on.{% endif %}</p>
+                        </div>
+                        <label class="adm-check"><input type="checkbox" id="maint-enabled" name="enabled" value="1"{% if mt.enabled %} checked{% endif %}> Show the maintenance page</label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="adm-section">
+                <h2 class="adm-section-title"><i class="fa-solid fa-table-columns"></i> Layout</h2>
+                <div class="adm-panel">
+                    {% for l in mt.layouts %}
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label for="maint-layout-{{ l.key }}">{{ l.label }}</label>
+                            <p>{{ l.about }}</p>
+                        </div>
+                        <div class="adm-maint-glitch">
+                            <a href="/admin/maintenance/preview?layout={{ l.key }}" class="adm-btn adm-btn-ghost" target="_blank" rel="noopener">Preview</a>
+                            <label class="adm-check"><input type="radio" id="maint-layout-{{ l.key }}" name="layout" value="{{ l.key }}"{% if l.key == mt.layout %} checked{% endif %}> Use</label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="adm-row">
+                        <p class="adm-muted">The previews show the saved text, video and glitch settings in each layout, so save first to compare changes.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="adm-section">
+                <h2 class="adm-section-title"><i class="fa-solid fa-terminal"></i> Text</h2>
+                <div class="adm-panel">
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label for="maint-title">Headline</label>
+                            <p>Big line in the bottom bar. Empty: MAINTENANCE.</p>
+                        </div>
+                        <input type="text" id="maint-title" name="title" class="adm-text adm-maint-wide" maxlength="{{ mt.max_title }}" value="{{ mt.title }}" placeholder="MAINTENANCE" autocomplete="off">
+                    </div>
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label for="maint-text">Terminal text</label>
+                            <p>Plain text. Every line shows up as its own terminal line, one after the other (up to {{ mt.max_lines }} lines).</p>
+                        </div>
+                        <textarea id="maint-text" name="text" class="adm-text adm-maint-wide adm-maint-textarea" maxlength="{{ mt.max_text }}" rows="7" placeholder="we are moving some bits around.&#10;back soon. probably.">{{ mt.text }}</textarea>
+                    </div>
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label for="maint-eta">Expected back</label>
+                            <p>Optional, shown as the last line ("expected back: …").</p>
+                        </div>
+                        <input type="text" id="maint-eta" name="eta" class="adm-text adm-maint-wide" maxlength="{{ mt.max_title }}" value="{{ mt.eta }}" placeholder="~16:00 UTC" autocomplete="off">
+                    </div>
+                </div>
+            </section>
+
+            <section class="adm-section">
+                <h2 class="adm-section-title"><i class="fa-solid fa-film"></i> Video</h2>
+                <div class="adm-panel">
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label>Current</label>
+                            <p>{% if mt.video_url %}From {{ mt.video_from }}. It plays muted in a loop.{% else %}None: the page shows a test card (colour bars).{% endif %}</p>
+                        </div>
+                        {% if mt.video_url %}
+                        <div class="adm-maint-current">
+                            {% if mt.video_is_image %}
+                            <img class="adm-maint-thumb" src="{{ mt.video_url }}" alt="">
+                            {% else %}
+                            <video class="adm-maint-thumb" src="{{ mt.video_url }}" muted loop playsinline controls preload="metadata"></video>
+                            {% endif %}
+                            <label class="adm-check"><input type="checkbox" name="video_remove" value="1"> Remove</label>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label for="maint-file">Upload</label>
+                            <p>mp4 or webm (also gif, webp, png, jpg), up to {{ mt.max_upload_mb }}&nbsp;MB. Replaces the current one.</p>
+                        </div>
+                        <input type="file" id="maint-file" name="file" class="adm-font-file-input" accept="video/mp4,video/webm,image/gif,image/webp,image/png,image/jpeg">
+                    </div>
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label for="maint-item">Or use an item</label>
+                            <p>ID of a video or image already on the site. Its file is copied, so it keeps playing whatever happens to the item.</p>
+                        </div>
+                        <input type="text" id="maint-item" name="item_id" class="adm-text adm-number" inputmode="numeric" pattern="[0-9]*" placeholder="ID" autocomplete="off">
+                    </div>
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label for="maint-controls">Player controls</label>
+                            <p>Show the video controls, so visitors can turn the sound on.</p>
+                        </div>
+                        <label class="adm-check"><input type="checkbox" id="maint-controls" name="video_controls" value="1"{% if mt.video_controls %} checked{% endif %}> Show controls</label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="adm-section">
+                <h2 class="adm-section-title"><i class="fa-solid fa-bolt"></i> Glitch effect</h2>
+                <div class="adm-panel">
+                    {% for el in mt.elements %}
+                    <div class="adm-row adm-row-wrap">
+                        <div class="adm-row-text">
+                            <label for="maint-glitch-{{ el.key }}">{{ el.label }}</label>
+                        </div>
+                        <div class="adm-maint-glitch">
+                            <label class="adm-check"><input type="checkbox" id="maint-glitch-{{ el.key }}" name="glitch_{{ el.key }}" value="1"{% if el.on %} checked{% endif %}> Glitch</label>
+                            <select name="strength_{{ el.key }}" class="adm-text adm-select" aria-label="{{ el.label }}: strength">
+                                {% for st in mt.strengths %}
+                                <option value="{{ st }}"{% if st == el.strength %} selected{% endif %}>{{ st|capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                            <select name="mode_{{ el.key }}" class="adm-text adm-select" aria-label="{{ el.label }}: when">
+                                {% for mode in mt.modes %}
+                                <option value="{{ mode.key }}"{% if mode.key == el.mode %} selected{% endif %}>{{ mode.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="adm-row">
+                        <p class="adm-muted">"Whole page" glitches everything at once and is heavy on slow devices; low strength or random bursts work best for it. Visitors who prefer reduced motion get a still page.</p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="adm-maint-actions">
+                <button type="submit" class="adm-btn adm-btn-primary">Save</button>
+                <a href="/admin/maintenance/preview" class="adm-btn adm-btn-ghost" target="_blank" rel="noopener">Preview saved page</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+{% include (shell_footer or "snippets/footer.html") %}

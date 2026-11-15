@@ -718,6 +718,7 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("is_anonymized", json!(false));
     put("git_hash", json!(st.git_hash));
     put("motd", json!(s.motd));
+    put("maintenance_on", json!(s.maintenance.enabled));
     put("manual_approval", json!(s.manual_approval));
     put("min_tags", json!(s.min_tags));
     put("registration_open", json!(st.settings.registration_open(cfg)));
@@ -1129,6 +1130,50 @@ mod tests {
         let ctx = serde_json::json!({ "n": { "item_slug": null, "item_id": 42 } });
         let out = env.render_str(r#"{{ "on #{id}".replace("{id}", (n.item_slug or n.item_id), 1) }}|{{ "a1b".replace(1, "-") }}"#, to_jvalue(&ctx)).unwrap();
         assert_eq!(out, "on #42|a-b");
+    }
+
+    /// views/maintenance.html renders the admin's text, the video and the glitch attributes; the
+    /// admin form parses.
+    #[test]
+    fn maintenance_page_renders() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let m = crate::maintenance::parse(
+            r#"{"enabled":true,"since":1794700000,"title":"brb","text":"line <one>\n\nline three","eta":"~16:00","video_url":"/s/maintenance/video-ab12.webm",
+                "glitch":{"headline":{"on":true,"strength":"high","mode":"bursts"},"video":{"on":true,"strength":"low","mode":"hover"}}}"#,
+        );
+        let mut ctx = crate::maintenance::page_ctx(&m, false);
+        ctx["domain"] = serde_json::json!("example.org");
+        let out = env.get_template("maintenance.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(out.contains(r#"<h1 class="mt-headline mt-fx mt-fx-high mt-fx-bursts" data-glitch="0.95" data-glitch-idle>brb</h1>"#), "{out}");
+        assert!(out.contains(r#"<div class="mt-tv-frame mt-fx mt-fx-low mt-fx-hover" data-glitch="0.3" data-glitch-hover>"#), "{out}");
+        assert!(out.contains(r#"<section class="mt-term" aria-label="Status">"#), "{out}");
+        assert!(out.contains(r#"<video class="mt-video" src="/s/maintenance/video-ab12.webm" autoplay muted loop playsinline></video>"#), "{out}");
+        assert!(out.contains(r#"<p class="mt-line">line &lt;one&gt;</p>"#), "{out}");
+        assert_eq!(out.matches(r#"<p class="mt-line">"#).count(), 3);
+        assert!(out.contains("expected back: ~16:00") && out.contains("since 2026-11-14 23:46 UTC") && out.contains(r#"href="/login""#), "{out}");
+        assert!(out.contains(r#"http-equiv="refresh""#));
+        // no video: the test card; preview: no refresh, link back to the settings
+        let mut ctx = crate::maintenance::page_ctx(&crate::maintenance::Maintenance::default(), true);
+        ctx["domain"] = serde_json::json!("example.org");
+        let out = env.get_template("maintenance.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(out.contains(r#"class="mt-bars""#) && out.contains(">MAINTENANCE</h1>") && !out.contains("<video"), "{out}");
+        assert!(!out.contains(r#"http-equiv="refresh""#) && out.contains(r#"href="/admin/maintenance""#), "{out}");
+        // the other layouts: same text, video and glitch attributes in their own markup
+        for (layout, marks) in [("signal", vec![r#"<div class="mt-bg mt-fx mt-fx-low mt-fx-hover" data-glitch="0.3" data-glitch-hover>"#, r#"class="mt-center""#]), ("panel", vec![r#"<div class="mt-box-video mt-fx"#, r#"class="mt-box""#])] {
+            let mut m = m.clone();
+            m.layout = layout.into();
+            let mut ctx = crate::maintenance::page_ctx(&m, false);
+            ctx["domain"] = serde_json::json!("example.org");
+            let out = env.get_template("maintenance.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+            assert!(out.contains(&format!(r#"<body class="mt-body mt-layout-{layout}">"#)), "{out}");
+            for mark in marks {
+                assert!(out.contains(mark), "{layout}: {mark}\n{out}");
+            }
+            assert!(out.contains(r#"<p class="mt-p">line &lt;one&gt;</p>"#) && out.contains("<video ") && out.contains(r#"data-glitch="0.95" data-glitch-idle>brb</h1>"#), "{out}");
+            assert!(!out.contains("mt-term"), "{out}");
+        }
+        env.get_template("admin/maintenance.html").unwrap();
     }
 
     /// snippets/comments-static.html (no-JavaScript item comments) renders the thread markup.

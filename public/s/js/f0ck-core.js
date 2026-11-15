@@ -582,6 +582,13 @@ window.F0ckLive = (() => {
   });
 })();
 
+// ── Maintenance mode ──────────────────────────────────────────────────────────────────────
+// Switched on in the admin panel (live event maintenance): everyone but admins reloads and gets
+// the maintenance page right away instead of on the next click.
+window.F0ckLive.onMessage((d) => {
+  if (d.type === 'maintenance' && d.data && d.data.enabled && !(window.f0ckSession && window.f0ckSession.is_admin)) location.reload();
+});
+
 // ── Navbar brand ──────────────────────────────────────────────────────────────────────────
 // The image and the text set in the admin panel (live event brand_image, admin.js after a save).
 // Every frontend that shows them marks them inside .navbar-brand: <img data-brand-img> and

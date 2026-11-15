@@ -20,6 +20,7 @@ mod gate;
 mod hidden_items;
 mod http;
 mod i18n;
+mod maintenance;
 mod media;
 mod media_gate;
 mod migrations;

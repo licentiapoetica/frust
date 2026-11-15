@@ -1,0 +1,7 @@
+{#- Admins, while maintenance mode is on (admin panel -> Maintenance): a note on every page that
+    everyone else gets the maintenance page. Included by snippets/footer.html (f0ckm) and
+    snippets/frontend-scripts.html (the other frontends). -#}
+{% if (maintenance_on and session and (session.admin or session._is_impersonating or session._preview_role)) %}
+<link rel="stylesheet" href="/s/css/maintenance-strip.css?v={{ mtime("/public/s/css/maintenance-strip.css") }}">
+<a class="mt-strip" href="/admin/maintenance" title="Everyone but admins gets the maintenance page">Maintenance mode is ON</a>
+{% endif %}

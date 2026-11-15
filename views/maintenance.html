@@ -1,0 +1,142 @@
+{#- Maintenance page (crate::maintenance): standalone, served with 503 to everyone but admins while
+    maintenance mode is on. Own CSS (maintenance.css), no site CSS. `mt` = maintenance::page_ctx.
+    Three layouts (mt.layout, maintenance::LAYOUTS): testcard, signal, panel.
+    Glitching elements get the glitchfx.js attributes (g) and the classes of the CSS-only stand-in
+    used without JavaScript (mt.glitch.<el>.cls). -#}
+{%- macro g(o) %}{% if o.on %} data-glitch="{{ o.level }}"{% if o.idle %} data-glitch-idle{% endif %}{% if o.hover %} data-glitch-hover{% endif %}{% endif %}{% endmacro -%}
+{#- the video, an image, or (bars) the test card -#}
+{%- macro media(bars) %}
+          {% if (mt.video_url and mt.video_is_image) %}
+          <img class="mt-video" src="{{ mt.video_url }}" alt="">
+          {% elif mt.video_url %}
+          <video class="mt-video" src="{{ mt.video_url }}" autoplay muted loop playsinline{% if mt.video_controls %} controls{% endif %}></video>
+          {% elif bars %}
+          <div class="mt-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          {% endif %}
+{%- endmacro -%}
+{%- macro brand() %}
+      <span class="mt-brand{{ mt.glitch.logo.cls }}"{{ g(mt.glitch.logo) }}>
+        {% if custom_brand_image %}<img class="mt-brand-img" src="{{ custom_brand_image }}" alt="">{% endif %}
+        <span class="mt-brand-text">{{ (custom_navbar_brand_text or domain) }}</span>
+      </span>
+{%- endmacro -%}
+{%- macro offair() %}<span class="mt-offair"><span class="mt-dot" aria-hidden="true"></span>OFF AIR</span>{% endmacro -%}
+{%- macro login() %}
+      {% if mt.preview %}
+      <a class="mt-login" href="/admin/maintenance">preview <span aria-hidden="true">//</span> back to settings &gt;</a>
+      {% else %}
+      <a class="mt-login" href="/login">login &gt;</a>
+      {% endif %}
+{%- endmacro -%}
+{#- the admin's text as plain paragraphs (signal, panel) -#}
+{%- macro copy() %}
+          {% for line in mt.lines %}
+          <p class="mt-p">{{ line }}</p>
+          {% endfor %}
+          {% if mt.eta %}<p class="mt-p mt-p-eta">expected back: {{ mt.eta }}</p>{% endif %}
+{%- endmacro -%}
+<!doctype html>
+<html lang="{{ (lang or "en") }}" class="no-js" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ domain }} — {{ mt.title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#000" />
+  {#- without JavaScript the page comes back by itself once maintenance is over (with it: maintenance.js asks every 30 s) -#}
+  {% if not mt.preview %}<meta http-equiv="refresh" content="300" />{% endif %}
+  <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
+  <link rel="preload" href="/s/vcr.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="/s/css/glitchfx.css?v={{ mtime("/public/s/css/glitchfx.css") }}">
+  <link rel="stylesheet" href="/s/css/maintenance.css?v={{ mtime("/public/s/css/maintenance.css") }}">
+  <script src="/s/js/views/maintenance.js?v={{ mtime("/public/s/js/views/maintenance.js") }}"></script>
+</head>
+<body class="mt-body mt-layout-{{ mt.layout }}"{% if mt.preview %} data-preview="1"{% endif %}>
+  <div class="mt-screen{{ mt.glitch.page.cls }}"{{ g(mt.glitch.page) }}>
+
+  {% if mt.layout == "signal" %}
+    {#- Signal lost: the video behind everything, headline and text in the middle -#}
+    <div class="mt-bg{{ mt.glitch.video.cls }}"{{ g(mt.glitch.video) }}>
+      {{- media(true) }}
+    </div>
+    <div class="mt-dim" aria-hidden="true"></div>
+
+    <main class="mt-center">
+      {{ offair() }}
+      <h1 class="mt-headline{{ mt.glitch.headline.cls }}"{{ g(mt.glitch.headline) }}>{{ mt.title }}</h1>
+      <div class="mt-copy{{ mt.glitch.text.cls }}"{{ g(mt.glitch.text) }}>
+        {{- copy() }}
+      </div>
+    </main>
+
+    <footer class="mt-corner">
+      {{- brand() }}
+      {% if mt.since %}<span class="mt-since">since {{ mt.since }}</span>{% endif %}
+      {{- login() }}
+    </footer>
+
+  {% elif mt.layout == "panel" %}
+    {#- Boxed panel: logo, then one box with headline, video and text -#}
+    <header class="mt-logo">
+      {{- brand() }}
+    </header>
+
+    <main class="mt-box">
+      <div class="mt-box-head">
+        <h1 class="mt-headline{{ mt.glitch.headline.cls }}"{{ g(mt.glitch.headline) }}>{{ mt.title }}</h1>
+        {{ offair() }}
+      </div>
+      {% if mt.video_url %}
+      <div class="mt-box-video{{ mt.glitch.video.cls }}"{{ g(mt.glitch.video) }}>
+        {{- media(false) }}
+      </div>
+      {% endif %}
+      <div class="mt-copy{{ mt.glitch.text.cls }}"{{ g(mt.glitch.text) }}>
+        {{- copy() }}
+      </div>
+    </main>
+
+    <footer class="mt-corner">
+      {% if mt.since %}<span class="mt-since">since {{ mt.since }}</span>{% endif %}
+      {{- login() }}
+    </footer>
+
+  {% else %}
+    {#- Test card / terminal: video left, terminal right, headline in the bottom bar -#}
+    <header class="mt-top">
+      {{- brand() }}
+      {{ offair() }}
+      {% if mt.since %}<span class="mt-since">since {{ mt.since }}</span>{% endif %}
+    </header>
+
+    <main class="mt-main">
+      <section class="mt-tv" aria-label="Video">
+        <div class="mt-tv-frame{{ mt.glitch.video.cls }}"{{ g(mt.glitch.video) }}>
+          {{- media(true) }}
+        </div>
+        <p class="mt-tv-label">CH 00 <span aria-hidden="true">//</span> NO SIGNAL</p>
+      </section>
+
+      <section class="mt-term{{ mt.glitch.text.cls }}"{{ g(mt.glitch.text) }} aria-label="Status">
+        <p class="mt-term-bar">tty0 <span aria-hidden="true">//</span> {{ domain }}</p>
+        <div class="mt-term-body">
+          <p class="mt-line mt-line-cmd">maintenance --status</p>
+          {% for line in mt.lines %}
+          <p class="mt-line">{{ line }}</p>
+          {% endfor %}
+          {% if mt.eta %}<p class="mt-line mt-line-eta">expected back: {{ mt.eta }}</p>{% endif %}
+          <p class="mt-line mt-line-end"><span class="mt-cursor" aria-hidden="true"></span></p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mt-bottom">
+      <h1 class="mt-headline{{ mt.glitch.headline.cls }}"{{ g(mt.glitch.headline) }}>{{ mt.title }}</h1>
+      {{- login() }}
+    </footer>
+  {% endif %}
+
+  </div>
+  <script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>
+</body>
+</html>

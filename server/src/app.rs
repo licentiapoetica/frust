@@ -312,6 +312,16 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
     // Media URLs: private/unavailable items and protect_files
     static MEDIA: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"^/(b|c|t|ca|a|memes)/").unwrap());
     if MEDIA.is_match(&path) || path.starts_with("/s/emojis/") {
+        // Maintenance mode: item media only for admins (emojis stay, the login page uses them)
+        if MEDIA.is_match(&path) && st.settings.maintenance_on() && !cfg.truthy("websrv.private_society") {
+            let admin = match req.cookie("session") {
+                Some(c) => media_user(st, &c.to_string()).await.is_some_and(|u| u.bool("admin") && !u.bool("banned")),
+                None => false,
+            };
+            if !admin {
+                return Ok(Some(crate::maintenance::media_unavailable()));
+            }
+        }
         if let Some(hit) = crate::private_items::from_path(st, &path) {
             let user = match req.cookie("session") {
                 Some(c) => media_user(st, &c.to_string()).await,
@@ -694,6 +704,11 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
         }
     }
 
+    // Maintenance mode: everyone but admins gets the maintenance page
+    if let Some(resp) = crate::maintenance::intercept(st, req) {
+        return Ok(Some(resp));
+    }
+
     // Private society: login required for everything else
     if cfg.truthy("websrv.private_society") && req.session.is_none() {
         static PUBLIC: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
@@ -816,6 +831,7 @@ const CSRF_EXEMPT: &[&str] = &[
     "/admin/brand_image/delete",
     "/admin/favicon/upload",
     "/admin/fonts/upload",
+    "/admin/maintenance/save",
     // No session state involved: captcha puzzles and browser CSP reports
     "/api/cap/challenge",
     "/api/cap/redeem",

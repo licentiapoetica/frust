@@ -648,7 +648,7 @@ async fn run_socket(st: AppState, socket: WebSocket, client: Arc<Client>, mut rx
 
 // ── Postgres LISTEN ─────────────────────────────────────────────────────────
 
-const CHANNELS: [&str; 20] = [
+const CHANNELS: [&str; 21] = [
     "notifications",
     "warnings",
     "bans",
@@ -658,6 +658,7 @@ const CHANNELS: [&str; 20] = [
     "comments",
     "favorites",
     "motd",
+    "maintenance",
     "brand_image",
     "new_item",
     "delete_item",
@@ -738,6 +739,11 @@ async fn dispatch(st: &AppState, channel: &str, payload: &str) {
             let motd = payload.to_string();
             st.settings.update(|s| s.motd = motd.clone());
             HUB.broadcast(&json!({ "type": "motd", "data": { "motd": motd } }));
+        }
+        "maintenance" => {
+            // Saved in the admin panel (by any process): take over the new setup, then tell the tabs
+            crate::maintenance::reload(st).await;
+            HUB.broadcast(&json!({ "type": "maintenance", "data": { "enabled": st.settings.maintenance_on() } }));
         }
         "emojis_updated" => HUB.broadcast(&json!({ "type": "emojis_updated" })),
         "global_chat_clear" => HUB.broadcast(&json!({ "type": "global_chat_clear" })),

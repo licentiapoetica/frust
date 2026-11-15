@@ -3,6 +3,7 @@
 //!
 //! * `dashboard` — /admin, site settings, MOTD and page texts, cleanup, sessions, tokens and
 //!   invite requests, Köpfe list, halls/chat pages
+//! * `maintenance` — maintenance mode and its page
 //! * `bans` — ban lists and (un)ban APIs, per-user IP history
 //! * `users` — user management and admin impersonation
 //! * `upload_page` — GET /upload
@@ -13,6 +14,7 @@
 
 mod bans;
 mod dashboard;
+mod maintenance;
 mod upload_page;
 mod users;
 
@@ -25,6 +27,7 @@ use serde_json::{Value, json};
 
 pub fn register(r: &mut Router) {
     dashboard::register(r);
+    maintenance::register(r);
     bans::register(r);
     users::register(r);
     upload_page::register(r);

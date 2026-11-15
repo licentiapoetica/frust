@@ -44,6 +44,8 @@ pub struct SiteSettings {
     /// Navbar brand text size in percent of the frontend's own (see [`BRAND_SIZES`]), 0 = 100
     pub brand_size: i64,
     pub motd: String,
+    /// Maintenance mode and its page (admin panel → Maintenance), see crate::maintenance
+    pub maintenance: crate::maintenance::Maintenance,
     pub about_text: String,
     pub rules_text: String,
     pub terms_text: String,
@@ -84,6 +86,7 @@ impl Settings {
                 brand_font: String::new(),
                 brand_weight: 0,
                 motd: String::new(),
+                maintenance: Default::default(),
                 about_text: String::new(),
                 rules_text: String::new(),
                 terms_text: String::new(),
@@ -143,6 +146,14 @@ impl Settings {
     }
     pub fn motd(&self) -> String {
         self.inner.read().motd.clone()
+    }
+    pub fn maintenance_on(&self) -> bool {
+        self.inner.read().maintenance.enabled
+    }
+    /// The maintenance setup while maintenance mode is on.
+    pub fn maintenance_if_on(&self) -> Option<crate::maintenance::Maintenance> {
+        let s = self.inner.read();
+        s.maintenance.enabled.then(|| s.maintenance.clone())
     }
 
     pub fn set_min_tags(&self, v: &Value) {
@@ -438,6 +449,7 @@ pub async fn load_from_db(st: &crate::state::AppState) {
             let b = val == "true";
             match key.as_str() {
                 "motd" => s.motd = val,
+                "maintenance" => s.maintenance = crate::maintenance::parse(&val),
                 "manual_approval" => s.manual_approval = b,
                 "min_tags" => s.min_tags = as_int(&Value::String(val)).unwrap_or(0).max(0),
                 "registration_open" => s.registration_open = b,

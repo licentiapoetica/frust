@@ -1,0 +1,25 @@
+/*
+ * maintenance-strip.css: the "maintenance mode is ON" note admins see on every page while it is
+ * on (snippets/maintenance-strip.html). Own file: the snippet is in every frontend, which share no
+ * site CSS.
+ */
+
+.mt-strip {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: 2147483000;
+  padding: 4px 10px;
+  background: #ff2a2a;
+  color: #000;
+  font: 700 12px/1.4 monospace;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mt-strip:hover,
+.mt-strip:focus-visible {
+  background: #fff;
+  color: #000;
+}

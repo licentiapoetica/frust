@@ -25284,7 +25284,8 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   cursor: pointer;
 }
 
-:where(.adm) .adm-check input[type="checkbox"] {
+:where(.adm) .adm-check input[type="checkbox"],
+:where(.adm) .adm-check input[type="radio"] {
   margin: 0;
   accent-color: var(--adm-accent);
 }
@@ -25523,6 +25524,54 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 :where(.adm) .adm-font-empty {
   margin: 0;
   padding: 14px 16px;
+}
+
+/* ---- admin/maintenance: maintenance mode and its page ---- */
+/* Dashboard tile while maintenance mode is on */
+:where(.adm) .adm-tool-alert,
+:where(.adm) .adm-tool-alert > i {
+  border-color: #ff2a2a;
+  color: #ff2a2a;
+}
+
+:where(.adm) .adm-maint-on {
+  color: #ff2a2a;
+}
+
+:where(.adm) .adm-maint-wide {
+  flex: 1 1 320px;
+  width: auto;
+}
+
+:where(.adm) .adm-maint-textarea {
+  height: auto;
+  min-height: 150px;
+  padding: 8px 10px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+:where(.adm) .adm-maint-current,
+:where(.adm) .adm-maint-glitch,
+:where(.adm) .adm-maint-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+:where(.adm) .adm-maint-thumb {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  max-height: 140px;
+  object-fit: contain;
+  background: #000;
+  border: 1px solid var(--adm-border);
+}
+
+:where(.adm) .adm-maint-actions {
+  margin-top: 16px;
 }
 
 /* ---- admin/mod subpages: shared bits (identical inline styles on several pages) ---- */
