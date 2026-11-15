@@ -2240,11 +2240,18 @@ html[data-w0bm-theme="Glitch"] .navbar .dropdown-menu {
    <body> (Glitch a gradient fixed to the window, Epilepsie the flashing). */
 .page-header:has(.w0bm-searchform) {
     position: sticky;
-    top: 50px;
+    /* the navbar's height: it wraps onto more rows when its entries don't fit, so w0bm.js
+       measures it */
+    top: var(--w0bm-nav-h, 50px);
     z-index: 100;
     margin-top: 30px;
     padding-top: 10px;
     background-color: #161618;
+}
+/* Without JavaScript the navbar's height isn't known (a wrapped navbar would cover the header),
+   so there the header scrolls with the page */
+html.w0bm-nojs .page-header:has(.w0bm-searchform) {
+    position: static;
 }
 /* the title's 20px top margin collapsed into the header's margin; the padding ends that */
 .page-header:has(.w0bm-searchform) > h3#index {
@@ -2681,6 +2688,13 @@ nav.navbar.navbar-static-top {
     position: sticky;
     top: 0;
     z-index: 1030;
+}
+/* Glitch makes <body> exactly one window high (glitch.css height: 100%), and a sticky box can't
+   leave its parent: the navbar scrolled away after the first screen. At least a window high
+   instead (the item page keeps its own fixed height). */
+html[data-w0bm-theme="Glitch"] body:not(.w0bm-item-page) {
+    height: auto;
+    min-height: 100%;
 }
 /* stats page: the label / link column on the left reads left-aligned */
 table.w0bm-ranking > tbody > tr > td:first-child,

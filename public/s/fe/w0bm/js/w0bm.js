@@ -99,6 +99,25 @@
     fit();
   }
 
+  // ── Sticky page header: below the navbar, however high it is ──────────────────────────
+  // The navbar wraps onto a second row when its entries don't fit (logged in, wide theme labels),
+  // so the header with the search box sticks at the navbar's measured height
+  // (w0bm-fe.css --w0bm-nav-h).
+  const stickyHead = $('.page-header .w0bm-searchform')?.closest('.page-header');
+  const stickyNav = stickyHead && $('nav.navbar');
+  if (stickyNav && window.ResizeObserver) {
+    const root = document.documentElement;
+    const measure = () => {
+      // measured in screen px, set in the header's own px (its CSS zoom from the text size)
+      const h = Math.floor(stickyNav.getBoundingClientRect().height / (stickyHead.currentCSSZoom || 1)) + 'px';
+      if (root.style.getPropertyValue('--w0bm-nav-h') !== h) root.style.setProperty('--w0bm-nav-h', h);
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(stickyNav);
+    onLeave(() => ro.disconnect());
+    measure();
+  }
+
   function escapeHTML(str) {
     return String(str ?? '').replace(/[&<>"'`=\/]/g, (s) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;',
