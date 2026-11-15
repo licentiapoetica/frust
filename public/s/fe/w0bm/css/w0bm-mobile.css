@@ -225,6 +225,24 @@ body.w0bm-item-page .vertical-align {
 .videotitle-div:has(> #w0bm-item-title:empty) {
     display: none;
 }
+/* the player: the big play button smaller (70px covered most of an upright video), and the
+   control bar always inside the player, whatever the text size or website font: its font, which
+   sizes the buttons too, shrinks with the player's width (container query units: 4cqi is about
+   the most play, mute, volume, the times, speed and fullscreen take) */
+body.w0bm-item-page .w0bm-media,
+.w0bm-fs-host > .w0bm-media {
+    container-type: inline-size;
+}
+.w0bm-media .video-js .vjs-big-play-button {
+    font-size: 1.7em;
+}
+.w0bm-media .video-js .vjs-control-bar {
+    font-size: min(13px, 4cqi);
+}
+/* vjsnew.css: 6rem, which doesn't shrink with the bar */
+.w0bm-media .video-js .vjs-volume-control.vjs-control {
+    width: 4.5em;
+}
 /* page links: one row, first and last included (w0bmcustom.css puts those two in tabs over the
    top corners below 690px) */
 /* always one row, whatever the text size or website font: the row's font shrinks when it would
