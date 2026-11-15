@@ -227,15 +227,35 @@ body.w0bm-item-page .vertical-align {
 }
 /* page links: one row, first and last included (w0bmcustom.css puts those two in tabs over the
    top corners below 690px) */
+/* always one row, whatever the text size or website font: the row's font shrinks when it would
+   not fit (container query units, like the sidebar footer links in w0bm-fe.css: 5cqi is about
+   the most "← first ← prev | random | next → last →" takes in a wide font), and a long context
+   label (the tag, user or hall in the middle) is cut with an ellipsis */
+body.w0bm-item-page .vertical-align > .wrapper {
+    container-type: inline-size;
+}
 body.w0bm-item-page .w0bm-itemnav {
     justify-content: space-between;
     align-items: baseline;
+    gap: 0.3em;
     padding: 4px 2px;
     white-space: nowrap;
+    font-size: min(19px, 5cqi);
+}
+body.w0bm-item-page .w0bm-itemnav > a {
+    flex: none;
+}
+body.w0bm-item-page .w0bm-itemnav > #w0bm-context {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 body.w0bm-item-page .w0bm-itemnav > a.first,
 body.w0bm-item-page .w0bm-itemnav > a.last {
     position: static;
+    /* style.css: 18px */
+    font-size: inherit;
     padding: 0;
     background: none;
     border: 0;
@@ -308,9 +328,17 @@ body.w0bm-item-page #cinput:focus {
 }
 
 /* the toolbar in one row: Post, the effect buttons spread over the rest, the emoji button last */
+/* it stays one row in any text size or website font: the buttons' font shrinks with the box
+   (container query units: 3.8cqi is about the most Post + the five labels + the emoji take) */
+body.w0bm-item-page #commentForm .commbordersoos {
+    container-type: inline-size;
+}
 body.w0bm-item-page #comment_tools.commentform-panel-footer {
     align-items: center;
     gap: 8px;
+}
+body.w0bm-item-page #comment_tools > .btn {
+    font-size: min(12px, 3.5cqi);
 }
 body.w0bm-item-page #comment_tools > .textmodifierss {
     flex: 1 1 auto;
@@ -318,7 +346,8 @@ body.w0bm-item-page #comment_tools > .textmodifierss {
     justify-content: space-between;
     align-self: center;
     gap: 4px;
-    font-size: 13px;
+    min-width: 0;
+    font-size: min(13px, 3.8cqi);
 }
 /* the emoji box open: it takes the comments' place, fills the screen between the comment box and
    the tags and scrolls inside; tapping the emoji button again brings the comments back */
