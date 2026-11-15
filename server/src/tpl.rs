@@ -1148,7 +1148,7 @@ mod tests {
         assert!(out.contains(r#"<h1 class="mt-headline mt-fx mt-fx-high mt-fx-bursts" data-glitch="0.95" data-glitch-idle>brb</h1>"#), "{out}");
         assert!(out.contains(r#"<div class="mt-tv-frame mt-fx mt-fx-low mt-fx-hover" data-glitch="0.3" data-glitch-hover>"#), "{out}");
         assert!(out.contains(r#"<section class="mt-term" aria-label="Status">"#), "{out}");
-        assert!(out.contains(r#"<video class="mt-video" src="/s/maintenance/video-ab12.webm" autoplay muted loop playsinline></video>"#), "{out}");
+        assert!(out.contains(r#"<video class="mt-video" src="/s/maintenance/video-ab12.webm" autoplay muted loop playsinline controls></video>"#), "{out}");
         assert!(out.contains(r#"<p class="mt-line">line &lt;one&gt;</p>"#), "{out}");
         assert_eq!(out.matches(r#"<p class="mt-line">"#).count(), 3);
         assert!(out.contains("expected back: ~16:00") && out.contains("since 2026-11-14 23:46 UTC") && out.contains(r#"href="/login?form""#), "{out}");

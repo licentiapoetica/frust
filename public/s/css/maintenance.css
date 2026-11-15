@@ -166,6 +166,28 @@ body {
   object-fit: contain;
 }
 
+/* "Sound off, click": over the video while the browser still blocks its sound (maintenance.js) */
+.mt-sound {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 4px 10px;
+  border: 0;
+  background: var(--mt-accent);
+  color: #000;
+  font: inherit;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.mt-sound[hidden] {
+  display: none;
+}
+
 /* Test card when there is no video */
 .mt-bars {
   position: absolute;
@@ -467,6 +489,7 @@ body {
 }
 
 .mt-box-video {
+  position: relative;
   background: #000;
   border-bottom: 1px solid var(--mt-border);
   overflow: hidden;

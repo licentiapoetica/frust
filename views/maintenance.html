@@ -9,7 +9,12 @@
           {% if (mt.video_url and mt.video_is_image) %}
           <img class="mt-video" src="{{ mt.video_url }}" alt="">
           {% elif mt.video_url %}
-          <video class="mt-video" src="{{ mt.video_url }}" autoplay muted loop playsinline{% if mt.video_controls %} controls{% endif %}></video>
+          {#- Starts muted (browsers only autoplay muted video); maintenance.js turns the sound on, right away
+              where the browser allows it, else on the visitor's first click or key (the hint below).
+              Controls are always in the markup so the sound can be turned on without JavaScript;
+              maintenance.js takes them off again unless the admin wants them (data-controls). -#}
+          <video class="mt-video" src="{{ mt.video_url }}" autoplay muted loop playsinline controls{% if mt.video_controls %} data-controls="1"{% endif %}></video>
+          <button type="button" class="mt-sound" hidden>sound off <span aria-hidden="true">//</span> click</button>
           {% elif bars %}
           <div class="mt-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
           {% endif %}

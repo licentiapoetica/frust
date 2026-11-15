@@ -96,7 +96,7 @@ pub struct Maintenance {
     pub video_url: String,
     /// Where the video came from, for the admin form ("upload: x.mp4", "item 123")
     pub video_from: String,
-    /// Show the player controls (lets visitors unmute)
+    /// Keep the player controls on screen (the sound is on by itself, see maintenance.js)
     pub video_controls: bool,
     pub glitch: BTreeMap<String, Glitch>,
 }

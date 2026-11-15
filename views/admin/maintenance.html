@@ -78,7 +78,7 @@
                     <div class="adm-row adm-row-wrap">
                         <div class="adm-row-text">
                             <label>Current</label>
-                            <p>{% if mt.video_url %}From {{ mt.video_from }}. It plays muted in a loop.{% else %}None: the page shows a test card (colour bars).{% endif %}</p>
+                            <p>{% if mt.video_url %}From {{ mt.video_from }}. It plays in a loop with sound; where the browser blocks sound until the visitor clicks, it starts muted with a "sound off, click" note and the first click or key turns it on.{% else %}None: the page shows a test card (colour bars).{% endif %}</p>
                         </div>
                         {% if mt.video_url %}
                         <div class="adm-maint-current">
@@ -108,7 +108,7 @@
                     <div class="adm-row adm-row-wrap">
                         <div class="adm-row-text">
                             <label for="maint-controls">Player controls</label>
-                            <p>Show the video controls, so visitors can turn the sound on.</p>
+                            <p>Keep the video controls on screen (pause, volume). Without JavaScript they always show.</p>
                         </div>
                         <label class="adm-check"><input type="checkbox" id="maint-controls" name="video_controls" value="1"{% if mt.video_controls %} checked{% endif %}> Show controls</label>
                     </div>
