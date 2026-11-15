@@ -36832,6 +36832,20 @@ html[class*="user-fs-"] body {
 
 .settings .settings-reauth-input {
   display: block;
+/* Delete account: "this cannot be undone", and the last question before it is sent */
+.settings .settings-delete-warning {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.settings .settings-delete-final {
+  margin-top: 10px;
+}
+
   width: 100%;
   max-width: 360px;
   margin: 0 auto 10px;

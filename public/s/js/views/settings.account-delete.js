@@ -1,20 +1,38 @@
 // Settings: "Delete my account". The form also works as a plain post; here it is sent with fetch so
-// a passkey-only account can confirm with its passkey (f0ckWithReauth, f0ck-core.js).
+// a passkey-only account can confirm with its passkey (f0ckWithReauth, f0ck-core.js), and the
+// button first opens a last question ("this cannot be undone") before anything is sent.
 (function () {
   var form = document.getElementById('account-delete-form');
   if (!form) return;
   var status = document.getElementById('account-delete-status');
   var btn = form.querySelector('button[type="submit"]');
+  var first = document.getElementById('account-delete-first');
+  var finalBox = document.getElementById('account-delete-final');
+  var finalBtn = document.getElementById('account-delete-final-btn');
+  var cancelBtn = document.getElementById('account-delete-cancel');
+  function askAgain(on) {
+    finalBox.classList.toggle('settings-hidden', !on);
+    first.classList.toggle('settings-hidden', on);
+  }
   function setStatus(msg, ok) {
     status.textContent = msg;
     status.classList.toggle('success', !!ok);
     status.classList.toggle('error', !ok);
   }
+  // First button (or Enter): only the last question
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    if (!form.reportValidity()) return;
+    setStatus('', true);
+    askAgain(true);
+    cancelBtn.focus();
+  });
+  cancelBtn.addEventListener('click', function () { askAgain(false); });
+  finalBtn.addEventListener('click', function () {
     var password = form.elements.current_password;
     var confirmBox = form.elements.confirm;
-    if (!form.reportValidity()) return;
+    if (!form.reportValidity()) return askAgain(false);
+    finalBtn.disabled = true;
     btn.disabled = true;
     var send = function () {
       return fetch(form.action, {
@@ -24,7 +42,11 @@
           'X-Requested-With': 'XMLHttpRequest',
           'X-CSRF-Token': (window.f0ckSession && window.f0ckSession.csrf_token) || form.elements.csrf_token.value
         },
-        body: JSON.stringify({ current_password: password ? password.value : '', confirm: confirmBox.checked })
+        body: JSON.stringify({
+          current_password: password ? password.value : '',
+          confirm: confirmBox.checked,
+          confirm_username: form.elements.confirm_username.value
+        })
       });
     };
     var request = window.f0ckWithReauth ? window.f0ckWithReauth(send) : send().then(function (r) { return r.json(); });
@@ -36,9 +58,13 @@
         return;
       }
       btn.disabled = false;
+      finalBtn.disabled = false;
+      askAgain(false);
       setStatus((d && d.msg) || 'Failed to delete the account.', false);
     }).catch(function (err) {
       btn.disabled = false;
+      finalBtn.disabled = false;
+      askAgain(false);
       setStatus((err && err.name === 'NotAllowedError') ? 'Passkey confirmation was cancelled.' : 'Network error.', false);
     });
   });

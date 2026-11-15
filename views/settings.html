@@ -1027,6 +1027,7 @@
       <h2 id="delete-account"><i class="fa-solid fa-user-slash"></i> {{ t("settings.delete_account_title") }}</h2>
       <div class="account-settings-wrapper settings-delete-account">
         <p class="settings-muted">{{ t("settings.delete_account_desc") }}</p>
+        <p class="settings-delete-warning" role="note"><i class="fa-solid fa-triangle-exclamation"></i> {{ t("settings.delete_account_warning") }}</p>
         {% if session.admin %}
         <p class="settings-muted">{{ t("settings.delete_account_admin") }}</p>
         {% else %}
@@ -1043,8 +1044,19 @@
             <input type="checkbox" name="confirm" value="1" required>
             <span>{{ t("settings.delete_account_confirm") }}</span>
           </label>
-          <div class="settings-button-row">
+          {#- Second confirmation: the own username, typed out (checked by the server) -#}
+          <input type="text" name="confirm_username" class="input settings-reauth-input"
+            placeholder="{{ t("settings.delete_account_type_name") }}" aria-label="{{ t("settings.delete_account_type_name") }}" required autocomplete="off" autocapitalize="off" spellcheck="false">
+          <div class="settings-button-row" id="account-delete-first">
             <button type="submit" class="button button-danger"><i class="fa-solid fa-user-slash"></i> {{ t("settings.delete_account_btn") }}</button>
+          </div>
+          {#- With JavaScript the first button only opens this last question -#}
+          <div id="account-delete-final" class="settings-delete-final settings-hidden">
+            <p class="settings-delete-warning" role="alert"><i class="fa-solid fa-triangle-exclamation"></i> {{ t("settings.delete_account_final") }}</p>
+            <div class="settings-button-row">
+              <button type="button" id="account-delete-final-btn" class="button button-danger"><i class="fa-solid fa-user-slash"></i> {{ t("settings.delete_account_final_btn") }}</button>
+              <button type="button" id="account-delete-cancel" class="button">{{ t("settings.delete_account_cancel") }}</button>
+            </div>
           </div>
           <div id="account-delete-status" class="avatar-status"></div>
         </form>

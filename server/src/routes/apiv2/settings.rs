@@ -477,7 +477,8 @@ async fn username_color(st: AppState, mut req: Req) -> Res {
 // ── password / email ────────────────────────────────────────────────────────
 
 /// A user deletes their own account. Needs the current password (passkey-only accounts confirm
-/// with a passkey, see [`reauth_check`]) and `confirm`. Uploads and comments stay on the site
+/// with a passkey, see [`reauth_check`]) and two confirmations: `confirm` (the checkbox) and
+/// `confirm_username` (the own username, typed out). Uploads and comments stay on the site
 /// under `deleted_user` (routes/admin/users.rs `delete_account`, the same as an admin's delete).
 async fn account_delete(st: AppState, mut req: Req) -> Res {
     let body = req.post_value().await;
@@ -489,6 +490,12 @@ async fn account_delete(st: AppState, mut req: Req) -> Res {
     }
     if !crate::config::truthy(body.get("confirm").unwrap_or(&Value::Null)) {
         return fail("Please confirm that you want to delete your account.", 400);
+    }
+    // Second confirmation: the username typed out, so it can't happen by a stray click
+    let typed = js_str(body.get("confirm_username")).unwrap_or_default();
+    let typed = typed.trim();
+    if typed.is_empty() || !(typed.eq_ignore_ascii_case(&s.login) || typed == s.user) {
+        return fail("Type your username to confirm. Deleting your account cannot be undone.", 400);
     }
     match reauth_check(&st, &req, &body).await {
         Ok(None) => {}
