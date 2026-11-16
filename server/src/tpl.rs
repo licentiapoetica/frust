@@ -1432,7 +1432,7 @@ mod tests {
         assert!(home.contains("<article class=\"fy-card\" data-id=\"7\">") && home.contains("<a class=\"fy-thumb\" href=\"/7\""));
         assert!(home.contains("<span class=\"fy-watched\" title=\"watched\"></span>"));
         // the play time on the thumbnail, and the video to preview on hover
-        assert!(home.contains("<span class=\"fy-badge-br fy-time\">1:15</span>"));
+        assert!(home.contains("<span class=\"fy-badges\"><span class=\"fy-tbadge fy-time\">1:15</span></span>"));
         assert!(home.contains("<a class=\"fy-thumb\" href=\"/7\" tabindex=\"-1\" aria-hidden=\"true\" data-preview=\"/b/abc.mp4\">"));
         assert!(home.contains("class=\"fy-ava fy-ava-letter fy-ava-color\" style=\"--user-color: #f00\""));
         assert!(home.contains("<div class=\"fy-grid\" data-fy-feed>"));
@@ -1473,7 +1473,7 @@ mod tests {
             "result": [{ "id": 7, "username": "al", "display_name": "Al B", "avatar_file": "a.webp", "mime": "video/mp4", "dest": "s.mp4", "duration": 62.5, "views": 3, "tag": "cat", "score": 0.93 }],
             "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" } }));
         dump("search", &search);
-        assert!(search.contains("data-preview=\"/b/s.mp4\"") && search.contains("<span class=\"fy-badge-br fy-time\">1:02</span>"));
+        assert!(search.contains("data-preview=\"/b/s.mp4\"") && search.contains("<span class=\"fy-tbadge fy-time\">1:02</span>"));
         assert!(search.contains("<img class=\"fy-ava\" src=\"/a/a.webp\" alt=\"\" loading=\"lazy\"><span>Al B</span>") && search.contains("3 views"));
         assert!(search.contains("<h3 class=\"fy-row-title\"><a href=\"/tag/cat/7\">cat - f0ck #7</a></h3>"));
         assert!(search.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
@@ -1512,7 +1512,7 @@ mod tests {
         assert!(page.contains("<ol class=\"fy-upnext-list\" id=\"fy-recs\" data-item-id=\"7\">"));
         assert!(page.contains("<a href=\"/9\" data-rec=\"9\" data-tags=\"cat,dog\" data-creator=\"al\">"));
         assert!(page.contains("<span class=\"fy-upnext-name\" title=\"#cat #dog\">#cat #dog</span>"));
-        assert!(page.contains("<span class=\"fy-badge-tl fy-rate-nsfw\">NSFW</span>") && page.contains("<span class=\"fy-badge-br fy-time\">1:02:05</span>"));
+        assert!(page.contains("<span class=\"fy-badges\"><span class=\"fy-tbadge fy-rate-nsfw\">NSFW</span><span class=\"fy-tbadge fy-time\">1:02:05</span></span>"));
         assert!(page.contains("<span class=\"fy-upnext-thumb\" data-preview=\"/b/r.webm\">"));
         assert!(page.contains("1 view &middot; <time") && page.contains("<span class=\"fy-foryou\">For you</span>"));
         // views; no message of the day in f0ckyou

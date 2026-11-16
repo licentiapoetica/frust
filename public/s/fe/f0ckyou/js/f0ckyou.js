@@ -723,10 +723,13 @@
       img.loading = 'lazy';
       thumb.append(img);
     }
-    if (v.rating_class === 'nsfw' || v.rating_class === 'nsfl') thumb.append(el('span', `fy-badge-tl fy-rate-${v.rating_class}`, v.rating_class.toUpperCase()));
+    // bottom right: the rating (not SFW), then the play time or the file type
+    const badges = el('span', 'fy-badges');
+    if (v.rating_class === 'nsfw' || v.rating_class === 'nsfl') badges.append(el('span', `fy-tbadge fy-rate-${v.rating_class}`, v.rating_class.toUpperCase()));
     const ext = EXT(mime);
-    if (Number(v.duration) >= 1) thumb.append(el('span', 'fy-badge-br fy-time', timecode(v.duration)));
-    else if (ext) thumb.append(el('span', 'fy-badge-br', ext));
+    if (Number(v.duration) >= 1) badges.append(el('span', 'fy-tbadge fy-time', timecode(v.duration)));
+    else if (ext) badges.append(el('span', 'fy-tbadge', ext));
+    thumb.append(badges);
     const text = el('span', 'fy-upnext-text');
     const name = el('span', 'fy-upnext-name', title);
     name.title = title;

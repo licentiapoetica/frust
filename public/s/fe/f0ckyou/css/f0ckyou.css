@@ -1134,8 +1134,14 @@ html:not(.no-js) .nojs-only {
 }
 
 /* the badges and the watched bar stay over it */
-:is(.fy-thumb, .fy-upnext-thumb) > :is(.fy-badge-br, .fy-badge-tl, .fy-watched, .fy-hall-side) {
+:is(.fy-thumb, .fy-upnext-thumb, .fy-row-thumb) > :is(.fy-badge-br, .fy-badge-tl, .fy-badges, .fy-watched, .fy-hall-side) {
   z-index: 1;
+  transition: opacity .15s;
+}
+
+/* while the preview plays, nothing covers it */
+.fy-previewing > :is(.fy-badge-br, .fy-badge-tl, .fy-badges, .fy-watched) {
+  opacity: 0;
 }
 
 /* the play time: numbers that don't jump */
@@ -1153,8 +1159,47 @@ html:not(.no-js) .nojs-only {
   background: var(--fy-red);
 }
 
-.fy-thumb:has(.fy-watched) .fy-badge-br {
+.fy-thumb:has(.fy-watched) :is(.fy-badge-br, .fy-badges) {
   bottom: .75rem;
+}
+
+/* bottom right of a thumbnail: the rating next to the play time */
+.fy-badges {
+  position: absolute;
+  right: .5rem;
+  bottom: .5rem;
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.fy-badges:empty {
+  display: none;
+}
+
+.fy-tbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .1875rem .3125rem;
+  background: rgba(0, 0, 0, .8);
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.fy-tbadge .fy-ico {
+  width: .875rem;
+  height: .875rem;
+}
+
+.fy-tbadge.fy-rate-nsfw {
+  background: var(--fy-nsfw);
+}
+
+.fy-tbadge.fy-rate-nsfl {
+  background: var(--fy-nsfl);
 }
 
 .fy-card-meta {
@@ -1430,7 +1475,7 @@ html.fy-navigating .fy-mast::after {
 /* ── watch page ── */
 .fy-watch {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(18rem, 25rem);
+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
   gap: 1.5rem;
   max-width: 110rem;
   margin: 0 auto;
@@ -2181,7 +2226,7 @@ body.fy-page-watch {
 .fy-upnext-list {
   display: flex;
   flex-direction: column;
-  gap: .5rem;
+  gap: .75rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2189,7 +2234,7 @@ body.fy-page-watch {
 
 .fy-upnext-list a {
   display: flex;
-  gap: .5rem;
+  gap: .75rem;
   color: var(--fy-text);
 }
 
@@ -2200,7 +2245,7 @@ body.fy-page-watch {
 .fy-upnext-thumb {
   display: block;
   flex: none;
-  width: 10.5rem;
+  width: min(15rem, 52%);
   aspect-ratio: 16 / 9;
   overflow: hidden;
   background: var(--fy-thumb-bg);
@@ -2218,10 +2263,8 @@ body.fy-page-watch {
 }
 
 .fy-upnext-thumb .fy-badge-br {
-  right: .25rem;
-  bottom: .25rem;
-  padding: .125rem .25rem;
-  font-size: .6875rem;
+  right: .375rem;
+  bottom: .375rem;
 }
 
 .fy-upnext-thumb .fy-badge-tl {
@@ -2229,6 +2272,11 @@ body.fy-page-watch {
   left: .25rem;
   padding: .125rem .25rem;
   font-size: .6875rem;
+}
+
+.fy-upnext-thumb .fy-badges {
+  right: .375rem;
+  bottom: .375rem;
 }
 
 .fy-upnext-thumb .fy-thumb-audio .fy-ico {
@@ -2246,9 +2294,9 @@ body.fy-page-watch {
 .fy-upnext-name {
   display: -webkit-box;
   overflow: hidden;
-  font-size: .875rem;
+  font-size: 1rem;
   font-weight: 500;
-  line-height: 1.25rem;
+  line-height: 1.375rem;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow-wrap: anywhere;
@@ -2257,13 +2305,13 @@ body.fy-page-watch {
 .fy-upnext-chan {
   overflow: hidden;
   color: var(--fy-muted);
-  font-size: .75rem;
+  font-size: .875rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .fy-upnext-text .fy-dim {
-  font-size: .75rem;
+  font-size: .8125rem;
 }
 
 .fy-foryou {
@@ -3330,6 +3378,6 @@ html.user-fs-150 {
   }
 
   .fy-upnext-thumb {
-    width: 8rem;
+    width: min(11rem, 45%);
   }
 }

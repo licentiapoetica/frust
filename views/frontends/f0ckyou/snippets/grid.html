@@ -14,8 +14,9 @@
     {%- set fy_preview = (p.mime and p.mime.startswith("video/") and p.mime != "video/youtube" and p.dest and not p.dest.endswith(".gif")) -%}
     <a class="fy-thumb" href="{{ href }}" tabindex="-1" aria-hidden="true"{% if fy_preview %} data-preview="{{ (paths_images or "/b") }}/{{ p.dest }}"{% endif %}>
       {% if (p.is_audio and not p.has_coverart and not p.thumb) %}<span class="fy-thumb-audio">{{ fy.ico("music") }}</span>{% else %}<img src="{{ (p.thumb or ("/t/" ~ p.id ~ ".webp")) }}" alt="" loading="lazy">{% endif %}
-      {% if p.is_pinned %}<span class="fy-badge-tl">{{ fy.ico("pin") }}Pinned</span>{% elif p.rating_class in ["nsfw", "nsfl"] %}<span class="fy-badge-tl fy-rate-{{ p.rating_class }}">{{ p.rating_class|upper }}</span>{% endif %}
-      {% if (p.is_album and p.album_count > 1) %}<span class="fy-badge-br">{{ fy.ico("album") }}{{ p.album_count }}</span>{% elif (p.duration and p.duration >= 1) %}<span class="fy-badge-br fy-time">{% if p.mime.startswith("audio") %}{{ fy.ico("music") }}{% endif %}{{ fy.timecode(p.duration) }}</span>{% elif kind %}<span class="fy-badge-br">{{ kind }}</span>{% endif %}
+      {% if p.is_pinned %}<span class="fy-badge-tl">{{ fy.ico("pin") }}Pinned</span>{% endif %}
+      {#- bottom right: the rating (not SFW), then the play time (or the album size, or the type) -#}
+      <span class="fy-badges">{% if p.rating_class in ["nsfw", "nsfl"] %}<span class="fy-tbadge fy-rate-{{ p.rating_class }}">{{ p.rating_class|upper }}</span>{% endif %}{% if (p.is_album and p.album_count > 1) %}<span class="fy-tbadge">{{ fy.ico("album") }}{{ p.album_count }}</span>{% elif (p.duration and p.duration >= 1) %}<span class="fy-tbadge fy-time">{% if p.mime.startswith("audio") %}{{ fy.ico("music") }}{% endif %}{{ fy.timecode(p.duration) }}</span>{% elif kind %}<span class="fy-tbadge">{{ kind }}</span>{% endif %}</span>
       {% if p.my_views %}<span class="fy-watched" title="watched"></span>{% endif %}
     </a>
     <div class="fy-card-meta">
