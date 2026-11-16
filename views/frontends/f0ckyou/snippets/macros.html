@@ -31,6 +31,15 @@
 {%- endif %} view{{ "" if n == 1 else "s" }}
 {%- endmacro -%}
 
+{#- A play time as on a video site: "0:13", "4:05", "1:02:05" (items.duration, seconds). -#}
+{%- macro timecode(secs) -%}
+{%- set t = ((secs or 0)|int) -%}
+{%- set h = t // 3600 -%}
+{%- set m = (t % 3600) // 60 -%}
+{%- set s = t % 60 -%}
+{%- if h -%}{{ h }}:{{ ("0" ~ m)[-2:] }}{%- else -%}{{ m }}{%- endif -%}:{{ ("0" ~ s)[-2:] }}
+{%- endmacro -%}
+
 {#- The icon of a media type (cards, chips). -#}
 {%- macro mime_icon(mime) -%}
 {%- if not mime -%}{{ ico("file") }}

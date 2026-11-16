@@ -321,6 +321,7 @@ pub async fn recommendation_items(st: &AppState, req: &Req, q: RecQuery) -> anyh
                 "mime": g("mime"),
                 "stamp": g("stamp"),
                 "views": g("views"),
+                "duration": g("duration"),
                 "username": if anon { json!("anonymous") } else { g("username") },
                 "display_name": if anon { Value::Null } else { g("display_name") },
                 "username_color": if anon { Value::Null } else { g("username_color") },

@@ -297,6 +297,9 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       CONSTRAINT item_view_marks_item_id_fkey FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
     )"#,
     r#"CREATE INDEX IF NOT EXISTS idx_item_view_marks_seen_at ON item_view_marks(seen_at)"#,
+    // Play time of videos and songs in seconds (media/duration.rs fills it; 0 = unknown)
+    r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS duration real"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_items_duration_missing ON items(id) WHERE duration IS NULL"#,
     // Website font weight (100-900, NULL: the font's own) and text size (percent, NULL: 100)
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_weight smallint"#,
     // Text size per frontend ({"<frontend>": percent, 100 = default}). The old single font_size

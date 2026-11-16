@@ -18,10 +18,10 @@
   {%- set rext = ((rmime.split("/")[1] if "/" in rmime else "")|replace("jpeg", "jpg")|replace("x-shockwave-flash", "flash")|replace("x-flac", "flac")|replace("mpeg", "mp3")|upper) -%}
   <li data-id="{{ v.id }}" data-personalized="{{ ("true" if v.personalized else "false") }}">
     <a href="/{{ key }}" data-rec="{{ v.id }}" data-tags="{{ rtags|join(",") }}" data-creator="{{ ("" if is_anonymized else (v.username or "")) }}">
-      <span class="fy-upnext-thumb">
+      <span class="fy-upnext-thumb"{% if (rmime.startswith("video/") and rmime != "video/youtube" and v.dest and not v.dest.endswith(".gif")) %} data-preview="{{ (paths_images or "/b") }}/{{ v.dest }}"{% endif %}>
         {% if (rmime.startswith("audio/") and not v.has_coverart) %}<span class="fy-thumb-audio">{{ fy.ico("music") }}</span>{% else %}<img src="/t/{{ v.id }}.webp" alt="" loading="lazy">{% endif %}
         {% if v.rating_class in ["nsfw", "nsfl"] %}<span class="fy-badge-tl fy-rate-{{ v.rating_class }}">{{ v.rating_class|upper }}</span>{% endif %}
-        {% if rext %}<span class="fy-badge-br">{{ rext }}</span>{% endif %}
+        {% if (v.duration and v.duration >= 1) %}<span class="fy-badge-br fy-time">{{ fy.timecode(v.duration) }}</span>{% elif rext %}<span class="fy-badge-br">{{ rext }}</span>{% endif %}
       </span>
       <span class="fy-upnext-text">
         <span class="fy-upnext-name" title="{{ rtitle }}">{{ rtitle }}</span>

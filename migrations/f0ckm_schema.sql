@@ -111,6 +111,7 @@ DROP INDEX IF EXISTS public.idx_items_pinned_id;
 DROP INDEX IF EXISTS public.idx_items_is_purged;
 DROP INDEX IF EXISTS public.idx_items_is_deleted;
 DROP INDEX IF EXISTS public.idx_items_expires_at;
+DROP INDEX IF EXISTS public.idx_items_duration_missing;
 DROP INDEX IF EXISTS public.idx_items_dest;
 DROP INDEX IF EXISTS public.idx_items_active_id;
 DROP INDEX IF EXISTS public.idx_invite_tokens_used_at;
@@ -990,7 +991,8 @@ CREATE TABLE public.items (
     visibility smallint DEFAULT 0 NOT NULL,
     slug character varying(16),
     expires_at bigint,
-    views bigint DEFAULT 0 NOT NULL
+    views bigint DEFAULT 0 NOT NULL,
+    duration real
 );
 
 
@@ -2561,6 +2563,13 @@ CREATE INDEX idx_items_active_id ON public.items USING btree (id) WHERE (active 
 --
 
 CREATE INDEX idx_items_dest ON public.items USING btree (dest);
+
+
+--
+-- Name: idx_items_duration_missing; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_items_duration_missing ON public.items USING btree (id) WHERE (duration IS NULL);
 
 
 --

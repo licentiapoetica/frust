@@ -181,7 +181,7 @@ pub async fn getf0cks(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> 
     let mut q = Sql::new(
         "select items.id, items.title, items.slug, items.stamp, items.visibility, items.mime, items.dest, items.username as username, \
          items.is_pinned, items.is_oc, items.has_coverart, items.is_album, items.album_count, \
-         items.views, ",
+         items.views, items.duration, ",
     );
     match uid {
         Some(u) => {

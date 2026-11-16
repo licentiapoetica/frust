@@ -3,6 +3,7 @@
 
 pub mod autotagger;
 pub mod delete;
+pub mod duration;
 pub mod mime;
 pub mod multipart;
 pub mod queue;

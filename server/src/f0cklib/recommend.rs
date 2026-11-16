@@ -143,6 +143,7 @@ fn map_item(r: &Row) -> Map<String, Value> {
     m.insert("avatar_file".into(), or_null(r.val("avatar_file")));
     m.insert("stamp".into(), r.val("stamp").clone());
     m.insert("views".into(), r.val("views").clone());
+    m.insert("duration".into(), r.val("duration").clone());
     m.insert("tags".into(), tags);
     m.insert("rating_tag_id".into(), tag_id.clone());
     m.insert("rating_class".into(), json!(rating_class));

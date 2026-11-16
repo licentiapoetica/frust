@@ -10,10 +10,12 @@
   {%- set who_name = ("anonymous" if is_anonymized else (p.display_name or p.username or domain)) -%}
   {%- set kind = ("" if not p.mime else ("YouTube" if p.mime == "video/youtube" else ("Flash" if "flash" in p.mime else (p.mime.split("/")[0]|capitalize if p.mime.split("/")[0] in ["video", "image", "audio"] else "File")))) -%}
   <article class="fy-card" data-id="{{ p.id }}">
-    <a class="fy-thumb" href="{{ href }}" tabindex="-1" aria-hidden="true">
+    {#- a video plays muted while the pointer is on its thumbnail (f0ckyou.js, as f0ckm's grid) -#}
+    {%- set fy_preview = (p.mime and p.mime.startswith("video/") and p.mime != "video/youtube" and p.dest and not p.dest.endswith(".gif")) -%}
+    <a class="fy-thumb" href="{{ href }}" tabindex="-1" aria-hidden="true"{% if fy_preview %} data-preview="{{ (paths_images or "/b") }}/{{ p.dest }}"{% endif %}>
       {% if (p.is_audio and not p.has_coverart and not p.thumb) %}<span class="fy-thumb-audio">{{ fy.ico("music") }}</span>{% else %}<img src="{{ (p.thumb or ("/t/" ~ p.id ~ ".webp")) }}" alt="" loading="lazy">{% endif %}
       {% if p.is_pinned %}<span class="fy-badge-tl">{{ fy.ico("pin") }}Pinned</span>{% elif p.rating_class in ["nsfw", "nsfl"] %}<span class="fy-badge-tl fy-rate-{{ p.rating_class }}">{{ p.rating_class|upper }}</span>{% endif %}
-      {% if (p.is_album and p.album_count > 1) %}<span class="fy-badge-br">{{ fy.ico("album") }}{{ p.album_count }}</span>{% elif kind %}<span class="fy-badge-br">{{ kind }}</span>{% endif %}
+      {% if (p.is_album and p.album_count > 1) %}<span class="fy-badge-br">{{ fy.ico("album") }}{{ p.album_count }}</span>{% elif (p.duration and p.duration >= 1) %}<span class="fy-badge-br fy-time">{% if p.mime.startswith("audio") %}{{ fy.ico("music") }}{% endif %}{{ fy.timecode(p.duration) }}</span>{% elif kind %}<span class="fy-badge-br">{{ kind }}</span>{% endif %}
       {% if p.my_views %}<span class="fy-watched" title="watched"></span>{% endif %}
     </a>
     <div class="fy-card-meta">

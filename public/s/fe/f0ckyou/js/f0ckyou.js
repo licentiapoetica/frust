@@ -664,12 +664,22 @@
   };
   const EXT = m => (m.includes('/') ? m.split('/')[1] : '')
     .replace('jpeg', 'jpg').replace('x-shockwave-flash', 'flash').replace('x-flac', 'flac').replace('mpeg', 'mp3').toUpperCase();
+  // where the files are (websrv.paths.images, as on the thumbnails the server rendered)
+  const MEDIA = (document.querySelector('[data-preview]')?.dataset.preview || '/b/x').replace(/\/[^/]*$/, '');
   const ICONS = document.querySelector('use[href*="/icons.svg"]')?.getAttribute('href')?.split('#')[0] || '/s/fe/f0ckyou/img/icons.svg';
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
     if (text != null) n.textContent = text;
     return n;
+  };
+  // a play time as macros.html timecode(): 0:13, 4:05, 1:02:05
+  const timecode = (secs) => {
+    const t = Math.floor(Number(secs) || 0);
+    const h = Math.floor(t / 3600);
+    const m = Math.floor((t % 3600) / 60);
+    const sec = String(t % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
   };
   // a view count as macros.html views(): cut, not rounded
   const viewCount = (raw) => {
@@ -695,6 +705,7 @@
     a.dataset.tags = tags.join(',');
     a.dataset.creator = anon ? '' : (v.username || '');
     const thumb = el('span', 'fy-upnext-thumb');
+    if (mime.startsWith('video/') && mime !== 'video/youtube' && v.dest && !/\.gif$/i.test(v.dest)) thumb.dataset.preview = `${MEDIA}/${v.dest}`;
     if (mime.startsWith('audio/') && !v.has_coverart) {
       const ph = el('span', 'fy-thumb-audio');
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -714,7 +725,8 @@
     }
     if (v.rating_class === 'nsfw' || v.rating_class === 'nsfl') thumb.append(el('span', `fy-badge-tl fy-rate-${v.rating_class}`, v.rating_class.toUpperCase()));
     const ext = EXT(mime);
-    if (ext) thumb.append(el('span', 'fy-badge-br', ext));
+    if (Number(v.duration) >= 1) thumb.append(el('span', 'fy-badge-br fy-time', timecode(v.duration)));
+    else if (ext) thumb.append(el('span', 'fy-badge-br', ext));
     const text = el('span', 'fy-upnext-text');
     const name = el('span', 'fy-upnext-name', title);
     name.title = title;
@@ -867,6 +879,56 @@
     }
   });
 
+  // ── a video's thumbnail plays it, muted, while the pointer is on it (as f0ckm's grid): after
+  //    150 ms, so passing over a thumbnail doesn't fetch anything; only the start of the file is
+  //    asked for (preload metadata) until it plays ──
+  let preview = null; // { thumb, video, timer }
+  const stopPreview = () => {
+    if (!preview) return;
+    clearTimeout(preview.timer);
+    const { thumb, video } = preview;
+    preview = null;
+    thumb.classList.remove('fy-previewing');
+    if (video) {
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      video.remove();
+    }
+  };
+  const startPreview = (thumb) => {
+    stopPreview();
+    const p = { thumb, video: null, timer: 0 };
+    preview = p;
+    p.timer = setTimeout(() => {
+      if (preview !== p || !thumb.isConnected) return;
+      const video = document.createElement('video');
+      video.className = 'fy-preview-video';
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = 'metadata';
+      video.setAttribute('aria-hidden', 'true');
+      video.oncanplay = () => {
+        if (preview !== p) return;
+        video.play().catch(() => {});
+        video.classList.add('playing');
+      };
+      video.src = thumb.dataset.preview;
+      thumb.classList.add('fy-previewing');
+      thumb.appendChild(video);
+      p.video = video;
+    }, 150);
+  };
+  document.addEventListener('mouseover', e => {
+    const thumb = e.target.closest?.('[data-preview]');
+    if (thumb && (!preview || preview.thumb !== thumb)) startPreview(thumb);
+  });
+  document.addEventListener('mouseout', e => {
+    const thumb = e.target.closest?.('[data-preview]');
+    if (thumb && !(e.relatedTarget && thumb.contains(e.relatedTarget))) stopPreview();
+  });
+
   // ── the page on screen: set up its parts (also for every page shown in place) ──
   const setupPage = () => {
     readPage();
@@ -909,6 +971,7 @@
       try { m.pause(); m.removeAttribute('src'); m.load(); } catch { /* gone already */ }
     });
     document.getElementById('fy-newpill')?.remove();
+    stopPreview();
     menus().forEach(d => { d.open = false; });
     const toggle = guideToggle();
     if (toggle) toggle.checked = false;

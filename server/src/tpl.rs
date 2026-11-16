@@ -1391,7 +1391,7 @@ mod tests {
         let session = serde_json::json!({ "user": "bob", "id": 1, "admin": true, "avatar": 5, "show_motd": true });
         let item = |id: i64| {
             serde_json::json!({ "id": id, "username": "al", "display_name": "Al", "username_color": "#f00", "mime": "video/mp4", "tag_id": 1,
-                "rating_class": "sfw", "thumb": null, "title": null, "stamp": 1_794_700_000, "my_views": 1, "views": 1290 })
+                "rating_class": "sfw", "thumb": null, "title": null, "stamp": 1_794_700_000, "my_views": 1, "views": 1290, "duration": 75.4, "dest": "abc.mp4" })
         };
         let base = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "modes": ["sfw", "nsfw", "untagged", "all", "nsfl"], "mode": 1,
             "frontend": "f0ckyou", "frontends": ["f0ckm", "f0ckyou"], "frontend_switch": true, "enable_comments": true, "private_messages": true,
@@ -1431,6 +1431,9 @@ mod tests {
         assert!(home.contains("<sup class=\"fy-logo-cc\">NSFW</sup>"));
         assert!(home.contains("<article class=\"fy-card\" data-id=\"7\">") && home.contains("<a class=\"fy-thumb\" href=\"/7\""));
         assert!(home.contains("<span class=\"fy-watched\" title=\"watched\"></span>"));
+        // the play time on the thumbnail, and the video to preview on hover
+        assert!(home.contains("<span class=\"fy-badge-br fy-time\">1:15</span>"));
+        assert!(home.contains("<a class=\"fy-thumb\" href=\"/7\" tabindex=\"-1\" aria-hidden=\"true\" data-preview=\"/b/abc.mp4\">"));
         assert!(home.contains("class=\"fy-ava fy-ava-letter fy-ava-color\" style=\"--user-color: #f00\""));
         assert!(home.contains("<div class=\"fy-grid\" data-fy-feed>"));
         assert!(home.contains("<a class=\"fy-pg fy-pg-end\" href=\"/p/3\" rel=\"next\">"));
@@ -1480,7 +1483,7 @@ mod tests {
         let it = serde_json::json!({ "id": 7, "username": "al", "author_color": "#0f0", "mime": "video/mp4", "dest": "/b/7.mp4", "size": "1 MB", "tags": tags,
             "timestamp": { "timeago": "1 day ago", "timefull": "x" }, "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" }, "views": 12345 });
         let rec = serde_json::json!({ "id": 9, "slug": null, "title": null, "tags": ["cat", "dog"], "username": "al", "display_name": "Al", "mime": "video/mp4",
-            "stamp": 1_794_700_000, "views": 1, "personalized": true, "rating_class": "nsfw", "has_coverart": false });
+            "stamp": 1_794_700_000, "views": 1, "personalized": true, "rating_class": "nsfw", "has_coverart": false, "duration": 3725, "dest": "r.webm" });
         let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
             "replies": [{ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content_html": "yo", "attachments_html": "", "timeago": "now", "iso": "x" }] });
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it,
@@ -1506,7 +1509,8 @@ mod tests {
         assert!(page.contains("<ol class=\"fy-upnext-list\" id=\"fy-recs\" data-item-id=\"7\">"));
         assert!(page.contains("<a href=\"/9\" data-rec=\"9\" data-tags=\"cat,dog\" data-creator=\"al\">"));
         assert!(page.contains("<span class=\"fy-upnext-name\" title=\"#cat #dog\">#cat #dog</span>"));
-        assert!(page.contains("<span class=\"fy-badge-tl fy-rate-nsfw\">NSFW</span>") && page.contains("<span class=\"fy-badge-br\">MP4</span>"));
+        assert!(page.contains("<span class=\"fy-badge-tl fy-rate-nsfw\">NSFW</span>") && page.contains("<span class=\"fy-badge-br fy-time\">1:02:05</span>"));
+        assert!(page.contains("<span class=\"fy-upnext-thumb\" data-preview=\"/b/r.webm\">"));
         assert!(page.contains("1 view &middot; <time") && page.contains("<span class=\"fy-foryou\">For you</span>"));
         // views; no message of the day in f0ckyou
         // the view beacon (counts without JavaScript; f0ck-core.js starts from it) on item pages only
