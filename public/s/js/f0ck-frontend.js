@@ -14,6 +14,7 @@
  *     newItem(data),     // a new upload went live ({id, slug, tag_id, username, mime, ...}): add it to the grid
  *     dmBadge(),         // a DM arrived and messages.js isn't loaded: refresh the DM badge
  *     reconnected(),     // the socket came back after a drop: events may have been missed
+ *     live(msg),         // any other event ({type, data}), e.g. a frontend's own (f0ckyou: fy_brand)
  *     flash, motd, brand // see f0ck-core.js
  *   }
  *
@@ -102,6 +103,7 @@
         }
         break;
       default:
+        hook('live', msg);
         break;
     }
   });

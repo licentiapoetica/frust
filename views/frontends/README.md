@@ -126,6 +126,7 @@ window.f0ckFrontend = {
   reconnected(),     // the live socket came back: events may have been missed
   motd(text),        // the MOTD changed
   brand(url, text),  // the navbar brand changed: url (image, null = removed) or text, the other undefined
+  live(msg),         // any other live event ({type, data}), e.g. a frontend's own (f0ckyou: fy_brand)
 };
 ```
 
