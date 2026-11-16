@@ -2057,6 +2057,30 @@ body.fy-page-watch {
   font-size: .75rem;
 }
 
+/* a comment jumped to: below the masthead, lit up (:target without JavaScript, fy-comment-flash with
+   it, f0ckyou.js) */
+.fy-comment {
+  scroll-margin-top: calc(var(--fy-mast-h) + 1.5rem);
+}
+
+.fy-comment:target,
+.fy-comment.fy-comment-flash {
+  animation: fy-comment-flash 2.2s ease-out;
+}
+
+@keyframes fy-comment-flash {
+  0%,
+  35% {
+    background: rgba(62, 166, 255, .22);
+    box-shadow: 0 0 0 .375rem rgba(62, 166, 255, .22);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 .375rem transparent;
+  }
+}
+
 .fy-comment-target {
   outline: 2px solid rgba(62, 166, 255, .5);
   outline-offset: .25rem;

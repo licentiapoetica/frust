@@ -135,6 +135,30 @@
     (media.closest('.fy-player') || media).scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, true);
 
+  // ── >>id links between comments (the replies in a comment's head, the quotes in its text): the
+  //    page goes to that comment and lights it up for a moment, as f0ckm (comments.js) ──
+  document.addEventListener('click', e => {
+    const link = e.target.closest?.('a.comment-context-link, a.fy-quote');
+    if (!link || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const id = (link.dataset.id || (link.getAttribute('href') || '').replace(/^#c/, '')).replace(/\D/g, '');
+    const target = id && document.getElementById(`c${id}`);
+    e.preventDefault();
+    e.stopPropagation();
+    if (!target) {
+      flash(`Comment #${id} isn't on this page (deleted?)`, 'info');
+      return;
+    }
+    // a reply in a closed thread: open it first
+    const thread = target.closest('details');
+    if (thread && !thread.open) thread.open = true;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.remove('fy-comment-flash');
+    void target.offsetWidth; // restart the animation for a second click
+    target.classList.add('fy-comment-flash');
+    setTimeout(() => target.classList.remove('fy-comment-flash'), 2200);
+    try { history.replaceState(history.state, '', `#c${id}`); } catch { /* ignore */ }
+  }, true);
+
   window.addEventListener('f0ck:emojis_updated', () => {
     const box = document.getElementById('fy-emoji-box');
     if (box) box.replaceChildren();
