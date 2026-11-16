@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-const DEFAULT_THEME_COLOR: &str = "#0096ff";
+const DEFAULT_THEME_COLOR: &str = "#000000";
 
 fn icon_mime(src: &str) -> &'static str {
     let s = src.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();

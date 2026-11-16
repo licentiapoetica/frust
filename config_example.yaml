@@ -287,7 +287,7 @@ manifest:
   # display: standalone
   # handle_links: preferred   # installed app opens links to the site (null: off)
   # background_color: "#000000"
-  # theme_color: "#0096ff"      # also used for <meta name="theme-color">
+  # theme_color: "#000000"      # also used for <meta name="theme-color">
   # categories: [entertainment, social, memes]
   #
   # icons: leave unset. By default the 192x192 and 512x512 PNGs that installing the app needs are
