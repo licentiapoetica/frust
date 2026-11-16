@@ -7,7 +7,8 @@
     const dragModalClose = document.getElementById('drag-modal-close');
     const dragForm = dragModal ? dragModal.querySelector('.upload-form') : null;
 
-    const navUploadLink = document.getElementById('nav-upload-link');
+    // Looked up on every use: a frontend that swaps its header in place (f0ckyou) brings a new one.
+    const uploadLink = () => document.getElementById('nav-upload-link');
 
     // Dropdown placement: right under the navbar "Upload" link, left-aligned with it and kept inside the
     // window. Without a visible link (phone: it sits in the collapsed menu) it drops from the navbar.
@@ -20,7 +21,8 @@
         const zoom = content.currentCSSZoom || 1;
         const vw = document.documentElement.clientWidth;
         const vh = window.innerHeight;
-        const linkRect = navUploadLink ? navUploadLink.getBoundingClientRect() : null;
+        const link = uploadLink();
+        const linkRect = link ? link.getBoundingClientRect() : null;
         const useLink = !!(linkRect && linkRect.width > 0 && linkRect.height > 0);
         const nav = document.querySelector('body > nav.navbar, nav.navbar');
         const top = Math.round((useLink ? linkRect.bottom : (nav ? nav.getBoundingClientRect().bottom : 0)) + 6);
@@ -35,11 +37,13 @@
 
     // The navbar link shows when the dropdown is open. Watched on the modal itself because it gets closed
     // from several places (close button, Escape, toggle, finished upload, hideAllModals).
-    if (dragModal && navUploadLink) {
+    if (dragModal) {
         const syncLink = () => {
+            const link = uploadLink();
+            if (!link) return;
             const open = dragModal.classList.contains('show');
-            navUploadLink.classList.toggle('is-active', open);
-            navUploadLink.setAttribute('aria-expanded', open ? 'true' : 'false');
+            link.classList.toggle('is-active', open);
+            link.setAttribute('aria-expanded', open ? 'true' : 'false');
         };
         new MutationObserver(syncLink).observe(dragModal, { attributes: true, attributeFilter: ['class'] });
         syncLink();
@@ -70,14 +74,14 @@
 
     // Navbar upload link — always attached so it works even if drag-drop can't init.
     // Toggles the dropdown when available; falls back to /upload navigation otherwise.
-    if (navUploadLink) {
-        navUploadLink.addEventListener('click', (e) => {
-            if (!dragModal) return; // no modal → fall back to href navigation
-            e.preventDefault();
-            if (dragModal.classList.contains('show')) hideModal();
-            else showModal();
-        });
-    }
+    // Delegated, so a link swapped in later works too.
+    document.addEventListener('click', (e) => {
+        if (!dragModal || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // no modal → href navigation
+        if (!(e.target instanceof Element) || !e.target.closest('#nav-upload-link')) return;
+        e.preventDefault();
+        if (dragModal.classList.contains('show')) hideModal();
+        else showModal();
+    });
 
     if (!dropOverlay || !dragModal || !dragForm) {
         console.warn('[f0ck] Quick Upload Modal or Form missing, global drag-drop disabled.');
