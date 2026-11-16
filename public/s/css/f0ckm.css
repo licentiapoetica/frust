@@ -4279,7 +4279,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
 
 .sidebar-video-title {
   /* Card text a step under the comments tab (the thumbnail carries the card): title 14px,
-     uploader and time 12.8px */
+     uploader 12.8px, time / For You 11.2px */
   font-size: 0.875em;
   font-weight: 600;
   color: var(--text-color, #eee);
@@ -4316,7 +4316,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   align-items: center;
   flex-wrap: wrap;
   gap: 3px 5px;
-  font-size: 0.8em;
+  font-size: 0.7em;
   color: #777;
   margin-top: 2px;
 }
