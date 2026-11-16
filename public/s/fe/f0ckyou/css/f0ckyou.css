@@ -3123,6 +3123,39 @@ body.fy-page-watch {
   gap: .5rem;
 }
 
+/* the Edit dialog on the watch page (item.html #edit) */
+.fy-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.fy-edit-tools {
+  display: flex;
+  flex-direction: column;
+  gap: .625rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--fy-line);
+}
+
+.fy-edit-tools h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.fy-edit-tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .75rem;
+}
+
+.fy-edit-tool .fy-dim {
+  flex: 1 1 12rem;
+  font-size: .8125rem;
+}
+
 .fy-share input[type="text"] {
   flex: 1;
   min-width: 0;

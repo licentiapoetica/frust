@@ -66,7 +66,7 @@
     </div>
     {% endif %}
 
-    <h1 class="fy-watch-title">{% if (enable_oc and item.is_oc) %}<span class="fy-oc">OC</span> {% endif %}{{ fy_item_title }}</h1>
+    <h1 class="fy-watch-title" data-fy-live="title">{% if (enable_oc and item.is_oc) %}<span class="fy-oc">OC</span> {% endif %}{{ fy_item_title }}</h1>
 
     <div class="fy-watch-bar">
       <div class="fy-owner">
@@ -76,7 +76,6 @@
           <a class="fy-owner-name{% if item.author_color %} fy-namecolor{% endif %}" href="/user/{{ uploader|lower|encode_uri_component }}"{% if item.author_color %} style="--user-color: {{ item.author_color }}"{% endif %}>{{ uploader_name }}</a>
           <span class="fy-dim">@{{ uploader|lower }}</span>
         </div>
-        <a class="fy-btn fy-btn-white" href="/user/{{ uploader|lower|encode_uri_component }}/uploads">View channel</a>
         {% else %}
         <span class="fy-owner-ava">{{ fy.avatar("", "", (uploader_name or domain)) }}</span>
         <div class="fy-owner-text"><span class="fy-owner-name">{{ (uploader_name or domain) }}</span></div>
@@ -105,6 +104,7 @@
         <a class="fy-pill" href="#share">{{ fy.ico("share") }}<span>Share</span></a>
         {% if item.dest %}<a class="fy-pill fy-hide-narrow" href="{{ item.dest }}" download>{{ fy.ico("download") }}<span>Download</span></a>{% endif %}
         <a class="fy-pill" href="#report">{{ fy.ico("flag") }}<span>Report</span></a>
+        {% if (can_manage_item or is_mod_or_admin) %}<a class="fy-pill" href="#edit">{{ fy.ico("edit") }}<span>Edit</span></a>{% endif %}
         {% if is_mod_or_admin %}<a class="fy-pill fy-pill-danger" href="#delete">{{ fy.ico("trash") }}<span>Delete</span></a>{% endif %}
       </div>
     </div>
@@ -219,6 +219,47 @@
     <div class="fy-modal-btns"><a href="#_" class="fy-btn-text">Cancel</a><button type="submit" class="fy-btn-blue">Report</button></div>
   </form>
 </div>
+{% if (can_manage_item or is_mod_or_admin) %}
+{#- Edit (the uploader and staff), like f0ckm's and w0bm's item tools: the title, a new thumbnail,
+    for staff unavailable (451) on/off. Plain forms; with JavaScript they save in place and the
+    title and this dialog come again from the page (data-fy-live). -#}
+{%- set fy_unavailable = ((item.visibility or 0)|int == 3) -%}
+<div id="edit" class="fy-modal" data-fy-live="edit">
+  <a href="#_" class="fy-modal-bg" aria-label="close"></a>
+  <div class="fy-modal-box">
+    <div class="fy-modal-head"><h2>Edit f0ck {{ item_ref }}</h2><a href="#_" aria-label="close">{{ fy.ico("close") }}</a></div>
+    {% if enable_item_title %}
+    <form method="post" action="/api/v2/items/{{ item.id }}/title" class="fy-edit-form fy-ajax" data-fy-refresh="title edit" data-fy-close data-fy-ok="Title saved">
+      <label for="fy-edit-title">Title</label>
+      <input type="text" id="fy-edit-title" name="title" maxlength="500" value="{{ (item.title or "") }}" placeholder="Add a title">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ here }}">
+      <div class="fy-modal-btns"><a href="#_" class="fy-btn-text">Cancel</a><button type="submit" class="fy-btn-blue">Save</button></div>
+    </form>
+    {% endif %}
+    <div class="fy-edit-tools">
+      <h3>Tools</h3>
+      <form method="post" action="/api/v2/items/{{ item.id }}/rethumb" class="fy-edit-tool fy-ajax" data-fy-close data-fy-ok="New thumbnail made">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}">
+        <button type="submit" class="fy-pill">{{ fy.ico("image") }}<span>New thumbnail</span></button>
+        <span class="fy-dim">Make the thumbnail again from the file.</span>
+      </form>
+      {% if is_mod_or_admin %}
+      <form method="post" action="/api/v2/item/visibility" class="fy-edit-tool fy-ajax" data-fy-refresh="edit" data-fy-close data-fy-ok="{{ ("Available again" if fy_unavailable else "Unavailable now (451)") }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="postid" value="{{ item.id }}">
+        <input type="hidden" name="id" value="{{ item.id }}">
+        <input type="hidden" name="visibility" value="{{ ("0" if fy_unavailable else "3") }}">
+        <input type="hidden" name="back" value="{{ here }}">
+        <button type="submit" class="fy-pill{% if not fy_unavailable %} fy-pill-danger{% endif %}">{{ fy.ico("lock") }}<span>{{ ("Make available again" if fy_unavailable else "Make unavailable (451)") }}</span></button>
+        <span class="fy-dim">{{ ("Unavailable for legal reasons (451) right now." if fy_unavailable else "Hide it behind a 451 Unavailable For Legal Reasons page.") }}</span>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
 {% if is_mod_or_admin %}
 <div id="delete" class="fy-modal">
   <a href="#_" class="fy-modal-bg" aria-label="close"></a>

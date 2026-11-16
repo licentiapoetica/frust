@@ -56,7 +56,7 @@ pub(super) async fn tags_rename(st: AppState, mut req: Req) -> Res {
     j(q.map(Value::Object).unwrap_or(Value::Null), if tagname == newtag { 200 } else { 201 })
 }
 
-// ── PATCH /items/:id/title ──────────────────────────────────────────────────
+// ── PATCH (or POST, a plain form) /items/:id/title ─────────────────────────
 
 pub(super) async fn set_title(st: AppState, mut req: Req) -> Res {
     let id: i32 = req.param("id").and_then(|i| i.parse().ok()).unwrap_or(0);

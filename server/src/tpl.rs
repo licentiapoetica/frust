@@ -1478,6 +1478,10 @@ mod tests {
         assert!(own.contains("<span class=\"fy-logo fy-logo-own fy-logo-custom fy-bsize-150\" data-fy-logo><img class=\"fy-logo-img\" src=\"/s/img/navbar/fybrand.1.webp\" alt=\"myTube\"><span class=\"fy-logo-word fy-bfont fy-bweight-700\">my<b>Tube</b></span></span>"), "{own}");
         assert!(own.contains("<link rel=\"stylesheet\" id=\"fy-brand-font-css\" href=\"/fy-brand-font.css?v=1\">"));
         assert!(!own.contains("SiteBrand") && !own.contains("fy-logo-mark"));
+        // the Abyss in the guide, when it is on
+        assert!(!own.contains("href=\"/abyss\""));
+        let abyss = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "abyss_enabled": true }));
+        assert!(abyss.contains("<a href=\"/abyss\"") && abyss.contains("icons.svg?v=") && abyss.contains("#abyss\""), "abyss link");
         // "use the site's brand": the site brand's picture and text in its font, no play mark
         let branded = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "custom_brand_image": "/s/brand.png",
             "fy_brand": { "site": true, "font_css": "/fy-brand-font.css?v=1" },
@@ -1563,7 +1567,12 @@ mod tests {
         // the description: collapsed, opened by a click (no JavaScript needed)
         assert!(page.contains("<details class=\"fy-desc\" data-fy-live=\"desc\">") && page.contains("<summary class=\"fy-desc-top\">"));
         assert!(!page.contains("<details class=\"fy-desc\" data-fy-live=\"desc\" open"));
-        for live in ["actions", "desc", "comments", "comments-head"] {
+        // no "View channel"; Edit (title, new thumbnail, 451 for staff) next to Delete
+        assert!(!page.contains("View channel"));
+        assert!(page.contains("<a class=\"fy-pill\" href=\"#edit\">") && page.contains("<div id=\"edit\" class=\"fy-modal\" data-fy-live=\"edit\">"));
+        assert!(page.contains("<form method=\"post\" action=\"/api/v2/items/7/rethumb\" class=\"fy-edit-tool fy-ajax\""));
+        assert!(page.contains("<input type=\"hidden\" name=\"visibility\" value=\"3\">"));
+        for live in ["actions", "desc", "comments", "comments-head", "title", "edit"] {
             assert_eq!(page.matches(&format!("data-fy-live=\"{live}\"")).count(), 1, "{live}");
         }
         assert!(page.contains("data-reply=\"3\" data-name=\"al\""));
