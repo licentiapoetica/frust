@@ -15,7 +15,8 @@
 {%- set fy_staff = (session and (session.admin or session.is_moderator)) -%}
 {#- guide entries: [href, icon, label, key] -#}
 {%- set fy_main = [["/", "home", "Home", "home"], ["/random", "shuffle", "Random", "random"]]
-    + ([["/subscriptions", "subs", "Subscriptions", "subs"]] if (session and enable_comments) else []) -%}
+    + ([["/subscriptions", "subs", "Subscriptions", "subs"]] if (session and enable_comments) else [])
+    + ([["/abyss", "abyss", "Abyss", "abyss"]] if abyss_enabled else []) -%}
 {%- set fy_you = ([[fy_ulink, "user", "Your channel", "channel"], [fy_ulink ~ "/uploads", "videos", "Your f0cks", "uploads"], [fy_ulink ~ "/favs", "like", "Liked f0cks", "favs"]]
     + ([[fy_ulink ~ "/comments", "comment", "Your comments", "comments"]] if enable_comments else [])
     + [[fy_ulink ~ "/tags", "hash", "Your tags", "tags_user"]]
