@@ -4517,7 +4517,7 @@ html[theme='95'] .sidebar-video-title {
   cursor: pointer;
   padding: 0;
   margin-top: 5px;
-  font-size: 0.85em;
+  font-size: 1em;
   display: none;
   /* Hidden by default; CSS below shows it when has-overflow is present */
 }
@@ -4615,6 +4615,27 @@ html[theme='95'] .sidebar-video-title {
 
 #sidebar-activity-container.sidebar-comments-list .comment-header {
   margin-bottom: 4px;
+}
+
+/* The sidebar's comments in the page's text sizes (the item comments' smaller header is not for
+   here): name and links like the comment text, the time like the item infobox's (14px). Also in
+   the no-JavaScript activity frame (views/activity-frame.html), same classes. */
+#sidebar-activity-container.sidebar-comments-list .comment-header {
+  font-size: 1em;
+}
+
+#sidebar-activity-container.sidebar-comments-list .comment-time {
+  font-size: 0.875em;
+}
+
+.sidebar-activity .comment-content .sidebar-video-link {
+  font-size: 1em;
+}
+
+/* "View »" under the comment, to the comment on its item */
+.item-preview .sidebar-view-link {
+  color: var(--accent);
+  text-decoration: none;
 }
 
 /* ─── Sidebar Loading State ────────────────────────────────────────────────── */
@@ -37266,10 +37287,6 @@ body.activity-frame .comment-content-inner {
   overflow-wrap: anywhere;
 }
 
-body.activity-frame .comment-time {
-  font-size: 0.75em;
-}
-
 body.activity-frame .item-preview a img.activity-frame-thumb {
   display: block;
   width: 100%;
@@ -37282,12 +37299,6 @@ body.activity-frame .item-preview a img.activity-frame-thumb {
 /* Username in its user's colour (server-rendered: activity frame, no-JS item comments) */
 .user-color-text {
   color: var(--user-color);
-}
-
-.activity-frame-view {
-  font-size: 0.8em;
-  color: var(--accent);
-  text-decoration: none;
 }
 
 .activity-frame-empty {

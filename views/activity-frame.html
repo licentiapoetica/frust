@@ -2,7 +2,10 @@
 {#- GET /activity as plain HTML: the recent-comments sidebar for visitors without JavaScript,
     loaded by the <noscript> iframe in snippets/footer.html. Uses the sidebar classes so it
     looks like the list sidebar-activity.js draws; links open in the parent page (<base target>). -#}
-<html lang="{{ (lang or "en") }}" theme="{{ (theme or "f0ck") }}">
+{#- The page's font and text size: the visitor's font, else the site's default one, both as the
+    'CustomUserFont' stylesheet (the page puts the site font's @font-face rules in its own <style>) -#}
+{%- set frame_font_css = (user_font_css or (("/user-font.css?f=" ~ (site_font|encode_uri_component)) if site_font else "")) %}
+<html lang="{{ (lang or "en") }}" theme="{{ (theme or "f0ck") }}" class="{% if frame_font_css %}header-font-user{% endif %}{% if user_font_size %} user-fs-{{ user_font_size }}{% endif %}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,6 +14,7 @@
   <link rel="stylesheet" href="/s/fa/all.min.css">
   <link rel="stylesheet" href="/s/css/f0ckm.css?v={{ mtime("/public/s/css/f0ckm.css") }}">
   <link rel="stylesheet" href="/s/css/comment-fx.css?v={{ mtime("/public/s/css/comment-fx.css") }}">
+  {% if frame_font_css %}<link rel="stylesheet" href="{{ frame_font_css }}">{% endif %}
 </head>
 <body class="activity-frame">
   <div class="sidebar-activity">
@@ -38,7 +42,7 @@
           {% if c.item_id %}
           <div class="item-preview">
             <a href="/{{ (c.item_slug or c.item_id) }}" class="sidebar-thumb-link" data-mode="{{ c.item_rating_class }}">{% if ((c.mime and c.mime.startswith("audio")) and not c.has_coverart) %}<div class="sidebar-media-placeholder audio"><i class="fa-solid fa-music"></i></div>{% else %}<img src="/t/{{ c.item_id }}.webp" class="activity-frame-thumb" loading="lazy" alt="">{% endif %}</a>
-            <a href="/{{ (c.item_slug or c.item_id) }}#c{{ c.id }}" class="activity-frame-view">{{ t("sidebar.view") }} &raquo;</a>
+            <a href="/{{ (c.item_slug or c.item_id) }}#c{{ c.id }}" class="sidebar-view-link">{{ t("sidebar.view") }} &raquo;</a>
           </div>
           {% endif %}
         </div>

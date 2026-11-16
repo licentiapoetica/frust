@@ -567,7 +567,7 @@
             itemPreview = `
                 <div class="item-preview">
                     <a href="/${itemKey}" class="sidebar-thumb-link" data-mode="${rClass}">${mediaHtml}</a>
-                    <a href="/${itemKey}#c${c.id}" style="font-size: 0.8em; color: var(--accent); text-decoration: none;">${(window.f0ckI18n && window.f0ckI18n.sidebar_view) || 'View'} &raquo;</a>
+                    <a href="/${itemKey}#c${c.id}" class="sidebar-view-link">${(window.f0ckI18n && window.f0ckI18n.sidebar_view) || 'View'} &raquo;</a>
                 </div>`;
         }
 
@@ -602,9 +602,9 @@
                             ${authorAvatarHtml}
                             ${authorNameHtml}
                         </div>
-                        <span class="comment-time timeago" tooltip="${fullDate}" style="font-size: 0.75em;"${tsAttr}>${timeStr}</span>
+                        <span class="comment-time timeago" tooltip="${fullDate}"${tsAttr}>${timeStr}</span>
                     </div>
-                    <div class="comment-content${isLong ? ' has-overflow' : ''}"><div class="comment-content-inner">${displayContent}${attachmentsHtml}${pollHtml}</div><button class="read-more-btn"${isLong ? ' style="display:block"' : ''}>${window.f0ckI18n?.sidebar_read_more || 'read more'}</button></div>
+                    <div class="comment-content${isLong ? ' has-overflow' : ''}"><div class="comment-content-inner">${displayContent}${attachmentsHtml}${pollHtml}</div><button class="read-more-btn">${window.f0ckI18n?.sidebar_read_more || 'read more'}</button></div>
                     ${itemPreview}
                 </div>
             </div>`;
