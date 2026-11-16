@@ -28825,8 +28825,9 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 }
 
 /* ---- user-partial.html / tags_user-partial.html: page wrapper ---- */
+/* as wide as the item page's player (--legacy-item-w in "LAYOUT: LEGACY"), plus the side padding */
 .profile-page-wrapper {
-  max-width: 800px;
+  max-width: calc(min(1140px, max(calc((100vh - 310px) * 16 / 9), 640px)) + 20px);
   margin: 0 auto;
   width: 100%;
   padding: 20px 10px;
