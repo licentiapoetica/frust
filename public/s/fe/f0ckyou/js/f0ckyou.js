@@ -8,6 +8,7 @@
 //  - the f0ckFrontend hooks for the shared live events (views/frontends/README.md), the
 //    notification badge
 //  - menus (<details>): one open at a time, closed by an outside click or Escape
+//  - the masthead is see-through at the top of the page, with its background once scrolled
 //  - keys: "/" search; on a f0ck ← → (or Shift+P / Shift+N) previous / next, r random, k play /
 //    pause, j / l back / forward 10 s, m mute, f full screen
 //  - custom emojis :name: in comments as pictures, and the emoji picker
@@ -1215,6 +1216,11 @@
     window.f0ckCountViewFromPage?.();
     document.documentElement.classList.remove('fy-navigating');
   }
+
+  // the masthead: see-through at the top of the page, its background once scrolled (f0ckyou.css)
+  const markScrolled = () => document.documentElement.classList.toggle('fy-scrolled', window.scrollY > 0);
+  window.addEventListener('scroll', markScrolled, { passive: true });
+  markScrolled();
 
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   try { history.replaceState({ ...(history.state || {}), fy: 1 }, ''); } catch { /* ignore */ }

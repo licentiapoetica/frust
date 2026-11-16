@@ -614,6 +614,14 @@ html:not(.no-js) .nojs-only {
   height: var(--fy-mast-h);
   padding: 0 1rem;
   background: var(--fy-bg);
+  transition: background-color .2s ease, backdrop-filter .2s ease;
+}
+
+/* At the top of the page the masthead is see-through; it gets its background once the page is
+   scrolled (html.fy-scrolled, f0ckyou.js). Without JavaScript it keeps it. */
+html:not(.no-js):not(.fy-scrolled) .fy-mast {
+  background-color: transparent;
+  backdrop-filter: none;
 }
 
 .fy-mast-start,
