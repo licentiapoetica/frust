@@ -96,7 +96,7 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="subscribed" value="{{ ("0" if isSubscribed else "1") }}">
           <input type="hidden" name="back" value="{{ here }}">
-          <button type="submit" class="fy-pill{% if isSubscribed %} fy-pill-on{% else %} fy-pill-sub{% endif %}" title="{{ ("Stop getting its new comments" if isSubscribed else "Get its new comments") }}" aria-pressed="{{ ("true" if isSubscribed else "false") }}">{{ fy.ico(("bell-on" if isSubscribed else "bell")) }}<span>{{ ("Subscribed" if isSubscribed else "Subscribe") }}</span></button>
+          <button type="submit" class="fy-pill{% if isSubscribed %} fy-pill-on{% endif %}" title="{{ ("Stop getting its new comments" if isSubscribed else "Get its new comments") }}" aria-pressed="{{ ("true" if isSubscribed else "false") }}">{{ fy.ico(("bell-on" if isSubscribed else "bell")) }}<span>{{ ("Subscribed" if isSubscribed else "Subscribe") }}</span></button>
         </form>
         {% endif %}
         {% else %}
