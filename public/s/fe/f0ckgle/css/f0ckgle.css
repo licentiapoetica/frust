@@ -2050,11 +2050,276 @@ div.fg-card > form {
   --nav-border-color: #dadce0;
   --dropdown-bg: #fff;
   --navbar-h: 7rem;
-  --upload-opt-color: #202124;
+  --upload-opt-color: #1a73e8;
   --badge-sfw: #188038;
   --badge-nsfw: #c5221f;
   --badge-nsfl: #7c0a02;
   font-family: var(--fg-font);
+}
+
+/* upload.css is made for dark themes: white text and white-alpha borders and backgrounds are
+   hard-coded in it (f0ckm's light theme fixes them in f0ckm.css, which f0ckgle doesn't load). The
+   light versions here, for the upload page and the quick upload dropdown; :is() with the id beats
+   upload.css' selectors. Overlays on top of media (badges, album card actions) stay dark. */
+:is(.fg-upload-page, #upload-drag-modal) {
+  --fgu-line: #dadce0;
+  --fgu-line-strong: #bdc1c6;
+  --fgu-field: #fff;
+  --fgu-soft: #f8f9fa;
+  --fgu-hover: #f1f3f4;
+  --fgu-text: #202124;
+  --fgu-muted: #5f6368;
+  --fgu-faint: #80868b;
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .limit-remaining,
+:is(.fg-upload-page, #upload-drag-modal) .drop-zone-prompt,
+:is(.fg-upload-page, #upload-drag-modal) .gps-privacy-warning span,
+:is(.fg-upload-page, #upload-drag-modal) .album-stage-audio-name,
+:is(.fg-upload-page, #upload-drag-modal) #upload-form .tag-suggestion-meta {
+  color: var(--fgu-muted) !important;
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-form {
+  background: var(--fgu-field);
+  border-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .drop-zone {
+  border-color: var(--fgu-line-strong);
+  background: var(--fgu-soft);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .drop-zone:hover,
+:is(.fg-upload-page, #upload-drag-modal) .drop-zone.dragover {
+  border-color: var(--fg-blue);
+  background: #e8f0fe;
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-form-drop-types > span {
+  border-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-mode-tabs {
+  border-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-mode-tab {
+  color: var(--fgu-muted);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-mode-tab:first-child {
+  border-right-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-mode-tab:hover {
+  color: var(--fgu-text);
+  background: var(--fgu-hover);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-mode-tab.active {
+  background: #e8f0fe;
+  color: #174ea6;
+}
+
+/* text fields */
+:is(.fg-upload-page, #upload-drag-modal) :is(.url-input-container input[type="url"], .tag-input-container, .upload-title-input, .upload-comment,
+  .item-tag-input, .item-comment-input, .item-title-input, .album-stage-tags-input, select.upload-form-expiry) {
+  background: var(--fgu-field);
+  border-color: var(--fgu-line-strong);
+  color: var(--fgu-text);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) :is(.url-input-container input[type="url"], .tag-input-container input, .upload-title-input, .upload-comment,
+  .item-tag-input, .item-comment-input, .item-title-input, .album-stage-tags-input)::placeholder {
+  color: var(--fgu-faint);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .tag-input-container input {
+  color: var(--fgu-text);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .album-stage-tags-input:focus {
+  background: var(--fgu-field);
+}
+
+/* tag autocomplete (important in upload.css) */
+:is(.fg-upload-page, #upload-drag-modal) .upload-form .tag-suggestions {
+  background: var(--fgu-field) !important;
+  border-color: var(--fgu-line) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .2) !important;
+  color: var(--fgu-text) !important;
+}
+
+:is(.fg-upload-page, #upload-drag-modal) #upload-form .tag-suggestion-item:not(:last-child) {
+  border-bottom-color: var(--fgu-hover) !important;
+}
+
+:is(.fg-upload-page, #upload-drag-modal) #upload-form .tag-suggestion-item:hover,
+:is(.fg-upload-page, #upload-drag-modal) #upload-form .tag-suggestion-item.active {
+  background: var(--fgu-hover) !important;
+}
+
+/* ratings, visibility, buttons */
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-options {
+  border-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-option + .rating-option {
+  border-left-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-option .rating-label {
+  color: var(--fgu-muted);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-option .rating-label:hover {
+  color: var(--fgu-text);
+  background: var(--fgu-hover);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-option input:checked + .rating-label {
+  color: #174ea6;
+  background: #e8f0fe;
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .item-rating-label {
+  background: var(--fgu-soft);
+  border-color: var(--fgu-line);
+  color: var(--fgu-muted);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .item-rating-label:hover {
+  background: var(--fgu-hover);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .global-redirect-section .upload-checkbox-label {
+  color: var(--fgu-text);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .global-redirect-section .upload-checkbox-label:hover {
+  color: var(--fg-blue);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .btn-upload:disabled {
+  background: var(--fgu-hover);
+  color: var(--fgu-faint);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) :is(.btn-add-urls, .btn-add-album-pics, .item-emoji-trigger, .upload-comment-input .input-actions .upload-emoji-trigger) {
+  background: var(--fgu-soft);
+  border-color: var(--fgu-line);
+  color: var(--fgu-text);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) :is(.btn-add-urls, .btn-add-album-pics, .item-emoji-trigger, .upload-comment-input .input-actions .upload-emoji-trigger):hover {
+  background: var(--fgu-hover);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-comment-input .upload-emoji-picker {
+  background: var(--fgu-field);
+  border-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-comment-input .upload-emoji-picker img:hover {
+  background: var(--fgu-hover);
+}
+
+/* picked files, suggestions, progress */
+:is(.fg-upload-page, #upload-drag-modal) .file-preview-item,
+:is(.fg-upload-page, #upload-drag-modal) .add-more-item,
+:is(.fg-upload-page, #upload-drag-modal) .meta-suggestions-container,
+:is(.fg-upload-page, #upload-drag-modal) .album-choice-container,
+:is(.fg-upload-page, #upload-drag-modal) .album-staging-container {
+  background: var(--fgu-soft);
+  border-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .file-preview-item:hover {
+  background: var(--fgu-hover);
+  border-color: var(--fgu-line-strong);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .add-more-item,
+:is(.fg-upload-page, #upload-drag-modal) .album-stage-card.album-stage-add-more {
+  border-color: var(--fgu-line-strong);
+  color: var(--fgu-muted);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .album-staging-header {
+  border-bottom-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) :is(.file-name-small, .album-choice-title, .album-staging-title) {
+  color: var(--fgu-text);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) :is(.meta-suggestion, .item-meta-suggestion, .album-choice-btn) {
+  background: var(--fgu-field);
+  border-color: var(--fgu-line);
+  color: var(--fgu-text);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) :is(.meta-suggestion, .item-meta-suggestion, .album-choice-btn):hover,
+:is(.fg-upload-page, #upload-drag-modal) :is(.meta-suggestion, .item-meta-suggestion).selected {
+  background: #e8f0fe;
+  color: var(--fgu-text);
+  border-color: var(--fg-blue);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .item-tag-chip {
+  background: var(--fgu-hover);
+  color: var(--fgu-text);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-form.shitpost-mode-active .file-preview-item {
+  border-bottom-color: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .upload-progress {
+  background: var(--fgu-hover);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .progress-bar,
+:is(.fg-upload-page, #upload-drag-modal) .video-thumbnail-loading {
+  background: var(--fgu-line);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .loading-spinner,
+:is(.fg-upload-page, #upload-drag-modal) .sync-spinner .spinner-icon {
+  border-color: var(--fgu-line-strong);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .sync-spinner {
+  background: var(--fgu-field);
+  border-color: var(--fgu-line);
+  color: var(--fgu-text);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .login-required {
+  border-color: var(--fgu-line-strong);
+}
+
+/* upload-modal.css (the quick upload dropdown and the drop overlay): its dark-only bits */
+#drop-overlay {
+  --shade1: #fff;
+}
+
+#drop-overlay .overlay-content,
+#upload-drag-modal .modal-content {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
+}
+
+#upload-drag-modal .modal-close {
+  border-color: #dadce0;
+}
+
+#upload-drag-modal .upload-title {
+  border-bottom-color: #dadce0;
+}
+
+#upload-drag-modal .upload-footer {
+  border-top-color: #dadce0;
 }
 
 .fg-upload-title {
@@ -2197,7 +2462,7 @@ div.fg-card > form {
   --nav-border-color: #dadce0;
   --dropdown-bg: #fff;
   --navbar-h: 7rem;
-  --upload-opt-color: #202124;
+  --upload-opt-color: #1a73e8;
   --badge-sfw: #188038;
   --badge-nsfw: #c5221f;
   --badge-nsfl: #7c0a02;
