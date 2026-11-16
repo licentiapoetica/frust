@@ -9,7 +9,8 @@
 {% set token = (url.qs.token or "") %}
 {% include "frontends/f0ckgle/register.html" %}
 {% else %}
-{%- set fg_filtered = (tmp and (tmp.user or tmp.tag or tmp.hall or tmp.userHall or tmp.mime)) -%}
+{#- the homepage is "/" itself: the type filter is a cookie (tmp.mime) and must not hide it -#}
+{%- set fg_filtered = (tmp and (tmp.user or tmp.tag or tmp.hall or tmp.userHall)) -%}
 {%- set fg_home = (url and url.pathname == "/" and not fg_filtered) -%}
 {%- if fg_home -%}
 {% include "frontends/f0ckgle/snippets/home.html" %}
@@ -31,7 +32,8 @@
   {%- set fg_tab_base = "/" -%}
   {%- set fg_q = "" -%}
 {%- endif -%}
-{%- set fg_tab = ((tmp.mime if (tmp and tmp.mime and "," not in tmp.mime) else "all") if not (tmp and tmp.userHall) else "") -%}
+{#- the active tab: the one type filtered by, "All" without a filter (none for several types) -#}
+{%- set fg_tab = (("" if "," in tmp.mime else tmp.mime) if (tmp and tmp.mime) else "all") -%}
 {%- set fg_title = (fg_q or "f0cks") -%}
 {%- set fg_page = "results" -%}
 {% include "frontends/f0ckgle/snippets/head.html" %}

@@ -1,8 +1,13 @@
 {#- The header of every page but the homepage: small logo, search box, user area, then the tabs.
     Set before including: fg_q (search text), fg_tab (active tab: all, image, video, audio, or none),
-    fg_tab_base (the listing the mime tabs filter, "/" or "/tag/x/" ...), fg_tab_all (the "All" link). -#}
+    fg_tab_base (the listing the type tabs filter, "/" or "/tag/x/" ...), fg_tab_all (the "All" link,
+    default: the listing without type filter). -#}
+{#- The type tabs set the media filter with /mime (the `mime` cookie, the same as f0ckm's picker:
+    it wins over a /video path, routes/index.rs feed_mime), then go back to the listing; "All" clears
+    it. Plain links, so they work without JavaScript. -#}
 {%- set fg_base = (fg_tab_base if (fg_tab_base is defined and fg_tab_base) else "/") -%}
-{%- set fg_all = (fg_tab_all if (fg_tab_all is defined and fg_tab_all) else (fg_base ~ ("p/1" if fg_base == "/" else ""))) -%}
+{%- set fg_back = ("/p/1" if fg_base == "/" else fg_base)|encode_uri_component -%}
+{%- set fg_all = (fg_tab_all if (fg_tab_all is defined and fg_tab_all) else ("/mime?back=" ~ fg_back)) -%}
 {%- set fg_active = (fg_tab if (fg_tab is defined and fg_tab) else "") -%}
 <header class="fg-top f0ck-shell-chrome">
   <div class="fg-top-row">
@@ -12,9 +17,9 @@
   </div>
   <nav class="fg-tabs" aria-label="Search tabs">
     <a href="{{ fg_all }}"{% if fg_active == "all" %} class="active" aria-current="page"{% endif %}>All</a>
-    <a href="{{ fg_base }}image"{% if fg_active == "image" %} class="active" aria-current="page"{% endif %}>Images</a>
-    <a href="{{ fg_base }}video"{% if fg_active == "video" %} class="active" aria-current="page"{% endif %}>Videos</a>
-    <a href="{{ fg_base }}audio"{% if fg_active == "audio" %} class="active" aria-current="page"{% endif %}>Audio</a>
+    <a href="/mime?image=1&amp;back={{ fg_back }}"{% if fg_active == "image" %} class="active" aria-current="page"{% endif %}>Images</a>
+    <a href="/mime?video=1&amp;back={{ fg_back }}"{% if fg_active == "video" %} class="active" aria-current="page"{% endif %}>Videos</a>
+    <a href="/mime?audio=1&amp;back={{ fg_back }}"{% if fg_active == "audio" %} class="active" aria-current="page"{% endif %}>Audio</a>
     <a href="/tags"{% if fg_active == "tags" %} class="active" aria-current="page"{% endif %}>Tags</a>
     <details class="fg-menu fg-tabs-more">
       <summary>More</summary>

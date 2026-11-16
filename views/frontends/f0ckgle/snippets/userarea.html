@@ -5,7 +5,7 @@
 {%- set can_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
 <div class="fg-user">
   {% if (session and private_messages and not session.is_anon) %}<a class="fg-user-link" href="/messages">F0ckmail<span id="dm-badge" class="fg-dm-badge">0</span></a>{% endif %}
-  <a class="fg-user-link" href="/image">Images</a>
+  <a class="fg-user-link" href="/mime?image=1&amp;back=%2Fp%2F1">Images</a>
   <details class="fg-menu fg-apps">
     <summary title="F0ckgle apps"><img class="fg-icon" src="/s/fe/f0ckgle/img/apps.svg?v={{ mtime("/public/s/fe/f0ckgle/img/apps.svg") }}" alt=""><span class="fg-sr">F0ckgle apps</span></summary>
     <div class="fg-menu-box fg-apps-box">
