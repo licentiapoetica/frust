@@ -1638,9 +1638,10 @@ html.fy-navigating .fy-mast::after {
   --font: var(--fy-font);
 }
 
-/* square, as everything in f0ckyou (v0ck.css rounds its menu, buttons and knobs for f0ckm) */
+/* square, as everything in f0ckyou (v0ck.css rounds its menu, buttons and knobs for f0ckm); the
+   loading spinner stays v0ck's ring, as asked for */
 .fy-player.v0ck,
-.fy-player.v0ck * {
+.fy-player.v0ck *:not(.v0ck_loader, .v0ck_loader *) {
   border-radius: 0 !important;
 }
 
