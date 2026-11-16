@@ -8,6 +8,7 @@
 
 mod items;
 mod meta;
+pub mod views;
 
 use crate::db::{Row, RowExt, Sql};
 use crate::f0cklib::recommend::{self, RecOpts, TagFeedOpts, jnum};
@@ -34,6 +35,7 @@ pub fn register(r: &mut Router) {
     g.get(r"\/recommendations(?:\/(?<type>videos|all))?$", recommendations);
     g.post(r"\/track\/interaction$", track_interaction);
     g.post(r"\/track\/search$", track_search);
+    views::register(&mut g);
     g.get(r"\/favs-feed$", favs_feed);
     g.get(r"\/tag-feed$", tag_feed);
     g.get(r"\/orakel\/user$", orakel_user);

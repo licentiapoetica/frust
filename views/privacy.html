@@ -39,7 +39,7 @@
       <p class="pv-small">
         {% if pv.ip_mode == "hashed" %}IP addresses are logged, but only ever written to the database as <code>HMAC-SHA256(ip, server_secret)</code>. The raw address is not persisted.{% endif %}
         {% if pv.ip_mode == "raw" %}IP addresses are logged and written to the database in plain text.{% endif %}
-        {% if pv.ip_mode == "off" %}IP addresses are not stored. The only exception is brute-force protection: login attempts keep a keyed hash of the IP for {{ pv.ret.login }}, and a moderator ban stores the hash of the banned address.{% endif %}
+        {% if pv.ip_mode == "off" %}IP addresses are not stored. The only exception is brute-force protection: login attempts keep a keyed hash of the IP for {{ pv.ret.login }}, and a moderator ban stores the hash of the banned address. A guest's view of an item is counted once in 10 minutes by a keyed hash of the day, the IP and the browser, kept for at most an hour.{% endif %}
       </p>
     </section>
 
@@ -54,6 +54,7 @@
         <div class="pv-row"><span>Login attempts</span><span class="{% if pv.ret_on.login %}pv-ok{% else %} pv-warn{% endif %}">{{ pv.ret.login }}</span><span>Rows deleted (hashed IP, attempted username, result).</span></div>
         <div class="pv-row"><span>Unused sessions</span><span class="{% if pv.ret_on.sessions %}pv-ok{% else %} pv-warn{% endif %}">{{ pv.ret.sessions }}</span><span>Session deleted after this long without use; that device is logged out.</span></div>
         {% if pv.hw %}<div class="pv-row"><span>Device fingerprint</span><span class="{% if pv.ret_on.fp %}pv-ok{% else %} pv-warn{% endif %}">{{ pv.ret.fp }}</span><span>Cleared from anonymous identities that haven't been used for this long.</span></div>{% endif %}
+        <div class="pv-row"><span>Recent views</span><span class="pv-ok">10 minutes</span><span>Rows deleted (the item, and your account id or, for guests, a keyed hash of the day, IP and browser that changes daily). The item keeps only its view count.</span></div>
         <div class="pv-row"><span>Active bans</span><span>Until expiry</span><span>Banned IP hashes and fingerprints are kept until the ban expires or is lifted.</span></div>
         <div class="pv-row"><span>Your content</span><span>Until deleted</span><span>Uploads, comments, favourites and your account itself.</span></div>
       </div>

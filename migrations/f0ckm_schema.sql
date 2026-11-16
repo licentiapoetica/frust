@@ -18,6 +18,7 @@ ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_admin_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_video_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.item_view_marks DROP CONSTRAINT IF EXISTS item_view_marks_item_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_sessions DROP CONSTRAINT IF EXISTS user_sessions_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_pubkeys DROP CONSTRAINT IF EXISTS user_pubkeys_user_id_fkey;
@@ -83,6 +84,7 @@ DROP INDEX IF EXISTS public.tags_assign_tag_id_idx;
 DROP INDEX IF EXISTS public.items_phash;
 DROP INDEX IF EXISTS public.idx_webauthn_credentials_user_id;
 DROP INDEX IF EXISTS public.idx_user_video_views_video_id;
+DROP INDEX IF EXISTS public.idx_item_view_marks_seen_at;
 DROP INDEX IF EXISTS public.idx_user_warnings_user_status;
 DROP INDEX IF EXISTS public.idx_user_last_seen;
 DROP INDEX IF EXISTS public.idx_user_ips_user_id;
@@ -136,6 +138,7 @@ ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS webauthn_credentials_cred_id_key;
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_pkey;
+ALTER TABLE IF EXISTS ONLY public.item_view_marks DROP CONSTRAINT IF EXISTS item_view_marks_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_pubkeys DROP CONSTRAINT IF EXISTS user_pubkeys_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_options DROP CONSTRAINT IF EXISTS user_options_user_id;
 ALTER TABLE IF EXISTS ONLY public."user" DROP CONSTRAINT IF EXISTS user_name_unique;
@@ -224,6 +227,7 @@ DROP TABLE IF EXISTS public.webauthn_credentials;
 DROP SEQUENCE IF EXISTS public.user_warnings_id_seq;
 DROP TABLE IF EXISTS public.user_warnings;
 DROP TABLE IF EXISTS public.user_video_views;
+DROP TABLE IF EXISTS public.item_view_marks;
 DROP TABLE IF EXISTS public.user_sessions;
 DROP SEQUENCE IF EXISTS public.user_sessions_id_seq;
 DROP TABLE IF EXISTS public.user_pubkeys;
@@ -985,7 +989,8 @@ CREATE TABLE public.items (
     height integer,
     visibility smallint DEFAULT 0 NOT NULL,
     slug character varying(16),
-    expires_at bigint
+    expires_at bigint,
+    views bigint DEFAULT 0 NOT NULL
 );
 
 
@@ -1602,6 +1607,17 @@ CREATE TABLE public.user_sessions (
     csrf_token character varying(64),
     ip text,
     passkey_credential_id text
+);
+
+
+--
+-- Name: item_view_marks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.item_view_marks (
+    item_id integer NOT NULL,
+    viewer character varying(80) NOT NULL,
+    seen_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -2345,6 +2361,14 @@ ALTER TABLE ONLY public.user_pubkeys
 
 
 --
+-- Name: item_view_marks item_view_marks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_view_marks
+    ADD CONSTRAINT item_view_marks_pkey PRIMARY KEY (item_id, viewer);
+
+
+--
 -- Name: user_video_views user_video_views_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2706,6 +2730,13 @@ CREATE INDEX idx_user_ips_user_id ON public.user_ips USING btree (user_id);
 --
 
 CREATE INDEX idx_user_last_seen ON public."user" USING btree (last_seen);
+
+
+--
+-- Name: idx_item_view_marks_seen_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_item_view_marks_seen_at ON public.item_view_marks USING btree (seen_at);
 
 
 --
@@ -3207,6 +3238,14 @@ ALTER TABLE ONLY public.user_pubkeys
 
 ALTER TABLE ONLY public.user_sessions
     ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE;
+
+
+--
+-- Name: item_view_marks item_view_marks_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.item_view_marks
+    ADD CONSTRAINT item_view_marks_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id) ON DELETE CASCADE;
 
 
 --

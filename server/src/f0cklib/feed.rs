@@ -181,7 +181,7 @@ pub async fn getf0cks(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> 
     let mut q = Sql::new(
         "select items.id, items.title, items.slug, items.stamp, items.visibility, items.mime, items.dest, items.username as username, \
          items.is_pinned, items.is_oc, items.has_coverart, items.is_album, items.album_count, \
-         (select coalesce(sum(vv.view_count), 0) from user_video_views vv where vv.video_id = items.id)::bigint as views, ",
+         items.views, ",
     );
     match uid {
         Some(u) => {

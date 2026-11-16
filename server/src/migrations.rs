@@ -276,8 +276,27 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"DROP INDEX IF EXISTS idx_user_halls_assign_user_id"#,
     // /b/<dest> lookups (media_gate)
     r#"CREATE INDEX IF NOT EXISTS idx_items_dest ON items(dest)"#,
-    // an item's view count (the sum of its viewers' view_count; frontends show it)
+    // user_video_views by item (its foreign key, deleting an item)
     r#"CREATE INDEX IF NOT EXISTS idx_user_video_views_video_id ON user_video_views(video_id)"#,
+    // Views (routes/apiv2/views.rs): one counter per item, started once from the per-user counts
+    r#"DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_schema = 'public' AND table_name = 'items' AND column_name = 'views') THEN
+        ALTER TABLE items ADD COLUMN views bigint DEFAULT 0 NOT NULL;
+        UPDATE items SET views = s.total
+          FROM (SELECT video_id, sum(view_count)::bigint AS total FROM user_video_views GROUP BY video_id) s
+          WHERE items.id = s.video_id;
+      END IF;
+    END $$"#,
+    // who saw an item lately (a user id, or a guest's daily hash): one view per viewer per window
+    r#"CREATE TABLE IF NOT EXISTS item_view_marks (
+      item_id integer NOT NULL,
+      viewer character varying(80) NOT NULL,
+      seen_at timestamp with time zone DEFAULT now() NOT NULL,
+      CONSTRAINT item_view_marks_pkey PRIMARY KEY (item_id, viewer),
+      CONSTRAINT item_view_marks_item_id_fkey FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_item_view_marks_seen_at ON item_view_marks(seen_at)"#,
     // Website font weight (100-900, NULL: the font's own) and text size (percent, NULL: 100)
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_weight smallint"#,
     // Text size per frontend ({"<frontend>": percent, 100 = default}). The old single font_size

@@ -1509,6 +1509,9 @@ mod tests {
         assert!(page.contains("<span class=\"fy-badge-tl fy-rate-nsfw\">NSFW</span>") && page.contains("<span class=\"fy-badge-br\">MP4</span>"));
         assert!(page.contains("1 view &middot; <time") && page.contains("<span class=\"fy-foryou\">For you</span>"));
         // views; no message of the day in f0ckyou
+        // the view beacon (counts without JavaScript; f0ck-core.js starts from it) on item pages only
+        assert!(page.contains("<img class=\"f0ck-view-beacon\" src=\"/api/v2/view/7/nojs.gif\" data-item-id=\"7\" alt=\"\" width=\"1\" height=\"1\" loading=\"lazy\" hidden>"));
+        assert!(!home.contains("f0ck-view-beacon"));
         // f0ckm's player and blurred background on the watch page only
         assert!(page.contains("<canvas id=\"bg\" class=\"fy-bg\" data-tuner=\"null\" aria-hidden=\"true\"></canvas>"));
         assert!(page.contains("/s/js/v0ck.js?v=") && page.contains("/s/js/f0ck-bg.js?v=") && page.contains("/s/css/v0ck.css?v="));

@@ -23968,6 +23968,12 @@ document.addEventListener('keydown', (e) => {
 // ── User interest tracking: the engine is window.f0ckInterestEngine (f0ck-core.js); track the
 // item on screen after every item load ──
 (function() {
+  // the item's view (f0ckCountView, f0ck-core.js) for every item shown, also without a page load
+  document.addEventListener('f0ck:contentLoaded', () => {
+    const id = typeof window.getCurrentItemId === 'function' ? window.getCurrentItemId() : null;
+    // no item on screen: stops watching the one before
+    if (window.f0ckCountView) window.f0ckCountView(id, document.querySelector('#my-video, #f0ck-album-video'));
+  });
   const engine = window.f0ckInterestEngine;
   if (!engine) return;
   document.addEventListener('f0ck:contentLoaded', () => engine.startTrackingItem());

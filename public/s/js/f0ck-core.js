@@ -1134,3 +1134,86 @@ window.F0ckPageSwap = (() => {
   window.addEventListener('beforeunload', f0ckInterestEngine.flushCurrentTracking);
   window.addEventListener('pagehide', f0ckInterestEngine.flushCurrentTracking);
 })();
+
+// ── Item views ────────────────────────────────────────────────────────────────────────────────
+// A view counts when the item was actually seen: 3 seconds of a video or song played, or 3
+// seconds on screen for anything else. Then POST /api/v2/view/<id> (routes/apiv2/index/views.rs
+// decides whether it is a new one: one per viewer and item in 10 minutes, not the uploader's own, no
+// bots). f0ckCountView(itemId, media) starts watching an item (again for the next item of a page
+// that changes items without loading, f0ckm.js); pages with the view beacon (snippets/view-beacon.html)
+// start for their item by themselves. Without JavaScript the beacon image counts the page load.
+(() => {
+  const NEED_MS = 3000;
+  const counted = new Set();
+  let stop = null;
+  let watching = null; // [id, media] being watched
+
+  const report = (id) => {
+    counted.add(id);
+    const csrf = window.f0ckSession?.csrf_token || document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const body = JSON.stringify(csrf ? { csrf_token: csrf } : {});
+    try {
+      if (navigator.sendBeacon && navigator.sendBeacon(`/api/v2/view/${id}`, new Blob([body], { type: 'application/json' }))) return;
+    } catch { /* fall back to fetch */ }
+    fetch(`/api/v2/view/${id}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
+      body,
+    }).catch(() => {});
+  };
+
+  window.f0ckCountView = (itemId, media) => {
+    const id = parseInt(itemId, 10);
+    media = media || null;
+    // already watching this item on this element (a page asking twice)
+    if (stop && watching && watching[0] === id && watching[1] === media) return;
+    if (stop) stop();
+    stop = null;
+    watching = null;
+    if (!id || counted.has(id)) return;
+    watching = [id, media];
+    let seen = 0;
+    const done = () => {
+      if (stop) stop();
+      stop = null;
+      watching = null;
+      report(id);
+    };
+    if (media && (media instanceof HTMLVideoElement || media instanceof HTMLAudioElement)) {
+      // played time: what the media advanced while playing (a seek is no playing)
+      let last = null;
+      const onTime = () => {
+        const t = media.currentTime;
+        if (last !== null && !media.paused && t > last && t - last < 2) seen += (t - last) * 1000;
+        last = t;
+        if (seen >= NEED_MS) done();
+      };
+      const onSeek = () => { last = null; };
+      media.addEventListener('timeupdate', onTime);
+      media.addEventListener('seeking', onSeek);
+      stop = () => {
+        media.removeEventListener('timeupdate', onTime);
+        media.removeEventListener('seeking', onSeek);
+      };
+    } else {
+      // on screen: the time the page is visible
+      const timer = setInterval(() => {
+        if (document.visibilityState === 'visible') seen += 250;
+        if (seen >= NEED_MS) done();
+      }, 250);
+      stop = () => clearInterval(timer);
+    }
+  };
+
+  // the item of the page on screen (its beacon); none: stop watching. Frontends that swap pages
+  // without loading them call it for every page shown (f0ckv2).
+  const fromBeacon = () => {
+    const beacon = document.querySelector('img.f0ck-view-beacon[data-item-id]');
+    window.f0ckCountView(beacon ? beacon.dataset.itemId : null, document.querySelector('#my-video, #f0ck-album-video'));
+  };
+  window.f0ckCountViewFromPage = fromBeacon;
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fromBeacon);
+  else fromBeacon();
+})();

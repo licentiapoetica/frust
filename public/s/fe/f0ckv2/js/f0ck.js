@@ -47,6 +47,8 @@ const v2CheckThumb = a => {
 
 window.v2Page.onPage(() => {
   document.querySelectorAll('div.posts > a').forEach(v2CheckThumb);
+  // the item's view, for every page shown (f0ck-core.js; the first one counts there by itself)
+  if(window.f0ckCountViewFromPage) window.f0ckCountViewFromPage();
 
   // Onara viewer: the item over its grid page (index.html), closed by a link to that page
   const onara = document.getElementById('v2-onara');

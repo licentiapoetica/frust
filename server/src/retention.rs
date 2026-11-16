@@ -114,6 +114,10 @@ pub async fn run_retention(st: &AppState) {
         step!("anon.hw_fingerprint", sql!("update anon_identities set hw_fingerprint = null where hw_fingerprint is not null and last_seen < ", @c));
     }
 
+    // Who saw an item lately (a member's id, a guest's daily hash): only needed for the view window
+    let views_window = crate::routes::apiv2::index::views::WINDOW_MINUTES;
+    step!("item_view_marks", sql!("delete from item_view_marks where seen_at < now() - make_interval(mins => ", views_window, ")"));
+
     // Comment uploads nobody posted (not personal data as such, but storage anyone could fill)
     let unattached = crate::routes::comment_upload::purge_unattached(st).await;
     if unattached > 0 {

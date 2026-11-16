@@ -1,0 +1,6 @@
+{#- The item's view beacon (routes/apiv2/index/views.rs). Without JavaScript this hidden lazy image is
+    loaded with the page and counts the view (scripting off makes lazy images load at once); with
+    JavaScript a hidden lazy image is never loaded, and f0ck-core.js (f0ckCountView) counts the view
+    once the item was seen for 3 seconds, starting from the item id on this image. Not for 4chan
+    proxy items (no item of the site). -#}
+{% if (item is defined and item and item.id and not item.is_chan) %}<img class="f0ck-view-beacon" src="/api/v2/view/{{ item.id }}/nojs.gif" data-item-id="{{ item.id }}" alt="" width="1" height="1" loading="lazy" hidden>{% endif %}

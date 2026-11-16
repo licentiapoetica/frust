@@ -98,7 +98,6 @@ fn decorate(cfg: &crate::config::Config, alias: &str) -> Sql {
     let ratings: Vec<i32> = vec![1, 2, cfg.nsfl_tag_id() as i32];
     let mut q = Sql::new(&format!(
         "SELECT {alias}.*, uo.display_name, uo.username_color, uo.avatar, uo.avatar_file, \
-         (SELECT coalesce(sum(vv.view_count), 0) FROM user_video_views vv WHERE vv.video_id = {alias}.id)::bigint as views, \
          (SELECT ta.tag_id FROM tags_assign ta WHERE ta.item_id = {alias}.id AND ta.tag_id = ANY("
     ));
     q.bind(ratings).push(&format!(
