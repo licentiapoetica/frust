@@ -6824,17 +6824,17 @@ window.cancelAnimFrame = (function () {
     panel.innerHTML = `
       <div class="f0ck-tuner-header">
         <div class="f0ck-tuner-subtabs-nav">
-          <button type="button" class="f0ck-tuner-subtab-btn active" data-subtab="audio" title="Audio Reactivity Visualizer Tuner">
-            <i class="fa-solid fa-sliders"></i> Audio Tuner
-          </button>
-          <button type="button" class="f0ck-tuner-subtab-btn" data-subtab="danmaku" title="Danmaku Flying Comments Tuner & Debug">
-            <i class="fa-solid fa-bolt"></i> Danmaku Tuner
-          </button>
-          <button type="button" class="f0ck-tuner-subtab-btn" data-subtab="background" title="Onara & Video Background Settings">
+          <button type="button" class="f0ck-tuner-subtab-btn active" data-subtab="background" title="Onara & Video Background Settings">
             <i class="fa-solid fa-film"></i> Background
           </button>
           <button type="button" class="f0ck-tuner-subtab-btn" data-subtab="flashyank" title="Flash Yank: retro low-res / low-fps / few-colour video filter">
             <i class="fa-solid fa-bolt-lightning"></i> Flash Yank
+          </button>
+          <button type="button" class="f0ck-tuner-subtab-btn" data-subtab="audio" title="Audio Reactivity Visualizer Tuner">
+            <i class="fa-solid fa-sliders"></i> Audio Tuner
+          </button>
+          <button type="button" class="f0ck-tuner-subtab-btn" data-subtab="danmaku" title="Danmaku Flying Comments Tuner & Debug">
+            <i class="fa-solid fa-bolt"></i> Danmaku Tuner
           </button>
           <button type="button" class="f0ck-tuner-subtab-btn" data-subtab="laser" title="Laser cursor: colour, trail, glow, click and drag effects">
             <i class="fa-solid fa-wand-magic-sparkles"></i> Laser
@@ -6844,7 +6844,7 @@ window.cancelAnimFrame = (function () {
       </div>
 
       <!-- Pane 1: Audio Reactivity Visualizer Tuner -->
-      <div id="f0ck-tuner-pane-audio" class="f0ck-tuner-subtab-pane active">
+      <div id="f0ck-tuner-pane-audio" class="f0ck-tuner-subtab-pane" style="display: none;">
         <div class="f0ck-tuner-body">
           <div class="f0ck-tuner-presets-bar">
             <div class="f0ck-tuner-presets-select-wrap">
@@ -6937,7 +6937,7 @@ window.cancelAnimFrame = (function () {
       </div>
 
       <!-- Pane 3: Onara & Video Background Settings -->
-      <div id="f0ck-tuner-pane-background" class="f0ck-tuner-subtab-pane" style="display: none;">
+      <div id="f0ck-tuner-pane-background" class="f0ck-tuner-subtab-pane active">
         <div class="f0ck-tuner-body">
           <div class="f0ck-tuner-presets-bar">
             <div style="font-size: 0.6875rem; opacity: 0.85; font-weight: 700; display: flex; align-items: center; gap: 6px;">
@@ -7016,15 +7016,18 @@ window.cancelAnimFrame = (function () {
     `;
 
     // ── Sub-Tab Switching Logic ─────────────────────────────────────────────
-    // Audio uploads disabled in config: no Audio tab (its pane stays in the DOM, never shown, so the
-    // audio code's element lookups keep working); Danmaku opens first instead.
-    const audioTabOn = window.f0ckAudioUploads !== false;
-    if (!audioTabOn) {
-      const audioBtn = panel.querySelector('.f0ck-tuner-subtab-btn[data-subtab="audio"]');
-      if (audioBtn) audioBtn.remove();
-    }
+    // Tabs: Background, Flash Yank, Audio Tuner (only with audio uploads enabled in config), then the
+    // admin-only Danmaku and Laser. A dropped tab's pane stays in the DOM, never shown, so the code's
+    // element lookups keep working.
+    const isTunerAdmin = !!(window.f0ckSession && (window.f0ckSession.is_admin || window.f0ckSession.admin));
+    const shownSubtabs = ['background', 'flashyank'];
+    if (window.f0ckAudioUploads !== false) shownSubtabs.push('audio');
+    if (isTunerAdmin) shownSubtabs.push('danmaku', 'laser');
+    panel.querySelectorAll('.f0ck-tuner-subtabs-nav .f0ck-tuner-subtab-btn').forEach(btn => {
+      if (!shownSubtabs.includes(btn.dataset.subtab)) btn.remove();
+    });
     const subtabButtons = panel.querySelectorAll('.f0ck-tuner-subtabs-nav .f0ck-tuner-subtab-btn');
-    const switchSubtab = (targetTab, remember = true) => {
+    const switchSubtab = (targetTab) => {
       if (!targetTab) return;
       subtabButtons.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.subtab === targetTab);
@@ -7034,7 +7037,6 @@ window.cancelAnimFrame = (function () {
         p.classList.toggle('active', isActive);
         p.style.display = isActive ? 'block' : 'none';
       });
-      if (!remember) return;
       try {
         localStorage.setItem('f0ck_tuner_active_subtab', targetTab);
       } catch (e) {}
@@ -7048,11 +7050,7 @@ window.cancelAnimFrame = (function () {
 
     let savedSubtab = null;
     try { savedSubtab = localStorage.getItem('f0ck_tuner_active_subtab'); } catch (e) {}
-    if (savedSubtab && ((audioTabOn && savedSubtab === 'audio') || savedSubtab === 'danmaku' || savedSubtab === 'background' || savedSubtab === 'flashyank' || savedSubtab === 'laser')) {
-      switchSubtab(savedSubtab);
-    } else if (!audioTabOn) {
-      switchSubtab('danmaku', false);
-    }
+    if (savedSubtab && shownSubtabs.includes(savedSubtab)) switchSubtab(savedSubtab);
 
     // ── Flash Yank pane (window.f0ckFlashYank from flash_yank.js) ──────────
     (() => {

@@ -179,7 +179,7 @@
       <button type="button" class="sidebar-tab footer-hidden" id="sidebar-tab-favs" data-tab="favs" title="Favorites" aria-label="Favorites">
         <i class="fa-solid fa-heart"></i>
       </button>
-      <button type="button" class="sidebar-tab" id="sidebar-tab-tuner" data-tab="tuner" {% set tuner_title = "Tuner & Debug (Audio, Danmaku & Background)" if audio_uploads_enabled != false else "Tuner & Debug (Danmaku & Background)" %} title="{{ tuner_title }}" aria-label="{{ tuner_title }}">
+      <button type="button" class="sidebar-tab" id="sidebar-tab-tuner" data-tab="tuner" {% set tuner_title = "Tuner (Background, Flash Yank" ~ (", Audio" if audio_uploads_enabled != false else "") ~ (", Danmaku & Laser" if (session and session.admin) else "") ~ ")" %} title="{{ tuner_title }}" aria-label="{{ tuner_title }}">
         <i class="fa-solid fa-sliders"></i>
       </button>
     </div>
