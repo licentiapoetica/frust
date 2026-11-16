@@ -574,6 +574,10 @@ async fn generic(st: AppState, req: Req) -> Res {
         }
     }
 
+    if !is_item && !req.is_xhr() {
+        add_list_user(&st, &mut data).await;
+    }
+
     let tpl_req = req_with_session(&req, session.clone());
     if req.is_xhr() && !is_item {
         return Ok(no_store(html(crate::tpl::render(&st, Some(&tpl_req), "index-partial", data))));
@@ -801,6 +805,30 @@ async fn onara_page(st: &AppState, req: &Req, tpl_req: &Req, opts: &FeedOpts<'_>
     grid["can_rate_item"] = data["can_rate_item"].clone();
     grid["hidePagination"] = json!(false);
     Ok(html(crate::tpl::render(st, Some(tpl_req), "index", grid)))
+}
+
+/// A user's listing (/user/x/uploads, /user/x/favs): the user's public profile bits as `list_user`
+/// (name, display name, avatar, banner, colour, role, description), so a frontend can head the
+/// listing with them (f0ckyou: the channel header). Nothing for a name without an account.
+async fn add_list_user(st: &AppState, data: &mut Value) {
+    let Some(name) = data["tmp"]["user"].as_str().filter(|n| !n.is_empty()).map(str::to_string) else { return };
+    let row = sql!(
+        r#"select "user".id as user_id, "user".user, "user".admin, "user".is_moderator, uo.display_name, uo.avatar, uo.avatar_file,
+            uo.banner_file, uo.banner_position, uo.banner_size, uo.username_color, uo.description
+      from "user" left join user_options uo on uo.user_id = "user".id
+      where "user".user ilike "#,
+        crate::util::escape_like(&name),
+        r#" or "user".login ilike "#,
+        crate::util::escape_like(&name),
+        " limit 1"
+    )
+    .fetch_optional(&st.db)
+    .await;
+    match row {
+        Ok(Some(r)) => data["list_user"] = Value::Object(r),
+        Ok(None) => {}
+        Err(e) => tracing::warn!("[INDEX] list user {name}: {e}"),
+    }
 }
 
 /// The recommendations under / beside the item, for a frontend that lists them on its item page

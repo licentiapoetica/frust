@@ -1459,6 +1459,9 @@ mod tests {
         let uploads = render(&fe("index"), serde_json::json!({ "url": url("/user/al/uploads", serde_json::json!({})), "tmp": { "user": "al", "view_mode": "uploads" },
             "session": session, "items": [item(7)], "total": 1, "link": { "main": "/user/al/uploads/", "path": "p/", "suffix": "" } }));
         assert!(uploads.contains("<a href=\"/user/al/uploads\" class=\"active\" aria-current=\"page\">F0cks</a>"));
+        let listed = render(&fe("index"), serde_json::json!({ "url": url("/user/al/uploads", serde_json::json!({})), "tmp": { "user": "al", "view_mode": "uploads" },
+            "list_user": { "user": "Al", "display_name": "Al B", "avatar_file": "a.webp" }, "items": [item(7)], "total": 1, "link": { "main": "/user/al/uploads/", "path": "p/", "suffix": "" } }));
+        assert!(listed.contains("<img class=\"fy-channel-ava\" src=\"/a/a.webp\" alt=\"\">") && listed.contains(">Al B</span>"));
         let empty = render(&fe("index"), serde_json::json!({ "url": url("/tag/zzz", serde_json::json!({})), "tmp": { "tag": "zzz" }, "items": [], "total": 0 }));
         assert!(empty.contains("No f0cks here"));
 

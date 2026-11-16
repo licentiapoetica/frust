@@ -199,7 +199,7 @@ pub async fn getf0cks(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> 
     };
     q.push("(case when min(ta.tag_id) = 1 then 'SFW' when min(ta.tag_id) = 2 then 'NSFW' when min(ta.tag_id) = ")
         .bind(nsfl_cfg)
-        .push(" then 'NSFL' else null end) as tag, min(ta.tag_id) as tag_id, max(uo.display_name) as display_name, max(uo.username_color) as username_color, ");
+        .push(" then 'NSFL' else null end) as tag, min(ta.tag_id) as tag_id, max(uo.display_name) as display_name, max(uo.username_color) as username_color, max(uo.avatar) as avatar, max(uo.avatar_file) as avatar_file, ");
     if cfg.truthy("websrv.enable_dynamic_thumbs") {
         q.push("((SELECT count(*) FROM favorites WHERE item_id = items.id) + (SELECT count(*) FROM comments WHERE item_id = items.id AND is_deleted = false)) as contribution ");
     } else {

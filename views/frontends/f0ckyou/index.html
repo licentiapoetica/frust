@@ -45,7 +45,8 @@
 {% include "frontends/f0ckyou/snippets/chrome.html" %}
 <main class="fy-main">
   {% if tmp and tmp.user %}
-  {%- set ch_user = {"user": tmp.user} -%}
+  {#- list_user: the user's profile bits (routes/index.rs add_list_user); a bare name without an account -#}
+  {%- set ch_user = (list_user if (list_user is defined and list_user) else {"user": tmp.user}) -%}
   {%- set ch_tab = ("favs" if tmp.view_mode == "favs" else "uploads") -%}
   {% include "frontends/f0ckyou/snippets/channel-head.html" %}
   {% elif tmp and tmp.tag %}
