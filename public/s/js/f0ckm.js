@@ -18196,6 +18196,31 @@ window.cancelAnimFrame = (function () {
   })();
   // </left-sidebar-drag-zone>
 
+  // Drag-zone pills only show while the mouse is over their edge strip (f0ckm.css: .is-near). The strips
+  // are click-through, so CSS :hover can't see the cursor there; this marks the zone the cursor is in.
+  // A zone keeps the mark while a button is held, so a pill being dragged stays visible.
+  (() => {
+    const zones = ['sidebar-drag-zone', 'sidebar-left-drag-zone'];
+    let lastX = -1, lastY = -1, buttons = 0, queued = false;
+    const update = () => {
+      queued = false;
+      for (const id of zones) {
+        const z = document.getElementById(id);
+        if (!z) continue;
+        const r = z.getBoundingClientRect();
+        const inside = r.width > 0 && lastX >= r.left && lastX <= r.right && lastY >= r.top && lastY <= r.bottom;
+        z.classList.toggle('is-near', inside || (buttons !== 0 && z.classList.contains('is-near')));
+      }
+    };
+    document.addEventListener('mousemove', e => {
+      lastX = e.clientX; lastY = e.clientY; buttons = e.buttons;
+      if (!queued) { queued = true; requestAnimationFrame(update); }
+    }, { passive: true });
+    const clear = () => { lastX = lastY = -1; buttons = 0; update(); };
+    document.documentElement.addEventListener('mouseleave', clear);
+    window.addEventListener('blur', clear);
+  })();
+
 
   // Export loaders for external systems (like NotificationSystem)
   window.loadPageAjax = loadPageAjax;

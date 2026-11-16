@@ -2764,15 +2764,20 @@ body.layout-modern .global-sidebar-right {
   flex-shrink: 0;
   width: 5px;
   height: 40px;
-  border-radius: 2px;
   background: var(--accent, #888);
   pointer-events: auto;
   cursor: pointer;
-  opacity: 0.45;
+  /* hidden until the mouse is over the edge strip: f0ckm.js marks the zone .is-near (the strip is
+     click-through, so :hover can't see the cursor there) */
+  opacity: 0;
   transition: height 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
 }
 
-body.sidebar-right-hidden #sidebar-drag-zone::after {
+#sidebar-drag-zone.is-near::after {
+  opacity: 0.45;
+}
+
+body.sidebar-right-hidden #sidebar-drag-zone.is-near::after {
   opacity: 0.7;
 }
 
@@ -2780,13 +2785,6 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
 #sidebar-drag-zone:hover::after {
   opacity: 1;
   height: 56px;
-}
-
-/* Touch devices: no hover, so the handle stays fully visible */
-@media (pointer: coarse) {
-  #sidebar-drag-zone::after {
-    opacity: 0.7;
-  }
 }
 
 /* Left sidebar edge zone drag handle (modern layout's comments column): the same pill as
@@ -2808,15 +2806,18 @@ body.sidebar-right-hidden #sidebar-drag-zone::after {
   flex-shrink: 0;
   width: 5px;
   height: 40px;
-  border-radius: 2px;
   background: var(--accent, #888);
   pointer-events: auto;
   cursor: pointer;
-  opacity: 0.45;
+  opacity: 0;
   transition: height 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
 }
 
-body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
+#sidebar-left-drag-zone.is-near::after {
+  opacity: 0.45;
+}
+
+body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone.is-near::after {
   opacity: 0.7;
 }
 
@@ -2825,10 +2826,11 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   height: 56px;
 }
 
-/* Touch devices: no hover, so the handle stays fully visible */
+/* Touch devices: the pills never show (still tappable, and the swipe gestures work as before) */
 @media (pointer: coarse) {
+  #sidebar-drag-zone::after,
   #sidebar-left-drag-zone::after {
-    opacity: 0.7;
+    opacity: 0 !important;
   }
 }
 
