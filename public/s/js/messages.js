@@ -636,7 +636,7 @@ if (window.__dmLoaded) {
         // Anti-recursion / Performance safeguard for extremely long messages
         if (plaintext.length > 50000) {
             console.warn('[DM] Message too long, skipping markdown');
-            return `<pre style="white-space: pre-wrap; font-family: inherit; margin: 0; padding: 0; background: none; border: none; font-size: inherit; color: inherit;">${escHtml(plaintext)}</pre>`;
+            return `<pre class="text-raw">${escHtml(plaintext)}</pre>`;
         }
 
         const cs = window.commentSystem;
