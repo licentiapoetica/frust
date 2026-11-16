@@ -1592,6 +1592,9 @@ mod tests {
         assert!(!page.contains("<details class=\"fy-desc\" data-fy-live=\"desc\" open"));
         // no "View channel"; Edit (title, new thumbnail, 451 for staff) next to Delete
         assert!(!page.contains("View channel"));
+        // Upload in the masthead opens f0ckm's upload dropdown (f0ck_upload_init.js), /upload without JavaScript
+        assert!(page.contains("<a class=\"fy-create\" id=\"nav-upload-link\" href=\"/upload\" title=\"Upload (u)\" aria-haspopup=\"dialog\" aria-expanded=\"false\">"));
+        assert!(page.contains("id=\"upload-drag-modal\"") && page.contains("/s/js/f0ck_upload_init.js?v="));
         assert!(page.contains("<a class=\"fy-pill\" href=\"#edit\">") && page.contains("<div id=\"edit\" class=\"fy-modal\" data-fy-live=\"edit\">"));
         assert!(page.contains("<form method=\"post\" action=\"/api/v2/items/7/rethumb\" class=\"fy-edit-tool fy-ajax\""));
         assert!(page.contains("<input type=\"hidden\" name=\"visibility\" value=\"3\">"));

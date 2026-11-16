@@ -26,7 +26,7 @@
     + ([["/pending", "clock", "Pending" ~ ((" (" ~ session.own_pending_count ~ ")") if session.own_pending_count else ""), "pending"]] if (manual_approval and not session.is_anon) else [])) if session else [] -%}
 {%- set fy_explore = [["/tags", "hash", "Tags", "tags"], ["/ranking", "trophy", "Ranking", "ranking"]]
     + ([["/halls", "playlist", "Halls", "halls"]] if halls_enabled else [])
-    + ([["/upload", "create", "Upload", "upload"]] if fy_can_upload else []) -%}
+    + ([["/upload", "upload", "Upload", "upload"]] if fy_can_upload else []) -%}
 {%- set fy_staff_links = (([["/admin", "shield", "Admin console", "admin"]] if session.admin else [])
     + [["/mod", "shield", "Mod", "mod"], ["/mod/reports", "flag", "Reports", "reports"]]
     + ([["/mod/approve", "check", "Approve" ~ ((" (" ~ session.pending_count ~ ")") if session.pending_count else ""), "approve"]] if manual_approval else [])) if fy_staff else [] -%}

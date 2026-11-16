@@ -1,4 +1,5 @@
-{#- Masthead, right: Create (upload), messages, notifications and the account menu, or the settings
+{#- Masthead, right: Upload (f0ckm's upload dropdown, f0ck_upload_init.js opens it from
+    #nav-upload-link; /upload without JavaScript), messages, notifications and the account menu, or the settings
     menu and "Sign in". The menus are <details>, so they open without JavaScript; f0ckyou.js closes
     them on an outside click. The badges are filled by JavaScript (f0ckyou.js, messages.js). -#}
 {% import "frontends/f0ckyou/snippets/macros.html" as fy %}
@@ -6,7 +7,7 @@
 {%- set ua_link = "/user/" ~ (ua_me|encode_uri_component) -%}
 {%- set ua_mode = (mode if mode is number else 0) -%}
 {%- set ua_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
-{% if ua_upload %}<a class="fy-create" href="/upload" title="Upload">{{ fy.ico("create") }}<span>Create</span></a>{% endif %}
+{% if ua_upload %}<a class="fy-create" id="nav-upload-link" href="/upload" title="Upload (u)" aria-haspopup="dialog" aria-expanded="false">{{ fy.ico("upload") }}<span>Upload</span></a>{% endif %}
 {% if (session and private_messages and not session.is_anon) %}<a class="fy-iconbtn fy-hide-narrow" href="/messages" title="Messages">{{ fy.ico("mail") }}<span id="dm-badge" class="fy-badge">0</span><span class="fy-sr">Messages</span></a>{% endif %}
 {% if session %}<a class="fy-iconbtn" href="/notifications" title="Notifications">{{ fy.ico("bell") }}<span id="fy-notif-badge" class="fy-badge" hidden>0</span><span class="fy-sr">Notifications</span></a>{% endif %}
 {% if (not session or (frontend_switch and frontends and frontends|length > 1)) %}

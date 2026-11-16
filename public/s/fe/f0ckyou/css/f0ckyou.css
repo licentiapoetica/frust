@@ -412,7 +412,8 @@ html:not(.no-js) .nojs-only {
 
 .fy-btn:hover,
 .fy-pill:hover,
-.fy-create:hover {
+.fy-create:hover,
+.fy-create.is-active {
   background: var(--fy-soft-2);
 }
 
