@@ -38,6 +38,8 @@
   <link rel="stylesheet" href="/s/css/comment-fx.css?v={{ mtime("/public/s/css/comment-fx.css") }}">
   <link rel="stylesheet" href="/s/css/glitchfx.css?v={{ mtime("/public/s/css/glitchfx.css") }}">
   {% if user_font_css %}<link rel="stylesheet" id="user-font-css" href="{{ user_font_css }}">{% endif %}
+  {#- the brand's font (admin panel → branding), for the logo -#}
+  {% if brand_font_css %}<link rel="stylesheet" id="brand-font-css" href="{{ brand_font_css }}">{% endif %}
   {#- f0ckm's video player (v0ck.js, started by f0ckyou.js on the watch page); on every page, as pages
       change in place; f0ckyou.css squares it and colours it -#}
   <link rel="stylesheet" href="/s/css/v0ck.css?v={{ mtime("/public/s/css/v0ck.css") }}">

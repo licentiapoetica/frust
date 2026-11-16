@@ -41,6 +41,17 @@ html.f0ck-shell .f0ck-shell-page {
     scrollbar-width: auto !important;
   }
 
+  /* f0ckm.css makes a .navbar-brand a 50px flex box; the logo keeps its own size */
+  html.f0ck-shell .f0ck-shell-chrome .fy-logo.navbar-brand {
+    display: inline-flex !important;
+    flex-shrink: 0 !important;
+    align-items: center !important;
+    height: auto !important;
+    max-width: none !important;
+    padding: 0 !important;
+    background: none !important;
+  }
+
   html.f0ck-shell body {
     background: #0f0f0f !important;
     color: #f1f1f1 !important;

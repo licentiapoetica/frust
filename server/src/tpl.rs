@@ -1429,6 +1429,15 @@ mod tests {
         assert!(home.contains("<li><a href=\"/\" class=\"active\" aria-current=\"page\">"), "Home is the active guide entry");
         assert!(home.contains("<a href=\"/mode/1\" class=\"active\" aria-current=\"true\">NSFW</a>"));
         assert!(home.contains("<sup class=\"fy-logo-cc\">NSFW</sup>"));
+        // no brand set: f0ckYou's own logo, marked for live brand changes (f0ck-core.js)
+        assert!(home.contains("<span class=\"fy-logo navbar-brand\"><span class=\"fy-logo-mark\" aria-hidden=\"true\"></span><img class=\"fy-logo-img\" data-brand-img alt=\"f0ck.test\" hidden>"));
+        assert!(home.contains("data-brand-text data-text=\"\" data-fallback=\"f0ckYou\">f0ck<b>You</b></span>"));
+        // the admin's brand: picture and text in its font, no play mark
+        let branded = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "custom_brand_image": "/s/brand.png",
+            "custom_navbar_brand_text": "MyTube", "brand_font": "VCR", "brand_weight": 700, "brand_case": "upper", "brand_font_css": "/brand-font.css?f=VCR" }));
+        assert!(branded.contains("<span class=\"fy-logo navbar-brand fy-logo-custom\">") && branded.contains("src=\"/s/brand.png\">"));
+        assert!(branded.contains("class=\"fy-logo-word brand-case-upper brand-font brand-weight-700\" data-brand-text data-text=\"MyTube\" data-fallback=\"f0ckYou\">MyTube</span>"));
+        assert!(branded.contains("<link rel=\"stylesheet\" id=\"brand-font-css\" href=\"/brand-font.css?f=VCR\">"));
         assert!(home.contains("<article class=\"fy-card\" data-id=\"7\">") && home.contains("<a class=\"fy-thumb\" href=\"/7\""));
         assert!(home.contains("<span class=\"fy-watched\" title=\"watched\"></span>"));
         // the play time on the thumbnail, and the video to preview on hover
@@ -1995,7 +2004,7 @@ mod tests {
     #[test]
     fn brand_sizes_have_css() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
-        for f in ["public/s/css/f0ckm.css", "public/s/fe/w0bm/css/w0bm-fe.css", "public/s/fe/f0ckv2/css/f0ckv2.css"] {
+        for f in ["public/s/css/f0ckm.css", "public/s/fe/w0bm/css/w0bm-fe.css", "public/s/fe/f0ckv2/css/f0ckv2.css", "public/s/fe/f0ckyou/css/f0ckyou.css"] {
             let css = std::fs::read_to_string(root.join(f)).unwrap();
             for n in crate::settings::BRAND_SIZES {
                 assert!(css.contains(&format!("[data-brand-text].brand-size-{n} {{")), "{f} {n}");
@@ -2007,7 +2016,7 @@ mod tests {
     #[test]
     fn brand_weights_have_css() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
-        for f in ["public/s/css/f0ckm.css", "public/s/fe/w0bm/css/w0bm-fe.css", "public/s/fe/f0ckv2/css/f0ckv2.css"] {
+        for f in ["public/s/css/f0ckm.css", "public/s/fe/w0bm/css/w0bm-fe.css", "public/s/fe/f0ckv2/css/f0ckv2.css", "public/s/fe/f0ckyou/css/f0ckyou.css"] {
             let css = std::fs::read_to_string(root.join(f)).unwrap();
             for w in crate::fonts::WEIGHTS {
                 assert!(css.contains(&format!("[data-brand-text].brand-font.brand-weight-{w} {{\n  font-weight: {w} !important;")), "{f} {w}");

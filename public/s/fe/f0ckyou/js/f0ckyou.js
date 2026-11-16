@@ -472,6 +472,15 @@
   window.f0ckFrontend = {
     itemId: page.itemId || null,
     flash,
+    // the admin changed the brand (f0ck-core.js has updated the picture and the text): f0ckYou's
+    // play mark only without one
+    brand() {
+      document.querySelectorAll('.fy-logo').forEach(logo => {
+        const img = logo.querySelector('[data-brand-img]');
+        const txt = logo.querySelector('[data-brand-text]');
+        logo.classList.toggle('fy-logo-custom', !!((img && !img.hidden) || (txt && txt.dataset.text)));
+      });
+    },
     comments(data) {
       if (!page.itemId || String(data?.item_id) !== String(page.itemId)) return;
       refresh(['comments', 'comments-head']);
