@@ -1279,6 +1279,7 @@
                 <a href="${targetHref}" class="sidebar-video-link" data-mode="${rClass}" data-inherit-context="false">
                     <div class="sidebar-video-thumb-wrap" data-file="${escapeHtml(activeDest)}" data-mime="${escapeHtml(activeMime)}" data-ext="${escapeHtml(ext ? ext.toLowerCase() : '')}" data-mode="${rClass}">
                         ${thumbContentHtml}
+                        ${forYouBadge}
                         <div class="sidebar-video-badges">
                             ${formatBadge}
                             <span class="sidebar-video-badge rating-${rClass}">${rClass.toUpperCase()}</span>
@@ -1292,8 +1293,6 @@
                             </div>
                             <div class="sidebar-video-meta">
                                 ${timeStr ? `<span class="sidebar-video-time" title="${escapeHtml(fullDate)}">${escapeHtml(timeStr)}</span>` : ''}
-                                ${(timeStr && forYouBadge) ? `&bull;` : ''}
-                                ${forYouBadge}
                             </div>
                         </div>
                     </div>
