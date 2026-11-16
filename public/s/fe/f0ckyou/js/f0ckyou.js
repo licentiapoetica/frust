@@ -850,22 +850,15 @@
     return seen;
   };
 
-  // How many of a batch (15) come from the tag on the tag's list, by how far down it is: the list
-  // leaves the tag bit by bit (and at once when the tag has nothing left)
-  const TAG_SHARE = [10, 5, 0];
-  // n items spread evenly among the others: the recommendations between the tag's items
-  const interleave = (main, extra) => {
-    if (!extra.length) return main;
-    if (!main.length) return extra;
-    const out = [];
-    const step = (main.length + extra.length) / extra.length;
-    let next = step - 1;
-    let m = 0;
-    let x = 0;
-    for (let i = 0; i < main.length + extra.length; i++) {
-      if (x < extra.length && i >= Math.floor(next)) { out.push(extra[x++]); next += step; } else if (m < main.length) out.push(main[m++]); else out.push(extra[x++]);
-    }
-    return out;
+  // the end of the tag's list: everything of the tag is shown, the other recommendations are a tab away
+  const tagEnd = (list) => {
+    const pane = list.parentElement;
+    if (pane.querySelector('.fy-recs-end')) return;
+    const p = el('p', 'fy-dim fy-recs-end', `That's all in #${(list.dataset.tag || '').toLowerCase()}. `);
+    const label = el('label', 'fy-linkbtn', 'Show recommended');
+    label.htmlFor = 'fy-upnext-recs';
+    p.append(label);
+    list.after(p);
   };
   const setupList = (list) => {
     const itemId = list.dataset.itemId;
@@ -885,6 +878,8 @@
 
     // with the visitor's interests: the list f0ckm's tab would show (without them the server's is it);
     // the tag's list is the tag's
+    // the server's tag list was all the tag has
+    if (source === 'tag' && list.dataset.tagDone) done = true;
     if (source === 'recs' && !kept && affinityParams()) {
       loading = true;
       getRecs(`limit=20&exclude_ids=${encodeURIComponent(itemId)}`).then(items => {
@@ -904,16 +899,12 @@
         const exclude = encodeURIComponent([itemId, ...[...seen].slice(-100)].join(','));
         let items = [];
         if (source === 'tag') {
-          const round = parseInt(list.dataset.round || '0', 10);
-          list.dataset.round = String(round + 1);
-          const want = list.dataset.tagDone ? 0 : TAG_SHARE[Math.min(round, TAG_SHARE.length - 1)];
-          let inTag = [];
-          if (want) {
-            inTag = (await getRecs(`tag=${encodeURIComponent(tag)}&limit=${want}&exclude_ids=${exclude}`)) || [];
-            if (inTag.length < want) list.dataset.tagDone = '1';
+          // the tag's tab shows the tag only; the rest is the Recommended tab's
+          items = (await getRecs(`tag=${encodeURIComponent(tag)}&limit=15&exclude_ids=${exclude}`)) || [];
+          if (items.length < 15) {
+            list.dataset.tagDone = '1';
+            done = true;
           }
-          const others = (await getRecs(`limit=${15 - inTag.length}&exclude_ids=${exclude}&continuation=1`)) || [];
-          items = interleave(inTag, others);
         } else {
           items = (await getRecs(`limit=15&exclude_ids=${exclude}&continuation=1`)) || [];
         }
@@ -924,6 +915,7 @@
       } catch {
         done = true;
       } finally {
+        if (done && source === 'tag' && list.children.length) tagEnd(list);
         spinner.hidden = true;
         loading = false;
       }
@@ -962,11 +954,10 @@
     }
     try {
       const ex = encodeURIComponent(exclude.join(','));
-      // the tag's list: another item of the tag while there is one
-      let items = list.dataset.source === 'tag' && list.dataset.tag && !list.dataset.tagDone
-        ? await getRecs(`tag=${encodeURIComponent(list.dataset.tag)}&limit=1&exclude_ids=${ex}`)
-        : null;
-      if (!items || !items.length) items = await getRecs(`limit=1&exclude_ids=${ex}${prefer}`);
+      // the tag's list: another item of the tag, or none (the rest is the Recommended tab's)
+      const items = list.dataset.source === 'tag'
+        ? await getRecs(`tag=${encodeURIComponent(list.dataset.tag || '')}&limit=1&exclude_ids=${ex}`)
+        : await getRecs(`limit=1&exclude_ids=${ex}${prefer}`);
       const fresh = (items || []).find(v => !seen.has(String(v.id)));
       if (!fresh) throw new Error('none');
       seen.add(String(fresh.id));

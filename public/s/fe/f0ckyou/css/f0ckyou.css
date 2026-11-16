@@ -2423,6 +2423,15 @@ body.fy-page-watch {
   transition: opacity .2s;
 }
 
+.fy-recs-end {
+  margin: 1rem 0 0;
+}
+
+.fy-recs-end .fy-linkbtn,
+.fy-recs-empty .fy-linkbtn {
+  color: var(--fy-blue);
+}
+
 .fy-recs-empty {
   margin: 0;
 }

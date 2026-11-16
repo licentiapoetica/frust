@@ -1525,7 +1525,9 @@ mod tests {
             "recommendations": [rec.clone()], "tag_recommendations": [rec.clone()], "upnext_tag": "Cat" }));
         assert!(tagged.contains("<input type=\"radio\" name=\"fy-upnext-tab\" id=\"fy-upnext-tag\" class=\"fy-upnext-radio\" value=\"tag\" checked>"));
         assert!(tagged.contains("<label for=\"fy-upnext-tag\" class=\"fy-chip\">#cat</label>") && tagged.contains("<label for=\"fy-upnext-recs\" class=\"fy-chip\">Recommended</label>"));
-        assert!(tagged.contains("<ol class=\"fy-upnext-list\" id=\"fy-recs-tag\" data-source=\"tag\" data-tag=\"Cat\" data-item-id=\"7\">"));
+        assert!(tagged.contains("<ol class=\"fy-upnext-list\" id=\"fy-recs-tag\" data-source=\"tag\" data-tag=\"Cat\" data-item-id=\"7\" data-tag-done=\"1\">"));
+        // the tag's tab shows the tag only: at its end a way to the recommendations
+        assert!(tagged.contains("That's all in #cat. <label for=\"fy-upnext-recs\" class=\"fy-linkbtn\">Show recommended</label>"));
         assert!(tagged.contains("<a href=\"/tag/Cat/9\" data-rec=\"9\"") && tagged.contains("<a href=\"/9\" data-rec=\"9\""));
         dump("item-tag", &tagged);
         // views; no message of the day in f0ckyou
