@@ -2272,6 +2272,24 @@ body.fy-page-watch {
   outline-offset: .25rem;
 }
 
+/* the comment just posted: the same frame, fading out after a moment (f0ckyou.js) */
+.fy-comment-posted {
+  outline: 2px solid transparent;
+  outline-offset: .25rem;
+  animation: fy-comment-posted 2.5s ease-out;
+}
+
+@keyframes fy-comment-posted {
+  0%,
+  40% {
+    outline-color: rgba(62, 166, 255, .5);
+  }
+
+  100% {
+    outline-color: transparent;
+  }
+}
+
 .fy-comment-main {
   flex: 1;
   min-width: 0;
@@ -2344,11 +2362,11 @@ body.fy-page-watch {
   max-height: 20rem;
 }
 
-/* custom emojis stay emoji-sized (the rule above is for pictures; comment-fx.css' size again) */
+/* custom emojis and stickers: as big as in f0ckm's comments (up to 200px), small ones at their size */
 .fy-comment-body .f0ck-emoji {
-  max-width: 4em;
-  max-height: 2em;
-  vertical-align: middle;
+  max-width: 12.5rem;
+  max-height: 12.5rem;
+  vertical-align: bottom;
 }
 
 .fy-comment-actions {

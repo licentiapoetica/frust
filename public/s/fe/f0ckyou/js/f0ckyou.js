@@ -316,7 +316,9 @@
       const id = data?.comment?.id;
       const el = id && document.getElementById(`c${id}`);
       if (el) {
-        el.classList.add('fy-comment-target');
+        // the new comment lights up for a moment (the frame fades out: fy-comment-posted)
+        el.classList.add('fy-comment-posted');
+        el.addEventListener('animationend', () => el.classList.remove('fy-comment-posted'), { once: true });
         el.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }
     } catch (err) {
