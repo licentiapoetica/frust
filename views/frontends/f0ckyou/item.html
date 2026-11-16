@@ -25,9 +25,10 @@
 {%- set fy_ls = ((link.suffix or "") if link else "") -%}
 {% include "frontends/f0ckyou/snippets/head.html" %}
 {% include "frontends/f0ckyou/snippets/chrome.html" %}
+{#- f0ckm's blurred background: the media drawn behind the page (/s/js/f0ck-bg.js, started by
+    f0ckyou.js), with the admin's tuning (the audio tuner) -#}
+<canvas id="bg" class="fy-bg" data-tuner="{{ (audio_tuner_json or "null") }}" aria-hidden="true"></canvas>
 <main class="fy-watch" data-item-id="{{ item.id }}" data-creator="{{ ("" if is_anonymized else (item.username or "")) }}">
-  {#- the message of the day over the player, one line (all of it on hover) -#}
-  {% if not (session and session.show_motd == false) %}<p class="fy-motd fy-motd-top" title="{{ (motd or "") }}"{% if not ((motd or "")|trim) %} hidden{% endif %}>{{ (motd or "") }}</p>{% endif %}
   <div class="fy-watch-main">
     <div class="fy-player{% if item.mime.startswith("image") %} fy-player-image{% elif item.mime.startswith("audio") %} fy-player-audio{% endif %}">
       {% if item.mime == "video/youtube" %}

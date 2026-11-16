@@ -15,6 +15,11 @@
 }|tojson }}</script>
 {% include "snippets/frontend-scripts.html" %}
 <script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>
+{% if (fy_page is defined and fy_page == "watch") %}
+{#- the watch page: f0ckm's video player and its blurred background (the #bg canvas) -#}
+<script src="/s/js/v0ck.js?v={{ mtime("/public/s/js/v0ck.js") }}"></script>
+<script src="/s/js/f0ck-bg.js?v={{ mtime("/public/s/js/f0ck-bg.js") }}"></script>
+{% endif %}
 <script src="/s/fe/f0ckyou/js/f0ckyou.js?v={{ mtime("/public/s/fe/f0ckyou/js/f0ckyou.js") }}"></script>
 {% if session %}{% include "snippets/cap-gate.html" %}{% endif %}
 {%- if not fy_is_shell_foot %}

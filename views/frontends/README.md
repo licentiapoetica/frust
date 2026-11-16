@@ -98,6 +98,15 @@ interests (`f0ckInterestEngine.getTopAffinities()`, f0ck-core.js: `session_tags`
 interest tracking on its item page with `f0ckInterestEngine.startTrackingItem({ itemId, tags,
 creator })`. f0ckyou: `snippets/recommendations.html`, the "Up next" part of f0ckyou.js.
 
+**Player and blurred background (optional).** f0ckm's video player is `/s/js/v0ck.js` +
+`/s/css/v0ck.css` (`new v0ck(video)`; f0ckv2, f0ckyou). Its settings menu calls
+`window.toggleBackground` / `window.toggleAutoplay` when they exist. f0ckm's blurred item background
+for a frontend is `/s/js/f0ck-bg.js`: a `<canvas id="bg">` (the admin's tuning in
+`data-tuner="{{ audio_tuner_json }}"`) placed by the frontend's CSS behind a see-through page and faded
+with `fader-in` / `fader-out`; `f0ckBackground.start({ media, thumb })` draws the video's frames,
+a picture or Flash's `ambientCanvas` with f0ckm's tuning and switch (`show_background`), and defines
+`window.toggleBackground` (f0ckyou: item.html, f0ckyou.js).
+
 **Settings preferences (optional).** A frontend that only uses some of the preferences lists them in
 `settings-prefs.html` (`{% set prefs = ["language", "show_motd", …] %}`, keys: the
 `"…" in fe_prefs` tests in `views/settings.html`). The settings page then shows only those

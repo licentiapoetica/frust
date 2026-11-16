@@ -1436,7 +1436,6 @@ mod tests {
         assert!(home.contains("<a class=\"fy-pg fy-pg-end\" href=\"/p/3\" rel=\"next\">"));
         assert!(home.contains("<span class=\"fy-pg fy-pg-cur\" aria-current=\"page\">2</span>"));
         assert!(home.contains("/s/fe/f0ckyou/img/icons.svg?v="));
-        assert!(home.contains("<p class=\"fy-motd\">hello</p>"));
         assert!(home.contains("snippets/frontend-scripts") || home.contains("id=\"footer-data\""));
         let guest = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {} }));
         assert!(guest.contains("<a class=\"fy-btn-signin\" href=\"/?login=1\">"));
@@ -1506,10 +1505,14 @@ mod tests {
         assert!(page.contains("<span class=\"fy-upnext-name\" title=\"#cat #dog\">#cat #dog</span>"));
         assert!(page.contains("<span class=\"fy-badge-tl fy-rate-nsfw\">NSFW</span>") && page.contains("<span class=\"fy-badge-br\">MP4</span>"));
         assert!(page.contains("1 view &middot; <time") && page.contains("<span class=\"fy-foryou\">For you</span>"));
-        // views, and the message of the day over the player
+        // views; no message of the day in f0ckyou
+        // f0ckm's player and blurred background on the watch page only
+        assert!(page.contains("<canvas id=\"bg\" class=\"fy-bg\" data-tuner=\"null\" aria-hidden=\"true\"></canvas>"));
+        assert!(page.contains("/s/js/v0ck.js?v=") && page.contains("/s/js/f0ck-bg.js?v=") && page.contains("/s/css/v0ck.css?v="));
+        assert!(page.find("/s/js/f0ck-bg.js?v=").unwrap() < page.find("/s/fe/f0ckyou/js/f0ckyou.js?v=").unwrap());
+        assert!(!home.contains("v0ck") && !home.contains("id=\"bg\""));
+        assert!(!page.contains("fy-motd") && !home.contains("fy-motd"));
         assert!(page.contains("<b>12,345 views</b>"));
-        let motd = page.find("<p class=\"fy-motd fy-motd-top\" title=\"hello\">hello</p>").expect("motd on top");
-        assert!(motd < page.find("<div class=\"fy-player").unwrap());
         assert!(home.contains("<div class=\"fy-card-sub\">1.2K views &middot; <time"));
         assert!(page.contains("<button type=\"button\" class=\"fy-iconbtn js-only fy-emoji-btn\""));
         assert!(page.contains("<div class=\"fy-emoji-box\" id=\"fy-emoji-box\" hidden></div>"));

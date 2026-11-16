@@ -918,14 +918,6 @@ html:not(.no-js) .nojs-only {
   max-width: 80rem;
 }
 
-.fy-motd {
-  margin: .25rem 0 .75rem;
-  padding: .75rem 1rem;
-  border-left: .25rem solid var(--fy-red);
-  background: var(--fy-soft);
-  white-space: pre-line;
-}
-
 .fy-label {
   display: inline-block;
   padding: .0625rem .375rem;
@@ -1425,20 +1417,6 @@ a.fy-card-all:hover {
   max-height: var(--fy-player-h);
 }
 
-/* the message of the day over the player: a row across the page, one line; the player leaves
-   room for it */
-.fy-motd-top {
-  grid-column: 1 / -1;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fy-watch:has(> .fy-motd-top:not([hidden])) .fy-player {
-  --fy-above: 4.25rem;
-}
-
 .fy-player-audio {
   flex-direction: column;
   gap: 1rem;
@@ -1558,6 +1536,78 @@ a.fy-card-all:hover {
   display: flex;
   flex-wrap: wrap;
   gap: .5rem;
+}
+
+/* ── f0ckm's video player (v0ck.js / v0ck.css) in f0ckyou's colours ── */
+.fy-player.v0ck {
+  --accent: var(--fy-red);
+  --accent-rgb: 229, 8, 47;
+  --bg: var(--fy-bg);
+  --text-color: var(--fy-text);
+  --font: var(--fy-font);
+}
+
+/* square, as everything in f0ckyou (v0ck.css rounds its menu, buttons and knobs for f0ckm) */
+.fy-player.v0ck,
+.fy-player.v0ck * {
+  border-radius: 0 !important;
+}
+
+/* v0ck.css sets font-size 0 on the player and leaves the buttons at the browser's size; f0ckyou's
+   buttons inherit theirs, so the play time needs its own */
+.fy-player .v0ck_player_button.v0ck_playtime {
+  font-family: var(--fy-font);
+  font-size: .8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* f0ckyou has no flying comments: the Danmaku switch would do nothing */
+.fy-player .v0ck_bg_row:has(#toggledanmaku) {
+  display: none;
+}
+
+/* full screen: the whole screen, not the room left under the masthead */
+.fy-player.v0ck:fullscreen video.fy-media,
+.fy-player.v0ck.v0ck_fullscreen video.fy-media {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
+}
+
+/* ── f0ckm's blurred background (#bg, /s/js/f0ck-bg.js draws it, opacity and tint included) ── */
+.fy-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100vw;
+  height: 100vh;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.5s cubic-bezier(.4, 0, .2, 1);
+}
+
+.fy-bg.fader-in {
+  opacity: 1;
+}
+
+.fy-bg.fader-out {
+  opacity: 0;
+}
+
+html.no-js .fy-bg {
+  display: none;
+}
+
+/* the page lets it through: the window keeps the dark colour, the page itself is see-through */
+body.fy-page-watch {
+  background: transparent;
+}
+
+.fy-page-watch .fy-mast {
+  background: rgba(15, 15, 15, .72);
+  backdrop-filter: blur(1.5rem);
 }
 
 /* the description box */
@@ -3143,9 +3193,6 @@ html.user-fs-150 {
     padding: 0 .75rem;
   }
 
-  .fy-motd-top {
-    margin: .75rem .75rem 0;
-  }
 
   .fy-channel-head {
     flex-direction: column;

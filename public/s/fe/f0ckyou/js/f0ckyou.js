@@ -380,13 +380,6 @@
   window.f0ckFrontend = {
     itemId: page.itemId || null,
     flash,
-    motd(text) {
-      document.querySelectorAll('.fy-motd').forEach(el => {
-        el.textContent = text || '';
-        if (el.hasAttribute('title')) el.title = text || '';
-        el.hidden = !String(text || '').trim();
-      });
-    },
     comments(data) {
       if (!page.itemId || String(data?.item_id) !== String(page.itemId)) return;
       refresh(['comments', 'comments-head']);
@@ -421,9 +414,16 @@
     menus().forEach(d => { if (d.open && !d.contains(e.target)) d.open = false; });
   });
 
-  // ── the player: remembered volume, keys ──
+  // ── the player: f0ckm's v0ck for videos (its controls, settings menu, keys ↑ ↓ . ,), the
+  //    native one with a remembered volume for audio; keys; autonext; the blurred background ──
   const media = document.getElementById('my-video');
-  if (media && 'volume' in media) {
+  const player = document.querySelector('.fy-player');
+  const hasV0ck = !!(media instanceof HTMLVideoElement && window.v0ck);
+  if (hasV0ck) {
+    // v0ck replaces the native controls (kept in the page for visitors without JavaScript), keeps
+    // the volume in localStorage and starts the video unless autoplay is off
+    new window.v0ck(media);
+  } else if (media && 'volume' in media) {
     try {
       const vol = parseFloat(localStorage.getItem('volume'));
       if (Number.isFinite(vol)) media.volume = Math.min(1, Math.max(0, vol));
@@ -432,11 +432,46 @@
       try { localStorage.setItem('volume', String(media.volume)); } catch { /* storage blocked */ }
     });
   }
-  const player = document.querySelector('.fy-player');
   const fullscreen = () => {
+    const btn = player?.querySelector('.v0ck_fs_btn');
+    if (btn) return btn.click();
     if (document.fullscreenElement) document.exitFullscreen?.();
     else (player || media)?.requestFullscreen?.().catch(() => {});
   };
+  const playPause = () => {
+    if (!media || !('paused' in media)) return;
+    if (media.paused) media.play().catch(() => {}); else media.pause();
+  };
+
+  // autonext (the player's settings menu, as f0ckm): at the end of a video go to the next f0ck
+  // instead of looping (v0ck turns `loop` off while it is on)
+  const autonext = () => { try { return localStorage.getItem('autoplay') === 'true'; } catch { return false; } };
+  if (!window.toggleAutoplay) {
+    window.toggleAutoplay = () => {
+      try { localStorage.setItem('autoplay', autonext() ? 'false' : 'true'); } catch { /* storage blocked */ }
+      document.querySelectorAll('#toggleautoplay').forEach(el => el.classList.toggle('active', autonext()));
+    };
+  }
+  if (media instanceof HTMLVideoElement) {
+    media.addEventListener('ended', () => {
+      if (!autonext()) return;
+      const up = document.querySelector('#fy-recs a[data-rec]');
+      location.href = page.next || up?.getAttribute('href') || '/random';
+    });
+  }
+
+  // the blurred background (f0ck-bg.js): the video's frames, the picture, the cover of a song or
+  // the Flash movie, the thumbnail until there is a frame
+  if (window.f0ckBackground && page.itemId) {
+    const image = document.getElementById('f0ck-image');
+    const cover = document.querySelector('.fy-audio-cover');
+    const ruffleBox = document.getElementById('ruffle-container');
+    window.f0ckBackground.start({
+      media: media instanceof HTMLVideoElement ? media
+        : image || cover || (ruffleBox ? () => ruffleBox.querySelector('f0ck-flash')?.ambientCanvas || null : null),
+      thumb: `/t/${page.itemId}.webp`,
+    });
+  }
 
   // ── keys ──
   const typing = t => t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
@@ -466,9 +501,9 @@
       location.href = page.next;
     } else if (key === 'r') {
       location.href = '/random';
-    } else if (media && 'paused' in media && key === 'k') {
+    } else if (media && 'paused' in media && (key === 'k' || (key === ' ' && !e.target.closest?.('button, a, summary, label')))) {
       e.preventDefault();
-      if (media.paused) media.play().catch(() => {}); else media.pause();
+      playPause();
     } else if (media && 'currentTime' in media && (key === 'j' || key === 'l')) {
       media.currentTime = Math.max(0, media.currentTime + (key === 'l' ? 10 : -10));
     } else if (media && 'muted' in media && key === 'm') {
@@ -489,7 +524,8 @@
       try { vol = +(localStorage.getItem('volume') ?? 0.5); } catch { /* storage blocked */ }
       fl.volume = Number.isFinite(vol) ? vol : 0.5;
     });
-    fl.load({ url: ruffle.dataset.swf, autoplay: true, background: true }).catch(() => {
+    // the background draws the movie (its ambientCanvas) once it runs
+    fl.load({ url: ruffle.dataset.swf, autoplay: true, background: true }).then(() => window.f0ckBackground?.redraw()).catch(() => {
       flash('Flash playback failed', 'error');
     });
   }
