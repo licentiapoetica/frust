@@ -1310,6 +1310,9 @@ mod tests {
             assert_eq!(page.matches(&format!("data-fg-live=\"{live}\"")).count(), 1, "{live}");
         }
         assert!(page.contains("data-reply=\"3\" data-name=\"al\""));
+        // custom emojis: the picker (JavaScript) under the comment field
+        assert!(page.contains("class=\"fg-chip fg-chip-small js-only fg-emoji-btn\""));
+        assert!(page.contains("<div class=\"fg-emoji-box\" id=\"fg-emoji-box\" hidden></div>"));
         assert!(page.contains("<div id=\"report\" class=\"fg-modal\">"));
         assert!(page.contains("<div id=\"delete\" class=\"fg-modal\">"));
         assert!(page.contains("\"itemId\": 7"));

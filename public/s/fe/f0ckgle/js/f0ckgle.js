@@ -6,6 +6,7 @@
 //  - the f0ckFrontend hooks for the shared live events (views/frontends/README.md)
 //  - menus (<details>): one open at a time, closed by an outside click or Escape
 //  - keys: "/" focuses the search box; on an item ← → for previous / next, r for random
+//  - custom emojis :name: in comments as pictures, and the emoji picker
 //  - Flash items: starts the Ruffle player
 //  - moderators: the × on a tag removes it
 (() => {
@@ -35,6 +36,88 @@
     flash(message, type);
   };
 
+  // ── custom emojis :name: → pictures in comment texts (the server sends them as text). Only text
+  //    nodes are touched, so links and attributes stay as they are (f0ckLoadEmojis: f0ck-core.js) ──
+  const EMOJI = /:([a-z0-9_-]+):/g;
+  const HAS_EMOJI = /:[a-z0-9_-]+:/; // .test() on the /g one would keep its lastIndex
+  const emojify = async (root) => {
+    if (!root || !window.f0ckLoadEmojis) return;
+    const bodies = root.matches?.('.fg-comment-body') ? [root] : [...root.querySelectorAll('.fg-comment-body')];
+    if (!bodies.length) return;
+    const map = await window.f0ckLoadEmojis();
+    if (!map || !Object.keys(map).length) return;
+    bodies.forEach(body => {
+      const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walker.nextNode()) if (HAS_EMOJI.test(walker.currentNode.nodeValue)) nodes.push(walker.currentNode);
+      nodes.forEach(node => {
+        const text = node.nodeValue;
+        const frag = document.createDocumentFragment();
+        let last = 0;
+        text.replace(EMOJI, (m, name, at) => {
+          if (!map[name]) return m;
+          frag.append(text.slice(last, at));
+          const img = document.createElement('img');
+          img.className = 'f0ck-emoji';
+          img.src = map[name];
+          img.alt = img.title = m;
+          img.loading = 'lazy';
+          frag.append(img);
+          last = at + m.length;
+          return m;
+        });
+        if (!last) return;
+        frag.append(text.slice(last));
+        node.replaceWith(frag);
+      });
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => emojify(document.body));
+  else emojify(document.body);
+  window.addEventListener('f0ck:emojis_updated', () => {
+    const box = document.getElementById('fg-emoji-box');
+    if (box) box.replaceChildren();
+    emojify(document.body);
+  });
+
+  // the emoji picker under the comment field: inserts :name: at the cursor
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('.fg-emoji-btn');
+    const box = document.getElementById('fg-emoji-box');
+    if (!btn || !box) return;
+    const ta = document.querySelector('#comment-form textarea');
+    if (!box.childElementCount) {
+      const map = (await window.f0ckLoadEmojis?.()) || {};
+      const names = Object.keys(map).sort();
+      if (!names.length) {
+        const p = document.createElement('span');
+        p.className = 'fg-emoji-empty';
+        p.textContent = 'No emojis yet';
+        box.append(p);
+      }
+      names.forEach(name => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.title = `:${name}:`;
+        const img = document.createElement('img');
+        img.src = map[name];
+        img.alt = `:${name}:`;
+        img.loading = 'lazy';
+        b.append(img);
+        b.addEventListener('click', () => {
+          if (!ta) return;
+          const before = ta.value.slice(0, ta.selectionStart);
+          const pad = before && !/\s$/.test(before) ? ' ' : '';
+          ta.setRangeText(`${pad}:${name}: `, ta.selectionStart, ta.selectionEnd, 'end');
+          ta.focus();
+        });
+        box.append(b);
+      });
+    }
+    box.hidden = !box.hidden;
+    btn.setAttribute('aria-expanded', String(!box.hidden));
+  });
+
   // ── live regions: swap [data-fg-live="name"] in from a fresh render of this page ──
   const pageUrl = () => {
     const u = new URL(location.href);
@@ -53,7 +136,11 @@
       list.forEach(n => {
         const cur = document.querySelector(`[data-fg-live="${n}"]`);
         const next = doc.querySelector(`[data-fg-live="${n}"]`);
-        if (cur && next) cur.replaceWith(document.importNode(next, true));
+        if (cur && next) {
+          const el = document.importNode(next, true);
+          cur.replaceWith(el);
+          emojify(el);
+        }
       });
     }).catch(err => console.error('[f0ckgle] refresh', err));
     return queue;

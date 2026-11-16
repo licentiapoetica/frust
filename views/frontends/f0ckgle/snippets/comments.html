@@ -1,7 +1,8 @@
 {#- Comments under an item as "Discussions and forums". The server sends them as static_comments
     (routes/comments.rs static_item_comments, text effects included), so they need no JavaScript.
     With JavaScript, f0ckgle.js posts, replies and deletes with fetch and swaps in the list
-    (data-fg-live) from a fresh render of the page, also when a comment arrives live. Reply without
+    (data-fg-live) from a fresh render of the page, also when a comment arrives live, and shows the
+    custom emojis :name: as pictures (the server copy has them as text). Reply without
     JavaScript: a link (?reply=<id>) that fills the form's parent_id. -#}
 {%- set here_path = (url.pathname if (url and url.pathname) else ("/" ~ item.id)) -%}
 {%- set reply_to = (parse_int(url.qs.reply) if (url and url.qs and url.qs.reply) else none) -%}
@@ -48,7 +49,13 @@
     <p class="fg-dim fg-reply-to"{% if not reply_to %} hidden{% endif %}>Replying to <span>#{{ (reply_to or "") }}</span> &middot; <a href="{{ here_path }}#comments" class="fg-reply-cancel">cancel</a></p>
     <textarea name="content" rows="3" placeholder="Join the discussion" required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
     {% if "comment" in (captcha_scopes or []) %}{% include "frontends/f0ckgle/snippets/cap-image.html" %}{% endif %}
-    <button type="submit" class="fg-btn-blue">Post</button>
+    {#- the custom emojis: a picker that inserts :name: (JavaScript, f0ckgle.js; the list comes
+        from /api/v2/emojis). Without JavaScript :name: can still be typed. -#}
+    <div class="fg-emoji-box" id="fg-emoji-box" hidden></div>
+    <div class="fg-comment-tools">
+      <button type="button" class="fg-chip fg-chip-small js-only fg-emoji-btn" aria-expanded="false" aria-controls="fg-emoji-box" title="Emojis">&#9786; Emojis</button>
+      <button type="submit" class="fg-btn-blue">Post</button>
+    </div>
   </form>
   {% elif not session %}
   <p class="fg-dim"><a href="/?login=1">Sign in</a> to join the discussion.</p>
