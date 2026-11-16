@@ -37172,6 +37172,12 @@ html.no-js body>nav.navbar {
   anchor-name: --site-navbar;
 }
 
+/* The MOTD row across the whole width: beside it the sidebar's tabs would sit (they need JavaScript),
+   so the sidebar starts below it instead of leaving an empty box there */
+html.no-js body {
+  --motd-room: 0px;
+}
+
 @supports (anchor-name: --site-navbar) {
   html.no-js .global-sidebar-right,
   html.no-js .item-sidebar-right,
