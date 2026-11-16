@@ -7016,8 +7016,15 @@ window.cancelAnimFrame = (function () {
     `;
 
     // ── Sub-Tab Switching Logic ─────────────────────────────────────────────
+    // Audio uploads disabled in config: no Audio tab (its pane stays in the DOM, never shown, so the
+    // audio code's element lookups keep working); Danmaku opens first instead.
+    const audioTabOn = window.f0ckAudioUploads !== false;
+    if (!audioTabOn) {
+      const audioBtn = panel.querySelector('.f0ck-tuner-subtab-btn[data-subtab="audio"]');
+      if (audioBtn) audioBtn.remove();
+    }
     const subtabButtons = panel.querySelectorAll('.f0ck-tuner-subtabs-nav .f0ck-tuner-subtab-btn');
-    const switchSubtab = (targetTab) => {
+    const switchSubtab = (targetTab, remember = true) => {
       if (!targetTab) return;
       subtabButtons.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.subtab === targetTab);
@@ -7027,6 +7034,7 @@ window.cancelAnimFrame = (function () {
         p.classList.toggle('active', isActive);
         p.style.display = isActive ? 'block' : 'none';
       });
+      if (!remember) return;
       try {
         localStorage.setItem('f0ck_tuner_active_subtab', targetTab);
       } catch (e) {}
@@ -7038,9 +7046,12 @@ window.cancelAnimFrame = (function () {
       });
     });
 
-    const savedSubtab = localStorage.getItem('f0ck_tuner_active_subtab');
-    if (savedSubtab && (savedSubtab === 'audio' || savedSubtab === 'danmaku' || savedSubtab === 'background' || savedSubtab === 'flashyank' || savedSubtab === 'laser')) {
+    let savedSubtab = null;
+    try { savedSubtab = localStorage.getItem('f0ck_tuner_active_subtab'); } catch (e) {}
+    if (savedSubtab && ((audioTabOn && savedSubtab === 'audio') || savedSubtab === 'danmaku' || savedSubtab === 'background' || savedSubtab === 'flashyank' || savedSubtab === 'laser')) {
       switchSubtab(savedSubtab);
+    } else if (!audioTabOn) {
+      switchSubtab('danmaku', false);
     }
 
     // ── Flash Yank pane (window.f0ckFlashYank from flash_yank.js) ──────────

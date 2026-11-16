@@ -754,6 +754,8 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
         .map(|(kind, exts)| json!({ "kind": kind, "exts": exts }))
         .collect();
     put("upload_types", json!(upload_types));
+    // audio uploads off (no audio/* left in `allowedMimes`): the sidebar tuner drops its Audio tab
+    put("audio_uploads_enabled", json!(crate::media::mime::allowed_mimes(cfg).iter().any(|m| m.starts_with("audio/"))));
     put("require_video_sound", json!(cfg.truthy("websrv.require_video_sound")));
     put("mimes_json", json!(json_script(&Value::Object(mimes))));
     put("development", json!(cfg.development()));
