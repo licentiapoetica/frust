@@ -1499,6 +1499,7 @@ mod tests {
         assert!(page.contains("<input type=\"hidden\" name=\"action\" value=\"remove\">"));
         assert!(page.contains("aria-pressed=\"true\"") && page.contains("#like-on"));
         assert!(page.contains("<form method=\"post\" action=\"/api/subscribe/7\" class=\"fy-inline fy-ajax\" data-fy-refresh=\"actions\">"));
+        assert!(page.contains("aria-pressed=\"false\"><svg class=\"fy-ico\" aria-hidden=\"true\" focusable=\"false\"><use href=\"/s/fe/f0ckyou/img/icons.svg?v=") && page.contains("#bell\"></use>"));
         assert!(page.contains("<form method=\"post\" action=\"/api/v2/item/7/rating\" class=\"fy-inline fy-ajax\" data-fy-refresh=\"desc\">"));
         assert!(page.contains("class=\"f0ck-exclude-form is-excluded\" data-tag-id=\"9\""));
         assert!(page.contains("<form method=\"post\" action=\"/api/comments\" class=\"fy-comment-form fy-ajax\" id=\"comment-form\" data-fy-refresh=\"comments comments-head\" data-fy-comment>"));
