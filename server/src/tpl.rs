@@ -1470,8 +1470,11 @@ mod tests {
 
         // search results
         let search = render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({ "tag": "cat" })), "searchstring": "cat", "count": 2, "search_mode": "strict",
-            "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat", "score": 0.93 }], "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" } }));
+            "result": [{ "id": 7, "username": "al", "display_name": "Al B", "avatar_file": "a.webp", "mime": "video/mp4", "dest": "s.mp4", "duration": 62.5, "views": 3, "tag": "cat", "score": 0.93 }],
+            "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" } }));
         dump("search", &search);
+        assert!(search.contains("data-preview=\"/b/s.mp4\"") && search.contains("<span class=\"fy-badge-br fy-time\">1:02</span>"));
+        assert!(search.contains("<img class=\"fy-ava\" src=\"/a/a.webp\" alt=\"\" loading=\"lazy\"><span>Al B</span>") && search.contains("3 views"));
         assert!(search.contains("<h3 class=\"fy-row-title\"><a href=\"/tag/cat/7\">cat - f0ck #7</a></h3>"));
         assert!(search.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
         assert!(search.contains("93% match"));

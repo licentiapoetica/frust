@@ -35,12 +35,15 @@
     {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) -%}
     {%- set href = ("/tag/" ~ (line.tag|encode_uri_component) ~ "/" ~ ref) if line.tag else ("/" ~ ref) -%}
     {%- set who = ("anonymous" if is_anonymized else (line.username or "")) -%}
+    {%- set who_name = ("anonymous" if is_anonymized else (line.display_name or line.username or "")) -%}
+    {%- set lmime = (line.mime or "") -%}
+    {%- set lpreview = (lmime.startswith("video/") and lmime != "video/youtube" and line.dest and not line.dest.endswith(".gif")) -%}
     <li class="fy-row fy-row-big">
-      <a class="fy-row-thumb" href="{{ href }}" tabindex="-1" aria-hidden="true"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy">{% if line.mime %}<span class="fy-badge-br">{{ line.mime.split("/")[0]|capitalize }}</span>{% endif %}</a>
+      <a class="fy-row-thumb" href="{{ href }}" tabindex="-1" aria-hidden="true"{% if lpreview %} data-preview="{{ (paths_images or "/b") }}/{{ line.dest }}"{% endif %}><img src="/t/{{ line.id }}.webp" alt="" loading="lazy">{% if (line.duration and line.duration >= 1) %}<span class="fy-badge-br fy-time">{% if lmime.startswith("audio") %}{{ fy.ico("music") }}{% endif %}{{ fy.timecode(line.duration) }}</span>{% elif lmime %}<span class="fy-badge-br">{{ lmime.split("/")[0]|capitalize }}</span>{% endif %}</a>
       <div class="fy-row-text">
         <h3 class="fy-row-title"><a href="{{ href }}">{{ (line.title if line.title else (line.tag ~ " - f0ck #" ~ ref if line.tag else "f0ck #" ~ ref)) }}</a></h3>
-        <p class="fy-dim">#{{ line.id }}{% if line.mime %} &middot; {{ line.mime }}{% endif %}{% if (line.score is defined and line.score is number) %} &middot; {{ (line.score * 100)|fixed(0) }}% match{% endif %}</p>
-        <p class="fy-row-chan">{% if (who and not is_anonymized) %}<a href="/user/{{ who|lower|encode_uri_component }}">{{ fy.avatar("", "", who) }}<span>{{ who }}</span></a>{% else %}{{ fy.avatar("", "", (who or domain)) }}<span>{{ (who or domain) }}</span>{% endif %}</p>
+        <p class="fy-dim">{% if (line.views is defined and line.views is not none) %}{{ fy.views(line.views) }}{% else %}#{{ line.id }}{% endif %}{% if line.stamp %} &middot; <time title="{{ (line.stamp * 1000)|iso_date }}">{{ (line.stamp * 1000)|time_ago }}</time>{% endif %}{% if (line.score is defined and line.score is number) %} &middot; {{ (line.score * 100)|fixed(0) }}% match{% endif %}</p>
+        <p class="fy-row-chan">{% if (who and not is_anonymized) %}<a href="/user/{{ who|lower|encode_uri_component }}">{{ fy.avatar(line.avatar_file, line.avatar, who_name) }}<span>{{ who_name }}</span></a>{% else %}{{ fy.avatar("", "", (who_name or domain)) }}<span>{{ (who_name or domain) }}</span>{% endif %}</p>
         {% if line.tag %}<p class="fy-row-snippet">Tagged <a class="fy-hashtag" href="/tag/{{ line.tag|encode_uri_component }}">#{{ line.tag }}</a></p>{% endif %}
       </div>
     </li>

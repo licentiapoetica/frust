@@ -118,10 +118,13 @@ async fn search(st: AppState, req: Req) -> Res {
                 let pages = pages_of(total);
                 let act = pages.min(page);
                 let rows: Vec<Row> = sql!(
-                    r#"select "items".id, "items".slug, "items".username, "items".mime, min("tags".tag) as tag
+                    r#"select "items".id, "items".slug, "items".username, "items".mime, "items".title, "items".dest, "items".duration, "items".views, "items".stamp, min("tags".tag) as tag,
+                      max(uo.display_name) as display_name, max(uo.avatar) as avatar, max(uo.avatar_file) as avatar_file
                     from "items"
                     join "tags_assign" on "tags_assign".item_id = "items".id
                     join "tags" on "tags".id = "tags_assign".tag_id
+                    left join "user" author_u on author_u."user" = "items".username or author_u.login = "items".username
+                    left join user_options uo on uo.user_id = author_u.id
                     where "tags".normalized = ANY(ARRAY(SELECT slugify(x) FROM unnest("#,
                     tags,
                     r#"::text[]) AS x))
@@ -173,10 +176,13 @@ async fn search(st: AppState, req: Req) -> Res {
             let pages = pages_of(total);
             let act = pages.min(page);
             let rows: Vec<Row> = sql!(
-                r#"select "items".id, "items".slug, "items".username, "items".mime, min("tags".tag) as tag
+                r#"select "items".id, "items".slug, "items".username, "items".mime, "items".title, "items".dest, "items".duration, "items".views, "items".stamp, min("tags".tag) as tag,
+                      max(uo.display_name) as display_name, max(uo.avatar) as avatar, max(uo.avatar_file) as avatar_file
                 from "items"
                 join "tags_assign" on "tags_assign".item_id = "items".id
                 join "tags" on "tags".id = "tags_assign".tag_id
+                left join "user" author_u on author_u."user" = "items".username or author_u.login = "items".username
+                left join user_options uo on uo.user_id = author_u.id
                 where ("tags".tag ilike "#,
                 pattern.as_str(),
                 r#" or "tags".normalized like '%' || slugify("#,
