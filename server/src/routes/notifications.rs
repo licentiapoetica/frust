@@ -648,7 +648,7 @@ async fn run_socket(st: AppState, socket: WebSocket, client: Arc<Client>, mut rx
 
 // ── Postgres LISTEN ─────────────────────────────────────────────────────────
 
-const CHANNELS: [&str; 21] = [
+const CHANNELS: [&str; 22] = [
     "notifications",
     "warnings",
     "bans",
@@ -660,6 +660,7 @@ const CHANNELS: [&str; 21] = [
     "motd",
     "maintenance",
     "brand_image",
+    "fy_brand",
     "new_item",
     "delete_item",
     "emojis_updated",
@@ -881,6 +882,10 @@ async fn dispatch_json(st: &AppState, channel: &str, mut data: Value) {
                 d.insert("favs".into(), Value::Array(favs));
                 c.send(&json!({ "type": "favorites", "data": d }));
             }
+        }
+        // the f0ckyou frontend's own brand changed: its pages fetch their logo again
+        "fy_brand" => {
+            HUB.broadcast(&json!({ "type": "fy_brand", "data": {} }));
         }
         "brand_image" => {
             // `url` (image uploaded / removed) and/or `text` (navbar text saved): only what changed

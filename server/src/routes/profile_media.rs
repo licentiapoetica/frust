@@ -42,6 +42,10 @@ pub fn register(r: &mut Router) {
     r.pre(Method::POST, r"^\/admin\/brand_image\/delete$", None, brand_delete);
     r.post(r"^\/admin\/brand_text$", brand_text_save);
     r.post(r"^\/admin\/brand_glitch$", brand_glitch_save);
+    // the f0ckyou frontend's own brand (admin panel → f0ckYou brand)
+    r.pre(Method::POST, r"^\/admin\/fy_brand_image\/upload$", None, fy_brand_upload);
+    r.pre(Method::POST, r"^\/admin\/fy_brand_image\/delete$", None, fy_brand_delete);
+    r.post(r"^\/admin\/fy_brand$", fy_brand_save);
     r.pre(Method::POST, r"^\/admin\/favicon\/upload$", None, favicon_upload);
     r.pre(Method::POST, r"^\/admin\/favicon\/delete$", None, favicon_delete);
     r.pre(Method::POST, r"^\/api\/v2\/settings\/uploadBanner$", None, banner_upload);
@@ -536,12 +540,13 @@ async fn brand_upload(st: AppState, mut req: Req) -> Res {
         Err(r) => return r,
     };
     let back = form.text("back").and_then(crate::nojs::safe_back);
-    let resp = brand_store(&st, &s, &form).await;
+    let resp = brand_store(&st, &s, &form, false).await;
     drop(form);
     finish_form(&st, ajax, back, resp).await
 }
 
-async fn brand_store(st: &AppState, s: &Session, form: &multipart::Form) -> Res {
+/// The site's brand image, or (`fy`) the f0ckyou frontend's own.
+async fn brand_store(st: &AppState, s: &Session, form: &multipart::Form, fy: bool) -> Res {
     let file = match admin_file(form) {
         Ok(f) => f,
         Err(r) => return r,
@@ -557,7 +562,8 @@ async fn brand_store(st: &AppState, s: &Session, form: &multipart::Form) -> Res 
     }
     let is_svg = mime == "image/svg+xml";
     let ts = crate::util::now_ms();
-    let out_name = if is_svg { format!("brand.{ts}.svg") } else { format!("brand.{ts}.webp") };
+    let prefix = if fy { "fybrand." } else { "brand." };
+    let out_name = if is_svg { format!("{prefix}{ts}.svg") } else { format!("{prefix}{ts}.webp") };
     let final_path = dir.join(&out_name);
 
     if !is_svg {
@@ -577,8 +583,18 @@ async fn brand_store(st: &AppState, s: &Session, form: &multipart::Form) -> Res 
     }
     crate::media::make_public(&final_path).await;
 
-    delete_own_file(st, &st.settings.brand_image_url(), "brand.").await;
     let public_url = format!("/s/img/navbar/{out_name}");
+    if fy {
+        delete_own_file(st, &st.settings.get().fy_brand_image_url, "fybrand.").await;
+        if let Err(e) = persist_fy_brand_image(st, &public_url).await {
+            tracing::error!("[F0CKYOU BRAND UPLOAD ERROR] {e}");
+            return send(json!({ "success": false, "msg": "Upload failed" }), 500);
+        }
+        notify(st, "fy_brand", json!({ "image": public_url })).await;
+        crate::social::helpers::audit_log(st, s.id, "update_fy_brand_image", "system", "0", Some(json!({ "url": public_url }))).await;
+        return send(json!({ "success": true, "url": public_url, "msg": "f0ckYou brand image updated" }), 200);
+    }
+    delete_own_file(st, &st.settings.brand_image_url(), "brand.").await;
     if let Err(e) = persist_brand_image(st, &public_url).await {
         tracing::error!("[BRAND UPLOAD ERROR] {e}");
         return send(json!({ "success": false, "msg": "Upload failed" }), 500);
@@ -586,6 +602,98 @@ async fn brand_store(st: &AppState, s: &Session, form: &multipart::Form) -> Res 
     notify(st, "brand_image", json!({ "url": public_url })).await;
     crate::social::helpers::audit_log(st, s.id, "update_brand_image", "system", "0", Some(json!({ "url": public_url }))).await;
     send(json!({ "success": true, "url": public_url, "msg": "Brand image updated" }), 200)
+}
+
+async fn persist_fy_brand_image(st: &AppState, url: &str) -> anyhow::Result<()> {
+    let u = url.to_string();
+    st.settings.update(|s| s.fy_brand_image_url = u);
+    crate::settings::save(st, "fy_brand_image_url", url).await
+}
+
+/// `POST /admin/fy_brand_image/upload` (`file`): the f0ckyou frontend's brand picture.
+async fn fy_brand_upload(st: AppState, mut req: Req) -> Res {
+    let (s, header_ok) = match admin_session(&req) {
+        Ok(v) => v,
+        Err(r) => return r,
+    };
+    let ajax = crate::auth::is_ajax(&req);
+    let form = match admin_form(&st, &mut req, &s, header_ok).await {
+        Ok(f) => f,
+        Err(r) => return r,
+    };
+    let back = form.text("back").and_then(crate::nojs::safe_back);
+    let resp = brand_store(&st, &s, &form, true).await;
+    drop(form);
+    finish_form(&st, ajax, back, resp).await
+}
+
+/// `POST /admin/fy_brand_image/delete`: f0ckyou shows its brand text (and play mark) again.
+async fn fy_brand_delete(st: AppState, mut req: Req) -> Res {
+    let s = match admin_session_simple(&mut req).await {
+        Ok(s) => s,
+        Err(r) => return r,
+    };
+    delete_own_file(&st, &st.settings.get().fy_brand_image_url, "fybrand.").await;
+    if let Err(e) = persist_fy_brand_image(&st, "").await {
+        tracing::error!("[F0CKYOU BRAND DELETE ERROR] {e}");
+        return send(json!({ "success": false, "msg": "Delete failed" }), 500);
+    }
+    notify(&st, "fy_brand", json!({ "image": null })).await;
+    crate::social::helpers::audit_log(&st, s.id, "delete_fy_brand_image", "system", "0", Some(json!({}))).await;
+    send(json!({ "success": true, "msg": "f0ckYou brand image removed" }), 200)
+}
+
+/// `POST /admin/fy_brand` (`text`, `mark`, `site`, `font`, `weight`, `size`): the f0ckyou
+/// frontend's own brand. `text`: a part in *asterisks* is emphasized, empty is "f0ck*You*";
+/// `mark` / `site`: a hidden "0" and a checkbox "1" (explicit states, "0,1" when ticked: the last
+/// value wins); font, weight and size as for the site brand ([`brand_text_save`]).
+async fn fy_brand_save(st: AppState, mut req: Req) -> Res {
+    let Some(s) = req.session.clone().filter(|s| s.admin) else { return fail(401, "Unauthorized") };
+    let raw = req.post_str("text").await.unwrap_or_default();
+    let text: String = raw.split_whitespace().collect::<Vec<_>>().join(" ").chars().filter(|c| !c.is_control()).take(BRAND_TEXT_MAX + 4).collect();
+    let flag = |v: Option<String>| v.is_some_and(|v| matches!(v.rsplit(',').next().unwrap_or("").trim(), "1" | "true" | "on"));
+    let mark = flag(req.post_str("mark").await);
+    let site = flag(req.post_str("site").await);
+    let size = crate::settings::brand_size(&req.post_str("size").await.unwrap_or_default());
+    let font = match req.post_str("font").await.map(|f| f.trim().to_string()).unwrap_or_default() {
+        f if f.is_empty() => f,
+        f if crate::fonts::exists(&st.cfg(), &f) => f,
+        _ => return fail(400, "Unknown font"),
+    };
+    let weight = crate::settings::brand_weight(&req.post_str("weight").await.unwrap_or_default());
+    let weight = if font.is_empty() { None } else { crate::fonts::weight_for(&st.cfg(), &font, Some(weight)) };
+    let (t, f) = (text.clone(), font.clone());
+    st.settings.update(|x| {
+        x.fy_brand_text = t;
+        x.fy_brand_mark = mark;
+        x.fy_brand_site = site;
+        x.fy_brand_font = f;
+        x.fy_brand_weight = weight.map(i64::from).unwrap_or(0);
+        x.fy_brand_size = size;
+    });
+    let flag_str = |b: bool| if b { "true".to_string() } else { "false".to_string() };
+    let size_str = if size > 0 { size.to_string() } else { String::new() };
+    let weight_str = weight.map(|w| w.to_string()).unwrap_or_default();
+    for (key, v) in [
+        ("fy_brand_text", text.clone()),
+        ("fy_brand_mark", flag_str(mark)),
+        ("fy_brand_site", flag_str(site)),
+        ("fy_brand_font", font.clone()),
+        ("fy_brand_weight", weight_str),
+        ("fy_brand_size", size_str),
+    ] {
+        if let Err(e) = crate::settings::save(&st, key, &v).await {
+            tracing::error!("[F0CKYOU BRAND ERROR] {e}");
+            return fail(500, "Failed to save the f0ckYou brand");
+        }
+    }
+    let data = json!({ "text": text, "mark": mark, "site": site, "font": font, "weight": weight, "size": Some(size).filter(|n| *n > 0) });
+    notify(&st, "fy_brand", data.clone()).await;
+    crate::social::helpers::audit_log(&st, s.id, "update_fy_brand", "system", "0", Some(data.clone())).await;
+    let mut out = data;
+    out["success"] = json!(true);
+    out["msg"] = json!("f0ckYou brand saved");
+    send(out, 200)
 }
 
 async fn brand_delete(st: AppState, mut req: Req) -> Res {

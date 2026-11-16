@@ -7,10 +7,14 @@ document.querySelectorAll('.adm .adm-nojs-only').forEach((el) => el.remove());
 F0ckActions.define({
   saveAdminSettings: () => saveAdminSettings(),
   saveBrandText: (form) => saveBrandText(form),
-  fillBrandWeights: () => fillBrandWeights(),
+  fillBrandWeights: () => fillBrandWeights('brand-font-select', 'brand-weight-select'),
   saveBrandGlitch: (el) => saveBrandGlitch(el.closest('form')),
   uploadBrandImage: (el) => uploadBrandImage(el.closest('form')),
   removeBrandImage: (form) => removeBrandImage(form),
+  saveFyBrand: (form) => saveFyBrand(form),
+  fillFyBrandWeights: () => fillBrandWeights('fy-brand-font-select', 'fy-brand-weight-select'),
+  uploadFyBrandImage: (el) => uploadFyBrandImage(el.closest('form')),
+  removeFyBrandImage: (form) => removeFyBrandImage(form),
   uploadFavicon: (el) => uploadFavicon(el.closest('form')),
   removeFavicon: (form) => removeFavicon(form),
   regenerateTagImages: () => regenerateTagImages(),
@@ -117,8 +121,8 @@ async function regenerateTagImages() {
 // The forms post to the same endpoints without JavaScript; here they save in place.
 
 let brandStatusTimer = null;
-function brandStatus(text, kind) {
-  const status = document.getElementById('brand-status');
+function brandStatus(text, kind, id = 'brand-status') {
+  const status = document.getElementById(id);
   if (!status) return;
   clearTimeout(brandStatusTimer);
   status.textContent = text;
@@ -145,9 +149,9 @@ async function brandPost(form) {
 
 // The brand weight select lists the chosen font family's weights (data-weights on its option)
 // after "Default weight"; kept when the new family has it, hidden with fewer than two weights.
-function fillBrandWeights() {
-  const fontSelect = document.getElementById('brand-font-select');
-  const weightSelect = document.getElementById('brand-weight-select');
+function fillBrandWeights(fontId, weightId) {
+  const fontSelect = document.getElementById(fontId);
+  const weightSelect = document.getElementById(weightId);
   if (!fontSelect || !weightSelect) return;
   let weights = [];
   try {
@@ -230,6 +234,59 @@ async function removeBrandImage(form) {
     brandStatus('✓ Brand image removed.', 'ok');
   } catch (err) {
     brandStatus('Error: ' + err.message, 'err');
+  }
+}
+
+// ── f0ckYou brand: the f0ckyou frontend's own logo (open f0ckYou pages change on the live event
+//    fy_brand, this one too when it is shown in f0ckYou) ──
+const fyStatus = (text, kind) => brandStatus(text, kind, 'fy-brand-status');
+
+async function saveFyBrand(form) {
+  fyStatus('Saving…', 'busy');
+  try {
+    const data = await brandPost(form);
+    form.querySelector('#fy-brand-text-input').value = data.text || '';
+    form.querySelector('#fy-brand-mark').checked = !!data.mark;
+    form.querySelector('#fy-brand-site').checked = !!data.site;
+    form.querySelector('#fy-brand-weight-select').value = data.weight ? String(data.weight) : '';
+    fyStatus('✓ f0ckYou brand saved.', 'ok');
+  } catch (err) {
+    fyStatus('Error: ' + err.message, 'err');
+  }
+}
+
+async function uploadFyBrandImage(form) {
+  const input = form.querySelector('input[type="file"]');
+  if (!input || !input.files[0]) return;
+  fyStatus('Uploading…', 'busy');
+  try {
+    const data = await brandPost(form);
+    const preview = document.getElementById('fy-brand-preview');
+    preview.src = data.url;
+    preview.hidden = false;
+    document.getElementById('fy-brand-preview-empty').hidden = true;
+    document.getElementById('fy-brand-remove-btn').disabled = false;
+    fyStatus('✓ f0ckYou logo image updated!', 'ok');
+  } catch (err) {
+    fyStatus('Error: ' + err.message, 'err');
+  } finally {
+    input.value = '';
+  }
+}
+
+async function removeFyBrandImage(form) {
+  if (!confirm('Remove the f0ckYou logo image? The logo shows its text (and the play mark) again.')) return;
+  fyStatus('Removing…', 'busy');
+  try {
+    await brandPost(form);
+    const preview = document.getElementById('fy-brand-preview');
+    preview.removeAttribute('src');
+    preview.hidden = true;
+    document.getElementById('fy-brand-preview-empty').hidden = false;
+    document.getElementById('fy-brand-remove-btn').disabled = true;
+    fyStatus('✓ f0ckYou logo image removed.', 'ok');
+  } catch (err) {
+    fyStatus('Error: ' + err.message, 'err');
   }
 }
 

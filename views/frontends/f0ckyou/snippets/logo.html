@@ -1,9 +1,18 @@
-{#- The logo: the site's brand from the admin panel (branding: image, text, case, font, weight, size,
-    glitch), as in f0ckm, w0bm and f0ckv2. Without one, f0ckYou's own: the square play mark and the
-    word. The visitor's mode is the little country code.
-    The brand is marked for f0ck-core.js, which changes it live (.navbar-brand, data-brand-img,
-    data-brand-text); f0ckyou.js (f0ckFrontend.brand) drops the play mark once there is a brand.
-    The brand font: brand_font_css in snippets/head.html. -#}
+{#- The logo: f0ckYou's own brand (admin panel → f0ckYou brand, `fy_brand`): the square play mark,
+    a picture and/or the text, whose *emphasized* part is bold like the "You" of f0ckYou ("f0ck*You*"
+    when no text is set), in its own font, weight and size (the font: fy_brand.font_css in
+    snippets/head.html). With "use the site's brand" ticked it is the site's brand instead
+    (admin panel → branding: image, text, case, font, weight, size, glitch), as in f0ckm, w0bm and
+    f0ckv2, marked for f0ck-core.js, which changes it live (.navbar-brand, data-brand-img,
+    data-brand-text); f0ckyou.js (f0ckFrontend.brand) drops the play mark once there is one.
+    f0ckyou.js swaps every [data-fy-logo] on the live event fy_brand.
+    The visitor's mode is the little country code. -#}
 {%- set fy_logo_mode = ((modes[mode] if (session and modes and mode is number and mode < modes|length) else "") or "") -%}
-{%- set fy_brand = (custom_brand_image or custom_navbar_brand_text) -%}
-<span class="fy-logo navbar-brand{% if fy_brand %} fy-logo-custom{% endif %}"><span class="fy-logo-mark" aria-hidden="true"></span><img class="fy-logo-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="fy-logo-word{% if brand_case %} brand-case-{{ brand_case }}{% endif %}{% if brand_font %} brand-font{% endif %}{% if brand_weight %} brand-weight-{{ brand_weight }}{% endif %}{% if brand_size %} brand-size-{{ brand_size }}{% endif %}" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="f0ckYou"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{% if custom_navbar_brand_text %}{{ custom_navbar_brand_text }}{% elif not custom_brand_image %}f0ck<b>You</b>{% endif %}</span>{% if fy_logo_mode %}<sup class="fy-logo-cc">{{ fy_logo_mode|upper }}</sup>{% endif %}</span>
+{%- set fb = (fy_brand if (fy_brand is defined and fy_brand) else {"site": false, "image": "", "mark": true, "text": "", "parts": [{"text": "f0ck", "em": false}, {"text": "You", "em": true}], "font": "", "weight": none, "size": none}) -%}
+{%- if fb.site -%}
+{%- set fy_brand_set = (custom_brand_image or custom_navbar_brand_text) -%}
+<span class="fy-logo navbar-brand{% if fy_brand_set %} fy-logo-custom{% endif %}" data-fy-logo><span class="fy-logo-mark" aria-hidden="true"></span><img class="fy-logo-img" data-brand-img{% if brand_glitch_image %} data-glitch="0.6"{% endif %} alt="{{ (custom_navbar_brand_text or domain) }}"{% if custom_brand_image %} src="{{ custom_brand_image }}"{% else %} hidden{% endif %}><span class="fy-logo-word{% if brand_case %} brand-case-{{ brand_case }}{% endif %}{% if brand_font %} brand-font{% endif %}{% if brand_weight %} brand-weight-{{ brand_weight }}{% endif %}{% if brand_size %} brand-size-{{ brand_size }}{% endif %}" data-brand-text{% if brand_glitch_text %} data-glitch="0.6"{% endif %} data-text="{{ (custom_navbar_brand_text or "") }}" data-fallback="f0ckYou"{% if (custom_brand_image and not custom_navbar_brand_text) %} hidden{% endif %}>{% if custom_navbar_brand_text %}{{ custom_navbar_brand_text }}{% elif not custom_brand_image %}f0ck<b>You</b>{% endif %}</span>{% if fy_logo_mode %}<sup class="fy-logo-cc">{{ fy_logo_mode|upper }}</sup>{% endif %}</span>
+{%- else -%}
+{%- set fy_has_mark = (fb.mark and not fb.image) -%}
+<span class="fy-logo fy-logo-own{% if not fy_has_mark %} fy-logo-custom{% endif %}{% if fb.size %} fy-bsize-{{ fb.size }}{% endif %}" data-fy-logo>{% if fy_has_mark %}<span class="fy-logo-mark" aria-hidden="true"></span>{% endif %}{% if fb.image %}<img class="fy-logo-img" src="{{ fb.image }}" alt="{{ ((fb.text|replace("*", "")) or "f0ckYou") }}">{% endif %}{% if fb.parts %}<span class="fy-logo-word{% if fb.font %} fy-bfont{% endif %}{% if fb.weight %} fy-bweight-{{ fb.weight }}{% endif %}">{% for p in fb.parts %}{% if p.em %}<b>{{ p.text }}</b>{% else %}{{ p.text }}{% endif %}{% endfor %}</span>{% endif %}{% if fy_logo_mode %}<sup class="fy-logo-cc">{{ fy_logo_mode|upper }}</sup>{% endif %}</span>
+{%- endif -%}

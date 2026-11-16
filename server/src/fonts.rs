@@ -258,12 +258,27 @@ pub fn brand_css_url(file: &str, weight: Option<u16>) -> String {
 /// family's default weight like a user's font ([`faces_json`]). Empty when no font is set or the
 /// font is gone.
 pub fn brand_css(cfg: &Config, file: &str, weight: Option<u16>) -> String {
+    brand_css_as(cfg, file, weight, "BrandFont")
+}
+
+/// URL of the f0ckyou frontend's own brand font ([`fy_brand_css`]), versioned like [`brand_css_url`].
+pub fn fy_brand_css_url(file: &str, weight: Option<u16>) -> String {
+    format!("/fy-brand-font.css?v={}", brand_css_url(file, weight).rsplit('=').next().unwrap_or(""))
+}
+
+/// `/fy-brand-font.css`: [`brand_css`] for the f0ckyou frontend's own brand (admin panel →
+/// f0ckYou brand), as 'FyBrandFont'.
+pub fn fy_brand_css(cfg: &Config, file: &str, weight: Option<u16>) -> String {
+    brand_css_as(cfg, file, weight, "FyBrandFont")
+}
+
+fn brand_css_as(cfg: &Config, file: &str, weight: Option<u16>, alias: &str) -> String {
     match weight {
         Some(w) => match family_of(cfg, file).filter(|fam| fam.weights().contains(&w)) {
-            Some(fam) => faces_css(&fam.real_faces(), "BrandFont"),
-            None => family_css(cfg, file, None, "BrandFont"),
+            Some(fam) => faces_css(&fam.real_faces(), alias),
+            None => family_css(cfg, file, None, alias),
         },
-        None => family_css(cfg, file, None, "BrandFont"),
+        None => family_css(cfg, file, None, alias),
     }
 }
 

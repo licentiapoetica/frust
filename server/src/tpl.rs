@@ -651,6 +651,44 @@ fn list_dir(dir: &std::path::Path, re: &str) -> Vec<String> {
     v
 }
 
+/// The f0ckyou frontend's own brand (admin panel → f0ckYou brand; snippets/logo.html): `site`
+/// (show the site's brand instead), `image`, `mark` (the play mark, without an image), `text` (as
+/// saved), `parts` (the text to show: [{text, em}], a part in *asterisks* is `em`; no text shows
+/// "f0ck*You*", or nothing next to an image), `font` / `weight` (one the family still has) /
+/// `font_css`, `size` (percent, none = 100).
+fn fy_brand(cfg: &Config, s: &crate::settings::SiteSettings) -> Value {
+    let font = Some(s.fy_brand_font.as_str()).filter(|f| !f.is_empty() && crate::fonts::exists(cfg, f));
+    let weight = font.and_then(|f| crate::fonts::weight_for(cfg, f, Some(s.fy_brand_weight)));
+    let image = s.fy_brand_image_url.trim();
+    let text = match s.fy_brand_text.trim() {
+        "" if image.is_empty() => "f0ck*You*",
+        t => t,
+    };
+    json!({
+        "site": s.fy_brand_site,
+        "image": image,
+        "mark": s.fy_brand_mark,
+        "text": s.fy_brand_text,
+        "parts": brand_parts(text),
+        "font": font.unwrap_or(""),
+        "weight": weight,
+        "font_css": font.map(|f| crate::fonts::fy_brand_css_url(f, weight)).unwrap_or_default(),
+        "size": Some(s.fy_brand_size).filter(|n| *n > 0),
+    })
+}
+
+/// "f0ck*You*" → [{text: "f0ck", em: false}, {text: "You", em: true}]: every other part between
+/// asterisks is emphasized; empty parts are left out.
+fn brand_parts(text: &str) -> Value {
+    Value::Array(
+        text.split('*')
+            .enumerate()
+            .filter(|(_, t)| !t.is_empty())
+            .map(|(i, t)| json!({ "text": t, "em": i % 2 == 1 }))
+            .collect(),
+    )
+}
+
 fn json_script(v: &Value) -> String {
     crate::util::json_for_script(v)
 }
@@ -812,6 +850,7 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("brand_font", json!(brand_font.unwrap_or("")));
     put("brand_weight", json!(brand_weight));
     put("brand_font_css", json!(brand_font.map(|f| crate::fonts::brand_css_url(f, brand_weight)).unwrap_or_default()));
+    put("fy_brand", fy_brand(cfg, &s));
     put("default_font", json!(cfg.str_or("websrv.default_font", "")));
     put("site_description", json!(cfg.str_or("websrv.description", "The webs dumpster")));
     put("enable_nsfl", json!(cfg.enable_nsfl()));
@@ -1429,13 +1468,22 @@ mod tests {
         assert!(home.contains("<li><a href=\"/\" class=\"active\" aria-current=\"page\">"), "Home is the active guide entry");
         assert!(home.contains("<a href=\"/mode/1\" class=\"active\" aria-current=\"true\">NSFW</a>"));
         assert!(home.contains("<sup class=\"fy-logo-cc\">NSFW</sup>"));
-        // no brand set: f0ckYou's own logo, marked for live brand changes (f0ck-core.js)
-        assert!(home.contains("<span class=\"fy-logo navbar-brand\"><span class=\"fy-logo-mark\" aria-hidden=\"true\"></span><img class=\"fy-logo-img\" data-brand-img alt=\"f0ck.test\" hidden>"));
-        assert!(home.contains("data-brand-text data-text=\"\" data-fallback=\"f0ckYou\">f0ck<b>You</b></span>"));
-        // the admin's brand: picture and text in its font, no play mark
+        // no f0ckYou brand set: the play mark and "f0ck*You*", not marked for the site brand (f0ck-core.js)
+        assert!(home.contains("<span class=\"fy-logo fy-logo-own\" data-fy-logo><span class=\"fy-logo-mark\" aria-hidden=\"true\"></span><span class=\"fy-logo-word\">f0ck<b>You</b></span><sup class=\"fy-logo-cc\">NSFW</sup></span>"));
+        assert!(!home.contains("data-brand-text"));
+        // f0ckYou's own brand (admin panel → f0ckYou brand): picture, emphasized text, font, weight, size
+        let own = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "custom_navbar_brand_text": "SiteBrand",
+            "fy_brand": { "site": false, "image": "/s/img/navbar/fybrand.1.webp", "mark": true, "text": "my*Tube*", "parts": brand_parts("my*Tube*"),
+                "font": "VCR.ttf", "weight": 700, "size": 150, "font_css": "/fy-brand-font.css?v=1" } }));
+        assert!(own.contains("<span class=\"fy-logo fy-logo-own fy-logo-custom fy-bsize-150\" data-fy-logo><img class=\"fy-logo-img\" src=\"/s/img/navbar/fybrand.1.webp\" alt=\"myTube\"><span class=\"fy-logo-word fy-bfont fy-bweight-700\">my<b>Tube</b></span></span>"), "{own}");
+        assert!(own.contains("<link rel=\"stylesheet\" id=\"fy-brand-font-css\" href=\"/fy-brand-font.css?v=1\">"));
+        assert!(!own.contains("SiteBrand") && !own.contains("fy-logo-mark"));
+        // "use the site's brand": the site brand's picture and text in its font, no play mark
         let branded = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "custom_brand_image": "/s/brand.png",
+            "fy_brand": { "site": true, "font_css": "/fy-brand-font.css?v=1" },
             "custom_navbar_brand_text": "MyTube", "brand_font": "VCR", "brand_weight": 700, "brand_case": "upper", "brand_font_css": "/brand-font.css?f=VCR" }));
-        assert!(branded.contains("<span class=\"fy-logo navbar-brand fy-logo-custom\">") && branded.contains("src=\"/s/brand.png\">"));
+        assert!(branded.contains("<span class=\"fy-logo navbar-brand fy-logo-custom\" data-fy-logo>") && branded.contains("src=\"/s/brand.png\">"));
+        assert!(!branded.contains("fy-brand-font-css"));
         assert!(branded.contains("class=\"fy-logo-word brand-case-upper brand-font brand-weight-700\" data-brand-text data-text=\"MyTube\" data-fallback=\"f0ckYou\">MyTube</span>"));
         assert!(branded.contains("<link rel=\"stylesheet\" id=\"brand-font-css\" href=\"/brand-font.css?f=VCR\">"));
         assert!(home.contains("<article class=\"fy-card\" data-id=\"7\">") && home.contains("<a class=\"fy-thumb\" href=\"/7\""));
@@ -1991,6 +2039,31 @@ mod tests {
         assert!(render("", None).split('>').next().unwrap().contains(" hidden"));
     }
 
+    /// The admin panel's f0ckYou brand section: only with the f0ckyou frontend, filled from `fy_brand`.
+    #[test]
+    fn admin_fy_brand_section() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let empty = "frontends/w0bm/settings-prefs.html";
+        let fonts = serde_json::json!([{ "name": "M", "file": "M-Regular.woff2", "files": ["M-Regular.woff2", "M-Bold.woff2"],
+            "weights": [{ "weight": 400, "name": "Regular" }, { "weight": 700, "name": "Bold" }] }]);
+        let render = |frontends: serde_json::Value| {
+            let ctx = serde_json::json!({ "shell_header": empty, "shell_footer": empty, "session": { "user": "admin", "id": 1, "admin": true }, "csrf_token": "tok",
+                "domain": "f0ck.me", "fonts": fonts, "brand_sizes": crate::settings::BRAND_SIZES, "frontends": frontends,
+                "fy_brand": { "site": false, "image": "", "mark": false, "text": "f0ck*Tube*", "font": "M-Bold.woff2", "weight": 700, "size": 150 } });
+            env.get_template("admin.html").unwrap().render(to_jvalue(&ctx)).unwrap()
+        };
+        assert!(!render(serde_json::json!(["f0ckm"])).contains("fy-brand-section"));
+        let html = render(serde_json::json!(["f0ckm", "f0ckyou"]));
+        assert!(html.contains("<form method=\"post\" action=\"/admin/fy_brand\" data-on=\"submit:prevent,saveFyBrand\">"));
+        assert!(html.contains("name=\"text\" class=\"adm-text\" maxlength=\"68\" value=\"f0ck*Tube*\""));
+        assert!(html.contains("<option value=\"M-Regular.woff2\" data-weights="));
+        assert!(html.contains("<option value=\"700\" selected>700 Bold</option>"));
+        assert!(html.contains("<option value=\"150\" selected>150%</option>"));
+        assert!(html.contains("<input type=\"checkbox\" id=\"fy-brand-mark\" name=\"mark\" value=\"1\"> Play mark"));
+        assert!(html.contains("<button type=\"submit\" id=\"fy-brand-remove-btn\" class=\"adm-btn adm-btn-danger\" disabled>"));
+    }
+
     /// mtime() finds assets through the project directory, whatever the working directory.
     #[test]
     fn mtime_resolves_from_the_project_dir() {
@@ -2010,6 +2083,26 @@ mod tests {
                 assert!(css.contains(&format!("[data-brand-text].brand-size-{n} {{")), "{f} {n}");
             }
         }
+    }
+
+    /// f0ckYou's own brand (admin panel → f0ckYou brand): every size and weight has its rule.
+    #[test]
+    fn fy_brand_has_css() {
+        let css = std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../public/s/fe/f0ckyou/css/f0ckyou.css")).unwrap();
+        for n in crate::settings::BRAND_SIZES {
+            assert!(css.contains(&format!(".fy-logo-own.fy-bsize-{n} .fy-logo-word {{")), "{n}");
+        }
+        for w in crate::fonts::WEIGHTS {
+            assert!(css.contains(&format!(".fy-logo-word.fy-bfont.fy-bweight-{w} {{\n  font-weight: {w};")), "{w}");
+        }
+    }
+
+    #[test]
+    fn brand_parts_emphasize_asterisks() {
+        let p = brand_parts("f0ck*You*");
+        assert_eq!(p, serde_json::json!([{ "text": "f0ck", "em": false }, { "text": "You", "em": true }]));
+        assert_eq!(brand_parts("*a* b *c"), serde_json::json!([{ "text": "a", "em": true }, { "text": " b ", "em": false }, { "text": "c", "em": true }]));
+        assert_eq!(brand_parts("plain"), serde_json::json!([{ "text": "plain", "em": false }]));
     }
 
     /// Every navbar brand weight has its rule in each frontend's CSS.

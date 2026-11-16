@@ -42,6 +42,13 @@ pub fn register(r: &mut Router) {
         let css = crate::fonts::brand_css(&st.cfg(), &s.brand_font, weight);
         Ok(crate::http::with_header(reply(200, "text/css; charset=utf-8", css), "cache-control", "public, max-age=86400"))
     });
+    // The f0ckyou frontend's own brand font (admin panel → f0ckYou brand), see crate::fonts::fy_brand_css
+    r.get(r"^\/fy-brand-font\.css$", |st: AppState, _req: Req| async move {
+        let s = st.settings.get();
+        let weight = u16::try_from(s.fy_brand_weight).ok().filter(|w| *w > 0);
+        let css = crate::fonts::fy_brand_css(&st.cfg(), &s.fy_brand_font, weight);
+        Ok(crate::http::with_header(reply(200, "text/css; charset=utf-8", css), "cache-control", "public, max-age=86400"))
+    });
     // A visitor's chosen font as 'CustomUserFont' (#user-font-css in f0ckm and w0bm; settings.js
     // swaps it live), see crate::fonts::user_css.
     r.get(r"^\/user-font\.css$", |st: AppState, req: Req| async move {

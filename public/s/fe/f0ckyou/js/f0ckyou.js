@@ -472,10 +472,10 @@
   window.f0ckFrontend = {
     itemId: page.itemId || null,
     flash,
-    // the admin changed the brand (f0ck-core.js has updated the picture and the text): f0ckYou's
-    // play mark only without one
+    // the admin changed the site's brand (f0ck-core.js has updated the picture and the text): in a
+    // logo showing it (f0ckYou brand → "use the site's brand"), the play mark only without one
     brand() {
-      document.querySelectorAll('.fy-logo').forEach(logo => {
+      document.querySelectorAll('.fy-logo.navbar-brand').forEach(logo => {
         const img = logo.querySelector('[data-brand-img]');
         const txt = logo.querySelector('[data-brand-text]');
         logo.classList.toggle('fy-logo-custom', !!((img && !img.hidden) || (txt && txt.dataset.text)));
@@ -504,6 +504,28 @@
       if (page.session) notifBadge();
       if (page.itemId) refresh(['comments', 'comments-head', 'actions', 'desc']);
     },
+    live(msg) {
+      if (msg && msg.type === 'fy_brand') refreshLogo();
+    },
+  };
+
+  // ── the logo: f0ckYou's own brand changed (admin panel → f0ckYou brand, live event fy_brand):
+  //    every logo and the brand font's stylesheet come from a fresh render of this page ──
+  const refreshLogo = () => {
+    queue = queue.then(async () => {
+      const res = await fetch(pageUrl(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'text/html', 'X-Purpose': 'prefetch' } });
+      if (!res.ok) return;
+      const doc = parse(await res.text());
+      const fresh = [...doc.querySelectorAll('[data-fy-logo]')];
+      document.querySelectorAll('[data-fy-logo]').forEach((cur, i) => {
+        if (fresh[i]) cur.replaceWith(document.importNode(fresh[i], true));
+      });
+      const link = document.getElementById('fy-brand-font-css');
+      const next = doc.getElementById('fy-brand-font-css');
+      if (next && link) link.href = next.getAttribute('href');
+      else if (next) document.head.appendChild(document.importNode(next, true));
+      else if (link) link.remove();
+    }).catch(err => console.error('[f0ckyou] logo', err));
   };
 
   // ── menus ──
