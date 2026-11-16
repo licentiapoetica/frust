@@ -6,6 +6,7 @@
 //  - the f0ckFrontend hooks for the shared live events (views/frontends/README.md)
 //  - menus (<details>): one open at a time, closed by an outside click or Escape
 //  - keys: "/" focuses the search box; on an item ← → for previous / next, r for random
+//  - Flash items: starts the Ruffle player
 //  - moderators: the × on a tag removes it
 (() => {
   'use strict';
@@ -221,6 +222,22 @@
       location.href = '/random';
     }
   });
+
+  // ── Flash: the SWF plays in f0ckm's sandboxed Ruffle frame (<f0ck-flash>, /s/js/flash-embed.js,
+  //    loaded by the item page); this only starts it in #ruffle-container ──
+  const ruffle = document.getElementById('ruffle-container');
+  if (ruffle && ruffle.dataset.swf && window.customElements?.get('f0ck-flash')) {
+    const player = document.createElement('f0ck-flash');
+    ruffle.appendChild(player);
+    player.addEventListener('loadedmetadata', () => {
+      let vol = 0.5;
+      try { vol = +(localStorage.getItem('volume') ?? 0.5); } catch { /* storage blocked */ }
+      player.volume = Number.isFinite(vol) ? vol : 0.5;
+    });
+    player.load({ url: ruffle.dataset.swf, autoplay: true, background: true }).catch(() => {
+      flash('Flash playback failed', 'error');
+    });
+  }
 
   // ── /tags: "More tags" appends the next page from /api/tags (cards as snippets/tag-cards.html) ──
   document.addEventListener('click', async e => {
