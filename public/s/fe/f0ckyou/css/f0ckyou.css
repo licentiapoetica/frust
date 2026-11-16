@@ -1390,7 +1390,17 @@ a.fy-card-all:hover {
   padding: 1.5rem 1.5rem 3rem;
 }
 
+/* The player never pushes the title and the buttons under it out of the window, at any zoom or
+   text size (all in rem): --fy-below is the room they take with the masthead (a two-line title,
+   the owner and the buttons in one row). Where the column is too narrow for that row, the bar
+   wraps and takes more (the container queries on .fy-watch-main below). */
+.fy-watch-main {
+  container: fy-main / inline-size;
+}
+
 .fy-player {
+  --fy-below: 13.5rem;
+  --fy-player-h: max(10rem, calc(100vh - var(--fy-below)));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1402,7 +1412,7 @@ a.fy-card-all:hover {
   display: block;
   width: 100%;
   height: auto;
-  max-height: calc(100vh - 10rem);
+  max-height: var(--fy-player-h);
   background: #000;
 }
 
@@ -1411,7 +1421,7 @@ a.fy-card-all:hover {
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: calc(100vh - 10rem);
+  max-height: var(--fy-player-h);
 }
 
 .fy-player-audio {
@@ -1421,7 +1431,7 @@ a.fy-card-all:hover {
 }
 
 .fy-audio-cover {
-  max-height: 22rem;
+  max-height: min(22rem, max(5rem, calc(var(--fy-player-h) - 6rem)));
 }
 
 .fy-media-audio {
@@ -1431,7 +1441,7 @@ a.fy-card-all:hover {
 
 .fy-media-frame {
   display: block;
-  width: 100%;
+  width: min(100%, calc(var(--fy-player-h) * 16 / 9));
   aspect-ratio: 16 / 9;
   height: auto;
   border: 0;
@@ -2978,6 +2988,26 @@ html.user-fs-150 {
 }
 
 /* ── narrower screens ── */
+@supports (height: 100dvh) {
+  .fy-player {
+    --fy-player-h: max(10rem, calc(100dvh - var(--fy-below)));
+  }
+}
+
+/* the owner and the buttons in two rows */
+@container fy-main (max-width: 62rem) {
+  .fy-player {
+    --fy-below: 16.75rem;
+  }
+}
+
+/* and the buttons in two rows themselves */
+@container fy-main (max-width: 34rem) {
+  .fy-player {
+    --fy-below: 19.75rem;
+  }
+}
+
 @media (max-width: 1100px) {
   .fy-watch {
     grid-template-columns: minmax(0, 1fr);
