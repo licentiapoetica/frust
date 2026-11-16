@@ -361,8 +361,14 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     };
     let id32 = itemid as i32;
     let (next_item, prev_item, start_item, end_item, cheat_items) = if o.random {
-        let next = neighbour(sql!("and items.id != ", id32), Sql::new("order by random()"), 1).fetch_all(&st.db).await?;
-        (next.clone(), next, vec![], vec![], vec![])
+        // prev/next are a random pick; first/last stay the real ends of the context (tag, user, ...)
+        let qs = [
+            neighbour(sql!("and items.id != ", id32), Sql::new("order by random()"), 1),
+            neighbour(Sql::empty(), Sql::new("order by items.id asc"), 1),
+            neighbour(Sql::empty(), Sql::new("order by items.id desc"), 1),
+        ];
+        let (next, start, end) = tokio::try_join!(qs[0].fetch_all(&st.db), qs[1].fetch_all(&st.db), qs[2].fetch_all(&st.db))?;
+        (next.clone(), next, start, end, vec![])
     } else {
         let qs = [
             neighbour(sql!("and items.id > ", id32), Sql::new("order by items.id asc"), 1),
