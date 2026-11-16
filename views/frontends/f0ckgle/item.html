@@ -100,9 +100,6 @@
   </div>
 
   <aside class="fg-kp" data-fg-live="kp">
-    <h2 class="fg-kp-title">{{ fg_item_title }}</h2>
-    <div class="fg-kp-sub">{{ item.mime }}</div>
-    {% if phrase %}<p class="fg-kp-desc">{{ phrase }} <span class="fg-dim">&mdash; {{ domain }}</span></p>{% endif %}
     <dl class="fg-kp-facts">
       {% if uploader %}<div><dt>Uploaded by</dt><dd>{% if is_anonymized %}{{ uploader }}{% else %}<a href="/user/{{ uploader|lower|encode_uri_component }}/uploads{% if tmp and tmp.mime %}/{{ tmp.mime }}{% endif %}">{{ uploader_name }}</a>{% endif %}</dd></div>{% endif %}
       <div><dt>Uploaded</dt><dd><time title="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></dd></div>

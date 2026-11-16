@@ -1256,6 +1256,11 @@ video.fg-media-el {
   margin: .75rem 0;
 }
 
+/* the item's panel starts with the facts */
+.fg-kp > .fg-kp-facts:first-child {
+  margin-top: 0;
+}
+
 .fg-kp-facts > div {
   margin-bottom: .375rem;
 }
