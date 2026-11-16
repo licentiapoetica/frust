@@ -898,3 +898,239 @@ window.F0ckPageSwap = (() => {
 
   return { styles, scripts, tail, shown, loaded };
 })();
+
+// ── User interest & behavioural recommendation engine (client tracking) ───────────────────────
+// Learns the visitor's tags and creators (localStorage, also for guests) and reports views to
+// /api/v2/track/*. getTopAffinities() feeds /api/v2/recommendations (session_tags /
+// session_creators): f0ckm's recommendations tab (sidebar-activity.js) and the frontends' own
+// recommendation lists. f0ckm.js starts the tracking on its item pages; a frontend calls
+// startTrackingItem({ itemId, tags, creator }) on its item page itself.
+(function() {
+  const STORAGE_TAGS = 'f0ck_guest_tag_affinity';
+  const STORAGE_CREATORS = 'f0ck_guest_creator_affinity';
+
+  let currentTrackingItem = null;
+
+  const loadStoredMap = (key) => {
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : {};
+    } catch (_) {
+      return {};
+    }
+  };
+
+  const saveStoredMap = (key, map) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(map));
+    } catch (_) {}
+  };
+
+  const updateLocalAffinity = (key, name, delta) => {
+    if (!name || typeof name !== 'string') return;
+    const cleanName = name.trim().toLowerCase();
+    if (!cleanName) return;
+
+    const map = loadStoredMap(key);
+    const existing = map[cleanName] || { score: 0, count: 0, ts: Date.now() };
+    existing.score = Math.max(-10, Math.min(500, (existing.score || 0) + delta));
+    existing.count = (existing.count || 0) + 1;
+    existing.ts = Date.now();
+    map[cleanName] = existing;
+
+    // Prune to top 60 to prevent storage bloat
+    const entries = Object.entries(map);
+    if (entries.length > 60) {
+      entries.sort((a, b) => b[1].score - a[1].score);
+      const pruned = Object.fromEntries(entries.slice(0, 50));
+      saveStoredMap(key, pruned);
+    } else {
+      saveStoredMap(key, map);
+    }
+  };
+
+  const f0ckInterestEngine = {
+    getTopAffinities: () => {
+      const tagsMap = loadStoredMap(STORAGE_TAGS);
+      const creatorsMap = loadStoredMap(STORAGE_CREATORS);
+
+      const topTags = Object.entries(tagsMap)
+        .filter(([, v]) => v.score > 0)
+        .sort((a, b) => b[1].score - a[1].score)
+        .slice(0, 15)
+        .map(([k]) => k);
+
+      const topCreators = Object.entries(creatorsMap)
+        .filter(([, v]) => v.score > 0)
+        .sort((a, b) => b[1].score - a[1].score)
+        .slice(0, 10)
+        .map(([k]) => k);
+
+      return { topTags, topCreators };
+    },
+
+    recordInteraction: ({ itemId, tags = [], creator = '', duration = 0, percent = 0, type = 'dwell' }) => {
+      if (!itemId) return;
+
+      // Behavioral weighting: time spent is a primary signal
+      let delta = 1.0;
+      if (type === 'skip' || (duration < 2.5 && percent < 15)) {
+        delta = -1.5;
+      } else if (type === 'click_suggestion') {
+        delta = 2.5;
+      } else if (type === 'finish' || percent >= 75 || duration >= 20) {
+        delta = 3.0;
+      } else if (duration >= 8 || percent >= 35) {
+        delta = 1.5;
+      }
+
+      // Update local storage (for persistent guest learning across browser restarts)
+      if (Array.isArray(tags)) {
+        tags.forEach(t => updateLocalAffinity(STORAGE_TAGS, t, delta));
+      }
+      if (creator) {
+        updateLocalAffinity(STORAGE_CREATORS, creator, delta);
+      }
+
+      // Send beacon to backend
+      const payload = {
+        item_id: itemId,
+        duration: Math.round(duration * 10) / 10,
+        percent: Math.round(percent),
+        type
+      };
+      // sendBeacon can't set headers: logged-in users need the CSRF token in the body or get a 403
+      const csrf = window.f0ckSession?.csrf_token;
+      if (csrf) payload.csrf_token = csrf;
+
+      try {
+        if (navigator.sendBeacon) {
+          const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+          navigator.sendBeacon('/api/v2/track/interaction', blob);
+        } else {
+          fetch('/api/v2/track/interaction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch(() => {});
+        }
+      } catch (_) {}
+    },
+
+    recordSuggestionClick: (itemId, tags = [], creator = '') => {
+      if (!itemId) return;
+      f0ckInterestEngine.recordInteraction({ itemId, tags, creator, type: 'click_suggestion' });
+    },
+
+    recordTagSearch: (rawTag) => {
+      if (!rawTag || typeof rawTag !== 'string') return;
+      const tags = rawTag.split(',')
+        .map(t => t.trim().toLowerCase())
+        .filter(t => t && !t.startsWith('title:') && !t.startsWith('src:'));
+
+      if (!tags.length) return;
+
+      // Update local storage (for immediate in-session recommendations & guest learning)
+      tags.forEach(t => updateLocalAffinity(STORAGE_TAGS, t, 2.0));
+
+      // Dispatch tracking to backend
+      const payload = { tag: tags.join(',') };
+      // sendBeacon can't set headers: logged-in users need the CSRF token in the body or get a 403
+      const csrf = window.f0ckSession?.csrf_token;
+      if (csrf) payload.csrf_token = csrf;
+      try {
+        if (navigator.sendBeacon) {
+          const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+          navigator.sendBeacon('/api/v2/track/search', blob);
+        } else {
+          fetch('/api/v2/track/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch(() => {});
+        }
+      } catch (_) {}
+    },
+
+    flushCurrentTracking: () => {
+      if (!currentTrackingItem) return;
+      const { itemId, startTime, maxPercent, tags, creator } = currentTrackingItem;
+      currentTrackingItem = null;
+
+      const duration = (Date.now() - startTime) / 1000;
+      let type = 'dwell';
+      if (duration < 2.5 && maxPercent < 15) {
+        type = 'skip';
+      } else if (maxPercent >= 75 || duration >= 20) {
+        type = 'finish';
+      }
+
+      f0ckInterestEngine.recordInteraction({
+        itemId,
+        tags,
+        creator,
+        duration,
+        percent: maxPercent,
+        type
+      });
+    },
+
+    // ctx: { itemId, tags, creator } from a frontend's page; without it (f0ckm.js calls it as an
+    // event listener) the item is read from f0ckm's item page.
+    startTrackingItem: (ctx) => {
+      f0ckInterestEngine.flushCurrentTracking();
+
+      const given = ctx && typeof ctx === 'object' && !(ctx instanceof Event) && ctx.itemId ? ctx : null;
+      let itemId;
+      let tags;
+      let creator;
+      if (given) {
+        itemId = parseInt(given.itemId, 10);
+        tags = Array.isArray(given.tags) ? given.tags.filter(Boolean) : [];
+        creator = given.creator || '';
+      } else {
+        // Only track if on an item page
+        const currentIdStr = typeof window.getCurrentItemId === 'function' ? window.getCurrentItemId() : null;
+        itemId = currentIdStr ? parseInt(currentIdStr, 10) : null;
+        tags = Array.from(document.querySelectorAll('#tags .tag-text, #tags .tag-badge, .tag-link'))
+          .map(el => el.textContent.trim().replace(/^#/, ''))
+          .filter(Boolean);
+        const creatorEl = document.querySelector('#a_username, [data-username]');
+        creator = creatorEl ? (creatorEl.dataset.username || creatorEl.textContent.trim()) : '';
+      }
+      if (!itemId) return;
+
+      currentTrackingItem = {
+        itemId,
+        startTime: Date.now(),
+        maxPercent: 0,
+        tags,
+        creator
+      };
+
+      // Attach media playback listeners
+      const media = document.querySelector('video, audio');
+      if (media) {
+        const updatePercent = () => {
+          if (!currentTrackingItem || !media.duration) return;
+          const p = (media.currentTime / media.duration) * 100;
+          if (p > currentTrackingItem.maxPercent) {
+            currentTrackingItem.maxPercent = p;
+          }
+        };
+
+        media.addEventListener('timeupdate', updatePercent, { passive: true });
+        media.addEventListener('ended', () => {
+          if (currentTrackingItem) currentTrackingItem.maxPercent = 100;
+        }, { once: true });
+      }
+    }
+  };
+
+  window.f0ckInterestEngine = f0ckInterestEngine;
+
+  window.addEventListener('beforeunload', f0ckInterestEngine.flushCurrentTracking);
+  window.addEventListener('pagehide', f0ckInterestEngine.flushCurrentTracking);
+})();
