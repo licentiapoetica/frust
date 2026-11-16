@@ -100,7 +100,6 @@
   </div>
 
   <aside class="fg-kp" data-fg-live="kp">
-    <div class="fg-kp-img"><img src="{{ (item.thumbnail or ("/t/" ~ item.id ~ ".webp")) }}" alt=""></div>
     <h2 class="fg-kp-title">{{ fg_item_title }}</h2>
     <div class="fg-kp-sub">{{ item.mime }}</div>
     {% if phrase %}<p class="fg-kp-desc">{{ phrase }} <span class="fg-dim">&mdash; {{ domain }}</span></p>{% endif %}
