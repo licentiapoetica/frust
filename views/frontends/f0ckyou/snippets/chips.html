@@ -7,15 +7,16 @@
 {%- set ch_base = (fy_chip_base if (fy_chip_base is defined and fy_chip_base) else "/") -%}
 {%- set ch_back = ("/p/1" if ch_base == "/" else ch_base)|encode_uri_component -%}
 {%- set ch_active = (fy_chip if (fy_chip is defined and fy_chip) else "") -%}
-{#- Only the media types the site has (allowedMimes → scroller_mime_cats, Flash with enable_swf) and,
-    for anonymous users, may see (anon_permissions.allowed_mimes). With one type: no type chips. -#}
+{#- Only the media types the site has (allowedMimes → scroller_mime_cats, Flash with enable_swf) and
+    the visitor may filter by (filter_mimes: guests and anonymous users anon_permissions.allowed_mimes,
+    none without anon_permissions.filter; settings::filter_mimes, the same rule as the feed's). With
+    one type: no type chips. -#}
 {%- set ch_cats = (scroller_mime_cats if (scroller_mime_cats is defined and scroller_mime_cats is sequence) else ["video", "image", "audio"]) -%}
-{%- set ch_anon = (session and session.is_anon) -%}
-{%- set ch_anon_ok = ((anon_permissions.allowed_mimes if (anon_permissions and anon_permissions.allowed_mimes) else none) or ["image", "video", "audio", "flash"]) -%}
-{%- set ch_types = ([["video", "Videos"]] if ("video" in ch_cats and (not ch_anon or "video" in ch_anon_ok)) else [])
-    + ([["image", "Images"]] if ("image" in ch_cats and (not ch_anon or "image" in ch_anon_ok)) else [])
-    + ([["audio", "Music"]] if ("audio" in ch_cats and (not ch_anon or "audio" in ch_anon_ok)) else [])
-    + ([["flash", "Flash"]] if (enable_swf and (not ch_anon or "flash" in ch_anon_ok)) else []) -%}
+{%- set ch_ok = (filter_mimes if (filter_mimes is defined and filter_mimes is sequence) else ["image", "video", "audio", "flash"]) -%}
+{%- set ch_types = ([["video", "Videos"]] if ("video" in ch_cats and "video" in ch_ok) else [])
+    + ([["image", "Images"]] if ("image" in ch_cats and "image" in ch_ok) else [])
+    + ([["audio", "Music"]] if ("audio" in ch_cats and "audio" in ch_ok) else [])
+    + ([["flash", "Flash"]] if (enable_swf and "flash" in ch_ok) else []) -%}
 <nav class="fy-chips" aria-label="Filter">
   <a class="fy-chip{% if ch_active == "all" %} active{% endif %}" href="/mime?back={{ ch_back }}"{% if ch_active == "all" %} aria-current="page"{% endif %}>All</a>
   {% if ch_types|length > 1 %}{% for ty in ch_types %}

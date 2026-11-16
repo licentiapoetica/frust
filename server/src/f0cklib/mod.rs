@@ -158,9 +158,7 @@ pub(crate) fn exclude_sql(excluded: &[i64]) -> Sql {
     sql!("and not exists (select 1 from tags_assign where item_id = items.id and tag_id = any(", ids, "::int[]))")
 }
 
-fn is_guest(session: Option<&Session>) -> bool {
-    session.map(|s| s.user.is_empty()).unwrap_or(true)
-}
+use crate::settings::is_guest_session as is_guest;
 
 const MODE_NAMES: [&str; 5] = ["sfw", "nsfw", "untagged", "all", "nsfl"];
 
@@ -330,7 +328,8 @@ pub(crate) fn resolve_mime_sql(cfg: &Config, raw_mime: Option<&str>, session: Op
     let mut parts: Vec<String> = raw_mime.unwrap_or("").split(',').filter(|m| KNOWN.contains(m)).map(str::to_string).collect();
     if is_anon_session(session) {
         let allowed = anon_allowed_mimes(cfg);
-        let can_filter = can_anon_do(cfg, "filter");
+        // guests by anonymous_permissions.filter alone, even with enable_anonymous_access off
+        let can_filter = crate::settings::can_filter_mime(cfg, session);
         if !can_filter || allowed.len() == 1 {
             parts = if allowed.len() < 5 { allowed.clone() } else { vec![] };
         } else if !parts.is_empty() {
@@ -915,4 +914,33 @@ pub(crate) fn sub_matches_tag(tags: &[Value], terms: &[String], strict: &[String
         let slug = slugify(term);
         tags.iter().any(|t| norm(t).map(|n| !n.is_empty() && n.contains(&slug)).unwrap_or(false))
     })
+}
+
+#[cfg(test)]
+mod mime_filter_tests {
+    use super::resolve_mime_sql;
+    use crate::media::test_cfg;
+
+    /// Guests filter by type with anonymous accounts switched off (config_example.yaml's default):
+    /// the chips of the frontends set the cookie, and the feed has to follow it.
+    #[test]
+    fn guests_filter_types_without_anonymous_access() {
+        let cfg = test_cfg("enable_anonymous_access: false\nanonymous_permissions:\n  filter: true\n");
+        let (parts, sql) = resolve_mime_sql(&cfg, Some("flash"), None, "items");
+        assert_eq!(parts, vec!["flash".to_string()]);
+        assert!(!sql.sql().is_empty());
+        assert_eq!(crate::settings::filter_mimes(&cfg, None), ["image", "video", "audio", "flash", "pdf"]);
+
+        // anonymous_permissions.filter off: no filter, and no types offered
+        let cfg = test_cfg("anonymous_permissions:\n  filter: false\n");
+        let (parts, _) = resolve_mime_sql(&cfg, Some("flash"), None, "items");
+        assert!(parts.is_empty());
+        assert!(crate::settings::filter_mimes(&cfg, None).is_empty());
+
+        // allowed_mimes limits what guests may pick
+        let cfg = test_cfg("anonymous_permissions:\n  allowed_mimes: [image, video]\n");
+        let (parts, _) = resolve_mime_sql(&cfg, Some("video"), None, "items");
+        assert_eq!(parts, vec!["video".to_string()]);
+        assert_eq!(crate::settings::filter_mimes(&cfg, None), ["image", "video"]);
+    }
 }

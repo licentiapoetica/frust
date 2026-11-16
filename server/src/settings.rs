@@ -391,6 +391,44 @@ pub fn can_anon_mime(cfg: &Config, mime: &str) -> bool {
     anon_allowed_mimes(cfg).contains(&mime)
 }
 
+/// No account at all: no session, or one without a user.
+pub fn is_guest_session(session: Option<&Session>) -> bool {
+    session.map(|s| s.user.is_empty()).unwrap_or(true)
+}
+
+/// May guests (no account) filter the lists by media type? Yes unless
+/// `anonymous_permissions.filter` is off. `enable_anonymous_access` doesn't take it away: that is
+/// about anonymous accounts, and guests browse the site either way.
+pub fn can_guest_filter(cfg: &Config) -> bool {
+    anon_permissions(cfg).get("filter").map(truthy).unwrap_or(true)
+}
+
+/// May this visitor filter the lists by media type (the `mime` cookie)? Guests by
+/// [`can_guest_filter`], anonymous accounts by their `filter` permission, everyone else always.
+pub fn can_filter_mime(cfg: &Config, session: Option<&Session>) -> bool {
+    if is_guest_session(session) {
+        can_guest_filter(cfg)
+    } else if is_anon_session(session) {
+        can_anon_do(cfg, "filter")
+    } else {
+        true
+    }
+}
+
+/// The media types this visitor may filter by: all of them with an account, guests and anonymous
+/// accounts `anonymous_permissions.allowed_mimes`, nothing when they may not filter. For the type
+/// filters of the frontends (`filter_mimes` in the templates), so they match `resolve_mime_sql`.
+pub fn filter_mimes(cfg: &Config, session: Option<&Session>) -> Vec<String> {
+    if !can_filter_mime(cfg, session) {
+        return vec![];
+    }
+    if is_anon_session(session) {
+        anon_allowed_mimes(cfg)
+    } else {
+        ["image", "video", "audio", "flash", "pdf"].map(String::from).to_vec()
+    }
+}
+
 /// No session, or an anonymous one.
 pub fn is_anon_session(session: Option<&Session>) -> bool {
     match session {

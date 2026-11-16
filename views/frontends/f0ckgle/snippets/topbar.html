@@ -9,16 +9,16 @@
 {%- set fg_back = ("/p/1" if fg_base == "/" else fg_base)|encode_uri_component -%}
 {%- set fg_all = (fg_tab_all if (fg_tab_all is defined and fg_tab_all) else ("/mime?back=" ~ fg_back)) -%}
 {%- set fg_active = (fg_tab if (fg_tab is defined and fg_tab) else "") -%}
-{#- Only the media types the site has (allowedMimes → scroller_mime_cats, Flash with enable_swf) and,
-    for anonymous users, may see (anon_permissions.allowed_mimes); as w0bm's filter. With one type
-    there is nothing to pick: no type tabs. -#}
+{#- Only the media types the site has (allowedMimes → scroller_mime_cats, Flash with enable_swf) and
+    the visitor may filter by (filter_mimes: guests and anonymous users anon_permissions.allowed_mimes,
+    none without anon_permissions.filter; settings::filter_mimes, the same rule as the feed's); as
+    w0bm's filter. With one type there is nothing to pick: no type tabs. -#}
 {%- set fg_cats = (scroller_mime_cats if (scroller_mime_cats is defined and scroller_mime_cats is sequence) else ["video", "image", "audio"]) -%}
-{%- set fg_anon = (session and session.is_anon) -%}
-{%- set fg_anon_ok = ((anon_permissions.allowed_mimes if (anon_permissions and anon_permissions.allowed_mimes) else none) or ["image", "video", "audio", "flash"]) -%}
-{%- set fg_types = ([["image", "Images"]] if ("image" in fg_cats and (not fg_anon or "image" in fg_anon_ok)) else [])
-    + ([["video", "Videos"]] if ("video" in fg_cats and (not fg_anon or "video" in fg_anon_ok)) else [])
-    + ([["audio", "Audio"]] if ("audio" in fg_cats and (not fg_anon or "audio" in fg_anon_ok)) else [])
-    + ([["flash", "Flash"]] if (enable_swf and (not fg_anon or "flash" in fg_anon_ok)) else []) -%}
+{%- set fg_ok = (filter_mimes if (filter_mimes is defined and filter_mimes is sequence) else ["image", "video", "audio", "flash"]) -%}
+{%- set fg_types = ([["image", "Images"]] if ("image" in fg_cats and "image" in fg_ok) else [])
+    + ([["video", "Videos"]] if ("video" in fg_cats and "video" in fg_ok) else [])
+    + ([["audio", "Audio"]] if ("audio" in fg_cats and "audio" in fg_ok) else [])
+    + ([["flash", "Flash"]] if (enable_swf and "flash" in fg_ok) else []) -%}
 <header class="fg-top f0ck-shell-chrome">
   <div class="fg-top-row">
     <a class="fg-top-logo" href="/" title="Go to F0ckgle Home">{% include "frontends/f0ckgle/snippets/logo.html" %}</a>

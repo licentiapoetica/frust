@@ -1120,6 +1120,8 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
             ctx.insert("language_cookie".into(), json!(r.cookie("language").filter(|l| !l.is_empty())));
             ctx.insert("user_strict_bool".into(), json!(session.and_then(|s| s.strict_mode).unwrap_or(false)));
             ctx.insert("user_logged_in_bool".into(), json!(session.is_some()));
+            // the media types this visitor may filter by (the type filters of the frontends)
+            ctx.insert("filter_mimes".into(), json!(crate::settings::filter_mimes(&cfg, session)));
             let csrf = session
                 .and_then(|s| s.csrf_token.clone())
                 .or_else(|| ctx.get("csrf_token").and_then(Value::as_str).map(str::to_string))

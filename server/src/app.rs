@@ -625,7 +625,8 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
             req.cookies.insert("ratings".into(), "sfw".into());
             long(req, "ratings", "sfw");
         }
-        let allowed: Vec<String> = cfg.str_list("anonymous_permissions.allowed_mimes").unwrap_or_else(|| ["image", "video", "audio"].map(String::from).to_vec());
+        // the types guests may filter by, as the feed reads them (f0cklib::resolve_mime_sql)
+        let allowed = s::filter_mimes(&cfg, None);
         if let Some(m) = req.cookie("mime").map(str::to_string) {
             let raw_m: Vec<String> = crate::util::decode_lossy(&m).split(',').filter(|x| ALL_MIMES.contains(x)).map(str::to_string).collect();
             let valid: Vec<String> = raw_m.iter().filter(|x| allowed.contains(x)).cloned().collect();
