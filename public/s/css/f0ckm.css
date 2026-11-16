@@ -3278,6 +3278,8 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   flex-direction: column;
   text-decoration: none;
   color: inherit;
+  /* the page's size, not the 0.8em of the comment text's video links (.sidebar-video-link) */
+  font-size: 1em;
 }
 
 .sidebar-video-thumb-wrap {
@@ -4272,7 +4274,9 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
 }
 
 .sidebar-video-title {
-  font-size: 0.86em;
+  /* Card text in the page's sizes like the comments tab: title and name like the text, the
+     time like the comments' time (14px) */
+  font-size: 1em;
   font-weight: 600;
   color: var(--text-color, #eee);
   line-height: 1.35;
@@ -4289,7 +4293,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
 }
 
 .sidebar-video-channel {
-  font-size: 0.76em;
+  font-size: 1em;
   color: #999;
   margin-top: 3px;
   line-height: 1.2;
@@ -4309,7 +4313,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   align-items: center;
   flex-wrap: wrap;
   gap: 3px 5px;
-  font-size: 0.7em;
+  font-size: 0.875em;
   color: #777;
   margin-top: 2px;
 }
@@ -4419,7 +4423,8 @@ html[theme='95'] .sidebar-video-title {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.85em;
+  /* the tag / 4chan / favourites tab's head: the page's size, its count like the cards' time */
+  font-size: 1em;
   font-weight: 700;
   color: var(--accent, #a78bfa);
   overflow: hidden;
@@ -4432,7 +4437,7 @@ html[theme='95'] .sidebar-video-title {
 }
 
 .sidebar-tag-count {
-  font-size: 0.85em;
+  font-size: 0.875em;
   font-weight: 500;
   color: var(--text-muted, #888);
   margin-left: 4px;
