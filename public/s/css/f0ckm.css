@@ -4335,27 +4335,17 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   opacity: 0.85;
 }
 
-/* "For You" (a personalised recommendation): a label on the thumbnail's top left, in the style of the
-   format / rating labels at its bottom right, so the text row under the title stays uploader + time */
 .sidebar-personalized-pill {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  z-index: 10;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  /* about 9px like the labels at the bottom (0.65em of 0.875em) */
-  font-size: 0.57em;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 2px 5px;
-  background: rgba(0, 0, 0, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  gap: 3px;
   color: var(--accent, #a78bfa);
-  pointer-events: none;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.sidebar-personalized-pill i {
+  font-size: 0.9em;
 }
 
 /* Light / Paper themes */
