@@ -16823,6 +16823,16 @@ window.cancelAnimFrame = (function () {
 
   let edgeZoneTimeout = null;
 
+  // Mobile: the open right sidebar lies over the item's prev/random/next row (.steuerung). Swipes there then
+  // belong to the sidebar (close it, scroll it), never to prev/next. False when the sidebar sits beside it.
+  const sidebarCoversSteuerung = (sr) => {
+    if (document.body.classList.contains('sidebar-right-hidden')) return false;
+    const sb = document.querySelector('.global-sidebar-right, .item-sidebar-right, .index-sidebar-right');
+    if (!sb) return false;
+    const r = sb.getBoundingClientRect();
+    return r.width > 0 && r.left < sr.right && r.right > sr.left && r.top < sr.bottom && r.bottom > sr.top;
+  };
+
   document.addEventListener('touchstart', e => {
     if (window.f0ckSession?.disable_swiping) return;
     if (document.body.classList.contains('modal-open')) return;
@@ -16896,7 +16906,7 @@ window.cancelAnimFrame = (function () {
       swipeRT.startedInSteuerung = (
         touch0.clientX >= sr.left && touch0.clientX <= sr.right &&
         touch0.clientY >= sr.top  && touch0.clientY <= sr.bottom
-      );
+      ) && !sidebarCoversSteuerung(sr);
     } else {
       swipeRT.startedInSteuerung = false;
     }
@@ -17169,7 +17179,7 @@ window.cancelAnimFrame = (function () {
     const sr = steuerungEl.getBoundingClientRect();
     const t = e.touches[0];
     if (t.clientX >= sr.left && t.clientX <= sr.right &&
-        t.clientY >= sr.top  && t.clientY <= sr.bottom) {
+        t.clientY >= sr.top  && t.clientY <= sr.bottom && !sidebarCoversSteuerung(sr)) {
       e.preventDefault(); // Block iOS native back/forward gesture
       swipeRT._steuerungPreventedTarget = e.target;
     }
