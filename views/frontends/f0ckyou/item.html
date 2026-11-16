@@ -28,6 +28,14 @@
 {#- f0ckm's blurred background: the media drawn behind the page (/s/js/f0ck-bg.js, started by
     f0ckyou.js), with the admin's tuning (the audio tuner) -#}
 <canvas id="bg" class="fy-bg" data-tuner="{{ (audio_tuner_json or "null") }}" aria-hidden="true"></canvas>
+{#- Previous / Random / Next: at the top of "Up next", and in one column above the comments -#}
+{%- macro upnext_nav(cls, ids) -%}
+<div class="fy-upnext-nav{% if cls %} {{ cls }}{% endif %}">
+      {% if pagination.prev %}<a class="fy-btn"{% if ids %} id="fy-prev"{% endif %} href="{{ fy_lm }}{{ pagination.prev }}{{ fy_ls }}" title="previous (&larr;)">{{ fy.ico("prev") }}<span>Previous</span></a>{% endif %}
+      <a class="fy-btn" href="/random" title="random (r)">{{ fy.ico("shuffle") }}<span>Random</span></a>
+      {% if pagination.next %}<a class="fy-btn"{% if ids %} id="fy-next"{% endif %} href="{{ fy_lm }}{{ pagination.next }}{{ fy_ls }}" title="next (&rarr;)"><span>Next</span>{{ fy.ico("next") }}</a>{% endif %}
+    </div>
+{%- endmacro -%}
 <main class="fy-watch" data-item-id="{{ item.id }}" data-creator="{{ ("" if is_anonymized else (item.username or "")) }}">
   <div class="fy-watch-main">
     <div class="fy-player{% if item.mime.startswith("image") %} fy-player-image{% elif item.mime.startswith("audio") %} fy-player-audio{% endif %}">
@@ -172,17 +180,17 @@
       {% endif %}
     </details>
 
+    {#- one column (phones, narrow windows): Previous / Random / Next here, above the comments, instead
+        of at the top of "Up next" far below them (f0ckyou.css) -#}
+    {{ upnext_nav("fy-upnext-nav-narrow", false) }}
+
     {% if enable_comments and (session or not hide_comments_from_public) %}
     {% include "frontends/f0ckyou/snippets/comments.html" %}
     {% endif %}
   </div>
 
   <aside class="fy-upnext" aria-label="Up next">
-    <div class="fy-upnext-nav">
-      {% if pagination.prev %}<a class="fy-btn" id="fy-prev" href="{{ fy_lm }}{{ pagination.prev }}{{ fy_ls }}" title="previous (&larr;)">{{ fy.ico("prev") }}<span>Previous</span></a>{% endif %}
-      <a class="fy-btn" href="/random" title="random (r)">{{ fy.ico("shuffle") }}<span>Random</span></a>
-      {% if pagination.next %}<a class="fy-btn" id="fy-next" href="{{ fy_lm }}{{ pagination.next }}{{ fy_ls }}" title="next (&rarr;)"><span>Next</span>{{ fy.ico("next") }}</a>{% endif %}
-    </div>
+    {{ upnext_nav("", true) }}
     {% include "frontends/f0ckyou/snippets/recommendations.html" %}
   </aside>
 </main>

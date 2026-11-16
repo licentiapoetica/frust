@@ -1580,6 +1580,9 @@ mod tests {
         assert!(page.contains("<body class=\"fy-page-watch\">"));
         assert!(page.contains("<video id=\"my-video\" class=\"fy-media\""));
         assert!(page.contains("<a class=\"fy-btn\" id=\"fy-prev\" href=\"/tag/cat/6\""));
+        // one column: Previous / Random / Next again above the comments (without the ids)
+        assert!(page.contains("<div class=\"fy-upnext-nav fy-upnext-nav-narrow\">\n      <a class=\"fy-btn\" href=\"/tag/cat/6\""));
+        assert!(page.find("fy-upnext-nav-narrow") < page.find("id=\"comments\""));
         // the comment field's emoji picker: f0ckm's (shared emoji-picker.js)
         assert!(page.contains("<div class=\"f0ck-ep\" id=\"fy-emoji-box\" hidden></div>") && page.contains("/s/js/emoji-picker.js?v="));
         assert!(page.contains("<input type=\"hidden\" name=\"action\" value=\"remove\">"));

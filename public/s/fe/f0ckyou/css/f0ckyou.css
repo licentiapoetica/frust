@@ -2746,6 +2746,11 @@ body.fy-page-watch {
   padding: 0 .75rem;
 }
 
+/* the copy above the comments: only in one column (below), where "Up next" is under them */
+.fy-upnext-nav-narrow {
+  display: none;
+}
+
 /* Up next in a tag: two tabs, the tag's list and the recommendations (radio buttons, no
    JavaScript needed) */
 .fy-upnext-radio {
@@ -3860,6 +3865,15 @@ html.user-fs-150 {
 @media (max-width: 1100px) {
   .fy-watch {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fy-upnext-nav-narrow {
+    display: flex;
+    margin: 1.5rem 0 0;
+  }
+
+  .fy-upnext > .fy-upnext-nav {
+    display: none;
   }
 
   .fy-rank-cols {
