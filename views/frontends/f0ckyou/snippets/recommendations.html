@@ -16,7 +16,7 @@
   {%- set rwho = ("anonymous" if is_anonymized else (v.display_name or v.username or "")) -%}
   {%- set rmime = (v.mime or "") -%}
   {%- set rext = ((rmime.split("/")[1] if "/" in rmime else "")|replace("jpeg", "jpg")|replace("x-shockwave-flash", "flash")|replace("x-flac", "flac")|replace("mpeg", "mp3")|upper) -%}
-  <li data-id="{{ v.id }}">
+  <li data-id="{{ v.id }}" data-personalized="{{ ("true" if v.personalized else "false") }}">
     <a href="/{{ key }}" data-rec="{{ v.id }}" data-tags="{{ rtags|join(",") }}" data-creator="{{ ("" if is_anonymized else (v.username or "")) }}">
       <span class="fy-upnext-thumb">
         {% if (rmime.startswith("audio/") and not v.has_coverart) %}<span class="fy-thumb-audio">{{ fy.ico("music") }}</span>{% else %}<img src="/t/{{ v.id }}.webp" alt="" loading="lazy">{% endif %}

@@ -2246,6 +2246,12 @@ body.fy-page-watch {
   font-weight: 500;
 }
 
+/* a clicked recommendation while its replacement comes */
+.fy-rec-swapping {
+  opacity: .4;
+  transition: opacity .2s;
+}
+
 .fy-recs-empty {
   margin: 0;
 }

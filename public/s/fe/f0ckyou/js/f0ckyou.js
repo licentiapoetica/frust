@@ -688,6 +688,7 @@
     const mime = v.mime || '';
     const li = el('li');
     li.dataset.id = String(v.id);
+    li.dataset.personalized = v.personalized ? 'true' : 'false';
     const a = el('a');
     a.href = `/${key}`;
     a.dataset.rec = String(v.id);
@@ -733,19 +734,33 @@
     return li;
   };
 
+  const getRecs = async (query) => {
+    const res = await fetch(`/api/v2/recommendations?${query}${affinityParams()}`, {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+    });
+    const data = await res.json();
+    return data && data.success ? (data.items || data.videos || []) : null;
+  };
+  // what a list has shown (kept with it when it moves on to the next f0ck)
+  const recSeen = new WeakMap();
+  const seenOf = (list) => {
+    let seen = recSeen.get(list);
+    if (!seen) {
+      seen = new Set([...list.children].map(li => li.dataset.id));
+      recSeen.set(list, seen);
+    }
+    return seen;
+  };
+
   const setupRecs = () => {
   const recList = document.getElementById('fy-recs');
   if (recList) {
     const itemId = recList.dataset.itemId;
-    const seen = new Set([...recList.children].map(li => li.dataset.id));
-    const getRecs = async (query) => {
-      const res = await fetch(`/api/v2/recommendations?${query}${affinityParams()}`, {
-        credentials: 'same-origin',
-        headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
-      });
-      const data = await res.json();
-      return data && data.success ? (data.items || data.videos || []) : null;
-    };
+    const seen = seenOf(recList);
+    // the list came along from the f0ck before (go()): it stays as it is
+    const kept = recList.dataset.kept === '1';
+    delete recList.dataset.kept;
     const empty = () => document.querySelector('.fy-recs-empty');
     let loading = false;
     let done = false;
@@ -754,7 +769,7 @@
     recList.after(spinner);
 
     // with the visitor's interests: the list f0ckm's tab would show (without them the server's is it)
-    if (affinityParams()) {
+    if (!kept && affinityParams()) {
       loading = true;
       getRecs(`limit=20&exclude_ids=${encodeURIComponent(itemId)}`).then(items => {
         if (!items || !items.length) return;
@@ -793,12 +808,44 @@
     }
   }
   };
-  // a click on a recommendation teaches the interests (recordSuggestionClick, as f0ckm)
+  // a clicked recommendation makes room for a new one, the rest of the list stays (f0ckm's
+  // sidebar: replaceCardWithNewRandom): at most one personal pick among the first three, none
+  // next to another further down
+  const replaceCard = async (li) => {
+    const list = li?.parentElement;
+    if (!list || li.dataset.swapping) return;
+    li.dataset.swapping = '1';
+    li.classList.add('fy-rec-swapping');
+    const cards = [...list.children];
+    const at = cards.indexOf(li);
+    const seen = seenOf(list);
+    const exclude = [...new Set([...seen, ...cards.map(c => c.dataset.id), li.dataset.id, list.dataset.itemId].filter(Boolean))].slice(-120);
+    let prefer = '';
+    if (at >= 0 && at < 3) {
+      prefer = `&prefer_personalized=${li.dataset.personalized === 'true' ? 'true' : 'false'}`;
+    } else if (at >= 3) {
+      const near = [cards[at - 1], cards[at + 1]].some(c => c && c.dataset.personalized === 'true');
+      if (near) prefer = '&prefer_personalized=false';
+    }
+    try {
+      const items = await getRecs(`limit=1&exclude_ids=${encodeURIComponent(exclude.join(','))}${prefer}`);
+      const fresh = (items || []).find(v => !seen.has(String(v.id)));
+      if (!fresh) throw new Error('none');
+      seen.add(String(fresh.id));
+      if (li.isConnected) li.replaceWith(recCard(fresh));
+    } catch {
+      // nothing new to show: the clicked one goes, the list moves up
+      if (li.isConnected) li.remove();
+    }
+  };
+  // a click on a recommendation teaches the interests (recordSuggestionClick, as f0ckm) and swaps
+  // the card for a new one
   const picked = (e) => {
     if (e.button !== 0 && e.button !== 1) return;
     const a = e.target.closest?.('#fy-recs a[data-rec]');
-    if (!a || !engine) return;
-    engine.recordSuggestionClick(parseInt(a.dataset.rec, 10), (a.dataset.tags || '').split(',').filter(Boolean), a.dataset.creator || '');
+    if (!a) return;
+    engine?.recordSuggestionClick(parseInt(a.dataset.rec, 10), (a.dataset.tags || '').split(',').filter(Boolean), a.dataset.creator || '');
+    replaceCard(a.closest('li'));
   };
   document.addEventListener('click', picked);
   document.addEventListener('auxclick', picked);
@@ -916,6 +963,15 @@
     const oldBg = document.getElementById('bg');
     const newBg = next.querySelector('#bg');
     if (oldBg && newBg) newBg.replaceWith(oldBg);
+    // Up next stays too (as f0ckm's sidebar): the new f0ck takes the list over as it is
+    const oldRecs = document.getElementById('fy-recs');
+    const newRecs = next.querySelector('#fy-recs');
+    if (oldRecs && newRecs && oldRecs.children.length) {
+      oldRecs.dataset.itemId = newRecs.dataset.itemId;
+      oldRecs.dataset.kept = '1';
+      newRecs.replaceWith(oldRecs);
+      next.querySelector('.fy-recs-empty')?.remove();
+    }
     document.querySelector('.fy-content').replaceWith(next);
     ['.fy-mast', '.fy-guide', '.fy-mini'].forEach(sel => swapOne(doc, sel));
     const data = document.getElementById('fy-data');
