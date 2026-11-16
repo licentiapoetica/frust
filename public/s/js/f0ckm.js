@@ -17958,7 +17958,7 @@ window.cancelAnimFrame = (function () {
 
     document.addEventListener('mousedown', e => {
       if (!isMouseDevice() || !isLSActive()) return;
-      if (document.body.classList.contains('modal-open')) return;
+      if (document.body.classList.contains('modal-open') || document.body.classList.contains('pgm-open')) return;
       if (e.button !== 0) return;
 
       const { sb, layout } = getLS();
@@ -18049,7 +18049,7 @@ window.cancelAnimFrame = (function () {
 
     document.addEventListener('touchstart', e => {
       if (window.f0ckSession?.disable_swiping) return;
-      if (document.body.classList.contains('modal-open')) return;
+      if (document.body.classList.contains('modal-open') || document.body.classList.contains('pgm-open')) return;
       if (!isLSActive()) return;
 
       swipeRT.isDraggingLeftSidebar = false;
@@ -18081,7 +18081,7 @@ window.cancelAnimFrame = (function () {
 
     document.addEventListener('touchmove', e => {
       if (window.f0ckSession?.disable_swiping) return;
-      if (document.body.classList.contains('modal-open')) return;
+      if (document.body.classList.contains('modal-open') || document.body.classList.contains('pgm-open')) return;
       if (!swipeRT.xDown) return;
 
       if (swipeRT.isLeftSidebarCandidate && !swipeRT.isDraggingLeftSidebar && swipeRT.leftSB) {

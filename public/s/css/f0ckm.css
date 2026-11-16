@@ -2826,6 +2826,11 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone.is-near:
   height: 56px;
 }
 
+/* The page modal (settings, ...) covers the comments column: its handle goes with it */
+body.pgm-open #sidebar-left-drag-zone {
+  display: none !important;
+}
+
 /* Touch devices: the pills never show (still tappable, and the swipe gestures work as before) */
 @media (pointer: coarse) {
   #sidebar-drag-zone::after,

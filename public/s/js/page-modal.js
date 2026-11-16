@@ -129,11 +129,9 @@
     if (rightOverride && performance.now() < rightOverride.until) right = rightOverride.right;
     // Small phones: the sidebar is a pure overlay there, the content never makes room for it
     if (vw <= 599) right = 0;
-    // Left (comments) sidebar on item pages
-    const ls = visibleRect('.item-sidebar-left');
-    // exact, not rounded: the column is min(350px, 30vw) wide, rounding its edge up left a gap where the
-    // background canvas showed through
-    const left = ls && ls.right > 1 && ls.right < vw / 2 ? ls.right : 0;
+    // The left (comments) column on item pages belongs to the item, not the site: the modal covers it
+    // (f0ckm.css hides its drag handle while body.pgm-open)
+    const left = 0;
     // Desktop, sidebar beside the content: the header takes the exact height of the sidebar's tab row,
     // so the two form one continuous bar under the navbar
     const tabs = right > 0 && rsEl ? rsEl.querySelector('.sidebar-tabs') : null;
@@ -195,7 +193,7 @@
 
   // The navbar and sidebars change size on their own (mobile burger menu expanding/collapsing, sidebar resize):
   // follow every size change so the modal's edges stay glued to them
-  const LAYOUT_SEL = 'nav.navbar, .global-sidebar-right, .item-sidebar-right, .index-sidebar-right, .item-sidebar-left';
+  const LAYOUT_SEL = 'nav.navbar, .global-sidebar-right, .item-sidebar-right, .index-sidebar-right';
   const watched = new WeakSet();
   const ro = typeof ResizeObserver === 'function'
     ? new ResizeObserver(() => { if (placing()) place(); })
@@ -228,6 +226,7 @@
     watchLayout();
     place();
     modal.style.display = 'flex';
+    document.body.classList.add('pgm-open');
     // No visible scrollbar: focus the body so arrow keys / PageUp / PageDown / Space scroll it right away
     try { body.focus({ preventScroll: true }); } catch {}
     followFor(300);
@@ -259,6 +258,7 @@
       fx = null;
       if (isOpen) return; // reopened meanwhile
       modal.style.display = 'none';
+      document.body.classList.remove('pgm-open');
       lastSides = null;
       body.innerHTML = '';
     };
