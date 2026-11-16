@@ -3310,6 +3310,8 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   gap: 4px;
   z-index: 10;
   pointer-events: none;
+  /* the labels' 0.65em of this: about 9px */
+  font-size: 0.875em;
 }
 
 .sidebar-video-badges .sidebar-media-format-badge,
@@ -4272,7 +4274,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
      tall gaps between the rows */
   flex-wrap: wrap;
   /* top, not baseline: the uploader's ellipsis box (overflow: hidden) has its baseline at its
-     bottom edge, which pushed the time down; both rows are 14px with the same margin */
+     bottom edge, which pushed the time down; both are the same size with the same margin */
   align-items: flex-start;
   column-gap: 8px;
   flex: 1;
@@ -4282,10 +4284,10 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
 }
 
 .sidebar-video-title {
-  /* Card text in the comments tab's sizes: the title like a comment's author (16px), uploader and
-     time like a comment's time (14px) */
+  /* Card text a step under the comments tab (the thumbnail carries the card): title 14px,
+     uploader and time 12.8px */
   flex: 0 0 100%;
-  font-size: 1em;
+  font-size: 0.875em;
   font-weight: 600;
   color: var(--text-color, #eee);
   line-height: 1.35;
@@ -4304,7 +4306,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
 .sidebar-video-channel {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.875em;
+  font-size: 0.8em;
   color: #999;
   margin-top: 3px;
 }
@@ -4323,7 +4325,7 @@ body:is(.sidebar-left-hidden, .comments-hidden) #sidebar-left-drag-zone::after {
   align-items: center;
   flex-wrap: wrap;
   gap: 3px 5px;
-  font-size: 0.875em;
+  font-size: 0.8em;
   color: #777;
   margin-top: 3px;
   margin-left: auto;
