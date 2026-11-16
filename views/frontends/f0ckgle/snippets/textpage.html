@@ -1,0 +1,24 @@
+{#- A text page (about / rules / terms) as a plain article under the results header. tp_page: the
+    page; tp_text / tp_b64: the admin-edited Markdown (raw without JavaScript, rendered by
+    /s/js/views/dynamic-page.js); without it the page's own fallback block (fg_fallback) shows. -#}
+{%- set fg_title = tp_title -%}
+{%- set fg_page = "text" -%}
+{%- set fg_tab = "" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main">
+  <article class="fg-article">
+    <h1>{{ tp_title }}</h1>
+    {% if tp_text %}
+    <div class="dynamic-page-content fg-md" id="{{ tp_page }}-dynamic-content">{{ tp_text }}</div>
+    <script id="{{ tp_page }}-raw-data" type="application/json">{{ tp_b64|safe }}</script>
+    {% else %}
+    {% include "frontends/f0ckgle/snippets/text-" ~ tp_page ~ ".html" %}
+    {% endif %}
+  </article>
+</main>
+{% if tp_text %}
+<script src="/s/js/marked.min.js?v={{ mtime("/public/s/js/marked.min.js") }}"></script>
+<script src="/s/js/views/dynamic-page.js?v={{ mtime("/public/s/js/views/dynamic-page.js") }}" data-page="{{ tp_page }}"></script>
+{% endif %}
+{% include "frontends/f0ckgle/snippets/footer.html" %}

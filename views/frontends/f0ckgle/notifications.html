@@ -1,0 +1,56 @@
+{#- f0ckgle notifications: a list like results, the tabs (user / system / admin) as search tools,
+    "Mark all as read" a form that f0ckgle.js sends in place. -#}
+{%- set fg_title = "Notifications" -%}
+{%- set fg_page = "results" -%}
+{%- set fg_tab = "" -%}
+{%- set fg_tab_q = (activeTab or "")|encode_uri_component -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main">
+  <div class="fg-tools">
+    {% if enable_comments %}<a href="/notifications?tab=user"{% if activeTab == "user" %} class="active"{% endif %}>User{% if tabUnread and tabUnread.user %} ({{ tabUnread.user }}){% endif %}</a>{% endif %}
+    <a href="/notifications?tab=system"{% if activeTab == "system" %} class="active"{% endif %}>System{% if tabUnread and tabUnread.system %} ({{ tabUnread.system }}){% endif %}</a>
+    {% if session and session.admin %}<a href="/notifications?tab=admin"{% if activeTab == "admin" %} class="active"{% endif %}>Admin{% if tabUnread and tabUnread.admin %} ({{ tabUnread.admin }}){% endif %}</a>{% endif %}
+    {% if enable_comments %}<a href="/subscriptions">Subscriptions</a>{% endif %}
+    <form method="post" action="/api/notifications/read?tab={{ fg_tab_q }}" class="fg-inline fg-ajax fg-tools-end" data-fg-refresh="notifs">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="/notifications?tab={{ fg_tab_q }}">
+      <button type="submit" class="fg-linkbtn">Mark all as read</button>
+    </form>
+  </div>
+  <ol class="fg-results fg-notifs" data-fg-live="notifs">
+    {% for n in (notifications or []) %}
+    {% set ref = (n.item_slug or n.item_id) %}
+    {% set is_comment = n.type in ["comment", "comment_reply", "mention", "subscription", "upload_comment"] %}
+    {% set href = (("/" ~ ref ~ (("#c" ~ n.reference_id) if (is_comment and n.reference_id) else "")) if n.item_id else "") %}
+    <li class="fg-result{% if not n.is_read %} fg-unread{% endif %}">
+      <div class="fg-result-text">
+        <div class="fg-result-site"><span class="fg-fav fg-fav-letter">{{ ((n.from_display_name or n.from_user or domain or "?")[:1])|upper }}</span><span class="fg-result-who"><span class="fg-result-name">{% if is_comment %}{{ (n.from_display_name or n.from_user) }}{% else %}{{ domain }}{% endif %}</span><cite><time title="{{ n.created_at|locale_string }}">{{ n.created_at|time_ago }}</time>{% if not n.is_read %} &middot; new{% endif %}</cite></span></div>
+        <p class="fg-result-snippet">
+          {% if is_comment %}
+            <a href="/user/{{ (n.from_user or "")|lower|encode_uri_component }}">{{ (n.from_display_name or n.from_user) }}</a>
+            {% if n.type == "comment_reply" %}replied to your comment{% elif n.type == "mention" %}mentioned you{% elif n.type == "upload_comment" %}commented on your upload{% else %}commented{% endif %}
+            {% if n.item_id %}on <a href="{{ href }}">f0ck #{{ ref }}</a>{% endif %}
+          {% elif n.type == "approve" %}Your upload <a href="/{{ ref }}">#{{ ref }}</a> was approved.
+          {% elif n.type == "deny" %}Your upload #{{ ref }} was denied: {{ n.reason }}
+          {% elif n.type == "item_deleted" %}Your upload #{{ ref }} was deleted: {{ n.reason }}
+          {% elif n.type == "upload_success" %}Upload <a href="/{{ ref }}">#{{ ref }}</a> is done.
+          {% elif n.type == "upload_error" %}Upload failed: {{ n.reason }}
+          {% elif n.type == "admin_pending" %}A new upload is waiting for <a href="/mod/approve">approval</a>.
+          {% elif n.type == "report" %}New <a href="/mod/reports">report</a> #{{ n.reference_id }}.
+          {% elif n.type == "warning" %}You got a warning: {{ n.reason }}
+          {% elif n.type == "invite_request" %}New <a href="/admin">invite request</a>.
+          {% elif n.type == "account_application" %}New <a href="/admin/applications">account application</a>.
+          {% elif n.type == "invite_approved" %}Your invite request was approved.
+          {% elif n.type == "invite_denied" %}Your invite request was denied.
+          {% else %}{{ n.type }}{% endif %}
+        </p>
+      </div>
+      {% if n.item_id %}<a class="fg-result-thumb" href="{{ href }}"><img src="/t/{{ n.item_id }}.webp" alt="" loading="lazy"></a>{% endif %}
+    </li>
+    {% else %}
+    <li class="fg-none"><p>No notifications. Enjoy the silence.</p></li>
+    {% endfor %}
+  </ol>
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}

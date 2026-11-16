@@ -222,6 +222,42 @@
     }
   });
 
+  // ── /tags: "More tags" appends the next page from /api/tags (cards as snippets/tag-cards.html) ──
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-tags-more]');
+    const grid = document.getElementById('fg-tag-grid');
+    if (!btn || !grid) return;
+    const page = (parseInt(btn.dataset.page, 10) || 1) + 1;
+    btn.disabled = true;
+    try {
+      const res = await (await fetch(`/api/tags?page=${page}`, { credentials: 'same-origin', headers: { Accept: 'application/json' } })).json();
+      const mode = grid.dataset.mode || '0';
+      (res.tags || []).forEach(tt => {
+        const a = document.createElement('a');
+        a.className = 'fg-card';
+        a.href = `/tag/${tt.safe_tag}`;
+        const img = document.createElement('span');
+        img.className = 'fg-card-img';
+        img.innerHTML = `<img src="/tag_image/${tt.encoded_tag}?m=${encodeURIComponent(mode)}" alt="" loading="lazy">`;
+        const src = document.createElement('span');
+        src.className = 'fg-card-src';
+        src.innerHTML = '<span class="fg-fav fg-fav-letter">#</span>';
+        src.append(`${tt.total_items || 0} f0cks`);
+        const title = document.createElement('span');
+        title.className = 'fg-card-title';
+        title.textContent = `#${tt.tag}`;
+        a.append(img, src, title);
+        grid.appendChild(a);
+      });
+      btn.dataset.page = String(page);
+      if (!res.hasMore) btn.closest('.fg-more-wrap')?.remove();
+    } catch {
+      flash('Could not load more tags', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   // ── moderators: remove a tag (DELETE has no form; the panel is refreshed in place) ──
   document.addEventListener('click', async e => {
     const btn = e.target.closest('#tags .fg-tag-del');

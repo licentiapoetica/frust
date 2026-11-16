@@ -1,0 +1,19 @@
+{#- f0ckgle tags: the tags as image results under the "Tags" tab. The first page comes with the page;
+    "More tags" (JavaScript) appends the next ones from /api/tags in place (f0ckgle.js). -#}
+{%- set fg_title = "Tags" -%}
+{%- set fg_page = "results" -%}
+{%- set fg_tab = "tags" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main fg-main-wide">
+  <p class="fg-stats">Popular tags{% if phrase %} &middot; {{ phrase }}{% endif %}</p>
+  {% if toptags %}
+  <div class="fg-grid" id="fg-tag-grid" data-mode="{{ ((session.mode if session else 0) or 0) }}">
+    {% include "frontends/f0ckgle/snippets/tag-cards.html" %}
+  </div>
+  {% if toptags|length >= 50 %}<div class="fg-more-wrap js-only"><button type="button" class="fg-btn fg-more" data-tags-more data-page="1">More tags</button></div>{% endif %}
+  {% else %}
+  <div class="fg-none"><p>No tags yet.</p></div>
+  {% endif %}
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}

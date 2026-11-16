@@ -1873,6 +1873,196 @@ body.fg-page-login {
   margin-bottom: 2rem;
 }
 
+/* ── text pages (about / rules / terms) ── */
+.fg-article {
+  max-width: var(--fg-col);
+  padding-top: 1rem;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.fg-article h1 {
+  margin: 0 0 1rem;
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+.fg-article h2,
+.fg-md h1,
+.fg-md h2,
+.fg-md h3 {
+  margin: 1.5rem 0 .5rem;
+  font-size: 1.375rem;
+  font-weight: 400;
+}
+
+.fg-article code {
+  padding: 0 .25rem;
+  background: var(--fg-surface-2);
+}
+
+.fg-md img {
+  max-width: 100%;
+}
+
+/* ── more cards (tags), slim user panel, notifications ── */
+.fg-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0 2rem;
+}
+
+.fg-more {
+  min-width: 18rem;
+}
+
+.fg-card-desc {
+  overflow: hidden;
+  color: var(--fg-dim);
+  font-size: .75rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+div.fg-card > form {
+  margin-top: .375rem;
+}
+
+.fg-kp-slim {
+  margin-bottom: 1rem;
+}
+
+.fg-kp-slim .fg-kp-title {
+  font-size: 1.375rem;
+}
+
+.fg-kp-ava-small {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.fg-tools-end {
+  margin-left: auto;
+}
+
+.fg-tools .fg-linkbtn {
+  color: var(--fg-blue);
+}
+
+.fg-notifs .fg-result {
+  padding: .75rem;
+  margin-bottom: 0;
+  border-bottom: 1px solid #ebebeb;
+}
+
+.fg-notifs .fg-unread {
+  background: #e8f0fe;
+}
+
+.fg-comment-snippet {
+  margin: .25rem 0 0;
+}
+
+.fg-pager {
+  justify-content: center;
+}
+
+/* ── ranking ("Year in Search") ── */
+.fg-trends-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .75rem;
+  margin: 1.5rem 0;
+  font-size: 2.25rem;
+  font-weight: 400;
+}
+
+.fg-trends-title > span:last-child {
+  font-size: 1.5rem;
+  color: var(--fg-muted);
+}
+
+.fg-trends {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.fg-trends .fg-kp {
+  max-width: none;
+}
+
+.fg-kp-head-first {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.fg-rank {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fg-rank li {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .375rem 0;
+  border-bottom: 1px solid #ebebeb;
+}
+
+.fg-rank li:last-child {
+  border-bottom: 0;
+}
+
+.fg-rank img,
+.fg-rank .fg-ava-letter {
+  width: 2rem;
+  height: 2rem;
+  object-fit: cover;
+}
+
+.fg-rank-n {
+  min-width: 1.5rem;
+  color: var(--fg-dim);
+  font-size: 1.25rem;
+}
+
+.fg-rank-c {
+  margin-left: auto;
+  color: var(--fg-muted);
+}
+
+/* ── upload page: f0ckm's upload form (upload.css) in f0ckgle's colours ── */
+.fg-upload-page {
+  --accent: #1a73e8;
+  --accent-rgb: 26, 115, 232;
+  --bg: #fff;
+  --bg-form: #f8f9fa;
+  --black: #fff;
+  --white: #202124;
+  --text: #202124;
+  --text-color: #202124;
+  --nav-bg: #fff;
+  --nav-border-color: #dadce0;
+  --dropdown-bg: #fff;
+  --navbar-h: 7rem;
+  --upload-opt-color: #202124;
+  --badge-sfw: #188038;
+  --badge-nsfw: #c5221f;
+  --badge-nsfl: #7c0a02;
+  font-family: var(--fg-font);
+}
+
+.fg-upload-title {
+  margin: 1.5rem 0 .25rem;
+  font-size: 1.75rem;
+  font-weight: 400;
+}
+
 /* ── "login as anonymous" and the rules/terms consent (shared dialogs, shown by passkey.js /
    tos-consent.js; their Font Awesome icons aren't loaded here) ── */
 #anon-setup-modal,

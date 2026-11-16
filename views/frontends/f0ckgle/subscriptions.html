@@ -1,0 +1,33 @@
+{#- f0ckgle subscriptions: the f0cks whose comments you follow, as image results, each with an
+    "Unfollow" form that f0ckgle.js sends in place. -#}
+{%- set fg_title = "Subscriptions" -%}
+{%- set fg_page = "results" -%}
+{%- set fg_tab = "" -%}
+{%- set here = ((url.pathname ~ url.search) if (url and url.pathname) else "/subscriptions") -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main fg-main-wide" data-fg-live="subs">
+  <p class="fg-stats">Following the comments of {{ (totalCount or (items or [])|length) }} f0cks &middot; <a href="/notifications">Notifications</a></p>
+  {% if items %}
+  <div class="fg-grid">
+    {% for it in items %}
+    {%- set ref = (it.slug if (enable_item_slugs and it.slug) else it.id) -%}
+    <div class="fg-card">
+      <a class="fg-card-img" href="/{{ ref }}"><img src="{{ (it.thumb or ("/t/" ~ it.id ~ ".webp")) }}" alt="" loading="lazy"></a>
+      <span class="fg-card-src"><span class="fg-fav fg-fav-letter">{{ ((it.user or "?")[:1])|upper }}</span>{{ it.user }}</span>
+      <a class="fg-card-title" href="/{{ ref }}">f0ck #{{ ref }}</a>
+      <form method="post" action="/api/subscribe/{{ it.id }}" class="fg-ajax" data-fg-refresh="subs">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="subscribed" value="0">
+        <input type="hidden" name="back" value="{{ here }}">
+        <button type="submit" class="fg-chip fg-chip-small">Unfollow</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% include "frontends/f0ckgle/snippets/pagination.html" %}
+  {% else %}
+  <div class="fg-none"><p>You don't follow any f0cks yet. "Follow" on a f0ck gets you its new comments.</p></div>
+  {% endif %}
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}

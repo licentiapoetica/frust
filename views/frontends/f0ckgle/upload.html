@@ -1,0 +1,33 @@
+{#- f0ckgle upload: "Search by image" turned around. f0ckm's upload form (snippets/upload-form.html,
+    the same as the quick upload "u") in f0ckgle's colours (.fg-upload-page in f0ckgle.css);
+    /s/js/upload.js sends it with fetch, so it needs JavaScript, as in f0ckm and the other frontends. -#}
+{%- set fg_title = "Upload" -%}
+{%- set fg_page = "results" -%}
+{%- set fg_tab = "" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+<link rel="stylesheet" href="/s/css/fa-layered.css?v={{ mtime("/public/s/css/fa-layered.css") }}">
+<link rel="stylesheet" href="/s/css/upload.css?v={{ mtime("/public/s/css/upload.css") }}">
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main fg-upload-page">
+  <div class="upload-container" data-mimes='{{ mimes_json }}'>
+    <h1 class="fg-upload-title">Search by image <span class="fg-dim">(well, upload one)</span></h1>
+    <p class="fg-dim">
+      {% if uploads_remaining == none %}{{ t("upload_page.limit_unlimited") }}
+      {% elif uploads_remaining == 0 %}{{ (t("upload_page.limit_reached")).replace("{limit}", upload_limit, 1) }}
+      {% else %}{{ ((t("upload_page.limit_remaining")).replace("{remaining}", uploads_remaining, 1)).replace("{limit}", upload_limit, 1) }}{% endif %}
+    </p>
+    {% if session %}
+    {% include "snippets/upload-form.html" %}
+    <p class="nojs-only fg-dim">Uploading needs JavaScript{% if matrix_enabled or telegram_enabled %}; without it, post your links to the bot{% endif %}.</p>
+    {% else %}
+    <div class="fg-none">
+      <p><b>{{ t("upload_page.auth_required_title") }}</b></p>
+      <p>{{ t("upload_page.auth_required_text") }}</p>
+      <a href="/?login=1" class="fg-btn-blue">{{ t("upload_page.login_btn") }}</a>
+    </div>
+    {% endif %}
+  </div>
+</main>
+{% include "snippets/header-data.html" %}
+<script src="/s/js/upload.js?v={{ mtime("/public/s/js/upload.js") }}"></script>
+{% include "frontends/f0ckgle/snippets/footer.html" %}

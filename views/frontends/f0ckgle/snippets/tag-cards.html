@@ -1,0 +1,10 @@
+{#- Tags as image results: toptags (routes/toptags.rs process_tags), tagger (optional). The same
+    card f0ckgle.js builds for "More tags". -#}
+{%- set fg_m = ((session.mode if session else 0) or 0) -%}
+{% for tt in (toptags or []) %}
+<a class="fg-card" href="/tag/{{ tt.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}">
+  <span class="fg-card-img"><img src="/tag_image/{{ tt.encoded_tag }}?m={{ fg_m }}" alt="" loading="lazy"></span>
+  <span class="fg-card-src"><span class="fg-fav fg-fav-letter">#</span>{{ (tt.total_items or 0) }} f0cks</span>
+  <span class="fg-card-title">#{{ tt.tag }}</span>
+</a>
+{% endfor %}

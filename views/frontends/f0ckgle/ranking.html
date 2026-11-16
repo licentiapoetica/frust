@@ -1,0 +1,59 @@
+{#- f0ckgle ranking: "Year in Search" style, the top taggers, hosters, stats and top f0cks as
+    knowledge panels side by side. -#}
+{%- set fg_title = "Ranking" -%}
+{%- set fg_page = "results" -%}
+{%- set fg_tab = "" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main fg-main-wide">
+  <h1 class="fg-trends-title">{% include "frontends/f0ckgle/snippets/logo.html" %} <span>Year in Search: Top f0ckers of all time</span></h1>
+  <div class="fg-trends">
+    <section class="fg-kp">
+      <h2 class="fg-kp-head fg-kp-head-first">Biggest taggers</h2>
+      <ol class="fg-rank">
+        {% for u in (list or []) %}
+        <li>
+          <span class="fg-rank-n">{{ loop.index }}</span>
+          {% if u.avatar_file and u.avatar_file != "default.png" %}<img src="/a/{{ u.avatar_file }}" alt="">{% elif u.avatar %}<img src="/t/{{ u.avatar }}.webp" alt="">{% else %}<span class="fg-ava-letter">{{ ((u.display_name or u.user or "?")[:1])|upper }}</span>{% endif %}
+          <a href="/user/{{ u.user|lower|encode_uri_component }}">{{ (u.display_name or u.user) }}</a>
+          <span class="fg-rank-c">{{ u.count }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+    <section class="fg-kp">
+      <h2 class="fg-kp-head fg-kp-head-first">Top {{ (hoster or [])|length }} hosters</h2>
+      <ol class="fg-rank">
+        {% for host in (hoster or []) %}
+        <li><span class="fg-rank-n">{{ loop.index }}</span><span>{{ (host.part if host.part else "upload") }}</span><span class="fg-rank-c">{{ host.c }}</span></li>
+        {% endfor %}
+      </ol>
+      <h2 class="fg-kp-head">Top f0cks</h2>
+      <ol class="fg-rank">
+        {% for favo in (favotop or []) %}
+        {% set ref = (favo.slug if (enable_item_slugs and favo.slug) else (favo.item_id or favo.id)) %}
+        <li><span class="fg-rank-n">{{ loop.index }}</span><a href="/{{ ref }}">f0ck #{{ ref }}</a><span class="fg-rank-c">{{ favo.favs }} favs</span></li>
+        {% endfor %}
+      </ol>
+    </section>
+    <section class="fg-kp">
+      <h2 class="fg-kp-head fg-kp-head-first">Stats</h2>
+      <dl class="fg-kp-facts">
+        <div><dt>Total</dt><dd>{{ stats.total }}</dd></div>
+        <div><dt>Tagged</dt><dd>{{ stats.tagged }}</dd></div>
+        <div><dt>Untagged</dt><dd>{{ stats.untagged }}</dd></div>
+        <div><dt>SFW</dt><dd>{{ stats.sfw }}</dd></div>
+        <div><dt>NSFW</dt><dd>{{ stats.nsfw }}</dd></div>
+        {% if enable_nsfl %}<div><dt>NSFL</dt><dd>{{ stats.nsfl }}</dd></div>{% endif %}
+        <div><dt>Deleted</dt><dd>{{ stats.deleted }}</dd></div>
+        <div><dt>Missing ids</dt><dd>{{ stats.untracked }}</dd></div>
+        <div><dt>Comments</dt><dd>{{ totalComments }}</dd></div>
+        <div><dt>Favs</dt><dd>{{ totalFavs }}</dd></div>
+        <div><dt>Users</dt><dd>{{ totalUsers }}</dd></div>
+        <div><dt>Anon users</dt><dd>{{ totalAnonUsers }}</dd></div>
+        <div><dt>Disk usage</dt><dd>{{ diskSize }}</dd></div>
+      </dl>
+    </section>
+  </div>
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}

@@ -1,0 +1,21 @@
+{#- f0ckgle: the tags a user gave, as image results, with the stretched-logo page links. -#}
+{%- set fg_title = "Tags by " ~ (user.display_name or user.user or "") -%}
+{%- set fg_page = "results" -%}
+{%- set fg_q = "user:" ~ ((user.user or "")|lower) ~ " tags" -%}
+{%- set fg_tab = "tags" -%}
+{%- set fg_tab_base = "/user/" ~ ((user.user or "")|lower|encode_uri_component) ~ "/uploads/" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main fg-main-wide">
+  {%- set fg_user_what = "Tags" -%}
+  {% include "frontends/f0ckgle/snippets/user-head.html" %}
+  {% if toptags %}
+  <div class="fg-grid">
+    {% include "frontends/f0ckgle/snippets/tag-cards.html" %}
+  </div>
+  {% include "frontends/f0ckgle/snippets/pagination.html" %}
+  {% else %}
+  <div class="fg-none"><p>No tags yet.</p></div>
+  {% endif %}
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}
