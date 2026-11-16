@@ -36,7 +36,7 @@
           {% if is_comment %}
             <a href="/user/{{ (n.from_user or "")|lower|encode_uri_component }}"><b>{{ (n.from_display_name or n.from_user) }}</b></a>
             {% if n.type == "comment_reply" %}replied to your comment{% elif n.type == "mention" %}mentioned you{% elif n.type == "upload_comment" %}commented on your f0ck{% else %}commented{% endif %}
-            {% if n.item_id %}on <a href="{{ href }}">f0ck #{{ ref }}</a>{% endif %}
+            {% if n.item_id %}on <a href="{{ href }}">#{{ ref }}</a>{% endif %}
           {% elif n.type == "approve" %}Your upload <a href="/{{ ref }}">#{{ ref }}</a> was approved.
           {% elif n.type == "deny" %}Your upload #{{ ref }} was denied: {{ n.reason }}
           {% elif n.type == "item_deleted" %}Your upload #{{ ref }} was deleted: {{ n.reason }}

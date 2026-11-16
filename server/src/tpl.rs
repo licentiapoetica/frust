@@ -1536,7 +1536,7 @@ mod tests {
         dump("search", &search);
         assert!(search.contains("data-preview=\"/b/s.mp4\"") && search.contains("<span class=\"fy-tbadge fy-time\">1:02</span>"));
         assert!(search.contains("<img class=\"fy-ava\" src=\"/a/a.webp\" alt=\"\" loading=\"lazy\"><span>Al B</span>") && search.contains("3 views"));
-        assert!(search.contains("<h3 class=\"fy-row-title\"><a href=\"/tag/cat/7\">cat - f0ck #7</a></h3>"));
+        assert!(search.contains("<h3 class=\"fy-row-title\"><a href=\"/tag/cat/7\">cat #7</a></h3>"));
         assert!(search.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
         assert!(search.contains("93% match"));
         assert!(search.contains("<ol class=\"fy-list fy-results\" data-fy-feed>"));

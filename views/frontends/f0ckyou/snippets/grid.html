@@ -22,7 +22,7 @@
     <div class="fy-card-meta">
       {% if (who and not is_anonymized) %}<a class="fy-card-ava" href="/user/{{ who|lower|encode_uri_component }}" tabindex="-1" aria-hidden="true">{{ fy.avatar(p.avatar_file, p.avatar, who_name, (p.username_color or "")) }}</a>{% else %}<span class="fy-card-ava">{{ fy.avatar("", "", who_name) }}</span>{% endif %}
       <div class="fy-card-text">
-        <h3 class="fy-card-title"><a href="{{ href }}" title="{{ (p.title if (enable_item_title and p.title) else ("f0ck #" ~ ref)) }}">{% if (enable_oc and p.is_oc) %}<span class="fy-oc">OC</span> {% endif %}{{ (p.title if (enable_item_title and p.title) else ("f0ck #" ~ ref)) }}</a></h3>
+        <h3 class="fy-card-title"><a href="{{ href }}" title="{{ (p.title if (enable_item_title and p.title) else ("#" ~ ref)) }}">{% if (enable_oc and p.is_oc) %}<span class="fy-oc">OC</span> {% endif %}{{ (p.title if (enable_item_title and p.title) else ("#" ~ ref)) }}</a></h3>
         {% if (who and not is_anonymized) %}<a class="fy-card-chan" href="/user/{{ who|lower|encode_uri_component }}">{{ who_name }}</a>{% else %}<span class="fy-card-chan">{{ who_name }}</span>{% endif %}
         <div class="fy-card-sub">{{ fy.views(p.views) }}{% if p.stamp %} &middot; <time title="{{ (p.stamp * 1000)|iso_date }}">{{ (p.stamp * 1000)|time_ago }}</time>{% endif %}{% if p.has_notification %} <span class="fy-new">New comments</span>{% endif %}</div>
       </div>

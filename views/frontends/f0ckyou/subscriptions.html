@@ -21,7 +21,7 @@
       <div class="fy-card-meta">
         <span class="fy-card-ava">{{ fy.avatar("", "", (it.user or "?")) }}</span>
         <div class="fy-card-text">
-          <h3 class="fy-card-title"><a href="/{{ ref }}">f0ck #{{ ref }}</a></h3>
+          <h3 class="fy-card-title"><a href="/{{ ref }}">#{{ ref }}</a></h3>
           <span class="fy-card-chan">{{ it.user }}</span>
           <form method="post" action="/api/subscribe/{{ it.id }}" class="fy-ajax fy-card-form" data-fy-refresh="subs">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

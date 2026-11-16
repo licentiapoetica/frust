@@ -16,7 +16,7 @@
     <li class="fy-row" id="c{{ c.id }}">
       <a class="fy-row-thumb" href="/{{ c.item_key }}#c{{ c.id }}"><img src="/t/{{ c.item_id }}.webp" alt="" loading="lazy"></a>
       <div class="fy-row-text">
-        <h3 class="fy-row-title"><a href="/{{ c.item_key }}#c{{ c.id }}">f0ck #{{ c.item_key }}</a></h3>
+        <h3 class="fy-row-title"><a href="/{{ c.item_key }}#c{{ c.id }}">#{{ c.item_key }}</a></h3>
         <p class="fy-dim"><time title="{{ c.iso }}">{{ c.timeago }}</time></p>
         <div class="fy-comment-body fy-row-snippet">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
       </div>

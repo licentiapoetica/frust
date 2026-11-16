@@ -14,7 +14,7 @@
 {%- set here = ((url.pathname ~ url.search) if (url and url.pathname) else ("/" ~ item_ref)) -%}
 {%- set uploader = ("anonymous" if is_anonymized else (item.username or "")) -%}
 {%- set uploader_name = (uploader if is_anonymized else (item.author_display_name or uploader)) -%}
-{%- set fy_item_title = (item.title if (enable_item_title and item.title) else ("f0ck #" ~ item_ref)) -%}
+{%- set fy_item_title = (item.title if (enable_item_title and item.title) else ("#" ~ item_ref)) -%}
 {%- set fy_rating = ((item.tags or [])|selectattr("normalized", "in", ["sfw", "nsfw", "nsfl"])|map(attribute="normalized")|list) -%}
 {%- set fy_rating = (fy_rating[0] if fy_rating else "untagged") -%}
 {%- set fy_likes = (item.favorites or [])|length -%}

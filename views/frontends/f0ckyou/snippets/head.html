@@ -9,7 +9,7 @@
 {%- elif (page_meta is defined and page_meta and page_meta.title) -%}
   {%- set fy_doc_title = page_meta.title ~ " - f0ckYou" -%}
 {%- elif fy_item_ref -%}
-  {%- set fy_doc_title = ((item.title if (enable_item_title and item.title) else ("f0ck #" ~ fy_item_ref)) ~ " - f0ckYou") -%}
+  {%- set fy_doc_title = ((item.title if (enable_item_title and item.title) else ("#" ~ fy_item_ref)) ~ " - f0ckYou") -%}
 {%- else -%}
   {%- set fy_doc_title = "f0ckYou" -%}
 {%- endif -%}
