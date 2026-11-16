@@ -123,7 +123,7 @@ The text size (`user_font_size`, a percent) is chosen per frontend (`user_option
 by frontend name; the settings page saves it for the frontend it is shown in; a frontend without
 an entry has the default size, never another frontend's). It is a
 `user-fs-<percent>` class on `<html>`: give each
-size in crate::fonts::SIZES a rule (f0ckm scales the root font size, w0bm and f0ckv2 zoom the
+size in crate::fonts::SIZES a rule (f0ckm and f0ckgle scale the root font size, w0bm and f0ckv2 zoom the
 body; `tpl::tests::text_sizes_have_css` checks all three).
 
 ## Rules
@@ -163,6 +163,10 @@ body; `tpl::tests::text_sizes_have_css` checks all three).
 - The usual rules (CLAUDE.md) apply:
   - no inline scripts;
   - CSS in files;
-  - everything works without JavaScript.
+  - everything works without JavaScript;
+  - with JavaScript everything is live: actions (comments, replies, favs, tags, ratings, reports, ...)
+    go through `fetch` and update the page in place, never by reloading it. f0ckgle does it generically:
+    its forms are marked `.fg-ajax` and the regions they change `data-fg-live`, which f0ckgle.js swaps
+    in from a fresh render of the page.
 
   Old frontends keep their original CSS, rounded corners included.

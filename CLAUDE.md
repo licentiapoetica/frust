@@ -25,11 +25,12 @@ How:
   - Captchas: Cap needs JavaScript, so forms also accept the image captcha (`snippets/cap-image.html`, `server/src/cap_image.rs`).
   - Don't rely on `<noscript>` wrappers (script blockers rewrite them); use plain elements hidden by the CSS above.
   - Check new UI in a browser with JavaScript off.
+- **With JavaScript, everything is live (AJAX).** In every frontend, actions happen in place with `fetch`, never by a page reload: posting, replying to and deleting comments, favs, subscriptions, ratings, adding/removing/excluding tags, reports, mod actions, settings. The plain forms above are only the no-JS fallback; the frontend's JS intercepts them and updates the page itself (only leaving the page when it is gone, e.g. after deleting the item). Live events (new comments, uploads, notifications, ...) update the page in place too. Check new UI with JavaScript on as well: nothing may reload.
 - **Never edit `bundle.css` by hand.** It is built from `f0ckm.css` + `privacy.css` + `v0ck.css` by `f0ckm build-css` (also at server start). Edit the source files instead.
 
 ## Alternative frontends (keep them working)
 
-Besides the default templates in `views/`, the site can render old layouts (`w0bm`, `f0ckv2`): templates in `views/frontends/<name>/`, assets in `public/s/fe/<name>/`. `websrv.frontend` picks the site default; visitors switch with `/frontend/<name>` or `?frontend=<name>` (cookie). **The contract is [views/frontends/README.md](views/frontends/README.md); read it before touching views, routes' template data or shared scripts.**
+Besides the default templates in `views/`, the site can render old layouts (`w0bm`, `f0ckv2`) and a joke one (`f0ckgle`, a search engine homepage parody): templates in `views/frontends/<name>/`, assets in `public/s/fe/<name>/`. `websrv.frontend` picks the site default; visitors switch with `/frontend/<name>` or `?frontend=<name>` (cookie). **The contract is [views/frontends/README.md](views/frontends/README.md); read it before touching views, routes' template data or shared scripts.**
 
 - **`f0ckm check-frontends` must report 0 problems** (it also runs in `cargo test` as `tpl::tests::frontends_follow_contract`).
 - Shared pages (settings, messages, admin, mod, mod_reports, pending, banned, user halls, privacy) exist once in `views/` and render inside every frontend's shell (`shell_header` / `shell_footer`). Never copy them into a frontend.
