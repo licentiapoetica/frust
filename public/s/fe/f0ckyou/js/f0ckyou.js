@@ -65,11 +65,19 @@
         text.replace(EMOJI, (m, name, at) => {
           if (!map[name]) return m;
           frag.append(text.slice(last, at));
-          const img = document.createElement('img');
+          // sticker packs bring video stickers (.webm): those play as a muted loop, as in f0ckm
+          let img;
+          if (/\.webm(?:$|[?#])/i.test(map[name])) {
+            img = document.createElement('video');
+            img.autoplay = img.loop = img.muted = img.playsInline = true;
+            img.title = m;
+          } else {
+            img = document.createElement('img');
+            img.alt = img.title = m;
+            img.loading = 'lazy';
+          }
           img.className = 'f0ck-emoji';
           img.src = map[name];
-          img.alt = img.title = m;
-          img.loading = 'lazy';
           frag.append(img);
           last = at + m.length;
           return m;
@@ -159,50 +167,20 @@
     try { history.replaceState(history.state, '', `#c${id}`); } catch { /* ignore */ }
   }, true);
 
-  window.addEventListener('f0ck:emojis_updated', () => {
-    const box = document.getElementById('fy-emoji-box');
-    if (box) box.replaceChildren();
-    emojify(document.body);
-  });
+  window.addEventListener('f0ck:emojis_updated', () => emojify(document.body));
 
-  // the emoji picker under the comment field: inserts :name: at the cursor
-  document.addEventListener('click', async e => {
-    const btn = e.target.closest('.fy-emoji-btn');
-    const box = document.getElementById('fy-emoji-box');
-    if (!btn || !box) return;
-    const ta = document.querySelector('#comment-form textarea');
-    if (!box.childElementCount) {
-      const map = (await window.f0ckLoadEmojis?.()) || {};
-      const names = Object.keys(map).sort();
-      if (!names.length) {
-        const p = document.createElement('span');
-        p.className = 'fy-emoji-empty';
-        p.textContent = 'No emojis yet';
-        box.append(p);
-      }
-      names.forEach(name => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.title = `:${name}:`;
-        const img = document.createElement('img');
-        img.src = map[name];
-        img.alt = `:${name}:`;
-        img.loading = 'lazy';
-        b.append(img);
-        b.addEventListener('click', () => {
-          if (!ta) return;
-          const before = ta.value.slice(0, ta.selectionStart);
-          const pad = before && !/\s$/.test(before) ? ' ' : '';
-          ta.setRangeText(`${pad}:${name}: `, ta.selectionStart, ta.selectionEnd, 'end');
-          growField(ta);
-          ta.focus();
-        });
-        box.append(b);
-      });
-    }
-    box.hidden = !box.hidden;
-    btn.setAttribute('aria-expanded', String(!box.hidden));
-  });
+  // the emoji picker under the comment field: f0ckm's, with its tabs, favourites and previews
+  // (/s/js/emoji-picker.js); set up for every page shown
+  const setupEmojiPicker = () => {
+    const form = document.getElementById('comment-form');
+    if (!form || !window.f0ckEmojiPicker) return;
+    window.f0ckEmojiPicker.attach({
+      textarea: form.elements.content,
+      trigger: form.querySelector('.fy-emoji-btn'),
+      box: document.getElementById('fy-emoji-box'),
+      onChange: growField,
+    });
+  };
 
   // ── the comment field grows with its lines (rows, not an inline height) ──
   const growField = ta => {
@@ -1099,6 +1077,7 @@
     setupFlash();
     setupTracking();
     setupRecs();
+    setupEmojiPicker();
   };
 
   // ── pages change in place ──

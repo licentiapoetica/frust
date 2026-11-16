@@ -48,9 +48,10 @@
       <p class="fy-dim fy-reply-to"{% if not reply_to %} hidden{% endif %}>Replying to <span>#{{ (reply_to or "") }}</span> &middot; <a href="{{ here_path }}#comments" class="fy-reply-cancel">cancel</a></p>
       <textarea name="content" rows="1" placeholder="Add a comment..." required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
       {% if "comment" in (captcha_scopes or []) %}{% include "frontends/f0ckyou/snippets/cap-image.html" %}{% endif %}
-      {#- the custom emojis: a picker that inserts :name: (JavaScript, f0ckyou.js; the list comes
-          from /api/v2/emojis). Without JavaScript :name: can still be typed. -#}
-      <div class="fy-emoji-box" id="fy-emoji-box" hidden></div>
+      {#- the custom emojis: f0ckm's picker (JavaScript, /s/js/emoji-picker.js, set up by f0ckyou.js:
+          favourites and sticker-pack tabs, hold to preview, :name autocomplete). Without JavaScript
+          :name: can still be typed. -#}
+      <div class="f0ck-ep" id="fy-emoji-box" hidden></div>
       <div class="fy-comment-tools">
         <button type="button" class="fy-iconbtn js-only fy-emoji-btn" aria-expanded="false" aria-controls="fy-emoji-box" title="Emojis">{{ fy.ico("smile") }}<span class="fy-sr">Emojis</span></button>
         <span class="fy-grow"></span>

@@ -727,23 +727,26 @@ window.f0ckSiteLink = (href, text) => {
 
 // ── Custom emojis ───────────────────────────────────────────────────────────────────────────
 // :name: in comments, for the alternative frontends' comment renderers (f0ckm.js has its own).
-// f0ckLoadEmojis() loads /api/v2/emojis once and resolves to { name: url }; it reloads after the
-// live event emojis_updated. f0ckEmojify(html, map) swaps known names in escaped HTML for <img>.
+// f0ckLoadEmojiData() loads /api/v2/emojis once and resolves to { map: { name: url }, packs } (the
+// packs as the API groups them, for the tabbed picker: emoji-picker.js); f0ckLoadEmojis() resolves to
+// just the map. Both reload after the live event emojis_updated. f0ckEmojify(html, map) swaps known
+// names in escaped HTML for <img>.
 (() => {
   let loading = null;
-  window.f0ckLoadEmojis = () => {
+  window.f0ckLoadEmojiData = () => {
     if (!loading) {
       loading = fetch('/api/v2/emojis', { credentials: 'same-origin' })
         .then((r) => r.json())
         .then((d) => {
           const map = {};
           (d.emojis || []).forEach((e) => { if (e.name && e.url) map[e.name] = e.url; });
-          return map;
+          return { map, packs: Array.isArray(d.packs) ? d.packs : [] };
         })
-        .catch(() => { loading = null; return {}; });
+        .catch(() => { loading = null; return { map: {}, packs: [] }; });
     }
     return loading;
   };
+  window.f0ckLoadEmojis = () => window.f0ckLoadEmojiData().then((d) => d.map);
   window.addEventListener('f0ck:emojis_updated', () => { loading = null; });
   window.f0ckEmojify = (html, map) => {
     if (!map) return html;

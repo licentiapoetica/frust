@@ -29,6 +29,7 @@
   --fy-sfw: #2ba640;
   --fy-nsfw: #d93025;
   --fy-nsfl: #8b0000;
+  --fy-fav: #f5c518;
   --fy-shadow: 0 4px 32px rgba(0, 0, 0, .6);
   --fy-font: Roboto, Arial, "Helvetica Neue", sans-serif;
   --fy-mast-h: 3.5rem;
@@ -2344,7 +2345,7 @@ body.fy-page-watch {
 }
 
 /* custom emojis stay emoji-sized (the rule above is for pictures; comment-fx.css' size again) */
-.fy-comment-body img.f0ck-emoji {
+.fy-comment-body .f0ck-emoji {
   max-width: 4em;
   max-height: 2em;
   vertical-align: middle;
@@ -2405,43 +2406,331 @@ body.fy-page-watch {
   background: rgba(62, 166, 255, .16);
 }
 
-/* custom emojis: the picker under the comment field (f0ckyou.js); in the text they are .f0ck-emoji
-   (comment-fx.css) */
-.fy-emoji-box {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .25rem;
-  max-height: 14rem;
-  overflow-y: auto;
-  padding: .5rem;
-  background: var(--fy-menu);
-  box-shadow: var(--fy-shadow);
+/* custom emojis: f0ckm's picker under the comment field (/s/js/emoji-picker.js, set up by
+   f0ckyou.js) in f0ckyou's look; in the text they are .f0ck-emoji (comment-fx.css) */
+.f0ck-ep-field {
+  position: relative;
 }
 
-.fy-emoji-box button {
+.fy-comment-tools .fy-emoji-btn.is-active {
+  background: var(--fy-soft-2);
+}
+
+.f0ck-ep {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 15rem;
+  background: var(--fy-menu);
+  box-shadow: var(--fy-shadow);
+  transform-origin: top center;
+  scroll-margin-bottom: 1.5rem;
+}
+
+.f0ck-ep.is-opening {
+  animation: fy-ep-in .2s ease forwards;
+}
+
+.f0ck-ep.is-closing {
+  animation: fy-ep-out .18s ease forwards;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+@keyframes fy-ep-in {
+  from { opacity: 0; transform: translateY(-.5rem) scaleY(.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fy-ep-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-.5rem) scaleY(.96); }
+}
+
+/* loading / no emojis: one line, no fixed height */
+.f0ck-ep.is-empty {
+  height: auto;
+}
+
+.f0ck-ep-notice {
+  padding: .75rem 1rem;
+  color: var(--fy-muted);
+}
+
+.f0ck-ep-notice a {
+  color: var(--fy-blue);
+}
+
+/* the tabs: Favorites, then the packs */
+.f0ck-ep-tabs {
+  display: flex;
+  flex: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--fy-line);
+  scrollbar-width: none;
+}
+
+.f0ck-ep-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.f0ck-ep-tab {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: .3rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--fy-text);
+  cursor: pointer;
+  opacity: .55;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.f0ck-ep-tab:hover,
+.f0ck-ep-tab:focus-visible {
+  background: var(--fy-soft);
+  opacity: 1;
+}
+
+.f0ck-ep-tab.is-active {
+  border-bottom-color: var(--fy-blue);
+  background: var(--fy-soft);
+  opacity: 1;
+}
+
+.f0ck-ep-tab-favs.is-active {
+  border-bottom-color: var(--fy-fav);
+}
+
+.f0ck-ep-tab-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.f0ck-ep-tab-star {
+  color: var(--fy-fav);
+  font-size: 1.25rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Favorites opens by default: a small square under the star */
+.f0ck-ep-tab.is-default::after {
+  content: "";
+  position: absolute;
+  bottom: .2rem;
+  left: 50%;
+  width: .3rem;
+  height: .3rem;
+  background: var(--fy-fav);
+  transform: translateX(-50%);
+}
+
+.f0ck-ep-tab.is-default.is-active::after {
+  display: none;
+}
+
+/* the stickers */
+.f0ck-ep-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(auto-fill, minmax(4.25rem, 1fr));
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .25rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fy-soft-2) transparent;
+}
+
+.f0ck-ep-grid-empty {
+  grid-column: 1 / -1;
+  padding: 1.75rem .75rem;
+  color: var(--fy-muted);
+  text-align: center;
+}
+
+.f0ck-ep-sticker {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  aspect-ratio: 1;
   padding: .25rem;
   border: 0;
   background: none;
   cursor: pointer;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
-.fy-emoji-box button:hover,
-.fy-emoji-box button:focus-visible {
+.f0ck-ep-sticker:hover,
+.f0ck-ep-sticker:focus-visible {
   background: var(--fy-soft);
 }
 
-.fy-emoji-box img {
-  max-width: 100%;
-  max-height: 100%;
+.f0ck-ep-sticker .f0ck-ep-media {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
 }
 
-.fy-emoji-empty {
+/* a favourite: a star in the corner (not in the Favorites tab, where all are) */
+.f0ck-ep-badge {
+  position: absolute;
+  top: .1rem;
+  right: .2rem;
+  color: var(--fy-fav);
+  font-size: .7rem;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 0 2px #000;
+}
+
+.f0ck-ep-grid.is-favs .f0ck-ep-badge {
+  display: none;
+}
+
+/* right-click on a sticker: add to / remove from Favorites */
+.f0ck-ep-menu {
+  position: absolute;
+  right: .5rem;
+  bottom: .5rem;
+  left: .5rem;
+  z-index: 2;
+  padding: .25rem 0;
+  background: var(--fy-raised);
+  box-shadow: var(--fy-shadow);
+}
+
+.f0ck-ep-menu-item {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  width: 100%;
+  padding: .5rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--fy-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.f0ck-ep-menu-item:hover,
+.f0ck-ep-menu-item:focus-visible {
+  background: var(--fy-soft);
+}
+
+.f0ck-ep-menu-star {
+  color: var(--fy-fav);
+  font-size: 1.1rem;
+}
+
+.f0ck-ep-menu-item .f0ck-ep-media {
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: contain;
+}
+
+/* hold a sticker: the big preview, with its star */
+.f0ck-ep-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+
+.f0ck-ep-preview.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.f0ck-ep-preview .f0ck-ep-media {
+  max-width: min(85vw, 26rem);
+  max-height: min(85vh, 26rem);
+  object-fit: contain;
+}
+
+.f0ck-ep-preview-fav {
+  position: absolute;
+  right: 1.25rem;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 2px solid var(--fy-line);
+  background: rgba(0, 0, 0, .55);
   color: var(--fy-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.f0ck-ep-preview-fav:hover,
+.f0ck-ep-preview-fav.is-fav {
+  border-color: var(--fy-fav);
+  color: var(--fy-fav);
+  background: rgba(0, 0, 0, .75);
+}
+
+/* typing :na… in the field: the matching emojis, right under it */
+.f0ck-ep-ac {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  max-height: 14rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .25rem 0;
+  background: var(--fy-menu);
+  box-shadow: var(--fy-shadow);
+}
+
+.f0ck-ep-ac-item {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: .75rem;
+  padding: .35rem 1rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.f0ck-ep-ac-item:hover,
+.f0ck-ep-ac-item.is-active {
+  background: var(--fy-soft);
+}
+
+.f0ck-ep-ac-item .f0ck-ep-media {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
+.f0ck-ep-ac-item span {
+  color: var(--fy-muted);
+  font-family: ui-monospace, monospace;
 }
 
 /* ── up next ── */

@@ -1580,6 +1580,8 @@ mod tests {
         assert!(page.contains("<body class=\"fy-page-watch\">"));
         assert!(page.contains("<video id=\"my-video\" class=\"fy-media\""));
         assert!(page.contains("<a class=\"fy-btn\" id=\"fy-prev\" href=\"/tag/cat/6\""));
+        // the comment field's emoji picker: f0ckm's (shared emoji-picker.js)
+        assert!(page.contains("<div class=\"f0ck-ep\" id=\"fy-emoji-box\" hidden></div>") && page.contains("/s/js/emoji-picker.js?v="));
         assert!(page.contains("<input type=\"hidden\" name=\"action\" value=\"remove\">"));
         assert!(page.contains("aria-pressed=\"true\"") && page.contains("#like-on"));
         assert!(page.contains("<form method=\"post\" action=\"/api/subscribe/7\" class=\"fy-inline fy-ajax\" data-fy-refresh=\"actions\">"));
@@ -1637,7 +1639,6 @@ mod tests {
         assert!(page.contains("<b class=\"fy-views-count\" data-views=\"12345\">12,345 views</b>"), "a bigint view count comes as text");
         assert!(home.contains("<div class=\"fy-card-sub\">1.2K views &middot; <time"));
         assert!(page.contains("<button type=\"button\" class=\"fy-iconbtn js-only fy-emoji-btn\""));
-        assert!(page.contains("<div class=\"fy-emoji-box\" id=\"fy-emoji-box\" hidden></div>"));
         for modal in ["share", "report", "delete"] {
             assert!(page.contains(&format!("<div id=\"{modal}\" class=\"fy-modal\">")), "{modal}");
         }

@@ -19,6 +19,8 @@
     in place (f0ckyou.js) -#}
 <script src="/s/js/v0ck.js?v={{ mtime("/public/s/js/v0ck.js") }}"></script>
 <script src="/s/js/f0ck-bg.js?v={{ mtime("/public/s/js/f0ck-bg.js") }}"></script>
+{#- the emoji picker of the comment field (f0ckm's, shared: tabs, favourites, previews) -#}
+<script src="/s/js/emoji-picker.js?v={{ mtime("/public/s/js/emoji-picker.js") }}"></script>
 <script src="/s/fe/f0ckyou/js/f0ckyou.js?v={{ mtime("/public/s/fe/f0ckyou/js/f0ckyou.js") }}"></script>
 {% if session %}{% include "snippets/cap-gate.html" %}{% endif %}
 {%- if not fy_is_shell_foot %}
