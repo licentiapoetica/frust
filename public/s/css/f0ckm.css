@@ -13818,6 +13818,10 @@ html.hide-navbar-active #navbar-unhide-btn:focus-visible {
 .motd-container {
   order: 999;
   width: calc(100% - var(--motd-room, 0px) + min(var(--motd-room, 0px), 1px));
+  /* the rest of the row as margin: with its width it takes the whole row, so it always wraps below
+     the nav row (shortened by the sidebar it could fit beside the brand, squeezing the nav links to
+     nothing: without JavaScript, where the sidebar is open) */
+  margin-right: calc(var(--motd-room, 0px) - min(var(--motd-room, 0px), 1px));
   border-right: min(var(--motd-room, 0px), 1px) solid var(--nav-border-color);
   box-sizing: border-box;
   flex-shrink: 0;
@@ -13850,7 +13854,7 @@ body.sidebar-right-dragging {
 }
 
 body:is(.sidebar-right-closing, .sidebar-right-opening) .motd-container {
-  transition: width 0.6s cubic-bezier(0.45, 0, 0.2, 1);
+  transition: width 0.6s cubic-bezier(0.45, 0, 0.2, 1), margin-right 0.6s cubic-bezier(0.45, 0, 0.2, 1);
 }
 
 html.motd-on body:is(.sidebar-right-closing, .sidebar-right-opening) > nav.navbar {
