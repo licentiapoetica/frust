@@ -2,6 +2,9 @@ if (!window.UserCommentSystem) {
     window.UserCommentSystem = class UserCommentSystem {
         constructor() {
             this.container = document.getElementById('user-comments-container');
+            // The server-rendered list for visitors without JavaScript (comments_user-partial.html):
+            // hidden by the CSS already, removed so its #c<id> elements don't shadow the live ones
+            document.querySelectorAll('.user-comments-static').forEach(el => el.remove());
             this.username = this.container ? this.container.dataset.user : null;
             this.page = 1;
             this.loading = false;

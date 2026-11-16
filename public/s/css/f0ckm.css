@@ -28904,11 +28904,44 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   font-weight: bold;
 }
 
-.user-comments-list #user-comments-container {
+.user-comments-list #user-comments-container,
+.user-comments-static {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 6px;
+}
+
+/* Without JavaScript the server-rendered list (.user-comments-static) stands in for the script's */
+html.no-js .user-comments-list #user-comments-container {
+  display: none;
+}
+
+/* newer / older pages of the server-rendered list */
+.user-comments-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.user-comments-pager a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  background: var(--bg);
+  border: 1px solid var(--nav-border-color, rgba(255, 255, 255, 0.15));
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.user-comments-pager a:last-child {
+  margin-left: auto;
+}
+
+.user-comments-pager a:hover {
+  border-color: var(--accent);
 }
 
 .user-comments-loading,

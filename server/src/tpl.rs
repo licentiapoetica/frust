@@ -1201,6 +1201,31 @@ mod tests {
         assert!(!empty.contains("comments-static"));
     }
 
+    /// comments_user-partial.html: a user's comments server-rendered for visitors without
+    /// JavaScript, with links to the newer / older pages, under the profile sub-page head.
+    #[test]
+    fn user_comments_page_renders_without_js() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let user = serde_json::json!({ "user": "al", "username_color": "#f00", "display_name": "Al B", "banner_file": "b.png", "banner_position": "center", "banner_size": "cover" });
+        let c = serde_json::json!({ "id": 7, "item_id": 5, "item_key": "5", "content_html": "x &lt;b&gt;", "attachments_html": "", "timeago": "2 days ago", "iso": "y" });
+        let ctx = serde_json::json!({ "user": user, "static_comments": [c], "comments_page": 2, "has_more": true, "enable_comments": true, "user_banner_enabled": true });
+        let html = env.get_template("comments_user-partial.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(html.contains("class=\"profile_head profile-subhead\""), "{html}");
+        assert!(html.contains("--author-banner: url(&#x27;/a/b.png&#x27;)") || html.contains("--author-banner: url('/a/b.png')"), "{html}");
+        assert!(html.contains(">Al B</a> <span class=\"profile-subhead-bracket\">(al)</span>"), "{html}");
+        assert!(html.contains("href=\"/user/al/comments\" class=\"is-active\""), "{html}");
+        assert!(html.contains("<div class=\"comments-static user-comments-static\">"), "{html}");
+        assert!(html.contains("<div class=\"comment\" id=\"c7\">"), "{html}");
+        assert!(html.contains("<a href=\"/5\"><img src=\"/t/5.webp\""), "{html}");
+        assert!(html.contains("<div class=\"comment-content\">x &lt;b&gt;</div>"), "{html}");
+        assert!(html.contains("href=\"/5#c7\" class=\"comment-permalink\""), "{html}");
+        assert!(html.contains("href=\"?page=1\"") && html.contains("href=\"?page=3\""), "{html}");
+        let ctx = serde_json::json!({ "user": { "user": "al" }, "static_comments": [], "comments_page": 1, "has_more": false });
+        let empty = env.get_template("comments_user-partial.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        assert!(empty.contains("user-comments-empty") && !empty.contains("user-comments-pager"), "{empty}");
+    }
+
     /// w0bm's notification rows name who commented (anonymous for anon accounts and anonymized viewers).
     #[test]
     fn w0bm_notifications_name_the_commenter() {

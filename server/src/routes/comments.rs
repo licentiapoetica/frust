@@ -298,7 +298,44 @@ async fn user_comments_inner(st: &AppState, req: &Req, user: &str) -> anyhow::Re
     if is_json {
         return Ok(json_resp(&json!({ "success": true, "comments": comments_value, "user": u }), 200));
     }
-    let data = json!({ "user": u, "comments": comments_value, "hidePagination": true, "tmp": null });
+    // The page's comments for visitors without JavaScript (comments_user-partial.html, hidden when
+    // user_comments.js runs): the text rendered like the sidebar frame's, >>id quotes pointing at
+    // the comment's item.
+    let hosts = site_hosts(&cfg, &req.host_without_port());
+    let tr = st.i18n.translator(&crate::routes::index::req_lang(st, req));
+    let now = chrono::Utc::now();
+    let static_comments: Vec<Value> = comments_value
+        .as_array()
+        .map(|list| {
+            list.iter()
+                .map(|c| {
+                    let content = c["content"].as_str().unwrap_or("");
+                    let files = c["files"].as_array().cloned().unwrap_or_default();
+                    let item_key = c["item_slug"].as_str().filter(|s| !s.is_empty()).map(str::to_string).or_else(|| c["item_id"].as_i64().map(|i| i.to_string())).unwrap_or_default();
+                    let created = c["created_at"].as_str().and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok());
+                    json!({
+                        "id": c["id"],
+                        "item_id": c["item_id"],
+                        "item_key": item_key,
+                        "content_html": frame_comment_html(content, &format!("/{item_key}"), &hosts),
+                        "attachments_html": frame_attachments_html(&files, content),
+                        "timeago": created.map(|t| crate::util::time_ago(&tr, (now - t.with_timezone(&chrono::Utc)).num_seconds().max(0))).unwrap_or_default(),
+                        "iso": c["created_at"],
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let comments_page = page.unwrap_or(1.0).max(1.0) as i64;
+    let data = json!({
+        "user": u,
+        "comments": comments_value,
+        "static_comments": static_comments,
+        "comments_page": comments_page,
+        "has_more": static_comments.len() as i64 >= limit,
+        "hidePagination": true,
+        "tmp": null,
+    });
     let view = if req.is_xhr() { "comments_user-partial" } else { "comments_user" };
     Ok(html(crate::tpl::render(st, Some(req), view, data)))
 }

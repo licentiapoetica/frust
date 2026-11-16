@@ -6,11 +6,32 @@
     <div class="user-section user-comments">
         <div class="user-section-header">{{ t("profile.comments_label", "comments") }}</div>
         <div class="comments-list-page user-comments-list">
-            <!-- Container for CSR comments -->
+            {#- Without JavaScript: this page's comments (static_comments, routes/comments.rs), the
+                same markup as user_comments.js renderComment() minus the report button, and links
+                to the newer / older pages. user_comments.js removes the box and loads the list. -#}
+            <div class="comments-static user-comments-static">
+                {% for c in static_comments %}
+                <div class="comment" id="c{{ c.id }}">
+                    <div class="comment-avatar"><a href="/{{ c.item_key }}"><img src="/t/{{ c.item_id }}.webp" alt="" loading="lazy"></a></div>
+                    <div class="comment-body">
+                        <div class="comment-header"><div class="comment-header-left"><span class="comment-author{% if user.user|short_letters %} name-short{% endif %}{% if user.username_color %} user-color-text{% endif %}"{% if user.username_color %} style="--user-color: {{ user.username_color }}"{% endif %}>{{ user.user }}</span></div><span class="comment-time timeago" title="{{ c.iso }}">{{ c.timeago }}</span></div>
+                        <div class="comment-content">{{ c.content_html|safe }}</div>{{ c.attachments_html|safe }}
+                    </div>
+                    <a href="/{{ c.item_key }}#c{{ c.id }}" class="comment-permalink" title="Permalink">#{{ c.id }}</a>
+                </div>
+                {% else %}
+                <div class="user-comments-empty">No comments found.</div>
+                {% endfor %}
+                {% if (comments_page > 1 or has_more) %}
+                <nav class="user-comments-pager">
+                    {% if comments_page > 1 %}<a href="?page={{ comments_page - 1 }}"><i class="fa-solid fa-arrow-left"></i> newer</a>{% endif %}
+                    {% if has_more %}<a href="?page={{ comments_page + 1 }}">older <i class="fa-solid fa-arrow-right"></i></a>{% endif %}
+                </nav>
+                {% endif %}
+            </div>
             <div id="user-comments-container" data-user="{{ user.user }}"></div>
         </div>
     </div>
 </div>
 </div>
-<!-- Include local script for this page -->
 <script src="/s/js/user_comments.js?v={{ mtime("/public/s/js/user_comments.js") }}"></script>
