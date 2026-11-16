@@ -1,11 +1,12 @@
-{#- Top right: mail, images, the apps grid and the account menu (or "Sign in"). The menus are
-    <details>, so they open without JavaScript; f0ckgle.js closes them on an outside click. -#}
+{#- Top right: mail, "Browse all f0cks" (the overview: the grid without a type filter), the apps
+    grid and the account menu (or "Sign in"). The menus are <details>, so they open without
+    JavaScript; f0ckgle.js closes them on an outside click. -#}
 {%- set me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
 {%- set cur_mode = (mode if mode is number else 0) -%}
 {%- set can_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
 <div class="fg-user">
   {% if (session and private_messages and not session.is_anon) %}<a class="fg-user-link" href="/messages">F0ckmail<span id="dm-badge" class="fg-dm-badge">0</span></a>{% endif %}
-  <a class="fg-user-link" href="/mime?image=1&amp;back=%2Fp%2F1">Images</a>
+  <a class="fg-user-link" href="/mime?back=%2Fp%2F1" title="every f0ck, newest first, no type filter">Browse all f0cks</a>
   <details class="fg-menu fg-apps">
     <summary title="F0ckgle apps"><img class="fg-icon" src="/s/fe/f0ckgle/img/apps.svg?v={{ mtime("/public/s/fe/f0ckgle/img/apps.svg") }}" alt=""><span class="fg-sr">F0ckgle apps</span></summary>
     <div class="fg-menu-box fg-apps-box">

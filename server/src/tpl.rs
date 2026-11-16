@@ -1266,6 +1266,15 @@ mod tests {
         let videos = render(&fe("index"), serde_json::json!({ "url": url("/p/1", serde_json::json!({})), "tmp": { "mime": "video" }, "items": [item(7)], "total": 1 }));
         assert!(videos.contains("<a href=\"/mime?video=1&amp;back=%2Fp%2F1\" class=\"active\" aria-current=\"page\">Videos</a>"));
         assert!(videos.contains("<a href=\"/mime?back=%2Fp%2F1\">All</a>"));
+        // only the types the site has (allowedMimes → scroller_mime_cats, Flash with enable_swf)
+        let only = |cats: serde_json::Value, swf: bool| render(&fe("index"), serde_json::json!({ "url": url("/p/1", serde_json::json!({})), "tmp": {}, "items": [item(7)], "total": 1,
+            "scroller_mime_cats": cats, "enable_swf": swf }));
+        let two = only(serde_json::json!(["video", "image"]), false);
+        assert!(two.contains(">Images</a>") && two.contains(">Videos</a>") && !two.contains(">Audio</a>") && !two.contains(">Flash</a>"));
+        assert!(only(serde_json::json!(["video", "image", "audio"]), true).contains("<a href=\"/mime?flash=1&amp;back=%2Fp%2F1\">Flash</a>"));
+        let one = only(serde_json::json!(["video"]), false);
+        assert!(!one.contains("/mime?video=1"), "one type: no type tabs");
+        assert!(one.contains("<a class=\"fg-user-link\" href=\"/mime?back=%2Fp%2F1\""));
         // a type filter doesn't hide the homepage
         assert!(render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": { "mime": "video" } })).contains("fg-home-logo"));
         assert!(grid.contains("<a class=\"fg-pg fg-pg-end\" href=\"/tag/cat/p/1\" rel=\"prev\">"));
