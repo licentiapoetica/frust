@@ -1,28 +1,16 @@
-<div class="profile_head" data-banner-user="{{ (user.user or "") }}" style="{% if (user.banner_file and user_banner_enabled) %} --author-banner: url('/a/{{ user.banner_file }}'); --author-banner-position: {{ ("center top" if user.banner_position == "center" else (user.banner_position or "center top")) }}; --author-banner-size: {{ (user.banner_size or "cover") }}; {% endif %}">
-    {% if user.avatar_file %}
-    <div class="profile_head_avatar">
-        <img src="/a/{{ user.avatar_file }}" class="user-profile-head-avatar-img" />
-    </div>
-    {% elif (user.avatar and (user.avatar > 0)) %}
-    <div class="profile_head_avatar">
-        <img src="/t/{{ user.avatar }}.webp" class="user-profile-head-avatar-img" />
-    </div>
-    {% endif %}
-    <div class="layersoffear">
-        <div class="profile_head_username">
-            <span {% if user.username_color %} style="color: {{ user.username_color }}" {% endif %}>{{ (t("profile.comments_title")).replace("{user}", user.user, 1) }}</span>
-        </div>
-        <div class="profile_head_user_stats">
-            <a href="/user/{{ user.user }}">{{ t("profile.back_to_profile") }}</a>
+<div class="profile-page-wrapper">
+{% set subpage = "comments" %}
+{% include "snippets/profile-subhead.html" %}
+
+<div class="user_content_wrapper">
+    <div class="user-section user-comments">
+        <div class="user-section-header">{{ t("profile.comments_label", "comments") }}</div>
+        <div class="comments-list-page user-comments-list">
+            <!-- Container for CSR comments -->
+            <div id="user-comments-container" data-user="{{ user.user }}"></div>
         </div>
     </div>
 </div>
-
-<div class="user_content_wrapper user-profile-content-block">
-    <div class="comments-list-page user-comments-list">
-        <!-- Container for CSR comments -->
-        <div id="user-comments-container" data-user="{{ user.user }}"></div>
-    </div>
 </div>
 <!-- Include local script for this page -->
 <script src="/s/js/user_comments.js?v={{ mtime("/public/s/js/user_comments.js") }}"></script>

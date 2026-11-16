@@ -1,0 +1,31 @@
+{#- Profile head of a user's sub-pages (comments, tags): the profile's banner, avatar and name, and a
+    row of chips to the profile and its other pages, the current one marked. Set `subpage`
+    ("comments" / "tags") before including. -#}
+{%- set uname = (user.user or "") -%}
+{%- set ulink = "/user/" ~ (uname|encode_uri_component) -%}
+<div class="profile_head profile-subhead" data-banner-user="{{ uname }}"{% if (user.banner_file and user_banner_enabled) %} style="--author-banner: url('/a/{{ user.banner_file }}'); --author-banner-position: {{ ("center top" if user.banner_position == "center" else (user.banner_position or "center top")) }}; --author-banner-size: {{ (user.banner_size or "cover") }};"{% endif %}>
+    <a class="profile_head_avatar" href="{{ ulink }}">
+        {% if user.avatar_file %}
+        <img src="/a/{{ user.avatar_file }}" class="profile-avatar-img" alt="">
+        {% elif (user.avatar and (user.avatar > 0)) %}
+        <img src="/t/{{ user.avatar }}.webp" class="profile-avatar-img" alt="">
+        {% else %}
+        <img src="/a/default.png" class="profile-avatar-img" alt="">
+        {% endif %}
+    </a>
+    <div class="layersoffear">
+        <div class="profile_head_username">
+            <a class="profile-subhead-name{% if user.username_color %} has-user-color{% endif %}" href="{{ ulink }}"{% if user.username_color %} style="--user-color: {{ user.username_color }}"{% endif %}>{{ (user.display_name or uname) }}</a>{% if user.display_name %} <span class="profile-subhead-bracket">({{ uname }})</span>{% endif %}
+        </div>
+        <nav class="profile_head_user_stats profile-subhead-nav">
+            <a href="{{ ulink }}"><i class="fa-solid fa-arrow-left"></i> {{ t("profile.back_to_profile") }}</a>
+            {% if enable_comments %}
+            <a href="{{ ulink }}/comments"{% if subpage == "comments" %} class="is-active" aria-current="page"{% endif %}>{{ t("profile.comments_label", "comments") }}</a>
+            {% endif %}
+            <a href="{{ ulink }}/tags"{% if subpage == "tags" %} class="is-active" aria-current="page"{% endif %}>{{ t("profile.tags_label", "tags") }}</a>
+            {% if userhalls_enabled %}
+            <a href="{{ ulink }}/halls">{{ t("profile.halls_label", "halls") }}</a>
+            {% endif %}
+        </nav>
+    </div>
+</div>

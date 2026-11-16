@@ -197,7 +197,8 @@ async fn user_comments_inner(st: &AppState, req: &Req, user: &str) -> anyhow::Re
     let cfg = st.cfg();
     let session = req.session();
     let u = sql!(
-        r#"SELECT "user".id, "user".user, user_options.avatar, user_options.avatar_file, user_options.username_color
+        r#"SELECT "user".id, "user".user, user_options.avatar, user_options.avatar_file, user_options.username_color,
+                       user_options.display_name, user_options.banner_file, user_options.banner_position, user_options.banner_size
                 FROM "user"
                 LEFT JOIN user_options ON "user".id = user_options.user_id
                 WHERE "user".user ILIKE "#,

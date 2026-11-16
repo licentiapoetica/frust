@@ -28824,7 +28824,7 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   text-align: center;
 }
 
-/* ---- user-partial.html / tags_user-partial.html: page wrapper ---- */
+/* ---- user-partial.html / comments_user-partial.html / tags_user-partial.html: page wrapper ---- */
 /* as wide as the item page's player (--legacy-item-w in "LAYOUT: LEGACY"), plus the side padding */
 .profile-page-wrapper {
   max-width: calc(min(1140px, max(calc((100vh - 310px) * 16 / 9), 640px)) + 20px);
@@ -28834,20 +28834,109 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   box-sizing: border-box;
 }
 
-/* ---- comments_user-partial.html / tags_user-partial.html: profile head ---- */
-.profile_head_avatar > img.user-profile-head-avatar-img {
-  display: grid;
-  width: 55px;
+/* ---- snippets/profile-subhead.html: head of the comments / tags pages ----
+   The profile's head (banner, avatar, name, chip row), without its editing tools; the chips are the
+   tabs between the profile and its pages. */
+.profile_head.profile-subhead {
+  min-height: 0;
 }
 
+.profile-subhead .profile_head_avatar {
+  align-self: start;
+}
+
+.profile-subhead .profile_head_username {
+  font-size: 1.25em;
+  line-height: 1.2;
+}
+
+.profile-subhead-name {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.profile-subhead-name.has-user-color {
+  color: var(--user-color);
+}
+
+.profile-subhead-name:hover {
+  text-decoration: underline;
+}
+
+.profile-subhead-bracket {
+  font-size: 0.65em;
+  font-weight: 400;
+  color: var(--text-muted, #666);
+  letter-spacing: 0.5px;
+}
+
+.profile-subhead-nav a {
+  text-decoration: none;
+}
+
+.profile-subhead-nav a:hover {
+  border-color: var(--accent);
+}
+
+.profile-subhead-nav a.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg, #111);
+  cursor: default;
+}
+
+/* ---- tags_user-partial.html ---- */
 .user_content_wrapper.user-profile-content-block {
   display: block;
 }
 
-/* ---- comments_user-partial.html ---- */
-.comments-list-page.user-comments-list {
-  max-width: 800px;
-  margin: 0 auto;
+/* ---- comments_user-partial.html: the comments as a panel like the profile's uploads / favs ---- */
+.user_content_wrapper > .user-section {
+  min-width: 0;
+  background: var(--dropdown-bg, #232323);
+  border: 1px solid var(--nav-border-color, rgba(255, 255, 255, 0.15));
+}
+
+.user-section-header {
+  background: var(--bg, #111);
+  border-bottom: 1px solid var(--nav-border-color, rgba(255, 255, 255, 0.15));
+  padding: 6px 8px;
+  font-weight: bold;
+}
+
+.user-comments-list #user-comments-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+}
+
+.user-comments-loading,
+.user-comments-empty {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--text-muted, #888);
+}
+
+/* ---- comments.js / user_comments.js / messages.js: the report button and raw (unformatted) text ---- */
+.comment-actions .report-comment-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+  padding: 0;
+}
+
+pre.text-raw {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
 }
 
 /* ---- user-halls-partial.html: page (was a <style> block in the partial; :where keeps its specificity) ---- */
