@@ -1,0 +1,57 @@
+{#- f0ckgle web results: one result per f0ck (the uploader as the site, a breadcrumb, the title, a
+    snippet with the tag, type and match score, the thumbnail beside it), the stretched-logo page links
+    under them. "Verbatim" is the strict search (all tags must match). Without a search: the homepage. -#}
+{%- set searched = (result is defined and result is not none and result is not false) -%}
+{%- set fg_q = (searchstring if searchstring is string else "") -%}
+{% if not (searched or fg_q) %}
+{% include "frontends/f0ckgle/snippets/home.html" %}
+{% else %}
+{%- set fg_strict = (search_mode == "strict") -%}
+{%- set fg_title = fg_q -%}
+{%- set fg_page = "results" -%}
+{%- set fg_tab = "all" -%}
+{%- set fg_tab_all = "/search?tag=" ~ (fg_q|encode_uri_component) ~ ("&mode=strict" if fg_strict else "") -%}
+{%- set fg_tab_base = (("/tag/" ~ (fg_q|encode_uri_component) ~ "/") if (fg_q and "," not in fg_q and ":" not in fg_q) else "/") -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main">
+  <div class="fg-tools">
+    <a href="/search?tag={{ fg_q|encode_uri_component }}"{% if not fg_strict %} class="active"{% endif %}>All results</a>
+    <a href="/search?tag={{ fg_q|encode_uri_component }}&amp;mode=strict"{% if fg_strict %} class="active"{% endif %} title="all tags must match">Verbatim</a>
+  </div>
+  <p class="fg-stats">About {{ (count or 0)|locale_number }} results ({{ ((((count or 0) % 89) + 11) / 100)|fixed(2) }} seconds){% if (pagination and pagination.page and pagination.page > 1) %} &middot; Page {{ pagination.page }} of {{ pagination.end }}{% endif %}</p>
+  {% if (searched and result|length) %}
+  <ol class="fg-results">
+    {% for line in result %}
+    {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) -%}
+    {%- set href = ("/tag/" ~ (line.tag|encode_uri_component) ~ "/" ~ ref) if line.tag else ("/" ~ ref) -%}
+    {%- set who = ("anonymous" if is_anonymized else (line.username or domain)) -%}
+    <li class="fg-result">
+      <div class="fg-result-text">
+        <a class="fg-result-site" href="{{ href }}">
+          <span class="fg-fav fg-fav-letter">{{ (who[:1])|upper }}</span>
+          <span class="fg-result-who"><span class="fg-result-name">{{ who }}</span><cite>https://{{ domain }}{% if line.tag %} &rsaquo; tag &rsaquo; {{ line.tag }}{% endif %} &rsaquo; {{ ref }}</cite></span>
+        </a>
+        <h3 class="fg-result-title"><a href="{{ href }}">{{ (line.title if line.title else (line.tag ~ " - f0ck #" ~ ref if line.tag else "f0ck #" ~ ref)) }}</a></h3>
+        <p class="fg-result-snippet">{% if line.mime %}<span class="fg-dim">{{ line.mime }}</span> &mdash; {% endif %}{% if line.tag %}Tagged <b>{{ line.tag }}</b>{% else %}A f0ck{% endif %}{% if line.username and not is_anonymized %}, uploaded by <a href="/user/{{ line.username|lower|encode_uri_component }}">{{ line.username }}</a>{% endif %}.{% if (line.score is defined and line.score is number) %} <span class="fg-dim">Match: {{ (line.score * 100)|fixed(0) }}%</span>{% endif %}</p>
+      </div>
+      <a class="fg-result-thumb" href="{{ href }}"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></a>
+    </li>
+    {% endfor %}
+  </ol>
+  {% include "frontends/f0ckgle/snippets/pagination.html" %}
+  {% else %}
+  <div class="fg-none">
+    <p>Your search - <b>{{ fg_q }}</b> - did not match any f0cks.</p>
+    <p>Suggestions:</p>
+    <ul>
+      <li>Make sure that all tags are spelled correctly.</li>
+      <li>Try different tags, or fewer of them.</li>
+      {% if fg_strict %}<li>Turn off <a href="/search?tag={{ fg_q|encode_uri_component }}">Verbatim</a>.</li>{% endif %}
+      <li>Search titles with <b>title:text</b>.</li>
+    </ul>
+  </div>
+  {% endif %}
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}
+{% endif %}

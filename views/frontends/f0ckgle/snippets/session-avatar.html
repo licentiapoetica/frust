@@ -1,0 +1,8 @@
+{#- The visitor's avatar, or the first letter of the name on a coloured square. -#}
+{%- if (session.avatar_file and session.avatar_file != "default.png") -%}
+<img class="fg-ava" src="/a/{{ session.avatar_file }}" alt="">
+{%- elif session.avatar -%}
+<img class="fg-ava" src="/t/{{ session.avatar }}.webp" alt="">
+{%- else -%}
+<span class="fg-ava fg-ava-letter">{{ ((session.display_name or session.user or "?")[:1])|upper }}</span>
+{%- endif -%}

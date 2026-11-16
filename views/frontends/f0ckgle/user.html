@@ -1,0 +1,66 @@
+{#- f0ckgle profile: the user as a knowledge panel (avatar, name, facts, links), then their uploads
+    and favs as image results with "View all". -#}
+{%- set uname = (user.user or "") -%}
+{%- set ulink = "/user/" ~ (uname|lower|encode_uri_component) -%}
+{%- set is_me = (session and ((session.user|lower) == (uname|lower) or (session.login and (session.login|lower) == (uname|lower)))) -%}
+{%- set fg_page = "user" -%}
+{%- set fg_q = "user:" ~ (uname|lower) -%}
+{%- set fg_title = (user.display_name or uname) -%}
+{%- set fg_tab_base = ulink ~ "/uploads/" -%}
+{%- set fg_tab = "" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main fg-main-wide">
+  <section class="fg-kp fg-kp-wide">
+    <div class="fg-kp-person">
+      <img class="fg-kp-ava" src="{% if user.avatar_file and user.avatar_file != "default.png" %}/a/{{ user.avatar_file }}{% elif user.avatar %}/t/{{ user.avatar }}.webp{% else %}/s/fe/f0ckgle/img/default.svg{% endif %}" alt="">
+      <div>
+        <h1 class="fg-kp-title"><span{% if user.username_color %} class="fg-namecolor" style="--user-color: {{ user.username_color }}"{% endif %}>{{ (user.display_name or uname) }}</span></h1>
+        <div class="fg-kp-sub">{% if user.admin %}Administrator{% elif user.is_moderator %}Moderator{% elif user.is_ghost %}Legacy uploader{% else %}User{% endif %} on {{ domain }}{% if user.display_name and user.display_name != uname %} &middot; @{{ uname }}{% endif %}</div>
+        {% if user.banned %}<span class="fg-label fg-label-danger" title="{{ user.ban_duration }}">banned</span>{% endif %}
+      </div>
+    </div>
+    {% if (enable_profile_description and user.description) %}<p class="fg-kp-desc">{{ user.description }}</p>{% endif %}
+    <dl class="fg-kp-facts">
+      {% if user.user_id or user.id %}<div><dt>ID</dt><dd>{{ (user.user_id or user.id) }}</dd></div>{% endif %}
+      <div><dt>Joined</dt><dd><time title="{{ user.timestamp.timefull }}">{{ (user.created_at|locale_date if user.created_at else "") }}</time> ({{ user.timestamp.timeago }})</dd></div>
+      <div><dt>Uploads</dt><dd><a href="{{ ulink }}/uploads">{{ (count.f0cks or 0) }}</a></dd></div>
+      {% if not user.is_ghost %}
+      <div><dt>Favs</dt><dd><a href="{{ ulink }}/favs">{{ (count.favs or 0) }}</a></dd></div>
+      {% if enable_comments %}<div><dt>Comments</dt><dd><a href="{{ ulink }}/comments">{{ (count.comments or 0) }}</a></dd></div>{% endif %}
+      <div><dt>Tags</dt><dd><a href="{{ ulink }}/tags">{{ (count.tags or 0) }}</a></dd></div>
+      {% if userhalls_enabled %}<div><dt>Halls</dt><dd><a href="{{ ulink }}/halls">{{ (count.halls or 0) }}</a></dd></div>{% endif %}
+      {% endif %}
+    </dl>
+    {% if not user.is_ghost %}
+    <div class="fg-chips">
+      {% if (session and private_messages and not is_me and not session.is_anon) %}<a class="fg-chip" href="/messages/{{ uname|encode_uri_component }}">Message</a>{% endif %}
+      {% if is_me %}<a class="fg-chip" href="/settings">Manage your account</a>{% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="fg-user-sec">
+    <h2 class="fg-section-head">Uploads <a href="{{ (f0cks.link.main if (f0cks and f0cks.link) else ulink ~ "/uploads") }}">View all &rsaquo;</a></h2>
+    {% if (count.f0cks and f0cks and f0cks.items) %}
+    {% set posts = f0cks.items %}{% set posts_link = f0cks.link.main %}
+    {% include "frontends/f0ckgle/snippets/grid.html" %}
+    {% else %}
+    <p class="fg-dim">No uploads.</p>
+    {% endif %}
+  </section>
+  {% if not user.is_ghost %}
+  <section class="fg-user-sec">
+    <h2 class="fg-section-head">Favs <a href="{{ (favs.link.main if (favs and favs.link) else ulink ~ "/favs") }}">View all &rsaquo;</a></h2>
+    {% if (count.favs and favs and favs.items) %}
+    {% set posts = favs.items %}{% set posts_link = favs.link.main %}
+    {% include "frontends/f0ckgle/snippets/grid.html" %}
+    {% elif user.favorites_private and not is_me %}
+    <p class="fg-dim">Favorites are private.</p>
+    {% else %}
+    <p class="fg-dim">No favorites.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}

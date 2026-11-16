@@ -1203,6 +1203,110 @@ mod tests {
         assert!(!empty.contains("comments-static"));
     }
 
+    /// f0ckgle (the search engine parody frontend): its own pages render for guests and members,
+    /// with the forms that make them work without JavaScript (and live with it, f0ckgle.js). F0CKM_DUMP_F0CKGLE=<dir> writes them out.
+    #[test]
+    fn f0ckgle_pages_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let url = |path: &str, qs: serde_json::Value| serde_json::json!({ "pathname": path, "search": "", "qs": qs });
+        let session = serde_json::json!({ "user": "bob", "id": 1, "admin": true, "avatar": 5, "show_motd": true });
+        let item = |id: i64| serde_json::json!({ "id": id, "username": "al", "mime": "video/mp4", "tag_id": 1, "thumb": null, "title": null });
+        let base = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "modes": ["sfw", "nsfw", "untagged", "all", "nsfl"], "mode": 1,
+            "frontend": "f0ckgle", "frontends": ["f0ckm", "f0ckgle"], "frontend_switch": true, "enable_comments": true, "private_messages": true,
+            "motd": "hello", "nsfl_tag_id": 3, "anon_permissions_json": "{}", "captcha_scopes": [] });
+        let render = |view: &str, data: serde_json::Value| {
+            let mut ctx = base.clone();
+            ctx.as_object_mut().unwrap().extend(data.as_object().unwrap().clone());
+            let html = env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{view}: {e:#}"));
+            assert!(!html.contains("border-radius"), "{view}");
+            html
+        };
+        let dump = |name: &str, html: &str| {
+            if let Ok(dir) = std::env::var("F0CKM_DUMP_F0CKGLE") {
+                std::fs::write(PathBuf::from(dir).join(format!("{name}.html")), html).unwrap();
+            }
+        };
+        let fe = |v: &str| format!("frontends/f0ckgle/{v}.html");
+        let pag = serde_json::json!({ "start": 1, "end": 9, "page": 2, "prev": 1, "next": 3, "cheat": [1, 2, 3, 4] });
+
+        // homepage: logo, search box, both buttons; members get the modes
+        let home = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "session": session }));
+        dump("home", &home);
+        assert!(home.contains("<form class=\"fg-search\" id=\"fg-search\" action=\"/search\""));
+        assert!(home.contains("<button type=\"submit\" form=\"fg-search\" class=\"fg-btn\">F0ckgle Search</button>"));
+        assert!(home.contains("<a class=\"fg-btn\" href=\"/random\">I'm Feeling Lucky</a>"));
+        assert!(home.contains("<a href=\"/mode/1\" class=\"active\">NSFW</a>"));
+        assert!(home.contains("snippets/frontend-scripts") || home.contains("id=\"footer-data\""));
+        let guest = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {} }));
+        assert!(guest.contains("<a class=\"fg-signin\" href=\"/?login=1\">Sign in</a>"));
+
+        // image results with the stretched-logo page links
+        let grid = render(&fe("index"), serde_json::json!({ "url": url("/tag/cat/p/2", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session,
+            "items": [item(7), item(8)], "total": 1234, "pagination": pag, "link": { "main": "/tag/cat/", "path": "p/", "suffix": "" } }));
+        dump("grid", &grid);
+        assert!(grid.contains("<a class=\"fg-card\" href=\"/tag/cat/7\""));
+        assert!(grid.contains("<a href=\"/tag/cat/video\">Videos</a>"));
+        assert!(grid.contains("<a class=\"fg-pg fg-pg-end\" href=\"/tag/cat/p/1\" rel=\"prev\">"));
+        assert!(grid.contains("<span class=\"fg-pg fg-pg-cur\" aria-current=\"page\"><span class=\"fg-pg-l fg-c2\">0</span><span class=\"fg-pg-n\">2</span></span>"));
+        let empty = render(&fe("index"), serde_json::json!({ "url": url("/tag/zzz", serde_json::json!({})), "tmp": { "tag": "zzz" }, "items": [], "total": 0 }));
+        assert!(empty.contains("did not match any f0cks"));
+
+        // web results
+        let search = render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({ "tag": "cat" })), "searchstring": "cat", "count": 2, "search_mode": "strict",
+            "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat", "score": 0.93 }], "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" } }));
+        dump("search", &search);
+        assert!(search.contains("<h3 class=\"fg-result-title\"><a href=\"/tag/cat/7\">cat - f0ck #7</a></h3>"));
+        assert!(search.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
+        assert!(search.contains("Match: 93%"));
+        assert!(render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({})), "searchstring": [] })).contains("fg-home-logo"));
+
+        // item: the actions are plain forms
+        let tags = serde_json::json!([{ "id": 1, "tag": "sfw", "normalized": "sfw", "can_exclude": false }, { "id": 9, "tag": "Cat", "normalized": "cat", "can_exclude": true, "is_excluded": true }]);
+        let it = serde_json::json!({ "id": 7, "username": "al", "mime": "video/mp4", "dest": "/b/7.mp4", "size": "1 MB", "tags": tags, "timestamp": { "timeago": "1 day ago", "timefull": "x" },
+            "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" } });
+        let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x", "replies": [] });
+        let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it,
+            "pagination": { "prev": 8, "next": 6 }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_rate_item": true, "user_has_favorited": true,
+            "isSubscribed": false, "static_comments": [comment], "phrase": "nice" }));
+        dump("item", &page);
+        assert!(page.contains("<a class=\"fg-chip\" id=\"fg-prev\" href=\"/tag/cat/8\""));
+        assert!(page.contains("<input type=\"hidden\" name=\"action\" value=\"remove\">"));
+        assert!(page.contains("<form method=\"post\" action=\"/api/v2/item/7/rating\" class=\"fg-inline fg-ajax\" data-fg-refresh=\"kp\">"));
+        assert!(page.contains("class=\"f0ck-exclude-form is-excluded\" data-tag-id=\"9\""));
+        assert!(page.contains("<form method=\"post\" action=\"/api/comments\" class=\"fg-comment-form fg-ajax\" id=\"comment-form\" data-fg-refresh=\"comments comments-head\" data-fg-comment>"));
+        // with JavaScript the forms go through fetch and these regions are swapped in (f0ckgle.js)
+        for live in ["actions", "kp", "comments", "comments-head"] {
+            assert_eq!(page.matches(&format!("data-fg-live=\"{live}\"")).count(), 1, "{live}");
+        }
+        assert!(page.contains("data-reply=\"3\" data-name=\"al\""));
+        assert!(page.contains("<div id=\"report\" class=\"fg-modal\">"));
+        assert!(page.contains("<div id=\"delete\" class=\"fg-modal\">"));
+        assert!(page.contains("\"itemId\": 7"));
+
+        // profile, error, sign-in
+        let user = render(&fe("user"), serde_json::json!({ "url": url("/user/al", serde_json::json!({})), "session": session,
+            "user": { "user": "al", "id": 2, "timestamp": { "timeago": "1 year ago", "timefull": "x" } }, "count": { "f0cks": 2, "favs": 0 },
+            "f0cks": { "items": [item(7)], "link": { "main": "/user/al/uploads/" } } }));
+        dump("user", &user);
+        assert!(user.contains("<a class=\"fg-card\" href=\"/user/al/uploads/7\""));
+        let error = render(&fe("error"), serde_json::json!({ "message": "gone", "url": url("/x", serde_json::json!({})) }));
+        dump("error", &error);
+        assert!(error.contains("That's an error."));
+        let login = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({ "login": "1" })), "error": "wrong password" }));
+        dump("login", &login);
+        assert!(login.contains("<form class=\"fg-signin-card\" method=\"post\" action=\"/login\">"));
+        assert!(login.contains("<input type=\"hidden\" name=\"csrf_token\" value=\"tok\">"));
+        assert!(login.contains("wrong password"));
+
+        // a shared page in the shell
+        let shell = render("settings.html", serde_json::json!({ "url": url("/settings", serde_json::json!({})), "session": session,
+            "shell_header": "frontends/f0ckgle/shell/header.html", "shell_footer": "frontends/f0ckgle/shell/footer.html" }));
+        dump("settings", &shell);
+        assert!(shell.contains("class=\"no-js f0ck-shell\""));
+        assert!(shell.contains("<div class=\"f0ck-shell-page\">"));
+    }
+
     /// comments_user-partial.html: a user's comments server-rendered for visitors without
     /// JavaScript, with links to the newer / older pages, under the profile sub-page head.
     #[test]
@@ -1329,7 +1433,7 @@ mod tests {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
         let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
         let render = |view: &str, ctx: &serde_json::Value| env.get_template(view).unwrap().render(to_jvalue(ctx)).unwrap();
-        let forms = ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/w0bm/partials/registerform.html", "gate/login_injection.html"];
+        let forms = ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/f0ckgle/register.html", "frontends/w0bm/partials/registerform.html", "gate/login_injection.html"];
         let mut ctx = serde_json::json!({ "csrf_token": "tok", "domain": "f0ck.test", "registration_open": false, "captcha_enabled": false,
             "registration_apply": true, "registration_apply_email": false, "url": { "pathname": "/", "search": "", "qs": {} } });
         for view in forms {
@@ -1348,7 +1452,7 @@ mod tests {
         }
 
         // The dialog that has the rules and terms read comes with the forms (not under private_society)
-        for view in ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/w0bm/partials/navigation.html"] {
+        for view in ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/f0ckgle/register.html", "frontends/w0bm/partials/navigation.html"] {
             assert_eq!(render(view, &ctx).matches("<div id=\"tos-consent-modal\" hidden>").count(), 1, "{view}");
         }
         ctx["private_society"] = serde_json::json!(true);
@@ -1606,14 +1710,16 @@ mod tests {
         }
     }
 
-    /// Every text size has its rule in f0ckm.css, w0bm-fe.css and f0ckv2.css.
+    /// Every text size has its rule in f0ckm.css, w0bm-fe.css, f0ckv2.css and f0ckgle.css.
     #[test]
     fn text_sizes_have_css() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
         let f0ckm = std::fs::read_to_string(root.join("public/s/css/f0ckm.css")).unwrap();
         let w0bm = std::fs::read_to_string(root.join("public/s/fe/w0bm/css/w0bm-fe.css")).unwrap();
         let v2 = std::fs::read_to_string(root.join("public/s/fe/f0ckv2/css/f0ckv2.css")).unwrap();
+        let gle = std::fs::read_to_string(root.join("public/s/fe/f0ckgle/css/f0ckgle.css")).unwrap();
         for n in crate::fonts::SIZES {
+            assert!(gle.contains(&format!("html.user-fs-{n} {{\n  font-size: {n}%;")), "f0ckgle.css {n}");
             assert!(v2.contains(&format!("html.user-fs-{n} {{\n  --fs-zoom: ")), "f0ckv2.css {n}");
             assert!(f0ckm.contains(&format!("html.user-fs-{n} {{")), "f0ckm.css {n}");
             assert!(w0bm.contains(&format!("html.user-fs-{n} {{\n    --fs-zoom: ")), "w0bm-fe.css {n}");

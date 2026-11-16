@@ -1,0 +1,25 @@
+{#- f0ckgle error page: the classic "That's an error." page, with the filter hints of the other
+    frontends' error pages. -#}
+{%- set fg_page = "error" -%}
+{%- set fg_title = "Error" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+<main class="fg-error">
+  <a href="/" class="fg-error-logo">{% include "frontends/f0ckgle/snippets/logo.html" %}</a>
+  <p><b>404.</b> <span class="fg-dim">That's an error.</span></p>
+  <p>{{ message }}</p>
+  {% if (error_filter_hint is defined and error_filter_hint) %}
+  {#- the filter hint only for visitors who can change their filter (guests can't) -#}
+  {%- set can_filter = session and (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
+  {% if can_filter %}
+  <p>{{ error_filter_hint|safe }}</p>
+  <p>Switch the mode:{% for m in modes %}{% if m != "nsfl" or enable_nsfl %} <a href="/mode/{{ loop.index0 }}">{{ m }}</a>{% endif %}{% endfor %}</p>
+  {% elif not session %}
+  <p><a href="/?login=1">Sign in</a> to see more.</p>
+  {% endif %}
+  {% if (error_see_anyways and (item_id or item_slug)) %}
+  <p><a href="/{{ (item_slug or item_id) }}?see_anyways=1">{{ error_see_anyways }}</a></p>
+  {% endif %}
+  {% endif %}
+  <p class="fg-dim">That's all we know.</p>
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}

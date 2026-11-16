@@ -1,0 +1,76 @@
+/* f0ckgle frontend: the shared pages (settings, messages, admin, mod, pending, banned, user halls)
+   in f0ckgle's shell (shell/header.html). /s/css/f0ck-shell.css maps the --fe-* palette below onto
+   f0ckm's theme variables. The shell renders with theme="light", so f0ckm.css (layered in by
+   f0ck-shell.css) styles the pages with its light theme; f0ck-shell.css sets --black / --white for
+   dark themes, so the light theme's values are set again here (more specific). */
+
+html.f0ck-shell {
+  --fe-accent: #1a73e8;
+  --fe-accent-rgb: 26, 115, 232;
+  --fe-bg: #fff;
+  --fe-surface: #f8f9fa;
+  --fe-surface-2: #fff;
+  --fe-border: #dadce0;
+  --fe-text: #202124;
+  --fe-muted: #5f6368;
+  --fe-link: #1a0dab;
+  --fe-font: arial, sans-serif;
+  --fe-heading-font: arial, sans-serif;
+  --fe-input-bg: #fff;
+  --fe-radius: 0;
+  /* the header scrolls away: sticky parts of the pages go to the top */
+  --fe-navbar-h: 0px;
+}
+
+html.f0ck-shell[theme="light"] {
+  --black: #fff;
+  --white: #202124;
+  --gray: #e8eaed;
+  --text: #202124;
+  --text-color: #202124;
+  --fg: #202124;
+  --text-muted: #5f6368;
+  --nav-bg: #fff;
+  --dropdown-bg: #fff;
+  --dropdown-item-hover: #f1f3f4;
+  --nav-link-hover-bg: #f1f3f4;
+  --metadata-bg: #f8f9fa;
+  --badge-bg: #f1f3f4;
+  --badge-tag: #f1f3f4;
+  --tooltip-bg: #fff;
+  --scrollbar-color: #dadce0;
+}
+
+/* ── the page column under the results header (html.f0ck-shell: more specific than the
+   `all: revert-layer` on .f0ck-shell-page in f0ck-shell.css, which loads after this file) ── */
+html.f0ck-shell .f0ck-shell-page {
+  flex: 1;
+  width: 100%;
+  max-width: 75rem;
+  padding: 1.25rem 1.5rem 0 var(--fg-gutter);
+}
+
+@media (max-width: 700px) {
+  html.f0ck-shell .f0ck-shell-page {
+    padding: 1rem 1rem 0;
+  }
+}
+
+/* f0ckm.css sets the page background, its colours and hidden scrollbars with !important (in its
+   layer); the f0ck-shell-important layer is declared before it, so these win. */
+@layer f0ck-shell-important {
+  html.f0ck-shell {
+    background: #fff !important;
+    scrollbar-width: auto !important;
+  }
+
+  html.f0ck-shell body {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh !important;
+    background: #fff !important;
+    color: #202124 !important;
+    scrollbar-width: auto !important;
+    overflow-x: clip;
+  }
+}

@@ -1,0 +1,63 @@
+{#- f0ckgle index. "/" is the homepage (logo, search box, two buttons, nothing else); every other
+    listing (/p/2, /tag/x, /user/x/uploads, /video, ...) shows as image results.
+    /?login=1 and /?register=1 are the sign-in pages, as in f0ckv2. -#}
+{% if (private_society and not session) %}
+{% include "index.html" %}
+{% elif (not session and url and url.qs and url.qs.login) %}
+{% include "frontends/f0ckgle/login.html" %}
+{% elif (not session and url and url.qs and url.qs.register) %}
+{% set token = (url.qs.token or "") %}
+{% include "frontends/f0ckgle/register.html" %}
+{% else %}
+{%- set fg_filtered = (tmp and (tmp.user or tmp.tag or tmp.hall or tmp.userHall or tmp.mime)) -%}
+{%- set fg_home = (url and url.pathname == "/" and not fg_filtered) -%}
+{%- if fg_home -%}
+{% include "frontends/f0ckgle/snippets/home.html" %}
+{%- else -%}
+{#- image results: the search box says what is listed, the tabs filter it by type -#}
+{%- if tmp and tmp.user -%}
+  {%- set fg_tab_base = "/user/" ~ (tmp.user|lower|encode_uri_component) ~ "/" ~ (tmp.view_mode or "uploads") ~ "/" -%}
+  {%- set fg_q = ("user:" ~ (tmp.user|lower) ~ (" favs" if tmp.view_mode == "favs" else "")) -%}
+{%- elif tmp and tmp.tag -%}
+  {%- set fg_tab_base = "/tag/" ~ (tmp.tag|encode_uri_component) ~ "/" -%}
+  {%- set fg_q = tmp.tag|lower -%}
+{%- elif tmp and tmp.hall -%}
+  {%- set fg_tab_base = "/h/" ~ ((tmp.hall.slug if tmp.hall.slug else tmp.hall)|encode_uri_component) ~ "/" -%}
+  {%- set fg_q = ("hall:" ~ (tmp.hall.name if tmp.hall.name else tmp.hall)) -%}
+{%- elif tmp and tmp.userHall -%}
+  {%- set fg_tab_base = (link.main if (link and link.main) else "/") -%}
+  {%- set fg_q = ("hall:" ~ (tmp.userHall.name if tmp.userHall.name else tmp.userHall)) -%}
+{%- else -%}
+  {%- set fg_tab_base = "/" -%}
+  {%- set fg_q = "" -%}
+{%- endif -%}
+{%- set fg_tab = ((tmp.mime if (tmp and tmp.mime and "," not in tmp.mime) else "all") if not (tmp and tmp.userHall) else "") -%}
+{%- set fg_title = (fg_q or "f0cks") -%}
+{%- set fg_page = "results" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main fg-main-wide">
+  <p class="fg-stats">About {{ (total or 0)|locale_number }} results ({{ ((((total or 0) % 89) + 11) / 100)|fixed(2) }} seconds){% if (pagination and pagination.page and pagination.page > 1) %} &middot; Page {{ pagination.page }} of {{ pagination.end }}{% endif %}</p>
+  {% if tmp and tmp.hall and tmp.hall.description %}<p class="fg-note">{{ tmp.hall.description }}</p>{% endif %}
+  {% if tmp and tmp.userHallOwner %}<p class="fg-note">A hall by <a href="/user/{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner)|lower|encode_uri_component }}/halls">{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner) }}</a></p>{% endif %}
+  {% if tmp and tmp.user %}<p class="fg-note">Results from <a href="/user/{{ tmp.user|lower|encode_uri_component }}">{{ tmp.user|lower }}</a>{% if tmp.view_mode == "favs" %} &middot; <a href="/user/{{ tmp.user|lower|encode_uri_component }}/uploads">uploads</a>{% else %} &middot; <a href="/user/{{ tmp.user|lower|encode_uri_component }}/favs">favs</a>{% endif %}</p>{% endif %}
+  {% set posts = (items or []) %}{% set posts_link = link.main %}
+  {% if posts %}
+  {% include "frontends/f0ckgle/snippets/grid.html" %}
+  {% include "frontends/f0ckgle/snippets/pagination.html" %}
+  {% else %}
+  <div class="fg-none">
+    <p>Your search - <b>{{ (fg_q or "everything") }}</b> - did not match any f0cks.</p>
+    <p>Suggestions:</p>
+    <ul>
+      <li>Make sure that all tags are spelled correctly.</li>
+      <li>Try different tags.</li>
+      <li>Try a different <a href="/settings">mode</a>.</li>
+      <li><a href="/random">Feel lucky.</a></li>
+    </ul>
+  </div>
+  {% endif %}
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}
+{%- endif %}
+{% endif %}

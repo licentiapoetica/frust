@@ -1,0 +1,56 @@
+{#- Comments under an item as "Discussions and forums". The server sends them as static_comments
+    (routes/comments.rs static_item_comments, text effects included), so they need no JavaScript.
+    With JavaScript, f0ckgle.js posts, replies and deletes with fetch and swaps in the list
+    (data-fg-live) from a fresh render of the page, also when a comment arrives live. Reply without
+    JavaScript: a link (?reply=<id>) that fills the form's parent_id. -#}
+{%- set here_path = (url.pathname if (url and url.pathname) else ("/" ~ item.id)) -%}
+{%- set reply_to = (parse_int(url.qs.reply) if (url and url.qs and url.qs.reply) else none) -%}
+{%- set me = ((session.user or "")|lower if session else "") -%}
+{%- macro one(c, reply) -%}
+<div class="fg-comment{% if reply %} reply{% endif %}{% if c.is_pinned %} pinned{% endif %}{% if reply_to == c.id %} fg-comment-target{% endif %}" id="c{{ c.id }}">
+  <div class="fg-comment-head">
+    {% if c.username %}<a href="/user/{{ c.username|lower|encode_uri_component }}"><img class="fg-comment-ava" src="{{ c.avatar_src }}" alt="" loading="lazy"></a><a class="fg-comment-name{% if c.username_color %} fg-namecolor{% endif %}" href="/user/{{ c.username|lower|encode_uri_component }}"{% if c.username_color %} style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<span class="fg-comment-ava fg-ava-letter">?</span><span class="fg-comment-name">{{ (c.name or "anonymous") }}</span>{% endif %}
+    <span class="fg-dim">&middot; <a href="#c{{ c.id }}" title="{{ c.iso }}">{{ c.timeago }}</a></span>
+    {% if c.is_pinned %}<span class="fg-label">Top comment</span>{% endif %}
+    {% for b in (c.backlinks or []) %}<a href="#c{{ b }}" class="fg-quote">&gt;&gt;{{ b }}</a> {% endfor %}
+  </div>
+  <div class="fg-comment-body">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+  <div class="fg-comment-actions">
+    {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" data-reply="{{ c.id }}" data-name="{{ (c.name or "anonymous") }}">Reply</a>{% endif %}
+    {% if session and (is_mod_or_admin or (allow_comment_deletion and c.username and (c.username|lower) == me)) %}
+    <form method="post" action="/api/comments/{{ c.id }}/delete" class="fg-inline fg-ajax" data-fg-refresh="comments comments-head" data-fg-confirm="Delete this comment?">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ here_path }}#comments">
+      <button type="submit" class="fg-linkbtn">Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{%- endmacro -%}
+{%- set sc = (static_comments or []) -%}
+{%- set comment_total = (sc|length) + (sc|selectattr("replies")|map(attribute="replies")|map("length")|sum) -%}
+<section class="fg-comments" id="comments" data-item-id="{{ item.id }}">
+  <h2 class="fg-section-head" data-fg-live="comments-head">Discussions and forums <span class="fg-dim">({{ comment_total }}){% if item.is_comments_locked %} &middot; locked{% endif %}</span></h2>
+  <div class="fg-comment-list" data-fg-live="comments">
+    {% for c in sc %}
+    {{ one(c, false) }}
+    {% if c.replies %}<div class="fg-comment-replies">{% for r in c.replies %}{{ one(r, true) }}{% endfor %}</div>{% endif %}
+    {% else %}
+    <p class="fg-dim">No discussions yet. Be the first.</p>
+    {% endfor %}
+  </div>
+  {% if session and not item.is_comments_locked %}
+  <form method="post" action="/api/comments" class="fg-comment-form fg-ajax" id="comment-form" data-fg-refresh="comments comments-head" data-fg-comment>
+    <input type="hidden" name="item_id" value="{{ item.id }}">
+    <input type="hidden" name="parent_id" value="{{ (reply_to or "") }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="back" value="{{ here_path }}#comments">
+    <p class="fg-dim fg-reply-to"{% if not reply_to %} hidden{% endif %}>Replying to <span>#{{ (reply_to or "") }}</span> &middot; <a href="{{ here_path }}#comments" class="fg-reply-cancel">cancel</a></p>
+    <textarea name="content" rows="3" placeholder="Join the discussion" required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+    {% if "comment" in (captcha_scopes or []) %}{% include "frontends/f0ckgle/snippets/cap-image.html" %}{% endif %}
+    <button type="submit" class="fg-btn-blue">Post</button>
+  </form>
+  {% elif not session %}
+  <p class="fg-dim"><a href="/?login=1">Sign in</a> to join the discussion.</p>
+  {% endif %}
+</section>

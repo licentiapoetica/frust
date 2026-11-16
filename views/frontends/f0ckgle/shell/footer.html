@@ -1,0 +1,9 @@
+{#- Closes a shared page in f0ckgle's chrome: the footer bar and the scripts (snippets/footer.html with
+    fg_shell_foot, which includes snippets/frontend-scripts.html), then the shared pages' extras.
+    Contract: views/frontends/README.md -#}
+</div>
+{%- set fg_shell_foot = true %}
+{% include "frontends/f0ckgle/snippets/footer.html" %}
+{% include "snippets/shell-foot.html" %}
+</body>
+</html>

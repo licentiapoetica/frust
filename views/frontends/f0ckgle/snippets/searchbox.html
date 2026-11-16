@@ -1,0 +1,14 @@
+{#- The search box (tags, or title:text) to /search. fg_q: the text in it; fg_strict: keep the
+    "Verbatim" (strict) mode. The mic is random (it always hears "random"), the camera uploads.
+    Icons are files (<img>): f0ck-shell.css resets the chrome with `all: revert`, which would wipe
+    the geometry of inline SVG on the shared pages. -#}
+<form class="fg-search" id="fg-search" action="/search" method="get" role="search">
+  <img class="fg-icon fg-search-glass" src="/s/fe/f0ckgle/img/search.svg?v={{ mtime("/public/s/fe/f0ckgle/img/search.svg") }}" alt="">
+  <input type="search" name="tag" value="{{ (fg_q if (fg_q is defined and fg_q is string) else "") }}" aria-label="Search" title="Search" autocomplete="off" spellcheck="false" maxlength="2048"{% if (fg_autofocus is defined and fg_autofocus) %} autofocus{% endif %}>
+  {% if (fg_strict is defined and fg_strict) %}<input type="hidden" name="mode" value="strict">{% endif %}
+  <a class="fg-search-icon" href="/random" title="Search by voice"><img class="fg-icon" src="/s/fe/f0ckgle/img/mic.svg?v={{ mtime("/public/s/fe/f0ckgle/img/mic.svg") }}" alt=""><span class="fg-sr">Search by voice</span></a>
+  {% if (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) %}
+  <a class="fg-search-icon" href="/upload" title="Search by image"><img class="fg-icon" src="/s/fe/f0ckgle/img/camera.svg?v={{ mtime("/public/s/fe/f0ckgle/img/camera.svg") }}" alt=""><span class="fg-sr">Search by image</span></a>
+  {% endif %}
+  <button type="submit" class="fg-search-go" title="F0ckgle Search"><img class="fg-icon" src="/s/fe/f0ckgle/img/search-blue.svg?v={{ mtime("/public/s/fe/f0ckgle/img/search-blue.svg") }}" alt=""><span class="fg-sr">F0ckgle Search</span></button>
+</form>

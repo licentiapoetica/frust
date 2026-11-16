@@ -1,0 +1,18 @@
+{#- Image results: posts (list of items), posts_link (link prefix). Each one a thumbnail with a caption:
+    the uploader as the "site", the title (or the id) under it. -#}
+<div class="fg-grid">
+  {% for p in posts %}
+  {%- set ref = (p.slug if (enable_item_slugs and p.slug) else p.id) -%}
+  {%- set who = ("anonymous" if is_anonymized else (p.display_name or p.username or domain)) -%}
+  <a class="fg-card" href="{{ posts_link }}{{ ref }}" data-mode="{{ ("nsfl" if p.tag_id == nsfl_tag_id else ("nsfw" if p.tag_id == 2 else ("sfw" if p.tag_id == 1 else "null"))) }}">
+    <span class="fg-card-img">
+      {% if (p.is_audio and not p.has_coverart and not p.thumb) %}<span class="fg-card-audio">&#9835;</span>{% else %}<img src="{{ (p.thumb or ("/t/" ~ p.id ~ ".webp")) }}" alt="" loading="lazy">{% endif %}
+      {% if (p.mime and (p.mime.startswith("video") or p.mime.startswith("audio"))) %}<span class="fg-card-badge">&#9654;</span>{% endif %}
+      {% if (p.is_album and p.album_count > 1) %}<span class="fg-card-badge fg-card-badge-r">&#10697; {{ p.album_count }}</span>{% endif %}
+      {% if p.is_pinned %}<span class="fg-card-badge fg-card-badge-r" title="pinned">&#128204;</span>{% endif %}
+    </span>
+    <span class="fg-card-src"><span class="fg-fav fg-fav-letter">{{ (who[:1])|upper }}</span>{{ who }}{% if p.has_notification %} <span class="fg-card-new">new comments</span>{% endif %}</span>
+    <span class="fg-card-title">{% if (enable_oc and p.is_oc) %}[OC] {% endif %}{{ (p.title if (enable_item_title and p.title) else ("f0ck #" ~ ref)) }}</span>
+  </a>
+  {% endfor %}
+</div>

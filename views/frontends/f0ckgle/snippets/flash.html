@@ -1,0 +1,3 @@
+{#- Message of a form post without JavaScript (server/src/nojs.rs), as a snackbar at the bottom.
+    f0ckgle.js shows the live ones (f0ckFrontend.flash) in the same box. -#}
+<div id="fg-flash" class="fg-flash f0ck-shell-chrome" role="status">{% if nojs_flash %}<div class="fg-toast fg-toast-{{ ("success" if nojs_flash.kind == "success" else "error") }}">{{ nojs_flash.text }}</div>{% endif %}</div>

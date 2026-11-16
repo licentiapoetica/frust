@@ -1,0 +1,33 @@
+{#- f0ckgle: the grey footer bar, then the page data and the scripts, end of <body>. shell/footer.html
+    sets fg_shell_foot and closes the page itself (after snippets/shell-foot.html). -#}
+{%- set fg_is_shell_foot = (fg_shell_foot is defined and fg_shell_foot) -%}
+<footer class="fg-foot f0ck-shell-chrome">
+  <div class="fg-foot-country">f0ckland</div>
+  <div class="fg-foot-links">
+    <div>
+      <a href="/about">About</a>
+      <a href="/rules">Rules</a>
+      <a href="/ranking">How Search works</a>
+      {% if (frontend_switch and frontends and frontends|length > 1) %}<span class="fg-foot-fe">Also in:{% for f in frontends %}{% if f != frontend %} <a href="/frontend/{{ f }}">{{ f }}</a>{% endif %}{% endfor %}</span>{% endif %}
+    </div>
+    <div>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/settings">Settings</a>
+    </div>
+  </div>
+</footer>
+{#- what f0ckgle.js needs to know about the page -#}
+<script type="application/json" id="fg-data">{{ {
+  "itemId": ((item.id if (item is defined and item and item.id) else none)),
+  "prev": ((link.main ~ pagination.prev ~ (link.suffix or "")) if (item is defined and item and item.id and pagination and pagination.prev) else none),
+  "next": ((link.main ~ pagination.next ~ (link.suffix or "")) if (item is defined and item and item.id and pagination and pagination.next) else none)
+}|tojson }}</script>
+{% include "snippets/frontend-scripts.html" %}
+<script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>
+<script src="/s/fe/f0ckgle/js/f0ckgle.js?v={{ mtime("/public/s/fe/f0ckgle/js/f0ckgle.js") }}"></script>
+{% if session %}{% include "snippets/cap-gate.html" %}{% endif %}
+{%- if not fg_is_shell_foot %}
+</body>
+</html>
+{%- endif %}

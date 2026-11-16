@@ -1,0 +1,47 @@
+{#- f0ckgle register page (the account card, as the sign-in page), posts to f0ckm's /register. -#}
+{%- set fg_page = "login" -%}
+{%- set fg_title = "Create your F0ckgle Account" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% if captcha_enabled %}
+<script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
+<script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
+{% endif %}
+<main class="fg-card-page">
+  <form class="fg-signin-card" method="post" action="/register">
+    <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+    <a href="/" class="fg-signin-logo">{% include "frontends/f0ckgle/snippets/logo.html" %}</a>
+    <h1>Create a F0ckgle Account</h1>
+    <p class="fg-signin-sub">for {{ domain }}</p>
+    {% if (error is defined and error is string and error) %}<p class="fg-form-error">{{ error }}</p>{% endif %}
+    {% if (success is defined and success is string and success) %}<p class="fg-form-ok">{{ success }}</p>{% else %}
+    <label class="fg-field"><input type="text" name="username" placeholder=" " autocomplete="username" required><span>Username</span></label>
+    <label class="fg-field"><input type="password" name="password" placeholder=" " autocomplete="new-password" required minlength="20"><span>Password (min. 20 characters)</span></label>
+    <label class="fg-field"><input type="password" name="password_confirm" placeholder=" " autocomplete="new-password" required minlength="20"><span>Confirm</span></label>
+    {% if registration_apply %}
+    {#- Registration by application: an invite token, or a message for the admins -#}
+    <label class="fg-field"><input type="text" name="token" placeholder=" " autocomplete="off" value="{{ (token if token is defined else "") }}"><span>Invite token (if you have one)</span></label>
+    <label class="fg-field"><textarea name="application" maxlength="1000" rows="4" placeholder=" "></textarea><span>No token? Tell us why you want an account (min. 20 characters)</span></label>
+    <label class="fg-field"><input type="email" name="email" placeholder=" " autocomplete="email"><span>{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}</span></label>
+    {% elif not registration_open %}
+    <label class="fg-field"><input type="text" name="token" placeholder=" " autocomplete="off" value="{{ (token if token is defined else "") }}" required><span>Invite token</span></label>
+    {% elif registration_require_mail_andor_token %}
+    <label class="fg-field"><input type="email" name="email" placeholder=" " autocomplete="email" required><span>Email</span></label>
+    {% endif %}
+    <input type="text" name="email_confirm_field" class="register-honeypot" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <label class="fg-check"><input type="checkbox" id="tos" name="tos" required> {% if private_society %}I accept the terms{% else %}I accept the <a href="/terms" target="_blank">terms</a> and <a href="/rules" target="_blank">rules</a> and I am 18+{% endif %}</label>
+    {% if captcha_enabled %}
+    <cap-widget class="js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+    {% include "frontends/f0ckgle/snippets/cap-image.html" %}
+    {% endif %}
+    {% endif %}
+    <div class="fg-signin-btns">
+      <a href="/?login=1" class="fg-btn-text">Sign in instead</a>
+      {% if not (success is defined and success is string and success) %}<button type="submit" class="fg-btn-blue">{{ ("Apply" if registration_apply else "Next") }}</button>{% endif %}
+    </div>
+  </form>
+  <div class="fg-signin-foot"><span>English (f0ckland)</span><span><a href="/about">Help</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></span></div>
+</main>
+{#- the rules and terms have to be read before the checkbox gets ticked -#}
+{% include "snippets/tos-consent.html" %}
+</body>
+</html>

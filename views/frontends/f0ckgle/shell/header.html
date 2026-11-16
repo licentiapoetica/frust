@@ -1,0 +1,10 @@
+{#- f0ckgle chrome around the shared pages (settings, messages, admin, mod, pending, banned, ...):
+    the head with f0ck-shell and fg_shell_head in it, the results header, then the page content.
+    Contract: views/frontends/README.md -#}
+{%- set fg_shell = true -%}
+{%- set fg_shell_head = "snippets/shell-head.html" -%}
+{%- set fg_page = "shell" -%}
+{%- set fg_tab = "" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<div class="f0ck-shell-page">
