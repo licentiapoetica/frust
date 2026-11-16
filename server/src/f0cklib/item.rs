@@ -235,7 +235,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
         r#"select items.*, items.username as username, uo.username_color as author_color, uo.display_name as author_display_name,
         uo.avatar as author_avatar, uo.avatar_file as author_avatar_file, uo.banner_file as author_banner_file,
         uo.banner_position as author_banner_position, uo.banner_size as author_banner_size, uo.description as author_description,
-        author_u.id as author_id, items.is_pinned, "#,
+        author_u.id as author_id, items.is_pinned, (select coalesce(sum(vv.view_count), 0) from user_video_views vv where vv.video_id = items.id)::bigint as views, "#,
     );
     match uid {
         Some(_) => q.push("coalesce(uvv.view_count, 0) as my_views"),
@@ -703,6 +703,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             "mime": actitem.val("mime"),
             "size": crate::util::format_size(actitem.val("size")),
             "checksum": actitem.val("checksum"),
+            "views": actitem.val("views"),
             "timestamp": { "timeago": timeago, "timefull": timefull },
             "favorites": favorites.into_iter().map(Value::Object).collect::<Vec<_>>(),
             "tags": effective_tags,

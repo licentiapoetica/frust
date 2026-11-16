@@ -508,6 +508,15 @@ fn frontend_name_has_onara(st: &AppState, fe: &str) -> bool {
     fe == DEFAULT_FRONTEND || st.tpl.has(&format!("{FRONTENDS_DIR}/{fe}/ajax-item"))
 }
 
+/// Whether the frontend of this request lists recommendations on its item page (it has
+/// `snippets/recommendations.html`): the item routes then render them into the page
+/// (`recommendations`, the items of /api/v2/recommendations), so the list works without JavaScript.
+/// f0ckm loads its recommendations tab with JavaScript only.
+pub fn frontend_has_recommendations(st: &AppState, req: Option<&Req>) -> bool {
+    let fe = frontend_for(st, &st.cfg(), req);
+    fe != DEFAULT_FRONTEND && st.tpl.has(&format!("{FRONTENDS_DIR}/{fe}/snippets/recommendations"))
+}
+
 /// Shared pages: default views that render inside the frontend's shell (they include
 /// `shell_header`). Paths relative to views/, e.g. "admin/users.html".
 pub fn shared_views(views: &std::path::Path) -> Vec<String> {
@@ -1382,7 +1391,7 @@ mod tests {
         let session = serde_json::json!({ "user": "bob", "id": 1, "admin": true, "avatar": 5, "show_motd": true });
         let item = |id: i64| {
             serde_json::json!({ "id": id, "username": "al", "display_name": "Al", "username_color": "#f00", "mime": "video/mp4", "tag_id": 1,
-                "rating_class": "sfw", "thumb": null, "title": null, "stamp": 1_794_700_000, "my_views": 1 })
+                "rating_class": "sfw", "thumb": null, "title": null, "stamp": 1_794_700_000, "my_views": 1, "views": 1290 })
         };
         let base = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "modes": ["sfw", "nsfw", "untagged", "all", "nsfl"], "mode": 1,
             "frontend": "f0ckyou", "frontends": ["f0ckm", "f0ckyou"], "frontend_switch": true, "enable_comments": true, "private_messages": true,
@@ -1467,17 +1476,18 @@ mod tests {
         // watch page: the actions are plain forms, the regions they change are swapped in by f0ckyou.js
         let tags = serde_json::json!([{ "id": 1, "tag": "sfw", "normalized": "sfw", "can_exclude": false }, { "id": 9, "tag": "Cat", "normalized": "cat", "can_exclude": true, "is_excluded": true }]);
         let it = serde_json::json!({ "id": 7, "username": "al", "author_color": "#0f0", "mime": "video/mp4", "dest": "/b/7.mp4", "size": "1 MB", "tags": tags,
-            "timestamp": { "timeago": "1 day ago", "timefull": "x" }, "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" } });
+            "timestamp": { "timeago": "1 day ago", "timefull": "x" }, "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" }, "views": 12345 });
+        let rec = serde_json::json!({ "id": 9, "slug": null, "title": null, "tags": ["cat", "dog"], "username": "al", "display_name": "Al", "mime": "video/mp4",
+            "stamp": 1_794_700_000, "views": 1, "personalized": true, "rating_class": "nsfw", "has_coverart": false });
         let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
             "replies": [{ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content_html": "yo", "attachments_html": "", "timeago": "now", "iso": "x" }] });
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it,
             "pagination": { "prev": 6, "next": 8, "cheat": [4, 5, 6, 7, 8, 9] }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_rate_item": true,
-            "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice" }));
+            "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice", "recommendations": [rec] }));
         dump("item", &page);
         assert!(page.contains("<body class=\"fy-page-watch\">"));
         assert!(page.contains("<video id=\"my-video\" class=\"fy-media\""));
         assert!(page.contains("<a class=\"fy-btn\" id=\"fy-prev\" href=\"/tag/cat/6\""));
-        assert!(page.contains("<span class=\"fy-upnext-name\">f0ck #8</span><span class=\"fy-dim\">Next</span>"));
         assert!(page.contains("<input type=\"hidden\" name=\"action\" value=\"remove\">"));
         assert!(page.contains("aria-pressed=\"true\"") && page.contains("#like-on"));
         assert!(page.contains("<form method=\"post\" action=\"/api/subscribe/7\" class=\"fy-inline fy-ajax\" data-fy-refresh=\"actions\">"));
@@ -1490,11 +1500,17 @@ mod tests {
         assert!(page.contains("data-reply=\"3\" data-name=\"al\""));
         assert!(page.contains("<summary>1 reply</summary>"));
         assert!(page.contains("2 Comments"));
-        // up next: the neighbours, the next one first
-        let next = page.find("href=\"/tag/cat/8\"><span class=\"fy-upnext-thumb\"").expect("next in up next");
-        let prev = page.find("href=\"/tag/cat/6\"><span class=\"fy-upnext-thumb\"").expect("previous in up next");
-        assert!(next < prev);
-        assert!(!page.contains("href=\"/tag/cat/7\"><span class=\"fy-upnext-thumb\""), "not the item itself");
+        // up next: the recommendations (snippets/recommendations.html, the card f0ckyou.js builds too)
+        assert!(page.contains("<ol class=\"fy-upnext-list\" id=\"fy-recs\" data-item-id=\"7\">"));
+        assert!(page.contains("<a href=\"/9\" data-rec=\"9\" data-tags=\"cat,dog\" data-creator=\"al\">"));
+        assert!(page.contains("<span class=\"fy-upnext-name\" title=\"#cat #dog\">#cat #dog</span>"));
+        assert!(page.contains("<span class=\"fy-badge-tl fy-rate-nsfw\">NSFW</span>") && page.contains("<span class=\"fy-badge-br\">MP4</span>"));
+        assert!(page.contains("1 view &middot; <time") && page.contains("<span class=\"fy-foryou\">For you</span>"));
+        // views, and the message of the day over the player
+        assert!(page.contains("<b>12,345 views</b>"));
+        let motd = page.find("<p class=\"fy-motd fy-motd-top\" title=\"hello\">hello</p>").expect("motd on top");
+        assert!(motd < page.find("<div class=\"fy-player").unwrap());
+        assert!(home.contains("<div class=\"fy-card-sub\">1.2K views &middot; <time"));
         assert!(page.contains("<button type=\"button\" class=\"fy-iconbtn js-only fy-emoji-btn\""));
         assert!(page.contains("<div class=\"fy-emoji-box\" id=\"fy-emoji-box\" hidden></div>"));
         for modal in ["share", "report", "delete"] {

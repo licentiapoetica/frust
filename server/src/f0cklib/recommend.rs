@@ -98,6 +98,7 @@ fn decorate(cfg: &crate::config::Config, alias: &str) -> Sql {
     let ratings: Vec<i32> = vec![1, 2, cfg.nsfl_tag_id() as i32];
     let mut q = Sql::new(&format!(
         "SELECT {alias}.*, uo.display_name, uo.username_color, uo.avatar, uo.avatar_file, \
+         (SELECT coalesce(sum(vv.view_count), 0) FROM user_video_views vv WHERE vv.video_id = {alias}.id)::bigint as views, \
          (SELECT ta.tag_id FROM tags_assign ta WHERE ta.item_id = {alias}.id AND ta.tag_id = ANY("
     ));
     q.bind(ratings).push(&format!(
@@ -142,6 +143,7 @@ fn map_item(r: &Row) -> Map<String, Value> {
     m.insert("avatar".into(), or_null(r.val("avatar")));
     m.insert("avatar_file".into(), or_null(r.val("avatar_file")));
     m.insert("stamp".into(), r.val("stamp").clone());
+    m.insert("views".into(), r.val("views").clone());
     m.insert("tags".into(), tags);
     m.insert("rating_tag_id".into(), tag_id.clone());
     m.insert("rating_class".into(), json!(rating_class));

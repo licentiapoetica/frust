@@ -88,6 +88,16 @@ URL renders the grid page that contains the item, with the item over it (`routes
 Without `ajax-item.html` (w0bm), items always open on their own page and the settings page hides the
 Onara toggle (`frontend_onara`, `tpl::frontend_has_onara`).
 
+**Recommendations (optional).** A frontend that lists recommendations on its item page (f0ckm's
+recommendations tab, `/api/v2/recommendations`) has `snippets/recommendations.html`. The item routes
+then render the first page into the page as `recommendations` (the API's items, without the item
+itself; `routes/index.rs` `add_recommendations`, `tpl::frontend_has_recommendations`), so the list
+works without JavaScript. With JavaScript the frontend asks the API again with the visitor's
+interests (`f0ckInterestEngine.getTopAffinities()`, f0ck-core.js: `session_tags` /
+`session_creators`) and loads more with `continuation=1`, as sidebar-activity.js does; it starts the
+interest tracking on its item page with `f0ckInterestEngine.startTrackingItem({ itemId, tags,
+creator })`. f0ckyou: `snippets/recommendations.html`, the "Up next" part of f0ckyou.js.
+
 **Settings preferences (optional).** A frontend that only uses some of the preferences lists them in
 `settings-prefs.html` (`{% set prefs = ["language", "show_motd", …] %}`, keys: the
 `"…" in fe_prefs` tests in `views/settings.html`). The settings page then shows only those

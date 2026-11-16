@@ -563,6 +563,7 @@ async fn generic(st: AppState, req: Req) -> Res {
                 }
             }
         }
+        add_recommendations(&st, &req, &mut data).await;
         // Comments for visitors without JavaScript (full page loads only; the SPA uses /api/comments)
         if !req.is_xhr() && cfg.enabled("enable_comments") && (sref.is_some() || !cfg.truthy("main.hide_comments_from_public")) {
             if let Some(item_id) = data["item"]["id"].as_i64() {
@@ -798,6 +799,21 @@ async fn onara_page(st: &AppState, req: &Req, tpl_req: &Req, opts: &FeedOpts<'_>
     grid["can_rate_item"] = data["can_rate_item"].clone();
     grid["hidePagination"] = json!(false);
     Ok(html(crate::tpl::render(st, Some(tpl_req), "index", grid)))
+}
+
+/// The recommendations under / beside the item, for a frontend that lists them on its item page
+/// (tpl::frontend_has_recommendations): the first page of /api/v2/recommendations for this
+/// visitor without the item itself, as `recommendations`. Full page loads only.
+pub async fn add_recommendations(st: &AppState, req: &Req, data: &mut Value) {
+    if req.is_xhr() || !crate::tpl::frontend_has_recommendations(st, Some(req)) {
+        return;
+    }
+    let Some(item_id) = data["item"]["id"].as_i64() else { return };
+    let q = crate::routes::apiv2::index::RecQuery { limit: 20.0, exclude_ids: vec![item_id], ..Default::default() };
+    match crate::routes::apiv2::index::recommendation_items(st, req, q).await {
+        Ok(items) => data["recommendations"] = json!(items),
+        Err(e) => tracing::warn!("[ITEM] recommendations for {item_id}: {e}"),
+    }
 }
 
 /// `getSubscriptionStatus(userId, itemId)`

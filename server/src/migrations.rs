@@ -276,6 +276,8 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"DROP INDEX IF EXISTS idx_user_halls_assign_user_id"#,
     // /b/<dest> lookups (media_gate)
     r#"CREATE INDEX IF NOT EXISTS idx_items_dest ON items(dest)"#,
+    // an item's view count (the sum of its viewers' view_count; frontends show it)
+    r#"CREATE INDEX IF NOT EXISTS idx_user_video_views_video_id ON user_video_views(video_id)"#,
     // Website font weight (100-900, NULL: the font's own) and text size (percent, NULL: 100)
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS font_weight smallint"#,
     // Text size per frontend ({"<frontend>": percent, 100 = default}). The old single font_size

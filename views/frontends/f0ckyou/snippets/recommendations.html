@@ -1,0 +1,35 @@
+{#- "Up next": the recommendations of f0ckm's recommendations tab (/api/v2/recommendations, the same
+    logic: the visitor's mode, ratings, media filter and excluded tags, personal picks marked
+    "For you"). This file being here makes the item routes render the first page into the page
+    (`recommendations`, tpl::frontend_has_recommendations), so the list works without JavaScript.
+    With JavaScript, f0ckyou.js asks again with the visitor's interests (f0ckInterestEngine,
+    f0ck-core.js) as f0ckm does, and loads more at the end of the list (continuation).
+    The card is the one f0ckyou.js builds (recCard); change both together. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set recs = (recommendations if (recommendations is defined and recommendations is sequence) else []) -%}
+<h2 class="fy-upnext-title">Up next</h2>
+<ol class="fy-upnext-list" id="fy-recs" data-item-id="{{ item.id }}">
+  {% for v in recs %}
+  {%- set key = (v.slug if v.slug else v.id) -%}
+  {%- set rtags = (v.tags if (v.tags is defined and v.tags is sequence) else []) -%}
+  {%- set rtitle = ((v.title|trim) if (v.title and (v.title|trim)) else (("#" ~ (rtags|join(" #"))) if rtags else key)) -%}
+  {%- set rwho = ("anonymous" if is_anonymized else (v.display_name or v.username or "")) -%}
+  {%- set rmime = (v.mime or "") -%}
+  {%- set rext = ((rmime.split("/")[1] if "/" in rmime else "")|replace("jpeg", "jpg")|replace("x-shockwave-flash", "flash")|replace("x-flac", "flac")|replace("mpeg", "mp3")|upper) -%}
+  <li data-id="{{ v.id }}">
+    <a href="/{{ key }}" data-rec="{{ v.id }}" data-tags="{{ rtags|join(",") }}" data-creator="{{ ("" if is_anonymized else (v.username or "")) }}">
+      <span class="fy-upnext-thumb">
+        {% if (rmime.startswith("audio/") and not v.has_coverart) %}<span class="fy-thumb-audio">{{ fy.ico("music") }}</span>{% else %}<img src="/t/{{ v.id }}.webp" alt="" loading="lazy">{% endif %}
+        {% if v.rating_class in ["nsfw", "nsfl"] %}<span class="fy-badge-tl fy-rate-{{ v.rating_class }}">{{ v.rating_class|upper }}</span>{% endif %}
+        {% if rext %}<span class="fy-badge-br">{{ rext }}</span>{% endif %}
+      </span>
+      <span class="fy-upnext-text">
+        <span class="fy-upnext-name" title="{{ rtitle }}">{{ rtitle }}</span>
+        {% if rwho %}<span class="fy-upnext-chan">{{ rwho }}</span>{% endif %}
+        <span class="fy-dim">{{ fy.views(v.views) }}{% if v.stamp %} &middot; <time title="{{ (v.stamp * 1000)|iso_date }}">{{ (v.stamp * 1000)|time_ago }}</time>{% endif %}{% if v.personalized %} &middot; <span class="fy-foryou">For you</span>{% endif %}</span>
+      </span>
+    </a>
+  </li>
+  {% endfor %}
+</ol>
+{% if not recs %}<p class="fy-dim fy-recs-empty">No recommendations found.</p>{% endif %}

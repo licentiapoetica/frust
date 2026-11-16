@@ -82,6 +82,7 @@ DROP TRIGGER IF EXISTS global_chat_notify ON public.global_chat;
 DROP INDEX IF EXISTS public.tags_assign_tag_id_idx;
 DROP INDEX IF EXISTS public.items_phash;
 DROP INDEX IF EXISTS public.idx_webauthn_credentials_user_id;
+DROP INDEX IF EXISTS public.idx_user_video_views_video_id;
 DROP INDEX IF EXISTS public.idx_user_warnings_user_status;
 DROP INDEX IF EXISTS public.idx_user_last_seen;
 DROP INDEX IF EXISTS public.idx_user_ips_user_id;
@@ -2705,6 +2706,13 @@ CREATE INDEX idx_user_ips_user_id ON public.user_ips USING btree (user_id);
 --
 
 CREATE INDEX idx_user_last_seen ON public."user" USING btree (last_seen);
+
+
+--
+-- Name: idx_user_video_views_video_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_video_views_video_id ON public.user_video_views USING btree (video_id);
 
 
 --

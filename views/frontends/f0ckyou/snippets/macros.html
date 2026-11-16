@@ -19,6 +19,18 @@
 {%- endif -%}
 {%- endmacro -%}
 
+{#- A view count, short: "950 views", "1.2K views", "34K views", "1.5M views" (cut, not rounded).
+    The views are the sum of the viewers' counts (user_video_views: signed-in visitors' item page
+    loads). -#}
+{%- macro views(n) -%}
+{%- set n = ((n or 0)|int) -%}
+{%- if n >= 1000000 -%}{{ ((floor(n / 100000) / 10)|fixed(1)).replace(".0", "") }}M
+{%- elif n >= 10000 -%}{{ floor(n / 1000) }}K
+{%- elif n >= 1000 -%}{{ ((floor(n / 100) / 10)|fixed(1)).replace(".0", "") }}K
+{%- else -%}{{ n }}
+{%- endif %} view{{ "" if n == 1 else "s" }}
+{%- endmacro -%}
+
 {#- The icon of a media type (cards, chips). -#}
 {%- macro mime_icon(mime) -%}
 {%- if not mime -%}{{ ico("file") }}

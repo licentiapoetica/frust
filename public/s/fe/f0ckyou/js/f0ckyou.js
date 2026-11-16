@@ -383,6 +383,7 @@
     motd(text) {
       document.querySelectorAll('.fy-motd').forEach(el => {
         el.textContent = text || '';
+        if (el.hasAttribute('title')) el.title = text || '';
         el.hidden = !String(text || '').trim();
       });
     },
@@ -548,6 +549,193 @@
       btn.disabled = false;
     }
   });
+
+  // ── interests: the same learning as f0ckm (f0ckInterestEngine, f0ck-core.js): the f0ck on screen
+  //    (how long it is watched), clicks on recommendations, searches ──
+  const engine = window.f0ckInterestEngine;
+  const watch = document.querySelector('.fy-watch[data-item-id]');
+  if (engine && watch) {
+    engine.startTrackingItem({
+      itemId: watch.dataset.itemId,
+      tags: [...document.querySelectorAll('#tags .fy-tag:not(.fy-tag-rating)')].map(el => el.dataset.tag).filter(Boolean),
+      creator: watch.dataset.creator || '',
+    });
+  }
+  document.addEventListener('submit', e => {
+    if (!engine || !e.target.matches?.('form.fy-search')) return;
+    const q = e.target.elements.tag?.value || '';
+    if (q.trim()) engine.recordTagSearch(q);
+  });
+
+  // ── "Up next": the recommendations of f0ckm's recommendations tab, the same calls as
+  //    sidebar-activity.js. The server rendered the first page (snippets/recommendations.html);
+  //    with the visitor's interests the list is asked for again, and more come at its end. ──
+  const affinityParams = () => {
+    try {
+      const aff = engine ? engine.getTopAffinities() : null;
+      if (!aff) return '';
+      let q = '';
+      if (aff.topTags && aff.topTags.length) q += `&session_tags=${encodeURIComponent(aff.topTags.join(','))}`;
+      if (aff.topCreators && aff.topCreators.length) q += `&session_creators=${encodeURIComponent(aff.topCreators.join(','))}`;
+      return q;
+    } catch {
+      return '';
+    }
+  };
+  // at most one personal pick among the first three (enforceSidebarRecommendationDistribution)
+  const spreadPicks = (items) => {
+    if (!Array.isArray(items) || items.length <= 3) return items;
+    const picks = [];
+    for (let i = 0; i < 3; i++) if (items[i] && items[i].personalized) picks.push(i);
+    if (picks.length > 1) {
+      let other = 3;
+      for (let r = 1; r < picks.length; r++) {
+        while (other < items.length && items[other] && items[other].personalized) other++;
+        if (other < items.length) {
+          [items[picks[r]], items[other]] = [items[other], items[picks[r]]];
+          other++;
+        }
+      }
+    }
+    return items;
+  };
+  const EXT = m => (m.includes('/') ? m.split('/')[1] : '')
+    .replace('jpeg', 'jpg').replace('x-shockwave-flash', 'flash').replace('x-flac', 'flac').replace('mpeg', 'mp3').toUpperCase();
+  const ICONS = document.querySelector('use[href*="/icons.svg"]')?.getAttribute('href')?.split('#')[0] || '/s/fe/f0ckyou/img/icons.svg';
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  // a view count as macros.html views(): cut, not rounded
+  const viewCount = (raw) => {
+    const n = Math.max(0, parseInt(raw, 10) || 0);
+    const cut = (x) => String(Math.floor(x * 10) / 10);
+    const s = n >= 1e6 ? `${cut(n / 1e6)}M` : n >= 1e4 ? `${Math.floor(n / 1e3)}K` : n >= 1e3 ? `${cut(n / 1e3)}K` : String(n);
+    return `${s} view${n === 1 ? '' : 's'}`;
+  };
+  // the card of snippets/recommendations.html
+  const recCard = (v) => {
+    const anon = !!window.f0ckSession?.is_anonymized;
+    const key = v.slug || v.id;
+    const tags = Array.isArray(v.tags) ? v.tags.map(t => (typeof t === 'object' && t ? (t.tag || t.name || '') : String(t))).filter(Boolean) : [];
+    const title = (v.title && v.title.trim()) || (tags.length ? '#' + tags.join(' #') : String(key));
+    const who = anon ? 'anonymous' : (v.display_name || v.username || '');
+    const mime = v.mime || '';
+    const li = el('li');
+    li.dataset.id = String(v.id);
+    const a = el('a');
+    a.href = `/${key}`;
+    a.dataset.rec = String(v.id);
+    a.dataset.tags = tags.join(',');
+    a.dataset.creator = anon ? '' : (v.username || '');
+    const thumb = el('span', 'fy-upnext-thumb');
+    if (mime.startsWith('audio/') && !v.has_coverart) {
+      const ph = el('span', 'fy-thumb-audio');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'fy-ico');
+      svg.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      use.setAttribute('href', `${ICONS}#music`);
+      svg.append(use);
+      ph.append(svg);
+      thumb.append(ph);
+    } else {
+      const img = el('img');
+      img.src = `/t/${v.id}.webp`;
+      img.alt = '';
+      img.loading = 'lazy';
+      thumb.append(img);
+    }
+    if (v.rating_class === 'nsfw' || v.rating_class === 'nsfl') thumb.append(el('span', `fy-badge-tl fy-rate-${v.rating_class}`, v.rating_class.toUpperCase()));
+    const ext = EXT(mime);
+    if (ext) thumb.append(el('span', 'fy-badge-br', ext));
+    const text = el('span', 'fy-upnext-text');
+    const name = el('span', 'fy-upnext-name', title);
+    name.title = title;
+    text.append(name);
+    if (who) text.append(el('span', 'fy-upnext-chan', who));
+    const meta = el('span', 'fy-dim', viewCount(v.views));
+    if (v.stamp) {
+      const iso = new Date(v.stamp * 1000).toISOString();
+      const time = el('time', null, window.f0ckTimeAgo ? window.f0ckTimeAgo(iso) : '');
+      time.title = iso;
+      meta.append(' · ', time);
+    }
+    if (v.personalized) meta.append(' · ', el('span', 'fy-foryou', 'For you'));
+    text.append(meta);
+    a.append(thumb, text);
+    li.append(a);
+    return li;
+  };
+
+  const recList = document.getElementById('fy-recs');
+  if (recList) {
+    const itemId = recList.dataset.itemId;
+    const seen = new Set([...recList.children].map(li => li.dataset.id));
+    const getRecs = async (query) => {
+      const res = await fetch(`/api/v2/recommendations?${query}${affinityParams()}`, {
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+      });
+      const data = await res.json();
+      return data && data.success ? (data.items || data.videos || []) : null;
+    };
+    const empty = () => document.querySelector('.fy-recs-empty');
+    let loading = false;
+    let done = false;
+    const spinner = el('div', 'fy-recs-more');
+    spinner.hidden = true;
+    recList.after(spinner);
+
+    // with the visitor's interests: the list f0ckm's tab would show (without them the server's is it)
+    if (affinityParams()) {
+      loading = true;
+      getRecs(`limit=20&exclude_ids=${encodeURIComponent(itemId)}`).then(items => {
+        if (!items || !items.length) return;
+        spreadPicks(items);
+        seen.clear();
+        recList.replaceChildren(...items.map(v => { seen.add(String(v.id)); return recCard(v); }));
+        empty()?.remove();
+      }).catch(() => {}).finally(() => { loading = false; });
+    }
+
+    const loadMore = async () => {
+      if (loading || done || !seen.size) return;
+      loading = true;
+      spinner.hidden = false;
+      try {
+        const exclude = [itemId, ...[...seen].slice(-100)].join(',');
+        const items = await getRecs(`limit=15&exclude_ids=${encodeURIComponent(exclude)}&continuation=1`);
+        const fresh = (items || []).filter(v => !seen.has(String(v.id)));
+        fresh.forEach(v => { seen.add(String(v.id)); recList.append(recCard(v)); });
+        if (!fresh.length) done = true;
+      } catch {
+        done = true;
+      } finally {
+        spinner.hidden = true;
+        loading = false;
+      }
+    };
+    if ('IntersectionObserver' in window) {
+      const sentinel = el('div', 'fy-recs-sentinel');
+      spinner.after(sentinel);
+      new IntersectionObserver(entries => {
+        if (entries.some(en => en.isIntersecting)) loadMore();
+      }, { rootMargin: '400px 0px' }).observe(sentinel);
+    }
+
+    // a click on a recommendation teaches the interests (recordSuggestionClick, as f0ckm)
+    const picked = (e) => {
+      if (e.button !== 0 && e.button !== 1) return;
+      const a = e.target.closest('a[data-rec]');
+      if (!a || !engine) return;
+      engine.recordSuggestionClick(parseInt(a.dataset.rec, 10), (a.dataset.tags || '').split(',').filter(Boolean), a.dataset.creator || '');
+    };
+    recList.addEventListener('click', picked);
+    recList.addEventListener('auxclick', picked);
+  }
 
   // ── moderators: remove a tag (DELETE has no form; the description is refreshed in place) ──
   document.addEventListener('click', async e => {

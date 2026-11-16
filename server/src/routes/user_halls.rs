@@ -369,7 +369,9 @@ async fn hall_item(st: AppState, req: Req) -> Res {
         data.insert("item".into(), Value::Object(item));
     }
 
-    Ok(html(crate::tpl::render(&st, Some(&req), "item", Value::Object(data))))
+    let mut data = Value::Object(data);
+    crate::routes::index::add_recommendations(&st, &req, &mut data).await;
+    Ok(html(crate::tpl::render(&st, Some(&req), "item", data)))
 }
 
 // ── Thumbnail ───────────────────────────────────────────────────────────────

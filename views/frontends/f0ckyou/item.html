@@ -1,7 +1,7 @@
 {#- f0ckyou watch page: the player, the title, the uploader with the actions (like = fav, subscribe =
     follow the comments, share, download, report, delete), the description box (facts, rating, tags,
-    who liked it), the comments, and "Up next" beside it (the f0cks around this one, from
-    pagination.cheat). Every action is a plain form or link, so all of it works without JavaScript.
+    who liked it), the comments, and "Up next" beside it (the recommendations of f0ckm's
+    recommendations tab, snippets/recommendations.html). Every action is a plain form or link, so all of it works without JavaScript.
     With JavaScript, f0ckyou.js sends the forms (.fy-ajax) with fetch and swaps in the parts that
     changed (data-fy-live) from a fresh render of the page: no reload. It also adds the player keys,
     tag removal for mods and live comments.
@@ -25,7 +25,9 @@
 {%- set fy_ls = ((link.suffix or "") if link else "") -%}
 {% include "frontends/f0ckyou/snippets/head.html" %}
 {% include "frontends/f0ckyou/snippets/chrome.html" %}
-<main class="fy-watch" data-item-id="{{ item.id }}">
+<main class="fy-watch" data-item-id="{{ item.id }}" data-creator="{{ ("" if is_anonymized else (item.username or "")) }}">
+  {#- the message of the day over the player, one line (all of it on hover) -#}
+  {% if not (session and session.show_motd == false) %}<p class="fy-motd fy-motd-top" title="{{ (motd or "") }}"{% if not ((motd or "")|trim) %} hidden{% endif %}>{{ (motd or "") }}</p>{% endif %}
   <div class="fy-watch-main">
     <div class="fy-player{% if item.mime.startswith("image") %} fy-player-image{% elif item.mime.startswith("audio") %} fy-player-audio{% endif %}">
       {% if item.mime == "video/youtube" %}
@@ -106,10 +108,9 @@
       </div>
     </div>
 
-    {% if not (session and session.show_motd == false) %}<p class="fy-motd"{% if not ((motd or "")|trim) %} hidden{% endif %}>{{ (motd or "") }}</p>{% endif %}
-
     <section class="fy-desc" data-fy-live="desc">
       <p class="fy-desc-top">
+        <b>{{ (item.views or 0)|locale_number }} view{{ ("" if item.views == 1 else "s") }}</b>
         <b><time title="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></b>
         <b>{{ item.mime }} &middot; {{ item.size }}</b>
         {% for tag in (item.tags or []) %}{% if tag.normalized not in ["sfw", "nsfw", "nsfl"] and loop.index <= 6 %}<a class="fy-hashtag" href="/tag/{{ tag.normalized|encode_uri_component }}">#{{ tag.tag }}</a>{% endif %}{% endfor %}
@@ -176,18 +177,7 @@
       <a class="fy-btn" href="/random" title="random (r)">{{ fy.ico("shuffle") }}<span>Random</span></a>
       {% if pagination.next %}<a class="fy-btn" id="fy-next" href="{{ fy_lm }}{{ pagination.next }}{{ fy_ls }}" title="next (&rarr;)"><span>Next</span>{{ fy.ico("next") }}</a>{% endif %}
     </div>
-    {%- set fy_cheat = (pagination.cheat if (pagination and pagination.cheat is defined and pagination.cheat is sequence) else []) -%}
-    {% if fy_cheat|length > 1 %}
-    <h2 class="fy-upnext-title">Up next{% if (tmp and tmp.tag) %} in #{{ tmp.tag|lower }}{% elif (tmp and tmp.user) %} from {{ tmp.user }}{% endif %}</h2>
-    <ol class="fy-upnext-list">
-      {% for i in fy_cheat if i > item.id %}
-      <li><a href="{{ fy_lm }}{{ i }}{{ fy_ls }}"><span class="fy-upnext-thumb"><img src="/t/{{ i }}.webp" alt="" loading="lazy"></span><span class="fy-upnext-text"><span class="fy-upnext-name">f0ck #{{ i }}</span><span class="fy-dim">{{ ("Next" if i == pagination.next else ("Previous" if i == pagination.prev else "#" ~ i)) }}</span></span></a></li>
-      {% endfor %}
-      {% for i in fy_cheat|reverse if i < item.id %}
-      <li><a href="{{ fy_lm }}{{ i }}{{ fy_ls }}"><span class="fy-upnext-thumb"><img src="/t/{{ i }}.webp" alt="" loading="lazy"></span><span class="fy-upnext-text"><span class="fy-upnext-name">f0ck #{{ i }}</span><span class="fy-dim">{{ ("Next" if i == pagination.next else ("Previous" if i == pagination.prev else "#" ~ i)) }}</span></span></a></li>
-      {% endfor %}
-    </ol>
-    {% endif %}
+    {% include "frontends/f0ckyou/snippets/recommendations.html" %}
   </aside>
 </main>
 

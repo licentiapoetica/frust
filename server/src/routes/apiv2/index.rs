@@ -245,39 +245,66 @@ fn rec_opts(req: &Req) -> RecOpts<'_> {
     }
 }
 
+/// What a recommendations request asks for (the query of GET /api/v2/recommendations).
+#[derive(Default)]
+pub struct RecQuery {
+    pub limit: f64,
+    pub videos: bool,
+    pub exclude_ids: Vec<i64>,
+    pub session_tags: String,
+    pub session_creators: String,
+    pub continuation: bool,
+    pub prefer_personalized: Option<bool>,
+}
+
 async fn recommendations(st: AppState, req: Req) -> Res {
-    let cfg = st.cfg();
-    let mut o = rec_opts(&req);
-    o.limit = Some(qs_num(&req, "limit", 20.0).min(50.0));
-    let videos = req.param("type") == Some("videos");
-    // cookie: `req.cookies?.mime ? ... : null` (an empty cookie counts as missing)
-    o.mime = effective_mime(&req, if videos { Some("video") } else { None });
-    o.exclude_ids = qs(&req, "exclude_ids")
-        .map(|v| {
-            v.split(',')
-                .filter_map(js_number)
-                .filter(|n| n.fract() == 0.0 && *n > 0.0 && *n < i32::MAX as f64)
-                .map(|n| n as i64)
-                .take(150)
-                .collect()
-        })
-        .unwrap_or_default();
-    o.session_tags = req.query("session_tags").unwrap_or("").to_string();
-    o.session_creators = req.query("session_creators").unwrap_or("").to_string();
-    o.continuation = matches!(req.query("continuation"), Some("1" | "true"));
-    o.prefer_personalized = match req.query("prefer_personalized") {
-        Some("true" | "1") => Some(true),
-        Some("false" | "0") => Some(false),
-        _ => None,
+    let q = RecQuery {
+        limit: qs_num(&req, "limit", 20.0),
+        videos: req.param("type") == Some("videos"),
+        exclude_ids: qs(&req, "exclude_ids")
+            .map(|v| {
+                v.split(',')
+                    .filter_map(js_number)
+                    .filter(|n| n.fract() == 0.0 && *n > 0.0 && *n < i32::MAX as f64)
+                    .map(|n| n as i64)
+                    .take(150)
+                    .collect()
+            })
+            .unwrap_or_default(),
+        session_tags: req.query("session_tags").unwrap_or("").to_string(),
+        session_creators: req.query("session_creators").unwrap_or("").to_string(),
+        continuation: matches!(req.query("continuation"), Some("1" | "true")),
+        prefer_personalized: match req.query("prefer_personalized") {
+            Some("true" | "1") => Some(true),
+            Some("false" | "0") => Some(false),
+            _ => None,
+        },
     };
-    let items = match recommend::get_personalized_recommendations(&st, &o).await {
-        Ok(i) => i,
+    match recommendation_items(&st, &req, q).await {
+        Ok(out) => j(json!({ "success": true, "items": out }), 200),
         Err(e) => {
             tracing::error!("[RECOMMENDATIONS] Failed to fetch personalized recommendations: {e}");
-            return j(json!({ "success": false, "error": "Failed to load recommendations" }), 500);
+            j(json!({ "success": false, "error": "Failed to load recommendations" }), 500)
         }
-    };
-    let anon = anonymize(&st, &req);
+    }
+}
+
+/// The recommendations for a request (mode, ratings, mime filter and excluded tags of the
+/// visitor), as GET /api/v2/recommendations answers them. Also rendered into the item page of a
+/// frontend that lists them (tpl::frontend_has_recommendations), so they work without JavaScript.
+pub async fn recommendation_items(st: &AppState, req: &Req, q: RecQuery) -> anyhow::Result<Vec<Value>> {
+    let cfg = st.cfg();
+    let mut o = rec_opts(req);
+    o.limit = Some(q.limit.min(50.0));
+    // cookie: `req.cookies?.mime ? ... : null` (an empty cookie counts as missing)
+    o.mime = effective_mime(req, if q.videos { Some("video") } else { None });
+    o.exclude_ids = q.exclude_ids;
+    o.session_tags = q.session_tags;
+    o.session_creators = q.session_creators;
+    o.continuation = q.continuation;
+    o.prefer_personalized = q.prefer_personalized;
+    let items = recommend::get_personalized_recommendations(st, &o).await?;
+    let anon = anonymize(st, req);
     let slugs = s::enable_item_slugs(&cfg);
     let out: Vec<Value> = items
         .into_iter()
@@ -291,6 +318,7 @@ async fn recommendations(st: AppState, req: Req) -> Res {
                 "dest": g("dest"),
                 "mime": g("mime"),
                 "stamp": g("stamp"),
+                "views": g("views"),
                 "username": if anon { json!("anonymous") } else { g("username") },
                 "display_name": if anon { Value::Null } else { g("display_name") },
                 "username_color": if anon { Value::Null } else { g("username_color") },
@@ -304,7 +332,7 @@ async fn recommendations(st: AppState, req: Req) -> Res {
             })
         })
         .collect();
-    j(json!({ "success": true, "items": out }), 200)
+    Ok(out)
 }
 
 // ── POST /api/v2/track/* ────────────────────────────────────────────────────
