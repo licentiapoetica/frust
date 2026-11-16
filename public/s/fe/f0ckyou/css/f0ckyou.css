@@ -2122,6 +2122,12 @@ body.fy-page-watch {
   color: var(--fy-blue);
 }
 
+/* a play time in a comment: jumps the player there (f0ckyou.js) */
+.fy-comment-body .comment-timestamp {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
 .fy-comment-body img,
 .fy-comment-body video {
   max-width: 100%;

@@ -80,6 +80,61 @@
       });
     });
   };
+  // ── play times in comment texts (2:20, 1:02:20) as links that jump the player there, as f0ckm
+  //    (comments.js: the same pattern, .comment-timestamp, data-time); text nodes only ──
+  const TIMECODE = /\b(?<![./:])(?:(\d{1,2}):)?(\d{1,3}):([0-5]\d)\b/g;
+  const linkTimes = (root) => {
+    if (!root) return;
+    const bodies = root.matches?.('.fy-comment-body') ? [root] : [...root.querySelectorAll('.fy-comment-body')];
+    bodies.forEach(body => {
+      const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+        acceptNode: n => (n.parentElement?.closest('a, code, pre') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+      });
+      const nodes = [];
+      while (walker.nextNode()) {
+        TIMECODE.lastIndex = 0;
+        if (TIMECODE.test(walker.currentNode.nodeValue)) nodes.push(walker.currentNode);
+      }
+      nodes.forEach(node => {
+        const text = node.nodeValue;
+        const frag = document.createDocumentFragment();
+        let last = 0;
+        TIMECODE.lastIndex = 0;
+        text.replace(TIMECODE, (m, hrs, mins, secs, at) => {
+          frag.append(text.slice(last, at));
+          const a = document.createElement('a');
+          a.href = '#';
+          a.className = 'comment-timestamp';
+          a.dataset.time = String((hrs ? parseInt(hrs, 10) : 0) * 3600 + parseInt(mins, 10) * 60 + parseInt(secs, 10));
+          a.textContent = m;
+          frag.append(a);
+          last = at + m.length;
+          return m;
+        });
+        if (!last) return;
+        frag.append(text.slice(last));
+        node.replaceWith(frag);
+      });
+    });
+  };
+  const decorate = (root) => {
+    linkTimes(root);
+    emojify(root);
+  };
+  // a click on one: the player goes there, plays, and comes into view
+  document.addEventListener('click', e => {
+    const link = e.target.closest?.('.comment-timestamp');
+    if (!link) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const secs = parseFloat(link.dataset.time);
+    const media = document.getElementById('my-video');
+    if (!media || Number.isNaN(secs) || !('currentTime' in media)) return;
+    media.currentTime = secs;
+    if (media.paused) media.play().catch(() => {});
+    (media.closest('.fy-player') || media).scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, true);
+
   window.addEventListener('f0ck:emojis_updated', () => {
     const box = document.getElementById('fy-emoji-box');
     if (box) box.replaceChildren();
@@ -158,7 +213,7 @@
           // an opened box (the description) stays open
           if (cur.tagName === 'DETAILS' && cur.open) el.open = true;
           cur.replaceWith(el);
-          emojify(el);
+          decorate(el);
         }
       });
     }).catch(err => console.error('[f0ckyou] refresh', err));
@@ -339,7 +394,7 @@
           if (id && feed.querySelector(`[data-id="${CSS.escape(id)}"], #${CSS.escape(id)}`)) return;
           const node = document.importNode(el, true);
           feed.appendChild(node);
-          emojify(node);
+          decorate(node);
         });
         io.unobserve(nav);
         if (nextNav) {
@@ -939,7 +994,7 @@
     readPage();
     window.f0ckFrontend.itemId = page.itemId || null;
     setupMenus();
-    emojify(document.querySelector('.fy-content') || document.body);
+    decorate(document.querySelector('.fy-content') || document.body);
     if (page.session) notifBadge();
     setupFeed();
     setupPlayer();
