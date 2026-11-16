@@ -138,7 +138,8 @@
     const list = [...new Set(names)].filter(n => document.querySelector(`[data-fy-live="${n}"]`));
     if (!list.length) return queue;
     queue = queue.then(async () => {
-      const res = await fetch(pageUrl(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'text/html' } });
+      // X-Purpose: prefetch: this reload of the page for its parts isn't a view (routes/index.rs)
+      const res = await fetch(pageUrl(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'text/html', 'X-Purpose': 'prefetch' } });
       if (!res.ok) return;
       const doc = parse(await res.text());
       list.forEach(n => {
