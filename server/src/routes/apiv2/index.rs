@@ -257,6 +257,9 @@ pub struct RecQuery {
     pub session_creators: String,
     pub continuation: bool,
     pub prefer_personalized: Option<bool>,
+    /// only items of this tag, at random (Up next on a page in a tag), each marked `from_tag`
+    pub tag: Option<String>,
+    pub strict: bool,
 }
 
 async fn recommendations(st: AppState, req: Req) -> Res {
@@ -281,6 +284,8 @@ async fn recommendations(st: AppState, req: Req) -> Res {
             Some("false" | "0") => Some(false),
             _ => None,
         },
+        tag: req.query("tag").map(|t| t.trim().to_string()).filter(|t| !t.is_empty()),
+        strict: matches!(req.query("strict"), Some("1" | "true")) || req.session().and_then(|s| s.strict_mode).unwrap_or(false),
     };
     match recommendation_items(&st, &req, q).await {
         Ok(out) => j(json!({ "success": true, "items": out }), 200),
@@ -305,7 +310,11 @@ pub async fn recommendation_items(st: &AppState, req: &Req, q: RecQuery) -> anyh
     o.session_creators = q.session_creators;
     o.continuation = q.continuation;
     o.prefer_personalized = q.prefer_personalized;
-    let items = recommend::get_personalized_recommendations(st, &o).await?;
+    let from_tag = q.tag.clone();
+    let items = match &q.tag {
+        Some(tag) => recommend::get_tag_recommendations(st, &o, tag, q.strict).await?,
+        None => recommend::get_personalized_recommendations(st, &o).await?,
+    };
     let anon = anonymize(st, req);
     let slugs = s::enable_item_slugs(&cfg);
     let out: Vec<Value> = items
@@ -329,6 +338,7 @@ pub async fn recommendation_items(st: &AppState, req: &Req, q: RecQuery) -> anyh
                 "rating_class": g("rating_class"),
 
                 "personalized": crate::config::truthy(&g("personalized")),
+                "from_tag": from_tag.clone(),
                 "tags": it.get("tags").cloned().unwrap_or(json!([])),
                 "score": g("score"),
                 "rank_score": g("rank_score"),

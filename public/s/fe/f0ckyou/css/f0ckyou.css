@@ -2272,6 +2272,46 @@ body.fy-page-watch {
   padding: 0 .75rem;
 }
 
+/* Up next in a tag: two tabs, the tag's list and the recommendations (radio buttons, no
+   JavaScript needed) */
+.fy-upnext-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fy-upnext-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: 0 0 .75rem;
+}
+
+.fy-upnext-tabbar label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#fy-upnext-tag:checked ~ .fy-upnext-tabbar label[for="fy-upnext-tag"],
+#fy-upnext-recs:checked ~ .fy-upnext-tabbar label[for="fy-upnext-recs"] {
+  background: var(--fy-text);
+  color: #0f0f0f;
+}
+
+#fy-upnext-tag:focus-visible ~ .fy-upnext-tabbar label[for="fy-upnext-tag"],
+#fy-upnext-recs:focus-visible ~ .fy-upnext-tabbar label[for="fy-upnext-recs"] {
+  outline: 2px solid var(--fy-blue);
+}
+
+#fy-upnext-tag:checked ~ .fy-upnext-pane-recs,
+#fy-upnext-recs:checked ~ .fy-upnext-pane-tag {
+  display: none;
+}
+
 .fy-upnext-title {
   margin: 0 0 .75rem;
   font-size: 1rem;

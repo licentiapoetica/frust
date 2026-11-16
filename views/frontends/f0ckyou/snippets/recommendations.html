@@ -2,22 +2,26 @@
     logic: the visitor's mode, ratings, media filter and excluded tags, personal picks marked
     "For you"). This file being here makes the item routes render the first page into the page
     (`recommendations`, tpl::frontend_has_recommendations), so the list works without JavaScript.
+    On a page in a tag (/tag/x/<id>) a second list comes first, under its own tab: random items of
+    that tag (`tag_recommendations`, `upnext_tag`), whose cards stay in the tag; further down
+    f0ckyou.js mixes more and more of the other recommendations in, so the list leaves the tag
+    by itself. The tabs are radio buttons (no JavaScript needed).
     With JavaScript, f0ckyou.js asks again with the visitor's interests (f0ckInterestEngine,
-    f0ck-core.js) as f0ckm does, and loads more at the end of the list (continuation).
+    f0ck-core.js) as f0ckm does, and loads more at the end of the lists (continuation).
     The card is the one f0ckyou.js builds (recCard); change both together. -#}
 {% import "frontends/f0ckyou/snippets/macros.html" as fy %}
 {%- set recs = (recommendations if (recommendations is defined and recommendations is sequence) else []) -%}
-<h2 class="fy-upnext-title">Up next</h2>
-<ol class="fy-upnext-list" id="fy-recs" data-item-id="{{ item.id }}">
-  {% for v in recs %}
+{%- set tag_recs = (tag_recommendations if (tag_recommendations is defined and tag_recommendations is sequence and upnext_tag is defined and upnext_tag) else none) -%}
+{%- macro card(v, in_tag) -%}
   {%- set key = (v.slug if v.slug else v.id) -%}
   {%- set rtags = (v.tags if (v.tags is defined and v.tags is sequence) else []) -%}
   {%- set rtitle = ((v.title|trim) if (v.title and (v.title|trim)) else (("#" ~ (rtags|join(" #"))) if rtags else key)) -%}
   {%- set rwho = ("anonymous" if is_anonymized else (v.display_name or v.username or "")) -%}
   {%- set rmime = (v.mime or "") -%}
   {%- set rext = ((rmime.split("/")[1] if "/" in rmime else "")|replace("jpeg", "jpg")|replace("x-shockwave-flash", "flash")|replace("x-flac", "flac")|replace("mpeg", "mp3")|upper) -%}
+  {%- set href = (("/tag/" ~ (in_tag|encode_uri_component) ~ "/" ~ key) if in_tag else ("/" ~ key)) -%}
   <li data-id="{{ v.id }}" data-personalized="{{ ("true" if v.personalized else "false") }}">
-    <a href="/{{ key }}" data-rec="{{ v.id }}" data-tags="{{ rtags|join(",") }}" data-creator="{{ ("" if is_anonymized else (v.username or "")) }}">
+    <a href="{{ href }}" data-rec="{{ v.id }}" data-tags="{{ rtags|join(",") }}" data-creator="{{ ("" if is_anonymized else (v.username or "")) }}">
       <span class="fy-upnext-thumb"{% if (rmime.startswith("video/") and rmime != "video/youtube" and v.dest and not v.dest.endswith(".gif")) %} data-preview="{{ (paths_images or "/b") }}/{{ v.dest }}"{% endif %}>
         {% if (rmime.startswith("audio/") and not v.has_coverart) %}<span class="fy-thumb-audio">{{ fy.ico("music") }}</span>{% else %}<img src="/t/{{ v.id }}.webp" alt="" loading="lazy">{% endif %}
         <span class="fy-badges">{% if v.rating_class in ["nsfw", "nsfl"] %}<span class="fy-tbadge fy-rate-{{ v.rating_class }}">{{ v.rating_class|upper }}</span>{% endif %}{% if (v.duration and v.duration >= 1) %}<span class="fy-tbadge fy-time">{{ fy.timecode(v.duration) }}</span>{% elif rext %}<span class="fy-tbadge">{{ rext }}</span>{% endif %}</span>
@@ -29,6 +33,34 @@
       </span>
     </a>
   </li>
-  {% endfor %}
-</ol>
-{% if not recs %}<p class="fy-dim fy-recs-empty">No recommendations found.</p>{% endif %}
+{%- endmacro -%}
+{% if tag_recs is not none %}
+<div class="fy-upnext-tabs">
+  <input type="radio" name="fy-upnext-tab" id="fy-upnext-tag" class="fy-upnext-radio" value="tag" checked>
+  <input type="radio" name="fy-upnext-tab" id="fy-upnext-recs" class="fy-upnext-radio" value="recs">
+  <div class="fy-upnext-tabbar" aria-label="Up next">
+    <label for="fy-upnext-tag" class="fy-chip">#{{ upnext_tag|lower }}</label>
+    <label for="fy-upnext-recs" class="fy-chip">Recommended</label>
+  </div>
+  <div class="fy-upnext-pane fy-upnext-pane-tag">
+    <ol class="fy-upnext-list" id="fy-recs-tag" data-source="tag" data-tag="{{ upnext_tag }}" data-item-id="{{ item.id }}">
+      {% for v in tag_recs %}{{ card(v, upnext_tag) }}{% endfor %}
+    </ol>
+    {% if not tag_recs %}<p class="fy-dim fy-recs-empty">Nothing else in #{{ upnext_tag|lower }}.</p>{% endif %}
+  </div>
+  <div class="fy-upnext-pane fy-upnext-pane-recs">
+    <ol class="fy-upnext-list" id="fy-recs" data-source="recs" data-item-id="{{ item.id }}">
+      {% for v in recs %}{{ card(v, "") }}{% endfor %}
+    </ol>
+    {% if not recs %}<p class="fy-dim fy-recs-empty">No recommendations found.</p>{% endif %}
+  </div>
+</div>
+{% else %}
+<h2 class="fy-upnext-title">Up next</h2>
+<div class="fy-upnext-pane">
+  <ol class="fy-upnext-list" id="fy-recs" data-source="recs" data-item-id="{{ item.id }}">
+    {% for v in recs %}{{ card(v, "") }}{% endfor %}
+  </ol>
+  {% if not recs %}<p class="fy-dim fy-recs-empty">No recommendations found.</p>{% endif %}
+</div>
+{% endif %}

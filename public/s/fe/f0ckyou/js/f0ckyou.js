@@ -532,7 +532,7 @@
   if (media instanceof HTMLVideoElement) {
     media.addEventListener('ended', () => {
       if (!autonext()) return;
-      const up = document.querySelector('#fy-recs a[data-rec]');
+      const up = activeList()?.querySelector('a[data-rec]');
       go(page.next || up?.getAttribute('href') || '/random');
     });
   }
@@ -779,9 +779,10 @@
     const mime = v.mime || '';
     const li = el('li');
     li.dataset.id = String(v.id);
+    const href = v.from_tag ? `/tag/${encodeURIComponent(v.from_tag)}/${key}` : `/${key}`;
     li.dataset.personalized = v.personalized ? 'true' : 'false';
     const a = el('a');
-    a.href = `/${key}`;
+    a.href = href;
     a.dataset.rec = String(v.id);
     a.dataset.tags = tags.join(',');
     a.dataset.creator = anon ? '' : (v.username || '');
@@ -849,43 +850,77 @@
     return seen;
   };
 
-  const setupRecs = () => {
-  const recList = document.getElementById('fy-recs');
-  if (recList) {
-    const itemId = recList.dataset.itemId;
-    const seen = seenOf(recList);
+  // How many of a batch (15) come from the tag on the tag's list, by how far down it is: the list
+  // leaves the tag bit by bit (and at once when the tag has nothing left)
+  const TAG_SHARE = [10, 5, 0];
+  // n items spread evenly among the others: the recommendations between the tag's items
+  const interleave = (main, extra) => {
+    if (!extra.length) return main;
+    if (!main.length) return extra;
+    const out = [];
+    const step = (main.length + extra.length) / extra.length;
+    let next = step - 1;
+    let m = 0;
+    let x = 0;
+    for (let i = 0; i < main.length + extra.length; i++) {
+      if (x < extra.length && i >= Math.floor(next)) { out.push(extra[x++]); next += step; } else if (m < main.length) out.push(main[m++]); else out.push(extra[x++]);
+    }
+    return out;
+  };
+  const setupList = (list) => {
+    const itemId = list.dataset.itemId;
+    const source = list.dataset.source || 'recs';
+    const tag = list.dataset.tag || '';
+    const seen = seenOf(list);
     // the list came along from the f0ck before (go()): it stays as it is
-    const kept = recList.dataset.kept === '1';
-    delete recList.dataset.kept;
-    const empty = () => document.querySelector('.fy-recs-empty');
+    const kept = list.dataset.kept === '1';
+    delete list.dataset.kept;
+    const pane = list.parentElement;
+    const empty = () => pane.querySelector('.fy-recs-empty');
     let loading = false;
     let done = false;
     const spinner = el('div', 'fy-recs-more');
     spinner.hidden = true;
-    recList.after(spinner);
+    list.after(spinner);
 
-    // with the visitor's interests: the list f0ckm's tab would show (without them the server's is it)
-    if (!kept && affinityParams()) {
+    // with the visitor's interests: the list f0ckm's tab would show (without them the server's is it);
+    // the tag's list is the tag's
+    if (source === 'recs' && !kept && affinityParams()) {
       loading = true;
       getRecs(`limit=20&exclude_ids=${encodeURIComponent(itemId)}`).then(items => {
         if (!items || !items.length) return;
         spreadPicks(items);
         seen.clear();
-        recList.replaceChildren(...items.map(v => { seen.add(String(v.id)); return recCard(v); }));
+        list.replaceChildren(...items.map(v => { seen.add(String(v.id)); return recCard(v); }));
         empty()?.remove();
       }).catch(() => {}).finally(() => { loading = false; });
     }
 
     const loadMore = async () => {
-      if (loading || done || !seen.size) return;
+      if (loading || done) return;
       loading = true;
       spinner.hidden = false;
       try {
-        const exclude = [itemId, ...[...seen].slice(-100)].join(',');
-        const items = await getRecs(`limit=15&exclude_ids=${encodeURIComponent(exclude)}&continuation=1`);
-        const fresh = (items || []).filter(v => !seen.has(String(v.id)));
-        fresh.forEach(v => { seen.add(String(v.id)); recList.append(recCard(v)); });
-        if (!fresh.length) done = true;
+        const exclude = encodeURIComponent([itemId, ...[...seen].slice(-100)].join(','));
+        let items = [];
+        if (source === 'tag') {
+          const round = parseInt(list.dataset.round || '0', 10);
+          list.dataset.round = String(round + 1);
+          const want = list.dataset.tagDone ? 0 : TAG_SHARE[Math.min(round, TAG_SHARE.length - 1)];
+          let inTag = [];
+          if (want) {
+            inTag = (await getRecs(`tag=${encodeURIComponent(tag)}&limit=${want}&exclude_ids=${exclude}`)) || [];
+            if (inTag.length < want) list.dataset.tagDone = '1';
+          }
+          const others = (await getRecs(`limit=${15 - inTag.length}&exclude_ids=${exclude}&continuation=1`)) || [];
+          items = interleave(inTag, others);
+        } else {
+          items = (await getRecs(`limit=15&exclude_ids=${exclude}&continuation=1`)) || [];
+        }
+        const fresh = items.filter(v => !seen.has(String(v.id)) && String(v.id) !== String(itemId));
+        fresh.forEach(v => { seen.add(String(v.id)); list.append(recCard(v)); });
+        if (fresh.length) empty()?.remove();
+        else done = true;
       } catch {
         done = true;
       } finally {
@@ -902,8 +937,10 @@
       io.observe(sentinel);
       onLeave(() => io.disconnect());
     }
-  }
   };
+  const setupRecs = () => document.querySelectorAll('.fy-upnext-list').forEach(setupList);
+  // the list on screen: the tag's when its tab is on (or it is the only one)
+  const activeList = () => (document.getElementById('fy-upnext-recs')?.checked ? null : document.getElementById('fy-recs-tag')) || document.getElementById('fy-recs');
   // a clicked recommendation makes room for a new one, the rest of the list stays (f0ckm's
   // sidebar: replaceCardWithNewRandom): at most one personal pick among the first three, none
   // next to another further down
@@ -924,7 +961,12 @@
       if (near) prefer = '&prefer_personalized=false';
     }
     try {
-      const items = await getRecs(`limit=1&exclude_ids=${encodeURIComponent(exclude.join(','))}${prefer}`);
+      const ex = encodeURIComponent(exclude.join(','));
+      // the tag's list: another item of the tag while there is one
+      let items = list.dataset.source === 'tag' && list.dataset.tag && !list.dataset.tagDone
+        ? await getRecs(`tag=${encodeURIComponent(list.dataset.tag)}&limit=1&exclude_ids=${ex}`)
+        : null;
+      if (!items || !items.length) items = await getRecs(`limit=1&exclude_ids=${ex}${prefer}`);
       const fresh = (items || []).find(v => !seen.has(String(v.id)));
       if (!fresh) throw new Error('none');
       seen.add(String(fresh.id));
@@ -938,7 +980,7 @@
   // the card for a new one
   const picked = (e) => {
     if (e.button !== 0 && e.button !== 1) return;
-    const a = e.target.closest?.('#fy-recs a[data-rec]');
+    const a = e.target.closest?.('.fy-upnext-list a[data-rec]');
     if (!a) return;
     engine?.recordSuggestionClick(parseInt(a.dataset.rec, 10), (a.dataset.tags || '').split(',').filter(Boolean), a.dataset.creator || '');
     replaceCard(a.closest('li'));
@@ -1116,15 +1158,19 @@
     const oldBg = document.getElementById('bg');
     const newBg = next.querySelector('#bg');
     if (oldBg && newBg) newBg.replaceWith(oldBg);
-    // Up next stays too (as f0ckm's sidebar): the new f0ck takes the list over as it is
-    const oldRecs = document.getElementById('fy-recs');
-    const newRecs = next.querySelector('#fy-recs');
-    if (oldRecs && newRecs && oldRecs.children.length) {
-      oldRecs.dataset.itemId = newRecs.dataset.itemId;
-      oldRecs.dataset.kept = '1';
-      newRecs.replaceWith(oldRecs);
-      next.querySelector('.fy-recs-empty')?.remove();
-    }
+    // Up next stays too (as f0ckm's sidebar): the new f0ck takes the lists over as they are (the
+    // tag's list for the same tag only), and the tab that was on
+    ['fy-recs', 'fy-recs-tag'].forEach(id => {
+      const oldList = document.getElementById(id);
+      const newList = next.querySelector(`#${id}`);
+      if (!oldList || !newList || !oldList.children.length || (oldList.dataset.tag || '') !== (newList.dataset.tag || '')) return;
+      oldList.dataset.itemId = newList.dataset.itemId;
+      oldList.dataset.kept = '1';
+      newList.parentElement.querySelector('.fy-recs-empty')?.remove();
+      newList.replaceWith(oldList);
+    });
+    const tab = document.querySelector('.fy-upnext-radio:checked')?.id;
+    if (tab && next.querySelector(`#${tab}`)) next.querySelector(`#${tab}`).checked = true;
     document.querySelector('.fy-content').replaceWith(next);
     ['.fy-mast', '.fy-guide', '.fy-mini'].forEach(sel => swapOne(doc, sel));
     const data = document.getElementById('fy-data');

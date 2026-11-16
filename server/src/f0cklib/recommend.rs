@@ -563,29 +563,11 @@ pub async fn get_personalized_recommendations(st: &AppState, o: &RecOpts<'_>) ->
     Ok(result)
 }
 
-/// Options of [`get_tag_feed_items`].
-pub struct TagFeedOpts<'a> {
-    pub tag: String,
-    pub order: String,
-    pub offset: f64,
-    pub limit: Option<f64>,
-    pub focus_id: Option<String>,
-    pub strict: bool,
-    pub rec: RecOpts<'a>,
-}
-
-/// `getTagFeedItems` → `{ items, total, offset, limit }`
-pub async fn get_tag_feed_items(st: &AppState, o: &TagFeedOpts<'_>) -> anyhow::Result<Value> {
-    if o.tag.trim().is_empty() {
-        return Ok(json!({ "items": [], "total": 0 }));
-    }
-    let cfg = st.cfg();
-    let c = Common::new(st, &o.rec);
-    let max_limit = clamp_limit(o.limit, 20.0);
-    let num_offset = if o.offset.is_finite() { o.offset.max(0.0).trunc() as i64 } else { 0 };
-
-    let terms: Vec<String> = o.tag.split(',').map(str::trim).filter(|t| !t.is_empty()).map(str::to_string).collect();
-    let is_strict = o.strict || o.tag.contains(',');
+/// The items of a tag (several, comma separated: all of them when strict, else each like it), also
+/// through an album's pictures: `(terms, strict, condition)` for a query on `items`.
+fn tag_condition(tag: &str, strict: bool) -> (Vec<String>, bool, Sql) {
+    let terms: Vec<String> = tag.split(',').map(str::trim).filter(|t| !t.is_empty()).map(str::to_string).collect();
+    let is_strict = strict || tag.contains(',');
     let mut tag_cond = Sql::empty();
     if is_strict {
         if !terms.is_empty() {
@@ -617,6 +599,62 @@ pub async fn get_tag_feed_items(st: &AppState, o: &TagFeedOpts<'_>) -> anyhow::R
             ));
         }
     }
+    (terms, is_strict, tag_cond)
+}
+
+/// Random items of a tag for "Up next" on a page in that tag (f0ckyou: first the tag, then the
+/// rest), with every filter of the other recommendations (mode, ratings, media, excluded tags and
+/// items). `[]` when the tag has nothing left.
+pub async fn get_tag_recommendations(st: &AppState, o: &RecOpts<'_>, tag: &str, strict: bool) -> anyhow::Result<Vec<Map<String, Value>>> {
+    if tag.trim().is_empty() {
+        return Ok(vec![]);
+    }
+    let cfg = st.cfg();
+    let c = Common::new(st, o);
+    let limit = clamp_limit(o.limit, 20.0);
+    let (_, _, tag_cond) = tag_condition(tag, strict);
+    let mut q = Sql::new(&format!("WITH matched_items AS (SELECT {ITEM_COLS} FROM items WHERE items.active = true AND (items.is_deleted IS NOT TRUE) "));
+    q.append(&c.visibility)
+        .push(" ")
+        .append(&c.mime_sql)
+        .push(" ")
+        .append(&c.mode_filters())
+        .push(" ")
+        .append(&c.exclude_ids_sql())
+        .push(" ")
+        .append(&tag_cond)
+        .push(" ORDER BY random() LIMIT ")
+        .bind(limit)
+        .push(") ")
+        .append(&decorate(&cfg, "mi"))
+        .push("FROM matched_items mi")
+        .push(&user_join("mi"));
+    let rows = q.fetch_all(&st.db).await?;
+    Ok(rows.iter().map(map_item).collect())
+}
+
+/// Options of [`get_tag_feed_items`].
+pub struct TagFeedOpts<'a> {
+    pub tag: String,
+    pub order: String,
+    pub offset: f64,
+    pub limit: Option<f64>,
+    pub focus_id: Option<String>,
+    pub strict: bool,
+    pub rec: RecOpts<'a>,
+}
+
+/// `getTagFeedItems` → `{ items, total, offset, limit }`
+pub async fn get_tag_feed_items(st: &AppState, o: &TagFeedOpts<'_>) -> anyhow::Result<Value> {
+    if o.tag.trim().is_empty() {
+        return Ok(json!({ "items": [], "total": 0 }));
+    }
+    let cfg = st.cfg();
+    let c = Common::new(st, &o.rec);
+    let max_limit = clamp_limit(o.limit, 20.0);
+    let num_offset = if o.offset.is_finite() { o.offset.max(0.0).trunc() as i64 } else { 0 };
+
+    let (terms, is_strict, tag_cond) = tag_condition(&o.tag, o.strict);
     let is_desc = o.order.to_lowercase() == "desc";
     let sort_items = if is_desc { "items.id desc" } else { "items.id asc" };
     let sort_mi = if is_desc { "mi.id desc" } else { "mi.id asc" };

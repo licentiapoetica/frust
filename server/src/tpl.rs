@@ -1489,9 +1489,9 @@ mod tests {
             "stamp": 1_794_700_000, "views": 1, "personalized": true, "rating_class": "nsfw", "has_coverart": false, "duration": 3725, "dest": "r.webm" });
         let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
             "replies": [{ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content_html": "yo", "attachments_html": "", "timeago": "now", "iso": "x" }] });
-        let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it,
+        let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it.clone(),
             "pagination": { "prev": 6, "next": 8, "cheat": [4, 5, 6, 7, 8, 9] }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_rate_item": true,
-            "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice", "recommendations": [rec] }));
+            "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice", "recommendations": [rec.clone()] }));
         dump("item", &page);
         assert!(page.contains("<body class=\"fy-page-watch\">"));
         assert!(page.contains("<video id=\"my-video\" class=\"fy-media\""));
@@ -1512,12 +1512,22 @@ mod tests {
         assert!(page.contains("<summary>1 reply</summary>"));
         assert!(page.contains("2 Comments"));
         // up next: the recommendations (snippets/recommendations.html, the card f0ckyou.js builds too)
-        assert!(page.contains("<ol class=\"fy-upnext-list\" id=\"fy-recs\" data-item-id=\"7\">"));
+        assert!(page.contains("<ol class=\"fy-upnext-list\" id=\"fy-recs\" data-source=\"recs\" data-item-id=\"7\">"));
+        assert!(!page.contains("fy-upnext-tabs"), "no tag list: one list, no tabs");
         assert!(page.contains("<a href=\"/9\" data-rec=\"9\" data-tags=\"cat,dog\" data-creator=\"al\">"));
         assert!(page.contains("<span class=\"fy-upnext-name\" title=\"#cat #dog\">#cat #dog</span>"));
         assert!(page.contains("<span class=\"fy-badges\"><span class=\"fy-tbadge fy-rate-nsfw\">NSFW</span><span class=\"fy-tbadge fy-time\">1:02:05</span></span>"));
         assert!(page.contains("<span class=\"fy-upnext-thumb\" data-preview=\"/b/r.webm\">"));
         assert!(page.contains("1 view &middot; <time") && page.contains("<span class=\"fy-foryou\">For you</span>"));
+        // in a tag: the tag's list under its own tab first (its cards stay in the tag), the recommendations beside it
+        let tagged = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session,
+            "item": it.clone(), "pagination": { "prev": 6, "next": 8 }, "link": { "main": "/tag/cat/", "suffix": "" },
+            "recommendations": [rec.clone()], "tag_recommendations": [rec.clone()], "upnext_tag": "Cat" }));
+        assert!(tagged.contains("<input type=\"radio\" name=\"fy-upnext-tab\" id=\"fy-upnext-tag\" class=\"fy-upnext-radio\" value=\"tag\" checked>"));
+        assert!(tagged.contains("<label for=\"fy-upnext-tag\" class=\"fy-chip\">#cat</label>") && tagged.contains("<label for=\"fy-upnext-recs\" class=\"fy-chip\">Recommended</label>"));
+        assert!(tagged.contains("<ol class=\"fy-upnext-list\" id=\"fy-recs-tag\" data-source=\"tag\" data-tag=\"Cat\" data-item-id=\"7\">"));
+        assert!(tagged.contains("<a href=\"/tag/Cat/9\" data-rec=\"9\"") && tagged.contains("<a href=\"/9\" data-rec=\"9\""));
+        dump("item-tag", &tagged);
         // views; no message of the day in f0ckyou
         // the view beacon (counts without JavaScript; f0ck-core.js starts from it) on item pages only
         assert!(page.contains("<img class=\"f0ck-view-beacon\" src=\"/api/v2/view/7/nojs.gif\" data-item-id=\"7\" alt=\"\" width=\"1\" height=\"1\" loading=\"lazy\" hidden>"));

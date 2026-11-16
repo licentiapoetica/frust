@@ -844,6 +844,19 @@ pub async fn add_recommendations(st: &AppState, req: &Req, data: &mut Value) {
         Ok(items) => data["recommendations"] = json!(items),
         Err(e) => tracing::warn!("[ITEM] recommendations for {item_id}: {e}"),
     }
+    // on a page in a tag (/tag/x/<id>): the tag's own list too (`tag_recommendations`, at random)
+    let tag = data["tmp"]["tag"].as_str().map(str::trim).filter(|t| !t.is_empty() && !t.contains(':')).map(str::to_string);
+    if let Some(tag) = tag {
+        let strict = req.session().and_then(|s| s.strict_mode).unwrap_or(false);
+        let q = crate::routes::apiv2::index::RecQuery { limit: 20.0, exclude_ids: vec![item_id], tag: Some(tag.clone()), strict, ..Default::default() };
+        match crate::routes::apiv2::index::recommendation_items(st, req, q).await {
+            Ok(items) => {
+                data["tag_recommendations"] = json!(items);
+                data["upnext_tag"] = json!(tag);
+            }
+            Err(e) => tracing::warn!("[ITEM] tag recommendations for {item_id} in {tag}: {e}"),
+        }
+    }
 }
 
 /// `getSubscriptionStatus(userId, itemId)`
