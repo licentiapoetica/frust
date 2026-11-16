@@ -158,6 +158,9 @@ websrv:
   frontend: f0ckm
   # Let visitors pick their own frontend with /frontend/<name> or ?frontend=<name> (kept in a cookie)
   frontend_switch: true
+  # Frontends visitors can pick from. Empty: every installed one. The site frontend above is always available.
+  # e.g. [f0ckm, w0bm, f0ckyou]
+  frontends: []
   default_font: Manrope-Regular.woff2   # font file (built-in: public/s/fonts-builtin; upload your own in the admin panel, Tools → Fonts)
   default_layout: legacy
   custom_favicon: /s/img/favicon.gif   # admin panel → Branding: an uploaded favicon replaces it

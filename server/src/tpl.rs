@@ -443,11 +443,21 @@ fn valid_frontend_name(n: &str) -> bool {
     !n.is_empty() && n.len() <= 32 && n.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
-/// Every selectable frontend: the default one first, then the installed ones.
-pub fn frontend_names(st: &AppState) -> Vec<String> {
-    let mut v = vec![DEFAULT_FRONTEND.to_string()];
-    v.extend(st.tpl.frontends().into_iter().filter(|n| n != DEFAULT_FRONTEND));
-    v
+/// Every selectable frontend: the default one first, then the installed ones, narrowed down to
+/// `websrv.frontends` when that lists any (see `pick_frontends`).
+pub fn frontend_names(st: &AppState, cfg: &Config) -> Vec<String> {
+    let mut installed = vec![DEFAULT_FRONTEND.to_string()];
+    installed.extend(st.tpl.frontends().into_iter().filter(|n| n != DEFAULT_FRONTEND));
+    pick_frontends(installed, cfg.str_list("websrv.frontends"), cfg.str("websrv.frontend"))
+}
+
+/// The installed frontends the admin picked in `websrv.frontends` (missing or empty: all of them).
+/// The site's own frontend (`websrv.frontend`, else f0ckm) always stays available, listed or not;
+/// names that aren't installed are ignored.
+fn pick_frontends(installed: Vec<String>, picked: Option<Vec<String>>, site: Option<&str>) -> Vec<String> {
+    let Some(picked) = picked.filter(|p| !p.is_empty()) else { return installed };
+    let site = site.filter(|s| installed.iter().any(|n| n == s)).unwrap_or(DEFAULT_FRONTEND);
+    installed.into_iter().filter(|n| n == site || picked.iter().any(|p| p == n)).collect()
 }
 
 /// Whether visitors may pick their own frontend (`websrv.frontend_switch`, default on).
@@ -460,7 +470,7 @@ pub fn frontend_switch_enabled(cfg: &Config) -> bool {
 /// `websrv.frontend` applies again.
 pub fn frontend_cookie(st: &AppState, cfg: &Config, name: &str) -> Option<String> {
     use crate::http::{CookieExpiry, EXPIRED, cookie_options};
-    if !frontend_switch_enabled(cfg) || !frontend_names(st).iter().any(|n| n == name) {
+    if !frontend_switch_enabled(cfg) || !frontend_names(st, cfg).iter().any(|n| n == name) {
         return None;
     }
     Some(if name == frontend_for(st, cfg, None) {
@@ -484,7 +494,7 @@ pub fn remember_frontend_query(st: &AppState, req: &Req) {
 /// The frontend of this request: `?frontend=<name>` or the visitor's `frontend` cookie when
 /// switching is allowed, else `websrv.frontend`, else the default one.
 pub fn frontend_for(st: &AppState, cfg: &Config, req: Option<&Req>) -> String {
-    let names = frontend_names(st);
+    let names = frontend_names(st, cfg);
     let valid = |n: &str| names.iter().any(|x| x == n);
     if frontend_switch_enabled(cfg) {
         if let Some(r) = req {
@@ -1158,7 +1168,7 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     let prefs_tpl = (frontend != DEFAULT_FRONTEND && st.tpl.has(&prefs_tpl)).then(|| format!("{prefs_tpl}.html"));
     ctx.insert("frontend_settings_prefs".into(), json!(prefs_tpl));
     ctx.insert("frontend".into(), json!(frontend));
-    ctx.insert("frontends".into(), json!(frontend_names(st)));
+    ctx.insert("frontends".into(), json!(frontend_names(st, &cfg)));
     ctx.insert("frontend_switch".into(), json!(frontend_switch_enabled(&cfg)));
     // the media filter (mime picker): the "mime" cookie, e.g. "video,audio" (empty: everything)
     if !ctx.contains_key("mime_filter") {
@@ -1178,6 +1188,19 @@ mod tests {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
         let problems = check_frontends(&root.join("views"), &root.join("public"));
         assert!(problems.is_empty(), "frontend contract (views/frontends/README.md):\n{}", problems.join("\n"));
+    }
+
+    #[test]
+    fn frontends_can_be_handpicked() {
+        let all = || ["f0ckm", "f0ckgle", "f0ckv2", "w0bm"].map(String::from).to_vec();
+        let pick = |p: &[&str]| Some(p.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+        // nothing picked: every installed one
+        assert_eq!(pick_frontends(all(), None, None), all());
+        assert_eq!(pick_frontends(all(), pick(&[]), None), all());
+        // picked ones, in the usual order; the site's own frontend always stays; unknown names ignored
+        assert_eq!(pick_frontends(all(), pick(&["w0bm", "nope"]), None), ["f0ckm", "w0bm"]);
+        assert_eq!(pick_frontends(all(), pick(&["w0bm"]), Some("f0ckgle")), ["f0ckgle", "w0bm"]);
+        assert_eq!(pick_frontends(all(), pick(&["w0bm"]), Some("nope")), ["f0ckm", "w0bm"]);
     }
 
     #[test]

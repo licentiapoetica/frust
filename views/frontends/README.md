@@ -3,7 +3,9 @@
 Besides the default templates in `views/` (the "f0ckm" frontend), the site can render old layouts:
 `views/frontends/<name>/` (templates) plus `public/s/fe/<name>/` (their CSS, JS and assets).
 `websrv.frontend` picks the site default; visitors switch with `/frontend/<name>` or
-`?frontend=<name>` (cookie) when `websrv.frontend_switch` is on.
+`?frontend=<name>` (cookie) when `websrv.frontend_switch` is on. `websrv.frontends` (a list of
+names) limits which installed frontends can be picked; empty or missing means all of them, and the
+site default is always available (`tpl::frontend_names`).
 
 **Check:** `f0ckm check-frontends` (also run by `cargo test`: `tpl::tests::frontends_follow_contract`).
 It must report 0 problems.
