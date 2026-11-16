@@ -1148,20 +1148,26 @@ window.F0ckPageSwap = (() => {
   let stop = null;
   let watching = null; // [id, media] being watched
 
+  // the page is still open after 3 seconds: fetch (the token in a header, an answer to read); a
+  // counted view is announced as `f0ck:view-counted` ({ itemId }) for the page's view count
   const report = (id) => {
     counted.add(id);
     const csrf = window.f0ckSession?.csrf_token || document.querySelector('meta[name="csrf-token"]')?.content || '';
     const body = JSON.stringify(csrf ? { csrf_token: csrf } : {});
-    try {
-      if (navigator.sendBeacon && navigator.sendBeacon(`/api/v2/view/${id}`, new Blob([body], { type: 'application/json' }))) return;
-    } catch { /* fall back to fetch */ }
     fetch(`/api/v2/view/${id}`, {
       method: 'POST',
       credentials: 'same-origin',
       keepalive: true,
-      headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
       body,
-    }).catch(() => {});
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.counted) document.dispatchEvent(new CustomEvent('f0ck:view-counted', { detail: { itemId: id } }));
+      })
+      .catch(() => {
+        try { navigator.sendBeacon?.(`/api/v2/view/${id}`, new Blob([body], { type: 'application/json' })); } catch { /* offline */ }
+      });
   };
 
   window.f0ckCountView = (itemId, media) => {

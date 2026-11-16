@@ -20,8 +20,7 @@
 {%- endmacro -%}
 
 {#- A view count, short: "950 views", "1.2K views", "34K views", "1.5M views" (cut, not rounded).
-    The views are the sum of the viewers' counts (user_video_views: signed-in visitors' item page
-    loads). -#}
+    items.views (routes/apiv2/index/views.rs); a bigint, so it may come as text: |int. -#}
 {%- macro views(n) -%}
 {%- set n = ((n or 0)|int) -%}
 {%- if n >= 1000000 -%}{{ ((floor(n / 100000) / 10)|fixed(1)).replace(".0", "") }}M

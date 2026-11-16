@@ -1484,7 +1484,7 @@ mod tests {
         // watch page: the actions are plain forms, the regions they change are swapped in by f0ckyou.js
         let tags = serde_json::json!([{ "id": 1, "tag": "sfw", "normalized": "sfw", "can_exclude": false }, { "id": 9, "tag": "Cat", "normalized": "cat", "can_exclude": true, "is_excluded": true }]);
         let it = serde_json::json!({ "id": 7, "username": "al", "author_color": "#0f0", "mime": "video/mp4", "dest": "/b/7.mp4", "size": "1 MB", "tags": tags,
-            "timestamp": { "timeago": "1 day ago", "timefull": "x" }, "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" }, "views": 12345 });
+            "timestamp": { "timeago": "1 day ago", "timefull": "x" }, "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" }, "views": "12345" });
         let rec = serde_json::json!({ "id": 9, "slug": null, "title": null, "tags": ["cat", "dog"], "username": "al", "display_name": "Al", "mime": "video/mp4",
             "stamp": 1_794_700_000, "views": 1, "personalized": true, "rating_class": "nsfw", "has_coverart": false, "duration": 3725, "dest": "r.webm" });
         let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
@@ -1542,7 +1542,7 @@ mod tests {
         // the scripts on every page (pages change in place), the canvas only on the watch page
         assert!(home.contains("/s/js/v0ck.js?v=") && !home.contains("id=\"bg\""));
         assert!(!page.contains("fy-motd") && !home.contains("fy-motd"));
-        assert!(page.contains("<b>12,345 views</b>"));
+        assert!(page.contains("<b class=\"fy-views-count\" data-views=\"12345\">12,345 views</b>"), "a bigint view count comes as text");
         assert!(home.contains("<div class=\"fy-card-sub\">1.2K views &middot; <time"));
         assert!(page.contains("<button type=\"button\" class=\"fy-iconbtn js-only fy-emoji-btn\""));
         assert!(page.contains("<div class=\"fy-emoji-box\" id=\"fy-emoji-box\" hidden></div>"));

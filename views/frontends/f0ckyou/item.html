@@ -113,7 +113,9 @@
         JavaScript needed; f0ckyou.js keeps it open when the box is swapped after a change) -#}
     <details class="fy-desc" data-fy-live="desc">
       <summary class="fy-desc-top">
-        <b>{{ (item.views or 0)|locale_number }} view{{ ("" if item.views == 1 else "s") }}</b>
+        {#- a bigint: the database layer hands it over as text, |int makes it a number -#}
+        {%- set fy_views = ((item.views or 0)|int) %}
+        <b class="fy-views-count" data-views="{{ fy_views }}">{{ fy_views|locale_number }} view{{ ("" if fy_views == 1 else "s") }}</b>
         <b><time title="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></b>
         <b>{{ item.mime }} &middot; {{ item.size }}</b>
         {% for tag in (item.tags or []) %}{% if tag.normalized not in ["sfw", "nsfw", "nsfl"] and loop.index <= 6 %}<a class="fy-hashtag" href="/tag/{{ tag.normalized|encode_uri_component }}">#{{ tag.tag }}</a>{% endif %}{% endfor %}

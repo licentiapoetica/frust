@@ -1046,6 +1046,16 @@
     if (thumb && !(e.relatedTarget && thumb.contains(e.relatedTarget))) stopPreview();
   });
 
+  // ── the view just counted (f0ck-core.js, after 3 seconds seen): the count on the page goes up ──
+  document.addEventListener('f0ck:view-counted', e => {
+    if (String(e.detail?.itemId) !== String(page.itemId)) return;
+    const box = document.querySelector('.fy-views-count[data-views]');
+    if (!box) return;
+    const n = (parseInt(box.dataset.views, 10) || 0) + 1;
+    box.dataset.views = String(n);
+    box.textContent = `${n.toLocaleString('en-US')} view${n === 1 ? '' : 's'}`;
+  });
+
   // ── the page on screen: set up its parts (also for every page shown in place) ──
   const setupPage = () => {
     readPage();
