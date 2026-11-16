@@ -1502,6 +1502,9 @@ mod tests {
         assert!(page.contains("<form method=\"post\" action=\"/api/v2/item/7/rating\" class=\"fy-inline fy-ajax\" data-fy-refresh=\"desc\">"));
         assert!(page.contains("class=\"f0ck-exclude-form is-excluded\" data-tag-id=\"9\""));
         assert!(page.contains("<form method=\"post\" action=\"/api/comments\" class=\"fy-comment-form fy-ajax\" id=\"comment-form\" data-fy-refresh=\"comments comments-head\" data-fy-comment>"));
+        // the description: collapsed, opened by a click (no JavaScript needed)
+        assert!(page.contains("<details class=\"fy-desc\" data-fy-live=\"desc\">") && page.contains("<summary class=\"fy-desc-top\">"));
+        assert!(!page.contains("<details class=\"fy-desc\" data-fy-live=\"desc\" open"));
         for live in ["actions", "desc", "comments", "comments-head"] {
             assert_eq!(page.matches(&format!("data-fy-live=\"{live}\"")).count(), 1, "{live}");
         }

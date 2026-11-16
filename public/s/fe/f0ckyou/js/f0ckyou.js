@@ -155,6 +155,8 @@
         const next = doc.querySelector(`[data-fy-live="${n}"]`);
         if (cur && next) {
           const el = document.importNode(next, true);
+          // an opened box (the description) stays open
+          if (cur.tagName === 'DETAILS' && cur.open) el.open = true;
           cur.replaceWith(el);
           emojify(el);
         }
@@ -1015,7 +1017,13 @@
     // not one of f0ckyou's own pages (a shared page in the shell, sign-in, ...), or one with scripts
     // of its own: load it as usual
     const scripts = content ? [...content.querySelectorAll('script[src]')] : [];
-    if (!content || doc.documentElement.classList.contains('f0ck-shell') || FULL.test(finalUrl.pathname)
+    // f0ckyou's own CSS or JS changed since this page loaded (an update): load the new page as usual,
+    // or it would show in the old styles and scripts
+    const version = (d, sel, attr) => d.querySelector(sel)?.getAttribute(attr) || '';
+    const stale = ['link[href*="/f0ckyou.css"]', 'href', 'script[src*="/f0ckyou.js"]', 'src'];
+    const outdated = version(doc, stale[0], stale[1]) !== version(document, stale[0], stale[1])
+      || version(doc, stale[2], stale[3]) !== version(document, stale[2], stale[3]);
+    if (!content || outdated || doc.documentElement.classList.contains('f0ck-shell') || FULL.test(finalUrl.pathname)
       || scripts.some(sc => !ONCE.test(new URL(sc.getAttribute('src'), location.href).pathname))) {
       return full(finalUrl.href);
     }

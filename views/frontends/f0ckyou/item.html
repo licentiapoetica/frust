@@ -109,13 +109,16 @@
       </div>
     </div>
 
-    <section class="fy-desc" data-fy-live="desc">
-      <p class="fy-desc-top">
+    {#- the description: collapsed to its first line, a click opens the rest (<details>, no
+        JavaScript needed; f0ckyou.js keeps it open when the box is swapped after a change) -#}
+    <details class="fy-desc" data-fy-live="desc">
+      <summary class="fy-desc-top">
         <b>{{ (item.views or 0)|locale_number }} view{{ ("" if item.views == 1 else "s") }}</b>
         <b><time title="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></b>
         <b>{{ item.mime }} &middot; {{ item.size }}</b>
         {% for tag in (item.tags or []) %}{% if tag.normalized not in ["sfw", "nsfw", "nsfl"] and loop.index <= 6 %}<a class="fy-hashtag" href="/tag/{{ tag.normalized|encode_uri_component }}">#{{ tag.tag }}</a>{% endif %}{% endfor %}
-      </p>
+        <span class="fy-desc-toggle"><span class="fy-desc-more">&hellip;more</span><span class="fy-desc-less">Show less</span></span>
+      </summary>
       <dl class="fy-facts">
         {% if uploader %}<div><dt>Uploaded by</dt><dd>{% if is_anonymized %}{{ uploader }}{% else %}<a href="/user/{{ uploader|lower|encode_uri_component }}/uploads{% if tmp and tmp.mime %}/{{ tmp.mime }}{% endif %}">{{ uploader_name }}</a>{% endif %}</dd></div>{% endif %}
         <div><dt>Source</dt><dd>{% if (item.src and item.src.short and (item.src.short|lower) != (domain|lower)) %}<a href="{{ item.src.long }}" target="_blank" rel="noopener noreferrer">{{ item.src.short }}</a>{% elif (item.src and item.src.long) %}{{ (item.src.short or item.src.long) }}{% else %}hidden{% endif %}</dd></div>
@@ -165,7 +168,7 @@
         {% endfor %}
       </div>
       {% endif %}
-    </section>
+    </details>
 
     {% if enable_comments and (session or not hide_comments_from_public) %}
     {% include "frontends/f0ckyou/snippets/comments.html" %}

@@ -91,7 +91,7 @@ impl Common {
     }
 }
 
-const ITEM_COLS: &str = "items.id, items.title, items.slug, items.mime, items.dest, items.username, items.stamp, items.width, items.height, items.has_coverart";
+const ITEM_COLS: &str = "items.id, items.title, items.slug, items.mime, items.dest, items.username, items.stamp, items.width, items.height, items.has_coverart, items.views, items.duration";
 
 /// The shared outer select: user options, rating tag, first 3 tags.
 fn decorate(cfg: &crate::config::Config, alias: &str) -> Sql {
