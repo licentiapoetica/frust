@@ -9824,7 +9824,8 @@ div.posts>a>p::before {
   right: 0;
   bottom: 0;
   height: 10px;
-  width: 8%;
+  /* fixed, so the marker is the same size at every thumbnail size (S/M/L/XL) */
+  width: 16px;
 }
 
 div.posts>a[data-mode="sfw"]>p::before {
