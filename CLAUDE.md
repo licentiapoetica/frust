@@ -39,3 +39,40 @@ Besides the default templates in `views/`, the site can render old layouts (`w0b
 - Changing the data a route passes to a view: grep `views/frontends/*/<view>.html` and update the frontends' own pages too.
 - A new user-facing feature on an own page (item page, grid, comments, upload, ...) has to be added to each frontend's version of that page, in its style.
 - Old frontends keep their original CSS 1:1, rounded corners included (exception to the rule above). Everything else in this file applies to them.
+
+### Building a new frontend (checklist, learned building f0ckgle)
+
+A new frontend is new design: the design rules above apply in full (square corners, no inline CSS/JS, works without JS, live with JS). Use `views/frontends/f0ckgle/` + `public/s/fe/f0ckgle/` as the most complete example (one base `snippets/head.html`, `topbar.html`, `footer.html`; every page included).
+
+**Pages and data**
+- Every page in `tpl::FRONTEND_OWN_PAGES` plus `shell/header.html` / `shell/footer.html` (README). Look at an existing frontend's version of each page for the data it gets (`grep -rn 'tpl::render(' server/src/routes`, then the route's `json!`).
+- `index.html` also handles `private_society` without session (include the default `index.html`), `?login=1` and `?register=1` (own `login.html` / `register.html`; the login route renders `login` again on errors with `error`).
+- 4chan proxy items (`item.is_chan`) keep f0ckm's item page: `{% include "item.html" %}`.
+- Optional: `ajax-item.html` (Onara viewer), `settings-prefs.html` (only the preferences the frontend uses).
+
+**Template gotchas (minijinja)**
+- An undefined variable passes `is sequence`: test `x is defined and x is sequence`.
+- Build lists in one expression (`([..] if a else []) + ([..] if b else [])`) rather than `{% set %}` inside `{% if %}` blocks.
+- Give the `<body>` class a prefix (`fg-page-item`): a body class equal to a layout class (`fg-item`) styled the whole page.
+
+**JavaScript**
+- Load order at the end of `<body>`: page data, `snippets/frontend-scripts.html` (f0ck-core.js, live events, quick upload), then the frontend's own script, so `f0ck-core.js` helpers exist when it runs.
+- Set the `window.f0ckFrontend` hooks (flash, comments, notify, newItem, dmBadge, reconnected, motd); without them live events do nothing visible.
+- Live actions: intercept the plain forms with one delegated `submit` listener, send JSON (`Accept: application/json` makes the endpoints answer JSON instead of the no-JS redirect), update the page in place. Swapping server-rendered regions from a fresh `fetch` of the page (f0ckgle: `.fg-ajax` forms, `data-fg-live` regions) keeps the markup in one place. Use delegated listeners so swapped-in content keeps working.
+- Read a form's URL with `form.getAttribute('action')`: an input named `action` (the fav form) shadows `form.action`.
+- Comments: call `window.f0ckCaptchaGate('comment')` before posting with fetch; the no-JS form takes the image captcha (`snippets/cap-image.html` or the frontend's copy of it).
+- Custom emojis are client-side in every frontend: the server sends `:name:` as text. Use `f0ckLoadEmojis()` / `f0ckEmojify()` (f0ck-core.js) on comment texts (text nodes only), again after every swap and on `f0ck:emojis_updated`, and give the comment form an emoji picker. Keep `.f0ck-emoji` small (comment-fx.css) against the frontend's own `img` rules.
+- Flash: `/s/js/flash-embed.js` only defines `<f0ck-flash>`; the frontend's script creates it in `#ruffle-container` and calls `load({ url, autoplay: true })`.
+- The exclude-tag forms (`.f0ck-exclude-form`) are handled by f0ck-core.js; don't intercept them twice.
+- messages.js shows `#dm-badge` with an inline `display`: hide the badge by default in CSS.
+
+**CSS**
+- Media type filters: the `mime` cookie (f0ckm's picker) wins over `/video`-style paths, so type tabs go through `/mime?video=1&back=<listing>` (`/mime?back=…` clears it). Offer only the site's types: `scroller_mime_cats` (allowedMimes), Flash with `enable_swf`, anonymous users `anon_permissions.allowed_mimes`; no tabs for a single type. The homepage must not depend on `tmp.mime`.
+- Light frontends: `upload.css` and `upload-modal.css` hard-code dark colours (white text, white-alpha borders and fields). Override them scoped to the upload page and `#upload-drag-modal` (see the upload block in f0ckgle.css), and give both f0ckm's colour variables (`--accent`, `--accent-rgb`, `--bg`, `--white`, `--upload-opt-color`, ...).
+- Shell pages: `f0ck-shell.css` resets the chrome with `all: revert`, which also wipes inline SVG geometry: use icon files (`<img>` or `<use href="sprite.svg#id">`). It loads after the frontend's shell CSS, so rules for `.f0ck-shell-page` need `html.f0ck-shell .f0ck-shell-page` to win. A light frontend renders the shell with `theme="light"` (f0ckm.css' light theme) and sets `--white` / `--black` again on `html.f0ck-shell[theme="light"]` (f0ck-shell.css forces the dark values).
+- Text size: a `html.user-fs-<n>` rule for every size in `crate::fonts::SIZES`; user font: `user_font_css` with `id="user-font-css"` and `data-user-font-class` on `<html>`.
+
+**Tests and checks**
+- `f0ckm check-frontends` → 0 problems.
+- Add the frontend to the per-frontend tests in `server/src/tpl.rs`: `text_sizes_have_css`, `register_forms_take_applications` (register form + tos-consent), and a render test of every own page with sample data (f0ckgle: `f0ckgle_pages_render`, `F0CKM_DUMP_F0CKGLE=<dir>` writes the pages out).
+- Look at the pages in a browser with JavaScript on and off, including the shared pages in the shell and the upload form after picking a file. Headless Chromium works for this: serve the dumped pages with `public/` on a scratch port (never the user's :1337 server) and drive it over the DevTools protocol.
