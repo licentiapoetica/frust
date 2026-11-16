@@ -530,6 +530,15 @@ pub fn shared_views(views: &std::path::Path) -> Vec<String> {
     out
 }
 
+/// The own pages every alternative frontend has to provide itself (views/frontends/<fe>/<page>.html):
+/// the visitor-facing full pages the routes render that aren't shared pages. A frontend without one
+/// would show f0ckm's layout there. Standalone pages with their own look (scroller, maintenance,
+/// forgot-password, the 4chan proxy, the meme creator) aren't in it. views/frontends/README.md
+pub const FRONTEND_OWN_PAGES: [&str; 18] = [
+    "about", "comments_user", "error", "halls", "index", "item", "login", "notifications", "ranking", "register", "rules", "search",
+    "subscriptions", "tags", "tags_user", "terms", "upload", "user",
+];
+
 /// Checks every alternative frontend against the contract in views/frontends/README.md; returns
 /// the problems found (empty = fine). `public` is the public/ directory.
 pub fn check_frontends(views: &std::path::Path, public: &std::path::Path) -> Vec<String> {
@@ -570,6 +579,11 @@ pub fn check_frontends(views: &std::path::Path, public: &std::path::Path) -> Vec
                 if !footer.contains(need) {
                     problems.push(format!("{}: must contain {need}", at("shell/footer.html")));
                 }
+            }
+        }
+        for page in FRONTEND_OWN_PAGES {
+            if !dir.join(format!("{page}.html")).is_file() {
+                problems.push(format!("{}: missing; every page needs the frontend's own template (it would show f0ckm's layout)", at(&format!("{page}.html"))));
             }
         }
         for v in &shared {
@@ -1246,7 +1260,14 @@ mod tests {
             "items": [item(7), item(8)], "total": 1234, "pagination": pag, "link": { "main": "/tag/cat/", "path": "p/", "suffix": "" } }));
         dump("grid", &grid);
         assert!(grid.contains("<a class=\"fg-card\" href=\"/tag/cat/7\""));
-        assert!(grid.contains("<a href=\"/tag/cat/video\">Videos</a>"));
+        // the type tabs set the media filter cookie (/mime) and come back; the filtered one is active
+        assert!(grid.contains("<a href=\"/mime?video=1&amp;back=%2Ftag%2Fcat%2F\">Videos</a>"));
+        assert!(grid.contains("<a href=\"/mime?back=%2Ftag%2Fcat%2F\" class=\"active\" aria-current=\"page\">All</a>"));
+        let videos = render(&fe("index"), serde_json::json!({ "url": url("/p/1", serde_json::json!({})), "tmp": { "mime": "video" }, "items": [item(7)], "total": 1 }));
+        assert!(videos.contains("<a href=\"/mime?video=1&amp;back=%2Fp%2F1\" class=\"active\" aria-current=\"page\">Videos</a>"));
+        assert!(videos.contains("<a href=\"/mime?back=%2Fp%2F1\">All</a>"));
+        // a type filter doesn't hide the homepage
+        assert!(render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": { "mime": "video" } })).contains("fg-home-logo"));
         assert!(grid.contains("<a class=\"fg-pg fg-pg-end\" href=\"/tag/cat/p/1\" rel=\"prev\">"));
         assert!(grid.contains("<span class=\"fg-pg fg-pg-cur\" aria-current=\"page\"><span class=\"fg-pg-l fg-c2\">0</span><span class=\"fg-pg-n\">2</span></span>"));
         let empty = render(&fe("index"), serde_json::json!({ "url": url("/tag/zzz", serde_json::json!({})), "tmp": { "tag": "zzz" }, "items": [], "total": 0 }));
@@ -1298,6 +1319,38 @@ mod tests {
         assert!(login.contains("<form class=\"fg-signin-card\" method=\"post\" action=\"/login\">"));
         assert!(login.contains("<input type=\"hidden\" name=\"csrf_token\" value=\"tok\">"));
         assert!(login.contains("wrong password"));
+
+        // the other own pages (tpl::FRONTEND_OWN_PAGES): none falls back to f0ckm's layout
+        let tag = serde_json::json!({ "tag": "Cat", "safe_tag": "cat", "encoded_tag": "Cat", "total_items": 3 });
+        let al = serde_json::json!({ "user": "al", "id": 2 });
+        let pages = [
+            ("about", serde_json::json!({ "about_text": "" })),
+            ("rules", serde_json::json!({ "rules_text": "# Be nice", "rules_text_b64": "IyBCZSBuaWNl" })),
+            ("terms", serde_json::json!({})),
+            ("tags", serde_json::json!({ "toptags": [tag], "session": session })),
+            ("tags_user", serde_json::json!({ "toptags": [tag], "tagger": "al", "user": al, "pagination": pag, "link": { "main": "/user/al/tags", "path": "?page=" } })),
+            ("halls", serde_json::json!({ "hallsList": [{ "slug": "best", "name": "Best", "rating": "nsfw", "total_items": 4, "description": "the best" }] })),
+            ("subscriptions", serde_json::json!({ "session": session, "items": [{ "id": 7, "user": "al", "thumb": "/t/7.webp" }], "totalCount": 1,
+                "pagination": { "start": 1, "end": 1, "page": 1 }, "link": { "main": "/subscriptions", "path": "?page=" } })),
+            ("notifications", serde_json::json!({ "session": session, "activeTab": "user", "tabUnread": { "user": 1 },
+                "notifications": [{ "type": "comment_reply", "from_user": "al", "item_id": 7, "reference_id": 3, "is_read": false, "created_at": "2026-11-15T10:00:00Z" }] })),
+            ("ranking", serde_json::json!({ "list": [{ "user": "al", "count": 9 }], "hoster": [{ "part": "youtube.com", "c": 4 }], "favotop": [{ "item_id": 7, "favs": 2 }],
+                "stats": { "total": 10 }, "totalComments": 1, "totalFavs": 2, "totalUsers": 3, "totalAnonUsers": 0, "diskSize": "1 GB" })),
+            ("comments_user", serde_json::json!({ "user": al, "comments_page": 2, "has_more": true,
+                "static_comments": [{ "id": 3, "item_id": 7, "item_key": "7", "content_html": "<b>hi</b>", "attachments_html": "", "timeago": "now", "iso": "x" }] })),
+            ("upload", serde_json::json!({ "session": session, "mimes_json": "{}", "uploads_remaining": null, "upload_types": [], "min_tags": 1 })),
+        ];
+        for (view, data) in pages {
+            let mut data = data;
+            data["url"] = url(&format!("/{view}"), serde_json::json!({}));
+            let html = render(&fe(view), data);
+            dump(view, &html);
+            assert!(html.contains("/s/fe/f0ckgle/css/f0ckgle.css") && html.contains("class=\"fg-top f0ck-shell-chrome\""), "{view}: not in f0ckgle's layout");
+            assert!(!html.contains("/s/css/f0ckm.css"), "{view}");
+        }
+        for page in FRONTEND_OWN_PAGES {
+            assert!(root.join("views/frontends/f0ckgle").join(format!("{page}.html")).is_file(), "{page}");
+        }
 
         // a shared page in the shell
         let shell = render("settings.html", serde_json::json!({ "url": url("/settings", serde_json::json!({})), "session": session,

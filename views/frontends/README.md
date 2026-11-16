@@ -27,6 +27,14 @@ There are two kinds of pages:
 
 ## What a frontend must provide
 
+**Every page.** A frontend has its own template for every own page, in its own look; none may fall
+back to f0ckm's layout: `about`, `comments_user`, `error`, `halls`, `index`, `item`, `login`,
+`notifications`, `ranking`, `register`, `rules`, `search`, `subscriptions`, `tags`, `tags_user`,
+`terms`, `upload`, `user` (`tpl::FRONTEND_OWN_PAGES`; `f0ckm check-frontends` reports a missing one).
+The shared pages come with the shell (below). Only standalone pages with their own look keep
+f0ckm's: the scroller, the maintenance page, forgot-password, the 4chan proxy and the meme creator.
+A new page the routes render goes into that list and into every frontend.
+
 **`shell/header.html`** opens a shared page:
 - the doctype;
 - `<html class="… f0ck-shell">` with the palette variables (below);
