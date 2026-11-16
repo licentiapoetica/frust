@@ -1221,6 +1221,33 @@ a.fy-card-all:hover {
   cursor: pointer;
 }
 
+/* ── pages change in place (f0ckyou.js): a bar under the masthead while the next one loads ── */
+.fy-mast::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: .1875rem;
+  background: var(--fy-red);
+  opacity: 0;
+}
+
+html.fy-navigating .fy-mast::after {
+  opacity: 1;
+  animation: fy-nav 1.6s cubic-bezier(.1, .7, .3, 1) forwards;
+}
+
+@keyframes fy-nav {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 85%;
+  }
+}
+
 /* ── page links (and the infinite list: f0ckyou.js loads on when they come into view) ── */
 .fy-pages {
   display: flex;

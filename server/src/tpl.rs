@@ -1516,7 +1516,8 @@ mod tests {
         assert!(page.contains("<canvas id=\"bg\" class=\"fy-bg\" data-tuner=\"null\" aria-hidden=\"true\"></canvas>"));
         assert!(page.contains("/s/js/v0ck.js?v=") && page.contains("/s/js/f0ck-bg.js?v=") && page.contains("/s/css/v0ck.css?v="));
         assert!(page.find("/s/js/f0ck-bg.js?v=").unwrap() < page.find("/s/fe/f0ckyou/js/f0ckyou.js?v=").unwrap());
-        assert!(!home.contains("v0ck") && !home.contains("id=\"bg\""));
+        // the scripts on every page (pages change in place), the canvas only on the watch page
+        assert!(home.contains("/s/js/v0ck.js?v=") && !home.contains("id=\"bg\""));
         assert!(!page.contains("fy-motd") && !home.contains("fy-motd"));
         assert!(page.contains("<b>12,345 views</b>"));
         assert!(home.contains("<div class=\"fy-card-sub\">1.2K views &middot; <time"));

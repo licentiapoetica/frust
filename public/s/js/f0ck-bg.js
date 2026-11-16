@@ -10,7 +10,8 @@
 // styles: the frontend's CSS places the canvas (position: fixed behind the content) and fades it
 // with the classes fader-in / fader-out.
 //
-//   f0ckBackground.start({ media, thumb })
+//   f0ckBackground.start({ media, thumb }) (again for every item a page shows without loading;
+//   the canvas may be a new one), f0ckBackground.stop() when the item goes
 //     media: <video>, <img>, <canvas> (Flash's ambientCanvas) or a function returning one; a
 //            <video> is drawn every frame while it plays, the rest once (a canvas: every frame)
 //     thumb: the item's thumbnail URL, drawn until a video has a frame (and for anything else)
@@ -34,10 +35,17 @@
   const KEYS = Object.keys(DEFAULTS);
   const SCALE = 0.5; // the canvas is drawn at half the window size (f0ckm: SCALE)
 
-  const canvas = document.getElementById('bg');
-  if (!canvas || !canvas.getContext) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  // the canvas of the page on screen (looked up again on every start: pages may change in place)
+  let canvas = null;
+  let ctx = null;
+  const bind = () => {
+    const c = document.getElementById('bg');
+    if (c !== canvas) {
+      canvas = c && c.getContext ? c : null;
+      ctx = canvas ? canvas.getContext('2d') : null;
+    }
+    return !!ctx;
+  };
 
   const pick = (o) => {
     const out = {};
@@ -46,7 +54,7 @@
   };
   const tuning = () => {
     let server = null;
-    try { server = JSON.parse(canvas.dataset.tuner || 'null'); } catch { server = null; }
+    try { server = JSON.parse((canvas && canvas.dataset.tuner) || 'null'); } catch { server = null; }
     if (!server && window.f0ckServerAudioTuner) server = window.f0ckServerAudioTuner;
     let own = null;
     try { own = JSON.parse(localStorage.getItem('f0ck_audio_tuning') || 'null'); } catch { own = null; }
@@ -157,6 +165,7 @@
     ? !!window.f0ckSession.show_background
     : (() => { try { return localStorage.getItem('background') !== 'false'; } catch { return true; } })();
   const show = (on) => {
+    if (!canvas) return;
     canvas.classList.toggle('fader-in', on);
     canvas.classList.toggle('fader-out', !on);
   };
@@ -183,7 +192,7 @@
   };
 
   const drawNow = () => {
-    if (!enabled || !current) return;
+    if (!enabled || !current || !ctx || !canvas.isConnected) return;
     const m = mediaOf();
     try {
       if (m && hasFrame(m) && paint(m)) {
@@ -218,21 +227,33 @@
     if (enabled && m && isLive(m)) raf = requestAnimationFrame(loop);
   };
 
+  const stop = () => {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    current = null;
+  };
+
   const start = ({ media, thumb } = {}) => {
+    stop();
+    if (!bind()) return;
     current = { media, thumbImg: null };
+    // a canvas kept from the item before shows it until this one has a picture
+    drawn = false;
+    const mine = current;
     if (thumb) {
       const img = new Image();
-      img.onload = () => { if (!drawn) drawNow(); };
+      img.onload = () => { if (current === mine && !drawn) drawNow(); };
       img.src = thumb;
       current.thumbImg = img;
     }
     const m = mediaOf();
     if (m instanceof HTMLVideoElement) {
-      ['play', 'playing', 'seeked', 'loadeddata'].forEach(ev => m.addEventListener(ev, run));
+      const again = () => { if (current === mine) run(); };
+      ['play', 'playing', 'seeked', 'loadeddata'].forEach(ev => m.addEventListener(ev, again));
       // paused: the frame on screen stays (f0ckm stops its loop the same way)
-      m.addEventListener('pause', () => { if (raf) cancelAnimationFrame(raf); raf = 0; drawNow(); });
+      m.addEventListener('pause', () => { if (current !== mine) return; if (raf) cancelAnimationFrame(raf); raf = 0; drawNow(); });
     } else if (m instanceof HTMLImageElement && !hasFrame(m)) {
-      m.addEventListener('load', run, { once: true });
+      m.addEventListener('load', () => { if (current === mine) run(); }, { once: true });
     }
     run();
   };
@@ -249,6 +270,7 @@
     enabled = !enabled;
     try { localStorage.setItem('background', enabled ? 'true' : 'false'); } catch { /* storage blocked */ }
     syncSwitches();
+    bind();
     if (enabled) run();
     else show(false);
     const s = window.f0ckSession;
@@ -269,6 +291,7 @@
 
   window.f0ckBackground = {
     start,
+    stop,
     redraw: run,
     toggle,
     get enabled() { return enabled; },

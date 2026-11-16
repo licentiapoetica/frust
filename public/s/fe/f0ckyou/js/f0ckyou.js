@@ -13,10 +13,20 @@
 //  - custom emojis :name: in comments as pictures, and the emoji picker
 //  - Flash items: starts the Ruffle player; the player volume is remembered
 //  - moderators: the × on a tag removes it
+//  - pages change in place: a click on a link of the site (or a search) fetches the page and swaps
+//    in its column, masthead and guide, with history (back / forward) and a progress bar; the parts
+//    of a page are set up again for every page shown (setupPage) and taken down when it goes
+//    (onLeave). Pages that need their own scripts or the shared pages' shell load as usual.
 (() => {
   'use strict';
   let page = {};
-  try { page = JSON.parse(document.getElementById('fy-data')?.textContent || '{}') || {}; } catch { page = {}; }
+  const readPage = () => {
+    try { page = JSON.parse(document.getElementById('fy-data')?.textContent || '{}') || {}; } catch { page = {}; }
+  };
+  readPage();
+  // what a page sets up and has to take down when the next one is shown
+  let leaving = [];
+  const onLeave = (fn) => { leaving.push(fn); };
   const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
   const parse = html => new DOMParser().parseFromString(html, 'text/html');
 
@@ -70,8 +80,6 @@
       });
     });
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => emojify(document.body));
-  else emojify(document.body);
   window.addEventListener('f0ck:emojis_updated', () => {
     const box = document.getElementById('fy-emoji-box');
     if (box) box.replaceChildren();
@@ -168,7 +176,6 @@
       badge.hidden = !n;
     } catch { /* offline: keep the badge as it is */ }
   };
-  if (page.session) notifBadge();
 
   // ── forms sent with fetch: the same endpoints and fields, as JSON (they answer JSON then) ──
   const formBody = (form) => {
@@ -307,6 +314,7 @@
   });
 
   // ── lists keep going: the next page into the list when the page links come into view ──
+  const setupFeed = () => {
   const feedNav = document.querySelector('.fy-pages');
   const feed = feedNav?.previousElementSibling?.matches('[data-fy-feed]') ? feedNav.previousElementSibling : null;
   if (feedNav && feed && 'IntersectionObserver' in window) {
@@ -349,7 +357,9 @@
       }
     }, { rootMargin: '800px 0px' });
     io.observe(nav);
+    onLeave(() => io.disconnect());
   }
+  };
 
   // ── new uploads: a pill at the top of the home feed that swaps in the fresh first page ──
   const newPill = () => {
@@ -408,17 +418,22 @@
 
   // ── menus ──
   const menus = () => [...document.querySelectorAll('details.fy-menu')];
-  menus().forEach(d => d.addEventListener('toggle', () => {
-    if (d.open) menus().forEach(o => { if (o !== d) o.open = false; });
-  }));
+  const setupMenus = () => menus().forEach(d => {
+    if (d.dataset.fyMenu) return;
+    d.dataset.fyMenu = '1';
+    d.addEventListener('toggle', () => {
+      if (d.open) menus().forEach(o => { if (o !== d) o.open = false; });
+    });
+  });
   document.addEventListener('click', e => {
     menus().forEach(d => { if (d.open && !d.contains(e.target)) d.open = false; });
   });
 
   // ── the player: f0ckm's v0ck for videos (its controls, settings menu, keys ↑ ↓ . ,), the
   //    native one with a remembered volume for audio; keys; autonext; the blurred background ──
-  const media = document.getElementById('my-video');
-  const player = document.querySelector('.fy-player');
+  const getMedia = () => document.getElementById('my-video');
+  const setupPlayer = () => {
+  const media = getMedia();
   const hasV0ck = !!(media instanceof HTMLVideoElement && window.v0ck);
   if (hasV0ck) {
     // v0ck replaces the native controls (kept in the page for visitors without JavaScript), keeps
@@ -433,31 +448,11 @@
       try { localStorage.setItem('volume', String(media.volume)); } catch { /* storage blocked */ }
     });
   }
-  const fullscreen = () => {
-    const btn = player?.querySelector('.v0ck_fs_btn');
-    if (btn) return btn.click();
-    if (document.fullscreenElement) document.exitFullscreen?.();
-    else (player || media)?.requestFullscreen?.().catch(() => {});
-  };
-  const playPause = () => {
-    if (!media || !('paused' in media)) return;
-    if (media.paused) media.play().catch(() => {}); else media.pause();
-  };
-
-  // autonext (the player's settings menu, as f0ckm): at the end of a video go to the next f0ck
-  // instead of looping (v0ck turns `loop` off while it is on)
-  const autonext = () => { try { return localStorage.getItem('autoplay') === 'true'; } catch { return false; } };
-  if (!window.toggleAutoplay) {
-    window.toggleAutoplay = () => {
-      try { localStorage.setItem('autoplay', autonext() ? 'false' : 'true'); } catch { /* storage blocked */ }
-      document.querySelectorAll('#toggleautoplay').forEach(el => el.classList.toggle('active', autonext()));
-    };
-  }
   if (media instanceof HTMLVideoElement) {
     media.addEventListener('ended', () => {
       if (!autonext()) return;
       const up = document.querySelector('#fy-recs a[data-rec]');
-      location.href = page.next || up?.getAttribute('href') || '/random';
+      go(page.next || up?.getAttribute('href') || '/random');
     });
   }
 
@@ -472,20 +467,45 @@
         : image || cover || (ruffleBox ? () => ruffleBox.querySelector('f0ck-flash')?.ambientCanvas || null : null),
       thumb: `/t/${page.itemId}.webp`,
     });
+    onLeave(() => window.f0ckBackground.stop());
+  }
+  };
+  const fullscreen = () => {
+    const player = document.querySelector('.fy-player');
+    const media = getMedia();
+    const btn = player?.querySelector('.v0ck_fs_btn');
+    if (btn) return btn.click();
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else (player || media)?.requestFullscreen?.().catch(() => {});
+  };
+  const playPause = () => {
+    const media = getMedia();
+    if (!media || !('paused' in media)) return;
+    if (media.paused) media.play().catch(() => {}); else media.pause();
+  };
+
+  // autonext (the player's settings menu, as f0ckm): at the end of a video go to the next f0ck
+  // instead of looping (v0ck turns `loop` off while it is on)
+  const autonext = () => { try { return localStorage.getItem('autoplay') === 'true'; } catch { return false; } };
+  if (!window.toggleAutoplay) {
+    window.toggleAutoplay = () => {
+      try { localStorage.setItem('autoplay', autonext() ? 'false' : 'true'); } catch { /* storage blocked */ }
+      document.querySelectorAll('#toggleautoplay').forEach(el => el.classList.toggle('active', autonext()));
+    };
   }
 
   // ── keys ──
   const typing = t => t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
-  const guideToggle = document.getElementById('fy-guide-toggle');
+  const guideToggle = () => document.getElementById('fy-guide-toggle');
   const drawerOpen = () => {
     const scrim = document.querySelector('.fy-scrim');
-    return guideToggle?.checked && scrim && getComputedStyle(scrim).display !== 'none';
+    return guideToggle()?.checked && scrim && getComputedStyle(scrim).display !== 'none';
   };
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       menus().forEach(d => { d.open = false; });
       if (/^#(report|delete|share)$/.test(location.hash)) location.hash = '_';
-      if (drawerOpen()) guideToggle.checked = false;
+      if (drawerOpen()) guideToggle().checked = false;
       return;
     }
     if (typing(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -496,12 +516,13 @@
       return;
     }
     if (!page.itemId) return;
+    const media = getMedia();
     if ((key === 'ArrowLeft' || key === 'P') && page.prev) {
-      location.href = page.prev;
+      go(page.prev);
     } else if ((key === 'ArrowRight' || key === 'N') && page.next) {
-      location.href = page.next;
+      go(page.next);
     } else if (key === 'r') {
-      location.href = '/random';
+      go('/random');
     } else if (media && 'paused' in media && (key === 'k' || (key === ' ' && !e.target.closest?.('button, a, summary, label')))) {
       e.preventDefault();
       playPause();
@@ -516,6 +537,7 @@
 
   // ── Flash: the SWF plays in f0ckm's sandboxed Ruffle frame (<f0ck-flash>, /s/js/flash-embed.js,
   //    loaded by the watch page); this only starts it in #ruffle-container ──
+  const setupFlash = () => {
   const ruffle = document.getElementById('ruffle-container');
   if (ruffle && ruffle.dataset.swf && window.customElements?.get('f0ck-flash')) {
     const fl = document.createElement('f0ck-flash');
@@ -530,6 +552,7 @@
       flash('Flash playback failed', 'error');
     });
   }
+  };
 
   // ── /tags: "Show more" appends the next page from /api/tags (cards as snippets/tag-cards.html) ──
   const tagCard = (tt, mode) => {
@@ -590,14 +613,17 @@
   // ── interests: the same learning as f0ckm (f0ckInterestEngine, f0ck-core.js): the f0ck on screen
   //    (how long it is watched), clicks on recommendations, searches ──
   const engine = window.f0ckInterestEngine;
-  const watch = document.querySelector('.fy-watch[data-item-id]');
-  if (engine && watch) {
-    engine.startTrackingItem({
-      itemId: watch.dataset.itemId,
-      tags: [...document.querySelectorAll('#tags .fy-tag:not(.fy-tag-rating)')].map(el => el.dataset.tag).filter(Boolean),
-      creator: watch.dataset.creator || '',
-    });
-  }
+  const setupTracking = () => {
+    const watch = document.querySelector('.fy-watch[data-item-id]');
+    if (engine && watch) {
+      engine.startTrackingItem({
+        itemId: watch.dataset.itemId,
+        tags: [...document.querySelectorAll('#tags .fy-tag:not(.fy-tag-rating)')].map(el => el.dataset.tag).filter(Boolean),
+        creator: watch.dataset.creator || '',
+      });
+      onLeave(() => engine.flushCurrentTracking());
+    }
+  };
   document.addEventListener('submit', e => {
     if (!engine || !e.target.matches?.('form.fy-search')) return;
     const q = e.target.elements.tag?.value || '';
@@ -707,6 +733,7 @@
     return li;
   };
 
+  const setupRecs = () => {
   const recList = document.getElementById('fy-recs');
   if (recList) {
     const itemId = recList.dataset.itemId;
@@ -758,21 +785,23 @@
     if ('IntersectionObserver' in window) {
       const sentinel = el('div', 'fy-recs-sentinel');
       spinner.after(sentinel);
-      new IntersectionObserver(entries => {
+      const io = new IntersectionObserver(entries => {
         if (entries.some(en => en.isIntersecting)) loadMore();
-      }, { rootMargin: '400px 0px' }).observe(sentinel);
+      }, { rootMargin: '400px 0px' });
+      io.observe(sentinel);
+      onLeave(() => io.disconnect());
     }
-
-    // a click on a recommendation teaches the interests (recordSuggestionClick, as f0ckm)
-    const picked = (e) => {
-      if (e.button !== 0 && e.button !== 1) return;
-      const a = e.target.closest('a[data-rec]');
-      if (!a || !engine) return;
-      engine.recordSuggestionClick(parseInt(a.dataset.rec, 10), (a.dataset.tags || '').split(',').filter(Boolean), a.dataset.creator || '');
-    };
-    recList.addEventListener('click', picked);
-    recList.addEventListener('auxclick', picked);
   }
+  };
+  // a click on a recommendation teaches the interests (recordSuggestionClick, as f0ckm)
+  const picked = (e) => {
+    if (e.button !== 0 && e.button !== 1) return;
+    const a = e.target.closest?.('#fy-recs a[data-rec]');
+    if (!a || !engine) return;
+    engine.recordSuggestionClick(parseInt(a.dataset.rec, 10), (a.dataset.tags || '').split(',').filter(Boolean), a.dataset.creator || '');
+  };
+  document.addEventListener('click', picked);
+  document.addEventListener('auxclick', picked);
 
   // ── moderators: remove a tag (DELETE has no form; the description is refreshed in place) ──
   document.addEventListener('click', async e => {
@@ -790,4 +819,165 @@
       flash(err.message || 'could not remove the tag', 'error');
     }
   });
+
+  // ── the page on screen: set up its parts (also for every page shown in place) ──
+  const setupPage = () => {
+    readPage();
+    window.f0ckFrontend.itemId = page.itemId || null;
+    setupMenus();
+    emojify(document.querySelector('.fy-content') || document.body);
+    if (page.session) notifBadge();
+    setupFeed();
+    setupPlayer();
+    setupFlash();
+    setupTracking();
+    setupRecs();
+  };
+
+  // ── pages change in place ──
+  // Paths that load as usual: files and the API, the shared pages (they render in the shell with
+  // their own scripts), sign-in / sign-out, settings that change the whole site, the upload page.
+  const FULL = /^\/(?:api|b|t|a|s|ca|tag_image|hall_image|logout|login|register|forgot-password|frontend|settings|messages|admin|mod|pending|privacy|banned|upload|scroller|chan|meme|activity|flash-frame|maintenance)(?:\/|$)|^\/user\/[^/]+\/halls?(?:\/|$)/;
+  // scripts a page may bring that only need to be there once (custom elements, settings)
+  const ONCE = /\/(?:flash-embed|cap-config|cap\.min)\.js$/;
+  const loaded = new Set([...document.scripts].map(sc => sc.src && new URL(sc.src, location.href).pathname).filter(Boolean));
+  const loadOnce = (src) => new Promise(resolve => {
+    const path = new URL(src, location.href).pathname;
+    if (loaded.has(path)) return resolve();
+    loaded.add(path);
+    const sc = document.createElement('script');
+    sc.src = src;
+    sc.onload = sc.onerror = () => resolve();
+    document.body.appendChild(sc);
+  });
+  const pathKey = (href) => { const u = new URL(href, location.href); return u.pathname + u.search; };
+  let shown = pathKey(location.href);
+
+  const leave = () => {
+    const fns = leaving;
+    leaving = [];
+    fns.forEach(fn => { try { fn(); } catch (err) { console.error('[f0ckyou] leave', err); } });
+    // the media of the page going: stop it and let go of the file
+    document.querySelectorAll('.fy-content video, .fy-content audio').forEach(m => {
+      try { m.pause(); m.removeAttribute('src'); m.load(); } catch { /* gone already */ }
+    });
+    document.getElementById('fy-newpill')?.remove();
+    menus().forEach(d => { d.open = false; });
+    const toggle = guideToggle();
+    if (toggle) toggle.checked = false;
+  };
+
+  const swapOne = (doc, sel) => {
+    const cur = document.querySelector(sel);
+    const next = doc.querySelector(sel);
+    if (cur && next) cur.replaceWith(document.importNode(next, true));
+  };
+
+  let navigation = null;
+  async function go(href, { push = true, scroll = null } = {}) {
+    const target = new URL(href, location.href);
+    if (target.origin !== location.origin || FULL.test(target.pathname)) {
+      location.href = target.href;
+      return;
+    }
+    if (navigation) navigation.abort();
+    const ctrl = navigation = new AbortController();
+    document.documentElement.classList.add('fy-navigating');
+    const full = (url) => { location.href = url || target.href; };
+    let res;
+    let doc;
+    try {
+      res = await fetch(target.href, { credentials: 'same-origin', headers: { Accept: 'text/html' }, signal: ctrl.signal });
+      if (!(res.headers.get('content-type') || '').includes('text/html')) return full();
+      doc = parse(await res.text());
+    } catch {
+      if (!ctrl.signal.aborted) full();
+      return;
+    }
+    if (ctrl !== navigation) return;
+    navigation = null;
+    const content = doc.querySelector('.fy-content');
+    const finalUrl = new URL(res.url || target.href);
+    if (target.hash) finalUrl.hash = target.hash;
+    // not one of f0ckyou's own pages (a shared page in the shell, sign-in, ...), or one with scripts
+    // of its own: load it as usual
+    const scripts = content ? [...content.querySelectorAll('script[src]')] : [];
+    if (!content || doc.documentElement.classList.contains('f0ck-shell') || FULL.test(finalUrl.pathname)
+      || scripts.some(sc => !ONCE.test(new URL(sc.getAttribute('src'), location.href).pathname))) {
+      return full(finalUrl.href);
+    }
+
+    // where this page was scrolled to, for coming back
+    try { history.replaceState({ ...(history.state || {}), fy: 1, fyScroll: window.scrollY }, ''); } catch { /* ignore */ }
+    leave();
+
+    // the blurred background stays from one f0ck to the next (no flash), the new one draws over it
+    const next = document.importNode(content, true);
+    const oldBg = document.getElementById('bg');
+    const newBg = next.querySelector('#bg');
+    if (oldBg && newBg) newBg.replaceWith(oldBg);
+    document.querySelector('.fy-content').replaceWith(next);
+    ['.fy-mast', '.fy-guide', '.fy-mini'].forEach(sel => swapOne(doc, sel));
+    const data = document.getElementById('fy-data');
+    const nextData = doc.getElementById('fy-data');
+    if (data && nextData) data.textContent = nextData.textContent;
+    // the item's view beacon (f0ck-core.js counts the view from it)
+    document.querySelectorAll('img.f0ck-view-beacon').forEach(b => b.remove());
+    const beacon = doc.querySelector('img.f0ck-view-beacon');
+    if (beacon) document.body.appendChild(document.importNode(beacon, true));
+    document.title = doc.title;
+    document.body.className = doc.body.className;
+    // stylesheets the new page uses that this one didn't load
+    const haveCss = new Set([...document.querySelectorAll('link[rel="stylesheet"][href]')].map(l => new URL(l.getAttribute('href'), location.href).pathname));
+    doc.querySelectorAll('link[rel="stylesheet"][href]').forEach(l => {
+      const path = new URL(l.getAttribute('href'), location.href).pathname;
+      if (!haveCss.has(path)) document.head.appendChild(document.importNode(l, true));
+    });
+    for (const sc of scripts) await loadOnce(sc.getAttribute('src'));
+
+    if (push) history.pushState({ fy: 1 }, '', finalUrl.href);
+    else history.replaceState({ ...(history.state || {}), fy: 1 }, '', finalUrl.href);
+    shown = pathKey(finalUrl.href);
+    const hashEl = finalUrl.hash.length > 1 ? document.getElementById(decodeURIComponent(finalUrl.hash.slice(1))) : null;
+    if (typeof scroll === 'number') window.scrollTo(0, scroll);
+    else if (hashEl) hashEl.scrollIntoView();
+    else window.scrollTo(0, 0);
+
+    setupPage();
+    window.f0ckCountViewFromPage?.();
+    document.documentElement.classList.remove('fy-navigating');
+  }
+
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  try { history.replaceState({ ...(history.state || {}), fy: 1 }, ''); } catch { /* ignore */ }
+
+  // links of the site: in place (a new tab, a download, a dialog link or another site as usual)
+  document.addEventListener('click', e => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest?.('a[href]');
+    if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+    const url = new URL(a.href, location.href);
+    if (url.origin !== location.origin || FULL.test(url.pathname)) return;
+    // the same page with a #part: a dialog (:target) or a jump
+    if (pathKey(url.href) === pathKey(location.href) && url.hash) return;
+    e.preventDefault();
+    go(url.href);
+  });
+  // the search box (GET /search): in place too
+  document.addEventListener('submit', e => {
+    const form = e.target;
+    if (e.defaultPrevented || !(form instanceof HTMLFormElement) || !form.matches('form.fy-search')) return;
+    e.preventDefault();
+    const url = new URL(form.getAttribute('action') || '/search', location.href);
+    for (const [k, v] of new FormData(form)) if (typeof v === 'string' && v !== '') url.searchParams.append(k, v);
+    go(url.href);
+  });
+  // back / forward
+  window.addEventListener('popstate', e => {
+    // only a #part changed (a dialog opened or closed): nothing to load
+    if (pathKey(location.href) === shown) return;
+    go(location.href, { push: false, scroll: e.state && typeof e.state.fyScroll === 'number' ? e.state.fyScroll : null });
+  });
+
+  setupPage();
 })();
