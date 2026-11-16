@@ -97,6 +97,8 @@ pub struct RehostSource {
     /// Value stored in `items.src` (what the thread/catalog views look up).
     pub src: String,
     pub board: String,
+    /// Media file name (`<tim>.<ext>`).
+    pub file: String,
 }
 
 const PROXY_PREFIX: &str = "/api/v2/scroller/external/4chan/";
@@ -127,7 +129,7 @@ pub fn rehost_source(raw: &str) -> Option<RehostSource> {
                 return None;
             }
             let download = ChanUrl::media_on(&host, board, file)?;
-            return Some(RehostSource { download, src: raw.to_string(), board: board.to_string() });
+            return Some(RehostSource { download, src: raw.to_string(), board: board.to_string(), file: file.to_string() });
         }
         (u.path().to_string(), true)
     } else if raw.starts_with('/') && !raw.starts_with("//") {
@@ -147,7 +149,7 @@ pub fn rehost_source(raw: &str) -> Option<RehostSource> {
     let download = ChanUrl::media(board, file)?;
     // Absolute proxy URLs are stored in their relative form (the form the views look up)
     let src = if absolute { format!("{PROXY_PREFIX}{board}/media/{file}") } else { raw.to_string() };
-    Some(RehostSource { download, src, board: board.to_string() })
+    Some(RehostSource { download, src, board: board.to_string(), file: file.to_string() })
 }
 
 // ── Browser identity ────────────────────────────────────────────────────────

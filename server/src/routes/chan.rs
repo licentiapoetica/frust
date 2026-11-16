@@ -92,15 +92,21 @@ pub(crate) fn catalog_threads(pages: &Value) -> anyhow::Result<Vec<Value>> {
 pub(crate) fn src_candidates(board: &str, posts: &[Value]) -> Vec<String> {
     let mut out = Vec::new();
     for p in posts.iter().filter(|p| has_media(p)) {
-        let tim = js_str(&p["tim"]);
-        let (ext, lower) = (ext_raw(p), ext_lower(p));
-        out.push(format!("https://i.4cdn.org/{board}/{tim}{ext}"));
-        out.push(format!("https://i.4cdn.org/{board}/{tim}{lower}"));
-        out.push(format!("http://i.4cdn.org/{board}/{tim}{ext}"));
-        out.push(format!("http://i.4cdn.org/{board}/{tim}{lower}"));
-        out.push(format!("/api/v2/scroller/external/4chan/{board}/media/{tim}{lower}"));
+        out.extend(media_src_candidates(board, &js_str(&p["tim"]), &ext_raw(p)));
     }
     out
+}
+
+/// The `items.src` values one 4chan media file (`<tim><ext>`, ext with its dot) may be stored under.
+pub(crate) fn media_src_candidates(board: &str, tim: &str, ext: &str) -> Vec<String> {
+    let lower = ext.to_lowercase();
+    vec![
+        format!("https://i.4cdn.org/{board}/{tim}{ext}"),
+        format!("https://i.4cdn.org/{board}/{tim}{lower}"),
+        format!("http://i.4cdn.org/{board}/{tim}{ext}"),
+        format!("http://i.4cdn.org/{board}/{tim}{lower}"),
+        format!("/api/v2/scroller/external/4chan/{board}/media/{tim}{lower}"),
+    ]
 }
 
 /// One rehosted item.

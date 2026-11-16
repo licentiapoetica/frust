@@ -22,6 +22,7 @@ use crate::state::AppState;
 use axum::http::{HeaderValue, header};
 use axum::response::Response;
 use serde_json::{Map, Value, json};
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 pub fn register(r: &mut Router) {
@@ -388,6 +389,55 @@ fn dim(v: &Value) -> Option<i32> {
     (f.is_finite() && f >= 1.0 && f <= 100_000.0).then_some(f as i32)
 }
 
+/// The item a 4chan file was already rehosted as (by any `src` form the views look up).
+async fn rehosted_already(st: &AppState, source: &chan_http::RehostSource) -> anyhow::Result<Option<i64>> {
+    let mut srcs = vec![source.src.clone()];
+    if let Some((tim, ext)) = source.file.rsplit_once('.') {
+        srcs.extend(chanr::media_src_candidates(&source.board, tim, &format!(".{ext}")));
+    }
+    let row = sql!("SELECT id FROM items WHERE src = ANY(", srcs, ") ORDER BY id LIMIT 1").fetch_optional(&st.db).await?;
+    Ok(row.and_then(|r| r.i64("id")))
+}
+
+/// The reply for a rehost of something already on the site: subscribe the user and link to it.
+async fn repost(st: &AppState, session: &crate::session::Session, id: i64, msg: &str) -> Response {
+    auto_subscribe(st, session.id, id, "repost").await;
+    let path = item_path(st, id).await;
+    json(json!({ "success": true, "repost": true, "item_id": id, "item_path": path, "msg": msg }), 200)
+}
+
+/// Bypass mode: symlink `link` to the newest stored copy of a file with this checksum.
+/// False when there is none or linking failed (the caller then stores the file itself).
+async fn link_existing_copy(st: &AppState, checksum: &str, link: &Path) -> bool {
+    let like = format!("{}_bypass_%", crate::util::escape_like(checksum));
+    let existing = sql!("SELECT dest FROM items WHERE checksum = ", checksum, " OR checksum LIKE ", like, " ORDER BY id DESC LIMIT 1").fetch_optional(&st.db).await;
+    let dest = match existing {
+        Ok(Some(r)) => r.string("dest"),
+        Ok(None) => return false,
+        Err(e) => {
+            tracing::error!("[REHOST] bypass lookup failed: {e}");
+            return false;
+        }
+    };
+    if !media::is_plain_name(&dest) {
+        return false;
+    }
+    let r = async {
+        let real = tokio::fs::canonicalize(st.cfg().paths.b.join(&dest)).await?;
+        let dir = link.parent().map(Path::to_path_buf).unwrap_or_default();
+        let dir = tokio::fs::canonicalize(&dir).await.unwrap_or(dir);
+        let rel = media::relative_path(&dir, &real);
+        tokio::fs::symlink(&rel, link).await?;
+        tracing::info!("[REHOST] bypass: symlinked {} → {}", link.display(), rel.display());
+        std::io::Result::Ok(())
+    }
+    .await;
+    if let Err(e) = &r {
+        tracing::error!("[REHOST] bypass symlink failed: {e}");
+    }
+    r.is_ok()
+}
+
 async fn rehost(st: AppState, mut req: Req) -> Res {
     let body = req.post().await?.clone();
     let url_raw = match &body["url"] {
@@ -418,6 +468,14 @@ async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSou
     let owner = s::session_owner_name(Some(session)).unwrap_or_default();
     let max_bytes = cfg.int("main.maxfilesize").filter(|&n| n > 0).map(|n| n as u64).unwrap_or(100 * 1024 * 1024);
 
+    // Without bypass, a 4chan file that is already on the site is not downloaded again
+    let bypass = st.settings.bypass_duplicate_check();
+    if !bypass {
+        if let Some(id) = rehosted_already(st, source).await? {
+            return Ok(repost(st, session, id, "Already on site").await);
+        }
+    }
+
     let uuid = queue::genuuid();
     tokio::fs::create_dir_all(&cfg.paths.tmp).await?;
     let tmp = TempPath::new(cfg.paths.tmp.join(format!("{uuid}.tmp")));
@@ -433,22 +491,15 @@ async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSou
     drop(tmp);
 
     let checksum = queue::sha256_file(&final_tmp.path).await?;
-    let bypass = st.settings.bypass_duplicate_check();
     if !bypass {
-        if let Some(repost) = queue::check_repost_sum(st, &checksum).await? {
-            drop(final_tmp);
-            auto_subscribe(st, session.id, repost, "repost").await;
-            let path = item_path(st, repost).await;
-            return Ok(json(json!({ "success": true, "repost": true, "item_id": repost, "item_path": path, "msg": "Already on site" }), 200));
+        if let Some(id) = queue::check_repost_sum(st, &checksum).await? {
+            return Ok(repost(st, session, id, "Already on site").await);
         }
     }
     let phash = queue::generate_phash(&final_tmp.path).await;
     if !bypass && phash.is_some() {
-        if let Some(m) = queue::check_repost_phash(st, phash.as_deref()).await? {
-            drop(final_tmp);
-            auto_subscribe(st, session.id, m, "phash repost").await;
-            let path = item_path(st, m).await;
-            return Ok(json(json!({ "success": true, "repost": true, "item_id": m, "item_path": path, "msg": "Already on site (visual match)" }), 200));
+        if let Some(id) = queue::check_repost_phash(st, phash.as_deref()).await? {
+            return Ok(repost(st, session, id, "Already on site (visual match)").await);
         }
     }
 
@@ -462,10 +513,13 @@ async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSou
     let dest_dir = if manual { cfg.paths.pending.join("b") } else { cfg.paths.b.clone() };
     tokio::fs::create_dir_all(&dest_dir).await?;
     let dest_path = dest_dir.join(&filename);
-    media::move_file(&final_tmp.path, &dest_path).await?;
+    let size = tokio::fs::metadata(&final_tmp.path).await.map(|m| m.len() as i64).unwrap_or(0);
+    // Bypass mode: link to an existing copy of the same file instead of storing it twice
+    if !(bypass && link_existing_copy(st, &checksum, &dest_path).await) {
+        media::move_file(&final_tmp.path, &dest_path).await?;
+        media::make_public(&dest_path).await;
+    }
     drop(final_tmp);
-    media::make_public(&dest_path).await;
-    let size = tokio::fs::metadata(&dest_path).await.map(|m| m.len() as i64).unwrap_or(0);
     let insert_checksum = if bypass { format!("{checksum}_bypass_{}", crate::util::now_ms()) } else { checksum };
     let original_filename = body["original_filename"]
         .as_str()
