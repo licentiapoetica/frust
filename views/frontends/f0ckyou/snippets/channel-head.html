@@ -1,0 +1,40 @@
+{#- A user's channel header: banner (the profile banner, a database value: the one allowed inline
+    style), the square avatar, name, handle, counts, description, buttons, then the channel tabs.
+    Set before including: ch_user (the user: at least {user}), ch_tab (home, uploads, favs, tags,
+    comments, halls), ch_count (counts, optional: the profile page's `count`). -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set ch_name = (ch_user.user or "") -%}
+{%- set ch_link = "/user/" ~ (ch_name|lower|encode_uri_component) -%}
+{%- set ch_is_me = (session and ((session.user|lower) == (ch_name|lower) or (session.login and (session.login|lower) == (ch_name|lower)))) -%}
+{%- set ch_c = (ch_count if (ch_count is defined and ch_count) else none) -%}
+{%- set ch_tabs = [["home", ch_link, "Home"], ["uploads", ch_link ~ "/uploads", "F0cks"]]
+    + ([["favs", ch_link ~ "/favs", "Liked"]] if not ch_user.is_ghost else [])
+    + ([["tags", ch_link ~ "/tags", "Tags"]] if not ch_user.is_ghost else [])
+    + ([["comments", ch_link ~ "/comments", "Comments"]] if (enable_comments and not ch_user.is_ghost) else [])
+    + ([["halls", ch_link ~ "/halls", "Halls"]] if (userhalls_enabled and not ch_user.is_ghost) else []) -%}
+<section class="fy-channel">
+  {% if (ch_user.banner_file and user_banner_enabled) %}<div class="fy-banner" style="--fy-banner: url('/a/{{ ch_user.banner_file }}')"></div>{% endif %}
+  <div class="fy-channel-head">
+    {% if (ch_user.avatar_file and ch_user.avatar_file != "default.png") %}<img class="fy-channel-ava" src="/a/{{ ch_user.avatar_file }}" alt="">{% elif ch_user.avatar %}<img class="fy-channel-ava" src="/t/{{ ch_user.avatar }}.webp" alt="">{% else %}<img class="fy-channel-ava" src="/s/fe/f0ckyou/img/default.svg?v={{ mtime("/public/s/fe/f0ckyou/img/default.svg") }}" alt="">{% endif %}
+    <div class="fy-channel-info">
+      <h1 class="fy-channel-name"><span{% if ch_user.username_color %} class="fy-namecolor" style="--user-color: {{ ch_user.username_color }}"{% endif %}>{{ (ch_user.display_name or ch_name) }}</span>{% if (ch_user.admin or ch_user.is_moderator) %} <span class="fy-verified" title="{{ ("Administrator" if ch_user.admin else "Moderator") }}">{{ fy.ico("check") }}</span>{% endif %}</h1>
+      <p class="fy-channel-sub">
+        <span>@{{ ch_name|lower }}</span>
+        {% if ch_c %}<span>{{ (ch_c.f0cks or 0)|locale_number }} f0cks</span>{% if not ch_user.is_ghost %}<span>{{ (ch_c.favs or 0)|locale_number }} liked</span>{% endif %}{% endif %}
+        {% if (ch_user.timestamp and ch_user.timestamp.timeago) %}<span>joined <time title="{{ ch_user.timestamp.timefull }}">{{ ch_user.timestamp.timeago }}</time></span>{% endif %}
+        {% if ch_user.is_ghost %}<span>legacy uploader</span>{% endif %}
+      </p>
+      {% if (enable_profile_description and ch_user.description) %}<p class="fy-channel-desc">{{ ch_user.description }}</p>{% endif %}
+      {% if ch_user.banned %}<p><span class="fy-label fy-label-danger" title="{{ ch_user.ban_duration }}">banned</span></p>{% endif %}
+      {% if not ch_user.is_ghost %}
+      <div class="fy-channel-btns">
+        {% if ch_is_me %}<a class="fy-btn" href="/settings">Customise channel</a><a class="fy-btn" href="{{ ch_link }}/uploads">Manage f0cks</a>
+        {% elif (session and private_messages and not session.is_anon) %}<a class="fy-btn fy-btn-white" href="/messages/{{ ch_name|encode_uri_component }}">{{ fy.ico("mail") }}<span>Message</span></a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <nav class="fy-tabs" aria-label="Channel">
+    {% for t in ch_tabs %}<a href="{{ t[1] }}"{% if t[0] == ch_tab %} class="active" aria-current="page"{% endif %}>{{ t[2] }}</a>{% endfor %}
+  </nav>
+</section>

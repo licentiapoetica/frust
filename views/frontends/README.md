@@ -131,8 +131,8 @@ The text size (`user_font_size`, a percent) is chosen per frontend (`user_option
 by frontend name; the settings page saves it for the frontend it is shown in; a frontend without
 an entry has the default size, never another frontend's). It is a
 `user-fs-<percent>` class on `<html>`: give each
-size in crate::fonts::SIZES a rule (f0ckm and f0ckgle scale the root font size, w0bm and f0ckv2 zoom the
-body; `tpl::tests::text_sizes_have_css` checks all three).
+size in crate::fonts::SIZES a rule (f0ckm, f0ckgle and f0ckyou scale the root font size, w0bm and f0ckv2 zoom the
+body; `tpl::tests::text_sizes_have_css` checks them all).
 
 ## Rules
 

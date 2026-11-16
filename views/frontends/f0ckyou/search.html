@@ -1,0 +1,60 @@
+{#- f0ckyou search results: chips for "All tags" (strict) and the title search, then one row per
+    f0ck (the big thumbnail, the title, the match, the uploader, the tag), the page links under them.
+    Without a search: a search page. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set searched = (result is defined and result is not none and result is not false) -%}
+{%- set fy_q = (searchstring if searchstring is string else "") -%}
+{%- set fy_strict = (search_mode == "strict") -%}
+{%- set fy_title = (fy_q or "Search") -%}
+{%- set fy_page = "results" -%}
+{%- set fy_nav = "none" -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main fy-main-list">
+  {% if not (searched or fy_q) %}
+  <div class="fy-empty fy-search-empty">
+    {{ fy.ico("search") }}
+    <h2>Search f0ckYou</h2>
+    <p>Type tags (several with commas) into the box at the top, or search titles with <b>title:text</b>.</p>
+    <form class="fy-search fy-search-big" action="/search" method="get" role="search">
+      <input type="search" name="tag" placeholder="Search" aria-label="Search" autocomplete="off" spellcheck="false" maxlength="2048" autofocus>
+      <button type="submit" class="fy-search-go" title="Search">{{ fy.ico("search") }}<span class="fy-sr">Search</span></button>
+    </form>
+  </div>
+  {% else %}
+  <nav class="fy-chips" aria-label="Search filter">
+    <a class="fy-chip{% if not fy_strict %} active{% endif %}" href="/search?tag={{ fy_q|encode_uri_component }}">Any tag</a>
+    <a class="fy-chip{% if fy_strict %} active{% endif %}" href="/search?tag={{ fy_q|encode_uri_component }}&amp;mode=strict" title="all tags must match">All tags</a>
+    {% if (fy_q and "," not in fy_q and ":" not in fy_q) %}<a class="fy-chip" href="/tag/{{ fy_q|encode_uri_component }}">#{{ fy_q|lower }}</a>{% endif %}
+    {% if (fy_q and ":" not in fy_q) %}<a class="fy-chip" href="/tag/title:{{ fy_q|encode_uri_component }}">In titles</a>{% endif %}
+  </nav>
+  <p class="fy-dim fy-count">{{ (count or 0)|locale_number }} results{% if (pagination and pagination.page and pagination.page > 1) %} &middot; page {{ pagination.page }} of {{ pagination.end }}{% endif %}</p>
+  {% if (searched and result|length) %}
+  <ol class="fy-list fy-results" data-fy-feed>
+    {% for line in result %}
+    {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) -%}
+    {%- set href = ("/tag/" ~ (line.tag|encode_uri_component) ~ "/" ~ ref) if line.tag else ("/" ~ ref) -%}
+    {%- set who = ("anonymous" if is_anonymized else (line.username or "")) -%}
+    <li class="fy-row fy-row-big">
+      <a class="fy-row-thumb" href="{{ href }}" tabindex="-1" aria-hidden="true"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy">{% if line.mime %}<span class="fy-badge-br">{{ line.mime.split("/")[0]|capitalize }}</span>{% endif %}</a>
+      <div class="fy-row-text">
+        <h3 class="fy-row-title"><a href="{{ href }}">{{ (line.title if line.title else (line.tag ~ " - f0ck #" ~ ref if line.tag else "f0ck #" ~ ref)) }}</a></h3>
+        <p class="fy-dim">#{{ line.id }}{% if line.mime %} &middot; {{ line.mime }}{% endif %}{% if (line.score is defined and line.score is number) %} &middot; {{ (line.score * 100)|fixed(0) }}% match{% endif %}</p>
+        <p class="fy-row-chan">{% if (who and not is_anonymized) %}<a href="/user/{{ who|lower|encode_uri_component }}">{{ fy.avatar("", "", who) }}<span>{{ who }}</span></a>{% else %}{{ fy.avatar("", "", (who or domain)) }}<span>{{ (who or domain) }}</span>{% endif %}</p>
+        {% if line.tag %}<p class="fy-row-snippet">Tagged <a class="fy-hashtag" href="/tag/{{ line.tag|encode_uri_component }}">#{{ line.tag }}</a></p>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% include "frontends/f0ckyou/snippets/pagination.html" %}
+  {% else %}
+  <div class="fy-empty">
+    {{ fy.ico("search") }}
+    <h2>No results found</h2>
+    <p>Try different tags, fewer tags, or remove the filters.</p>
+    <p>{% if fy_strict %}<a class="fy-btn" href="/search?tag={{ fy_q|encode_uri_component }}">Match any tag</a> {% endif %}<a class="fy-btn" href="/tags">Browse tags</a></p>
+  </div>
+  {% endif %}
+  {% endif %}
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

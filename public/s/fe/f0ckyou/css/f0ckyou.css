@@ -1,0 +1,3114 @@
+/*
+ * f0ckyou frontend: a video site layout. Templates: views/frontends/f0ckyou/.
+ * One dark look, square corners (no border-radius, CLAUDE.md), sizes in rem so the text size
+ * setting (user-fs-<n> on <html>) scales everything.
+ *
+ * The guide (left menu) opens and closes without JavaScript: the checkbox #fy-guide-toggle and the
+ * <label>s for it (snippets/chrome.html).
+ *   - wide screens: the full guide; ticked: the mini guide (icons)
+ *   - medium: the mini guide; ticked: the full guide as a drawer over the page
+ *   - narrow, and the watch page at every width: nothing; ticked: the drawer
+ */
+
+:root {
+  --fy-bg: #0f0f0f;
+  --fy-raised: #212121;
+  --fy-menu: #282828;
+  --fy-soft: rgba(255, 255, 255, .1);
+  --fy-soft-2: rgba(255, 255, 255, .2);
+  --fy-line: rgba(255, 255, 255, .2);
+  --fy-text: #f1f1f1;
+  --fy-muted: #aaa;
+  --fy-red: #e5082f;
+  --fy-blue: #3ea6ff;
+  --fy-blue-hover: #65b8ff;
+  --fy-input: #121212;
+  --fy-input-line: #303030;
+  --fy-focus: #1c62b9;
+  --fy-thumb-bg: #1f1f1f;
+  --fy-sfw: #2ba640;
+  --fy-nsfw: #d93025;
+  --fy-nsfl: #8b0000;
+  --fy-shadow: 0 4px 32px rgba(0, 0, 0, .6);
+  --fy-font: Roboto, Arial, "Helvetica Neue", sans-serif;
+  --fy-mast-h: 3.5rem;
+  --fy-guide-w: 15rem;
+  --fy-mini-w: 4.5rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--fy-bg);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--fy-bg);
+  color: var(--fy-text);
+  font-family: var(--fy-font);
+  font-size: .875rem;
+  line-height: 1.43;
+}
+
+a {
+  color: var(--fy-blue);
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ── No JavaScript (html.no-js until early.js drops it) ── */
+html.no-js .js-only {
+  display: none !important;
+}
+
+html:not(.no-js) .nojs-only {
+  display: none !important;
+}
+
+.fy-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.fy-dim {
+  color: var(--fy-muted);
+}
+
+.fy-grow {
+  flex: 1;
+}
+
+.fy-inline {
+  display: inline;
+  margin: 0;
+}
+
+/* ── icons (img/icons.svg; they draw in currentColor) ── */
+.fy-ico {
+  display: inline-block;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  vertical-align: middle;
+  overflow: visible;
+}
+
+/* ── the logo ── */
+.fy-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  color: var(--fy-text);
+  font-size: 1.25rem;
+  line-height: 1;
+  letter-spacing: -.05em;
+  white-space: nowrap;
+}
+
+.fy-logo-mark {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 1.875rem;
+  height: 1.3125rem;
+  background: var(--fy-red);
+}
+
+.fy-logo-mark::after {
+  content: "";
+  position: absolute;
+  top: 26%;
+  bottom: 26%;
+  left: 38%;
+  right: 30%;
+  background: #fff;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.fy-logo-word {
+  font-weight: 400;
+}
+
+.fy-logo-word b {
+  font-weight: 700;
+}
+
+.fy-logo-cc {
+  align-self: flex-start;
+  margin-left: .125rem;
+  color: var(--fy-muted);
+  font-size: .625rem;
+  letter-spacing: 0;
+}
+
+/* ── buttons ── */
+.fy-iconbtn {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fy-text);
+  cursor: pointer;
+}
+
+.fy-iconbtn:hover,
+.fy-iconbtn:focus-visible {
+  background: var(--fy-soft);
+}
+
+.fy-btn,
+.fy-btn-blue,
+.fy-btn-text,
+.fy-btn-signin,
+.fy-create,
+.fy-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .375rem;
+  height: 2.25rem;
+  padding: 0 1rem;
+  border: 0;
+  background: var(--fy-soft);
+  color: var(--fy-text);
+  font-size: .875rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.fy-btn .fy-ico,
+.fy-btn-blue .fy-ico,
+.fy-btn-signin .fy-ico,
+.fy-create .fy-ico,
+.fy-pill .fy-ico {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.fy-btn:hover,
+.fy-pill:hover,
+.fy-create:hover {
+  background: var(--fy-soft-2);
+}
+
+.fy-btn-white {
+  background: var(--fy-text);
+  color: #0f0f0f;
+}
+
+.fy-btn-white:hover {
+  background: #d9d9d9;
+}
+
+.fy-btn-blue {
+  background: var(--fy-blue);
+  color: #0f0f0f;
+}
+
+.fy-btn-blue:hover {
+  background: var(--fy-blue-hover);
+}
+
+.fy-btn-blue:disabled,
+.fy-btn:disabled,
+.fy-pill:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.fy-btn-danger {
+  background: var(--fy-nsfw);
+  color: #fff;
+}
+
+.fy-btn-danger:hover {
+  background: #ee4639;
+}
+
+.fy-btn-text {
+  background: none;
+}
+
+.fy-btn-text:hover {
+  background: var(--fy-soft);
+}
+
+.fy-btn-signin {
+  padding: 0 .875rem 0 .5rem;
+  border: 1px solid var(--fy-line);
+  background: none;
+  color: var(--fy-blue);
+}
+
+.fy-btn-signin:hover {
+  border-color: transparent;
+  background: rgba(62, 166, 255, .16);
+}
+
+.fy-create {
+  padding: 0 1rem 0 .625rem;
+}
+
+.fy-linkbtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fy-text);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fy-linkbtn:hover {
+  text-decoration: underline;
+}
+
+.fy-pill {
+  padding: 0 1rem 0 .75rem;
+}
+
+.fy-pill.active .fy-ico {
+  color: var(--fy-red);
+}
+
+.fy-pill-sub {
+  background: var(--fy-text);
+  color: #0f0f0f;
+}
+
+.fy-pill-sub:hover {
+  background: #d9d9d9;
+}
+
+.fy-pill-danger:hover {
+  background: var(--fy-nsfw);
+  color: #fff;
+}
+
+.fy-pill-small {
+  height: 2rem;
+  font-size: .8125rem;
+}
+
+/* ── chips (filters, modes, tabs of lists) ── */
+.fy-chips {
+  position: sticky;
+  top: var(--fy-mast-h);
+  z-index: 50;
+  display: flex;
+  gap: .75rem;
+  margin: 0 -.25rem;
+  padding: .75rem .25rem;
+  background: var(--fy-bg);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.fy-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 2rem;
+  padding: 0 .75rem;
+  border: 0;
+  background: var(--fy-soft);
+  color: var(--fy-text);
+  font-size: .875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fy-chip:hover {
+  background: var(--fy-soft-2);
+}
+
+.fy-chip.active {
+  background: var(--fy-text);
+  color: #0f0f0f;
+}
+
+.fy-chip:disabled {
+  cursor: default;
+}
+
+.fy-chip-small {
+  height: 1.625rem;
+  padding: 0 .5rem;
+  font-size: .75rem;
+}
+
+/* ── avatars: squares ── */
+.fy-ava {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  object-fit: cover;
+  background: #3f3f3f;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.fy-ava-letter {
+  background: #5f6368;
+}
+
+.fy-ava-color {
+  background: var(--user-color);
+  text-shadow: 0 0 .25rem rgba(0, 0, 0, .7);
+}
+
+.fy-ava-big {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.fy-namecolor {
+  color: var(--user-color);
+}
+
+/* ── masthead ── */
+.fy-guide-toggle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fy-guide-toggle:focus-visible ~ .fy-mast .fy-guide-btn {
+  outline: 2px solid var(--fy-blue);
+}
+
+.fy-mast {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: var(--fy-mast-h);
+  padding: 0 1rem;
+  background: var(--fy-bg);
+}
+
+.fy-mast-start,
+.fy-mast-end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: .5rem;
+}
+
+.fy-mast-start {
+  gap: 1rem;
+}
+
+.fy-mast-logo {
+  display: inline-flex;
+  align-items: center;
+  height: 2.5rem;
+  padding: 0 .25rem;
+}
+
+.fy-mast-logo:hover {
+  text-decoration: none;
+}
+
+/* search box */
+.fy-search {
+  display: flex;
+  flex: 0 1 40rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.fy-search input {
+  flex: 1;
+  min-width: 0;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border: 1px solid var(--fy-input-line);
+  border-right: 0;
+  background: var(--fy-input);
+  color: var(--fy-text);
+  font-size: 1rem;
+}
+
+.fy-search input:focus {
+  border-color: var(--fy-focus);
+  outline: 0;
+}
+
+.fy-search input::-webkit-search-cancel-button {
+  filter: invert(1);
+}
+
+.fy-search-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 2.5rem;
+  border: 1px solid var(--fy-input-line);
+  background: #222;
+  color: var(--fy-text);
+  cursor: pointer;
+}
+
+.fy-search-go:hover {
+  background: #303030;
+}
+
+.fy-search-big {
+  width: 100%;
+  max-width: 36rem;
+  margin: 1.5rem auto 0;
+}
+
+/* badges on the masthead buttons */
+.fy-badge,
+#dm-badge {
+  position: absolute;
+  top: .125rem;
+  right: 0;
+  min-width: 1.125rem;
+  padding: 0 .25rem;
+  background: var(--fy-red);
+  color: #fff;
+  font-size: .6875rem;
+  font-weight: 500;
+  line-height: 1.125rem;
+  text-align: center;
+}
+
+/* messages.js shows it with an inline display when there are unread messages */
+#dm-badge {
+  display: none;
+}
+
+#dm-badge.fy-on {
+  display: block;
+}
+
+/* ── menus (<details>) ── */
+.fy-menu {
+  position: relative;
+}
+
+.fy-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.fy-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fy-menu[open] > summary {
+  background: var(--fy-soft);
+}
+
+.fy-account-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-left: .25rem;
+}
+
+.fy-account-btn .fy-ava {
+  width: 2rem;
+  height: 2rem;
+  font-size: .875rem;
+}
+
+.fy-menu-box {
+  position: absolute;
+  top: calc(100% + .25rem);
+  right: 0;
+  z-index: 400;
+  width: 18.75rem;
+  max-height: calc(100vh - 5rem);
+  overflow-y: auto;
+  padding: .5rem 0;
+  background: var(--fy-menu);
+  box-shadow: var(--fy-shadow);
+}
+
+.fy-menu-box hr {
+  margin: .5rem 0;
+  border: 0;
+  border-top: 1px solid var(--fy-line);
+}
+
+.fy-account-who {
+  display: flex;
+  gap: 1rem;
+  padding: .5rem 1rem .75rem;
+  line-height: 1.5;
+}
+
+.fy-account-name {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.fy-menu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fy-menu-list a {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  color: var(--fy-text);
+}
+
+.fy-menu-list a:hover {
+  background: var(--fy-soft);
+}
+
+.fy-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .5rem 1rem .25rem;
+  color: var(--fy-muted);
+  font-size: .75rem;
+}
+
+.fy-menu-head .fy-ico {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.fy-menu-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem;
+  margin: 0;
+  padding: .25rem 1rem .5rem;
+  list-style: none;
+}
+
+.fy-menu-chips a,
+.fy-guide-chips a {
+  display: inline-flex;
+  align-items: center;
+  height: 1.75rem;
+  padding: 0 .625rem;
+  background: var(--fy-soft);
+  color: var(--fy-text);
+  font-size: .75rem;
+  font-weight: 500;
+}
+
+.fy-menu-chips a:hover,
+.fy-guide-chips a:hover {
+  background: var(--fy-soft-2);
+}
+
+.fy-menu-chips a.active,
+.fy-guide-chips a.active {
+  background: var(--fy-text);
+  color: #0f0f0f;
+}
+
+/* ── the app: guide + page column ── */
+.fy-app {
+  display: flex;
+  align-items: flex-start;
+}
+
+.fy-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.fy-guide {
+  position: sticky;
+  top: var(--fy-mast-h);
+  flex: none;
+  width: var(--fy-guide-w);
+  height: calc(100vh - var(--fy-mast-h));
+  overflow-y: auto;
+  padding: .75rem;
+  background: var(--fy-bg);
+  scrollbar-width: thin;
+  scrollbar-color: #555 transparent;
+}
+
+.fy-guide-head {
+  display: none;
+}
+
+.fy-guide hr {
+  margin: .75rem 0;
+  border: 0;
+  border-top: 1px solid var(--fy-line);
+}
+
+.fy-guide-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fy-guide-list a {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: 2.5rem;
+  padding: 0 .75rem;
+  color: var(--fy-text);
+  white-space: nowrap;
+}
+
+.fy-guide-list a span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fy-guide-list a:hover {
+  background: var(--fy-soft);
+}
+
+.fy-guide-list a.active {
+  background: var(--fy-soft);
+  font-weight: 500;
+}
+
+.fy-guide-title {
+  margin: .25rem 0;
+  padding: .25rem .75rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.fy-guide-title a {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--fy-text);
+}
+
+.fy-guide-title .fy-ico {
+  width: 1rem;
+  height: 1rem;
+}
+
+.fy-guide-signin {
+  padding: 0 .75rem;
+}
+
+.fy-guide-signin p {
+  margin: 0 0 .75rem;
+}
+
+.fy-guide-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem;
+  margin: 0;
+  padding: 0 .75rem;
+  list-style: none;
+}
+
+.fy-guide-foot {
+  padding: 0 .75rem 1rem;
+  color: var(--fy-muted);
+  font-size: .8125rem;
+  font-weight: 500;
+}
+
+.fy-guide-foot p {
+  margin: 0 0 .5rem;
+}
+
+.fy-guide-foot a {
+  margin-right: .5rem;
+  color: var(--fy-muted);
+}
+
+.fy-guide-foot a:hover {
+  color: var(--fy-text);
+}
+
+.fy-guide-copy {
+  color: #717171;
+  font-weight: 400;
+}
+
+/* the mini guide: icons with a word under them */
+.fy-mini {
+  position: sticky;
+  top: var(--fy-mast-h);
+  display: none;
+  flex: none;
+  flex-direction: column;
+  width: var(--fy-mini-w);
+  padding: .25rem;
+}
+
+.fy-mini a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .375rem;
+  padding: 1rem 0 .875rem;
+  color: var(--fy-text);
+  font-size: .625rem;
+  text-align: center;
+}
+
+.fy-mini a:hover,
+.fy-mini a.active {
+  background: var(--fy-soft);
+}
+
+.fy-scrim {
+  display: none;
+}
+
+/* the guide as a drawer over the page: narrow and medium screens, and the watch page */
+.fy-page-watch .fy-guide {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 300;
+  display: none;
+  height: 100vh;
+  padding-top: 0;
+  background: var(--fy-raised);
+}
+
+.fy-page-watch .fy-guide-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: var(--fy-mast-h);
+  margin: 0 -.75rem .5rem;
+  padding: 0 1rem;
+}
+
+.fy-page-watch .fy-guide-toggle:checked ~ .fy-app .fy-guide {
+  display: block;
+}
+
+.fy-page-watch .fy-guide-toggle:checked ~ .fy-app .fy-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: block;
+  background: rgba(0, 0, 0, .5);
+  cursor: pointer;
+}
+
+.fy-page-watch .fy-mini,
+.fy-page-watch .fy-guide-toggle:checked ~ .fy-app .fy-mini {
+  display: none;
+}
+
+@media (min-width: 1313px) {
+  .fy-guide-toggle:checked ~ .fy-app .fy-guide {
+    display: none;
+  }
+
+  .fy-guide-toggle:checked ~ .fy-app .fy-mini {
+    display: flex;
+  }
+}
+
+@media (max-width: 1312px) {
+  .fy-guide {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 300;
+    display: none;
+    height: 100vh;
+    padding-top: 0;
+    background: var(--fy-raised);
+  }
+
+  .fy-guide-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: var(--fy-mast-h);
+    margin: 0 -.75rem .5rem;
+    padding: 0 1rem;
+  }
+
+  .fy-guide-toggle:checked ~ .fy-app .fy-guide {
+    display: block;
+  }
+
+  .fy-guide-toggle:checked ~ .fy-app .fy-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    display: block;
+    background: rgba(0, 0, 0, .5);
+    cursor: pointer;
+  }
+}
+
+@media (min-width: 792px) and (max-width: 1312px) {
+  .fy-mini {
+    display: flex;
+  }
+}
+
+/* ── page column ── */
+.fy-main {
+  padding: 0 1.5rem 3rem;
+}
+
+.fy-main-narrow {
+  max-width: 64rem;
+}
+
+.fy-main-list {
+  max-width: 80rem;
+}
+
+.fy-motd {
+  margin: .25rem 0 .75rem;
+  padding: .75rem 1rem;
+  border-left: .25rem solid var(--fy-red);
+  background: var(--fy-soft);
+  white-space: pre-line;
+}
+
+.fy-label {
+  display: inline-block;
+  padding: .0625rem .375rem;
+  background: var(--fy-soft);
+  font-size: .75rem;
+  font-weight: 500;
+}
+
+.fy-label-danger {
+  background: var(--fy-nsfw);
+  color: #fff;
+}
+
+.fy-oc {
+  display: inline-block;
+  padding: 0 .25rem;
+  background: var(--fy-red);
+  color: #fff;
+  font-size: .75em;
+  vertical-align: .1em;
+}
+
+.fy-new {
+  display: inline-block;
+  margin-left: .25rem;
+  padding: 0 .25rem;
+  background: var(--fy-soft);
+  color: var(--fy-text);
+  font-size: .75rem;
+}
+
+/* list headers: a hashtag, a hall, the tags, ... */
+.fy-listhead {
+  margin: 1.5rem 0 .5rem;
+}
+
+.fy-listhead-title {
+  margin: 0 0 .25rem;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.fy-listhead p {
+  margin: 0;
+}
+
+.fy-listhead-hall {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.fy-listhead-ico {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 5rem;
+  height: 5rem;
+  background: var(--fy-soft);
+}
+
+.fy-listhead-ico .fy-ico {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.fy-listhead-desc {
+  margin-top: .5rem !important;
+  max-width: 50rem;
+}
+
+.fy-listhead-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.fy-count {
+  margin: 0 0 1rem;
+}
+
+/* nothing found */
+.fy-empty {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 4rem 1rem;
+  text-align: center;
+  list-style: none;
+}
+
+.fy-empty > .fy-ico {
+  width: 5rem;
+  height: 5rem;
+  color: var(--fy-muted);
+}
+
+.fy-empty h2 {
+  margin: .75rem 0 .5rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.fy-empty p {
+  color: var(--fy-muted);
+}
+
+.fy-empty .fy-btn {
+  margin: .25rem;
+}
+
+/* ── video cards ── */
+.fy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+  gap: 2.5rem 1rem;
+  margin: .75rem 0 2.5rem;
+}
+
+.fy-card {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  min-width: 0;
+}
+
+.fy-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--fy-thumb-bg);
+}
+
+.fy-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fy-thumb-audio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--fy-muted);
+}
+
+.fy-thumb-audio .fy-ico {
+  width: 3rem;
+  height: 3rem;
+}
+
+.fy-badge-br,
+.fy-badge-tl {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .1875rem .3125rem;
+  background: rgba(0, 0, 0, .8);
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.fy-badge-br {
+  right: .5rem;
+  bottom: .5rem;
+}
+
+.fy-badge-tl {
+  top: .5rem;
+  left: .5rem;
+}
+
+.fy-badge-br .fy-ico,
+.fy-badge-tl .fy-ico {
+  width: .875rem;
+  height: .875rem;
+}
+
+.fy-badge-tl.fy-rate-nsfw {
+  background: var(--fy-nsfw);
+}
+
+.fy-badge-tl.fy-rate-nsfl {
+  background: var(--fy-nsfl);
+}
+
+/* watched it: the red bar under the thumbnail */
+.fy-watched {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: .25rem;
+  background: var(--fy-red);
+}
+
+.fy-thumb:has(.fy-watched) .fy-badge-br {
+  bottom: .75rem;
+}
+
+.fy-card-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+}
+
+.fy-card-ava {
+  display: flex;
+  flex: none;
+}
+
+.fy-card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.fy-card-title {
+  display: -webkit-box;
+  margin: 0 0 .25rem;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.375rem;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.fy-card-title a {
+  color: var(--fy-text);
+}
+
+.fy-card-chan,
+.fy-card-sub {
+  display: block;
+  color: var(--fy-muted);
+  font-size: .875rem;
+  line-height: 1.25rem;
+}
+
+a.fy-card-chan:hover,
+a.fy-card-all:hover {
+  color: var(--fy-text);
+}
+
+.fy-card-form {
+  margin-top: .5rem;
+}
+
+/* halls: the count on a side panel of the cover */
+.fy-hall-side {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
+  width: 40%;
+  background: rgba(0, 0, 0, .75);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.fy-grid-tags {
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+}
+
+.fy-more-wrap {
+  margin: -1rem 0 2rem;
+  text-align: center;
+}
+
+.fy-newpill {
+  position: fixed;
+  top: calc(var(--fy-mast-h) + 4rem);
+  left: 50%;
+  z-index: 150;
+  transform: translateX(-50%);
+  height: 2.25rem;
+  padding: 0 1.25rem;
+  border: 0;
+  background: var(--fy-blue);
+  color: #0f0f0f;
+  font-weight: 500;
+  box-shadow: var(--fy-shadow);
+  cursor: pointer;
+}
+
+/* ── page links (and the infinite list: f0ckyou.js loads on when they come into view) ── */
+.fy-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  margin: 0 0 2rem;
+}
+
+.fy-pg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .25rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 .5rem;
+  background: var(--fy-soft);
+  color: var(--fy-text);
+  font-weight: 500;
+}
+
+.fy-pg:hover {
+  background: var(--fy-soft-2);
+}
+
+.fy-pg-cur {
+  background: var(--fy-text);
+  color: #0f0f0f;
+}
+
+.fy-pg-end {
+  padding: 0 .75rem;
+}
+
+.fy-pg .fy-ico {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.fy-pg-of {
+  width: 100%;
+  color: var(--fy-muted);
+  font-size: .75rem;
+  text-align: center;
+}
+
+.fy-pages.fy-loading {
+  opacity: .5;
+}
+
+.fy-pages.fy-loading::after {
+  content: "";
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 3px solid var(--fy-soft-2);
+  border-top-color: var(--fy-text);
+  animation: fy-spin .8s linear infinite;
+}
+
+@keyframes fy-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── lists (search results, comments, ranking) ── */
+.fy-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fy-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.fy-row-thumb {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 15rem;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--fy-thumb-bg);
+}
+
+.fy-row-big .fy-row-thumb {
+  width: min(22.5rem, 40%);
+}
+
+.fy-row-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fy-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.fy-row-text p {
+  margin: 0 0 .375rem;
+}
+
+.fy-row-title {
+  margin: 0 0 .25rem;
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.625rem;
+  overflow-wrap: anywhere;
+}
+
+.fy-row-title a {
+  color: var(--fy-text);
+}
+
+.fy-row-chan a,
+.fy-row-chan {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .5rem 0 !important;
+  color: var(--fy-muted);
+}
+
+.fy-row-chan a:hover {
+  color: var(--fy-text);
+}
+
+.fy-row-chan .fy-ava {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: .75rem;
+}
+
+.fy-row-snippet {
+  color: var(--fy-muted);
+  font-size: .8125rem;
+}
+
+.fy-search-empty .fy-ico {
+  width: 6rem;
+  height: 6rem;
+}
+
+/* ── watch page ── */
+.fy-watch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 25rem);
+  gap: 1.5rem;
+  max-width: 110rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 3rem;
+}
+
+.fy-player {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  background: #000;
+}
+
+.fy-player video.fy-media {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 10rem);
+  background: #000;
+}
+
+.fy-player img.fy-media {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(100vh - 10rem);
+}
+
+.fy-player-audio {
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.fy-audio-cover {
+  max-height: 22rem;
+}
+
+.fy-media-audio {
+  width: 100%;
+  max-width: 40rem;
+}
+
+.fy-media-frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border: 0;
+}
+
+.fy-media-file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .75rem;
+  padding: 3rem 1rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.fy-media-file > .fy-ico {
+  width: 3rem;
+  height: 3rem;
+  color: var(--fy-muted);
+}
+
+.fy-album {
+  display: flex;
+  gap: .5rem;
+  margin-top: .5rem;
+  overflow-x: auto;
+}
+
+.fy-album a {
+  flex: none;
+  outline-offset: -2px;
+}
+
+.fy-album a.active {
+  outline: 2px solid var(--fy-text);
+}
+
+.fy-album img {
+  display: block;
+  width: 6rem;
+  height: 3.375rem;
+  object-fit: cover;
+}
+
+.fy-watch-title {
+  margin: .75rem 0 .5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.75rem;
+  overflow-wrap: anywhere;
+}
+
+.fy-watch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem 1rem;
+}
+
+.fy-owner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-width: 0;
+}
+
+.fy-owner-ava {
+  display: flex;
+}
+
+.fy-owner-ava .fy-ava {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.fy-owner-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-right: .75rem;
+  line-height: 1.375;
+}
+
+.fy-owner-name {
+  overflow: hidden;
+  color: var(--fy-text);
+  font-size: 1rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fy-owner-text .fy-dim {
+  font-size: .75rem;
+}
+
+.fy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+/* the description box */
+.fy-desc {
+  margin-top: .75rem;
+  padding: .75rem;
+  background: var(--fy-soft);
+}
+
+.fy-desc-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .5rem;
+  margin: 0 0 .75rem;
+}
+
+.fy-desc-top b {
+  font-weight: 500;
+}
+
+.fy-hashtag {
+  color: var(--fy-blue);
+}
+
+.fy-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: .375rem 1.5rem;
+  margin: 0;
+}
+
+.fy-facts > div {
+  display: contents;
+}
+
+.fy-facts dt {
+  color: var(--fy-muted);
+}
+
+.fy-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .25rem .5rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.fy-facts dd .fy-ico {
+  width: 1rem;
+  height: 1rem;
+}
+
+.fy-facts a {
+  color: var(--fy-text);
+  text-decoration: underline;
+  text-decoration-color: var(--fy-line);
+}
+
+.fy-rating {
+  display: inline-block;
+  padding: 0 .375rem;
+  background: #5f6368;
+  color: #fff;
+  font-weight: 500;
+}
+
+.fy-rating.fy-rate-sfw {
+  background: var(--fy-sfw);
+}
+
+.fy-rating.fy-rate-nsfw {
+  background: var(--fy-nsfw);
+}
+
+.fy-rating.fy-rate-nsfl {
+  background: var(--fy-nsfl);
+}
+
+.fy-desc-head {
+  margin: 1rem 0 .5rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.fy-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.fy-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  background: var(--fy-soft);
+}
+
+.fy-tag > a {
+  padding: .25rem .75rem;
+  color: var(--fy-text);
+  font-weight: 500;
+}
+
+.fy-tag:hover {
+  background: var(--fy-soft-2);
+}
+
+.fy-tag-rating.fy-rate-sfw > a {
+  color: #4cd964;
+}
+
+.fy-tag-rating.fy-rate-nsfw > a {
+  color: #ff6b5e;
+}
+
+.fy-tag-rating.fy-rate-nsfl > a {
+  color: #ff3b3b;
+}
+
+.fy-tag-del,
+.fy-tag .f0ck-exclude-btn {
+  align-self: stretch;
+  padding: 0 .5rem;
+  border: 0;
+  background: none;
+  color: var(--fy-muted);
+  cursor: pointer;
+}
+
+.fy-tag-del:hover,
+.fy-tag .f0ck-exclude-btn:hover {
+  color: var(--fy-text);
+  background: var(--fy-soft);
+}
+
+/* exclude-tag button (form .f0ck-exclude-form, f0ck-core.js) */
+.fy-tag .f0ck-exclude-form {
+  display: inline-flex;
+  align-self: stretch;
+  margin: 0;
+}
+
+.fy-tag .f0ck-excl-on,
+.fy-tag .is-excluded .f0ck-excl-off {
+  display: none;
+}
+
+.fy-tag .is-excluded .f0ck-excl-on {
+  display: inline;
+}
+
+.fy-tag .is-excluded .f0ck-exclude-btn {
+  color: #ff6b5e;
+}
+
+.fy-tag.f0ck-tag-excluded {
+  background: rgba(217, 48, 37, .25);
+}
+
+.fy-tag.f0ck-tag-excluded > a:first-child {
+  text-decoration: line-through;
+  text-decoration-color: #ff6b5e;
+}
+
+/* a text field drawn as a line, as the comment field */
+.fy-addtag {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  max-width: 26rem;
+  margin-top: .75rem;
+}
+
+.fy-addtag input,
+.fy-comment-form textarea {
+  flex: 1;
+  min-width: 0;
+  padding: .25rem 0;
+  border: 0;
+  border-bottom: 1px solid #717171;
+  background: none;
+  color: var(--fy-text);
+}
+
+.fy-addtag input {
+  height: 2.25rem;
+}
+
+.fy-addtag input:focus,
+.fy-comment-form textarea:focus {
+  border-bottom-color: var(--fy-text);
+  box-shadow: 0 1px 0 var(--fy-text);
+  outline: 0;
+}
+
+.fy-favs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.fy-favs a {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .25rem .75rem .25rem .25rem;
+  background: var(--fy-soft);
+  color: var(--fy-text);
+  font-size: .8125rem;
+}
+
+.fy-favs a:hover {
+  background: var(--fy-soft-2);
+}
+
+.fy-favs .fy-ava {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: .75rem;
+}
+
+/* ── comments ── */
+.fy-comments {
+  margin-top: 1.5rem;
+}
+
+.fy-comments-head {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0 0 1.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.fy-comments-head .fy-ico {
+  width: 1rem;
+  height: 1rem;
+}
+
+.fy-comments-head .fy-dim {
+  font-size: .875rem;
+  font-weight: 400;
+}
+
+.fy-comments-signin {
+  margin: 0 0 1.5rem;
+}
+
+.fy-comment-form {
+  display: flex;
+  gap: 1rem;
+  margin: 0 0 2rem;
+}
+
+.fy-comment-ava {
+  display: flex;
+  flex: none;
+}
+
+.fy-comment-ava img,
+.fy-comment-ava .fy-ava {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: cover;
+}
+
+.fy-comment-form-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: .5rem;
+  min-width: 0;
+}
+
+.fy-comment-form textarea {
+  width: 100%;
+  min-height: 1.875rem;
+  resize: none;
+  line-height: 1.25rem;
+}
+
+.fy-reply-to {
+  margin: 0;
+}
+
+.fy-reply-to a {
+  color: var(--fy-blue);
+}
+
+.fy-comment-tools {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.fy-comment-tools .fy-iconbtn .fy-ico {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* "Cancel" and "Comment" show once the field is in use, as on the big video sites */
+.fy-comment-form:not(:focus-within):has(textarea:placeholder-shown) .fy-comment-cancel {
+  visibility: hidden;
+}
+
+.fy-thread {
+  margin-bottom: 1rem;
+}
+
+.fy-comment {
+  display: flex;
+  gap: 1rem;
+  padding: .25rem 0;
+}
+
+.fy-comment.reply .fy-comment-ava img,
+.fy-comment.reply .fy-comment-ava .fy-ava {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: .75rem;
+}
+
+.fy-comment-target {
+  outline: 2px solid rgba(62, 166, 255, .5);
+  outline-offset: .25rem;
+}
+
+.fy-comment-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.fy-comment-pin {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  margin-bottom: .125rem;
+  color: var(--fy-muted);
+  font-size: .75rem;
+}
+
+.fy-comment-pin .fy-ico {
+  width: .875rem;
+  height: .875rem;
+}
+
+.fy-comment-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .125rem .5rem;
+  font-size: .8125rem;
+}
+
+.fy-comment-name {
+  color: var(--fy-text);
+  font-weight: 500;
+}
+
+.fy-comment-head .fy-dim {
+  font-size: .75rem;
+}
+
+.fy-comment-head .fy-dim:hover {
+  color: var(--fy-text);
+}
+
+.fy-quote {
+  color: var(--fy-blue);
+  font-size: .75rem;
+}
+
+.fy-comment-body {
+  margin: .125rem 0 .25rem;
+  font-size: .875rem;
+  line-height: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.fy-comment-body p {
+  margin: 0 0 .375rem;
+}
+
+.fy-comment-body a {
+  color: var(--fy-blue);
+}
+
+.fy-comment-body img,
+.fy-comment-body video {
+  max-width: 100%;
+  max-height: 20rem;
+}
+
+/* custom emojis stay emoji-sized (the rule above is for pictures; comment-fx.css' size again) */
+.fy-comment-body img.f0ck-emoji {
+  max-width: 4em;
+  max-height: 2em;
+  vertical-align: middle;
+}
+
+.fy-comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: .75rem;
+}
+
+.fy-comment-actions a,
+.fy-comment-actions .fy-linkbtn {
+  padding: .375rem .5rem;
+  margin-left: -.5rem;
+  color: var(--fy-text);
+  font-size: .75rem;
+  font-weight: 500;
+}
+
+.fy-comment-actions a:hover,
+.fy-comment-actions .fy-linkbtn:hover {
+  background: var(--fy-soft);
+  text-decoration: none;
+}
+
+.fy-replies {
+  margin-left: 3.5rem;
+}
+
+.fy-replies > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  height: 2.25rem;
+  padding: 0 1rem;
+  margin-left: -1rem;
+  color: var(--fy-blue);
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+
+.fy-replies > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fy-replies > summary::before {
+  content: "\25BE";
+}
+
+.fy-replies:not([open]) > summary::before {
+  content: "\25B8";
+}
+
+.fy-replies > summary:hover {
+  background: rgba(62, 166, 255, .16);
+}
+
+/* custom emojis: the picker under the comment field (f0ckyou.js); in the text they are .f0ck-emoji
+   (comment-fx.css) */
+.fy-emoji-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  max-height: 14rem;
+  overflow-y: auto;
+  padding: .5rem;
+  background: var(--fy-menu);
+  box-shadow: var(--fy-shadow);
+}
+
+.fy-emoji-box button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: .25rem;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.fy-emoji-box button:hover,
+.fy-emoji-box button:focus-visible {
+  background: var(--fy-soft);
+}
+
+.fy-emoji-box img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.fy-emoji-empty {
+  color: var(--fy-muted);
+}
+
+/* ── up next ── */
+.fy-upnext-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+
+.fy-upnext-nav .fy-btn {
+  flex: 1;
+  padding: 0 .75rem;
+}
+
+.fy-upnext-title {
+  margin: 0 0 .75rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.fy-upnext-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fy-upnext-list a {
+  display: flex;
+  gap: .5rem;
+  color: var(--fy-text);
+}
+
+.fy-upnext-list a:hover .fy-upnext-name {
+  text-decoration: underline;
+}
+
+.fy-upnext-thumb {
+  display: block;
+  flex: none;
+  width: 10.5rem;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--fy-thumb-bg);
+}
+
+.fy-upnext-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fy-upnext-text {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  min-width: 0;
+}
+
+.fy-upnext-name {
+  font-size: .875rem;
+  font-weight: 500;
+}
+
+.fy-upnext-text .fy-dim {
+  font-size: .75rem;
+}
+
+/* ── channel ── */
+.fy-banner {
+  aspect-ratio: 6.2 / 1;
+  margin-top: 1rem;
+  background: var(--fy-thumb-bg) var(--fy-banner) center / cover no-repeat;
+}
+
+.fy-channel-head {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 0 1rem;
+}
+
+.fy-channel-ava {
+  flex: none;
+  width: 10rem;
+  height: 10rem;
+  object-fit: cover;
+  background: var(--fy-thumb-bg);
+}
+
+.fy-channel-info {
+  min-width: 0;
+}
+
+.fy-channel-name {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0 0 .5rem;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.fy-verified {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--fy-muted);
+  color: #0f0f0f;
+}
+
+.fy-verified .fy-ico {
+  width: 1rem;
+  height: 1rem;
+}
+
+.fy-channel-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 .375rem;
+  margin: 0 0 .5rem;
+  color: var(--fy-muted);
+}
+
+.fy-channel-sub > span + span::before {
+  content: "\2022";
+  margin-right: .375rem;
+}
+
+.fy-channel-sub > span:first-child {
+  color: var(--fy-text);
+  font-weight: 500;
+}
+
+.fy-channel-desc {
+  max-width: 50rem;
+  margin: 0 0 .75rem;
+  color: var(--fy-muted);
+  white-space: pre-line;
+}
+
+.fy-channel-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.fy-tabs {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: .5rem;
+  border-bottom: 1px solid var(--fy-line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.fy-tabs a {
+  flex: none;
+  padding: .75rem 0;
+  border-bottom: 2px solid transparent;
+  color: var(--fy-muted);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.fy-tabs a:hover {
+  color: var(--fy-text);
+  border-bottom-color: #717171;
+}
+
+.fy-tabs a.active {
+  color: var(--fy-text);
+  border-bottom-color: var(--fy-text);
+}
+
+.fy-shelf {
+  margin-top: 1.5rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--fy-line);
+}
+
+.fy-shelf:last-child {
+  border-bottom: 0;
+}
+
+.fy-shelf-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 .5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.fy-shelf-head > a:first-child {
+  color: var(--fy-text);
+}
+
+.fy-shelf-head .fy-btn-text {
+  color: var(--fy-blue);
+}
+
+.fy-shelf .fy-facts {
+  max-width: 40rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── notifications ── */
+.fy-notifs {
+  margin-bottom: 2rem;
+}
+
+.fy-notif {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: .75rem 1rem .75rem 1.5rem;
+}
+
+.fy-notif:hover {
+  background: var(--fy-soft);
+}
+
+.fy-notif-dot {
+  position: absolute;
+  top: 1.5rem;
+  left: .5rem;
+  width: .375rem;
+  height: .375rem;
+}
+
+.fy-unread .fy-notif-dot {
+  background: var(--fy-blue);
+}
+
+.fy-notif .fy-ava {
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.25rem;
+}
+
+.fy-notif-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.fy-notif-text p {
+  margin: 0 0 .25rem;
+}
+
+.fy-notif-text a {
+  color: var(--fy-text);
+}
+
+.fy-notif-text a:hover {
+  text-decoration: underline;
+}
+
+.fy-notif-thumb {
+  flex: none;
+  width: 5.375rem;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--fy-thumb-bg);
+}
+
+.fy-notif-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── ranking ── */
+.fy-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: .5rem;
+  margin: 1rem 0 2rem;
+}
+
+.fy-stats > div {
+  padding: .875rem 1rem;
+  background: var(--fy-soft);
+}
+
+.fy-stats b {
+  display: block;
+  font-size: 1.375rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.fy-stats span {
+  color: var(--fy-muted);
+}
+
+.fy-rank-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  gap: 2rem;
+}
+
+.fy-rank-side {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.fy-row-rank {
+  align-items: center;
+}
+
+.fy-row-rank .fy-row-thumb {
+  width: 10rem;
+}
+
+.fy-rank-n {
+  flex: none;
+  width: 1.75rem;
+  color: var(--fy-muted);
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.fy-rank {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fy-rank li {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .375rem 0;
+}
+
+.fy-rank li > :nth-child(3),
+.fy-rank li > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fy-rank a {
+  color: var(--fy-text);
+}
+
+.fy-rank .fy-ava {
+  width: 2rem;
+  height: 2rem;
+  font-size: .875rem;
+}
+
+.fy-rank .fy-rank-n {
+  font-size: .875rem;
+}
+
+/* ── text pages (about / rules / terms) ── */
+.fy-article {
+  max-width: 50rem;
+  padding-top: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.fy-article h1 {
+  margin: 0 0 1rem;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fy-article h2 {
+  margin: 1.5rem 0 .5rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.fy-article code {
+  padding: 0 .25rem;
+  background: var(--fy-soft);
+}
+
+.fy-md img {
+  max-width: 100%;
+}
+
+/* ── error page ── */
+.fy-error {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding-top: 4rem;
+  text-align: center;
+}
+
+.fy-error-art {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.fy-error-art .fy-logo-mark {
+  width: 9rem;
+  height: 6.3rem;
+  filter: grayscale(1);
+  opacity: .5;
+}
+
+.fy-error h1 {
+  margin: 0 0 .75rem;
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+.fy-error-modes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+}
+
+/* ── image captcha (no JavaScript) ── */
+.fy-imgcap {
+  display: flex;
+  flex-direction: column;
+  gap: .375rem;
+  width: 100%;
+}
+
+.fy-imgcap-frame {
+  width: 100%;
+  max-width: 20rem;
+  height: 5.5rem;
+  border: 1px solid var(--fy-line);
+  background: #fff;
+}
+
+.fy-imgcap input {
+  max-width: 20rem;
+  height: 2.5rem;
+  padding: 0 .75rem;
+  border: 1px solid var(--fy-input-line);
+  background: var(--fy-input);
+}
+
+/* ── dialogs (:target, no JavaScript needed) ── */
+.fy-modal {
+  display: none;
+}
+
+.fy-modal:target {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.fy-modal-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .6);
+}
+
+.fy-modal-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  width: min(32rem, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: 1.5rem;
+  background: var(--fy-menu);
+  box-shadow: var(--fy-shadow);
+}
+
+.fy-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fy-modal-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.fy-modal-head a {
+  display: flex;
+  color: var(--fy-text);
+}
+
+.fy-modal-box > p {
+  margin: 0;
+}
+
+.fy-modal-box textarea,
+.fy-modal-box input[type="text"] {
+  width: 100%;
+  padding: .625rem .75rem;
+  border: 1px solid var(--fy-input-line);
+  background: var(--fy-input);
+  color: var(--fy-text);
+  resize: vertical;
+}
+
+.fy-modal-box textarea:focus,
+.fy-modal-box input[type="text"]:focus {
+  border-color: var(--fy-focus);
+  outline: 0;
+}
+
+.fy-checks {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .375rem 1rem;
+}
+
+.fy-checks label {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  cursor: pointer;
+}
+
+.fy-checks input,
+.fy-check input {
+  accent-color: var(--fy-blue);
+}
+
+.fy-modal-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.fy-share {
+  display: flex;
+  gap: .5rem;
+}
+
+.fy-share input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── snackbar ── */
+.fy-flash {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  max-width: calc(100vw - 3rem);
+  pointer-events: none;
+}
+
+.fy-toast {
+  min-width: 18rem;
+  max-width: 36rem;
+  padding: .875rem 1.5rem;
+  border-left: .25rem solid transparent;
+  background: var(--fy-text);
+  color: #0f0f0f;
+  box-shadow: var(--fy-shadow);
+  pointer-events: auto;
+}
+
+.fy-toast-error {
+  border-left-color: var(--fy-nsfw);
+}
+
+.fy-toast-success {
+  border-left-color: var(--fy-sfw);
+}
+
+/* ── sign in / register ── */
+.fy-page-login {
+  display: flex;
+  flex-direction: column;
+}
+
+.fy-card-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+}
+
+.fy-signin-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  width: min(64rem, 100%);
+  padding: 2.25rem;
+  background: var(--fy-raised);
+}
+
+.fy-signin-logo {
+  display: inline-flex;
+  margin-bottom: 1.5rem;
+}
+
+.fy-signin-logo:hover {
+  text-decoration: none;
+}
+
+.fy-signin-side h1 {
+  margin: 0 0 .75rem;
+  font-size: 2.25rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.fy-signin-sub {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.fy-signin-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fy-field {
+  display: flex;
+  flex-direction: column;
+  gap: .375rem;
+}
+
+.fy-field > span {
+  color: var(--fy-muted);
+  font-size: .8125rem;
+}
+
+.fy-field input,
+.fy-field textarea {
+  width: 100%;
+  padding: .875rem 1rem;
+  border: 1px solid #717171;
+  background: none;
+  color: var(--fy-text);
+  font-size: 1rem;
+}
+
+.fy-field textarea {
+  resize: vertical;
+}
+
+.fy-field input:focus,
+.fy-field textarea:focus {
+  border-color: var(--fy-blue);
+  box-shadow: inset 0 0 0 1px var(--fy-blue);
+  outline: 0;
+}
+
+.fy-check {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  cursor: pointer;
+}
+
+.fy-signin-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.25rem;
+  margin: 0;
+}
+
+.fy-signin-more .fy-linkbtn,
+.fy-signin-more a {
+  color: var(--fy-blue);
+}
+
+.fy-signin-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-top: .5rem;
+}
+
+.fy-signin-btns .fy-btn-text {
+  color: var(--fy-blue);
+}
+
+.fy-form-error {
+  margin: 0;
+  padding: .625rem .875rem;
+  background: rgba(217, 48, 37, .2);
+  color: #ff8a80;
+}
+
+.fy-form-ok {
+  margin: 0;
+  padding: .625rem .875rem;
+  background: rgba(43, 166, 64, .2);
+  color: #7ee08a;
+}
+
+.fy-signin-card .register-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.fy-signin-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  width: min(64rem, 100%);
+  padding: 1rem .25rem;
+  color: var(--fy-muted);
+  font-size: .75rem;
+}
+
+.fy-signin-foot span:last-child {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.fy-signin-foot a {
+  color: var(--fy-muted);
+}
+
+/* ── upload page: f0ckm's upload form (upload.css, made for dark themes) in f0ckyou's colours ── */
+.fy-upload-page,
+#upload-drag-modal,
+#drop-overlay {
+  --accent: #3ea6ff;
+  --accent-rgb: 62, 166, 255;
+  --bg: #0f0f0f;
+  --bg-form: #212121;
+  --black: #000;
+  --white: #fff;
+  --text: #f1f1f1;
+  --text-color: #f1f1f1;
+  --nav-bg: #212121;
+  --nav-border-color: #3f3f3f;
+  --dropdown-bg: #282828;
+  --navbar-h: 3.5rem;
+  --upload-opt-color: #f1f1f1;
+  --badge-sfw: #2ba640;
+  --badge-nsfw: #d93025;
+  --badge-nsfl: #8b0000;
+  font-family: var(--fy-font);
+}
+
+.fy-upload-page .fy-listhead {
+  margin-bottom: 1rem;
+}
+
+#drop-overlay .overlay-content,
+#upload-drag-modal .modal-content {
+  box-shadow: var(--fy-shadow);
+}
+
+@media (max-width: 792px) {
+  #upload-drag-modal {
+    --navbar-h: 0px;
+  }
+}
+
+/* ── "login as anonymous" and the rules/terms consent (shared dialogs, shown by passkey.js /
+   tos-consent.js; their Font Awesome icons aren't loaded here) ── */
+#anon-setup-modal,
+:is(#privacy-consent-modal, #tos-consent-modal) {
+  position: fixed;
+  inset: 0;
+  z-index: 1060;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, .6);
+}
+
+:is(#privacy-consent-modal, #tos-consent-modal) {
+  z-index: 1070;
+}
+
+#anon-setup-modal i[class*="fa-"],
+:is(#privacy-consent-modal, #tos-consent-modal) i[class*="fa-"] {
+  display: none;
+}
+
+#anon-setup-modal .navbar-anon-modal-box,
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(25rem, 100%);
+  max-height: 90vh;
+  padding: 1.5rem;
+  background: var(--fy-menu);
+  color: var(--fy-text);
+  box-shadow: var(--fy-shadow);
+}
+
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-content {
+  width: min(40rem, 100%);
+}
+
+#anon-setup-modal .navbar-anon-modal-close,
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-close {
+  position: absolute;
+  top: .5rem;
+  right: .75rem;
+  border: 0;
+  background: none;
+  color: var(--fy-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+#anon-setup-modal .lm-title,
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-header h3 {
+  margin: 0 0 .75rem;
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: .5rem 0;
+  border-top: 1px solid var(--fy-line);
+  border-bottom: 1px solid var(--fy-line);
+}
+
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-body a {
+  color: var(--fy-blue);
+}
+
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: .75rem;
+}
+
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-hint {
+  color: var(--fy-muted);
+}
+
+#anon-setup-modal .lm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  margin-bottom: .75rem;
+  cursor: pointer;
+}
+
+#anon-setup-modal .lm-check-box {
+  display: none;
+}
+
+#anon-setup-modal .lm-btn,
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-accept {
+  height: 2.25rem;
+  padding: 0 1.5rem;
+  border: 0;
+  background: var(--fy-blue);
+  color: #0f0f0f;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+#anon-setup-modal .lm-btn:disabled,
+:is(#privacy-consent-modal, #tos-consent-modal) .pc-accept:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+#anon-setup-modal .lm-error {
+  margin-top: .75rem;
+  padding: .5rem .75rem;
+  background: rgba(217, 48, 37, .2);
+  color: #ff8a80;
+}
+
+#anon-setup-modal .lm-footer {
+  margin: .75rem 0 0;
+  color: var(--fy-muted);
+}
+
+/* ── the visitor's website font (settings; user_font_css declares 'CustomUserFont') ── */
+html.fy-user-font body,
+html.fy-user-font button,
+html.fy-user-font input,
+html.fy-user-font textarea,
+html.fy-user-font select {
+  font-family: 'CustomUserFont', Roboto, Arial, sans-serif;
+}
+
+/* ── text size (settings → text size): user-fs-<percent> on <html>, everything is in rem ── */
+html.user-fs-80 {
+  font-size: 80%;
+}
+
+html.user-fs-90 {
+  font-size: 90%;
+}
+
+html.user-fs-110 {
+  font-size: 110%;
+}
+
+html.user-fs-120 {
+  font-size: 120%;
+}
+
+html.user-fs-130 {
+  font-size: 130%;
+}
+
+html.user-fs-140 {
+  font-size: 140%;
+}
+
+html.user-fs-150 {
+  font-size: 150%;
+}
+
+/* ── narrower screens ── */
+@media (max-width: 1100px) {
+  .fy-watch {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fy-rank-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 792px) {
+  .fy-mast {
+    gap: .5rem;
+    padding: 0 .5rem;
+  }
+
+  .fy-mast-start {
+    gap: .25rem;
+  }
+
+  .fy-mast-end {
+    gap: .25rem;
+  }
+
+  .fy-search-go {
+    width: 3rem;
+  }
+
+  .fy-hide-narrow,
+  .fy-create span,
+  .fy-btn-signin span {
+    display: none;
+  }
+
+  .fy-create,
+  .fy-btn-signin {
+    padding: 0 .5rem;
+  }
+
+  .fy-main {
+    padding: 0 .75rem 2rem;
+  }
+
+  .fy-watch {
+    padding: 0 0 2rem;
+  }
+
+  .fy-watch-main > :not(.fy-player):not(.fy-album) {
+    margin-left: .75rem;
+    margin-right: .75rem;
+  }
+
+  .fy-upnext {
+    padding: 0 .75rem;
+  }
+
+  .fy-channel-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .fy-channel-ava {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .fy-channel-name,
+  .fy-listhead-title,
+  .fy-article h1 {
+    font-size: 1.5rem;
+  }
+
+  .fy-row-thumb,
+  .fy-row-big .fy-row-thumb {
+    width: 10rem;
+  }
+
+  .fy-row-title {
+    font-size: 1rem;
+    line-height: 1.375rem;
+  }
+
+  .fy-signin-card {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+
+  .fy-grid {
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 1.5rem .75rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .fy-logo-word,
+  .fy-logo-cc {
+    display: none;
+  }
+
+  .fy-mast-start .fy-guide-btn {
+    width: 2rem;
+  }
+
+  .fy-row {
+    flex-direction: column;
+  }
+
+  .fy-row-thumb,
+  .fy-row-big .fy-row-thumb {
+    width: 100%;
+  }
+
+  .fy-row-rank {
+    flex-direction: row;
+  }
+
+  .fy-row-rank .fy-row-thumb {
+    width: 7rem;
+  }
+
+  .fy-replies {
+    margin-left: 1.5rem;
+  }
+
+  .fy-checks {
+    grid-template-columns: 1fr;
+  }
+
+  .fy-upnext-thumb {
+    width: 8rem;
+  }
+}

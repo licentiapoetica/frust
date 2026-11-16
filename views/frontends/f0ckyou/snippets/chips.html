@@ -1,0 +1,27 @@
+{#- The chip bar over a list: "All" and the media types. The types set the media filter with /mime
+    (the `mime` cookie, the same as f0ckm's picker: it wins over a /video path, routes/index.rs
+    feed_mime), then go back to the listing; "All" clears it. Plain links, so they work without
+    JavaScript. Set before including: fy_chip (active: all, image, video, audio, flash, or none),
+    fy_chip_base (the listing the chips filter, "/" or "/tag/x/" ...), fy_chips_extra (more chips:
+    [[href, label, active]], optional). -#}
+{%- set ch_base = (fy_chip_base if (fy_chip_base is defined and fy_chip_base) else "/") -%}
+{%- set ch_back = ("/p/1" if ch_base == "/" else ch_base)|encode_uri_component -%}
+{%- set ch_active = (fy_chip if (fy_chip is defined and fy_chip) else "") -%}
+{#- Only the media types the site has (allowedMimes → scroller_mime_cats, Flash with enable_swf) and,
+    for anonymous users, may see (anon_permissions.allowed_mimes). With one type: no type chips. -#}
+{%- set ch_cats = (scroller_mime_cats if (scroller_mime_cats is defined and scroller_mime_cats is sequence) else ["video", "image", "audio"]) -%}
+{%- set ch_anon = (session and session.is_anon) -%}
+{%- set ch_anon_ok = ((anon_permissions.allowed_mimes if (anon_permissions and anon_permissions.allowed_mimes) else none) or ["image", "video", "audio", "flash"]) -%}
+{%- set ch_types = ([["video", "Videos"]] if ("video" in ch_cats and (not ch_anon or "video" in ch_anon_ok)) else [])
+    + ([["image", "Images"]] if ("image" in ch_cats and (not ch_anon or "image" in ch_anon_ok)) else [])
+    + ([["audio", "Music"]] if ("audio" in ch_cats and (not ch_anon or "audio" in ch_anon_ok)) else [])
+    + ([["flash", "Flash"]] if (enable_swf and (not ch_anon or "flash" in ch_anon_ok)) else []) -%}
+<nav class="fy-chips" aria-label="Filter">
+  <a class="fy-chip{% if ch_active == "all" %} active{% endif %}" href="/mime?back={{ ch_back }}"{% if ch_active == "all" %} aria-current="page"{% endif %}>All</a>
+  {% if ch_types|length > 1 %}{% for ty in ch_types %}
+  <a class="fy-chip{% if ch_active == ty[0] %} active{% endif %}" href="/mime?{{ ty[0] }}=1&amp;back={{ ch_back }}"{% if ch_active == ty[0] %} aria-current="page"{% endif %}>{{ ty[1] }}</a>
+  {% endfor %}{% endif %}
+  {% for c in ((fy_chips_extra if (fy_chips_extra is defined and fy_chips_extra is sequence) else [])) %}
+  <a class="fy-chip{% if c[2] %} active{% endif %}" href="{{ c[0] }}"{% if c[2] %} aria-current="page"{% endif %}>{{ c[1] }}</a>
+  {% endfor %}
+</nav>

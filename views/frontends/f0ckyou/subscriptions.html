@@ -1,0 +1,42 @@
+{#- f0ckyou subscriptions: the f0cks whose comments you follow, as cards, each with an "Unsubscribe"
+    form that f0ckyou.js sends in place. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set fy_title = "Subscriptions" -%}
+{%- set fy_page = "results" -%}
+{%- set fy_nav = "subs" -%}
+{%- set here = ((url.pathname ~ url.search) if (url and url.pathname) else "/subscriptions") -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main" data-fy-live="subs">
+  <header class="fy-listhead">
+    <h1 class="fy-listhead-title">Subscriptions</h1>
+    <p class="fy-dim">You get the new comments of {{ (totalCount or (items or [])|length)|locale_number }} f0cks &middot; <a href="/notifications">Notifications</a></p>
+  </header>
+  {% if items %}
+  <div class="fy-grid">
+    {% for it in items %}
+    {%- set ref = (it.slug if (enable_item_slugs and it.slug) else it.id) -%}
+    <article class="fy-card">
+      <a class="fy-thumb" href="/{{ ref }}" tabindex="-1" aria-hidden="true"><img src="{{ (it.thumb or ("/t/" ~ it.id ~ ".webp")) }}" alt="" loading="lazy"></a>
+      <div class="fy-card-meta">
+        <span class="fy-card-ava">{{ fy.avatar("", "", (it.user or "?")) }}</span>
+        <div class="fy-card-text">
+          <h3 class="fy-card-title"><a href="/{{ ref }}">f0ck #{{ ref }}</a></h3>
+          <span class="fy-card-chan">{{ it.user }}</span>
+          <form method="post" action="/api/subscribe/{{ it.id }}" class="fy-ajax fy-card-form" data-fy-refresh="subs">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="subscribed" value="0">
+            <input type="hidden" name="back" value="{{ here }}">
+            <button type="submit" class="fy-pill fy-pill-on fy-pill-small">{{ fy.ico("bell") }}<span>Unsubscribe</span></button>
+          </form>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% include "frontends/f0ckyou/snippets/pagination.html" %}
+  {% else %}
+  <div class="fy-empty">{{ fy.ico("subs") }}<h2>No subscriptions yet</h2><p>"Subscribe" under a f0ck gets you its new comments.</p></div>
+  {% endif %}
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

@@ -1,0 +1,77 @@
+{#- f0ckyou ranking ("Trending"): the most liked f0cks as a numbered list with thumbnails, the top
+    taggers and hosters beside it, the site's stats as tiles. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set fy_title = "Ranking" -%}
+{%- set fy_page = "results" -%}
+{%- set fy_nav = "ranking" -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main">
+  <header class="fy-listhead fy-listhead-hall">
+    <span class="fy-listhead-ico">{{ fy.ico("trophy") }}</span>
+    <div>
+      <h1 class="fy-listhead-title">Ranking</h1>
+      <p class="fy-dim">The top f0ckers of all time</p>
+    </div>
+  </header>
+  <div class="fy-stats">
+    <div><b>{{ stats.total }}</b><span>f0cks</span></div>
+    <div><b>{{ stats.tagged }}</b><span>tagged</span></div>
+    <div><b>{{ stats.untagged }}</b><span>untagged</span></div>
+    <div><b>{{ stats.sfw }}</b><span>SFW</span></div>
+    <div><b>{{ stats.nsfw }}</b><span>NSFW</span></div>
+    {% if enable_nsfl %}<div><b>{{ stats.nsfl }}</b><span>NSFL</span></div>{% endif %}
+    <div><b>{{ stats.deleted }}</b><span>deleted</span></div>
+    <div><b>{{ stats.untracked }}</b><span>missing ids</span></div>
+    <div><b>{{ totalComments }}</b><span>comments</span></div>
+    <div><b>{{ totalFavs }}</b><span>likes</span></div>
+    <div><b>{{ totalUsers }}</b><span>users</span></div>
+    <div><b>{{ totalAnonUsers }}</b><span>anon users</span></div>
+    <div><b>{{ diskSize }}</b><span>on disk</span></div>
+  </div>
+  <div class="fy-rank-cols">
+    <section class="fy-rank-col fy-rank-wide">
+      <h2 class="fy-shelf-head">Most liked</h2>
+      <ol class="fy-list">
+        {% for favo in (favotop or []) %}
+        {% set fid = (favo.item_id or favo.id) %}
+        {% set ref = (favo.slug if (enable_item_slugs and favo.slug) else fid) %}
+        <li class="fy-row fy-row-rank">
+          <span class="fy-rank-n">{{ loop.index }}</span>
+          <a class="fy-row-thumb" href="/{{ ref }}" tabindex="-1" aria-hidden="true"><img src="/t/{{ fid }}.webp" alt="" loading="lazy"></a>
+          <div class="fy-row-text">
+            <h3 class="fy-row-title"><a href="/{{ ref }}">f0ck #{{ ref }}</a></h3>
+            <p class="fy-dim">{{ fy.ico("like") }} {{ favo.favs }} likes</p>
+          </div>
+        </li>
+        {% else %}
+        <li class="fy-dim">Nothing liked yet.</li>
+        {% endfor %}
+      </ol>
+    </section>
+    <div class="fy-rank-side">
+      <section class="fy-rank-col">
+        <h2 class="fy-shelf-head">Top taggers</h2>
+        <ol class="fy-rank">
+          {% for u in (list or []) %}
+          <li>
+            <span class="fy-rank-n">{{ loop.index }}</span>
+            {{ fy.avatar(u.avatar_file, u.avatar, (u.display_name or u.user)) }}
+            <a href="/user/{{ u.user|lower|encode_uri_component }}">{{ (u.display_name or u.user) }}</a>
+            <span class="fy-dim">{{ u.count }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+      </section>
+      <section class="fy-rank-col">
+        <h2 class="fy-shelf-head">Top {{ (hoster or [])|length }} hosters</h2>
+        <ol class="fy-rank">
+          {% for host in (hoster or []) %}
+          <li><span class="fy-rank-n">{{ loop.index }}</span><span>{{ (host.part if host.part else "upload") }}</span><span class="fy-dim">{{ host.c }}</span></li>
+          {% endfor %}
+        </ol>
+      </section>
+    </div>
+  </div>
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

@@ -1,0 +1,51 @@
+{#- f0ckyou register page (the account card, as the sign-in page), posts to f0ckm's /register. -#}
+{%- set fy_page = "login" -%}
+{%- set fy_title = "Create your account" -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% if captcha_enabled %}
+<script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
+<script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
+{% endif %}
+<main class="fy-card-page">
+  <form class="fy-signin-card" method="post" action="/register">
+    <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+    <div class="fy-signin-side">
+      <a href="/" class="fy-signin-logo">{% include "frontends/f0ckyou/snippets/logo.html" %}</a>
+      <h1>Create an account</h1>
+      <p class="fy-signin-sub">to start your channel on {{ domain }}</p>
+    </div>
+    <div class="fy-signin-fields">
+      {% if (error is defined and error is string and error) %}<p class="fy-form-error">{{ error }}</p>{% endif %}
+      {% if (success is defined and success is string and success) %}<p class="fy-form-ok">{{ success }}</p>{% else %}
+      <label class="fy-field"><span>Username</span><input type="text" name="username" autocomplete="username" required></label>
+      <label class="fy-field"><span>Password (min. 20 characters)</span><input type="password" name="password" autocomplete="new-password" required minlength="20"></label>
+      <label class="fy-field"><span>Confirm</span><input type="password" name="password_confirm" autocomplete="new-password" required minlength="20"></label>
+      {% if registration_apply %}
+      {#- Registration by application: an invite token, or a message for the admins -#}
+      <label class="fy-field"><span>Invite token (if you have one)</span><input type="text" name="token" autocomplete="off" value="{{ (token if token is defined else "") }}"></label>
+      <label class="fy-field"><span>No token? Tell us why you want an account (min. 20 characters)</span><textarea name="application" maxlength="1000" rows="4"></textarea></label>
+      <label class="fy-field"><span>{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}</span><input type="email" name="email" autocomplete="email"></label>
+      {% elif not registration_open %}
+      <label class="fy-field"><span>Invite token</span><input type="text" name="token" autocomplete="off" value="{{ (token if token is defined else "") }}" required></label>
+      {% elif registration_require_mail_andor_token %}
+      <label class="fy-field"><span>Email</span><input type="email" name="email" autocomplete="email" required></label>
+      {% endif %}
+      <input type="text" name="email_confirm_field" class="register-honeypot" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <label class="fy-check"><input type="checkbox" id="tos" name="tos" required> {% if private_society %}I accept the terms{% else %}I accept the <a href="/terms" target="_blank">terms</a> and <a href="/rules" target="_blank">rules</a> and I am 18+{% endif %}</label>
+      {% if captcha_enabled %}
+      <cap-widget class="js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+      {% include "frontends/f0ckyou/snippets/cap-image.html" %}
+      {% endif %}
+      {% endif %}
+      <div class="fy-signin-btns">
+        <a href="/?login=1" class="fy-btn-text">Sign in instead</a>
+        {% if not (success is defined and success is string and success) %}<button type="submit" class="fy-btn-blue">{{ ("Apply" if registration_apply else "Next") }}</button>{% endif %}
+      </div>
+    </div>
+  </form>
+  <div class="fy-signin-foot"><span>English</span><span><a href="/about">Help</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></span></div>
+</main>
+{#- the rules and terms have to be read before the checkbox gets ticked -#}
+{% include "snippets/tos-consent.html" %}
+</body>
+</html>

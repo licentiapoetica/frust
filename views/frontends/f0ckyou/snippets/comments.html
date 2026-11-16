@@ -1,0 +1,80 @@
+{#- Comments under the player: the count, the form (your square avatar, the field, emojis, Comment),
+    then the threads. The server sends them as static_comments (routes/comments.rs
+    static_item_comments, text effects included), so they need no JavaScript. With JavaScript,
+    f0ckyou.js posts, replies and deletes with fetch and swaps in the list (data-fy-live) from a fresh
+    render of the page, also when a comment arrives live, and shows the custom emojis :name: as
+    pictures (the server copy has them as text). Reply without JavaScript: a link (?reply=<id>) that
+    fills the form's parent_id. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set here_path = (url.pathname if (url and url.pathname) else ("/" ~ item.id)) -%}
+{%- set reply_to = (parse_int(url.qs.reply) if (url and url.qs and url.qs.reply) else none) -%}
+{%- set me = ((session.user or "")|lower if session else "") -%}
+{%- macro one(c, reply, reply_to, here_path, me) -%}
+<div class="fy-comment{% if reply %} reply{% endif %}{% if c.is_pinned %} pinned{% endif %}{% if reply_to == c.id %} fy-comment-target{% endif %}" id="c{{ c.id }}">
+  {% if c.username %}<a class="fy-comment-ava" href="/user/{{ c.username|lower|encode_uri_component }}"><img src="{{ c.avatar_src }}" alt="" loading="lazy"></a>{% else %}<span class="fy-comment-ava">{{ fy.avatar("", "", (c.name or "?")) }}</span>{% endif %}
+  <div class="fy-comment-main">
+    {% if c.is_pinned %}<div class="fy-comment-pin">{{ fy.ico("pin") }}Pinned</div>{% endif %}
+    <div class="fy-comment-head">
+      {% if c.username %}<a class="fy-comment-name{% if c.username_color %} fy-namecolor{% endif %}" href="/user/{{ c.username|lower|encode_uri_component }}"{% if c.username_color %} style="--user-color: {{ c.username_color }}"{% endif %}>@{{ c.name }}</a>{% else %}<span class="fy-comment-name">{{ (c.name or "anonymous") }}</span>{% endif %}
+      <a class="fy-dim" href="#c{{ c.id }}" title="{{ c.iso }}">{{ c.timeago }}</a>
+      {% for b in (c.backlinks or []) %}<a href="#c{{ b }}" class="fy-quote">&gt;&gt;{{ b }}</a> {% endfor %}
+    </div>
+    <div class="fy-comment-body">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+    <div class="fy-comment-actions">
+      {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" data-reply="{{ c.id }}" data-name="{{ (c.name or "anonymous") }}">Reply</a>{% endif %}
+      {% if session and (is_mod_or_admin or (allow_comment_deletion and c.username and (c.username|lower) == me)) %}
+      <form method="post" action="/api/comments/{{ c.id }}/delete" class="fy-inline fy-ajax" data-fy-refresh="comments comments-head" data-fy-confirm="Delete this comment?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here_path }}#comments">
+        <button type="submit" class="fy-linkbtn">Delete</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{%- endmacro -%}
+{%- set sc = (static_comments or []) -%}
+{%- set comment_total = (sc|length) + (sc|selectattr("replies")|map(attribute="replies")|map("length")|sum) -%}
+<section class="fy-comments" id="comments" data-item-id="{{ item.id }}">
+  <h2 class="fy-comments-head" data-fy-live="comments-head">{{ comment_total|locale_number }} Comment{% if comment_total != 1 %}s{% endif %}{% if item.is_comments_locked %} <span class="fy-dim">&middot; {{ fy.ico("lock") }} locked</span>{% endif %}</h2>
+  {% if session and not item.is_comments_locked %}
+  <form method="post" action="/api/comments" class="fy-comment-form fy-ajax" id="comment-form" data-fy-refresh="comments comments-head" data-fy-comment>
+    <span class="fy-comment-ava">{{ fy.avatar(session.avatar_file, session.avatar, (session.display_name or session.user)) }}</span>
+    <div class="fy-comment-form-main">
+      <input type="hidden" name="item_id" value="{{ item.id }}">
+      <input type="hidden" name="parent_id" value="{{ (reply_to or "") }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ here_path }}#comments">
+      <p class="fy-dim fy-reply-to"{% if not reply_to %} hidden{% endif %}>Replying to <span>#{{ (reply_to or "") }}</span> &middot; <a href="{{ here_path }}#comments" class="fy-reply-cancel">cancel</a></p>
+      <textarea name="content" rows="1" placeholder="Add a comment..." required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+      {% if "comment" in (captcha_scopes or []) %}{% include "frontends/f0ckyou/snippets/cap-image.html" %}{% endif %}
+      {#- the custom emojis: a picker that inserts :name: (JavaScript, f0ckyou.js; the list comes
+          from /api/v2/emojis). Without JavaScript :name: can still be typed. -#}
+      <div class="fy-emoji-box" id="fy-emoji-box" hidden></div>
+      <div class="fy-comment-tools">
+        <button type="button" class="fy-iconbtn js-only fy-emoji-btn" aria-expanded="false" aria-controls="fy-emoji-box" title="Emojis">{{ fy.ico("smile") }}<span class="fy-sr">Emojis</span></button>
+        <span class="fy-grow"></span>
+        <button type="reset" class="fy-btn-text fy-comment-cancel">Cancel</button>
+        <button type="submit" class="fy-btn-blue">Comment</button>
+      </div>
+    </div>
+  </form>
+  {% elif not session %}
+  <p class="fy-dim fy-comments-signin"><a href="/?login=1">Sign in</a> to comment.</p>
+  {% endif %}
+  <div class="fy-comment-list" data-fy-live="comments">
+    {% for c in sc %}
+    <div class="fy-thread">
+    {{ one(c, false, reply_to, here_path, me) }}
+    {% if c.replies %}
+    <details class="fy-replies" open>
+      <summary>{{ c.replies|length }} repl{{ ("y" if c.replies|length == 1 else "ies") }}</summary>
+      {% for r in c.replies %}{{ one(r, true, reply_to, here_path, me) }}{% endfor %}
+    </details>
+    {% endif %}
+    </div>
+    {% else %}
+    <p class="fy-dim">No comments yet. Start the conversation.</p>
+    {% endfor %}
+  </div>
+</section>

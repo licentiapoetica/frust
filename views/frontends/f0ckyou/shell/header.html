@@ -1,0 +1,9 @@
+{#- f0ckyou chrome around the shared pages (settings, messages, admin, mod, pending, banned, ...):
+    the head with f0ck-shell and fy_shell_head in it, the masthead and the guide, then the page
+    content. Contract: views/frontends/README.md -#}
+{%- set fy_shell = true -%}
+{%- set fy_shell_head = "snippets/shell-head.html" -%}
+{%- set fy_page = "shell" -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<div class="f0ck-shell-page">

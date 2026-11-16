@@ -1,0 +1,9 @@
+{#- Closes a shared page in f0ckyou's chrome: the page column (snippets/footer.html with
+    fy_shell_foot, which includes snippets/frontend-scripts.html), then the shared pages' extras.
+    Contract: views/frontends/README.md -#}
+</div>
+{%- set fy_shell_foot = true %}
+{% include "frontends/f0ckyou/snippets/footer.html" %}
+{% include "snippets/shell-foot.html" %}
+</body>
+</html>

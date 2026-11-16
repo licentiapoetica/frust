@@ -1,0 +1,16 @@
+{#- Tags as cards: toptags (routes/toptags.rs process_tags), tagger (optional). The same card
+    f0ckyou.js builds for "Show more". -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set tc_m = ((session.mode if session else 0) or 0) -%}
+{% for tt in (toptags or []) %}
+<article class="fy-card fy-card-tag">
+  <a class="fy-thumb" href="/tag/{{ tt.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}"><img src="/tag_image/{{ tt.encoded_tag }}?m={{ tc_m }}" alt="" loading="lazy"><span class="fy-badge-br">{{ fy.ico("videos") }}{{ (tt.total_items or 0)|locale_number }}</span></a>
+  <div class="fy-card-meta">
+    <span class="fy-card-ava"><span class="fy-ava fy-ava-letter" aria-hidden="true">#</span></span>
+    <div class="fy-card-text">
+      <h3 class="fy-card-title"><a href="/tag/{{ tt.safe_tag }}{% if (tagger is defined and tagger) %}?tagger={{ tagger|encode_uri_component }}{% endif %}">#{{ tt.tag }}</a></h3>
+      <div class="fy-card-sub">{{ (tt.total_items or 0)|locale_number }} f0cks</div>
+    </div>
+  </div>
+</article>
+{% endfor %}

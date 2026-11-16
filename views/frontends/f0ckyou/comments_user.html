@@ -1,0 +1,35 @@
+{#- f0ckyou: a user's comments under their channel header (the Comments tab): each with the f0ck's
+    thumbnail, effects included (static_comments, routes/comments.rs), newer / older page links. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set fy_title = "Comments by " ~ (user.display_name or user.user or "") -%}
+{%- set fy_page = "channel" -%}
+{%- set fy_is_me = (session and user and ((session.user|lower) == ((user.user or "")|lower))) -%}
+{%- set fy_nav = ("comments" if fy_is_me else "none") -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main">
+  {%- set ch_user = user -%}
+  {%- set ch_tab = "comments" -%}
+  {% include "frontends/f0ckyou/snippets/channel-head.html" %}
+  <ol class="fy-list" data-fy-feed>
+    {% for c in (static_comments or []) %}
+    <li class="fy-row" id="c{{ c.id }}">
+      <a class="fy-row-thumb" href="/{{ c.item_key }}#c{{ c.id }}"><img src="/t/{{ c.item_id }}.webp" alt="" loading="lazy"></a>
+      <div class="fy-row-text">
+        <h3 class="fy-row-title"><a href="/{{ c.item_key }}#c{{ c.id }}">f0ck #{{ c.item_key }}</a></h3>
+        <p class="fy-dim"><time title="{{ c.iso }}">{{ c.timeago }}</time></p>
+        <div class="fy-comment-body fy-row-snippet">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+      </div>
+    </li>
+    {% else %}
+    <li class="fy-empty"><h2>No comments</h2><p>This channel hasn't commented yet.</p></li>
+    {% endfor %}
+  </ol>
+  {% if (comments_page > 1 or has_more) %}
+  <nav class="fy-pages">
+    {% if comments_page > 1 %}<a class="fy-pg fy-pg-end" href="?page={{ comments_page - 1 }}" rel="prev">{{ fy.ico("prev") }}<span>Newer</span></a>{% endif %}
+    {% if has_more %}<a class="fy-pg fy-pg-end" href="?page={{ comments_page + 1 }}" rel="next"><span>Older</span>{{ fy.ico("next") }}</a>{% endif %}
+  </nav>
+  {% endif %}
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

@@ -1,0 +1,31 @@
+{#- f0ckyou helpers. Import with {% import "frontends/f0ckyou/snippets/macros.html" as fy %}.
+    Icons come from one sprite file (<use href>), not inline paths: f0ck-shell.css resets the chrome
+    of the shared pages with `all: revert`, which would wipe inline SVG geometry. -#}
+
+{#- An icon of public/s/fe/f0ckyou/img/icons.svg; it draws in currentColor. -#}
+{%- macro ico(name, cls="") -%}
+<svg class="fy-ico{% if cls %} {{ cls }}{% endif %}" aria-hidden="true" focusable="false"><use href="/s/fe/f0ckyou/img/icons.svg?v={{ mtime("/public/s/fe/f0ckyou/img/icons.svg") }}#{{ name }}"></use></svg>
+{%- endmacro -%}
+
+{#- An avatar: the uploaded picture, an item thumbnail, else the first letter of the name on a square
+    in the user's colour (a database value: the one allowed inline style, a custom property). -#}
+{%- macro avatar(file, thumb, name, color="", cls="") -%}
+{%- if (file and file != "default.png") -%}
+<img class="fy-ava{% if cls %} {{ cls }}{% endif %}" src="/a/{{ file }}" alt="" loading="lazy">
+{%- elif thumb -%}
+<img class="fy-ava{% if cls %} {{ cls }}{% endif %}" src="/t/{{ thumb }}.webp" alt="" loading="lazy">
+{%- else -%}
+<span class="fy-ava fy-ava-letter{% if cls %} {{ cls }}{% endif %}{% if color %} fy-ava-color{% endif %}"{% if color %} style="--user-color: {{ color }}"{% endif %} aria-hidden="true">{{ ((name or "?")[:1])|upper }}</span>
+{%- endif -%}
+{%- endmacro -%}
+
+{#- The icon of a media type (cards, chips). -#}
+{%- macro mime_icon(mime) -%}
+{%- if not mime -%}{{ ico("file") }}
+{%- elif mime.startswith("video") -%}{{ ico("film") }}
+{%- elif mime.startswith("image") -%}{{ ico("image") }}
+{%- elif mime.startswith("audio") -%}{{ ico("music") }}
+{%- elif "flash" in mime -%}{{ ico("flash") }}
+{%- else -%}{{ ico("file") }}
+{%- endif -%}
+{%- endmacro -%}

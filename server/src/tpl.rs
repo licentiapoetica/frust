@@ -1372,6 +1372,197 @@ mod tests {
         assert!(shell.contains("<div class=\"f0ck-shell-page\">"));
     }
 
+    /// f0ckYou (the video site parody): its own pages render for guests and members, with the forms
+    /// that make them work without JavaScript (and live with it, f0ckyou.js). F0CKM_DUMP_F0CKYOU=<dir> writes them out.
+    #[test]
+    fn f0ckyou_pages_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let url = |path: &str, qs: serde_json::Value| serde_json::json!({ "pathname": path, "search": "", "qs": qs });
+        let session = serde_json::json!({ "user": "bob", "id": 1, "admin": true, "avatar": 5, "show_motd": true });
+        let item = |id: i64| {
+            serde_json::json!({ "id": id, "username": "al", "display_name": "Al", "username_color": "#f00", "mime": "video/mp4", "tag_id": 1,
+                "rating_class": "sfw", "thumb": null, "title": null, "stamp": 1_794_700_000, "my_views": 1 })
+        };
+        let base = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "modes": ["sfw", "nsfw", "untagged", "all", "nsfl"], "mode": 1,
+            "frontend": "f0ckyou", "frontends": ["f0ckm", "f0ckyou"], "frontend_switch": true, "enable_comments": true, "private_messages": true,
+            "motd": "hello", "nsfl_tag_id": 3, "anon_permissions_json": "{}", "captcha_scopes": [] });
+        let render = |view: &str, data: serde_json::Value| {
+            let mut ctx = base.clone();
+            ctx.as_object_mut().unwrap().extend(data.as_object().unwrap().clone());
+            let html = env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{view}: {e:#}"));
+            assert!(!html.contains("border-radius"), "{view}");
+            // no inline styles but the database values (user colour, banner) as custom properties
+            // (the shared pages in the shell have their own)
+            for style in html.split("style=\"").skip(1).filter(|_| view.starts_with("frontends/f0ckyou/")) {
+                let value = style.split('"').next().unwrap();
+                assert!(value.starts_with("--user-color: ") || value.starts_with("--fy-banner: url("), "{view}: inline style {value}");
+            }
+            html
+        };
+        let dump = |name: &str, html: &str| {
+            if let Ok(dir) = std::env::var("F0CKM_DUMP_F0CKYOU") {
+                std::fs::write(PathBuf::from(dir).join(format!("{name}.html")), html).unwrap();
+            }
+        };
+        let fe = |v: &str| format!("frontends/f0ckyou/{v}.html");
+        let pag = serde_json::json!({ "start": 1, "end": 9, "page": 2, "prev": 1, "next": 3, "cheat": [1, 2, 3, 4] });
+
+        // home: masthead, guide (opens without JavaScript: a checkbox and labels), chips, cards
+        let home = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "session": session,
+            "items": [item(7), item(8)], "total": 2, "pagination": pag, "link": { "main": "/", "path": "p/", "suffix": "" } }));
+        dump("home", &home);
+        assert!(home.contains("<body class=\"fy-page-home\">"));
+        assert!(home.contains("<input type=\"checkbox\" id=\"fy-guide-toggle\""));
+        assert!(home.contains("<label for=\"fy-guide-toggle\" class=\"fy-iconbtn fy-guide-btn\""));
+        assert!(home.contains("<label for=\"fy-guide-toggle\" class=\"fy-scrim f0ck-shell-chrome\""));
+        assert!(home.contains("<form class=\"fy-search\" id=\"fy-search\" action=\"/search\" method=\"get\" role=\"search\">"));
+        assert!(home.contains("<li><a href=\"/\" class=\"active\" aria-current=\"page\">"), "Home is the active guide entry");
+        assert!(home.contains("<a href=\"/mode/1\" class=\"active\" aria-current=\"true\">NSFW</a>"));
+        assert!(home.contains("<sup class=\"fy-logo-cc\">NSFW</sup>"));
+        assert!(home.contains("<article class=\"fy-card\" data-id=\"7\">") && home.contains("<a class=\"fy-thumb\" href=\"/7\""));
+        assert!(home.contains("<span class=\"fy-watched\" title=\"watched\"></span>"));
+        assert!(home.contains("class=\"fy-ava fy-ava-letter fy-ava-color\" style=\"--user-color: #f00\""));
+        assert!(home.contains("<div class=\"fy-grid\" data-fy-feed>"));
+        assert!(home.contains("<a class=\"fy-pg fy-pg-end\" href=\"/p/3\" rel=\"next\">"));
+        assert!(home.contains("<span class=\"fy-pg fy-pg-cur\" aria-current=\"page\">2</span>"));
+        assert!(home.contains("/s/fe/f0ckyou/img/icons.svg?v="));
+        assert!(home.contains("<p class=\"fy-motd\">hello</p>"));
+        assert!(home.contains("snippets/frontend-scripts") || home.contains("id=\"footer-data\""));
+        let guest = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {} }));
+        assert!(guest.contains("<a class=\"fy-btn-signin\" href=\"/?login=1\">"));
+        assert!(!guest.contains("fy-account") && !guest.contains("fy-logo-cc"));
+
+        // the media chips set the filter cookie (/mime) and come back; the filtered one is active
+        let tag = render(&fe("index"), serde_json::json!({ "url": url("/tag/cat/p/2", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session,
+            "items": [item(7)], "total": 1234, "pagination": pag, "link": { "main": "/tag/cat/", "path": "p/", "suffix": "" } }));
+        dump("tag", &tag);
+        assert!(tag.contains("<h1 class=\"fy-listhead-title\">#cat</h1>"));
+        assert!(tag.contains("<a class=\"fy-thumb\" href=\"/tag/cat/7\""));
+        assert!(tag.contains("<a class=\"fy-chip\" href=\"/mime?video=1&amp;back=%2Ftag%2Fcat%2F\">Videos</a>"));
+        assert!(tag.contains("<a class=\"fy-chip active\" href=\"/mime?back=%2Ftag%2Fcat%2F\" aria-current=\"page\">All</a>"));
+        assert!(!tag.contains("fy-page-home") && !tag.contains("class=\"fy-motd\""));
+        let videos = render(&fe("index"), serde_json::json!({ "url": url("/p/1", serde_json::json!({})), "tmp": { "mime": "video" }, "items": [item(7)], "total": 1 }));
+        assert!(videos.contains("<a class=\"fy-chip active\" href=\"/mime?video=1&amp;back=%2Fp%2F1\" aria-current=\"page\">Videos</a>"));
+        let one = render(&fe("index"), serde_json::json!({ "url": url("/p/1", serde_json::json!({})), "tmp": {}, "items": [item(7)], "total": 1,
+            "scroller_mime_cats": ["video"], "enable_swf": false }));
+        assert!(!one.contains("/mime?video=1"), "one type: no type chips");
+        // a user's uploads: their channel header with the tabs
+        let uploads = render(&fe("index"), serde_json::json!({ "url": url("/user/al/uploads", serde_json::json!({})), "tmp": { "user": "al", "view_mode": "uploads" },
+            "session": session, "items": [item(7)], "total": 1, "link": { "main": "/user/al/uploads/", "path": "p/", "suffix": "" } }));
+        assert!(uploads.contains("<a href=\"/user/al/uploads\" class=\"active\" aria-current=\"page\">F0cks</a>"));
+        let empty = render(&fe("index"), serde_json::json!({ "url": url("/tag/zzz", serde_json::json!({})), "tmp": { "tag": "zzz" }, "items": [], "total": 0 }));
+        assert!(empty.contains("No f0cks here"));
+
+        // search results
+        let search = render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({ "tag": "cat" })), "searchstring": "cat", "count": 2, "search_mode": "strict",
+            "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat", "score": 0.93 }], "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" } }));
+        dump("search", &search);
+        assert!(search.contains("<h3 class=\"fy-row-title\"><a href=\"/tag/cat/7\">cat - f0ck #7</a></h3>"));
+        assert!(search.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
+        assert!(search.contains("93% match"));
+        assert!(search.contains("<ol class=\"fy-list fy-results\" data-fy-feed>"));
+        assert!(render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({})), "searchstring": [] })).contains("Search f0ckYou"));
+
+        // watch page: the actions are plain forms, the regions they change are swapped in by f0ckyou.js
+        let tags = serde_json::json!([{ "id": 1, "tag": "sfw", "normalized": "sfw", "can_exclude": false }, { "id": 9, "tag": "Cat", "normalized": "cat", "can_exclude": true, "is_excluded": true }]);
+        let it = serde_json::json!({ "id": 7, "username": "al", "author_color": "#0f0", "mime": "video/mp4", "dest": "/b/7.mp4", "size": "1 MB", "tags": tags,
+            "timestamp": { "timeago": "1 day ago", "timefull": "x" }, "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" } });
+        let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
+            "replies": [{ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content_html": "yo", "attachments_html": "", "timeago": "now", "iso": "x" }] });
+        let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it,
+            "pagination": { "prev": 6, "next": 8, "cheat": [4, 5, 6, 7, 8, 9] }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_rate_item": true,
+            "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice" }));
+        dump("item", &page);
+        assert!(page.contains("<body class=\"fy-page-watch\">"));
+        assert!(page.contains("<video id=\"my-video\" class=\"fy-media\""));
+        assert!(page.contains("<a class=\"fy-btn\" id=\"fy-prev\" href=\"/tag/cat/6\""));
+        assert!(page.contains("<span class=\"fy-upnext-name\">f0ck #8</span><span class=\"fy-dim\">Next</span>"));
+        assert!(page.contains("<input type=\"hidden\" name=\"action\" value=\"remove\">"));
+        assert!(page.contains("aria-pressed=\"true\"") && page.contains("#like-on"));
+        assert!(page.contains("<form method=\"post\" action=\"/api/subscribe/7\" class=\"fy-inline fy-ajax\" data-fy-refresh=\"actions\">"));
+        assert!(page.contains("<form method=\"post\" action=\"/api/v2/item/7/rating\" class=\"fy-inline fy-ajax\" data-fy-refresh=\"desc\">"));
+        assert!(page.contains("class=\"f0ck-exclude-form is-excluded\" data-tag-id=\"9\""));
+        assert!(page.contains("<form method=\"post\" action=\"/api/comments\" class=\"fy-comment-form fy-ajax\" id=\"comment-form\" data-fy-refresh=\"comments comments-head\" data-fy-comment>"));
+        for live in ["actions", "desc", "comments", "comments-head"] {
+            assert_eq!(page.matches(&format!("data-fy-live=\"{live}\"")).count(), 1, "{live}");
+        }
+        assert!(page.contains("data-reply=\"3\" data-name=\"al\""));
+        assert!(page.contains("<summary>1 reply</summary>"));
+        assert!(page.contains("2 Comments"));
+        // up next: the neighbours, the next one first
+        let next = page.find("href=\"/tag/cat/8\"><span class=\"fy-upnext-thumb\"").expect("next in up next");
+        let prev = page.find("href=\"/tag/cat/6\"><span class=\"fy-upnext-thumb\"").expect("previous in up next");
+        assert!(next < prev);
+        assert!(!page.contains("href=\"/tag/cat/7\"><span class=\"fy-upnext-thumb\""), "not the item itself");
+        assert!(page.contains("<button type=\"button\" class=\"fy-iconbtn js-only fy-emoji-btn\""));
+        assert!(page.contains("<div class=\"fy-emoji-box\" id=\"fy-emoji-box\" hidden></div>"));
+        for modal in ["share", "report", "delete"] {
+            assert!(page.contains(&format!("<div id=\"{modal}\" class=\"fy-modal\">")), "{modal}");
+        }
+        assert!(page.contains("\"itemId\": 7"));
+        assert!(page.contains("class=\"fy-owner-name fy-namecolor\" href=\"/user/al\" style=\"--user-color: #0f0\""));
+
+        // channel, error, sign-in
+        let user = render(&fe("user"), serde_json::json!({ "url": url("/user/al", serde_json::json!({})), "session": session, "user_banner_enabled": true,
+            "user": { "user": "al", "id": 2, "banner_file": "b.png", "timestamp": { "timeago": "1 year ago", "timefull": "x" } }, "count": { "f0cks": 2, "favs": 0 },
+            "f0cks": { "items": [item(7)], "link": { "main": "/user/al/uploads/" } } }));
+        dump("user", &user);
+        assert!(user.contains("<div class=\"fy-banner\" style=\"--fy-banner: url('/a/b.png')\"></div>") || user.contains("--fy-banner: url(&#x27;/a/b.png&#x27;)"));
+        assert!(user.contains("<a class=\"fy-thumb\" href=\"/user/al/uploads/7\""));
+        assert!(user.contains("<a href=\"/user/al\" class=\"active\" aria-current=\"page\">Home</a>"));
+        assert!(user.contains("href=\"/messages/al\""));
+        let error = render(&fe("error"), serde_json::json!({ "message": "gone", "url": url("/x", serde_json::json!({})) }));
+        dump("error", &error);
+        assert!(error.contains("This page isn't available."));
+        let login = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({ "login": "1" })), "error": "wrong password" }));
+        dump("login", &login);
+        assert!(login.contains("<form class=\"fy-signin-card\" method=\"post\" action=\"/login\">"));
+        assert!(login.contains("<input type=\"hidden\" name=\"csrf_token\" value=\"tok\">"));
+        assert!(login.contains("wrong password"));
+
+        // the other own pages (tpl::FRONTEND_OWN_PAGES): none falls back to f0ckm's layout
+        let tag = serde_json::json!({ "tag": "Cat", "safe_tag": "cat", "encoded_tag": "Cat", "total_items": 3 });
+        let al = serde_json::json!({ "user": "al", "id": 2 });
+        let pages = [
+            ("about", serde_json::json!({ "about_text": "" })),
+            ("rules", serde_json::json!({ "rules_text": "# Be nice", "rules_text_b64": "IyBCZSBuaWNl" })),
+            ("terms", serde_json::json!({})),
+            ("tags", serde_json::json!({ "toptags": [tag], "session": session })),
+            ("tags_user", serde_json::json!({ "toptags": [tag], "tagger": "al", "user": al, "pagination": pag, "link": { "main": "/user/al/tags", "path": "?page=" } })),
+            ("halls", serde_json::json!({ "hallsList": [{ "slug": "best", "name": "Best", "rating": "nsfw", "total_items": 4, "description": "the best" }] })),
+            ("subscriptions", serde_json::json!({ "session": session, "items": [{ "id": 7, "user": "al", "thumb": "/t/7.webp" }], "totalCount": 1,
+                "pagination": { "start": 1, "end": 1, "page": 1 }, "link": { "main": "/subscriptions", "path": "?page=" } })),
+            ("notifications", serde_json::json!({ "session": session, "activeTab": "user", "tabUnread": { "user": 1 },
+                "notifications": [{ "type": "comment_reply", "from_user": "al", "item_id": 7, "reference_id": 3, "is_read": false, "created_at": "2026-11-15T10:00:00Z" }] })),
+            ("ranking", serde_json::json!({ "list": [{ "user": "al", "count": 9 }], "hoster": [{ "part": "youtube.com", "c": 4 }], "favotop": [{ "item_id": 7, "favs": 2 }],
+                "stats": { "total": 10 }, "totalComments": 1, "totalFavs": 2, "totalUsers": 3, "totalAnonUsers": 0, "diskSize": "1 GB" })),
+            ("comments_user", serde_json::json!({ "user": al, "comments_page": 2, "has_more": true,
+                "static_comments": [{ "id": 3, "item_id": 7, "item_key": "7", "content_html": "<b>hi</b>", "attachments_html": "", "timeago": "now", "iso": "x" }] })),
+            ("upload", serde_json::json!({ "session": session, "mimes_json": "{}", "uploads_remaining": null, "upload_types": [], "min_tags": 1 })),
+        ];
+        for (view, data) in pages {
+            let mut data = data;
+            data["url"] = url(&format!("/{view}"), serde_json::json!({}));
+            let html = render(&fe(view), data);
+            dump(view, &html);
+            assert!(html.contains("/s/fe/f0ckyou/css/f0ckyou.css") && html.contains("<header class=\"fy-mast f0ck-shell-chrome\">"), "{view}: not in f0ckyou's layout");
+            assert!(!html.contains("/s/css/f0ckm.css"), "{view}");
+            assert!(html.trim_end().ends_with("</html>"), "{view}");
+        }
+        for page in FRONTEND_OWN_PAGES {
+            assert!(root.join("views/frontends/f0ckyou").join(format!("{page}.html")).is_file(), "{page}");
+        }
+
+        // a shared page in the shell
+        let shell = render("settings.html", serde_json::json!({ "url": url("/settings", serde_json::json!({})), "session": session,
+            "shell_header": "frontends/f0ckyou/shell/header.html", "shell_footer": "frontends/f0ckyou/shell/footer.html" }));
+        dump("settings", &shell);
+        assert!(shell.contains("class=\"no-js f0ck-shell\""));
+        assert!(shell.contains("<div class=\"f0ck-shell-page\">"));
+        assert!(shell.contains("<a href=\"/settings\" class=\"active\" aria-current=\"page\">"), "Settings is the active guide entry");
+    }
+
     /// comments_user-partial.html: a user's comments server-rendered for visitors without
     /// JavaScript, with links to the newer / older pages, under the profile sub-page head.
     #[test]
@@ -1498,7 +1689,7 @@ mod tests {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
         let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
         let render = |view: &str, ctx: &serde_json::Value| env.get_template(view).unwrap().render(to_jvalue(ctx)).unwrap();
-        let forms = ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/f0ckgle/register.html", "frontends/w0bm/partials/registerform.html", "gate/login_injection.html"];
+        let forms = ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/f0ckgle/register.html", "frontends/f0ckyou/register.html", "frontends/w0bm/partials/registerform.html", "gate/login_injection.html"];
         let mut ctx = serde_json::json!({ "csrf_token": "tok", "domain": "f0ck.test", "registration_open": false, "captcha_enabled": false,
             "registration_apply": true, "registration_apply_email": false, "url": { "pathname": "/", "search": "", "qs": {} } });
         for view in forms {
@@ -1517,7 +1708,7 @@ mod tests {
         }
 
         // The dialog that has the rules and terms read comes with the forms (not under private_society)
-        for view in ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/f0ckgle/register.html", "frontends/w0bm/partials/navigation.html"] {
+        for view in ["snippets/navbar.html", "register.html", "frontends/f0ckv2/register.html", "frontends/f0ckgle/register.html", "frontends/f0ckyou/register.html", "frontends/w0bm/partials/navigation.html"] {
             assert_eq!(render(view, &ctx).matches("<div id=\"tos-consent-modal\" hidden>").count(), 1, "{view}");
         }
         ctx["private_society"] = serde_json::json!(true);
@@ -1775,7 +1966,7 @@ mod tests {
         }
     }
 
-    /// Every text size has its rule in f0ckm.css, w0bm-fe.css, f0ckv2.css and f0ckgle.css.
+    /// Every text size has its rule in f0ckm.css, w0bm-fe.css, f0ckv2.css, f0ckgle.css and f0ckyou.css.
     #[test]
     fn text_sizes_have_css() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
@@ -1783,8 +1974,10 @@ mod tests {
         let w0bm = std::fs::read_to_string(root.join("public/s/fe/w0bm/css/w0bm-fe.css")).unwrap();
         let v2 = std::fs::read_to_string(root.join("public/s/fe/f0ckv2/css/f0ckv2.css")).unwrap();
         let gle = std::fs::read_to_string(root.join("public/s/fe/f0ckgle/css/f0ckgle.css")).unwrap();
+        let tube = std::fs::read_to_string(root.join("public/s/fe/f0ckyou/css/f0ckyou.css")).unwrap();
         for n in crate::fonts::SIZES {
             assert!(gle.contains(&format!("html.user-fs-{n} {{\n  font-size: {n}%;")), "f0ckgle.css {n}");
+            assert!(tube.contains(&format!("html.user-fs-{n} {{\n  font-size: {n}%;")), "f0ckyou.css {n}");
             assert!(v2.contains(&format!("html.user-fs-{n} {{\n  --fs-zoom: ")), "f0ckv2.css {n}");
             assert!(f0ckm.contains(&format!("html.user-fs-{n} {{")), "f0ckm.css {n}");
             assert!(w0bm.contains(&format!("html.user-fs-{n} {{\n    --fs-zoom: ")), "w0bm-fe.css {n}");

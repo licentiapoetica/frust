@@ -1,0 +1,73 @@
+{#- Masthead, right: Create (upload), messages, notifications and the account menu, or the settings
+    menu and "Sign in". The menus are <details>, so they open without JavaScript; f0ckyou.js closes
+    them on an outside click. The badges are filled by JavaScript (f0ckyou.js, messages.js). -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set ua_me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
+{%- set ua_link = "/user/" ~ (ua_me|encode_uri_component) -%}
+{%- set ua_mode = (mode if mode is number else 0) -%}
+{%- set ua_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
+{% if ua_upload %}<a class="fy-create" href="/upload" title="Upload">{{ fy.ico("create") }}<span>Create</span></a>{% endif %}
+{% if (session and private_messages and not session.is_anon) %}<a class="fy-iconbtn fy-hide-narrow" href="/messages" title="Messages">{{ fy.ico("mail") }}<span id="dm-badge" class="fy-badge">0</span><span class="fy-sr">Messages</span></a>{% endif %}
+{% if session %}<a class="fy-iconbtn" href="/notifications" title="Notifications">{{ fy.ico("bell") }}<span id="fy-notif-badge" class="fy-badge" hidden>0</span><span class="fy-sr">Notifications</span></a>{% endif %}
+{% if (not session or (frontend_switch and frontends and frontends|length > 1)) %}
+<details class="fy-menu fy-more-menu{% if session %} fy-hide-narrow{% endif %}">
+  <summary class="fy-iconbtn" title="More">{{ fy.ico("dots") }}<span class="fy-sr">More</span></summary>
+  <div class="fy-menu-box">
+    <ul class="fy-menu-list">
+      <li><a href="/settings">{{ fy.ico("settings") }}<span>Settings</span></a></li>
+      <li><a href="/about">{{ fy.ico("info") }}<span>About</span></a></li>
+      <li><a href="/rules">{{ fy.ico("rules") }}<span>Rules</span></a></li>
+    </ul>
+    {% if (frontend_switch and frontends and frontends|length > 1) %}
+    <div class="fy-menu-head">{{ fy.ico("layers") }}<span>Layout</span></div>
+    <ul class="fy-menu-chips">
+      {% for f in frontends %}<li><a href="/frontend/{{ f }}"{% if f == frontend %} class="active"{% endif %}>{{ f }}</a></li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</details>
+{% endif %}
+{% if session %}
+<details class="fy-menu fy-account">
+  <summary class="fy-account-btn" title="Account: {{ (session.display_name or session.user) }}">{{ fy.avatar(session.avatar_file, session.avatar, (session.display_name or session.user)) }}<span class="fy-sr">Account</span></summary>
+  <div class="fy-menu-box fy-account-box">
+    <div class="fy-account-who">
+      {{ fy.avatar(session.avatar_file, session.avatar, (session.display_name or session.user), "", "fy-ava-big") }}
+      <div>
+        <div class="fy-account-name">{{ (session.display_name or session.user) }}</div>
+        <div class="fy-dim">@{{ ua_me }}</div>
+        <a href="{{ ua_link }}">View your channel</a>
+      </div>
+    </div>
+    <ul class="fy-menu-list">
+      <li><a href="{{ ua_link }}/uploads">{{ fy.ico("videos") }}<span>Your f0cks</span></a></li>
+      <li><a href="{{ ua_link }}/favs">{{ fy.ico("like") }}<span>Liked f0cks</span></a></li>
+      {% if (manual_approval and not session.is_anon) %}<li><a href="/pending">{{ fy.ico("clock") }}<span>Pending{% if session.own_pending_count %} ({{ session.own_pending_count }}){% endif %}</span></a></li>{% endif %}
+      {% if session.admin %}<li><a href="/admin">{{ fy.ico("shield") }}<span>Admin console</span></a></li>{% endif %}
+      {% if (session.admin or session.is_moderator) %}<li><a href="/mod">{{ fy.ico("shield") }}<span>Mod</span></a></li>{% endif %}
+      <li><a href="{{ (logout_url or "/logout") }}">{{ fy.ico("logout") }}<span>Sign out</span></a></li>
+    </ul>
+    <hr>
+    {% if modes %}
+    <div class="fy-menu-head">{{ fy.ico("eye") }}<span>Mode</span></div>
+    <ul class="fy-menu-chips">
+      {% for m in modes %}{% if m != "nsfl" or enable_nsfl %}<li><a href="/mode/{{ loop.index0 }}"{% if loop.index0 == ua_mode %} class="active"{% endif %}>{{ m|upper }}</a></li>{% endif %}{% endfor %}
+    </ul>
+    {% endif %}
+    {% if (frontend_switch and frontends and frontends|length > 1) %}
+    <div class="fy-menu-head">{{ fy.ico("layers") }}<span>Layout</span></div>
+    <ul class="fy-menu-chips">
+      {% for f in frontends %}<li><a href="/frontend/{{ f }}"{% if f == frontend %} class="active"{% endif %}>{{ f }}</a></li>{% endfor %}
+    </ul>
+    {% endif %}
+    <hr>
+    <ul class="fy-menu-list">
+      <li><a href="/settings">{{ fy.ico("settings") }}<span>Settings</span></a></li>
+      <li><a href="/about">{{ fy.ico("info") }}<span>Help</span></a></li>
+      <li><a href="/rules">{{ fy.ico("rules") }}<span>Rules</span></a></li>
+    </ul>
+  </div>
+</details>
+{% else %}
+<a class="fy-btn-signin" href="/?login=1">{{ fy.ico("user") }}<span>Sign in</span></a>
+{% endif %}

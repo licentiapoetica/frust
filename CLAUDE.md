@@ -30,7 +30,7 @@ How:
 
 ## Alternative frontends (keep them working)
 
-Besides the default templates in `views/`, the site can render old layouts (`w0bm`, `f0ckv2`) and a joke one (`f0ckgle`, a search engine homepage parody): templates in `views/frontends/<name>/`, assets in `public/s/fe/<name>/`. `websrv.frontend` picks the site default; visitors switch with `/frontend/<name>` or `?frontend=<name>` (cookie). **The contract is [views/frontends/README.md](views/frontends/README.md); read it before touching views, routes' template data or shared scripts.**
+Besides the default templates in `views/`, the site can render old layouts (`w0bm`, `f0ckv2`) and two joke ones (`f0ckgle`, a search engine homepage parody; `f0ckyou`, a video site parody): templates in `views/frontends/<name>/`, assets in `public/s/fe/<name>/`. `websrv.frontend` picks the site default; visitors switch with `/frontend/<name>` or `?frontend=<name>` (cookie). **The contract is [views/frontends/README.md](views/frontends/README.md); read it before touching views, routes' template data or shared scripts.**
 
 - **`f0ckm check-frontends` must report 0 problems** (it also runs in `cargo test` as `tpl::tests::frontends_follow_contract`).
 - Shared pages (settings, messages, admin, mod, mod_reports, pending, banned, user halls, privacy) exist once in `views/` and render inside every frontend's shell (`shell_header` / `shell_footer`). Never copy them into a frontend.

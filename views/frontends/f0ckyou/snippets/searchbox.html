@@ -1,0 +1,8 @@
+{#- The search box of the masthead (tags, or title:text) to /search. fy_q: the text in it; fy_strict:
+    keep the strict search ("all tags"). -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+<form class="fy-search" id="fy-search" action="/search" method="get" role="search">
+  <input type="search" name="tag" value="{{ (fy_q if (fy_q is defined and fy_q is string) else "") }}" placeholder="Search" aria-label="Search" autocomplete="off" spellcheck="false" maxlength="2048"{% if (fy_autofocus is defined and fy_autofocus) %} autofocus{% endif %}>
+  {% if (fy_strict is defined and fy_strict) %}<input type="hidden" name="mode" value="strict">{% endif %}
+  <button type="submit" class="fy-search-go" title="Search">{{ fy.ico("search") }}<span class="fy-sr">Search</span></button>
+</form>

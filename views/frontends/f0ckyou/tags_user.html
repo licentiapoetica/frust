@@ -1,0 +1,21 @@
+{#- f0ckyou: the tags a user gave, under their channel header (the Tags tab), as tag cards with page links. -#}
+{%- set fy_title = "Tags by " ~ (user.display_name or user.user or "") -%}
+{%- set fy_page = "channel" -%}
+{%- set fy_is_me = (session and user and ((session.user|lower) == ((user.user or "")|lower))) -%}
+{%- set fy_nav = ("tags_user" if fy_is_me else "none") -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main">
+  {%- set ch_user = user -%}
+  {%- set ch_tab = "tags" -%}
+  {% include "frontends/f0ckyou/snippets/channel-head.html" %}
+  {% if toptags %}
+  <div class="fy-grid fy-grid-tags">
+    {% include "frontends/f0ckyou/snippets/tag-cards.html" %}
+  </div>
+  {% include "frontends/f0ckyou/snippets/pagination.html" %}
+  {% else %}
+  <div class="fy-empty"><h2>No tags yet</h2><p>This channel hasn't tagged anything.</p></div>
+  {% endif %}
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

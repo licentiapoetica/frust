@@ -153,7 +153,7 @@ websrv:
     - term
     - xd
   theme: amoled
-  # Site frontend: f0ckm (default), or an alternative one from views/frontends/ (w0bm, f0ckv2, f0ckgle).
+  # Site frontend: f0ckm (default), or an alternative one from views/frontends/ (w0bm, f0ckv2, f0ckgle, f0ckyou).
   # Pages a frontend has no template for use the f0ckm one.
   frontend: f0ckm
   # Let visitors pick their own frontend with /frontend/<name> or ?frontend=<name> (kept in a cookie)

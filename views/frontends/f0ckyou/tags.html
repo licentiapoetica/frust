@@ -1,0 +1,22 @@
+{#- f0ckyou tags ("Explore"): the popular tags as cards. The first page comes with the page;
+    "Show more" (JavaScript) appends the next ones from /api/tags in place (f0ckyou.js). -#}
+{%- set fy_title = "Tags" -%}
+{%- set fy_page = "results" -%}
+{%- set fy_nav = "tags" -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main">
+  <header class="fy-listhead">
+    <h1 class="fy-listhead-title">Explore tags</h1>
+    <p class="fy-dim">The most used tags{% if phrase %} &middot; {{ phrase }}{% endif %}</p>
+  </header>
+  {% if toptags %}
+  <div class="fy-grid fy-grid-tags" id="fy-tag-grid" data-mode="{{ ((session.mode if session else 0) or 0) }}">
+    {% include "frontends/f0ckyou/snippets/tag-cards.html" %}
+  </div>
+  {% if toptags|length >= 50 %}<div class="fy-more-wrap js-only"><button type="button" class="fy-btn fy-more" data-tags-more data-page="1">Show more</button></div>{% endif %}
+  {% else %}
+  <div class="fy-empty"><h2>No tags yet</h2></div>
+  {% endif %}
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

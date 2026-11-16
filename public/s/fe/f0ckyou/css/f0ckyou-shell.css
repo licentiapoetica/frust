@@ -1,0 +1,50 @@
+/* f0ckyou frontend: the shared pages (settings, messages, admin, mod, pending, banned, user halls)
+   in f0ckyou's shell (shell/header.html). /s/css/f0ck-shell.css maps the --fe-* palette below onto
+   f0ckm's theme variables; f0ckm's default (dark) theme fits f0ckyou. */
+
+html.f0ck-shell {
+  --fe-accent: #3ea6ff;
+  --fe-accent-rgb: 62, 166, 255;
+  --fe-bg: #0f0f0f;
+  --fe-surface: #212121;
+  --fe-surface-2: #282828;
+  --fe-border: #3f3f3f;
+  --fe-text: #f1f1f1;
+  --fe-muted: #aaa;
+  --fe-link: #3ea6ff;
+  --fe-font: Roboto, Arial, "Helvetica Neue", sans-serif;
+  --fe-heading-font: Roboto, Arial, "Helvetica Neue", sans-serif;
+  --fe-input-bg: #121212;
+  --fe-radius: 0;
+  /* the masthead stays on top: sticky parts of the pages go below it */
+  --fe-navbar-h: 3.5rem;
+}
+
+/* ── the page column next to the guide (html.f0ck-shell: more specific than the
+   `all: revert-layer` on .f0ck-shell-page in f0ck-shell.css, which loads after this file) ── */
+html.f0ck-shell .f0ck-shell-page {
+  max-width: 90rem;
+  padding: 1rem 1.5rem 0;
+}
+
+@media (max-width: 792px) {
+  html.f0ck-shell .f0ck-shell-page {
+    padding: .75rem .75rem 0;
+  }
+}
+
+/* f0ckm.css sets the page background, its colours and hidden scrollbars with !important (in its
+   layer); the f0ck-shell-important layer is declared before it, so these win. */
+@layer f0ck-shell-important {
+  html.f0ck-shell {
+    background: #0f0f0f !important;
+    scrollbar-width: auto !important;
+  }
+
+  html.f0ck-shell body {
+    background: #0f0f0f !important;
+    color: #f1f1f1 !important;
+    scrollbar-width: auto !important;
+    overflow-x: clip;
+  }
+}

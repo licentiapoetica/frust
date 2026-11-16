@@ -1,0 +1,39 @@
+{#- f0ckyou upload ("Create"): f0ckm's upload form (snippets/upload-form.html, the same as the quick
+    upload "u") in f0ckyou's colours (.fy-upload-page in f0ckyou.css); /s/js/upload.js sends it with
+    fetch, so it needs JavaScript, as in f0ckm and the other frontends. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set fy_title = "Upload" -%}
+{%- set fy_page = "results" -%}
+{%- set fy_nav = "upload" -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+<link rel="stylesheet" href="/s/css/fa-layered.css?v={{ mtime("/public/s/css/fa-layered.css") }}">
+<link rel="stylesheet" href="/s/css/upload.css?v={{ mtime("/public/s/css/upload.css") }}">
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main fy-main-narrow fy-upload-page">
+  <div class="upload-container" data-mimes='{{ mimes_json }}'>
+    <header class="fy-listhead fy-listhead-hall">
+      <span class="fy-listhead-ico">{{ fy.ico("create") }}</span>
+      <div>
+        <h1 class="fy-listhead-title">Upload f0cks</h1>
+        <p class="fy-dim">
+          {% if uploads_remaining == none %}{{ t("upload_page.limit_unlimited") }}
+          {% elif uploads_remaining == 0 %}{{ (t("upload_page.limit_reached")).replace("{limit}", upload_limit, 1) }}
+          {% else %}{{ ((t("upload_page.limit_remaining")).replace("{remaining}", uploads_remaining, 1)).replace("{limit}", upload_limit, 1) }}{% endif %}
+        </p>
+      </div>
+    </header>
+    {% if session %}
+    {% include "snippets/upload-form.html" %}
+    <p class="nojs-only fy-dim">Uploading needs JavaScript{% if matrix_enabled or telegram_enabled %}; without it, post your links to the bot{% endif %}.</p>
+    {% else %}
+    <div class="fy-empty">
+      <h2>{{ t("upload_page.auth_required_title") }}</h2>
+      <p>{{ t("upload_page.auth_required_text") }}</p>
+      <a href="/?login=1" class="fy-btn-signin">{{ fy.ico("user") }}<span>{{ t("upload_page.login_btn") }}</span></a>
+    </div>
+    {% endif %}
+  </div>
+</main>
+{% include "snippets/header-data.html" %}
+<script src="/s/js/upload.js?v={{ mtime("/public/s/js/upload.js") }}"></script>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

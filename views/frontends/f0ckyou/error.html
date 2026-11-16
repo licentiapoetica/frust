@@ -1,0 +1,32 @@
+{#- f0ckyou error page: "This page isn't available", with the filter hints of the other frontends'
+    error pages. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set fy_page = "error" -%}
+{%- set fy_title = "Error" -%}
+{%- set fy_nav = "none" -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main fy-error">
+  <div class="fy-error-art" aria-hidden="true"><span class="fy-logo-mark"></span></div>
+  <h1>This page isn't available. Sorry about that.</h1>
+  <p>{{ message }}</p>
+  {% if (error_filter_hint is defined and error_filter_hint) %}
+  {#- the filter hint only for visitors who can change their filter (guests can't) -#}
+  {%- set can_filter = session and (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
+  {% if can_filter %}
+  <p>{{ error_filter_hint|safe }}</p>
+  <p class="fy-error-modes">Switch the mode:{% for m in modes %}{% if m != "nsfl" or enable_nsfl %} <a class="fy-chip" href="/mode/{{ loop.index0 }}">{{ m|upper }}</a>{% endif %}{% endfor %}</p>
+  {% elif not session %}
+  <p><a class="fy-btn-signin" href="/?login=1">{{ fy.ico("user") }}<span>Sign in</span></a> to see more.</p>
+  {% endif %}
+  {% if (error_see_anyways and (item_id or item_slug)) %}
+  <p><a class="fy-btn" href="/{{ (item_slug or item_id) }}?see_anyways=1">{{ error_see_anyways }}</a></p>
+  {% endif %}
+  {% endif %}
+  <p class="fy-dim">Try searching for something else.</p>
+  <form class="fy-search fy-search-big" action="/search" method="get" role="search">
+    <input type="search" name="tag" placeholder="Search" aria-label="Search" autocomplete="off" spellcheck="false" maxlength="2048">
+    <button type="submit" class="fy-search-go" title="Search">{{ fy.ico("search") }}<span class="fy-sr">Search</span></button>
+  </form>
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

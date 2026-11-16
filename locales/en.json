@@ -233,7 +233,7 @@
     "font_size": "Text size",
     "theme": "Theme",
     "frontend": "Frontend",
-    "frontend_hint": "The whole site layout. w0bm and f0ckv2 are the old layouts, f0ckgle is a joke.",
+    "frontend_hint": "The whole site layout. w0bm and f0ckv2 are the old layouts, f0ckgle and f0ckyou are jokes.",
     "flash_section": "Flash",
     "flash_bg": "Keep Flash Playing in Background",
     "flash_bg_hint": "Prevents Ruffle from pausing when leaving the tab",

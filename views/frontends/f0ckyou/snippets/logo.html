@@ -1,0 +1,4 @@
+{#- The logo: a square play mark and the word, the visitor's mode as the little country code.
+    Not the site's brand on purpose (it's the joke, as f0ckgle). -#}
+{%- set fy_logo_mode = ((modes[mode] if (session and modes and mode is number and mode < modes|length) else "") or "") -%}
+<span class="fy-logo" aria-label="f0ckYou"><span class="fy-logo-mark" aria-hidden="true"></span><span class="fy-logo-word">f0ck<b>You</b></span>{% if fy_logo_mode %}<sup class="fy-logo-cc">{{ fy_logo_mode|upper }}</sup>{% endif %}</span>

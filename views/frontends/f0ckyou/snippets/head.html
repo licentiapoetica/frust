@@ -1,0 +1,50 @@
+{#- f0ckyou frontend (a video site layout): <!doctype>, <html> and <head>, then <body>.
+    Set before including: fy_page (body class fy-page-<fy_page>: home, watch, channel, results,
+    text, error, login, shell), fy_title (the page title, optional), fy_shell (a shared page:
+    shell/header.html, which also sets fy_shell_head, the shared pages' head snippet). -#}
+{%- set fy_is_shell = (fy_shell is defined and fy_shell) -%}
+{%- set fy_item_ref = ((item.slug if (enable_item_slugs and item.slug) else item.id) if (item is defined and item and item.id) else "") -%}
+{%- if (fy_title is defined and fy_title) -%}
+  {%- set fy_doc_title = fy_title ~ " - f0ckYou" -%}
+{%- elif (page_meta is defined and page_meta and page_meta.title) -%}
+  {%- set fy_doc_title = page_meta.title ~ " - f0ckYou" -%}
+{%- elif fy_item_ref -%}
+  {%- set fy_doc_title = ((item.title if (enable_item_title and item.title) else ("f0ck #" ~ fy_item_ref)) ~ " - f0ckYou") -%}
+{%- else -%}
+  {%- set fy_doc_title = "f0ckYou" -%}
+{%- endif -%}
+<!doctype html>
+<html lang="{{ (lang or "en") }}" class="no-js{% if fy_is_shell %} f0ck-shell{% endif %}{% if user_font_css %} fy-user-font{% endif %}{% if user_font_size %} user-fs-{{ user_font_size }}{% endif %}" data-user-font-class="fy-user-font">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ fy_doc_title }}</title>
+  <meta name="description" content="{% if (page_meta is defined and page_meta and page_meta.description) %}{{ page_meta.description }}{% else %}{{ site_description }}{% endif %}">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="color-scheme" content="dark">
+  <link rel="manifest" href="/manifest.json">
+  {% if fy_item_ref %}
+  <link rel="canonical" href="https://{{ domain }}/{{ fy_item_ref }}">
+  <meta property="og:site_name" content="{{ domain }}">
+  <meta property="og:title" content="{{ fy_item_ref }}">
+  <meta property="og:url" content="https://{{ domain }}/{{ fy_item_ref }}">
+  <meta property="og:image" content="https://{{ domain }}{{ item.og_thumbnail }}">
+  <meta property="og:type" content="website">
+  {% endif %}
+  <link rel="icon" {% if custom_favicon %}href="{{ custom_favicon }}"{% else %}type="image/svg+xml" href="/s/fe/f0ckyou/img/favicon.svg?v={{ mtime("/public/s/fe/f0ckyou/img/favicon.svg") }}"{% endif %}>
+  <link rel="stylesheet" href="/s/fe/f0ckyou/css/f0ckyou.css?v={{ mtime("/public/s/fe/f0ckyou/css/f0ckyou.css") }}">
+  {#- comment effects [rb] [reich] [krebs] [glitch], shared with the other frontends -#}
+  <link rel="stylesheet" href="/s/css/comment-fx.css?v={{ mtime("/public/s/css/comment-fx.css") }}">
+  <link rel="stylesheet" href="/s/css/glitchfx.css?v={{ mtime("/public/s/css/glitchfx.css") }}">
+  {% if user_font_css %}<link rel="stylesheet" id="user-font-css" href="{{ user_font_css }}">{% endif %}
+  <script src="/s/fe/f0ckyou/js/early.js?v={{ mtime("/public/s/fe/f0ckyou/js/early.js") }}"></script>
+  {% if fy_is_shell %}
+  <link rel="stylesheet" href="/s/fe/f0ckyou/css/f0ckyou-shell.css?v={{ mtime("/public/s/fe/f0ckyou/css/f0ckyou-shell.css") }}">
+  {% include fy_shell_head %}
+  {% else %}
+  <script src="/s/js/csp-actions.js?v={{ mtime("/public/s/js/csp-actions.js") }}"></script>
+  {% endif %}
+</head>
+<body class="fy-page-{{ (fy_page if (fy_page is defined and fy_page) else "results") }}">
+{% include "frontends/f0ckyou/snippets/flash.html" %}

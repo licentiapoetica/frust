@@ -1,0 +1,53 @@
+{#- f0ckyou channel page: the channel header (banner, avatar, name, counts, tabs), then the user's
+    f0cks and liked f0cks as shelves of cards with "View all". -#}
+{%- set uname = (user.user or "") -%}
+{%- set ulink = "/user/" ~ (uname|lower|encode_uri_component) -%}
+{%- set fy_page = "channel" -%}
+{%- set fy_title = (user.display_name or uname) -%}
+{%- set fy_is_me = (session and ((session.user|lower) == (uname|lower) or (session.login and (session.login|lower) == (uname|lower)))) -%}
+{%- set fy_nav = ("channel" if fy_is_me else "none") -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main">
+  {%- set ch_user = user -%}
+  {%- set ch_tab = "home" -%}
+  {%- set ch_count = count -%}
+  {% include "frontends/f0ckyou/snippets/channel-head.html" %}
+
+  <section class="fy-shelf">
+    <h2 class="fy-shelf-head"><a href="{{ (f0cks.link.main if (f0cks and f0cks.link) else ulink ~ "/uploads") }}">F0cks</a> <a class="fy-btn-text" href="{{ (f0cks.link.main if (f0cks and f0cks.link) else ulink ~ "/uploads") }}">View all</a></h2>
+    {% if (count.f0cks and f0cks and f0cks.items) %}
+    {% set posts = f0cks.items %}{% set posts_link = f0cks.link.main %}
+    {% include "frontends/f0ckyou/snippets/grid.html" %}
+    {% else %}
+    <p class="fy-dim">This channel has no f0cks.</p>
+    {% endif %}
+  </section>
+  {% if not user.is_ghost %}
+  <section class="fy-shelf">
+    <h2 class="fy-shelf-head"><a href="{{ (favs.link.main if (favs and favs.link) else ulink ~ "/favs") }}">Liked f0cks</a> <a class="fy-btn-text" href="{{ (favs.link.main if (favs and favs.link) else ulink ~ "/favs") }}">View all</a></h2>
+    {% if (count.favs and favs and favs.items) %}
+    {% set posts = favs.items %}{% set posts_link = favs.link.main %}
+    {% include "frontends/f0ckyou/snippets/grid.html" %}
+    {% elif user.favorites_private and not fy_is_me %}
+    <p class="fy-dim">Liked f0cks are private.</p>
+    {% else %}
+    <p class="fy-dim">No liked f0cks.</p>
+    {% endif %}
+  </section>
+  <section class="fy-shelf">
+    <h2 class="fy-shelf-head">About</h2>
+    <dl class="fy-facts">
+      {% if user.user_id or user.id %}<div><dt>ID</dt><dd>{{ (user.user_id or user.id) }}</dd></div>{% endif %}
+      <div><dt>Joined</dt><dd><time title="{{ user.timestamp.timefull }}">{{ (user.created_at|locale_date if user.created_at else "") }}</time> ({{ user.timestamp.timeago }})</dd></div>
+      <div><dt>Role</dt><dd>{% if user.admin %}Administrator{% elif user.is_moderator %}Moderator{% else %}User{% endif %}</dd></div>
+      <div><dt>F0cks</dt><dd><a href="{{ ulink }}/uploads">{{ (count.f0cks or 0)|locale_number }}</a></dd></div>
+      <div><dt>Liked</dt><dd><a href="{{ ulink }}/favs">{{ (count.favs or 0)|locale_number }}</a></dd></div>
+      {% if enable_comments %}<div><dt>Comments</dt><dd><a href="{{ ulink }}/comments">{{ (count.comments or 0)|locale_number }}</a></dd></div>{% endif %}
+      <div><dt>Tags given</dt><dd><a href="{{ ulink }}/tags">{{ (count.tags or 0)|locale_number }}</a></dd></div>
+      {% if userhalls_enabled %}<div><dt>Halls</dt><dd><a href="{{ ulink }}/halls">{{ (count.halls or 0)|locale_number }}</a></dd></div>{% endif %}
+    </dl>
+  </section>
+  {% endif %}
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

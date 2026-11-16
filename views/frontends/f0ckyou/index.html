@@ -1,0 +1,81 @@
+{#- f0ckyou index: the home feed and every listing (/p/2, /tag/x, /h/x, /user/x/uploads, /user/x/favs,
+    /video, ...) as a grid of video cards under a header for what is listed (a hashtag, a hall, the
+    user's channel) and the media chips. /?login=1 and /?register=1 are the sign-in pages. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{% if (private_society and not session) %}
+{% include "index.html" %}
+{% elif (not session and url and url.qs and url.qs.login) %}
+{% include "frontends/f0ckyou/login.html" %}
+{% elif (not session and url and url.qs and url.qs.register) %}
+{% set token = (url.qs.token or "") %}
+{% include "frontends/f0ckyou/register.html" %}
+{% else %}
+{%- if tmp and tmp.user -%}
+  {%- set fy_chip_base = "/user/" ~ (tmp.user|lower|encode_uri_component) ~ "/" ~ (tmp.view_mode or "uploads") ~ "/" -%}
+  {%- set fy_title = tmp.user ~ (" - Liked" if tmp.view_mode == "favs" else " - F0cks") -%}
+  {%- set fy_q = "" -%}
+  {%- set fy_page = "channel" -%}
+  {%- set fy_is_me = (session and ((session.user|lower) == (tmp.user|lower) or (session.login and (session.login|lower) == (tmp.user|lower)))) -%}
+  {%- set fy_nav = ((("favs" if tmp.view_mode == "favs" else "uploads")) if fy_is_me else "none") -%}
+{%- elif tmp and tmp.tag -%}
+  {%- set fy_chip_base = "/tag/" ~ (tmp.tag|encode_uri_component) ~ "/" -%}
+  {%- set fy_title = "#" ~ (tmp.tag|lower) -%}
+  {%- set fy_q = tmp.tag|lower -%}
+  {%- set fy_nav = "none" -%}
+{%- elif tmp and tmp.hall -%}
+  {%- set fy_chip_base = "/h/" ~ ((tmp.hall.slug if tmp.hall.slug else tmp.hall)|encode_uri_component) ~ "/" -%}
+  {%- set fy_title = (tmp.hall.name if tmp.hall.name else tmp.hall) -%}
+  {%- set fy_q = "" -%}
+  {%- set fy_nav = "halls" -%}
+{%- elif tmp and tmp.userHall -%}
+  {%- set fy_chip_base = (link.main if (link and link.main) else "/") -%}
+  {%- set fy_title = (tmp.userHall.name if tmp.userHall.name else tmp.userHall) -%}
+  {%- set fy_q = "" -%}
+  {%- set fy_nav = "none" -%}
+{%- else -%}
+  {%- set fy_chip_base = "/" -%}
+  {%- set fy_q = "" -%}
+  {%- set fy_nav = "home" -%}
+  {%- set fy_page = "home" -%}
+{%- endif -%}
+{#- the active chip: the one type filtered by, "All" without a filter (none for several types) -#}
+{%- set fy_chip = (("" if "," in tmp.mime else tmp.mime) if (tmp and tmp.mime) else "all") -%}
+{%- set fy_home = (fy_nav == "home") -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main">
+  {% if tmp and tmp.user %}
+  {%- set ch_user = {"user": tmp.user} -%}
+  {%- set ch_tab = ("favs" if tmp.view_mode == "favs" else "uploads") -%}
+  {% include "frontends/f0ckyou/snippets/channel-head.html" %}
+  {% elif tmp and tmp.tag %}
+  <header class="fy-listhead">
+    <h1 class="fy-listhead-title">#{{ tmp.tag|lower }}</h1>
+    <p class="fy-dim">{{ (total or 0)|locale_number }} f0cks &middot; <a href="/search?tag={{ tmp.tag|encode_uri_component }}">search for it</a></p>
+  </header>
+  {% elif tmp and (tmp.hall or tmp.userHall) %}
+  <header class="fy-listhead fy-listhead-hall">
+    <span class="fy-listhead-ico">{{ fy.ico("playlist") }}</span>
+    <div>
+      <h1 class="fy-listhead-title">{{ fy_title }}</h1>
+      <p class="fy-dim">Hall &middot; {{ (total or 0)|locale_number }} f0cks{% if tmp.userHallOwner %} &middot; by <a href="/user/{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner)|lower|encode_uri_component }}/halls">{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner) }}</a>{% endif %}</p>
+      {% if (tmp.hall and tmp.hall.description) %}<p class="fy-listhead-desc">{{ tmp.hall.description }}</p>{% endif %}
+    </div>
+  </header>
+  {% endif %}
+  {% include "frontends/f0ckyou/snippets/chips.html" %}
+  {% if (fy_home and not (session and session.show_motd == false)) %}<p class="fy-motd"{% if not ((motd or "")|trim) %} hidden{% endif %}>{{ (motd or "") }}</p>{% endif %}
+  {% set posts = (items or []) %}{% set posts_link = link.main %}
+  {% if posts %}
+  {% include "frontends/f0ckyou/snippets/grid.html" %}
+  {% include "frontends/f0ckyou/snippets/pagination.html" %}
+  {% else %}
+  <div class="fy-empty">
+    <h2>No f0cks here</h2>
+    <p>Nothing matches{% if fy_title is defined and fy_title %} <b>{{ fy_title }}</b>{% endif %} in your mode and filter.</p>
+    <p><a class="fy-btn" href="/mime?back=%2Fp%2F1">Show all types</a> <a class="fy-btn" href="/random">Random f0ck</a>{% if session %} <a class="fy-btn" href="/settings">Change the mode</a>{% endif %}</p>
+  </div>
+  {% endif %}
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}
+{% endif %}

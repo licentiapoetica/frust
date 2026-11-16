@@ -1,0 +1,29 @@
+{#- Video cards: posts (list of items), posts_link (link prefix). Each one the thumbnail (type, album
+    and rating badges, a red bar when you have watched it), the uploader's square, the title, the
+    uploader and "#id · time ago". The same card f0ckyou.js appends when it loads the next page. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+<div class="fy-grid" data-fy-feed>
+  {% for p in posts %}
+  {%- set ref = (p.slug if (enable_item_slugs and p.slug) else p.id) -%}
+  {%- set href = posts_link ~ ref -%}
+  {%- set who = ("anonymous" if is_anonymized else (p.username or "")) -%}
+  {%- set who_name = ("anonymous" if is_anonymized else (p.display_name or p.username or domain)) -%}
+  {%- set kind = ("" if not p.mime else ("YouTube" if p.mime == "video/youtube" else ("Flash" if "flash" in p.mime else (p.mime.split("/")[0]|capitalize if p.mime.split("/")[0] in ["video", "image", "audio"] else "File")))) -%}
+  <article class="fy-card" data-id="{{ p.id }}">
+    <a class="fy-thumb" href="{{ href }}" tabindex="-1" aria-hidden="true">
+      {% if (p.is_audio and not p.has_coverart and not p.thumb) %}<span class="fy-thumb-audio">{{ fy.ico("music") }}</span>{% else %}<img src="{{ (p.thumb or ("/t/" ~ p.id ~ ".webp")) }}" alt="" loading="lazy">{% endif %}
+      {% if p.is_pinned %}<span class="fy-badge-tl">{{ fy.ico("pin") }}Pinned</span>{% elif p.rating_class in ["nsfw", "nsfl"] %}<span class="fy-badge-tl fy-rate-{{ p.rating_class }}">{{ p.rating_class|upper }}</span>{% endif %}
+      {% if (p.is_album and p.album_count > 1) %}<span class="fy-badge-br">{{ fy.ico("album") }}{{ p.album_count }}</span>{% elif kind %}<span class="fy-badge-br">{{ kind }}</span>{% endif %}
+      {% if p.my_views %}<span class="fy-watched" title="watched"></span>{% endif %}
+    </a>
+    <div class="fy-card-meta">
+      {% if (who and not is_anonymized) %}<a class="fy-card-ava" href="/user/{{ who|lower|encode_uri_component }}" tabindex="-1" aria-hidden="true">{{ fy.avatar("", "", who_name, (p.username_color or "")) }}</a>{% else %}<span class="fy-card-ava">{{ fy.avatar("", "", who_name) }}</span>{% endif %}
+      <div class="fy-card-text">
+        <h3 class="fy-card-title"><a href="{{ href }}" title="{{ (p.title if (enable_item_title and p.title) else ("f0ck #" ~ ref)) }}">{% if (enable_oc and p.is_oc) %}<span class="fy-oc">OC</span> {% endif %}{{ (p.title if (enable_item_title and p.title) else ("f0ck #" ~ ref)) }}</a></h3>
+        {% if (who and not is_anonymized) %}<a class="fy-card-chan" href="/user/{{ who|lower|encode_uri_component }}">{{ who_name }}</a>{% else %}<span class="fy-card-chan">{{ who_name }}</span>{% endif %}
+        <div class="fy-card-sub">#{{ p.id }}{% if p.stamp %} &middot; <time title="{{ (p.stamp * 1000)|iso_date }}">{{ (p.stamp * 1000)|time_ago }}</time>{% endif %}{% if p.has_notification %} <span class="fy-new">New comments</span>{% endif %}</div>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>

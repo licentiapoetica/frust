@@ -1,0 +1,63 @@
+{#- f0ckyou notifications: the tabs (user / system / admin) as chips, one row per notification (who,
+    what, when, the f0ck's thumbnail; a dot when unread). "Mark all as read" is a form that
+    f0ckyou.js sends in place. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set fy_title = "Notifications" -%}
+{%- set fy_page = "results" -%}
+{%- set fy_nav = "notifs" -%}
+{%- set nt_tab = (activeTab or "")|encode_uri_component -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main fy-main-list">
+  <header class="fy-listhead fy-listhead-row">
+    <h1 class="fy-listhead-title">Notifications</h1>
+    <form method="post" action="/api/notifications/read?tab={{ nt_tab }}" class="fy-inline fy-ajax" data-fy-refresh="notifs">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="/notifications?tab={{ nt_tab }}">
+      <button type="submit" class="fy-btn">{{ fy.ico("check") }}<span>Mark all as read</span></button>
+    </form>
+  </header>
+  <nav class="fy-chips" aria-label="Notification tabs">
+    {% if enable_comments %}<a class="fy-chip{% if activeTab == "user" %} active{% endif %}" href="/notifications?tab=user">Comments{% if tabUnread and tabUnread.user %} ({{ tabUnread.user }}){% endif %}</a>{% endif %}
+    <a class="fy-chip{% if activeTab == "system" %} active{% endif %}" href="/notifications?tab=system">System{% if tabUnread and tabUnread.system %} ({{ tabUnread.system }}){% endif %}</a>
+    {% if session and session.admin %}<a class="fy-chip{% if activeTab == "admin" %} active{% endif %}" href="/notifications?tab=admin">Admin{% if tabUnread and tabUnread.admin %} ({{ tabUnread.admin }}){% endif %}</a>{% endif %}
+    {% if enable_comments %}<a class="fy-chip" href="/subscriptions">Subscriptions</a>{% endif %}
+  </nav>
+  <ol class="fy-list fy-notifs" data-fy-live="notifs">
+    {% for n in (notifications or []) %}
+    {% set ref = (n.item_slug or n.item_id) %}
+    {% set is_comment = n.type in ["comment", "comment_reply", "mention", "subscription", "upload_comment"] %}
+    {% set href = (("/" ~ ref ~ (("#c" ~ n.reference_id) if (is_comment and n.reference_id) else "")) if n.item_id else "") %}
+    <li class="fy-notif{% if not n.is_read %} fy-unread{% endif %}">
+      <span class="fy-notif-dot" aria-hidden="true"></span>
+      {{ fy.avatar("", "", ((n.from_display_name or n.from_user) if is_comment else domain)) }}
+      <div class="fy-notif-text">
+        <p>
+          {% if is_comment %}
+            <a href="/user/{{ (n.from_user or "")|lower|encode_uri_component }}"><b>{{ (n.from_display_name or n.from_user) }}</b></a>
+            {% if n.type == "comment_reply" %}replied to your comment{% elif n.type == "mention" %}mentioned you{% elif n.type == "upload_comment" %}commented on your f0ck{% else %}commented{% endif %}
+            {% if n.item_id %}on <a href="{{ href }}">f0ck #{{ ref }}</a>{% endif %}
+          {% elif n.type == "approve" %}Your upload <a href="/{{ ref }}">#{{ ref }}</a> was approved.
+          {% elif n.type == "deny" %}Your upload #{{ ref }} was denied: {{ n.reason }}
+          {% elif n.type == "item_deleted" %}Your upload #{{ ref }} was deleted: {{ n.reason }}
+          {% elif n.type == "upload_success" %}Upload <a href="/{{ ref }}">#{{ ref }}</a> is done.
+          {% elif n.type == "upload_error" %}Upload failed: {{ n.reason }}
+          {% elif n.type == "admin_pending" %}A new upload is waiting for <a href="/mod/approve">approval</a>.
+          {% elif n.type == "report" %}New <a href="/mod/reports">report</a> #{{ n.reference_id }}.
+          {% elif n.type == "warning" %}You got a warning: {{ n.reason }}
+          {% elif n.type == "invite_request" %}New <a href="/admin">invite request</a>.
+          {% elif n.type == "account_application" %}New <a href="/admin/applications">account application</a>.
+          {% elif n.type == "invite_approved" %}Your invite request was approved.
+          {% elif n.type == "invite_denied" %}Your invite request was denied.
+          {% else %}{{ n.type }}{% endif %}
+        </p>
+        <p class="fy-dim"><time title="{{ n.created_at|locale_string }}">{{ n.created_at|time_ago }}</time></p>
+      </div>
+      {% if n.item_id %}<a class="fy-notif-thumb" href="{{ href }}" tabindex="-1" aria-hidden="true"><img src="/t/{{ n.item_id }}.webp" alt="" loading="lazy"></a>{% endif %}
+    </li>
+    {% else %}
+    <li class="fy-empty">{{ fy.ico("bell") }}<h2>Your notifications live here</h2><p>Subscribe to f0cks to hear about their new comments.</p></li>
+    {% endfor %}
+  </ol>
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

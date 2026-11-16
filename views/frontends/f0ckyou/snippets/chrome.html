@@ -1,0 +1,101 @@
+{#- The chrome of every page with the guide: the masthead (guide button, logo, search box, create,
+    notifications, account), the guide on the left (full, mini, or a drawer, by screen width), then
+    opens <div class="fy-content"> for the page; snippets/footer.html closes it.
+    Set before including: fy_nav (the guide entry to mark: home, random, subs, channel, uploads,
+    favs, comments, tags_user, halls_user, notifs, messages, tags, ranking, halls, upload, settings,
+    about, rules, terms; default: the one whose link is the current path), fy_q (search text),
+    fy_strict (keep the strict search).
+    The guide opens and closes without JavaScript: the checkbox #fy-guide-toggle and its <label>s. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set fy_path = (url.pathname if (url and url.pathname) else "") -%}
+{%- set fy_cur = (fy_nav if (fy_nav is defined and fy_nav) else "") -%}
+{%- set fy_me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
+{%- set fy_ulink = ("/user/" ~ (fy_me|encode_uri_component)) if session else "" -%}
+{%- set fy_can_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
+{%- set fy_staff = (session and (session.admin or session.is_moderator)) -%}
+{#- guide entries: [href, icon, label, key] -#}
+{%- set fy_main = [["/", "home", "Home", "home"], ["/random", "shuffle", "Random", "random"]]
+    + ([["/subscriptions", "subs", "Subscriptions", "subs"]] if (session and enable_comments) else []) -%}
+{%- set fy_you = ([[fy_ulink, "user", "Your channel", "channel"], [fy_ulink ~ "/uploads", "videos", "Your f0cks", "uploads"], [fy_ulink ~ "/favs", "like", "Liked f0cks", "favs"]]
+    + ([[fy_ulink ~ "/comments", "comment", "Your comments", "comments"]] if enable_comments else [])
+    + [[fy_ulink ~ "/tags", "hash", "Your tags", "tags_user"]]
+    + ([[fy_ulink ~ "/halls", "playlist", "Your halls", "halls_user"]] if userhalls_enabled else [])
+    + [["/notifications", "bell", "Notifications", "notifs"]]
+    + ([["/messages", "mail", "Messages", "messages"]] if (private_messages and not session.is_anon) else [])
+    + ([["/pending", "clock", "Pending" ~ ((" (" ~ session.own_pending_count ~ ")") if session.own_pending_count else ""), "pending"]] if (manual_approval and not session.is_anon) else [])) if session else [] -%}
+{%- set fy_explore = [["/tags", "hash", "Tags", "tags"], ["/ranking", "trophy", "Ranking", "ranking"]]
+    + ([["/halls", "playlist", "Halls", "halls"]] if halls_enabled else [])
+    + ([["/upload", "create", "Upload", "upload"]] if fy_can_upload else []) -%}
+{%- set fy_staff_links = (([["/admin", "shield", "Admin console", "admin"]] if session.admin else [])
+    + [["/mod", "shield", "Mod", "mod"], ["/mod/reports", "flag", "Reports", "reports"]]
+    + ([["/mod/approve", "check", "Approve" ~ ((" (" ~ session.pending_count ~ ")") if session.pending_count else ""), "approve"]] if manual_approval else [])) if fy_staff else [] -%}
+{%- set fy_more = [["/settings", "settings", "Settings", "settings"], ["/about", "info", "About", "about"], ["/rules", "rules", "Rules", "rules"], ["/terms", "file", "Terms", "terms"]] -%}
+{%- macro entries(list, cur, path) -%}
+<ul class="fy-guide-list">
+  {% for e in list %}{% set on = ((cur and cur == e[3]) or (not cur and path == e[0])) %}
+  <li><a href="{{ e[0] }}"{% if on %} class="active" aria-current="page"{% endif %}>{{ fy.ico(e[1]) }}<span>{{ e[2] }}</span></a></li>
+  {% endfor %}
+</ul>
+{%- endmacro -%}
+<input type="checkbox" id="fy-guide-toggle" class="fy-guide-toggle f0ck-shell-chrome" aria-label="Show the guide" autocomplete="off">
+<header class="fy-mast f0ck-shell-chrome">
+  <div class="fy-mast-start">
+    <label for="fy-guide-toggle" class="fy-iconbtn fy-guide-btn" title="Guide">{{ fy.ico("menu") }}<span class="fy-sr">Guide</span></label>
+    <a class="fy-mast-logo" href="/" title="f0ckYou Home">{% include "frontends/f0ckyou/snippets/logo.html" %}</a>
+  </div>
+  {% include "frontends/f0ckyou/snippets/searchbox.html" %}
+  <div class="fy-mast-end">
+    {% include "frontends/f0ckyou/snippets/userarea.html" %}
+  </div>
+</header>
+<div class="fy-app">
+  <nav class="fy-guide f0ck-shell-chrome" aria-label="Guide">
+    <div class="fy-guide-head">
+      <label for="fy-guide-toggle" class="fy-iconbtn" title="Close the guide">{{ fy.ico("menu") }}<span class="fy-sr">Close the guide</span></label>
+      <a class="fy-mast-logo" href="/">{% include "frontends/f0ckyou/snippets/logo.html" %}</a>
+    </div>
+    {{ entries(fy_main, fy_cur, fy_path) }}
+    <hr>
+    {% if session %}
+    <h3 class="fy-guide-title"><a href="{{ fy_ulink }}">You {{ fy.ico("next") }}</a></h3>
+    {{ entries(fy_you, fy_cur, fy_path) }}
+    {% else %}
+    <div class="fy-guide-signin">
+      <p>Sign in to fav f0cks, comment and subscribe.</p>
+      <a class="fy-btn-signin" href="/?login=1">{{ fy.ico("user") }}<span>Sign in</span></a>
+    </div>
+    {% endif %}
+    <hr>
+    <h3 class="fy-guide-title">Explore</h3>
+    {{ entries(fy_explore, fy_cur, fy_path) }}
+    {% if fy_staff %}
+    <hr>
+    <h3 class="fy-guide-title">Moderation</h3>
+    {{ entries(fy_staff_links, fy_cur, fy_path) }}
+    {% endif %}
+    <hr>
+    {{ entries(fy_more, fy_cur, fy_path) }}
+    {% if (session and modes) %}
+    {%- set fy_mode = (mode if mode is number else 0) -%}
+    <hr>
+    <h3 class="fy-guide-title">Mode</h3>
+    <ul class="fy-guide-chips">
+      {% for m in modes %}{% if m != "nsfl" or enable_nsfl %}<li><a href="/mode/{{ loop.index0 }}"{% if loop.index0 == fy_mode %} class="active" aria-current="true"{% endif %}>{{ m|upper }}</a></li>{% endif %}{% endfor %}
+    </ul>
+    {% endif %}
+    <hr>
+    <footer class="fy-guide-foot">
+      <p><a href="/about">About</a> <a href="/rules">Rules</a> <a href="/terms">Terms</a> <a href="/privacy">Privacy</a> <a href="/ranking">Stats</a></p>
+      {% if (frontend_switch and frontends and frontends|length > 1) %}<p>Also as:{% for f in frontends %}{% if f != frontend %} <a href="/frontend/{{ f }}">{{ f }}</a>{% endif %}{% endfor %}</p>{% endif %}
+      <p class="fy-guide-copy">&copy; {{ domain }}</p>
+    </footer>
+  </nav>
+  <nav class="fy-mini f0ck-shell-chrome" aria-label="Guide (short)">
+    <a href="/"{% if (fy_cur == "home" or (not fy_cur and fy_path == "/")) %} class="active"{% endif %}>{{ fy.ico("home") }}<span>Home</span></a>
+    <a href="/random">{{ fy.ico("shuffle") }}<span>Random</span></a>
+    {% if (session and enable_comments) %}<a href="/subscriptions"{% if fy_cur == "subs" %} class="active"{% endif %}>{{ fy.ico("subs") }}<span>Subscriptions</span></a>{% endif %}
+    <a href="/tags"{% if fy_cur == "tags" %} class="active"{% endif %}>{{ fy.ico("hash") }}<span>Tags</span></a>
+    {% if session %}<a href="{{ fy_ulink }}"{% if fy_cur in ["channel", "uploads", "favs", "comments", "tags_user", "halls_user"] %} class="active"{% endif %}>{{ fy.ico("user") }}<span>You</span></a>{% endif %}
+  </nav>
+  <label for="fy-guide-toggle" class="fy-scrim f0ck-shell-chrome" aria-hidden="true"></label>
+  <div class="fy-content">

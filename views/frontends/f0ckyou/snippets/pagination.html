@@ -1,0 +1,15 @@
+{#- Page links under a list. Without JavaScript they are the way on; with it f0ckyou.js loads the next
+    page into the list when this bar scrolls into view (rel="next"), so the list keeps going. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{% if (pagination is defined and pagination and link is defined and link and pagination.start) %}
+{%- set fy_pg = (link.main ~ link.path) -%}
+{%- set fy_sfx = (link.suffix or "") -%}
+<nav class="fy-pages" aria-label="Pages">
+  {% if pagination.prev %}<a class="fy-pg fy-pg-end" href="{{ fy_pg }}{{ pagination.prev }}{{ fy_sfx }}" rel="prev">{{ fy.ico("prev") }}<span>Previous</span></a>{% endif %}
+  {% for i in (pagination.cheat or []) %}
+  {% if i == pagination.page %}<span class="fy-pg fy-pg-cur" aria-current="page">{{ i }}</span>{% else %}<a class="fy-pg" href="{{ fy_pg }}{{ i }}{{ fy_sfx }}">{{ i }}</a>{% endif %}
+  {% endfor %}
+  {% if pagination.next %}<a class="fy-pg fy-pg-end" href="{{ fy_pg }}{{ pagination.next }}{{ fy_sfx }}" rel="next"><span>Next</span>{{ fy.ico("next") }}</a>{% endif %}
+  {% if (pagination.end and pagination.end > 1) %}<span class="fy-pg-of">Page {{ pagination.page }} of {{ pagination.end }}</span>{% endif %}
+</nav>
+{% endif %}

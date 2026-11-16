@@ -1,0 +1,23 @@
+{#- f0ckyou: closes the page column and the app opened by snippets/chrome.html (not with fy_bare:
+    pages without the chrome), then the page data and the scripts, end of <body>.
+    shell/footer.html sets fy_shell_foot and closes the page itself (after snippets/shell-foot.html). -#}
+{%- set fy_is_shell_foot = (fy_shell_foot is defined and fy_shell_foot) -%}
+{%- if not (fy_bare is defined and fy_bare) %}
+  </div>
+</div>
+{%- endif %}
+{#- what f0ckyou.js needs to know about the page -#}
+<script type="application/json" id="fy-data">{{ {
+  "itemId": ((item.id if (item is defined and item and item.id) else none)),
+  "prev": ((link.main ~ pagination.prev ~ (link.suffix or "")) if (item is defined and item and item.id and pagination and pagination.prev) else none),
+  "next": ((link.main ~ pagination.next ~ (link.suffix or "")) if (item is defined and item and item.id and pagination and pagination.next) else none),
+  "session": (true if session else false)
+}|tojson }}</script>
+{% include "snippets/frontend-scripts.html" %}
+<script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>
+<script src="/s/fe/f0ckyou/js/f0ckyou.js?v={{ mtime("/public/s/fe/f0ckyou/js/f0ckyou.js") }}"></script>
+{% if session %}{% include "snippets/cap-gate.html" %}{% endif %}
+{%- if not fy_is_shell_foot %}
+</body>
+</html>
+{%- endif %}
