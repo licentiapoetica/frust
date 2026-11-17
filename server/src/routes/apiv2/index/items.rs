@@ -752,6 +752,7 @@ pub(super) async fn set_expiry(st: AppState, mut req: Req) -> Res {
         }
     }
     sql!("UPDATE items SET expires_at = ", target, " WHERE id = ", id as i32).execute(&st.db).await?;
+    mdel::expiry_changed();
     let uid = req.session().map(|s| s.id).unwrap_or(0);
     audit_log(&st, uid, "set_item_expiry", "item", &id.to_string(), Some(json!({ "expires_at": target }))).await;
     let purged = target.is_some_and(|t| t <= now);

@@ -229,6 +229,7 @@ pub async fn may_view(st: &AppState, req: &Req, id: i64, privileged: bool, claim
         Ok(Some(_)) => {
             set_claim(id, Some(hash));
             DELIVERY.lock().insert(id, Delivery { bumped: now, ..Default::default() });
+            crate::media::delete::expiry_changed();
             req.set_cookie(format!("{COOKIE}={tok}; {}", cookie_options(&cfg, CookieExpiry::MaxAge(COOKIE_SECS), true)));
             tracing::info!("[BURN] Item #{id} opened by its first viewer");
             true

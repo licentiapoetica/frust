@@ -232,16 +232,43 @@ pub async fn purge_expired_uploads(st: &AppState) {
     }
 }
 
-/// Run [`purge_expired_uploads`] 10 s after boot and then every 30 s (the old setTimeout/setInterval).
+/// Wakes the expiry purger early: an expiry was set or moved ([`expiry_changed`]).
+static EXPIRY_CHANGED: once_cell::sync::Lazy<tokio::sync::Notify> = once_cell::sync::Lazy::new(tokio::sync::Notify::new);
+
+/// Longest the purger sleeps without a due item in sight (catches expiries set elsewhere, e.g. SQL).
+const PURGER_MAX_SLEEP: Duration = Duration::from_secs(30);
+
+/// Call after setting an item's `expires_at`, so the purger plans for it (it sleeps until the next one due).
+pub fn expiry_changed() {
+    EXPIRY_CHANGED.notify_one();
+}
+
+/// The earliest `expires_at` still waiting to be purged (unix seconds).
+async fn next_expiry(st: &AppState) -> Option<i64> {
+    let mut q = sql!("SELECT min(expires_at) AS next FROM items WHERE expires_at IS NOT NULL AND is_purged = false");
+    if !crate::settings::enable_expiring_uploads(&st.cfg()) {
+        q.push(" AND burn_after_read");
+    }
+    q.fetch_optional(&st.db).await.ok().flatten().and_then(|r| r.i64("next"))
+}
+
+/// Purge expired uploads on time: 10 s after boot, then always at the next `expires_at` (to the
+/// second; at most [`PURGER_MAX_SLEEP`] apart), and again whenever an expiry changes.
 pub fn spawn_expiry_purger(st: &AppState) {
     let st = st.clone();
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_secs(10)).await;
-        let mut tick = tokio::time::interval(Duration::from_secs(30));
-        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
-            tick.tick().await;
             purge_expired_uploads(&st).await;
+            let wait = match next_expiry(&st).await {
+                // just after the second it's due (expires_at <= now then holds)
+                Some(at) => Duration::from_millis(u64::try_from(at * 1000 - crate::util::now_ms() + 50).unwrap_or(0)).min(PURGER_MAX_SLEEP),
+                None => PURGER_MAX_SLEEP,
+            };
+            tokio::select! {
+                _ = tokio::time::sleep(wait) => {}
+                _ = EXPIRY_CHANGED.notified() => {}
+            }
         }
     });
 }

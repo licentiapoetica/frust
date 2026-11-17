@@ -449,6 +449,9 @@ async fn notify_new_item(st: &AppState, payload: &Value) {
 
 #[allow(clippy::too_many_arguments)]
 fn success(cfg: &Config, ctx: &Ctx, item_id: i64, dest: &str, mime: &str, file_url: Value) -> Res {
+    if ctx.expires_at.is_some() {
+        crate::media::delete::expiry_changed();
+    }
     let base = cfg.url_full();
     // the new item's address: its slug when slugs are enabled, else its id (like every item link)
     let slugs = crate::settings::enable_item_slugs(cfg);

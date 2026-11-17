@@ -143,7 +143,7 @@
                         <a href="/h/{{ item.primaryHall.slug }}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> {{ item.primaryHall.name }}</a>{% if (item.otherHalls and item.otherHalls|length) %}<span class="hall-overflow-pill">+{{ item.otherHalls|length }}<span class="hall-overflow-tooltip">{% for key, oh in item.otherHalls|entries %}<a href="/h/{{ oh.slug }}">{{ oh.name }}</a>{% endfor %}</span></span>{% endif %}
                     </span>{% endif %}</span>
                     <span class="badge badge-dark"><a href="/{{ item_href }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>
-                    {% if item.expires_at %}
+                    {% if item.expires_at and not item.burn_claimed %}
                     — <span class="badge badge-warning item-expiring-badge" tooltip="Self-destructs {{ ((item.expires_at|int) * 1000)|locale_string }} {{ ((item.expires_at|int) * 1000)|tz_label }}" data-local-time="{{ item.expires_at }}" data-local-time-attr="tooltip" data-local-time-prefix="Self-destructs " flow="up"><i class="fa-solid fa-clock"></i><span class="item-expiring-time" data-countdown="{{ item.expires_at }}">{{ item.expires_countdown }}</span></span>
                     {% endif %}
                     {% if item.burn_after_read %}

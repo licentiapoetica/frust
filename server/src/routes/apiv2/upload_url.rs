@@ -421,6 +421,9 @@ async fn insert_item(st: &AppState, cfg: &Config, job: &UrlJob, src: &str, dest:
     if job.burn {
         crate::burn::reload_item(st, id).await;
     }
+    if expires_at.is_some() {
+        crate::media::delete::expiry_changed();
+    }
     if cfg.enabled("enable_comments") {
         if let Err(e) = sql!("INSERT INTO comment_subscriptions (user_id, item_id) VALUES (", job.user_id as i32, ", ", id as i32, ") ON CONFLICT DO NOTHING")
             .execute(&st.db)

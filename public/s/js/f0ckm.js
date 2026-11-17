@@ -20742,6 +20742,19 @@ class NotificationSystem {
   }
 }
 
+// The item's expiry countdown ran out (f0ck-core.js): it's being deleted right now (the purger runs
+// at the exact second), so show the page again in place, which then says it's gone.
+document.addEventListener('f0ck:countdown-done', (e) => {
+  if (!e.target.closest || !e.target.closest('.item-expiring-badge')) return;
+  const here = location.pathname + location.search;
+  setTimeout(() => {
+    if (location.pathname + location.search !== here) return; // moved on meanwhile
+    if (typeof window.loadPageAjax === 'function') {
+      window.loadPageAjax(here, false, { bypassCache: true, skipCache: true, skipInherit: true });
+    }
+  }, 1000);
+});
+
 // <pagination-ajax>
 document.addEventListener('click', (e) => {
   // Only intercept clicks on pagination links

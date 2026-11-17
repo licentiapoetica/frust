@@ -1229,7 +1229,7 @@ window.F0ckPageSwap = (() => {
 
 // Live countdowns (and local dates): every element with data-countdown="<unix seconds>" shows the time left
 // ("6d 23h 05m 09s" ... "9s", the server renders the same), ticking every second; `countdown-soon`
-// in the last minute. Looked up on every tick, so content swapped in later (ajax pages) ticks too.
+// in the last minute, `f0ck:countdown-done` when it runs out. Looked up on every tick, so content swapped in later (ajax pages) ticks too.
 (() => {
   const pad = (n) => String(n).padStart(2, '0');
   const text = (left) => {
@@ -1260,6 +1260,13 @@ window.F0ckPageSwap = (() => {
       const t = text(left);
       if (el.textContent !== t) el.textContent = t;
       el.classList.toggle('countdown-soon', left < 60);
+      // ran out while on screen: `f0ck:countdown-done` (bubbles) once, so the page can react
+      // (not for one that was already at 0 when it appeared, which would just repeat)
+      if (left > 0) el.dataset.countdownRunning = '1';
+      else if (el.dataset.countdownRunning && el.dataset.countdownDone !== String(at)) {
+        el.dataset.countdownDone = String(at);
+        el.dispatchEvent(new CustomEvent('f0ck:countdown-done', { bubbles: true, detail: { at } }));
+      }
     });
   };
   tick();
