@@ -17,6 +17,8 @@
   --fy-menu: #282828;
   --fy-soft: rgba(255, 255, 255, .1);
   --fy-soft-2: rgba(255, 255, 255, .2);
+  /* the round spinners: a ring cut out of a circle, no rounded borders */
+  --fy-ring: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px) calc(100% - .5px), transparent 100%);
   --fy-line: rgba(255, 255, 255, .2);
   --fy-text: #f1f1f1;
   --fy-muted: #aaa;
@@ -1793,8 +1795,9 @@ html.fy-navigating .fy-mast::after {
   content: "";
   width: 1.5rem;
   height: 1.5rem;
-  border: 3px solid var(--fy-soft-2);
-  border-top-color: var(--fy-text);
+  background: conic-gradient(var(--fy-text) 0 25%, var(--fy-soft-2) 0);
+  -webkit-mask: var(--fy-ring);
+  mask: var(--fy-ring);
   animation: fy-spin .8s linear infinite;
 }
 
@@ -3231,8 +3234,9 @@ body.fy-page-watch {
   content: "";
   width: 1.25rem;
   height: 1.25rem;
-  border: 3px solid var(--fy-soft-2);
-  border-top-color: var(--fy-text);
+  background: conic-gradient(var(--fy-text) 0 25%, var(--fy-soft-2) 0);
+  -webkit-mask: var(--fy-ring);
+  mask: var(--fy-ring);
   animation: fy-spin .8s linear infinite;
 }
 
@@ -3478,8 +3482,9 @@ body.fy-page-watch {
   content: "";
   width: 1.5rem;
   height: 1.5rem;
-  border: 3px solid var(--fy-soft-2);
-  border-top-color: var(--fy-text);
+  background: conic-gradient(var(--fy-text) 0 25%, var(--fy-soft-2) 0);
+  -webkit-mask: var(--fy-ring);
+  mask: var(--fy-ring);
   animation: fy-spin .8s linear infinite;
 }
 

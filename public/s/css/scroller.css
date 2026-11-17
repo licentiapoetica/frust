@@ -52,6 +52,13 @@ html[theme='amoled'] {
   --accent: #fff;
 }
 
+/* Opened from a frontend with an accent colour of its own: that one, whatever f0ckm theme is
+   picked (data-frontend on <html>, views/scroller.html). f0ckYou: its red. */
+html[data-frontend='f0ckyou'],
+html[data-frontend='f0ckyou'][theme] {
+  --accent: #e5082f;
+}
+
 html,
 body {
   width: 100%;
@@ -1107,11 +1114,14 @@ canvas.scroll-bg-blur {
   font-weight: 500;
 }
 
+/* a round ring without rounded borders: a quarter of accent on a faint circle, cut to a ring by
+   the mask */
 .loader-spinner {
   width: 28px;
   height: 28px;
-  border: 2.5px solid rgba(255,255,255,.1);
-  border-top-color: var(--accent, #fff);
+  background: conic-gradient(var(--accent, #fff) 0 25%, rgba(255,255,255,.1) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px) calc(100% - .5px), transparent 100%);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px) calc(100% - .5px), transparent 100%);
   animation: spin .65s linear infinite;
 }
 

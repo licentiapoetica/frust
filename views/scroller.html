@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ (lang or "en") }}" theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}">
+<html lang="{{ (lang or "en") }}"{% if (frontend is defined and frontend) %} data-frontend="{{ frontend }}"{% endif %} theme="{% if (theme is defined and theme) %}{{ theme }}{% elif (req is defined and req.theme) %}{{ req.theme }}{% else %}{{ (default_theme or "f0ck") }}{% endif %}">
 <head>
   <title>{{ domain }} — doomscroll</title>
   <meta charset="utf-8" />
