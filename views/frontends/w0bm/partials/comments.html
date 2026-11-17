@@ -4,7 +4,7 @@
     w0bm.js renders it like f0ckm (inline Markdown) and updates it live -#}
 {%- set w0bm_motd_off = (session and session.show_motd == false) %}
 <div class="panel panel-default w0bm-motd" id="w0bm-motd" data-show="{{ ("0" if w0bm_motd_off else "1") }}"{% if (w0bm_motd_off or not ((motd or "")|trim)) %} hidden{% endif %}>
-    <div class="panel-body w0bm-motd-text">{{ (motd or "") }}</div>
+    <div class="panel-body"><i class="fa fa-black-tie w0bm-motd-icon" aria-hidden="true"></i><span class="w0bm-motd-text">{{ (motd or "") }}</span></div>
 </div>
 {% if session %}
 {% if (item.is_comments_locked and not is_mod_or_admin) %}

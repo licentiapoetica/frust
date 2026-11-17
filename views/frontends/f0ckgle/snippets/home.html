@@ -14,7 +14,7 @@
     <button type="submit" form="fg-search" class="fg-btn">F0ckgle Search</button>
     <a class="fg-btn" href="/random">I'm Feeling Lucky</a>
   </div>
-  {% if not (session and session.show_motd == false) %}<p class="fg-motd"{% if not ((motd or "")|trim) %} hidden{% endif %}>{{ (motd or "") }}</p>{% endif %}
+  {% if not (session and session.show_motd == false) %}<p class="fg-motd"{% if not ((motd or "")|trim) %} hidden{% endif %}><span class="fg-motd-tie" aria-hidden="true"></span><span class="fg-motd-text">{{ (motd or "") }}</span></p>{% endif %}
   {% if (session and modes) %}
   {%- set cur_mode = (mode if mode is number else 0) -%}
   <p class="fg-home-langs">F0ckgle offered in:{% for m in modes %}{% if m != "nsfl" or enable_nsfl %} <a href="/mode/{{ loop.index0 }}"{% if loop.index0 == cur_mode %} class="active"{% endif %}>{{ m|upper }}</a>{% endif %}{% endfor %}</p>

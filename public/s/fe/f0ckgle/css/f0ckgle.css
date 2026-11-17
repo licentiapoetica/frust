@@ -631,6 +631,18 @@ html:not(.no-js) .nojs-only {
   white-space: pre-line;
 }
 
+/* the tie in front of every MOTD (Font Awesome's black-tie as an icon file, in the text colour) */
+.fg-motd-tie {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: .4em;
+  vertical-align: -.125em;
+  background: currentColor;
+  -webkit-mask: url(/s/img/motd-tie.svg) center / contain no-repeat;
+  mask: url(/s/img/motd-tie.svg) center / contain no-repeat;
+}
+
 .fg-home-langs {
   margin: 1.5rem 0 0;
   color: var(--fg-muted);

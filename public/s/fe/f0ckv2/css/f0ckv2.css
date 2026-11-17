@@ -121,6 +121,17 @@ html:not([theme^="f0ck95"]) .container .metadata {
 .v2-motd[hidden] {
   display: none;
 }
+/* the tie in front of every MOTD (Font Awesome's black-tie as an icon file, in the text colour) */
+.v2-motd-tie {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: .4em;
+  vertical-align: -.125em;
+  background: currentColor;
+  -webkit-mask: url(/s/img/motd-tie.svg) center / contain no-repeat;
+  mask: url(/s/img/motd-tie.svg) center / contain no-repeat;
+}
 
 .v2-hall-desc {
   margin-top: -10px;

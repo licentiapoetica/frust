@@ -2064,6 +2064,10 @@ html:not(.w0bm-nojs) .w0bm-nojs-only {
     text-align: center;
     word-wrap: break-word;
 }
+/* the tie in front of every MOTD */
+.w0bm-motd-icon {
+    margin-right: 0.4em;
+}
 /* set apart from the comments: a faint accent-colour gradient over the theme's panel colour
    (only the image, so each theme keeps its own background colour under it) */
 .panel.w0bm-motd {

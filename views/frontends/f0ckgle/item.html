@@ -93,7 +93,7 @@
       {% if is_mod_or_admin %}<a class="fg-chip fg-chip-danger" href="#delete">Delete</a>{% endif %}
     </div>
 
-    {% if not (session and session.show_motd == false) %}<p class="fg-motd fg-motd-item"{% if not ((motd or "")|trim) %} hidden{% endif %}>{{ (motd or "") }}</p>{% endif %}
+    {% if not (session and session.show_motd == false) %}<p class="fg-motd fg-motd-item"{% if not ((motd or "")|trim) %} hidden{% endif %}><span class="fg-motd-tie" aria-hidden="true"></span><span class="fg-motd-text">{{ (motd or "") }}</span></p>{% endif %}
 
     {% if enable_comments and (session or not hide_comments_from_public) %}
     {% include "frontends/f0ckgle/snippets/comments.html" %}

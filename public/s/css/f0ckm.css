@@ -1882,7 +1882,8 @@ html[theme="f0ck95"] {
 }
 
 /* the message of the day on the silver navbar */
-html[theme="f0ck95"] #motd-display {
+html[theme="f0ck95"] #motd-display,
+html[theme="f0ck95"] .motd-icon {
   color: #000;
 }
 
@@ -13168,6 +13169,13 @@ body.layout-legacy .comment-content img.emoji {
 #motd-display-guest {
   left: 5px;
   position: relative;
+}
+
+/* the tie in front of every MOTD (navbar.html) */
+.motd-icon {
+  position: relative;
+  left: 5px;
+  margin-right: 0.4em;
 }
 
 .motd-close {

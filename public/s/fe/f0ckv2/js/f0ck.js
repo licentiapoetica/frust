@@ -615,7 +615,7 @@ window.v2Page.onPage(() => {
   // the MOTD box (item page, between the player and the metadata)
   fe.motd = (text) => {
     document.querySelectorAll('.v2-motd').forEach(box => {
-      box.textContent = text || '';
+      box.querySelector('.v2-motd-text').textContent = text || '';
       box.hidden = !String(text || '').trim();
     });
   };

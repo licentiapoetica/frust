@@ -157,7 +157,7 @@
 
   <!-- MOTD: below the nav row -->
   <div class="motd-container{% if (motd is undefined or motd == "") %} navbar-hidden{% endif %}{% if (session and session.show_motd == false) %} motd-pref-off{% endif %}" id="motd-container">
-    <span class="motd-content" id="motd-display">{% if motd is defined %}<span class="motd-nojs">{{ motd }}</span>{% endif %}</span>
+    <i class="fa-brands fa-black-tie motd-icon" aria-hidden="true"></i><span class="motd-content" id="motd-display">{% if motd is defined %}<span class="motd-nojs">{{ motd }}</span>{% endif %}</span>
     <div id="motd-data" class="navbar-hidden">{% if motd is defined %}{{ motd }}{% endif %}</div>
     <div id="user-pref-show-motd" class="navbar-hidden">{% if session.show_motd != false %}true{% else %} false {% endif %}</div>
   </div>
@@ -315,7 +315,7 @@
   </div>
 
   <div class="motd-container{% if (motd is undefined or motd == "") %} navbar-hidden{% endif %}" id="motd-container">
-    <span class="motd-content" id="motd-display">{% if motd is defined %}<span class="motd-nojs">{{ motd }}</span>{% endif %}</span>
+    <i class="fa-brands fa-black-tie motd-icon" aria-hidden="true"></i><span class="motd-content" id="motd-display">{% if motd is defined %}<span class="motd-nojs">{{ motd }}</span>{% endif %}</span>
     <div id="motd-data" class="navbar-hidden">{% if motd is defined %}{{ motd }}{% endif %}</div>
   </div>
 

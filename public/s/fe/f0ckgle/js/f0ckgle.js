@@ -286,7 +286,7 @@
     flash,
     motd(text) {
       document.querySelectorAll('.fg-motd').forEach(el => {
-        el.textContent = text || '';
+        el.querySelector('.fg-motd-text').textContent = text || '';
         el.hidden = !String(text || '').trim();
       });
     },
