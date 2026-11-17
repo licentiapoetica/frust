@@ -13175,6 +13175,7 @@ body.layout-legacy .comment-content img.emoji {
 .motd-icon {
   position: relative;
   left: 5px;
+  margin-left: 5px;
   margin-right: 0.4em;
 }
 
