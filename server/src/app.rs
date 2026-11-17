@@ -712,8 +712,9 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
 
     // Private society: login required for everything else
     if cfg.truthy("websrv.private_society") && req.session.is_none() {
+        // api/v2/settings/passkeys/login: the gate's "Sign in with Passkey" (login_begin/login_finish)
         static PUBLIC: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
-            regex::Regex::new(r"^/(s|login|logout|register|api/cap|api/csp-report|flash-frame|activate|forgot-password|reset-password|banned|api/v2/auth|api/v2/upload|manifest\.json|sw\.js|robots\.txt|favicon\.(ico|png|gif)|s/img/duck-icon-(192|512)\.png)(/.*)?$").unwrap()
+            regex::Regex::new(r"^/(s|login|logout|register|api/cap|api/csp-report|flash-frame|activate|forgot-password|reset-password|banned|api/v2/auth|api/v2/upload|api/v2/settings/passkeys/login|manifest\.json|sw\.js|robots\.txt|favicon\.(ico|png|gif)|s/img/duck-icon-(192|512)\.png)(/.*)?$").unwrap()
         });
         if !PUBLIC.is_match(&path) {
             if req.is_xhr() {

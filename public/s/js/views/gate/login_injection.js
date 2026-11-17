@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
       gateResetCaptcha();
     });
   };
-  // Passkey sign-in button (works for both registered users and anonymous passkey holders)
+  // Passkey sign-in button: members' passkeys (same endpoints as f0ckPasskeyLogin in f0ck-core.js)
   var passkeyBtn = document.getElementById('gate-passkey-btn');
   if (passkeyBtn && window.PublicKeyCredential) {
     passkeyBtn.addEventListener('click', async function() {
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
       passkeyBtn.style.opacity = '0.65';
       try {
         // 1. Get challenge from server
-        var beginRes = await fetch('/api/v2/anon/passkey/auth/begin', {
+        var beginRes = await fetch('/api/v2/settings/passkeys/login/begin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({})
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var assertion = await navigator.credentials.get({ publicKey: pkOpts });
 
         // 4. Send to server — use original base64url challenge string
-        var finishRes = await fetch('/api/v2/anon/passkey/auth/finish', {
+        var finishRes = await fetch('/api/v2/settings/passkeys/login/finish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
