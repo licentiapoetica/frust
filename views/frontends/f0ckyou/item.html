@@ -91,7 +91,7 @@
       </div>
       <div class="fy-actions" data-fy-live="actions">
         {% if session %}
-        <form method="post" action="/api/v2/togglefav" class="fy-inline fy-ajax" data-fy-refresh="actions desc">
+        <form method="post" action="/api/v2/togglefav" class="fy-inline fy-ajax" data-fy-refresh="actions desc" data-fy-fav>
           <input type="hidden" name="postid" value="{{ item.id }}">
           <input type="hidden" name="action" value="{{ ("remove" if user_has_favorited else "add") }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

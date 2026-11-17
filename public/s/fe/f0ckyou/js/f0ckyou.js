@@ -380,6 +380,47 @@
     resolve(ok);
   });
 
+  // ── the like (fav) button answers at once, like f0ckm's heart: the button, its icon and the count
+  //    change before the server is asked; the requests go out in click order, a failed one puts the
+  //    button back, and the regions (the likers in the description) are swapped in from the page
+  //    once no click is waiting any more ──
+  let favQueue = Promise.resolve();
+  let favPending = 0;
+  const favState = (form, on) => {
+    const btn = form.querySelector('button[type="submit"]');
+    if (!btn) return;
+    const label = btn.querySelector('span');
+    const count = parseInt((label?.textContent || '').replace(/\D/g, ''), 10) || 0;
+    const n = Math.max(0, count + (on ? 1 : -1));
+    form.elements.action.value = on ? 'remove' : 'add';
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.title = on ? 'Unlike' : 'I like this (fav)';
+    const use = btn.querySelector('use');
+    if (use) use.setAttribute('href', use.getAttribute('href').replace(/#[^#]*$/, on ? '#like-on' : '#like'));
+    if (label) label.textContent = n ? n.toLocaleString(document.documentElement.lang || undefined) : 'Like';
+  };
+  document.addEventListener('submit', e => {
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement) || !form.classList.contains('fy-ajax') || !('fyFav' in form.dataset)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const on = form.elements.action.value === 'add';
+    const body = formBody(form);
+    favState(form, on);
+    favPending++;
+    favQueue = favQueue.then(async () => {
+      try {
+        await send(form.getAttribute('action'), body);
+      } catch (err) {
+        if (form.isConnected) favState(form, !on);
+        flash(err.message || 'Something went wrong', 'error');
+      } finally {
+        if (--favPending === 0) refresh((form.dataset.fyRefresh || '').split(/\s+/).filter(Boolean));
+      }
+    });
+  });
+
   document.addEventListener('submit', async e => {
     const form = e.target;
     if (!(form instanceof HTMLFormElement) || !form.classList.contains('fy-ajax')) return;
@@ -1136,20 +1177,27 @@
   document.addEventListener('click', picked);
   document.addEventListener('auxclick', picked);
 
-  // ── moderators: remove a tag (DELETE has no form; the description is refreshed in place) ──
+  // ── moderators: remove a tag (DELETE has no form). The tag goes at once; a failed request puts
+  //    it back, and the description is swapped in from the page once no removal is waiting ──
+  let tagPending = 0;
   document.addEventListener('click', async e => {
     const btn = e.target.closest('#tags .fy-tag-del');
     if (!btn) return;
-    const tag = btn.closest('[data-tag]')?.dataset.tag;
+    const el = btn.closest('[data-tag]');
+    const tag = el?.dataset.tag;
     const id = document.getElementById('tags')?.dataset.itemId;
     if (!tag || !id || !(await ask(`Remove the tag "${tag}"?`))) return;
-    btn.disabled = true;
+    const parent = el.parentNode;
+    const next = el.nextSibling;
+    el.remove();
+    tagPending++;
     try {
       await send(`/api/v2/tags/${id}/${encodeURIComponent(tag)}`, {}, 'DELETE');
-      await refresh(['desc']);
     } catch (err) {
-      btn.disabled = false;
+      if (parent?.isConnected) parent.insertBefore(el, next?.parentNode === parent ? next : null);
       flash(err.message || 'could not remove the tag', 'error');
+    } finally {
+      if (--tagPending === 0) refresh(['desc']);
     }
   });
 
