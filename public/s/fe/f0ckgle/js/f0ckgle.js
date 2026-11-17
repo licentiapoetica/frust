@@ -122,6 +122,8 @@
   const pageUrl = () => {
     const u = new URL(location.href);
     u.searchParams.delete('reply');
+    // ?meta=1 reads the file's metadata (the tag suggestions): not for every refresh
+    u.searchParams.delete('meta');
     u.hash = '';
     return u.toString();
   };
@@ -212,6 +214,8 @@
         form.reset();
         if (location.hash) location.hash = '_';
       }
+      // a tag suggestion that is a tag now: checked, no second click
+      if ('fgAdded' in form.dataset) form.classList.add('is-added');
       if (form.dataset.fgOk) flash(form.dataset.fgOk, 'success');
       await refresh((form.dataset.fgRefresh || '').split(/\s+/).filter(Boolean));
       const id = data?.comment?.id;
@@ -224,9 +228,38 @@
       flash(err.message || 'Something went wrong', 'error');
       if ('fgClose' in form.dataset) window.f0ckCapReset?.();
     } finally {
-      buttons.forEach(b => { if (b.isConnected) b.disabled = false; });
+      buttons.forEach(b => { if (b.isConnected && !form.classList.contains('is-added')) b.disabled = false; });
     }
   });
+
+  // Tag suggestions (Edit dialog → #meta): the server reads the file's metadata for the page's
+  // ?meta=1 render (without JavaScript the link loads it); here its dialog is opened at once and
+  // filled from that render. Its contents are swapped, not the dialog, so it stays :target.
+  document.addEventListener('click', async e => {
+    const a = e.target.closest?.('a[data-fg-meta]');
+    if (!a || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const box = document.querySelector('[data-fg-live="meta"]');
+    if (!box) return;
+    e.preventDefault();
+    location.hash = 'meta';
+    box.classList.add('fg-meta-busy');
+    try {
+      const u = new URL(a.href, location.href);
+      u.hash = '';
+      // X-Purpose: prefetch: not a view of the f0ck (routes/index.rs)
+      const res = await fetch(u.href, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'text/html', 'X-Purpose': 'prefetch' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const next = new DOMParser().parseFromString(await res.text(), 'text/html').querySelector('[data-fg-live="meta"]');
+      const cur = document.querySelector('[data-fg-live="meta"]');
+      if (next && cur) {
+        cur.replaceChildren(...[...next.childNodes].map(n => document.importNode(n, true)));
+      }
+    } catch (err) {
+      flash(`Couldn't read the metadata: ${err.message}`, 'error');
+    } finally {
+      document.querySelector('[data-fg-live="meta"]')?.classList.remove('fg-meta-busy');
+    }
+  }, true);
 
   // reply: fill the form's parent_id in place (without JavaScript the link reloads with ?reply=<id>)
   document.addEventListener('click', e => {
@@ -294,7 +327,8 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       menus().forEach(d => { d.open = false; });
-      if (/^#(report|delete)$/.test(location.hash)) location.hash = '_';
+      if (/^#(report|delete|edit)$/.test(location.hash)) location.hash = '_';
+      else if (location.hash === '#meta') location.hash = 'edit';
       return;
     }
     if (typing(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;

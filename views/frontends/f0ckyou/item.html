@@ -137,7 +137,7 @@
         {% if (halls_enabled and item.primaryHall) %}<div><dt>Halls</dt><dd><a href="/h/{{ item.primaryHall.slug }}">{{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %}, <a href="/h/{{ h.slug }}">{{ h.name }}</a>{% endfor %}</dd></div>{% endif %}
         {% if item.expires_in %}<div><dt>Expires</dt><dd title="{{ item.expires_at }}">{{ item.expires_in }}</dd></div>{% endif %}
         {% if item.burn_after_read %}<div><dt>Burn after read</dt><dd title="Only the first person to open it sees it, then it's deleted">{{ ("opened, being deleted" if item.burn_claimed else "not opened yet") }}</dd></div>{% endif %}
-        {% if (item.visibility and item.visibility > 0) %}<div><dt>Visibility</dt><dd>{{ fy.ico("lock") }} private</dd></div>{% endif %}
+        {% if (item.visibility and item.visibility > 0) %}<div><dt>Visibility</dt><dd>{{ fy.ico("lock") }} {{ (["public", "unlisted", "private", "unavailable (451)"][(item.visibility|int)] if (item.visibility|int) <= 3 else "private") }}</dd></div>{% endif %}
         <div><dt>Rating</dt><dd><span class="fy-rating fy-rate-{{ fy_rating }}">{{ ("unrated" if fy_rating == "untagged" else fy_rating|upper) }}</span>
           {% if can_rate_item %}
           {% for r in ["sfw", "nsfw", "nsfl"] %}{% if r != "nsfl" or enable_nsfl %}
@@ -229,13 +229,20 @@
   </form>
 </div>
 {% if (can_manage_item or is_mod_or_admin) %}
-{#- Edit (the uploader and staff), like f0ckm's and w0bm's item tools: the title, a new thumbnail,
-    for staff unavailable (451) on/off. Plain forms; with JavaScript they save in place and the
-    title and this dialog come again from the page (data-fy-live). -#}
-{%- set fy_unavailable = ((item.visibility or 0)|int == 3) -%}
+{#- Edit (the uploader and staff): everything of f0ckm's info box (snippets/info-modal.html) and item
+    tools: the title, visibility, expiration, the file's details, similar uploads, a new thumbnail and
+    tag suggestions from the file's metadata. Plain forms; with JavaScript they save in place: the
+    title, the dialog's sections and the description come again from the page (data-fy-live). -#}
+{%- set fy_vis = ((item.visibility or 0)|int) -%}
+{%- set fy_vis_opts = [
+  ["Public", "Everyone sees it: on the front page, in search and in the rankings."],
+  ["Unlisted", "Not in any list; only who has the link sees it."],
+  ["Private", "Only you and the staff see it."],
+  ["Unavailable (451)", "Only the staff see it; everyone else gets 451 Unavailable For Legal Reasons."]] -%}
+{%- set fy_meta_href = (url.pathname ~ (url.search ~ "&" if url.search else "?") ~ "meta=1") if (url and url.pathname and "meta=1" not in (url.search or "")) else here -%}
 <div id="edit" class="fy-modal" data-fy-live="edit">
   <a href="#_" class="fy-modal-bg" aria-label="close"></a>
-  <div class="fy-modal-box">
+  <div class="fy-modal-box fy-edit-box">
     <div class="fy-modal-head"><h2>Edit f0ck {{ item_ref }}</h2><a href="#_" aria-label="close">{{ fy.ico("close") }}</a></div>
     {% if enable_item_title %}
     <form method="post" action="/api/v2/items/{{ item.id }}/title" class="fy-edit-form fy-ajax" data-fy-refresh="title edit" data-fy-close data-fy-ok="Title saved">
@@ -246,28 +253,135 @@
       <div class="fy-modal-btns"><a href="#_" class="fy-btn-text">Cancel</a><button type="submit" class="fy-btn-blue">Save</button></div>
     </form>
     {% endif %}
-    <div class="fy-edit-tools">
-      <h3>Tools</h3>
+    {% if can_manage_item %}
+    <section class="fy-edit-sec" data-fy-live="edit-vis">
+      <h3>{{ fy.ico("eye") }}<span>Visibility</span></h3>
+      {% if (fy_vis == 3 and not is_mod_or_admin) %}
+      <p class="fy-dim">{{ fy_vis_opts[3][0] }}: the staff took it down, only they can change that.</p>
+      {% else %}
+      <form method="post" action="/api/v2/item/visibility" class="fy-edit-vis fy-ajax" data-fy-refresh="edit-vis desc" data-fy-ok="Visibility saved">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="postid" value="{{ item.id }}">
+        <input type="hidden" name="id" value="{{ item.id }}">
+        <input type="hidden" name="back" value="{{ here }}#edit">
+        {% for v in ([0, 1, 2] + ([3] if is_mod_or_admin else [])) %}
+        <label class="fy-radio{% if v == 3 %} fy-radio-danger{% endif %}"><input type="radio" name="visibility" value="{{ v }}"{% if v == fy_vis %} checked{% endif %}><span><b>{{ fy_vis_opts[v][0] }}</b><span class="fy-dim">{{ fy_vis_opts[v][1] }}</span></span></label>
+        {% endfor %}
+        <div class="fy-modal-btns"><button type="submit" class="fy-btn-blue">Save</button></div>
+      </form>
+      {% endif %}
+    </section>
+    {% if enable_expiring_uploads != false %}
+    <section class="fy-edit-sec" data-fy-live="edit-exp">
+      <h3>{{ fy.ico("clock") }}<span>Expiration</span></h3>
+      {% if item.expires_at %}
+      <p>Deletes itself in <b class="fy-countdown" data-countdown="{{ item.expires_at }}">{{ item.expires_countdown }}</b> <span class="fy-dim" title="{{ ((item.expires_at|int) * 1000)|locale_string }} {{ ((item.expires_at|int) * 1000)|tz_label }}" data-local-time="{{ item.expires_at }}" data-local-time-attr="title">({{ ((item.expires_at|int) * 1000)|locale_string }} {{ ((item.expires_at|int) * 1000)|tz_label }})</span></p>
+      {% else %}
+      <p>Never: it stays.</p>
+      {% endif %}
+      {% if item.burn_after_read %}<p class="fy-dim">Burn after read: {{ ("opened by its first viewer, it's being deleted." if item.burn_claimed else "only the first person to open it sees it, then it's deleted.") }}</p>{% endif %}
+      <form method="post" action="/api/v2/items/{{ item.id }}/expiry" class="fy-edit-exp fy-ajax" data-fy-refresh="edit-exp desc" data-fy-ok="Expiration saved">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}#edit">
+        <select name="expiry" aria-label="Expiration">
+          <option value="permanent"{% if not item.expires_at %} selected{% endif %}>Permanent</option>
+          <option value="30minutes">30 minutes</option>
+          <option value="1hour">1 hour</option>
+          <option value="24hours">24 hours</option>
+          <option value="1week">1 week</option>
+          <option value="1month">1 month</option>
+          <option value="custom">Custom&hellip;</option>
+        </select>
+        {#- only while "Custom…" is picked (f0ckyou.css, :has()) -#}
+        <span class="fy-edit-custom">
+          <input type="number" name="expiry_amount" min="0" step="any" placeholder="5" aria-label="Custom expiration">
+          <select name="expiry_unit" aria-label="Custom expiration unit">
+            <option value="minutes" selected>minutes</option>
+            <option value="hours">hours</option>
+            <option value="days">days</option>
+            <option value="weeks">weeks</option>
+          </select>
+        </span>
+        <button type="submit" class="fy-btn-blue">Save</button>
+      </form>
+    </section>
+    {% endif %}
+    {% endif %}
+    <section class="fy-edit-sec">
+      <h3>{{ fy.ico("file") }}<span>File</span></h3>
+      <dl class="fy-facts">
+        <div><dt>ID</dt><dd>{{ item.id }}{% if item.slug %} &middot; {{ item.slug }}{% endif %}</dd></div>
+        <div><dt>Size</dt><dd>{{ item.size }}</dd></div>
+        {% if (item.width and item.height) %}<div><dt>Dimensions</dt><dd>{{ item.width }} &times; {{ item.height }} px</dd></div>{% endif %}
+        <div><dt>MIME type</dt><dd>{{ item.mime }}</dd></div>
+        <div><dt>Direct link</dt><dd><a href="{{ (item.external_thread_url or (("https://www.youtube.com/watch?v=" ~ item.dest.replace("yt:", "", 1)) if item.mime == "video/youtube" else item.dest)) }}" target="_blank" rel="noopener noreferrer">Open the file</a></dd></div>
+        {% if (item.src and item.src.short) %}<div><dt>Source</dt><dd><a href="{{ item.src.long }}" target="_blank" rel="noopener noreferrer">{{ item.src.short }}</a></dd></div>{% endif %}
+      </dl>
+      {% if item.show_repost_row %}
+      <h4>Similar and duplicate uploads</h4>
+      <div class="fy-edit-reposts">
+        {% for key, rp in item.reposts|entries %}
+        <a class="fy-chip fy-chip-small" href="/{{ (rp.slug or rp.id) }}" title="{{ ("Looks the same (perceptual hash)" if rp.match_type == "phash" else "The same file (checksum)") }}">{{ ("~#" if rp.match_type == "phash" else "#") }}{{ (rp.slug or rp.id) }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+    {% if can_manage_item %}
+    <section class="fy-edit-sec fy-edit-tools">
+      <h3>{{ fy.ico("settings") }}<span>Tools</span></h3>
       <form method="post" action="/api/v2/items/{{ item.id }}/rethumb" class="fy-edit-tool fy-ajax" data-fy-close data-fy-ok="New thumbnail made">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="back" value="{{ here }}">
         <button type="submit" class="fy-pill">{{ fy.ico("image") }}<span>New thumbnail</span></button>
         <span class="fy-dim">Make the thumbnail again from the file.</span>
       </form>
-      {% if is_mod_or_admin %}
-      <form method="post" action="/api/v2/item/visibility" class="fy-edit-tool fy-ajax" data-fy-refresh="edit" data-fy-close data-fy-ok="{{ ("Available again" if fy_unavailable else "Unavailable now (451)") }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="postid" value="{{ item.id }}">
-        <input type="hidden" name="id" value="{{ item.id }}">
-        <input type="hidden" name="visibility" value="{{ ("0" if fy_unavailable else "3") }}">
-        <input type="hidden" name="back" value="{{ here }}">
-        <button type="submit" class="fy-pill{% if not fy_unavailable %} fy-pill-danger{% endif %}">{{ fy.ico("lock") }}<span>{{ ("Make available again" if fy_unavailable else "Make unavailable (451)") }}</span></button>
-        <span class="fy-dim">{{ ("Unavailable for legal reasons (451) right now." if fy_unavailable else "Hide it behind a 451 Unavailable For Legal Reasons page.") }}</span>
-      </form>
+      {% if can_extract_meta %}
+      <div class="fy-edit-tool">
+        <a class="fy-pill" href="{{ fy_meta_href }}#meta" data-fy-meta>{{ fy.ico("hash") }}<span>Tag suggestions</span></a>
+        <span class="fy-dim">Tags from the file's metadata: its name, EXIF, title, artist, ...</span>
+      </div>
       {% endif %}
-    </div>
+    </section>
+    {% endif %}
   </div>
 </div>
+{% if (can_manage_item and can_extract_meta) %}
+{#- Tag suggestions: the server reads the file's metadata for ?meta=1 (meta_fields / meta_error,
+    routes/index.rs); without it this is the dialog f0ckyou.js fills from that page -#}
+<div id="meta" class="fy-modal" data-fy-live="meta">
+  <a href="#edit" class="fy-modal-bg" aria-label="back"></a>
+  <div class="fy-modal-box">
+    <div class="fy-modal-head"><h2>Tag suggestions</h2><a href="#edit" aria-label="back">{{ fy.ico("close") }}</a></div>
+    {% if (meta_fields is defined and meta_fields is sequence) %}
+    {% if meta_fields %}
+    {%- set fy_tagnames = (item.tags or [])|map(attribute="tag")|map("lower")|list -%}
+    <p class="fy-dim">From the file's metadata. Pick one to add it as a tag.</p>
+    <div class="fy-meta-list">
+      {% for f in meta_fields %}
+      {% if (f|lower) in fy_tagnames %}
+      <span class="fy-meta-tag is-added">{{ fy.ico("check") }}<span>{{ f }}</span></span>
+      {% else %}
+      <form method="post" action="/api/v2/tags/{{ item.id }}" class="fy-inline fy-ajax" data-fy-refresh="desc" data-fy-ok="Tag added" data-fy-added>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}#meta">
+        <input type="hidden" name="tagname" value="{{ f }}">
+        <button type="submit" class="fy-meta-tag">{{ fy.ico("check", "fy-meta-on") }}<span>{{ f }}</span></button>
+      </form>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="fy-dim">The file has no metadata to suggest tags from.</p>
+    {% endif %}
+    {% elif meta_error is defined %}
+    <p class="fy-dim">{{ meta_error }}</p>
+    {% else %}
+    <p class="fy-dim">Reading the file's metadata&hellip;</p>
+    {% endif %}
+    <div class="fy-modal-btns"><a href="#edit" class="fy-btn-text">Back</a></div>
+  </div>
+</div>
+{% endif %}
 {% endif %}
 {% if is_mod_or_admin %}
 <div id="delete" class="fy-modal">

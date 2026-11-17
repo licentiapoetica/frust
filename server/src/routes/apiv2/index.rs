@@ -7,7 +7,7 @@
 //! that can never match. The live route is in scroller.mjs.
 
 mod items;
-mod meta;
+pub(crate) mod meta;
 pub mod views;
 
 use crate::db::{Row, RowExt, Sql};

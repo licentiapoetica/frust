@@ -27,7 +27,7 @@
       <span class="fg-fav fg-fav-letter">{{ ((uploader_name or domain)[:1])|upper }}</span>
       <span class="fg-result-who">{% if (uploader and not is_anonymized) %}<a class="fg-result-name" href="/user/{{ uploader|lower|encode_uri_component }}">{{ uploader_name }}</a>{% else %}<span class="fg-result-name">{{ (uploader_name or domain) }}</span>{% endif %}<cite>https://{{ domain }}{% if (tmp and tmp.tag) %} &rsaquo; tag &rsaquo; {{ tmp.tag|lower }}{% endif %} &rsaquo; {{ item_ref }}</cite></span>
     </div>
-    <h1 class="fg-item-title">{% if (enable_oc and item.is_oc) %}<span class="fg-label">OC</span> {% endif %}{{ fg_item_title }}</h1>
+    <h1 class="fg-item-title" data-fg-live="title">{% if (enable_oc and item.is_oc) %}<span class="fg-label">OC</span> {% endif %}{{ fg_item_title }}</h1>
 
     <div class="fg-media">
       {% if item.mime == "video/youtube" %}
@@ -89,6 +89,7 @@
       {% endif %}
       <a class="fg-chip" href="{{ item.dest }}" target="_blank">Visit</a>
       <a class="fg-chip" href="#report">Report</a>
+      {% if (can_manage_item or is_mod_or_admin) %}<a class="fg-chip" href="#edit">Edit</a>{% endif %}
       {% if is_mod_or_admin %}<a class="fg-chip fg-chip-danger" href="#delete">Delete</a>{% endif %}
     </div>
 
@@ -109,7 +110,7 @@
       {% if (halls_enabled and item.primaryHall) %}<div><dt>Halls</dt><dd><a href="/h/{{ item.primaryHall.slug }}">{{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %}, <a href="/h/{{ h.slug }}">{{ h.name }}</a>{% endfor %}</dd></div>{% endif %}
       {% if item.expires_in %}<div><dt>Expires</dt><dd title="{{ item.expires_at }}">{{ item.expires_in }}</dd></div>{% endif %}
       {% if item.burn_after_read %}<div><dt>Burn after read</dt><dd title="Only the first person to open it sees it, then it's deleted">{{ ("opened, being deleted" if item.burn_claimed else "not opened yet") }}</dd></div>{% endif %}
-      {% if (item.visibility and item.visibility > 0) %}<div><dt>Visibility</dt><dd>private</dd></div>{% endif %}
+      {% if (item.visibility and item.visibility > 0) %}<div><dt>Visibility</dt><dd>{{ (["public", "unlisted", "private", "unavailable (451)"][(item.visibility|int)] if (item.visibility|int) <= 3 else "private") }}</dd></div>{% endif %}
       <div><dt>Rating</dt><dd><span class="fg-rating fg-rating-{{ fg_rating }}">{{ ("unrated" if fg_rating == "untagged" else fg_rating|upper) }}</span></dd></div>
     </dl>
     {% if can_rate_item %}
@@ -177,6 +178,161 @@
     <div class="fg-modal-btns"><a href="#_" class="fg-btn-text">Cancel</a><button type="submit" class="fg-btn-blue">Send</button></div>
   </form>
 </div>
+{% if (can_manage_item or is_mod_or_admin) %}
+{#- Edit (the uploader and staff): everything of f0ckm's info box (snippets/info-modal.html) and item
+    tools: the title, visibility, expiration, the file's details, similar uploads, a new thumbnail and
+    tag suggestions from the file's metadata. Plain forms; with JavaScript they save in place: the
+    title, the dialog's sections and the knowledge panel come again from the page (data-fg-live). -#}
+{%- set fg_vis = ((item.visibility or 0)|int) -%}
+{%- set fg_vis_opts = [
+  ["Public", "Everyone sees it: on the front page, in search and in the rankings."],
+  ["Unlisted", "Not in any list; only who has the link sees it."],
+  ["Private", "Only you and the staff see it."],
+  ["Unavailable (451)", "Only the staff see it; everyone else gets 451 Unavailable For Legal Reasons."]] -%}
+{%- set fg_meta_href = (url.pathname ~ (url.search ~ "&" if url.search else "?") ~ "meta=1") if (url and url.pathname and "meta=1" not in (url.search or "")) else here -%}
+<div id="edit" class="fg-modal" data-fg-live="edit">
+  <a href="#_" class="fg-modal-bg" aria-label="close"></a>
+  <div class="fg-modal-box fg-edit-box">
+    <div class="fg-modal-head"><h2>Edit f0ck {{ item_ref }}</h2><a href="#_" aria-label="close">&#215;</a></div>
+    {% if enable_item_title %}
+    <form method="post" action="/api/v2/items/{{ item.id }}/title" class="fg-edit-sec fg-ajax" data-fg-refresh="title edit" data-fg-close data-fg-ok="Title saved">
+      <h3><label for="fg-edit-title">Title</label></h3>
+      <input type="text" id="fg-edit-title" name="title" maxlength="500" value="{{ (item.title or "") }}" placeholder="Add a title">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ here }}">
+      <div class="fg-modal-btns"><a href="#_" class="fg-btn-text">Cancel</a><button type="submit" class="fg-btn-blue">Save</button></div>
+    </form>
+    {% endif %}
+    {% if can_manage_item %}
+    <section class="fg-edit-sec" data-fg-live="edit-vis">
+      <h3>Visibility</h3>
+      {% if (fg_vis == 3 and not is_mod_or_admin) %}
+      <p class="fg-dim">{{ fg_vis_opts[3][0] }}: the staff took it down, only they can change that.</p>
+      {% else %}
+      <form method="post" action="/api/v2/item/visibility" class="fg-edit-vis fg-ajax" data-fg-refresh="edit-vis kp" data-fg-ok="Visibility saved">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="postid" value="{{ item.id }}">
+        <input type="hidden" name="id" value="{{ item.id }}">
+        <input type="hidden" name="back" value="{{ here }}#edit">
+        {% for v in ([0, 1, 2] + ([3] if is_mod_or_admin else [])) %}
+        <label class="fg-radio{% if v == 3 %} fg-radio-danger{% endif %}"><input type="radio" name="visibility" value="{{ v }}"{% if v == fg_vis %} checked{% endif %}><span><b>{{ fg_vis_opts[v][0] }}</b><span class="fg-dim">{{ fg_vis_opts[v][1] }}</span></span></label>
+        {% endfor %}
+        <div class="fg-modal-btns"><button type="submit" class="fg-btn-blue">Save</button></div>
+      </form>
+      {% endif %}
+    </section>
+    {% if enable_expiring_uploads != false %}
+    <section class="fg-edit-sec" data-fg-live="edit-exp">
+      <h3>Expiration</h3>
+      {% if item.expires_at %}
+      <p>Deletes itself in <b class="fg-countdown" data-countdown="{{ item.expires_at }}">{{ item.expires_countdown }}</b> <span class="fg-dim" title="{{ ((item.expires_at|int) * 1000)|locale_string }} {{ ((item.expires_at|int) * 1000)|tz_label }}" data-local-time="{{ item.expires_at }}" data-local-time-attr="title">({{ ((item.expires_at|int) * 1000)|locale_string }} {{ ((item.expires_at|int) * 1000)|tz_label }})</span></p>
+      {% else %}
+      <p>Never: it stays.</p>
+      {% endif %}
+      {% if item.burn_after_read %}<p class="fg-dim">Burn after read: {{ ("opened by its first viewer, it's being deleted." if item.burn_claimed else "only the first person to open it sees it, then it's deleted.") }}</p>{% endif %}
+      <form method="post" action="/api/v2/items/{{ item.id }}/expiry" class="fg-edit-exp fg-ajax" data-fg-refresh="edit-exp kp" data-fg-ok="Expiration saved">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}#edit">
+        <select name="expiry" aria-label="Expiration">
+          <option value="permanent"{% if not item.expires_at %} selected{% endif %}>Permanent</option>
+          <option value="30minutes">30 minutes</option>
+          <option value="1hour">1 hour</option>
+          <option value="24hours">24 hours</option>
+          <option value="1week">1 week</option>
+          <option value="1month">1 month</option>
+          <option value="custom">Custom&hellip;</option>
+        </select>
+        {#- only while "Custom…" is picked (f0ckgle.css, :has()) -#}
+        <span class="fg-edit-custom">
+          <input type="number" name="expiry_amount" min="0" step="any" placeholder="5" aria-label="Custom expiration">
+          <select name="expiry_unit" aria-label="Custom expiration unit">
+            <option value="minutes" selected>minutes</option>
+            <option value="hours">hours</option>
+            <option value="days">days</option>
+            <option value="weeks">weeks</option>
+          </select>
+        </span>
+        <button type="submit" class="fg-btn-blue">Save</button>
+      </form>
+    </section>
+    {% endif %}
+    {% endif %}
+    <section class="fg-edit-sec">
+      <h3>File</h3>
+      <dl class="fg-kp-facts">
+        <div><dt>ID</dt><dd>{{ item.id }}{% if item.slug %} &middot; {{ item.slug }}{% endif %}</dd></div>
+        <div><dt>Size</dt><dd>{{ item.size }}</dd></div>
+        {% if (item.width and item.height) %}<div><dt>Dimensions</dt><dd>{{ item.width }} &times; {{ item.height }} px</dd></div>{% endif %}
+        <div><dt>MIME type</dt><dd>{{ item.mime }}</dd></div>
+        <div><dt>Direct link</dt><dd><a href="{{ (item.external_thread_url or (("https://www.youtube.com/watch?v=" ~ item.dest.replace("yt:", "", 1)) if item.mime == "video/youtube" else item.dest)) }}" target="_blank" rel="noopener noreferrer">Open the file</a></dd></div>
+        {% if (item.src and item.src.short) %}<div><dt>Source</dt><dd><a href="{{ item.src.long }}" target="_blank" rel="noopener noreferrer">{{ item.src.short }}</a></dd></div>{% endif %}
+      </dl>
+      {% if item.show_repost_row %}
+      <h4>Similar and duplicate uploads</h4>
+      <div class="fg-edit-row">
+        {% for key, rp in item.reposts|entries %}
+        <a class="fg-chip fg-chip-small" href="/{{ (rp.slug or rp.id) }}" title="{{ ("Looks the same (perceptual hash)" if rp.match_type == "phash" else "The same file (checksum)") }}">{{ ("~#" if rp.match_type == "phash" else "#") }}{{ (rp.slug or rp.id) }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+    {% if can_manage_item %}
+    <section class="fg-edit-sec">
+      <h3>Tools</h3>
+      <form method="post" action="/api/v2/items/{{ item.id }}/rethumb" class="fg-edit-row fg-ajax" data-fg-close data-fg-ok="New thumbnail made">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}">
+        <button type="submit" class="fg-chip">New thumbnail</button>
+        <span class="fg-dim">Make the thumbnail again from the file.</span>
+      </form>
+      {% if can_extract_meta %}
+      <div class="fg-edit-row">
+        <a class="fg-chip" href="{{ fg_meta_href }}#meta" data-fg-meta>Tag suggestions</a>
+        <span class="fg-dim">Tags from the file's metadata: its name, EXIF, title, artist, ...</span>
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% if (can_manage_item and can_extract_meta) %}
+{#- Tag suggestions: the server reads the file's metadata for ?meta=1 (meta_fields / meta_error,
+    routes/index.rs); without it this is the dialog f0ckgle.js fills from that page -#}
+<div id="meta" class="fg-modal" data-fg-live="meta">
+  <a href="#edit" class="fg-modal-bg" aria-label="back"></a>
+  <div class="fg-modal-box">
+    <div class="fg-modal-head"><h2>Tag suggestions</h2><a href="#edit" aria-label="back">&#215;</a></div>
+    {% if (meta_fields is defined and meta_fields is sequence) %}
+    {% if meta_fields %}
+    {%- set fg_tagnames = (item.tags or [])|map(attribute="tag")|map("lower")|list -%}
+    <p class="fg-dim">From the file's metadata. Pick one to add it as a tag.</p>
+    <div class="fg-edit-row">
+      {% for f in meta_fields %}
+      {% if (f|lower) in fg_tagnames %}
+      <span class="fg-chip fg-meta-tag is-added">&#10003; {{ f }}</span>
+      {% else %}
+      <form method="post" action="/api/v2/tags/{{ item.id }}" class="fg-inline fg-ajax" data-fg-refresh="kp" data-fg-ok="Tag added" data-fg-added>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}#meta">
+        <input type="hidden" name="tagname" value="{{ f }}">
+        <button type="submit" class="fg-chip fg-meta-tag"><span class="fg-meta-on">&#10003; </span>{{ f }}</button>
+      </form>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="fg-dim">The file has no metadata to suggest tags from.</p>
+    {% endif %}
+    {% elif meta_error is defined %}
+    <p class="fg-dim">{{ meta_error }}</p>
+    {% else %}
+    <p class="fg-dim">Reading the file's metadata&hellip;</p>
+    {% endif %}
+    <div class="fg-modal-btns"><a href="#edit" class="fg-btn-text">Back</a></div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
 {% if is_mod_or_admin %}
 <div id="delete" class="fg-modal">
   <a href="#_" class="fg-modal-bg" aria-label="close"></a>

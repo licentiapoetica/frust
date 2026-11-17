@@ -3599,7 +3599,12 @@ body.fy-page-watch {
   gap: .5rem;
 }
 
-.fy-edit-tools {
+.fy-edit-box {
+  width: min(36rem, 100%);
+}
+
+/* its sections: visibility, expiration, the file, tools */
+.fy-edit-sec {
   display: flex;
   flex-direction: column;
   gap: .625rem;
@@ -3607,10 +3612,175 @@ body.fy-page-watch {
   border-top: 1px solid var(--fy-line);
 }
 
-.fy-edit-tools h3 {
+.fy-edit-sec h3 {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
   margin: 0;
   font-size: 1rem;
   font-weight: 500;
+}
+
+.fy-edit-sec h3 .fy-ico {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.fy-edit-sec h4 {
+  margin: 0;
+  color: var(--fy-muted);
+  font-size: .875rem;
+  font-weight: 500;
+}
+
+.fy-edit-sec p {
+  margin: 0;
+}
+
+/* visibility: one choice per row, the picked one framed */
+.fy-edit-vis {
+  display: flex;
+  flex-direction: column;
+  gap: .375rem;
+}
+
+.fy-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .5rem .625rem;
+  border: 1px solid var(--fy-input-line);
+  cursor: pointer;
+}
+
+.fy-radio:hover {
+  background: var(--fy-soft);
+}
+
+.fy-radio:has(input:checked) {
+  border-color: var(--fy-blue);
+}
+
+.fy-radio input {
+  margin: .1875rem 0 0;
+  accent-color: var(--fy-blue);
+}
+
+.fy-radio > span {
+  display: flex;
+  flex-direction: column;
+  gap: .125rem;
+}
+
+.fy-radio b {
+  font-weight: 500;
+}
+
+.fy-radio .fy-dim {
+  font-size: .8125rem;
+}
+
+.fy-radio-danger b {
+  color: #ff4e45;
+}
+
+/* expiration: the presets, "Custom…" adds an amount and a unit (shown only while it's picked) */
+.fy-edit-exp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+
+.fy-edit-exp select,
+.fy-edit-exp input[type="number"] {
+  height: 2.25rem;
+  padding: 0 .5rem;
+  border: 1px solid var(--fy-input-line);
+  background: var(--fy-input);
+  color: var(--fy-text);
+  font: inherit;
+}
+
+.fy-edit-exp select:focus,
+.fy-edit-exp input[type="number"]:focus {
+  border-color: var(--fy-focus);
+  outline: 0;
+}
+
+.fy-edit-custom {
+  display: flex;
+  gap: .5rem;
+}
+
+.fy-edit-custom input[type="number"] {
+  width: 5rem;
+}
+
+.fy-edit-exp:not(:has(option[value="custom"]:checked)) .fy-edit-custom {
+  display: none;
+}
+
+/* the live countdown (f0ck-core.js [data-countdown]), red in the last minute */
+.fy-countdown {
+  font-variant-numeric: tabular-nums;
+}
+
+.fy-countdown.countdown-soon {
+  color: #ff4e45;
+}
+
+.fy-edit-reposts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem;
+}
+
+/* tag suggestions (#meta): one button per text of the file's metadata, a check once it's a tag */
+.fy-meta-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.fy-meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  max-width: 100%;
+  padding: .375rem .75rem;
+  border: 0;
+  background: var(--fy-soft);
+  color: var(--fy-text);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.fy-meta-tag:hover {
+  background: var(--fy-soft-2);
+}
+
+.fy-meta-tag .fy-ico {
+  width: 1rem;
+  height: 1rem;
+}
+
+.fy-inline:not(.is-added) .fy-meta-on {
+  display: none;
+}
+
+.fy-meta-tag.is-added,
+.is-added > .fy-meta-tag {
+  background: none;
+  color: var(--fy-muted);
+  cursor: default;
+}
+
+/* while f0ckyou.js reads the suggestions again */
+.fy-meta-busy .fy-modal-box {
+  opacity: .6;
 }
 
 .fy-edit-tool {

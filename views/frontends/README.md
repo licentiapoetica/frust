@@ -100,6 +100,18 @@ interests (`f0ckInterestEngine.getTopAffinities()`, f0ck-core.js: `session_tags`
 interest tracking on its item page with `f0ckInterestEngine.startTrackingItem({ itemId, tags,
 creator })`. f0ckyou: `snippets/recommendations.html`, the "Up next" part of f0ckyou.js.
 
+**Item tools (the uploader and staff).** f0ckm's info box (`snippets/info-modal.html`) is what an
+item's owner and the staff can do with it; a frontend's item page offers all of it, as plain forms
+(f0ckgle / f0ckyou: the `#edit` dialog): title (`/api/v2/items/:id/title`), visibility
+(`/api/v2/item/visibility`: public / unlisted / private, 451 for staff only, `can_manage_item`,
+`is_mod_or_admin`), expiration (`/api/v2/items/:id/expiry`, presets and `custom` with
+`expiry_amount` + `expiry_unit`, if `enable_expiring_uploads`), the file's details and similar uploads
+(`item.show_repost_row`, `item.reposts`), a new thumbnail (`/api/v2/items/:id/rethumb`) and tag
+suggestions from the file's metadata (`can_extract_meta`). For those the item page with `?meta=1`
+gets `meta_fields` (the texts, each one an add-tag form) or `meta_error` (`routes/index.rs`,
+`apiv2/index/meta.rs` `item_fields`), so they work without JavaScript; with it the frontend fetches
+that render and shows its dialog in place (f0ckyou.js / f0ckgle.js `data-*-meta`).
+
 **Player and blurred background (optional).** f0ckm's video player is `/s/js/v0ck.js` +
 `/s/css/v0ck.css` (`new v0ck(video)`; f0ckv2, f0ckyou). Its settings menu calls
 `window.toggleBackground` / `window.toggleAutoplay` when they exist. f0ckm's blurred item background

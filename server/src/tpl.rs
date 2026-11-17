@@ -1388,8 +1388,8 @@ mod tests {
             "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" } });
         let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x", "replies": [] });
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it,
-            "pagination": { "prev": 8, "next": 6 }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_rate_item": true, "user_has_favorited": true,
-            "isSubscribed": false, "static_comments": [comment], "phrase": "nice" }));
+            "pagination": { "prev": 8, "next": 6 }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_manage_item": true, "can_extract_meta": true,
+            "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice" }));
         dump("item", &page);
         assert!(page.contains("<a class=\"fg-chip\" id=\"fg-prev\" href=\"/tag/cat/8\""));
         assert!(page.contains("<input type=\"hidden\" name=\"action\" value=\"remove\">"));
@@ -1407,6 +1407,35 @@ mod tests {
         assert!(page.contains("<div id=\"report\" class=\"fg-modal\">"));
         assert!(page.contains("<div id=\"delete\" class=\"fg-modal\">"));
         assert!(page.contains("\"itemId\": 7"));
+        // Edit: everything of f0ckm's info box (visibility, expiration, the file, tools) as plain forms
+        assert!(page.contains("<a class=\"fg-chip\" href=\"#edit\">Edit</a>") && page.contains("<div id=\"edit\" class=\"fg-modal\" data-fg-live=\"edit\">"));
+        assert!(page.contains("<form method=\"post\" action=\"/api/v2/item/visibility\" class=\"fg-edit-vis fg-ajax\""));
+        assert!(page.contains("name=\"visibility\" value=\"0\" checked>") && page.contains("name=\"visibility\" value=\"3\">"), "staff: 451 too");
+        assert!(page.contains("<form method=\"post\" action=\"/api/v2/items/7/expiry\" class=\"fg-edit-exp fg-ajax\"") && page.contains("<option value=\"custom\">"));
+        assert!(page.contains("<p>Never: it stays.</p>"));
+        assert!(page.contains("<form method=\"post\" action=\"/api/v2/items/7/rethumb\" class=\"fg-edit-row fg-ajax\""));
+        assert!(page.contains("<a class=\"fg-chip\" href=\"/tag/cat/7?meta=1#meta\" data-fg-meta>Tag suggestions</a>"));
+        assert!(page.contains("<div id=\"meta\" class=\"fg-modal\" data-fg-live=\"meta\">") && page.contains("Reading the file's metadata"));
+        for live in ["title", "edit", "edit-vis", "edit-exp", "meta"] {
+            assert_eq!(page.matches(&format!("data-fg-live=\"{live}\"")).count(), 1, "{live}");
+        }
+        // the uploader: no 451; a private, expiring item; ?meta=1 brings the tag suggestions
+        let mut own = it.clone();
+        own["visibility"] = serde_json::json!(2);
+        own["expires_at"] = serde_json::json!("1900000000");
+        own["expires_countdown"] = serde_json::json!("1d 2h");
+        let mine = render(&fe("item"), serde_json::json!({ "url": { "pathname": "/7", "search": "?meta=1", "qs": {} }, "tmp": {}, "session": session, "item": own,
+            "pagination": {}, "link": { "main": "/", "suffix": "" }, "can_manage_item": true, "can_extract_meta": true, "meta_fields": ["cat", "holiday 2024"] }));
+        dump("item-mine", &mine);
+        assert!(mine.contains("name=\"visibility\" value=\"2\" checked>") && !mine.contains("name=\"visibility\" value=\"3\""));
+        assert!(mine.contains("<dt>Visibility</dt><dd>private</dd>"));
+        assert!(mine.contains("<b class=\"fg-countdown\" data-countdown=\"1900000000\">1d 2h</b>"));
+        assert!(mine.contains("<span class=\"fg-chip fg-meta-tag is-added\">&#10003; cat</span>"), "already a tag (Cat)");
+        assert!(mine.contains("<input type=\"hidden\" name=\"back\" value=\"/7?meta=1#meta\">") && mine.contains("<input type=\"hidden\" name=\"tagname\" value=\"holiday 2024\">"));
+        assert!(mine.contains("href=\"/7?meta=1#meta\" data-fg-meta") && !mine.contains("Reading the file's metadata"));
+        let failed = render(&fe("item"), serde_json::json!({ "url": url("/7", serde_json::json!({})), "tmp": {}, "session": session, "item": it.clone(),
+            "pagination": {}, "link": { "main": "/", "suffix": "" }, "can_manage_item": true, "can_extract_meta": true, "meta_error": "Extraction failed" }));
+        assert!(failed.contains("<p class=\"fg-dim\">Extraction failed</p>"));
 
         // profile, error, sign-in
         let user = render(&fe("user"), serde_json::json!({ "url": url("/user/al", serde_json::json!({})), "session": session,
@@ -1594,8 +1623,9 @@ mod tests {
         let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
             "replies": [{ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content_html": "yo", "attachments_html": "", "timeago": "now", "iso": "x" }] });
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it.clone(),
-            "pagination": { "prev": 6, "next": 8, "cheat": [4, 5, 6, 7, 8, 9] }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_rate_item": true,
-            "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice", "recommendations": [rec.clone()] }));
+            "pagination": { "prev": 6, "next": 8, "cheat": [4, 5, 6, 7, 8, 9] }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_manage_item": true,
+            "can_extract_meta": true, "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice",
+            "recommendations": [rec.clone()] }));
         dump("item", &page);
         assert!(page.contains("<body class=\"fy-page-watch\">"));
         assert!(page.contains("<video id=\"my-video\" class=\"fy-media\""));
@@ -1626,10 +1656,29 @@ mod tests {
         assert!(page.contains("data-fy-notif-tabs") && page.contains("data-fy-notif-body") && page.contains("data-fy-notif-read"));
         assert!(page.contains("<a class=\"fy-pill\" href=\"#edit\">") && page.contains("<div id=\"edit\" class=\"fy-modal\" data-fy-live=\"edit\">"));
         assert!(page.contains("<form method=\"post\" action=\"/api/v2/items/7/rethumb\" class=\"fy-edit-tool fy-ajax\""));
-        assert!(page.contains("<input type=\"hidden\" name=\"visibility\" value=\"3\">"));
-        for live in ["actions", "desc", "comments", "comments-head", "title", "edit"] {
+        // Edit: everything of f0ckm's info box (visibility, expiration, the file, tools) as plain forms
+        assert!(page.contains("<form method=\"post\" action=\"/api/v2/item/visibility\" class=\"fy-edit-vis fy-ajax\""));
+        assert!(page.contains("name=\"visibility\" value=\"0\" checked>") && page.contains("name=\"visibility\" value=\"3\">"), "staff: 451 too");
+        assert!(page.contains("<form method=\"post\" action=\"/api/v2/items/7/expiry\" class=\"fy-edit-exp fy-ajax\"") && page.contains("<option value=\"custom\">"));
+        assert!(page.contains("href=\"/tag/cat/7?meta=1#meta\" data-fy-meta>"));
+        assert!(page.contains("<div id=\"meta\" class=\"fy-modal\" data-fy-live=\"meta\">") && page.contains("Reading the file's metadata"));
+        for live in ["actions", "desc", "comments", "comments-head", "title", "edit", "edit-vis", "edit-exp", "meta"] {
             assert_eq!(page.matches(&format!("data-fy-live=\"{live}\"")).count(), 1, "{live}");
         }
+        // the uploader: no 451; a private, expiring item; ?meta=1 brings the tag suggestions
+        let mut own = it.clone();
+        own["visibility"] = serde_json::json!(2);
+        own["expires_at"] = serde_json::json!("1900000000");
+        own["expires_countdown"] = serde_json::json!("1d 2h");
+        let mine = render(&fe("item"), serde_json::json!({ "url": { "pathname": "/7", "search": "?meta=1", "qs": {} }, "tmp": {}, "session": session, "item": own,
+            "pagination": {}, "link": { "main": "/", "suffix": "" }, "can_manage_item": true, "can_extract_meta": true, "meta_fields": ["cat", "holiday 2024"] }));
+        dump("item-mine", &mine);
+        assert!(mine.contains("name=\"visibility\" value=\"2\" checked>") && !mine.contains("name=\"visibility\" value=\"3\""));
+        assert!(mine.contains("#lock\"></use></svg> private</dd>"));
+        assert!(mine.contains("<b class=\"fy-countdown\" data-countdown=\"1900000000\">1d 2h</b>"));
+        assert!(mine.contains("<span class=\"fy-meta-tag is-added\">"), "already a tag (Cat)");
+        assert!(mine.contains("<input type=\"hidden\" name=\"back\" value=\"/7?meta=1#meta\">") && mine.contains("<input type=\"hidden\" name=\"tagname\" value=\"holiday 2024\">"));
+        assert!(mine.contains("href=\"/7?meta=1#meta\" data-fy-meta>") && !mine.contains("Reading the file's metadata"));
         assert!(page.contains("data-reply=\"3\" data-name=\"al\""));
         assert!(page.contains("<summary>1 reply</summary>"));
         assert!(page.contains("2 Comments"));

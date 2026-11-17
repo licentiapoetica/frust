@@ -1704,6 +1704,173 @@ html.no-js .fg-comment-tools {
   gap: .5rem;
 }
 
+/* the Edit dialog on the item page (item.html #edit): title, visibility, expiration, the file, tools */
+.fg-edit-box {
+  width: min(36rem, 100%);
+}
+
+.fg-edit-sec {
+  display: flex;
+  flex-direction: column;
+  gap: .625rem;
+  margin: 0;
+  padding-top: .75rem;
+  border-top: 1px solid var(--fg-border);
+}
+
+.fg-edit-sec h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.fg-edit-sec h4 {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: .875rem;
+  font-weight: 400;
+}
+
+.fg-edit-sec p,
+.fg-edit-sec .fg-kp-facts {
+  margin: 0;
+}
+
+.fg-edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .75rem;
+  margin: 0;
+}
+
+.fg-edit-row .fg-dim {
+  flex: 1 1 12rem;
+  font-size: .8125rem;
+}
+
+/* visibility: one choice per row, the picked one framed */
+.fg-edit-vis {
+  display: flex;
+  flex-direction: column;
+  gap: .375rem;
+}
+
+.fg-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .5rem .625rem;
+  border: 1px solid var(--fg-border);
+  cursor: pointer;
+}
+
+.fg-radio:hover {
+  background: var(--fg-hover);
+}
+
+.fg-radio:has(input:checked) {
+  border-color: var(--fg-blue);
+  background: #e8f0fe;
+}
+
+.fg-radio input {
+  margin: .1875rem 0 0;
+  accent-color: var(--fg-blue);
+}
+
+.fg-radio > span {
+  display: flex;
+  flex-direction: column;
+  gap: .125rem;
+}
+
+.fg-radio b {
+  font-weight: 400;
+}
+
+.fg-radio .fg-dim {
+  font-size: .8125rem;
+}
+
+.fg-radio-danger b {
+  color: #d93025;
+}
+
+/* expiration: the presets, "Custom…" adds an amount and a unit (shown only while it's picked) */
+.fg-edit-exp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+
+.fg-edit-exp select,
+.fg-edit-exp input[type="number"] {
+  height: 2.25rem;
+  padding: 0 .5rem;
+  border: 1px solid var(--fg-border);
+  background: var(--fg-bg);
+  color: var(--fg-text);
+  font: inherit;
+}
+
+.fg-edit-exp select:focus,
+.fg-edit-exp input[type="number"]:focus {
+  border-color: var(--fg-blue);
+  outline: 0;
+}
+
+.fg-edit-custom {
+  display: flex;
+  gap: .5rem;
+}
+
+.fg-edit-custom input[type="number"] {
+  width: 5rem;
+}
+
+.fg-edit-exp:not(:has(option[value="custom"]:checked)) .fg-edit-custom {
+  display: none;
+}
+
+/* the live countdown (f0ck-core.js [data-countdown]), red in the last minute */
+.fg-countdown {
+  font-variant-numeric: tabular-nums;
+}
+
+.fg-countdown.countdown-soon {
+  color: #d93025;
+}
+
+/* tag suggestions (#meta): metadata texts can be long, the chips wrap */
+.fg-meta-tag {
+  height: auto;
+  max-width: 100%;
+  padding: .3125rem 1rem;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.fg-inline:not(.is-added) .fg-meta-on {
+  display: none;
+}
+
+.fg-meta-tag.is-added,
+.is-added > .fg-meta-tag {
+  border-color: #d2e3fc;
+  background: #e8f0fe;
+  color: #174ea6;
+  cursor: default;
+}
+
+/* while f0ckgle.js reads the suggestions again */
+.fg-meta-busy .fg-modal-box {
+  opacity: .6;
+}
+
 /* ── error page ── */
 .fg-error {
   flex: 1;

@@ -81,25 +81,49 @@ fn value_text(v: &Value) -> String {
 }
 
 pub(super) async fn extract_item(st: AppState, req: Req) -> Res {
-    let cfg = st.cfg();
-    let id: i32 = match req.param("id").and_then(|i| i.parse().ok()) {
-        Some(i) => i,
-        None => return j(json!({ "success": false, "msg": "Item not found" }), 404),
+    let Some(id) = req.param("id").and_then(|i| i.parse::<i32>().ok()) else {
+        return j(json!({ "success": false, "msg": "Item not found" }), 404);
     };
-    let r: anyhow::Result<Res> = async {
+    match item_fields(&st, req.session(), id).await {
+        Ok(fields) => j(json!({ "success": true, "fields": fields }), 200),
+        Err((code, msg)) => j(json!({ "success": false, "msg": msg }), code),
+    }
+}
+
+/// The "extract metadata" tool: tag suggestions from an item's file (original file name, EXIF,
+/// title / artist / ... tags); YouTube items: the video's title and channel (`/meta/fetch`).
+/// Err: HTTP status and a message for the visitor. Also used by the item page (`?meta=1`), so the
+/// frontends offer the suggestions without JavaScript.
+pub(crate) async fn item_fields(st: &AppState, session: Option<&crate::session::Session>, id: i32) -> Result<Vec<String>, (u16, String)> {
+    let cfg = st.cfg();
+    let r: anyhow::Result<Result<Vec<String>, (u16, String)>> = async {
         // Private / unavailable items: only for those who may see them (EXIF can hold GPS)
-        if !crate::f0cklib::may_access_item(&st, req.session(), id).await? {
-            return Ok(j(json!({ "success": false, "msg": "Item not found" }), 404));
+        if !crate::f0cklib::may_access_item(st, session, id).await? {
+            return Ok(Err((404, "Item not found".into())));
         }
         let Some(item) = sql!("SELECT dest, mime, original_filename FROM items WHERE id = ", id, " AND is_deleted = false").fetch_optional(&st.db).await? else {
-            return Ok(j(json!({ "success": false, "msg": "Item not found" }), 404));
+            return Ok(Err((404, "Item not found".into())));
         };
         let mime = item.string("mime");
-        let is_media = (mime.starts_with("video/") || mime.starts_with("audio/") || mime.starts_with("image/")) && !mime.contains("flash") && !mime.contains("youtube");
-        if !is_media {
-            return Ok(j(json!({ "success": false, "msg": "Metadata extraction not available for this file type" }), 400));
-        }
         let dest = item.string("dest");
+        if mime == "video/youtube" {
+            let url = format!("https://www.youtube.com/watch?v={}", dest.strip_prefix("yt:").unwrap_or(&dest));
+            let (v, code) = fetch_meta(st, &url, session.is_some()).await;
+            if v.get("success") != Some(&json!(true)) {
+                return Ok(Err((code, v.get("msg").and_then(Value::as_str).unwrap_or("Extraction failed").to_string())));
+            }
+            let mut f = Fields { out: vec![], seen: Default::default() };
+            for k in ["title", "author"] {
+                if let Some(Value::String(t)) = v["meta"].get(k) {
+                    f.add(t);
+                }
+            }
+            return Ok(Ok(f.out));
+        }
+        let is_media = (mime.starts_with("video/") || mime.starts_with("audio/") || mime.starts_with("image/")) && !mime.contains("flash");
+        if !is_media {
+            return Ok(Err((400, "Metadata extraction not available for this file type".into())));
+        }
         let full = if crate::media::is_plain_name(&dest) { cfg.paths.b.join(&dest) } else { PathBuf::from("/nonexistent") };
         let mut f = Fields { out: vec![], seen: Default::default() };
         if let Some(orig) = item.str("original_filename").filter(|o| !o.is_empty()) {
@@ -110,7 +134,7 @@ pub(super) async fn extract_item(st: AppState, req: Req) -> Res {
             f.add(base.trim());
         }
         if mime.starts_with("image/") {
-            exif_fields(&st, &full, &mut f).await;
+            exif_fields(st, &full, &mut f).await;
         } else {
             let meta = crate::media::queue::get_video_metadata(&full).await.unwrap_or_default();
             for k in ["title", "TITLE", "comment", "COMMENT", "artist", "ARTIST", "album_artist", "ALBUM_ARTIST", "author", "AUTHOR", "genre", "GENRE", "description", "DESCRIPTION"] {
@@ -119,16 +143,13 @@ pub(super) async fn extract_item(st: AppState, req: Req) -> Res {
                 }
             }
         }
-        Ok(j(json!({ "success": true, "fields": f.out }), 200))
+        Ok(Ok(f.out))
     }
     .await;
-    match r {
-        Ok(res) => res,
-        Err(e) => {
-            tracing::error!("[API-V2-EXTRACT-RETR] Error: {e}");
-            j(json!({ "success": false, "msg": "Extraction failed" }), 500)
-        }
-    }
+    r.unwrap_or_else(|e| {
+        tracing::error!("[API-V2-EXTRACT-RETR] Error: {e}");
+        Err((500, "Extraction failed".into()))
+    })
 }
 
 async fn exif_fields(st: &AppState, full: &Path, f: &mut Fields) {
@@ -432,36 +453,48 @@ fn lines(out: &str) -> Vec<String> {
 }
 
 pub(super) async fn fetch(st: AppState, req: Req) -> Res {
-    let cfg = st.cfg();
-    if !cfg.truthy("websrv.web_meta_extraction") {
-        return j(json!({ "success": false, "msg": "Metadata extraction is disabled" }), 403);
-    }
     let Some(url) = req.query("url").filter(|u| !u.is_empty()).map(str::to_string) else {
         return j(json!({ "success": false, "msg": "URL required" }), 400);
     };
+    let (v, code) = fetch_meta(&st, &url, req.session().is_some()).await;
+    j(v, code)
+}
+
+/// The page metadata of `url` (title, site, author, ...) as `/meta/fetch` answers it, with its HTTP
+/// status. Outbound fetches only when `may_fetch` (a session); else only the cache answers.
+async fn fetch_meta(st: &AppState, url: &str, may_fetch: bool) -> (Value, u16) {
+    fn out(v: Value, code: u16) -> (Value, u16) {
+        (v, code)
+    }
+    let st = st.clone();
+    let url = url.to_string();
+    let cfg = st.cfg();
+    if !cfg.truthy("websrv.web_meta_extraction") {
+        return out(json!({ "success": false, "msg": "Metadata extraction is disabled" }), 403);
+    }
     if let Some(m) = META_CACHE.lock().get(&url).cloned() {
-        return j(json!({ "success": true, "meta": m }), 200);
+        return out(json!({ "success": true, "meta": m }), 200);
     }
     match sql!("SELECT data FROM meta_cache WHERE url = ", url.as_str(), " LIMIT 1").fetch_optional(&st.db).await {
         Ok(Some(r)) => {
             let meta = r.val("data").clone();
             cache_put(&META_CACHE, &url, meta.clone(), MAX_META_CACHE);
-            return j(json!({ "success": true, "meta": meta }), 200);
+            return out(json!({ "success": true, "meta": meta }), 200);
         }
         Ok(None) => {}
         Err(e) => tracing::error!("[META-CACHE] DB lookup failed: {e}"),
     }
     // Cache miss: only sessions may trigger outbound fetches (SSRF)
-    if req.session().is_none() {
-        return j(json!({ "success": false, "msg": "Not cached" }), 401);
+    if !may_fetch {
+        return out(json!({ "success": false, "msg": "Not cached" }), 401);
     }
     if MEDIA_URL_RE.is_match(&url) {
-        return j(json!({ "success": false, "msg": "Metadata extraction skipped for direct media URLs" }), 400);
+        return out(json!({ "success": false, "msg": "Metadata extraction skipped for direct media URLs" }), 400);
     }
     // Only public http(s) targets, never option-like strings or local/private hosts (the old code
     // handed any string to yt-dlp and curl).
     if crate::routes::uploads::upload::validate_remote_url(&url).is_none() {
-        return j(json!({ "success": false, "msg": "Invalid URL" }), 400);
+        return out(json!({ "success": false, "msg": "Invalid URL" }), 400);
     }
     let is_large = LARGE_SITE_RE.is_match(&url);
     let is_yt = YT_HOST_RE.is_match(&url);
@@ -491,7 +524,7 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
                         let author = d.get("author_name").filter(|v| crate::config::truthy(v)).cloned().unwrap_or(json!("Unknown"));
                         let meta = json!({ "title": title, "site_name": "youtube.com", "author": author });
                         set_cache(&st, &url, &meta).await;
-                        return j(json!({ "success": true, "meta": meta }), 200);
+                        return out(json!({ "success": true, "meta": meta }), 200);
                     }
                 }
             }
@@ -507,7 +540,7 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
                         let author = l.get(1).filter(|s| !s.is_empty()).cloned().unwrap_or_else(|| "Unknown".into());
                         let meta = json!({ "title": title, "site_name": "youtube.com", "author": author });
                         set_cache(&st, &url, &meta).await;
-                        return j(json!({ "success": true, "meta": meta }), 200);
+                        return out(json!({ "success": true, "meta": meta }), 200);
                     }
                 }
                 Err(e) => {
@@ -519,7 +552,7 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
                 }
             }
         }
-        return j(json!({ "success": false, "msg": "Failed to extract YouTube metadata" }), 500);
+        return out(json!({ "success": false, "msg": "Failed to extract YouTube metadata" }), 500);
     }
 
     // yt-dlp for Instagram, Twitter and other complex sites
@@ -544,7 +577,7 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
                     let author = l.get(1).filter(|s| !s.is_empty()).cloned().unwrap_or_else(|| "Unknown".into());
                     let meta = json!({ "title": title, "site_name": site, "author": author });
                     set_cache(&st, &url, &meta).await;
-                    return j(json!({ "success": true, "meta": meta }), 200);
+                    return out(json!({ "success": true, "meta": meta }), 200);
                 }
             }
             Err(e) => {
@@ -554,7 +587,7 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
                 }
                 tracing::error!("[META-FETCH] yt-dlp failed after 3 attempts for {url}: {e}");
                 if is_large {
-                    return j(json!({ "success": false, "msg": "Failed to extract metadata via yt-dlp after 3 attempts" }), 500);
+                    return out(json!({ "success": false, "msg": "Failed to extract metadata via yt-dlp after 3 attempts" }), 500);
                 }
             }
         }
@@ -573,10 +606,10 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
                 if !html.is_empty() {
                     let meta = Value::Object(extract_meta(&html));
                     if meta.get("title").and_then(Value::as_str).is_some_and(|t| t.contains(REDDIT_WALL)) {
-                        return j(json!({ "success": false, "msg": "Reddit bot protection encountered" }), 403);
+                        return out(json!({ "success": false, "msg": "Reddit bot protection encountered" }), 403);
                     }
                     set_cache(&st, &url, &meta).await;
-                    return j(json!({ "success": true, "meta": meta }), 200);
+                    return out(json!({ "success": true, "meta": meta }), 200);
                 }
             }
             Ok(o) => {
@@ -587,7 +620,7 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
                 }
                 tracing::error!("[META-FETCH FALLBACK ERROR] {url} (Attempt {attempt}): curl exited with {code}");
                 if code == 63 {
-                    return j(json!({ "success": false, "msg": "Page too large for metadata extraction" }), 400);
+                    return out(json!({ "success": false, "msg": "Page too large for metadata extraction" }), 400);
                 }
             }
             Err(e) => {
@@ -599,7 +632,7 @@ pub(super) async fn fetch(st: AppState, req: Req) -> Res {
             }
         }
     }
-    j(json!({ "success": false, "msg": "Failed to extract metadata from this URL after multiple attempts" }), 500)
+    out(json!({ "success": false, "msg": "Failed to extract metadata from this URL after multiple attempts" }), 500)
 }
 
 // ── extractMeta(html) ───────────────────────────────────────────────────────

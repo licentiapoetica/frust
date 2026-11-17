@@ -551,6 +551,17 @@ async fn generic(st: AppState, req: Req) -> Res {
 
     if is_item && data["item"].is_object() {
         item_template_flags(&cfg, &mut data, page_session, req.session());
+        // ?meta=1: the "extract metadata" tool's tag suggestions rendered with the page, so the
+        // frontends' edit dialogs (f0ckgle, f0ckyou) offer them without JavaScript too
+        // (meta_fields, or meta_error with the reason). Only for whoever may manage the item.
+        if req.query("meta") == Some("1") && crate::config::truthy(&data["can_manage_item"]) && crate::config::truthy(&data["can_extract_meta"]) {
+            if let Some(id) = data["item"]["id"].as_i64() {
+                match crate::routes::apiv2::index::meta::item_fields(&st, req.session(), id as i32).await {
+                    Ok(fields) => data["meta_fields"] = json!(fields),
+                    Err((_, msg)) => data["meta_error"] = json!(msg),
+                }
+            }
+        }
         // The halls to pick from in the item's halls dialog, rendered with the page so it also works
         // without JavaScript (frontends/w0bm: partials/hallmodal.html). Site halls for staff, own halls
         // for members. Full page loads only.
