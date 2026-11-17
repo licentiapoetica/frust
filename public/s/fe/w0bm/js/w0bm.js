@@ -664,14 +664,10 @@
     return api_;
   }
 
-  // ── Search forms: members use /search?tag=, guests the tag page ───────────────────────
+  // ── Search forms (/search?tag=, for guests too): an empty search goes nowhere ──────────
   $$('form.w0bm-searchform').forEach((f) => f.addEventListener('submit', (e) => {
     const q = (f.querySelector('input[name="tag"]')?.value || '').trim();
-    if (!q) { e.preventDefault(); return; }
-    if (f.dataset.guest) {
-      e.preventDefault();
-      navigate('/tag/' + encodeURIComponent(q.split(',')[0].trim()));
-    }
+    if (!q) e.preventDefault();
   }));
 
   // ── Captcha (Cap) on demand ───────────────────────────────────────────────────────────

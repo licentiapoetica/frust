@@ -1929,9 +1929,10 @@ mod tests {
     fn search_pages_say_what_they_understood() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
         let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
-        let ctx = |explain: bool| {
+        let ctx = |explain: bool, guest: bool| {
+            let session = if guest { serde_json::Value::Bool(false) } else { serde_json::json!({ "user": "bob", "id": 1 }) };
             let mut c = serde_json::json!({ "url": { "pathname": "/search", "search": "?tag=cat", "qs": { "tag": "cat" } }, "domain": "f0ck.test",
-                "session": { "user": "bob", "id": 1 }, "searchstring": "cat", "count": 1, "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat" }],
+                "session": session, "searchstring": "cat", "count": 1, "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat" }],
                 "pagination": { "start": 1, "end": 1, "page": 1, "cheat": [1] }, "link": { "main": "/search/?tag=cat", "path": "&page=" } });
             if explain {
                 c["search_explain"] = serde_json::json!(["tagged \u{201c}cat\u{201d}", "uploaded by al"]);
@@ -1946,14 +1947,19 @@ mod tests {
             ("frontends/f0ckyou/search.html", "fy-search"),
             ("frontends/f0ckgle/search.html", "fg-search"),
         ] {
-            let render = |explain: bool| env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx(explain))).unwrap_or_else(|e| panic!("{view}: {e:#}"));
-            let html = render(true);
+            let render = |explain: bool, guest: bool| {
+                env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx(explain, guest))).unwrap_or_else(|e| panic!("{view}: {e:#}"))
+            };
+            // guests may search too
+            let guest = render(true, true);
+            assert!(guest.contains("Showing f0cks tagged \u{201c}cat\u{201d}") && guest.contains("/7"), "{view} for guests");
+            let html = render(true, false);
             assert!(
                 html.contains(&format!("<p class=\"search-understood {cls}-understood\">Showing f0cks tagged \u{201c}cat\u{201d} · uploaded by al</p>")),
                 "{view}"
             );
             assert!(html.contains(&format!("<p class=\"search-notes {cls}-notes\">Left out: unknown type")), "{view}");
-            let plain = render(false);
+            let plain = render(false, false);
             assert!(!plain.contains("search-understood") && !plain.contains("search-notes"), "{view}");
         }
     }

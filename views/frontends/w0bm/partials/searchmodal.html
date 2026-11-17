@@ -10,7 +10,7 @@
                 </div>
             </div>
             <div class="searchbar">
-                <form method="get" action="/search" class="w0bm-searchform"{% if not session %} data-guest="1"{% endif %}>
+                <form method="get" action="/search" class="w0bm-searchform">
                     <input class="suchleiste_video" placeholder="Search {{ domain }}" name="tag" type="text" value="{{ (searchstring or "") }}">
                     <button type="submit" class="suchbutton_video"><i class="fa fa-search w0bm-white"></i></button>
                 </form>

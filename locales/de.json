@@ -696,7 +696,6 @@
     "placeholder": "Suchen: Tags, user:, type:, sort:…",
     "strict_mode": "Strikter Modus",
     "tricks": "Suchtricks",
-    "needs_login": "Zum Suchen mit Operatoren bitte anmelden",
     "found": "{count} f0cks",
     "found_one": "1 f0ck",
     "strict_placeholder": "tag1, tag2…"

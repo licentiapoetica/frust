@@ -831,16 +831,16 @@ async fn search_syntax(st: AppState, req: Req) -> Res {
 }
 
 /// What a search would find while it's typed (`q`, `strict=1`): what it understood, what it left
-/// out, and how many f0cks (`count`, null for visitors who can't search: `needs_login`).
+/// out, and how many f0cks it finds (`count`).
 async fn search_preview(st: AppState, req: Req) -> Res {
     let q = req.query("q").unwrap_or("").chars().take(2048).collect::<String>();
     let strict = matches!(req.query("strict"), Some("1" | "true"));
     if q.trim().is_empty() {
-        return j(json!({ "success": true, "explain": [], "notes": [], "count": null, "needs_login": req.session().is_none() }), 200);
+        return j(json!({ "success": true, "explain": [], "notes": [], "count": null }), 200);
     }
     match crate::routes::search::preview(&st, &req, &q, strict).await {
         Ok((parsed, count)) => j(
-            json!({ "success": true, "explain": parsed.explain, "notes": parsed.notes, "count": count, "needs_login": req.session().is_none() }),
+            json!({ "success": true, "explain": parsed.explain, "notes": parsed.notes, "count": count }),
             200,
         ),
         Err(e) => {

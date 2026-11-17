@@ -534,7 +534,7 @@ fn field_name(f: NumField) -> &'static str {
 }
 
 /// How the results page says what a term looks for.
-fn describe(neg: bool, t: &Term) -> String {
+pub(crate) fn describe(neg: bool, t: &Term) -> String {
     let d = match t {
         Term::Tag { text, exact: true } => format!("tagged exactly \u{201c}{text}\u{201d}"),
         Term::Tag { text, .. } => format!("tagged \u{201c}{text}\u{201d}"),

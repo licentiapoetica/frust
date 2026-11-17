@@ -3,7 +3,7 @@
 use super::toptags::{member_session, no_store};
 use crate::db::{Row, Sql};
 use crate::f0cklib::query;
-use crate::http::{Guard, Req, Res, Router, html};
+use crate::http::{Req, Res, Router, html};
 use crate::sql;
 use crate::state::AppState;
 use serde_json::{Value, json};
@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 const EPS: i64 = 20;
 
 pub fn register(r: &mut Router) {
-    r.get_g(r"^\/search(\/)?$", Guard::LoggedIn, search);
+    r.get(r"^\/search(\/)?$", search);
 }
 
 /// Page numbers around the current one (`cheat`) plus prev/next.
@@ -42,10 +42,8 @@ struct Found {
 /// word (`score`, f0cklib/search.rs). Rows: id, slug, username, mime, title, dest, duration, views,
 /// stamp, tag (the matching tag, else the first one), display_name, avatar, avatar_file, score.
 async fn run_search(st: &AppState, req: &Req, input: &str, strict: bool, page: i64) -> anyhow::Result<Found> {
-    let cfg = st.cfg();
     let session = req.session();
-    let who_ok = !crate::settings::is_anonymize_session(&cfg, session);
-    let mut q = query::parse(input, strict, who_ok);
+    let mut q = parse_for(st, req, input, strict);
 
     // the tags looked for count towards the visitor's interests
     if let Some(s) = session.filter(|s| s.id != 0) {
@@ -60,8 +58,7 @@ async fn run_search(st: &AppState, req: &Req, input: &str, strict: bool, page: i
 
     let owner = crate::settings::session_owner_name(session);
     let viewer = query::Viewer { user_id: session.map(|s| s.id).unwrap_or(0), owner: owner.as_deref(), admin: session.map(|s| s.admin).unwrap_or(false) };
-    // Private items only for their owner, unavailable ones only for admins
-    let vis = crate::f0cklib::visibility_filter(session);
+    let vis = visitor_filter(&st.cfg(), session);
     let day = crate::util::now_secs() / 86_400;
     let seed = format!("{input}|{day}");
     let (count, _) = search_sql(&q, &viewer, &vis, related_id, &seed, 0);
@@ -91,6 +88,54 @@ async fn run_search(st: &AppState, req: &Req, input: &str, strict: bool, page: i
     Ok(Found { total, rows, page: act, explain: q.explain, notes: q.notes })
 }
 
+/// What a visitor may find at all. Private f0cks only for their owner, unavailable ones only for
+/// admins (f0cklib::visibility_filter). Guests and anonymous accounts get the same limits as in
+/// their feeds:
+/// - guests see SFW only, plus whatever `websrv.public_nsfw` / `public_untagged` open up;
+/// - anonymous accounts see the ratings of `anonymous_permissions.allowed_modes`;
+/// - both see only the media types of `allowed_mimes`.
+/// Members see everything and narrow it down with `rating:` / `type:`.
+fn visitor_filter(cfg: &crate::config::Config, session: Option<&crate::session::Session>) -> Sql {
+    let mut vis = crate::f0cklib::visibility_filter(session);
+    if crate::settings::is_anon_session(session) {
+        // guests: no mode (the public one); anonymous accounts: "all" of what they may see
+        let mode = session.map(|_| 3);
+        let base = crate::f0cklib::compute_base_mode(cfg, mode, None, session);
+        vis.push(" and (").push(&base).push(") ");
+        let (_, mime) = crate::f0cklib::resolve_mime_sql(cfg, None, session, "items");
+        vis.push(" ").append(&mime).push(" ");
+    }
+    vis
+}
+
+/// The search as this visitor may run it: `who_ok` (names hidden by anonymizing), and no
+/// `commenter:` for guests while comments are hidden from the public
+/// (`main.hide_comments_from_public`).
+fn parse_for(st: &AppState, req: &Req, input: &str, strict: bool) -> query::Query {
+    let cfg = st.cfg();
+    let session = req.session();
+    let who_ok = !crate::settings::is_anonymize_session(&cfg, session);
+    let mut q = query::parse(input, strict, who_ok);
+    if crate::settings::is_guest_session(session) && cfg.truthy("main.hide_comments_from_public") {
+        let mut dropped = Vec::new();
+        for g in &mut q.groups {
+            g.retain(|a| {
+                let keep = !matches!(a.term, query::Term::Commenter(_));
+                if !keep {
+                    dropped.push(query::describe(a.neg, &a.term));
+                }
+                keep
+            });
+        }
+        if !dropped.is_empty() {
+            q.groups.retain(|g| !g.is_empty());
+            q.explain.retain(|e| !dropped.contains(e));
+            q.notes.push("commenter: needs an account here (comments are for members)".into());
+        }
+    }
+    q
+}
+
 /// `related:<id or slug>` as an item id: Ok(None) without one, Err(()) (and a note) when it names no f0ck.
 async fn related_id(st: &AppState, q: &mut query::Query) -> anyhow::Result<Result<Option<i64>, ()>> {
     let Some(r) = q.related.clone() else { return Ok(Ok(None)) };
@@ -105,19 +150,18 @@ async fn related_id(st: &AppState, q: &mut query::Query) -> anyhow::Result<Resul
 }
 
 /// What a search would find, without running it: the parsed query (what it understood, what it
-/// left out) and, for a visitor who may search, how many f0cks it finds. The search boxes show it
-/// while typing (GET /api/v2/search/preview).
+/// left out) and how many f0cks it finds. The search boxes show it while typing
+/// (GET /api/v2/search/preview).
 pub async fn preview(st: &AppState, req: &Req, input: &str, strict: bool) -> anyhow::Result<(query::Query, Option<i64>)> {
     let session = req.session();
-    let who_ok = !crate::settings::is_anonymize_session(&st.cfg(), session);
-    let mut q = query::parse(input, strict, who_ok);
-    if session.is_none() || q.is_empty() {
+    let mut q = parse_for(st, req, input, strict);
+    if q.is_empty() {
         return Ok((q, None));
     }
     let Ok(related_id) = related_id(st, &mut q).await? else { return Ok((q, Some(0))) };
     let owner = crate::settings::session_owner_name(session);
     let viewer = query::Viewer { user_id: session.map(|s| s.id).unwrap_or(0), owner: owner.as_deref(), admin: session.map(|s| s.admin).unwrap_or(false) };
-    let vis = crate::f0cklib::visibility_filter(session);
+    let vis = visitor_filter(&st.cfg(), session);
     let (count, _) = search_sql(&q, &viewer, &vis, related_id, "", 0);
     let n = count.fetch_scalar::<i64, _>(&st.db).await?.unwrap_or(0);
     Ok((q, Some(n)))
@@ -234,6 +278,27 @@ mod tests {
 
     /// F0CKM_SEARCH_SQL=<file>: write the SQL of sample searches (values inlined) to run by hand
     /// against a database (`psql -f`).
+    /// Guests find only what their feed shows them: public, SFW (unless `public_nsfw`), and the
+    /// types of `anonymous_permissions.allowed_mimes`; members aren't narrowed down.
+    #[test]
+    fn guests_search_what_they_may_see() {
+        let cfg = crate::media::test_cfg("websrv: {}\n");
+        let guest = visitor_filter(&cfg, None).inline();
+        assert!(guest.contains("coalesce(items.visibility, 0) = 0"), "{guest}");
+        assert!(guest.contains("tag_id = 1"), "SFW only: {guest}");
+        assert!(!guest.contains("tag_id in (1, 2)"), "{guest}");
+        assert!(!guest.contains("items.mime"), "all types allowed: {guest}");
+
+        let open = crate::media::test_cfg("websrv: { public_nsfw: true }\nanonymous_permissions: { allowed_mimes: [image, video] }\n");
+        let guest = visitor_filter(&open, None).inline();
+        assert!(guest.contains("tag_id in (1, 2)"), "public NSFW: {guest}");
+        assert!(guest.contains("items.mime ilike 'image/%'") && guest.contains("items.mime ilike 'video/%'") && !guest.contains("audio"), "{guest}");
+
+        let member = crate::session::Session { user: "bob".into(), id: 1, ..Default::default() };
+        let m = visitor_filter(&cfg, Some(&member)).inline();
+        assert!(!m.contains("tag_id") && !m.contains("items.mime"), "{m}");
+    }
+
     #[test]
     fn search_sql_samples() {
         let Ok(out) = std::env::var("F0CKM_SEARCH_SQL") else { return };
@@ -259,9 +324,11 @@ mod tests {
         let viewer = query::Viewer { user_id: 1, owner: Some("x"), admin: false };
         let vis = crate::f0cklib::visibility_filter(None);
         let mut sql = String::new();
-        for (input, strict) in samples {
+        let guest_vis = visitor_filter(&crate::media::test_cfg("websrv: {}\n"), None);
+        let samples = samples.iter().map(|&(i, s)| (i, s, &vis)).chain([("cat type:video sort:random", false, &guest_vis)]);
+        for (input, strict, vis) in samples {
             let q = query::parse(input, strict, true);
-            let (count, sel) = search_sql(&q, &viewer, &vis, None, "seed", 0);
+            let (count, sel) = search_sql(&q, &viewer, vis, None, "seed", 0);
             sql.push_str(&format!("\\echo '== {}'\n{};\n{};\n", input.replace('\'', ""), count.inline(), sel.inline()));
         }
         let q = query::parse("related:x sort:related", false, true);
