@@ -406,6 +406,8 @@
       if (isComment) {
         form.elements.content.value = '';
         growField(form.elements.content);
+        // the emoji picker goes with the sent comment (emoji-picker.js keeps its controller here)
+        form.elements.content._f0ckEmojiPicker?.close();
         setReply(form, '', '');
       } else if (form.elements.tagname) {
         form.elements.tagname.value = '';
