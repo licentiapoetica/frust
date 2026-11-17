@@ -29668,7 +29668,17 @@ pre.text-raw {
 }
 
 .badge.item-expiring-badge > i {
-  margin-right: 3px;
+  margin-right: 4px;
+}
+
+/* the live countdown (f0ck-core.js): fixed-width digits so it doesn't jitter while ticking */
+.item-expiring-time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* the last minute */
+.item-expiring-time.countdown-soon {
+  color: #ff4d4d;
 }
 
 /* burn after read: just the icon (its tooltip says the rest) */

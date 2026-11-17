@@ -57,9 +57,9 @@
                     <div class="infobox-card">
                         <label class="infobox-card-label"><i class="fa-solid fa-hourglass-half"></i> Expiration</label>
                         <div class="infobox-expiry-content">
-                            <span id="info-expiry-label" class="expiry-status-label" title="{{ ((item.expires_at * 1000)|locale_string if item.expires_at else "") }}">
+                            <span id="info-expiry-label" class="expiry-status-label" title="{{ ((((item.expires_at|int) * 1000)|locale_string ~ " " ~ ((item.expires_at|int) * 1000)|tz_label) if item.expires_at else "") }}"{% if item.expires_at %} data-local-time="{{ item.expires_at }}" data-local-time-attr="title"{% endif %}>
                                 {% if item.expires_at %}
-                                <i class="fa-solid fa-clock info-modal-icon-expiring"></i> {{ (item.expires_in or "in " ~ ((item.expires_at * 1000)|locale_string)) }}
+                                <i class="fa-solid fa-clock info-modal-icon-expiring"></i> {{ (item.expires_in or "in " ~ (((item.expires_at|int) * 1000)|locale_string)) }}
                                 {% else %}
                                 <i class="fa-solid fa-clock-slash info-modal-icon-muted"></i> Never
                                 {% endif %}

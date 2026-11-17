@@ -743,6 +743,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             "original_filename": or_null(actitem.val("original_filename")),
             "expires_at": or_null(actitem.val("expires_at")),
             "expires_in": crate::util::expires_in(actitem.val("expires_at")).filter(|_| crate::config::truthy(actitem.val("expires_at"))),
+            "expires_countdown": crate::util::countdown(actitem.val("expires_at")).filter(|_| crate::config::truthy(actitem.val("expires_at"))),
             "burn_after_read": burn,
             "burn_claimed": burn && actitem.str("burn_claim").is_some(),
             "is_album": actitem.bool("is_album") && album.len() > 1,

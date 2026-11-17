@@ -1226,3 +1226,42 @@ window.F0ckPageSwap = (() => {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fromBeacon);
   else fromBeacon();
 })();
+
+// Live countdowns (and local dates): every element with data-countdown="<unix seconds>" shows the time left
+// ("6d 23h 05m 09s" ... "9s", the server renders the same), ticking every second; `countdown-soon`
+// in the last minute. Looked up on every tick, so content swapped in later (ajax pages) ticks too.
+(() => {
+  const pad = (n) => String(n).padStart(2, '0');
+  const text = (left) => {
+    const d = Math.floor(left / 86400), h = Math.floor(left % 86400 / 3600), m = Math.floor(left % 3600 / 60), s = left % 60;
+    if (d > 0) return `${d}d ${h}h ${pad(m)}m ${pad(s)}s`;
+    if (h > 0) return `${h}h ${pad(m)}m ${pad(s)}s`;
+    if (m > 0) return `${m}m ${pad(s)}s`;
+    return `${s}s`;
+  };
+  // data-local-time="<unix seconds>": the date in the viewer's own time zone, into the attribute
+  // data-local-time-attr names (after data-local-time-prefix); the server can only write its own zone
+  const localTimes = () => {
+    document.querySelectorAll('[data-local-time]').forEach((el) => {
+      const at = parseInt(el.dataset.localTime, 10);
+      const attr = el.dataset.localTimeAttr || 'title';
+      if (!at || el.dataset.localTimeDone === String(at)) return;
+      el.setAttribute(attr, (el.dataset.localTimePrefix || '') + new Date(at * 1000).toLocaleString());
+      el.dataset.localTimeDone = String(at);
+    });
+  };
+  const tick = () => {
+    localTimes();
+    const now = Math.floor(Date.now() / 1000);
+    document.querySelectorAll('[data-countdown]').forEach((el) => {
+      const at = parseInt(el.dataset.countdown, 10);
+      if (!at) return;
+      const left = Math.max(0, at - now);
+      const t = text(left);
+      if (el.textContent !== t) el.textContent = t;
+      el.classList.toggle('countdown-soon', left < 60);
+    });
+  };
+  tick();
+  setInterval(tick, 1000);
+})();

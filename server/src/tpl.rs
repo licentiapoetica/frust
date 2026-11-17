@@ -153,6 +153,15 @@ pub fn locale_time_str(d: &DateTime<Local>, lang: Option<&str>) -> String {
 }
 
 /// `Date.prototype.toLocaleString(lang)`
+/// "UTC" or "UTC±hh:mm" for an offset in seconds.
+fn tz_label(secs: i32) -> String {
+    if secs == 0 {
+        return "UTC".into();
+    }
+    let (sign, a) = if secs < 0 { ('-', -secs) } else { ('+', secs) };
+    format!("UTC{sign}{:02}:{:02}", a / 3600, a % 3600 / 60)
+}
+
 pub fn locale_string_str(d: &DateTime<Local>, lang: Option<&str>) -> String {
     format!("{}, {}", locale_date_str(d, lang), locale_time_str(d, lang))
 }
@@ -279,6 +288,8 @@ pub(crate) fn build_env(views: PathBuf, i18n: Arc<I18n>) -> Environment<'static>
     env.add_filter("locale_time", |state: &State, v: JValue, lang: Option<String>| {
         to_datetime(&v).map(|d| locale_time_str(&d, opt_lang(state, lang).as_deref())).unwrap_or_else(|| "Invalid Date".into())
     });
+    // The server's time zone for a date, "UTC" or "UTC+01:00" (what locale_string's text is in)
+    env.add_filter("tz_label", |v: JValue| to_datetime(&v).map(|d| tz_label(d.offset().local_minus_utc())).unwrap_or_default());
     env.add_filter("iso_date", |v: JValue| to_datetime(&v).map(|d| d.with_timezone(&chrono::Utc).format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()).unwrap_or_default());
     let i18n_ago = i18n.clone();
     env.add_filter("time_ago", move |state: &State, v: JValue| {
@@ -1184,6 +1195,13 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn zone_labels() {
+        assert_eq!(super::tz_label(0), "UTC");
+        assert_eq!(super::tz_label(3600), "UTC+01:00");
+        assert_eq!(super::tz_label(-(5 * 3600 + 30 * 60)), "UTC-05:30");
+    }
 
     #[test]
     fn frontends_follow_contract() {

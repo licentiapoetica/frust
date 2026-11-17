@@ -23694,9 +23694,34 @@ document.addEventListener('click', (e) => {
               if (data.expires_at) {
                 label.innerHTML = `<i class="fa-solid fa-clock info-modal-icon-expiring"></i> ${data.expires_in || ('in ' + new Date(data.expires_at * 1000).toLocaleString())}`;
                 label.setAttribute('title', new Date(data.expires_at * 1000).toLocaleString());
+                label.dataset.localTime = data.expires_at;
+                label.dataset.localTimeAttr = 'title';
               } else {
                 label.innerHTML = '<i class="fa-solid fa-clock-slash info-modal-icon-muted"></i> Never';
                 label.removeAttribute('title');
+                delete label.dataset.localTime;
+              }
+            }
+            // the ticking badge in the item's meta row (f0ck-core.js countdown)
+            const timeEl = document.querySelector('.item-expiring-time[data-countdown]');
+            if (data.expires_at && timeEl) {
+              timeEl.dataset.countdown = data.expires_at;
+              const badge = timeEl.closest('.item-expiring-badge');
+              if (badge) badge.dataset.localTime = data.expires_at; // the ticker rewrites its tooltip
+            } else if (!data.expires_at && timeEl) {
+              timeEl.closest('.item-expiring-badge')?.remove();
+            } else if (data.expires_at) {
+              const link = document.querySelector('.timestamp-link');
+              const time = link && (link.closest('.badge') || link);
+              if (time) {
+                const badge = document.createElement('span');
+                badge.className = 'badge badge-warning item-expiring-badge';
+                badge.setAttribute('flow', 'up');
+                badge.setAttribute('tooltip', 'Self-destructs ' + new Date(data.expires_at * 1000).toLocaleString());
+                Object.assign(badge.dataset, { localTime: data.expires_at, localTimeAttr: 'tooltip', localTimePrefix: 'Self-destructs ' });
+                badge.innerHTML = '<i class="fa-solid fa-clock"></i><span class="item-expiring-time"></span>';
+                badge.lastChild.dataset.countdown = data.expires_at;
+                time.after(' ', badge);
               }
             }
             if (data.purged) {

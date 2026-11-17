@@ -180,6 +180,26 @@ pub fn expires_in(expires_at: &Value) -> Option<String> {
     })
 }
 
+/// Time left until `expires_at` as a countdown: "6d 23h 05m 09s", "23h 05m 09s", "5m 09s", "9s"
+/// ("0s" once due). f0ck-core.js keeps `[data-countdown]` elements ticking in the same format.
+pub fn countdown(expires_at: &Value) -> Option<String> {
+    let left = (crate::config::as_int(expires_at)? - now_secs()).max(0);
+    Some(countdown_text(left))
+}
+
+fn countdown_text(left: i64) -> String {
+    let (d, h, m, s) = (left / 86400, left % 86400 / 3600, left % 3600 / 60, left % 60);
+    if d > 0 {
+        format!("{d}d {h}h {m:02}m {s:02}s")
+    } else if h > 0 {
+        format!("{h}h {m:02}m {s:02}s")
+    } else if m > 0 {
+        format!("{m}m {s:02}s")
+    } else {
+        format!("{s}s")
+    }
+}
+
 /// lib.getMode — SQL condition for a feed mode. Only ever built from integers.
 pub fn get_mode(cfg: &Config, mode: i64) -> String {
     let nsfl = cfg.nsfl_tag_id();
@@ -621,4 +641,16 @@ pub fn utf16_prefix(s: &str, n: usize) -> String {
         out.push(c);
     }
     out
+}
+
+#[cfg(test)]
+mod countdown_tests {
+    #[test]
+    fn countdown_format() {
+        assert_eq!(super::countdown_text(0), "0s");
+        assert_eq!(super::countdown_text(9), "9s");
+        assert_eq!(super::countdown_text(309), "5m 09s");
+        assert_eq!(super::countdown_text(3600 * 23 + 309), "23h 05m 09s");
+        assert_eq!(super::countdown_text(86400 * 6 + 3600 * 23 + 309), "6d 23h 05m 09s");
+    }
 }
