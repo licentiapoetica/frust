@@ -1102,11 +1102,34 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   max-width: 64rem;
 }
 
-/* search results and notifications: a centered column */
+/* search results and notifications: a column centered on the window (under the search box), not
+   on the room beside the guide: --fy-side is the width the guide takes on the left */
+.fy-app {
+  --fy-side: var(--fy-guide-w);
+}
+
+@media (min-width: 1313px) {
+  .fy-guide-toggle:checked ~ .fy-app {
+    --fy-side: var(--fy-mini-w);
+  }
+}
+
+@media (max-width: 1312px) {
+  .fy-app {
+    --fy-side: var(--fy-mini-w);
+  }
+}
+
+@media (max-width: 791px) {
+  .fy-app {
+    --fy-side: 0px;
+  }
+}
+
 .fy-main-list {
-  max-width: 80rem;
+  max-width: 56rem;
   margin-right: auto;
-  margin-left: auto;
+  margin-left: max(0px, calc((100vw - 56rem) / 2 - var(--fy-side)));
 }
 
 .fy-label {
