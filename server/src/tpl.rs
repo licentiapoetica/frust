@@ -538,6 +538,14 @@ pub fn frontend_has_recommendations(st: &AppState, req: Option<&Req>) -> bool {
     fe != DEFAULT_FRONTEND && st.tpl.has(&format!("{FRONTENDS_DIR}/{fe}/snippets/recommendations"))
 }
 
+/// Whether the frontend of this request has its own `views/frontends/<fe>/<view>.html`. For pages
+/// only one frontend has (f0ckgle's `howsearch`): the route answers 404 in the others, so such a
+/// page isn't one of `FRONTEND_OWN_PAGES` every frontend must provide.
+pub fn frontend_has_view(st: &AppState, req: Option<&Req>, view: &str) -> bool {
+    let fe = frontend_for(st, &st.cfg(), req);
+    fe != DEFAULT_FRONTEND && st.tpl.has(&format!("{FRONTENDS_DIR}/{fe}/{view}"))
+}
+
 /// Shared pages: default views that render inside the frontend's shell (they include
 /// `shell_header`). Paths relative to views/, e.g. "admin/users.html".
 pub fn shared_views(views: &std::path::Path) -> Vec<String> {
@@ -1375,8 +1383,11 @@ mod tests {
 
         // web results
         let search = render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({ "tag": "cat" })), "searchstring": "cat", "count": 2, "search_mode": "strict",
-            "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat", "score": 0.93 }], "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" } }));
+            "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat", "score": 0.93 }], "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" },
+            "search_explain": ["tagged \u{201c}cat\u{201d}", "sorted by views"], "search_notes": ["unknown sort \u{201c}x\u{201d}"] }));
         dump("search", &search);
+        assert!(search.contains("<p class=\"search-understood fg-search-understood\">Showing f0cks tagged \u{201c}cat\u{201d} · sorted by views</p>"));
+        assert!(search.contains("<p class=\"search-notes fg-search-notes\">Left out: unknown sort"));
         assert!(search.contains("<h3 class=\"fg-result-title\"><a href=\"/tag/cat/7\">cat - f0ck #7</a></h3>"));
         assert!(search.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
         assert!(search.contains("Match: 93%"));
@@ -1471,6 +1482,8 @@ mod tests {
             ("comments_user", serde_json::json!({ "user": al, "comments_page": 2, "has_more": true,
                 "static_comments": [{ "id": 3, "item_id": 7, "item_key": "7", "content_html": "<b>hi</b>", "attachments_html": "", "timeago": "now", "iso": "x" }] })),
             ("upload", serde_json::json!({ "session": session, "mimes_json": "{}", "uploads_remaining": null, "upload_types": [], "min_tags": 1 })),
+            // f0ckgle's own page (no other frontend has it: routes/index.rs how_search_works)
+            ("howsearch", serde_json::json!({})),
         ];
         for (view, data) in pages {
             let mut data = data;
@@ -1604,8 +1617,9 @@ mod tests {
         // search results
         let search = render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({ "tag": "cat" })), "searchstring": "cat", "count": 2, "search_mode": "strict",
             "result": [{ "id": 7, "username": "al", "display_name": "Al B", "avatar_file": "a.webp", "mime": "video/mp4", "dest": "s.mp4", "duration": 62.5, "views": 3, "tag": "cat", "score": 0.93 }],
-            "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" } }));
+            "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" }, "search_explain": ["tagged \u{201c}cat\u{201d}"] }));
         dump("search", &search);
+        assert!(search.contains("<p class=\"search-understood fy-search-understood\">Showing f0cks tagged \u{201c}cat\u{201d}</p>"));
         assert!(search.contains("data-preview=\"/b/s.mp4\"") && search.contains("<span class=\"fy-tbadge fy-time\">1:02</span>"));
         assert!(search.contains("<img class=\"fy-ava\" src=\"/a/a.webp\" alt=\"\" loading=\"lazy\"><span>Al B</span>") && search.contains("3 views"));
         assert!(search.contains("<h3 class=\"fy-row-title\"><a href=\"/tag/cat/7\">cat #7</a></h3>"));
@@ -1889,6 +1903,42 @@ mod tests {
                 assert!(rehosted.contains("class=\"id-link\" data-item-id=\"6250458\">6BHrY1UUphB</a>"));
                 assert!(fresh.contains("href=\"/4/wsg/6250450/6250458\" class=\"id-link\" data-item-id=\"6250458\">6250458</a>"));
             }
+        }
+    }
+
+    /// Every frontend's search page says what the search understood and what it left out
+    /// (snippets/search-understood.html, routes/search.rs search_explain / search_notes), each in
+    /// its own class; without them nothing shows.
+    #[test]
+    fn search_pages_say_what_they_understood() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let ctx = |explain: bool| {
+            let mut c = serde_json::json!({ "url": { "pathname": "/search", "search": "?tag=cat", "qs": { "tag": "cat" } }, "domain": "f0ck.test",
+                "session": { "user": "bob", "id": 1 }, "searchstring": "cat", "count": 1, "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat" }],
+                "pagination": { "start": 1, "end": 1, "page": 1, "cheat": [1] }, "link": { "main": "/search/?tag=cat", "path": "&page=" } });
+            if explain {
+                c["search_explain"] = serde_json::json!(["tagged \u{201c}cat\u{201d}", "uploaded by al"]);
+                c["search_notes"] = serde_json::json!(["unknown type \u{201c}x\u{201d}"]);
+            }
+            c
+        };
+        for (view, cls) in [
+            ("search.html", "srch"),
+            ("frontends/w0bm/search.html", "w0bm-search"),
+            ("frontends/f0ckv2/search.html", "v2-search"),
+            ("frontends/f0ckyou/search.html", "fy-search"),
+            ("frontends/f0ckgle/search.html", "fg-search"),
+        ] {
+            let render = |explain: bool| env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx(explain))).unwrap_or_else(|e| panic!("{view}: {e:#}"));
+            let html = render(true);
+            assert!(
+                html.contains(&format!("<p class=\"search-understood {cls}-understood\">Showing f0cks tagged \u{201c}cat\u{201d} · uploaded by al</p>")),
+                "{view}"
+            );
+            assert!(html.contains(&format!("<p class=\"search-notes {cls}-notes\">Left out: unknown type")), "{view}");
+            let plain = render(false);
+            assert!(!plain.contains("search-understood") && !plain.contains("search-notes"), "{view}");
         }
     }
 

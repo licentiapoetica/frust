@@ -27,6 +27,7 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/(terms)$", terms);
     r.get(r"^\/privacy\/?$", privacy);
     r.get(r"^\/(rules)$", rules);
+    r.get(r"^\/help\/?$", how_search_works);
     r.get(r"^\/api\/v2\/tos\/?$", tos_texts);
     r.get(r"^\/mode\/(\d)", mode);
     r.get(r"^\/strict\/(0|1)$", strict);
@@ -909,6 +910,21 @@ async fn terms(st: AppState, req: Req) -> Res {
     let cfg = st.cfg();
     let data = json!({ "tmp": null, "session": member_session(&req), "page_meta": page_meta(&cfg, "terms", "Terms of service", "terms") });
     Ok(html(crate::tpl::render(&st, Some(&req), "terms", data)))
+}
+
+/// How the search works: a page only f0ckgle has (the "How Search works" link in its footer,
+/// views/frontends/f0ckgle/howsearch.html); 404 in the other frontends.
+async fn how_search_works(st: AppState, req: Req) -> Res {
+    let cfg = st.cfg();
+    if !crate::tpl::frontend_has_view(&st, Some(&req), "howsearch") {
+        return Ok(error_page(&st, &req, 404, json!({ "message": "Not found", "tmp": null })));
+    }
+    let data = json!({
+        "tmp": null,
+        "session": member_session(&req),
+        "page_meta": page_meta(&cfg, "How Search works", "How the search finds f0cks", "help"),
+    });
+    Ok(html(crate::tpl::render(&st, Some(&req), "howsearch", data)))
 }
 
 /// The admin-edited rules and terms (Markdown), for the dialog that has them read before

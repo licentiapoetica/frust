@@ -831,6 +831,22 @@ html:not(.no-js) .nojs-only {
   color: var(--fg-dim);
 }
 
+/* what the search understood / left out (snippets/search-understood.html), like "Showing results for" */
+.fg-search-understood,
+.fg-search-notes {
+  margin: 0 0 1rem;
+  font-size: .875rem;
+  color: var(--fg-muted);
+}
+
+.fg-search-notes {
+  color: var(--fg-g2);
+}
+
+.fg-search-understood + .fg-search-notes {
+  margin-top: -.75rem;
+}
+
 .fg-note {
   margin: 0 0 1rem;
   color: var(--fg-muted);
@@ -2135,6 +2151,97 @@ body.fg-page-login {
 
 .fg-md img {
   max-width: 100%;
+}
+
+/* ── How Search works (howsearch.html) ── */
+.fg-hs p,
+.fg-hs li {
+  line-height: 1.58;
+  color: var(--fg-muted);
+}
+
+.fg-hs b,
+.fg-hs i {
+  color: var(--fg-text);
+}
+
+.fg-hs .fg-hs-lead {
+  margin: 0 0 1.5rem;
+  font-size: 1.125rem;
+  color: var(--fg-text);
+}
+
+.fg-hs ul {
+  padding-left: 1.25rem;
+}
+
+.fg-hs-ops {
+  margin: .75rem 0 0;
+  border-top: 1px solid var(--fg-border);
+}
+
+.fg-hs-ops > div {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 1rem;
+  padding: .75rem 0;
+  border-bottom: 1px solid var(--fg-border);
+}
+
+.fg-hs-ops dt {
+  white-space: nowrap;
+}
+
+.fg-hs-ops var {
+  font-style: italic;
+  color: var(--fg-dim);
+}
+
+.fg-hs-ops dd {
+  margin: 0;
+  color: var(--fg-muted);
+}
+
+.fg-hs-ops dd a {
+  margin-left: .25rem;
+}
+
+.fg-hs-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem 1.25rem;
+  margin: 0 0 .5rem;
+  padding: .75rem 0;
+  border-top: 1px solid var(--fg-border);
+  border-bottom: 1px solid var(--fg-border);
+  font-size: .875rem;
+}
+
+.fg-hs h2 {
+  scroll-margin-top: 1rem;
+}
+
+.fg-hs-ex {
+  text-decoration: none;
+}
+
+.fg-hs-ex:hover code {
+  text-decoration: underline;
+}
+
+.fg-hs-ex code {
+  color: var(--fg-link);
+}
+
+.fg-hs-wild li {
+  margin-bottom: .375rem;
+}
+
+@media (max-width: 480px) {
+  .fg-hs-ops > div {
+    grid-template-columns: 1fr;
+    gap: .25rem;
+  }
 }
 
 /* ── more cards (tags), slim user panel, notifications ── */

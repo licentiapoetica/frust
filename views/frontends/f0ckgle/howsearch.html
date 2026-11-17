@@ -1,0 +1,123 @@
+{#- f0ckgle only: how the search works (the "How Search works" link in the footer, /help;
+    routes/index.rs how_search_works answers 404 in frontends without this page). It explains the
+    search language of server/src/f0cklib/query.rs (routes/search.rs); keep the two in step. -#}
+{%- macro ex(q, strict=false) -%}
+<a class="fg-hs-ex" href="/search?tag={{ q|encode_uri_component }}{% if strict %}&amp;mode=strict{% endif %}"><code>{{ q }}</code></a>
+{%- endmacro -%}
+{%- macro op(key, arg, what, example="") -%}
+<div><dt><code>{{ key }}</code>{% if arg %}<var>{{ arg }}</var>{% endif %}</dt><dd>{{ what }}{% if example %} {{ ex(example) }}{% endif %}</dd></div>
+{%- endmacro -%}
+{%- set fg_title = "How Search works" -%}
+{%- set fg_page = "text" -%}
+{%- set fg_tab = "" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main">
+  <article class="fg-article fg-hs">
+    <h1>How Search works</h1>
+    <p class="fg-hs-lead">F0ckgle doesn't crawl the web. It looks through the f0cks on {{ domain }}: their tags, titles, uploaders, favs, comments, sizes and ages. Type words to find tags, add operators to say exactly what you want, and mix them as wildly as you like.</p>
+    <nav class="fg-hs-toc" aria-label="On this page">
+      <a href="#words">Words</a>
+      <a href="#exact">Exact tags</a>
+      <a href="#not-or">Not &amp; or</a>
+      <a href="#people">People</a>
+      <a href="#file">The file</a>
+      <a href="#numbers">Numbers</a>
+      <a href="#time">Time</a>
+      <a href="#sort">Order</a>
+      <a href="#mix">Go wild</a>
+    </nav>
+
+    <h2 id="words">Words</h2>
+    <p>Every word you type has to be part of one of a f0ck's tags. {{ ex("cat") }} finds <i>cats</i>, <i>black cat</i> and <i>catgirl</i>; {{ ex("black cat") }} finds f0cks with a tag containing <i>black</i> and a tag containing <i>cat</i> (or one tag with both). Upper and lower case don't matter, and neither do spaces, dashes and accents inside a word: {{ ex("blackcat") }} finds <i>black cat</i> too.</p>
+    <p>Results come 20 to a page, newest first. Within a page the best fits go to the top: a tag that is your first word, or starts with it, beats one that only has it in the middle. The <b>Match</b> under each result says how close it is.</p>
+
+    <h2 id="exact">Exact tags and wildcards</h2>
+    <dl class="fg-hs-ops">
+      {{ op('"', 'tag"', "A whole tag, nothing more: no catgirl for \"cat\".", '"black cat"') }}
+      {{ op("tag:", "name", "The same as quotes.", "tag:cat") }}
+      {{ op("*", "", "Any text in a tag (the whole tag has to fit the pattern).", "cat*") }}
+      {{ op("?", "", "Exactly one character.", "c?t") }}
+    </dl>
+    <p><b>Verbatim</b> above the results makes every word exact. There, commas separate tags: {{ ex("black cat, funny", true) }} finds f0cks tagged exactly <i>black cat</i> and <i>funny</i>.</p>
+
+    <h2 id="not-or">Leave out, or either</h2>
+    <dl class="fg-hs-ops">
+      {{ op("-", "word", "Leaves out what the word (or any operator after the dash) finds.", "cat -dog") }}
+      {{ op("OR", "", "Either one: a OR b, or a | b. Binds the terms next to it.", "cat OR dog") }}
+    </dl>
+    <p>Everything else is AND: {{ ex("cat OR dog funny") }} means (cat or dog) and funny.</p>
+
+    <h2 id="people">People</h2>
+    <dl class="fg-hs-ops">
+      {{ op("user:", "name", "Uploaded by them. Also from: and by:. Wildcards work in names.", "user:" ~ (session.user if (session and session.user) else "admin")) }}
+      {{ op("fav:", "name", "In their favs (unless they keep their favs private).", "") }}
+      {{ op("commenter:", "name", "They commented on it.", "") }}
+      {{ op("tagger:", "name", "They gave it a tag.", "") }}
+      {{ op("is:", "fav", "In your own favs.", "is:fav") }}
+      {{ op("is:", "mine", "Your own uploads.", "is:mine") }}
+    </dl>
+    <p class="fg-dim">On a site that hides who uploaded what, the people operators are left out.</p>
+
+    <h2 id="file">The f0ck itself</h2>
+    <dl class="fg-hs-ops">
+      {{ op("type:", "kind", "video, image, gif, audio or flash (also is:video and so on).", "type:gif") }}
+      {{ op("ext:", "end", "The file ending.", "ext:webm") }}
+      {{ op("rating:", "r", "sfw, nsfw, nsfl, or untagged (none of them).", "rating:sfw") }}
+      {{ op("title:", "text", "The title contains the text; title:\"two words\" keeps them together.", "title:fail") }}
+      {{ op("src:", "text", "The source, the address it came from.", "src:youtube") }}
+      {{ op("hall:", "name", "In that hall.", "") }}
+      {{ op("is:", "oc", "Original content. Also is:pinned, is:expiring, is:public, is:unlisted, is:private (your own).", "is:oc") }}
+      {{ op("has:", "what", "has:title, has:src, has:comments, has:favs, has:tags, has:cover.", "has:comments") }}
+      {{ op("related:", "f0ck", "Shares tags with that f0ck (its number or link name); the most shared first.", "") }}
+    </dl>
+
+    <h2 id="numbers">Numbers</h2>
+    <p>Give a number, or compare: <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;</code>, <code>&lt;=</code>, or a range <code>10..50</code>. Big numbers can be written <code>2k</code>.</p>
+    <dl class="fg-hs-ops">
+      {{ op("views:", "n", "How often it was watched.", "views:>100") }}
+      {{ op("favs:", "n", "How many favs it has.", "favs:>=2") }}
+      {{ op("comments:", "n", "How many comments it has.", "comments:>0") }}
+      {{ op("tags:", "n", "How many tags it has (the rating doesn't count).", "tags:<2") }}
+      {{ op("duration:", "time", "Length in seconds, or 1m30s, 1:30, 2h.", "duration:>2m") }}
+      {{ op("size:", "bytes", "File size: 500k, 10mb, 1gb.", "size:>10mb") }}
+      {{ op("width:", "px", "Width, height: and height in pixels.", "width:>=1920") }}
+      {{ op("id:", "n", "The f0ck's number.", "id:1..100") }}
+    </dl>
+
+    <h2 id="time">Time</h2>
+    <dl class="fg-hs-ops">
+      {{ op("year:", "2024", "Uploaded in that year; date: takes 2024-06 or 2024-06-15 too.", "") }}
+      {{ op("after:", "date", "Uploaded on that date or later (since: works too).", "") }}
+      {{ op("before:", "date", "Uploaded before that date.", "") }}
+      {{ op("age:", "time", "How old: age:<7d is the last week, age:>1y older than a year. h, d, w, mo, y.", "age:<7d") }}
+    </dl>
+
+    <h2 id="sort">Order</h2>
+    <dl class="fg-hs-ops">
+      {{ op("sort:", "how", "new (the default), old, views, favs, comments, long, short, big, small, random, related.", "sort:views") }}
+    </dl>
+    <p><code>sort:random</code> shuffles the results, the same way on every page of a search, and anew each day.</p>
+
+    <h2 id="mix">Go wild</h2>
+    <ul class="fg-hs-wild">
+      <li>{{ ex("type:video duration:<15s sort:views") }}: the most watched videos under fifteen seconds.</li>
+      <li>{{ ex("has:comments comments:>3 sort:comments") }}: where people won't stop talking.</li>
+      <li>{{ ex("-has:tags") }}: f0cks nobody tagged yet. Go and help.</li>
+      <li>{{ ex("rating:untagged") }}: f0cks without a rating.</li>
+      <li>{{ ex("type:gif sort:random") }}: a gif slot machine.</li>
+      <li>{{ ex("favs:0 views:>50") }}: watched a lot, loved by nobody.</li>
+      <li>{{ ex("age:<30d sort:favs") }}: the best of the month.</li>
+      <li>{{ ex("size:>50mb sort:big") }}: the heavyweights.</li>
+    </ul>
+    <p>Above the results F0ckgle says how it read your search, and what it had to leave out.</p>
+
+    <h2>What search doesn't show</h2>
+    <ul>
+      <li>Private f0cks, except to the person who uploaded them.</li>
+      <li>Deleted and expired f0cks, and f0cks that aren't available any more.</li>
+      <li>Anything at all if you're not signed in: searching is for members. <a href="/?login=1">Sign in</a></li>
+    </ul>
+  </article>
+</main>
+{% include "frontends/f0ckgle/snippets/footer.html" %}

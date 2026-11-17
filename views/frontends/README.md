@@ -121,6 +121,11 @@ with `fader-in` / `fader-out`; `f0ckBackground.start({ media, thumb })` draws th
 a picture or Flash's `ambientCanvas` with f0ckm's tuning and switch (`show_background`), and defines
 `window.toggleBackground` (f0ckyou: item.html, f0ckyou.js).
 
+**Pages only one frontend has (optional).** A page that belongs to one frontend's joke or look
+(f0ckgle: `howsearch.html`, "How Search works" at `/help`) is not an own page the others
+must copy. Its route checks `tpl::frontend_has_view(st, req, "<view>")` and answers 404 when the
+visitor's frontend has no such template; it is not in `tpl::FRONTEND_OWN_PAGES`.
+
 **Settings preferences (optional).** A frontend that only uses some of the preferences lists them in
 `settings-prefs.html` (`{% set prefs = ["language", "show_motd", …] %}`, keys: the
 `"…" in fe_prefs` tests in `views/settings.html`). The settings page then shows only those
