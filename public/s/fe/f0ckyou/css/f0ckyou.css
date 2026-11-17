@@ -972,11 +972,6 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   color: var(--fy-text);
 }
 
-.fy-guide-copy {
-  color: #717171;
-  font-weight: 400;
-}
-
 /* the mini guide: icons with a word under them */
 .fy-mini {
   position: sticky;

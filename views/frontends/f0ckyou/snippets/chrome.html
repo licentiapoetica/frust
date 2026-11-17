@@ -88,7 +88,6 @@
     <footer class="fy-guide-foot">
       <p><a href="/about">About</a> <a href="/rules">Rules</a> <a href="/terms">Terms</a> <a href="/privacy">Privacy</a> <a href="/ranking">Stats</a></p>
       {% if (frontend_switch and frontends and frontends|length > 1) %}<p>Also as:{% for f in frontends %}{% if f != frontend %} <a href="/frontend/{{ f }}">{{ f }}</a>{% endif %}{% endfor %}</p>{% endif %}
-      <p class="fy-guide-copy">&copy; {{ domain }}</p>
     </footer>
   </nav>
   <nav class="fy-mini f0ck-shell-chrome" aria-label="Guide (short)">
