@@ -45,6 +45,8 @@ pub fn register(r: &mut Router) {
     g.get(r"\/tags\/suggest$", tags_suggest);
     g.get(r"\/users\/suggest$", users_suggest);
     g.get(r"\/items\/suggest$", items_suggest);
+    g.get(r"\/search\/syntax$", search_syntax);
+    g.get(r"\/search\/preview$", search_preview);
     g.put_g(r"\/tags\/rename\/(?<tagname>.*)", Guard::ModAuth, items::tags_rename);
     g.patch_g(r"\/items\/(?<id>\d+)\/title$", Guard::RegisteredUser, items::set_title);
     // the same as a plain form post (no JavaScript: f0ckyou's Edit dialog)
@@ -808,6 +810,44 @@ async fn tags_suggest(st: AppState, req: Req) -> Res {
         }
     }
     j(Value::Object(reply), 200)
+}
+
+/// The search language for the search boxes' help and autocomplete (f0cklib/query.rs): the
+/// operators by group, the tricks beyond them, and whether the people operators work here.
+async fn search_syntax(st: AppState, req: Req) -> Res {
+    use crate::f0cklib::query::{GROUPS, OPERATORS, TRICKS};
+    let people = !anonymize(&st, &req);
+    let ops: Vec<_> = OPERATORS.iter().filter(|o| people || !o.people).collect();
+    j(
+        json!({
+            "success": true,
+            "people": people,
+            "groups": GROUPS.iter().map(|(id, title)| json!({ "id": id, "title": title })).collect::<Vec<_>>(),
+            "operators": ops,
+            "tricks": TRICKS.iter().map(|(syntax, about, example)| json!({ "syntax": syntax, "about": about, "example": example })).collect::<Vec<_>>(),
+        }),
+        200,
+    )
+}
+
+/// What a search would find while it's typed (`q`, `strict=1`): what it understood, what it left
+/// out, and how many f0cks (`count`, null for visitors who can't search: `needs_login`).
+async fn search_preview(st: AppState, req: Req) -> Res {
+    let q = req.query("q").unwrap_or("").chars().take(2048).collect::<String>();
+    let strict = matches!(req.query("strict"), Some("1" | "true"));
+    if q.trim().is_empty() {
+        return j(json!({ "success": true, "explain": [], "notes": [], "count": null, "needs_login": req.session().is_none() }), 200);
+    }
+    match crate::routes::search::preview(&st, &req, &q, strict).await {
+        Ok((parsed, count)) => j(
+            json!({ "success": true, "explain": parsed.explain, "notes": parsed.notes, "count": count, "needs_login": req.session().is_none() }),
+            200,
+        ),
+        Err(e) => {
+            tracing::warn!("[SEARCH] preview of {q:?}: {e}");
+            j(json!({ "success": false, "error": "Search preview failed" }), 500)
+        }
+    }
 }
 
 async fn users_suggest(st: AppState, req: Req) -> Res {

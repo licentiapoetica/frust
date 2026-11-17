@@ -11387,7 +11387,198 @@ input#s_avatar {
 
 #search-input::placeholder {
   color: #555;
+}
+
+/* ── the search overlay (f0ckm.js <search-overlay>): input, completion, live preview, quick
+      chips and the tricks list; the operators come from /api/v2/search/syntax ── */
+#search-overlay.open {
+  display: flex;
+  align-items: flex-start;
+  overflow-y: auto;
+}
+
+#search-overlay [hidden] {
+  display: none !important;
+}
+
+#search-overlay .search-container {
+  width: 100%;
+  max-width: 800px;
+  margin: auto 0;
+  padding: 40px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#search-overlay .search-box {
+  position: relative;
+  width: 100%;
+}
+
+#search-suggestions.search-suggestions {
+  top: 100%;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  min-width: 0;
+  max-width: none;
+  max-height: 50vh;
+  margin: 0;
+  border-radius: 0;
+  z-index: 10001;
+  text-align: left;
+}
+
+#search-suggestions .search-suggestion-hint {
+  padding: 8px 12px;
+  color: var(--white);
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+#search-suggestions .tag-suggestion-item[data-type="op"] .tag-suggestion-name,
+#search-suggestions .tag-suggestion-item[data-type="value"] .tag-suggestion-name {
+  font-family: monospace;
+  color: var(--accent);
+}
+
+#search-overlay .search-preview {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  margin: 16px 0 0;
+  color: var(--white);
+  opacity: 0.85;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+#search-overlay .search-preview-count {
+  color: var(--accent);
+}
+
+#search-overlay .search-preview-notes {
+  color: #e57373;
+}
+
+#search-overlay .search-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 20px;
+}
+
+#search-overlay .search-chip,
+#search-overlay .search-trick-ex {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--white);
+  font-family: monospace;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+#search-overlay .search-chip:hover,
+#search-overlay .search-chip:focus-visible,
+#search-overlay .search-trick-ex:hover,
+#search-overlay .search-trick-ex:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+
+#search-overlay .search-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 24px;
+  margin-top: 20px;
+  color: var(--white);
+}
+
+#search-overlay .search-tricks-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+#search-overlay .search-tricks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px 28px;
+  width: 100%;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: left;
+  color: var(--white);
+}
+
+#search-overlay .search-tricks-group h3 {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  opacity: 0.6;
+}
+
+#search-overlay .search-trick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+#search-overlay .search-trick-head code {
+  color: var(--accent);
+}
+
+#search-overlay .search-trick-head var {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+#search-overlay .search-trick-aliases {
+  margin-left: 8px;
+  font-family: monospace;
+  opacity: 0.45;
+}
+
+#search-overlay .search-trick-about {
+  font-size: 0.82rem;
+  opacity: 0.7;
+}
+
+#search-overlay .search-trick-ex {
+  margin-top: 2px;
+  padding: 1px 6px;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 600px) {
+  #search-input {
+    font-size: 1.8rem;
+  }
+}
+
+#search-close {
+  background: none;
+  border: 0;
+  padding: 0;
+  line-height: 1;
 }
 
 #search-close,

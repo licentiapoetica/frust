@@ -340,10 +340,10 @@ fn operator(key: &str, value: &str, who_ok: bool, q: &mut Query) -> Option<Op> {
             Some(op) => op,
             None => who(q, Term::Commenter(v.to_string())),
         },
-        "type" | "mime" | "filetype" => match mime_of(&lv) {
-            Some(m) => Op::Term(Term::Mime(m)),
+        "type" | "mime" | "filetype" => match kind_of(&lv) {
+            Some(t) => Op::Term(t),
             None => {
-                q.notes.push(format!("unknown type \u{201c}{v}\u{201d} (video, image, gif, audio, flash)"));
+                q.notes.push(format!("unknown type \u{201c}{v}\u{201d} (video, image, gif, audio, flash, or a file ending like mp4)"));
                 Op::Done
             }
         },
@@ -362,8 +362,9 @@ fn operator(key: &str, value: &str, who_ok: bool, q: &mut Query) -> Option<Op> {
                 Op::Done
             }
             Some(f) => Op::Term(Term::Is(f)),
-            None => match (mime_of(&lv), lv.as_str()) {
-                (Some(m), _) => Op::Term(Term::Mime(m)),
+            // is:mp4 yes, but no unknown word as a file ending (is:xyz is a mistake)
+            None => match (kind_of(&lv).filter(|t| !matches!(t, Term::Ext(_))), lv.as_str()) {
+                (Some(t), _) => Op::Term(t),
                 (None, "sfw" | "nsfw" | "nsfl" | "untagged") => Op::Term(Term::Rating(lv)),
                 _ => {
                     q.notes.push(format!("unknown {key}:{lv}"));
@@ -419,6 +420,33 @@ fn operator(key: &str, value: &str, who_ok: bool, q: &mut Query) -> Option<Op> {
         }
         _ => return None,
     })
+}
+
+/// What `type:` (and `is:`) take: a kind (video, image, gif, audio, flash, youtube), a mime type
+/// (video/mp4, image/*), or a file ending: the common ones as their mime type (mp4 → video/mp4,
+/// jpg → image/jpeg, ...), any other short one as the ending of the file (like `ext:`).
+fn kind_of(v: &str) -> Option<Term> {
+    if let Some(m) = mime_of(v) {
+        return Some(Term::Mime(m));
+    }
+    let v = v.trim_start_matches('.');
+    let mime = match v {
+        "mp4" | "m4v" => "video/mp4",
+        "webm" => "video/webm",
+        "mov" => "video/quicktime",
+        "mkv" => "video/x-matroska",
+        "youtube" | "yt" => "video/youtube",
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "webp" => "image/webp",
+        "avif" => "image/avif",
+        "bmp" => "image/bmp",
+        "mp3" => "audio/mpeg",
+        "flac" => "audio/flac",
+        e if (2..=5).contains(&e.len()) && e.chars().all(|c| c.is_ascii_alphanumeric()) => return Some(Term::Ext(e.to_string())),
+        _ => return None,
+    };
+    Some(Term::Mime(mime.to_string()))
 }
 
 fn mime_of(v: &str) -> Option<String> {
@@ -544,6 +572,83 @@ fn describe(neg: bool, t: &Term) -> String {
     };
     if neg { format!("not {d}") } else { d }
 }
+
+// ── the catalog (for the search boxes' help and autocomplete) ───────────────
+
+/// One operator as the search boxes explain and complete it (GET /api/v2/search/syntax). Every
+/// key and alias here is one `operator` understands (tests: catalog_matches_the_parser), so a new
+/// operator shows up in the f0ckm search overlay by being added here.
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub struct OpDoc {
+    pub key: &'static str,
+    pub aliases: &'static [&'static str],
+    /// what goes after the colon ("name", "n", ...)
+    pub arg: &'static str,
+    pub about: &'static str,
+    /// the values it takes, for completion (empty: free text or a number)
+    pub values: &'static [&'static str],
+    pub example: &'static str,
+    /// people, file, numbers, time, order
+    pub group: &'static str,
+    /// the value is a user name (completed from /api/v2/users/suggest; off on anonymized sites)
+    pub people: bool,
+    /// the value is a tag (completed from /api/v2/tags/suggest)
+    pub tag: bool,
+    /// shown as a quick chip in the search overlay
+    pub featured: bool,
+}
+
+const fn op_doc(key: &'static str, arg: &'static str, about: &'static str, example: &'static str, group: &'static str) -> OpDoc {
+    OpDoc { key, aliases: &[], arg, about, values: &[], example, group, people: false, tag: false, featured: false }
+}
+
+const TYPES: &[&str] = &["video", "image", "gif", "audio", "flash", "youtube", "mp4", "webm", "jpg", "png", "webp", "mp3"];
+const IS_VALUES: &[&str] = &["oc", "fav", "mine", "pinned", "expiring", "public", "unlisted", "private", "video", "image", "gif", "audio", "flash", "sfw", "nsfw", "nsfl", "untagged"];
+const HAS_VALUES: &[&str] = &["title", "src", "comments", "favs", "tags", "cover"];
+const SORTS: &[&str] = &["new", "old", "views", "favs", "comments", "long", "short", "big", "small", "random", "related"];
+
+/// The groups of the catalog, in order: (id, title).
+pub const GROUPS: &[(&str, &str)] = &[("tags", "Tags"), ("people", "People"), ("file", "The f0ck"), ("numbers", "Numbers"), ("time", "Time"), ("order", "Order")];
+
+pub const OPERATORS: &[OpDoc] = &[
+    OpDoc { tag: true, ..op_doc("tag", "name", "a whole tag, like \"quotes\"", "tag:cat", "tags") },
+    OpDoc { featured: true, people: true, aliases: &["from", "by", "uploader"], ..op_doc("user", "name", "uploaded by them", "user:name", "people") },
+    OpDoc { featured: true, people: true, aliases: &["favby", "faved", "likedby"], ..op_doc("fav", "name", "in their favs (unless private)", "fav:name", "people") },
+    OpDoc { people: true, aliases: &["commentedby"], ..op_doc("commenter", "name", "they commented on it", "commenter:name", "people") },
+    OpDoc { people: true, aliases: &["taggedby"], ..op_doc("tagger", "name", "they gave it a tag", "tagger:name", "people") },
+    OpDoc { featured: true, values: TYPES, aliases: &["mime", "filetype"], ..op_doc("type", "kind", "video, image, gif, audio, flash, youtube, or a file ending (mp4, png, ...)", "type:video", "file") },
+    OpDoc { values: &["webm", "mp4", "gif", "jpg", "png", "webp", "mp3", "swf"], ..op_doc("ext", "end", "the file ending", "ext:webm", "file") },
+    OpDoc { values: &["sfw", "nsfw", "nsfl", "untagged"], ..op_doc("rating", "r", "sfw, nsfw, nsfl, or untagged", "rating:sfw", "file") },
+    OpDoc { aliases: &["intitle"], ..op_doc("title", "text", "the title contains the text", "title:fail", "file") },
+    OpDoc { aliases: &["source", "url", "site"], ..op_doc("src", "text", "the source address contains the text", "src:youtube", "file") },
+    OpDoc { aliases: &["in"], ..op_doc("hall", "name", "in that hall", "hall:best", "file") },
+    OpDoc { featured: true, values: IS_VALUES, ..op_doc("is", "what", "oc, fav (yours), mine, pinned, expiring, private, a type or a rating", "is:oc", "file") },
+    OpDoc { featured: true, values: HAS_VALUES, ..op_doc("has", "what", "title, src, comments, favs, tags or cover", "has:comments", "file") },
+    OpDoc { aliases: &["like", "similar"], ..op_doc("related", "f0ck", "shares tags with that f0ck (number or link name)", "related:1", "file") },
+    OpDoc { featured: true, ..op_doc("views", "n", "how often it was watched: >100, 10..50, 2k", "views:>100", "numbers") },
+    op_doc("favs", "n", "how many favs (favs:name: in their favs)", "favs:>=2", "numbers"),
+    op_doc("comments", "n", "how many comments", "comments:>0", "numbers"),
+    op_doc("tags", "n", "how many tags (without the rating)", "tags:<2", "numbers"),
+    OpDoc { featured: true, aliases: &["length", "len"], ..op_doc("duration", "time", "length: 90, 1m30s, 1:30, 2h", "duration:<15s", "numbers") },
+    op_doc("size", "bytes", "file size: 500k, 10mb, 1gb", "size:>10mb", "numbers"),
+    OpDoc { aliases: &["w"], ..op_doc("width", "px", "width in pixels", "width:>=1920", "numbers") },
+    OpDoc { aliases: &["h"], ..op_doc("height", "px", "height in pixels", "height:>=1080", "numbers") },
+    op_doc("id", "n", "the f0ck's number", "id:1..100", "numbers"),
+    OpDoc { aliases: &["date", "on"], ..op_doc("year", "2024", "uploaded then: 2024, 2024-06, 2024-06-15", "year:2025", "time") },
+    OpDoc { aliases: &["since"], ..op_doc("after", "date", "uploaded on that date or later", "after:2025-01", "time") },
+    op_doc("before", "date", "uploaded before that date", "before:2025", "time"),
+    OpDoc { featured: true, values: &["<1d", "<7d", "<30d", "<1y", ">1y"], ..op_doc("age", "time", "how old: <7d, >1y (h, d, w, mo, y)", "age:<7d", "time") },
+    OpDoc { featured: true, values: SORTS, aliases: &["order"], ..op_doc("sort", "how", "new, old, views, favs, comments, long, short, big, small, random, related", "sort:views", "order") },
+];
+
+/// The syntax beyond operators, for the help: (what you type, what it does, example).
+pub const TRICKS: &[(&str, &str, &str)] = &[
+    ("word", "a tag containing the word; every word must match", "cat"),
+    ("\"tag\"", "a whole tag", "\"black cat\""),
+    ("*  ?", "wildcards over a whole tag", "cat*"),
+    ("-x", "leave out what x finds", "cat -dog"),
+    ("a OR b", "either one (also a | b)", "cat OR dog"),
+];
 
 // ── numbers and dates ───────────────────────────────────────────────────────
 
@@ -942,6 +1047,15 @@ mod tests {
             ]
         );
         assert_eq!(q.sort, Some(Sort::Views));
+        // type: kinds, file endings (as their mime type, else as the ending) and mime types
+        assert_eq!(terms(&parse("type:mp4", false, true)), vec![vec![(false, Term::Mime("video/mp4".into()))]]);
+        assert_eq!(terms(&parse("type:.jpg", false, true)), vec![vec![(false, Term::Mime("image/jpeg".into()))]]);
+        assert_eq!(terms(&parse("type:opus", false, true)), vec![vec![(false, Term::Ext("opus".into()))]]);
+        assert_eq!(terms(&parse("is:youtube", false, true)), vec![vec![(false, Term::Mime("video/youtube".into()))]]);
+        assert_eq!(terms(&parse("type:image/*", false, true)), vec![vec![(false, Term::Mime("image/%".into()))]]);
+        let q = parse("type:mp4 sort:random", false, true);
+        assert!(q.notes.is_empty() && q.sort == Some(Sort::Random));
+        assert!(!parse("type:not-a-type!", false, true).notes.is_empty());
         // favs: a number or a person
         assert!(matches!(&terms(&parse("favs:>3", false, true))[0][0].1, Term::Num { field: NumField::Favs, lo: Some(l), .. } if *l == 3.0));
         assert_eq!(terms(&parse("favs:bob", false, true)), vec![vec![(false, Term::Fav("bob".into()))]]);
@@ -954,6 +1068,38 @@ mod tests {
         let q = parse("related:abc", false, true);
         assert_eq!(q.related.as_deref(), Some("abc"));
         assert!(q.groups.is_empty() && !q.is_empty());
+    }
+
+    /// Every key and alias of the catalog is an operator the parser knows, with its example.
+    #[test]
+    fn catalog_matches_the_parser() {
+        for op in OPERATORS {
+            for key in std::iter::once(&op.key).chain(op.aliases.iter()) {
+                let q = parse(&format!("{key}:{}", op.example.split_once(':').map(|(_, v)| v).unwrap_or("x")), false, true);
+                let plain_word = q.groups.iter().flatten().any(|a| matches!(&a.term, Term::Tag { text, .. } if text.starts_with(&format!("{key}:"))));
+                assert!(!plain_word && q.notes.is_empty() && !q.is_empty(), "{key}: {:?} {:?}", q.groups, q.notes);
+            }
+            assert!(op.example.starts_with(&format!("{}:", op.key)), "{}", op.key);
+            for v in op.values {
+                let q = parse(&format!("{}:{v}", op.key), false, true);
+                assert!(q.notes.is_empty() && !q.is_empty(), "{}:{v}: {:?}", op.key, q.notes);
+            }
+            assert!(GROUPS.iter().any(|(g, _)| *g == op.group), "{}", op.key);
+        }
+        for (_, _, ex) in TRICKS {
+            assert!(!parse(ex, false, true).groups.is_empty(), "{ex}");
+        }
+    }
+
+    /// F0CKM_SEARCH_SYNTAX=<file>: write the catalog as GET /api/v2/search/syntax answers it.
+    #[test]
+    fn dump_syntax() {
+        let Ok(out) = std::env::var("F0CKM_SEARCH_SYNTAX") else { return };
+        let v = serde_json::json!({ "success": true, "people": true,
+            "groups": GROUPS.iter().map(|(id, title)| serde_json::json!({ "id": id, "title": title })).collect::<Vec<_>>(),
+            "operators": OPERATORS,
+            "tricks": TRICKS.iter().map(|(syntax, about, example)| serde_json::json!({ "syntax": syntax, "about": about, "example": example })).collect::<Vec<_>>() });
+        std::fs::write(out, v.to_string()).unwrap();
     }
 
     #[test]

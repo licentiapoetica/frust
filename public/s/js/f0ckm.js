@@ -15828,391 +15828,496 @@ window.cancelAnimFrame = (function () {
   // <scroller>
 
   // <search-overlay>
+  // The search (navbar magnifier, "k"): f0ckm's way into the search language of /search
+  // (server/src/f0cklib/query.rs). The operators come from GET /api/v2/search/syntax, so a new
+  // operator shows up here (quick chips, the tricks list, completion) without touching this code.
+  // Completion works on the word at the cursor: operator names, their values (types, sorts, ...),
+  // user names, tags and titles. A plain tag still opens its feed (/tag/x); a search with
+  // operators, quotes, -x, OR or wildcards opens /search, and while it's typed a live preview
+  // (GET /api/v2/search/preview) says what it understood and how many f0cks it finds.
   const initSearch = () => {
-    if (!document.getElementById('search-overlay')) {
-      const i18n = window.f0ckI18n || {};
-      const overlay = document.createElement('div');
-      overlay.id = 'search-overlay';
-      overlay.innerHTML = `
-             <div id="search-close">&times;</div>
-             <div class="search-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                <div style="width: 100%; max-width: 800px; position: relative;">
-                    <input type="text" id="search-input" placeholder="${i18n.search_placeholder || 'Search Tags'}" autocomplete="off" enterkeyhint="search">
-                    <div id="search-suggestions" class="tag-suggestions" style="display: none; top: 100% !important; bottom: auto !important; left: 0 !important; right: 0 !important; min-width: unset !important; max-width: none !important; z-index: 10001 !important;"></div>
-                </div>
-                <label class="strict-toggle" style="margin-top: 20px;">
-                    <input type="checkbox" id="search-strict"> ${i18n.search_strict_mode || 'Strict Mode'}
-                </label>
-             </div>
-         `;
-      document.body.appendChild(overlay);
+    if (document.getElementById('search-overlay')) return;
+    const i18n = window.f0ckI18n || {};
+    const overlay = document.createElement('div');
+    overlay.id = 'search-overlay';
+    overlay.innerHTML = `
+      <button type="button" id="search-close" aria-label="close">&times;</button>
+      <div class="search-container">
+        <div class="search-box">
+          <input type="text" id="search-input" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="search">
+          <div id="search-suggestions" class="tag-suggestions search-suggestions" hidden></div>
+        </div>
+        <p class="search-preview" id="search-preview" aria-live="polite" hidden></p>
+        <div class="search-chips" id="search-chips"></div>
+        <div class="search-tools">
+          <label class="strict-toggle"><input type="checkbox" id="search-strict"> <span class="search-strict-label"></span></label>
+          <button type="button" class="search-tricks-btn" id="search-tricks-btn" aria-expanded="false" aria-controls="search-tricks"></button>
+        </div>
+        <div class="search-tricks" id="search-tricks" hidden></div>
+      </div>`;
+    document.body.appendChild(overlay);
 
-      const input = document.getElementById('search-input');
-      const close = document.getElementById('search-close');
-      const strict = document.getElementById('search-strict');
-      const suggestions = document.getElementById('search-suggestions');
-      const btns = document.querySelectorAll('#nav-search-btn');
+    const input = document.getElementById('search-input');
+    const close = document.getElementById('search-close');
+    const strict = document.getElementById('search-strict');
+    const suggestions = document.getElementById('search-suggestions');
+    const preview = document.getElementById('search-preview');
+    const chips = document.getElementById('search-chips');
+    const tricks = document.getElementById('search-tricks');
+    const tricksBtn = document.getElementById('search-tricks-btn');
+    const btns = document.querySelectorAll('#nav-search-btn');
+    const placeholder = () => (strict.checked ? (i18n.search_strict_placeholder || 'tag1, tag2…') : (i18n.search_placeholder || 'Search: tags, user:, type:, sort:…'));
+    overlay.querySelector('.search-strict-label').textContent = i18n.search_strict_mode || 'Strict Mode';
+    tricksBtn.textContent = i18n.search_tricks || 'Search tricks';
 
-      let debounceTimer = null;
-      let closeTimer = null;
-      let highlightIdx = -1;
+    const el = (tag, cls, text) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text !== undefined) n.textContent = text;
+      return n;
+    };
+    const getJSON = (url) => fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(r => r.json()).catch(() => null);
 
-      const doSearch = () => {
-        let val = input.value.trim();
-        // Remove trailing commas and extra whitespace
-        val = val.replace(/,+$/, '').trim();
-        if (val) {
-          if (window.f0ckInterestEngine?.recordTagSearch) {
-            window.f0ckInterestEngine.recordTagSearch(val);
-          }
-          toggleSearch(false);
-          let targetUrl = `/tag/${encodeURIComponent(val).replace(/%2C/g, ',').replace(/%20/g, ' ')}`;
-          // Use AJAX for faster transition and clean URL
-          if (typeof loadPageAjax === 'function') {
-            loadPageAjax(targetUrl, true);
-          } else {
-            window.location.href = targetUrl;
-          }
-        }
-      };
+    // ── the language (operators, groups, tricks) from the server ──
+    let syntax = null;
+    let syntaxLoad = null;
+    const loadSyntax = () => syntaxLoad || (syntaxLoad = getJSON('/api/v2/search/syntax').then(d => {
+      if (d && d.success) {
+        syntax = d;
+        renderChips();
+        renderTricks();
+      } else {
+        syntaxLoad = null;
+      }
+      return syntax;
+    }));
+    const opByKey = (key) => {
+      const k = String(key).toLowerCase();
+      return (syntax?.operators || []).find(o => o.key === k || (o.aliases || []).includes(k)) || null;
+    };
 
-      const renderSuggestions = (tagItems, titleItems) => {
-        suggestions.innerHTML = '';
-        highlightIdx = -1;
-        const totalItems = (tagItems || []).length + (titleItems || []).length;
-        if (!totalItems) {
-          suggestions.style.display = 'none';
-          return;
-        }
+    // A search for /search rather than a tag's feed: operators, quotes, -x, OR / |, wildcards.
+    // A lone title:x keeps opening the title feed (/tag/title:x).
+    const isAdvanced = (val) => {
+      if (/(^|[\s,])-[^\s,]/.test(val) || /["*?|]/.test(val) || /(^|\s)OR(\s|$)/.test(val)) return true;
+      const keys = [...val.matchAll(/(?:^|[\s,])-?([a-z]+):[^\s,]/gi)].map(m => m[1].toLowerCase());
+      if (keys.length === 1 && keys[0] === 'title' && /^title:/i.test(val.trim())) return false;
+      return keys.some(k => (syntax ? !!opByKey(k) : true));
+    };
 
-        const addSectionHeader = (label) => {
-          const hdr = document.createElement('div');
-          hdr.className = 'tag-suggestion-header';
-          hdr.textContent = label;
-          suggestions.appendChild(hdr);
-        };
+    // ── the word at the cursor (commas only in strict mode; quotes keep their spaces) ──
+    const tokenAt = () => {
+      const v = input.value;
+      const caret = input.selectionStart ?? v.length;
+      const sep = c => c === ',' || (!strict.checked && /\s/.test(c));
+      let start = 0;
+      let inQuote = false;
+      for (let i = 0; i < caret; i++) {
+        if (v[i] === '"') inQuote = !inQuote;
+        else if (!inQuote && sep(v[i])) start = i + 1;
+      }
+      let end = caret;
+      while (end < v.length && !sep(v[end])) end++;
+      const raw = v.slice(start, end);
+      const lead = raw.length - raw.trimStart().length;
+      return { start: start + lead, end, text: raw.trim() };
+    };
 
-        // --- Tag results ---
-        if (tagItems && tagItems.length) {
-          if (titleItems && titleItems.length) addSectionHeader('Tags');
-          tagItems.forEach(s => {
-            const div = document.createElement('div');
-            div.className = 'tag-suggestion-item';
-            div.dataset.type = 'tag';
-            div.dataset.value = s.tag;
+    let debounceTimer = null;
+    let previewTimer = null;
+    let closeTimer = null;
+    let suggestSeq = 0;
+    let previewSeq = 0;
+    let highlightIdx = -1;
+    let entries = [];
+    // what the last plain search suggested (tags / titles): only titles → the title feed
+    let lastCounts = { tag: 0, title: 0 };
 
-            const name = document.createElement('span');
-            name.className = 'tag-suggestion-name';
-            name.textContent = s.tag;
+    const hideSuggestions = () => {
+      suggestSeq++;
+      suggestions.hidden = true;
+      suggestions.replaceChildren();
+      entries = [];
+      highlightIdx = -1;
+    };
 
-            const meta = document.createElement('span');
-            meta.className = 'tag-suggestion-meta';
-            meta.textContent = `${s.tagged}× · ${s.score.toFixed(2)}`;
-
-            div.appendChild(name);
-            div.appendChild(meta);
-
-            div.addEventListener('mousedown', (e) => {
-              e.preventDefault();
-              if (window.f0ckInterestEngine?.recordTagSearch) {
-                window.f0ckInterestEngine.recordTagSearch(s.tag);
-              }
-              const isStrict = strict && strict.checked;
-              if (isStrict) {
-                const parts = input.value.split(',');
-                parts[parts.length - 1] = s.tag;
-                input.value = parts.join(',') + ',';
-              } else {
-                input.value = s.tag;
-              }
-              suggestions.style.display = 'none';
-              highlightIdx = -1;
-              input.focus();
-            });
-            suggestions.appendChild(div);
-          });
-        }
-
-        // --- Title results ---
-        if (titleItems && titleItems.length) {
-          if (tagItems && tagItems.length) addSectionHeader('Titles');
-          titleItems.forEach(s => {
-            const div = document.createElement('div');
-            div.className = 'tag-suggestion-item tag-suggestion-item--title';
-            div.dataset.type = 'title';
-            div.dataset.id = s.id;
-            div.dataset.title = s.title;
-
-            const icon = document.createElement('span');
-            icon.className = 'tag-suggestion-icon';
-            icon.innerHTML = '<i class="fa-regular fa-file" aria-hidden="true"></i>';
-
-            const name = document.createElement('span');
-            name.className = 'tag-suggestion-name';
-            name.textContent = s.title.length > 60 ? s.title.substring(0, 60) + '…' : s.title;
-
-            const meta = document.createElement('span');
-            meta.className = 'tag-suggestion-meta';
-            meta.textContent = `#${s.id}`;
-
-            div.appendChild(icon);
-            div.appendChild(name);
-            div.appendChild(meta);
-
-            div.addEventListener('mousedown', (e) => {
-              e.preventDefault();
-              suggestions.style.display = 'none';
-              highlightIdx = -1;
-              toggleSearch(false);
-              const target = `/tag/title:${encodeURIComponent(s.title)}/`;
-              if (typeof loadPageAjax === 'function') {
-                loadPageAjax(target, true);
-              } else {
-                window.location.href = target;
-              }
-            });
-            suggestions.appendChild(div);
-          });
-        }
-
-        suggestions.style.display = 'block';
-      };
-
-      input.addEventListener('input', () => {
-        const isStrict = strict && strict.checked;
-        const q = isStrict ? input.value.split(',').pop().trim() : input.value.trim();
-        highlightIdx = -1;
-        if (q.length < 1) {
-          suggestions.style.display = 'none';
-          return;
-        }
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(async () => {
-          try {
-            const [tagRes, titleRes] = await Promise.all([
-              fetch(`/api/v2/tags/suggest?q=${encodeURIComponent(q)}`).then(r => r.json()).catch(() => ({ success: false })),
-              fetch(`/api/v2/items/suggest?q=${encodeURIComponent(q)}`).then(r => r.json()).catch(() => ({ success: false }))
-            ]);
-            if (!overlay.classList.contains('visible') || !input.value.trim()) {
-              suggestions.style.display = 'none';
-              return;
-            }
-            const tagSuggestions = (tagRes.success && tagRes.suggestions) ? tagRes.suggestions.slice(0, 6) : [];
-            const titleSuggestions = (titleRes.success && titleRes.suggestions) ? titleRes.suggestions.slice(0, 4) : [];
-            if (tagSuggestions.length || titleSuggestions.length) {
-              renderSuggestions(tagSuggestions, titleSuggestions);
-            } else {
-              suggestions.style.display = 'none';
-            }
-          } catch (e) {
-            suggestions.style.display = 'none';
-          }
-        }, 300);
-      });
-
-      input.addEventListener('keydown', e => {
-        const items = suggestions.querySelectorAll('.tag-suggestion-item');
-        if (!items.length || suggestions.style.display === 'none') return;
-
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          if (highlightIdx >= 0 && highlightIdx < items.length) items[highlightIdx].classList.remove('active');
-          highlightIdx = highlightIdx < items.length - 1 ? highlightIdx + 1 : 0;
-          items[highlightIdx].classList.add('active');
-          items[highlightIdx].scrollIntoView({ block: 'nearest' });
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          if (highlightIdx >= 0 && highlightIdx < items.length) items[highlightIdx].classList.remove('active');
-          highlightIdx = highlightIdx > 0 ? highlightIdx - 1 : items.length - 1;
-          items[highlightIdx].classList.add('active');
-          items[highlightIdx].scrollIntoView({ block: 'nearest' });
-        } else if (e.key === 'Escape') {
-          suggestions.style.display = 'none';
-          highlightIdx = -1;
-          e.stopPropagation();
-        }
-      });
-
-      input.addEventListener('blur', () => {
-        setTimeout(() => { suggestions.style.display = 'none'; }, 150);
-      });
-
-      // Load strict preference
-      const savedStrict = localStorage.getItem('search_strict') === 'true';
-      if (strict) strict.checked = savedStrict;
-
-      const clearSearchState = () => {
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-          debounceTimer = null;
-        }
-        input.value = '';
-        suggestions.innerHTML = '';
-        suggestions.style.display = 'none';
-        highlightIdx = -1;
-      };
-
-      const toggleSearch = (show) => {
-        if (show) {
-          if (closeTimer) {
-            clearTimeout(closeTimer);
-            closeTimer = null;
-          }
-          clearSearchState();
-          overlay.style.display = 'flex';
-          // Force reflow
-          overlay.offsetHeight;
-          overlay.classList.add('visible');
-          input.focus();
+    // Put `text` in place of the word at the cursor. An operator name (ending in ":") stays open
+    // for its value; anything else gets a separator after it so the next word can follow.
+    const replaceToken = (tok, text, { space = true } = {}) => {
+      const v = input.value;
+      let after = v.slice(tok.end);
+      let insert = text;
+      const open = text.endsWith(':');
+      if (space && !open) {
+        if (strict.checked) {
+          insert += ', ';
+          after = after.replace(/^\s*,?\s*/, '');
         } else {
-          if (closeTimer) {
-            clearTimeout(closeTimer);
-          }
-          overlay.classList.remove('visible');
-          suggestions.style.display = 'none';
-          if (document.activeElement === input) {
-            input.blur();
-          }
-          closeTimer = setTimeout(() => {
-            overlay.style.display = 'none';
-            clearSearchState();
-            closeTimer = null;
+          insert += ' ';
+          after = after.replace(/^\s+/, '');
+        }
+      }
+      input.value = v.slice(0, tok.start) + insert + after;
+      const pos = tok.start + insert.length;
+      input.focus();
+      input.setSelectionRange(pos, pos);
+      if (open) update();
+      else {
+        hideSuggestions();
+        schedulePreview();
+      }
+    };
+
+    // Add a term at the end (the quick chips, the examples in the tricks list).
+    const addTerm = (text) => {
+      const v = input.value.replace(/[\s,]+$/, '');
+      input.value = v ? `${v}${strict.checked ? ', ' : ' '}${text}` : text;
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+      if (text.endsWith(':')) update();
+      else {
+        hideSuggestions();
+        schedulePreview();
+      }
+    };
+
+    const headers = { op: 'Operators', user: 'People', tag: 'Tags', title: 'Titles' };
+    const show = (list, seq) => {
+      if (seq !== suggestSeq) return;
+      highlightIdx = -1;
+      entries = list.filter(e => e.apply);
+      suggestions.replaceChildren();
+      if (!list.length || !overlay.classList.contains('visible')) {
+        suggestions.hidden = true;
+        return;
+      }
+      const kinds = new Set(list.map(e => e.kind));
+      let lastKind = null;
+      list.forEach(e => {
+        if (kinds.size > 1 && e.kind !== lastKind && headers[e.kind]) suggestions.appendChild(el('div', 'tag-suggestion-header', headers[e.kind]));
+        lastKind = e.kind;
+        const row = el('div', e.apply ? 'tag-suggestion-item' : 'search-suggestion-hint');
+        row.dataset.type = e.kind;
+        if (e.kind === 'title') {
+          const icon = el('span', 'tag-suggestion-icon');
+          icon.innerHTML = '<i class="fa-regular fa-file" aria-hidden="true"></i>';
+          row.appendChild(icon);
+        }
+        row.appendChild(el('span', 'tag-suggestion-name', e.label));
+        if (e.meta) row.appendChild(el('span', 'tag-suggestion-meta', e.meta));
+        if (e.apply) {
+          row.addEventListener('mousedown', ev => {
+            ev.preventDefault();
+            e.apply();
+          });
+        }
+        suggestions.appendChild(row);
+      });
+      suggestions.hidden = false;
+    };
+
+    // ── completion for the word at the cursor ──
+    const update = () => {
+      clearTimeout(debounceTimer);
+      schedulePreview();
+      const seq = ++suggestSeq;
+      const tok = tokenAt();
+      const neg = tok.text.startsWith('-') ? '-' : '';
+      const word = tok.text.slice(neg.length);
+      const m = /^([a-z]+):(.*)$/i.exec(word);
+      const op = m && opByKey(m[1]);
+      const local = [];
+
+      if (op) {
+        // an operator: its values, people or tags
+        const key = `${neg}${m[1]}:`;
+        const val = m[2].replace(/^"/, '');
+        const lv = val.toLowerCase();
+        (op.values || []).filter(x => x.toLowerCase().startsWith(lv) && x.toLowerCase() !== lv).slice(0, 12)
+          .forEach(x => local.push({ kind: 'value', label: key + x, apply: () => replaceToken(tok, key + x) }));
+        if (!local.length && !(op.people || op.tag) && !val) {
+          local.push({ kind: 'hint', label: `${op.key}:${op.arg}`, meta: `${op.about} · ${op.example}` });
+        }
+        show(local, seq);
+        if ((op.people || op.tag) && val) {
+          debounceTimer = setTimeout(async () => {
+            const d = await getJSON(op.people ? `/api/v2/users/suggest?q=${encodeURIComponent(val)}` : `/api/v2/tags/suggest?q=${encodeURIComponent(val)}`);
+            if (seq !== suggestSeq) return;
+            const found = (d?.suggestions || []).slice(0, 8).map(s => {
+              const name = op.people ? s.user : s.tag;
+              const v = /\s/.test(name) ? `"${name}"` : name;
+              return { kind: op.people ? 'user' : 'tag', label: key + v, meta: op.people ? (s.display_name || '') : `${s.tagged}×`, apply: () => replaceToken(tok, key + v) };
+            });
+            show(local.concat(found), seq);
           }, 200);
         }
-      };
-
-      btns.forEach(btn => btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleSearch(true);
-      }));
-
-      close.addEventListener('click', () => toggleSearch(false));
-
-      if (strict) {
-        // Init state from server if available, else localStorage
-        if (window.f0ckSession && window.f0ckSession.logged_in && typeof window.f0ckSession.strict_mode !== 'undefined') {
-          strict.checked = window.f0ckSession.strict_mode;
-          localStorage.setItem('search_strict', strict.checked); // Sync local
-        } else {
-          strict.checked = localStorage.getItem('search_strict') === 'true';
-        }
-
-        // Helper to visualy toggle strict parameter on tag links
-        window.updateStrictLinks = (isStrict) => {
-          document.querySelectorAll('a[href*="/tag/"]').forEach(a => {
-            let href = a.getAttribute('href');
-            if (href && (href.startsWith('/tag/') || href.includes(window.location.origin + '/tag/'))) {
-              if (isStrict) {
-                if (!href.includes('strict=1')) {
-                  href += (href.includes('?') ? '&' : '?') + 'strict=1';
-                }
-              } else {
-                if (href.includes('strict=1')) {
-                  href = href.replace(/[?&]strict=1/, '').replace(/[?&]$/, '');
-                }
-              }
-              a.setAttribute('href', href);
-            }
-          });
-        };
-
-        // Init placeholder and links
-        if (strict.checked) {
-          input.placeholder = "tag1, tag2...";
-          window.updateStrictLinks(true);
-        }
-
-        strict.addEventListener('change', () => {
-          localStorage.setItem('search_strict', strict.checked);
-          if (window.f0ckSession) window.f0ckSession.strict_mode = strict.checked;
-
-          window.updateStrictLinks(strict.checked);
-          document.dispatchEvent(new CustomEvent('f0ck:strictChanged', { detail: { strict: strict.checked } }));
-
-          // Sync with server
-          fetch('/strict/' + (strict.checked ? 1 : 0));
-
-          if (strict.checked) {
-            input.placeholder = "tag1, tag2...";
-          } else {
-            input.placeholder = "Search Tags...";
-          }
-        });
+        return;
       }
 
-      // Close on click outside (background)
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) toggleSearch(false);
-      });
+      const plain = word.replace(/^"/, '').replace(/"$/, '');
+      if (!plain) {
+        show([], seq);
+        return;
+      }
+      // operator names starting with the word
+      if (syntax && /^[a-z]+$/i.test(word)) {
+        const lw = word.toLowerCase();
+        syntax.operators.filter(o => o.key.startsWith(lw) && o.key !== lw).slice(0, 4)
+          .forEach(o => local.push({ kind: 'op', label: `${neg}${o.key}:`, meta: o.about, apply: () => replaceToken(tok, `${neg}${o.key}:`) }));
+      }
+      show(local, seq);
+      // the whole search is this one word: its tag feed, or a title
+      const alone = input.value.trim() === tok.text && !neg;
+      debounceTimer = setTimeout(async () => {
+        const [tags, titles] = await Promise.all([
+          getJSON(`/api/v2/tags/suggest?q=${encodeURIComponent(plain)}`),
+          alone ? getJSON(`/api/v2/items/suggest?q=${encodeURIComponent(plain)}`) : null,
+        ]);
+        if (seq !== suggestSeq) return;
+        const tagList = (tags?.success ? tags.suggestions : []).slice(0, 6).map(s => {
+          // inside a longer search a tag with spaces goes in quotes (a whole tag)
+          const v = (!alone && !strict.checked && /\s/.test(s.tag)) ? `"${s.tag}"` : s.tag;
+          return {
+            kind: 'tag', label: neg + v, meta: `${s.tagged}×`,
+            apply: () => {
+              window.f0ckInterestEngine?.recordTagSearch?.(s.tag);
+              replaceToken(tok, neg + v, { space: !alone || strict.checked });
+            },
+          };
+        });
+        const titleList = (titles?.success ? titles.suggestions : []).slice(0, 4).map(s => ({
+          kind: 'title', label: s.title.length > 60 ? `${s.title.slice(0, 60)}…` : s.title, meta: `#${s.id}`,
+          apply: () => go(`/tag/title:${encodeURIComponent(s.title)}/`),
+        }));
+        if (alone) lastCounts = { tag: tagList.length, title: titleList.length };
+        show(local.concat(tagList, titleList), seq);
+      }, 250);
+    };
 
-      // ESC to close
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlay.classList.contains('visible')) {
-          toggleSearch(false);
+    // ── the live preview: what the search understood and how many f0cks it finds ──
+    const schedulePreview = () => {
+      clearTimeout(previewTimer);
+      const val = input.value.trim().replace(/,+$/, '');
+      const seq = ++previewSeq;
+      if (!val || !isAdvanced(val)) {
+        preview.hidden = true;
+        return;
+      }
+      previewTimer = setTimeout(async () => {
+        const d = await getJSON(`/api/v2/search/preview?q=${encodeURIComponent(val)}${strict.checked ? '&strict=1' : ''}`);
+        if (seq !== previewSeq || !d || !d.success) return;
+        preview.replaceChildren();
+        if (d.count !== null && d.count !== undefined) {
+          const n = Number(d.count);
+          preview.appendChild(el('b', 'search-preview-count', n === 1 ? (i18n.search_found_one || '1 f0ck') : (i18n.search_found || '{count} f0cks').replace('{count}', n.toLocaleString())));
         }
-        // "k" to open
-        if ((e.key === 'k' || e.key === 'K') && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.isContentEditable && !overlay.classList.contains('visible')) {
-          e.preventDefault();
-          toggleSearch(true);
-        }
-        // (Shift + S used to toggle strict mode here; it opens the settings now, see page-modal.js)
-      });
+        if (d.explain?.length) preview.appendChild(el('span', 'search-preview-explain', d.explain.join(' · ')));
+        if (d.notes?.length) preview.appendChild(el('span', 'search-preview-notes', d.notes.join(' · ')));
+        if (d.needs_login) preview.appendChild(el('span', 'search-preview-notes', i18n.search_needs_login || 'Sign in to search with operators'));
+        preview.hidden = !preview.childNodes.length;
+      }, 300);
+    };
 
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          // If a suggestion is highlighted, use it
-          if (highlightIdx >= 0) {
-            const items = suggestions.querySelectorAll('.tag-suggestion-item');
-            if (items[highlightIdx]) {
-              const el = items[highlightIdx];
-              // Title results: go to the search page showing all items with this title
-              if (el.dataset.type === 'title') {
-                suggestions.style.display = 'none';
-                highlightIdx = -1;
-                toggleSearch(false);
-                const target = `/tag/title:${encodeURIComponent(el.dataset.title)}/`;
-                if (typeof loadPageAjax === 'function') {
-                  loadPageAjax(target, true);
-                } else {
-                  window.location.href = target;
-                }
-                return;
-              }
-              // Tag results: fill input
-              const selectedTag = el.querySelector('.tag-suggestion-name').textContent;
-              const isStrict = strict && strict.checked;
-              if (isStrict) {
-                const parts = input.value.split(',');
-                parts[parts.length - 1] = selectedTag;
-                input.value = parts.join(',') + ',';
-              } else {
-                input.value = selectedTag;
-              }
-              highlightIdx = -1;
-              suggestions.style.display = 'none';
-              return;
-            }
-          }
-          // Snapshot before hiding — if there are only title matches and no tag matches,
-          // go to the title search page instead of a futile tag search.
-          const tagItems   = suggestions.querySelectorAll('.tag-suggestion-item[data-type="tag"]');
-          const titleItems = suggestions.querySelectorAll('.tag-suggestion-item[data-type="title"]');
-          suggestions.style.display = 'none';
-          if (tagItems.length === 0 && titleItems.length > 0) {
-            const q = input.value.trim();
-            toggleSearch(false);
-            const target = `/tag/title:${encodeURIComponent(q)}/`;
-            if (typeof loadPageAjax === 'function') {
-              loadPageAjax(target, true);
-            } else {
-              window.location.href = target;
-            }
-            return;
-          }
-          doSearch();
-        }
+    // ── quick chips (the featured operators) and the tricks list (all of them) ──
+    const chipText = (o) => ((o.people || o.example.endsWith(':name')) ? `${o.key}:` : o.example);
+    const renderChips = () => {
+      chips.replaceChildren();
+      (syntax?.operators || []).filter(o => o.featured).map(chipText).forEach(text => {
+        const b = el('button', 'search-chip', text);
+        b.type = 'button';
+        b.addEventListener('click', () => addTerm(text));
+        chips.appendChild(b);
       });
+    };
+    const renderTricks = () => {
+      tricks.replaceChildren();
+      const row = (code, arg, about, example, aliases) => {
+        const r = el('div', 'search-trick');
+        const head = el('div', 'search-trick-head');
+        head.appendChild(el('code', '', code));
+        if (arg) head.appendChild(el('var', '', arg));
+        if (aliases && aliases.length) head.appendChild(el('small', 'search-trick-aliases', aliases.map(a => `${a}:`).join(' ')));
+        r.appendChild(head);
+        r.appendChild(el('span', 'search-trick-about', about));
+        if (example) {
+          const b = el('button', 'search-trick-ex', example);
+          b.type = 'button';
+          b.addEventListener('click', () => addTerm(example));
+          r.appendChild(b);
+        }
+        return r;
+      };
+      const groups = syntax?.groups || [];
+      groups.forEach(g => {
+        const ops = (syntax.operators || []).filter(o => o.group === g.id);
+        const extra = g.id === 'tags' ? (syntax.tricks || []) : [];
+        if (!ops.length && !extra.length) return;
+        const sec = el('section', 'search-tricks-group');
+        sec.appendChild(el('h3', '', g.title));
+        extra.forEach(t => sec.appendChild(row(t.syntax, '', t.about, t.example)));
+        ops.forEach(o => sec.appendChild(row(`${o.key}:`, o.arg, o.about, (o.people || o.example.endsWith(':name')) ? '' : o.example, o.aliases)));
+        tricks.appendChild(sec);
+      });
+    };
+    const setTricks = (open) => {
+      tricks.hidden = !open;
+      tricksBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      try { localStorage.setItem('search_tricks_open', open ? '1' : '0'); } catch { /* private mode */ }
+    };
+    tricksBtn.addEventListener('click', () => setTricks(tricks.hidden));
+    try { if (localStorage.getItem('search_tricks_open') === '1') setTricks(true); } catch { /* private mode */ }
+
+    // ── going there ──
+    const go = (url) => {
+      toggleSearch(false);
+      // /search is a page of its own (not swapped in like the feeds)
+      if (url.startsWith('/search') || typeof loadPageAjax !== 'function') window.location.href = url;
+      else loadPageAjax(url, true);
+    };
+    const doSearch = () => {
+      const val = input.value.trim().replace(/,+$/, '').trim();
+      if (!val) return;
+      if (isAdvanced(val)) {
+        if (!window.f0ckSession?.logged_in) {
+          preview.replaceChildren(el('span', 'search-preview-notes', i18n.search_needs_login || 'Sign in to search with operators'));
+          preview.hidden = false;
+          return;
+        }
+        go(`/search?tag=${encodeURIComponent(val)}${strict.checked ? '&mode=strict' : ''}`);
+        return;
+      }
+      window.f0ckInterestEngine?.recordTagSearch?.(val);
+      // only titles fit, no tag: the title feed rather than a futile tag search
+      if (lastCounts.tag === 0 && lastCounts.title > 0 && !suggestions.hidden) {
+        go(`/tag/title:${encodeURIComponent(val)}/`);
+        return;
+      }
+      go(`/tag/${encodeURIComponent(val).replace(/%2C/g, ',').replace(/%20/g, ' ')}`);
+    };
+
+    input.addEventListener('input', () => {
+      lastCounts = { tag: 0, title: 0 };
+      update();
+    });
+    input.addEventListener('click', () => { if (input.value) update(); });
+    input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) hideSuggestions(); }, 150));
+
+    input.addEventListener('keydown', e => {
+      const items = suggestions.querySelectorAll('.tag-suggestion-item');
+      const open = !suggestions.hidden && items.length > 0;
+      const mark = (i) => {
+        items.forEach(n => n.classList.remove('active'));
+        highlightIdx = i;
+        items[i].classList.add('active');
+        items[i].scrollIntoView({ block: 'nearest' });
+      };
+      if (open && e.key === 'ArrowDown') {
+        e.preventDefault();
+        mark(highlightIdx < items.length - 1 ? highlightIdx + 1 : 0);
+      } else if (open && e.key === 'ArrowUp') {
+        e.preventDefault();
+        mark(highlightIdx > 0 ? highlightIdx - 1 : items.length - 1);
+      } else if (open && e.key === 'Tab' && !e.shiftKey) {
+        // Tab completes with the marked (or the first) suggestion
+        e.preventDefault();
+        entries[highlightIdx >= 0 ? highlightIdx : 0]?.apply();
+      } else if (e.key === 'Escape' && !suggestions.hidden) {
+        e.stopPropagation();
+        hideSuggestions();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (open && highlightIdx >= 0) entries[highlightIdx]?.apply();
+        else doSearch();
+      }
+    });
+
+    const clearSearchState = () => {
+      clearTimeout(debounceTimer);
+      clearTimeout(previewTimer);
+      previewSeq++;
+      input.value = '';
+      preview.hidden = true;
+      preview.replaceChildren();
+      lastCounts = { tag: 0, title: 0 };
+      hideSuggestions();
+    };
+
+    const toggleSearch = (showIt) => {
+      clearTimeout(closeTimer);
+      closeTimer = null;
+      if (showIt) {
+        clearSearchState();
+        loadSyntax();
+        overlay.classList.add('open');
+        // the class change first, so the fade-in runs
+        overlay.offsetHeight;
+        overlay.classList.add('visible');
+        input.focus();
+      } else {
+        overlay.classList.remove('visible');
+        hideSuggestions();
+        if (document.activeElement === input) input.blur();
+        closeTimer = setTimeout(() => {
+          overlay.classList.remove('open');
+          clearSearchState();
+          closeTimer = null;
+        }, 200);
+      }
+    };
+
+    btns.forEach(btn => btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleSearch(true);
+    }));
+    close.addEventListener('click', () => toggleSearch(false));
+    // a click on the background closes it
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) toggleSearch(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay.classList.contains('visible')) toggleSearch(false);
+      // "k" opens it
+      if ((e.key === 'k' || e.key === 'K') && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.isContentEditable && !overlay.classList.contains('visible')) {
+        e.preventDefault();
+        toggleSearch(true);
+      }
+      // (Shift + S used to toggle strict mode here; it opens the settings now, see page-modal.js)
+    });
+
+    // ── strict mode: the session's, else this browser's; kept on the server too ──
+    if (window.f0ckSession && window.f0ckSession.logged_in && typeof window.f0ckSession.strict_mode !== 'undefined') {
+      strict.checked = !!window.f0ckSession.strict_mode;
+      localStorage.setItem('search_strict', strict.checked);
+    } else {
+      strict.checked = localStorage.getItem('search_strict') === 'true';
     }
+    input.placeholder = placeholder();
+
+    // tag links carry ?strict=1 while strict mode is on
+    window.updateStrictLinks = (isStrict) => {
+      document.querySelectorAll('a[href*="/tag/"]').forEach(a => {
+        let href = a.getAttribute('href');
+        if (href && (href.startsWith('/tag/') || href.includes(window.location.origin + '/tag/'))) {
+          if (isStrict) {
+            if (!href.includes('strict=1')) href += (href.includes('?') ? '&' : '?') + 'strict=1';
+          } else if (href.includes('strict=1')) {
+            href = href.replace(/[?&]strict=1/, '').replace(/[?&]$/, '');
+          }
+          a.setAttribute('href', href);
+        }
+      });
+    };
+    if (strict.checked) window.updateStrictLinks(true);
+
+    strict.addEventListener('change', () => {
+      localStorage.setItem('search_strict', strict.checked);
+      if (window.f0ckSession) window.f0ckSession.strict_mode = strict.checked;
+      window.updateStrictLinks(strict.checked);
+      document.dispatchEvent(new CustomEvent('f0ck:strictChanged', { detail: { strict: strict.checked } }));
+      fetch('/strict/' + (strict.checked ? 1 : 0));
+      input.placeholder = placeholder();
+      schedulePreview();
+    });
   };
   const initExcludedTagsModal = () => {
     const overlay = document.getElementById('excluded-tags-overlay');

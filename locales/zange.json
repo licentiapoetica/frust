@@ -683,8 +683,13 @@
     "ago": "vor {t}"
   },
   "search_overlay": {
-    "placeholder": "Etiketten suchen",
-    "strict_mode": "Strenger Modus"
+    "placeholder": "Suchen: Etiketten, user:, type:, sort:…",
+    "strict_mode": "Strenger Modus",
+    "tricks": "Suchkniffe",
+    "needs_login": "Für die Suche mit Bedienern bitte anmelden",
+    "found": "{count} f0cks",
+    "found_one": "1 f0ck",
+    "strict_placeholder": "etikett1, etikett2…"
   },
   "toast": {
     "report_success": "Meldung erfolgreich eingereicht.",

@@ -54,18 +54,9 @@ async fn run_search(st: &AppState, req: &Req, input: &str, strict: bool, page: i
         }
     }
 
-    // related:<id or slug>
-    let mut related_id = None;
-    if let Some(r) = q.related.clone() {
-        let id: Option<i64> = sql!("SELECT id FROM items WHERE id::text = ", r.as_str(), " OR slug = ", r.as_str(), " LIMIT 1").fetch_scalar(&st.db).await?;
-        match id {
-            Some(id) => related_id = Some(id),
-            None => {
-                q.notes.push(format!("there is no f0ck \u{201c}{r}\u{201d}"));
-                return Ok(Found { total: 0, rows: vec![], page: 1, explain: q.explain, notes: q.notes });
-            }
-        }
-    }
+    let Ok(related_id) = related_id(st, &mut q).await? else {
+        return Ok(Found { total: 0, rows: vec![], page: 1, explain: q.explain, notes: q.notes });
+    };
 
     let owner = crate::settings::session_owner_name(session);
     let viewer = query::Viewer { user_id: session.map(|s| s.id).unwrap_or(0), owner: owner.as_deref(), admin: session.map(|s| s.admin).unwrap_or(false) };
@@ -98,6 +89,38 @@ async fn run_search(st: &AppState, req: &Req, input: &str, strict: bool, page: i
         });
     }
     Ok(Found { total, rows, page: act, explain: q.explain, notes: q.notes })
+}
+
+/// `related:<id or slug>` as an item id: Ok(None) without one, Err(()) (and a note) when it names no f0ck.
+async fn related_id(st: &AppState, q: &mut query::Query) -> anyhow::Result<Result<Option<i64>, ()>> {
+    let Some(r) = q.related.clone() else { return Ok(Ok(None)) };
+    let id: Option<i64> = sql!("SELECT id FROM items WHERE id::text = ", r.as_str(), " OR slug = ", r.as_str(), " LIMIT 1").fetch_scalar(&st.db).await?;
+    Ok(match id {
+        Some(id) => Ok(Some(id)),
+        None => {
+            q.notes.push(format!("there is no f0ck \u{201c}{r}\u{201d}"));
+            Err(())
+        }
+    })
+}
+
+/// What a search would find, without running it: the parsed query (what it understood, what it
+/// left out) and, for a visitor who may search, how many f0cks it finds. The search boxes show it
+/// while typing (GET /api/v2/search/preview).
+pub async fn preview(st: &AppState, req: &Req, input: &str, strict: bool) -> anyhow::Result<(query::Query, Option<i64>)> {
+    let session = req.session();
+    let who_ok = !crate::settings::is_anonymize_session(&st.cfg(), session);
+    let mut q = query::parse(input, strict, who_ok);
+    if session.is_none() || q.is_empty() {
+        return Ok((q, None));
+    }
+    let Ok(related_id) = related_id(st, &mut q).await? else { return Ok((q, Some(0))) };
+    let owner = crate::settings::session_owner_name(session);
+    let viewer = query::Viewer { user_id: session.map(|s| s.id).unwrap_or(0), owner: owner.as_deref(), admin: session.map(|s| s.admin).unwrap_or(false) };
+    let vis = crate::f0cklib::visibility_filter(session);
+    let (count, _) = search_sql(&q, &viewer, &vis, related_id, "", 0);
+    let n = count.fetch_scalar::<i64, _>(&st.db).await?.unwrap_or(0);
+    Ok((q, Some(n)))
 }
 
 /// The count and the page query of a search (`vis`: f0cklib::visibility_filter of the visitor).

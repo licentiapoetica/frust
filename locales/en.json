@@ -694,8 +694,13 @@
     "ago": "{t} ago"
   },
   "search_overlay": {
-    "placeholder": "Search Tags",
-    "strict_mode": "Strict Mode"
+    "placeholder": "Search: tags, user:, type:, sort:…",
+    "strict_mode": "Strict Mode",
+    "tricks": "Search tricks",
+    "needs_login": "Sign in to search with operators",
+    "found": "{count} f0cks",
+    "found_one": "1 f0ck",
+    "strict_placeholder": "tag1, tag2…"
   },
   "toast": {
     "report_success": "Report submitted successfully.",

@@ -691,8 +691,13 @@
     "ago": "{t} geleden"
   },
   "search_overlay": {
-    "placeholder": "Tags Zoeken",
-    "strict_mode": "Strikte Modus"
+    "placeholder": "Zoeken: tags, user:, type:, sort:…",
+    "strict_mode": "Strikte Modus",
+    "tricks": "Zoektrucs",
+    "needs_login": "Log in om met operators te zoeken",
+    "found": "{count} f0cks",
+    "found_one": "1 f0ck",
+    "strict_placeholder": "tag1, tag2…"
   },
   "toast": {
     "report_success": "Rapport succesvol ingediend.",
