@@ -636,6 +636,23 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   gap: 1rem;
 }
 
+/* Wider screens: the search box in the middle of the window, whatever the two sides hold (the
+   results of a search line up under it, .fy-main-list); a side wider than its half pushes it */
+@media (min-width: 793px) {
+  .fy-mast {
+    display: grid;
+    grid-template-columns: minmax(max-content, 1fr) minmax(0, 40rem) minmax(max-content, 1fr);
+  }
+
+  .fy-mast-start {
+    justify-self: start;
+  }
+
+  .fy-mast-end {
+    justify-self: end;
+  }
+}
+
 .fy-mast-logo {
   display: inline-flex;
   align-items: center;
@@ -1126,10 +1143,13 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   }
 }
 
+/* as wide as the search box (40rem, .fy-search) plus the column's padding, so the results line
+   up with its edges */
 .fy-main-list {
-  max-width: 56rem;
+  --fy-list-w: 43rem;
+  max-width: var(--fy-list-w);
   margin-right: auto;
-  margin-left: max(0px, calc((100vw - 56rem) / 2 - var(--fy-side)));
+  margin-left: max(0px, calc((100vw - var(--fy-list-w)) / 2 - var(--fy-side)));
 }
 
 .fy-label {
