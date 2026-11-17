@@ -12,7 +12,7 @@
     <form action="/search" method="GET" class="srch-form" role="search">
       <div class="srch-bar">
         <i class="fa-solid fa-magnifying-glass srch-bar-icon" aria-hidden="true"></i>
-        <input type="search" name="tag" value="{{ (searchstring if searchstring is string else "") }}" placeholder="tag1, tag2 … or title:text" aria-label="{{ t("search.title") }}" autocomplete="off">
+        <input type="search" name="tag" value="{{ (searchstring if searchstring is string else "") }}" placeholder="cat -dog user:name sort:views …" aria-label="{{ t("search.title") }}" autocomplete="off">
         <button type="submit">{{ t("search.title") }}</button>
       </div>
       <label class="srch-strict">
@@ -24,6 +24,7 @@
 
     {% if searched %}
     <div class="srch-meta">{{ (((t("search.results_found")).replace("{count}", count|string, 1)).replace("{page}", pagination.page|string, 1)).replace("{total}", pagination.end|string, 1) }}</div>
+    {% set su_cls = "srch" %}{% include "snippets/search-understood.html" %}
     {% if result|length %}
     <ul class="srch-list">
       {% for line in result %}

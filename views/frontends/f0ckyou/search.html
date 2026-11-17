@@ -29,6 +29,7 @@
     {% if (fy_q and ":" not in fy_q) %}<a class="fy-chip" href="/tag/title:{{ fy_q|encode_uri_component }}">In titles</a>{% endif %}
   </nav>
   <p class="fy-dim fy-count">{{ (count or 0)|locale_number }} results{% if (pagination and pagination.page and pagination.page > 1) %} &middot; page {{ pagination.page }} of {{ pagination.end }}{% endif %}</p>
+  {% set su_cls = "fy-search" %}{% include "snippets/search-understood.html" %}
   {% if (searched and result|length) %}
   <ol class="fy-list fy-results" data-fy-feed>
     {% for line in result %}

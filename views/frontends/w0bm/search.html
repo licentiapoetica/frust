@@ -8,9 +8,10 @@
     <h3 id="index">Search{% if (result is defined and result is not none and result is not false) %} <small>{{ count }} results</small>{% endif %}</h3>
     <form method="get" action="/search" class="w0bm-searchform">
         <button type="submit" class="suchbutton"><i class="fa fa-search w0bm-white"></i></button>
-        <input class="suchleiste" placeholder="tag1, tag2 … or title:text" name="tag" type="text" value="{{ (searchstring or "") }}">
+        <input class="suchleiste" placeholder="cat -dog user:name sort:views …" name="tag" type="text" value="{{ (searchstring or "") }}">
         <label class="w0bm-strict"><input type="checkbox" name="mode" value="strict"{% if search_mode == "strict" %} checked{% endif %}> strict</label>
     </form>
+    {% set su_cls = "w0bm-search" %}{% include "snippets/search-understood.html" %}
 </div>
 {% if (result is defined and result is not none and result is not false) %}
 <table class="table table-hover table-condensed">

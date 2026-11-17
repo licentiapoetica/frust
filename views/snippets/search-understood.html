@@ -1,0 +1,11 @@
+{#- What a search understood, over its results: "Showing f0cks tagged “cat” · uploaded by al ·
+    sorted by views" (search_explain), and the parts it couldn't use (search_notes): routes/search.rs,
+    f0cklib/query.rs. Every frontend's search page includes it, styled by its own CSS through su_cls
+    (its class for the two lines). -#}
+{%- set su = (su_cls if (su_cls is defined and su_cls) else "") -%}
+{% if (search_explain is defined and search_explain is sequence and search_explain) %}
+<p class="search-understood{% if su %} {{ su }}-understood{% endif %}">Showing f0cks {{ search_explain|join(" · ") }}</p>
+{% endif %}
+{% if (search_notes is defined and search_notes is sequence and search_notes) %}
+<p class="search-notes{% if su %} {{ su }}-notes{% endif %}">Left out: {{ search_notes|join(" · ") }}</p>
+{% endif %}

@@ -15,13 +15,14 @@
     </div>
     <form action="/search" class="v2-search-form" role="search">
       <div class="v2-search-bar">
-        <input type="search" name="tag" value="{{ (searchstring if searchstring is string else "") }}" placeholder="tag1, tag2 … or title:text" aria-label="search" autocomplete="off"><button type="submit" aria-label="search">&#128269;</button>
+        <input type="search" name="tag" value="{{ (searchstring if searchstring is string else "") }}" placeholder="cat -dog user:name sort:views …" aria-label="search" autocomplete="off"><button type="submit" aria-label="search">&#128269;</button>
       </div>
       <label class="v2-search-opts"><input type="checkbox" name="mode" value="strict"{% if search_mode == "strict" %} checked{% endif %}> strict (all tags must match)</label>
     </form>
     {% if searched %}
     <div class="v2-search-results">
       <div class="f0cks-header"><span>{{ count }} f0ck{{ ("" if count == 1 else "s") }} given</span>{% if pagination %}<span>page {{ pagination.page }} of {{ pagination.end }}</span>{% endif %}</div>
+      {% set su_cls = "v2-search" %}{% include "snippets/search-understood.html" %}
       {% if result|length %}
       <ul class="v2-search-list">
         {% for line in result %}

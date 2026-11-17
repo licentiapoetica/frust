@@ -33848,6 +33848,16 @@ body[type='login'] .register-back a.login-trigger-btn {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+/* what the search understood / left out (snippets/search-understood.html) */
+.srch-understood,
+.srch-notes {
+  margin: 0 0 10px;
+  color: var(--sr-text);
+  font-size: 0.9em;
+}
+.srch-notes {
+  color: var(--sr-muted);
+}
 .srch-list {
   margin: 0;
   padding: 0;

@@ -1234,6 +1234,17 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   margin: 0 0 1rem;
 }
 
+/* what the search understood / left out (snippets/search-understood.html) */
+.fy-search-understood,
+.fy-search-notes {
+  margin: -.5rem 0 1rem;
+  font-size: .875rem;
+}
+
+.fy-search-notes {
+  color: var(--fy-muted);
+}
+
 /* nothing found */
 .fy-empty {
   max-width: 36rem;

@@ -175,6 +175,23 @@ impl Sql {
     /// by SQL text alone, so the same text bound once with an i64 and later with an i32 reused the
     /// int8 statement and Postgres rejected the 4-byte value ("insufficient data left in message").
     /// The comment gives each type combination its own statement.
+    /// The query with its values written in as typed literals, to run by hand (tests only).
+    #[cfg(test)]
+    pub fn inline(&self) -> String {
+        let lit = |b: &Bind| match b {
+            Bind::Null | Bind::NullText | Bind::NullI32 | Bind::NullI64 => "NULL".to_string(),
+            Bind::Bool(v) => v.to_string(),
+            Bind::I16(v) => format!("{v}::int2"),
+            Bind::I32(v) => format!("{v}::int4"),
+            Bind::I64(v) => format!("{v}::int8"),
+            Bind::F64(v) => format!("{v}::float8"),
+            Bind::Text(v) => format!("'{}'::text", v.replace('\'', "''")),
+            other => format!("'{}'::{}", format!("{other:?}").replace('\'', "''"), other.pg_type()),
+        };
+        let mut binds = self.binds.iter();
+        self.text.chars().map(|c| if c == PLACEHOLDER { binds.next().map(lit).unwrap_or_default() } else { c.to_string() }).collect()
+    }
+
     pub fn sql(&self) -> String {
         let mut out = String::with_capacity(self.text.len() + self.binds.len() * 9 + 8);
         let mut n = 0;

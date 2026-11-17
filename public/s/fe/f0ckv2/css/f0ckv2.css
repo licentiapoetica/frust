@@ -765,6 +765,16 @@ div.posts.v2-cards>a>p {
 .v2-search-bar button:hover {
   background-color: var(--nav-link-hover-bg);
 }
+/* what the search understood / left out (snippets/search-understood.html) */
+.v2-search-understood,
+.v2-search-notes {
+  margin: 6px 0;
+  font-size: 12px;
+  opacity: .8;
+}
+.v2-search-notes {
+  opacity: .6;
+}
 .v2-search-opts {
   font-size: 12px;
   opacity: .8;

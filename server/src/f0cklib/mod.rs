@@ -13,6 +13,7 @@ mod feed;
 mod item;
 mod random;
 pub mod recommend;
+pub mod query;
 pub mod search;
 
 pub use feed::{get_item_page, getf0cks};
