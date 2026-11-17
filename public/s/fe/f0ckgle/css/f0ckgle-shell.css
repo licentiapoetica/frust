@@ -1,8 +1,12 @@
 /* f0ckgle frontend: the shared pages (settings, messages, admin, mod, pending, banned, user halls)
    in f0ckgle's shell (shell/header.html). /s/css/f0ck-shell.css maps the --fe-* palette below onto
-   f0ckm's theme variables. The shell renders with theme="light", so f0ckm.css (layered in by
-   f0ck-shell.css) styles the pages with its light theme; f0ck-shell.css sets --black / --white for
-   dark themes, so the light theme's values are set again here (more specific). */
+   f0ckm's theme variables. Light (f0ckgle's own): the shell renders with theme="light", so f0ckm.css
+   (layered in by f0ck-shell.css) styles the pages with its light theme; f0ck-shell.css sets --black /
+   --white for dark themes, so the light theme's values are set again here (more specific).
+   Dark (html.scheme-dark, views/frontends/README.md "Light and dark"): no theme attribute, f0ckm's
+   dark look in f0ckgle's dark palette. "Device" renders light (theme="light", html.scheme-auto) and
+   scheme-early.js turns it into scheme-dark without theme on a dark device; without JavaScript the
+   shared pages stay light there (f0ckm's light theme can't follow a media query). */
 
 html.f0ck-shell {
   --fe-accent: #1a73e8;
@@ -20,6 +24,22 @@ html.f0ck-shell {
   --fe-radius: 0;
   /* the header scrolls away: sticky parts of the pages go to the top */
   --fe-navbar-h: 0px;
+}
+
+html.f0ck-shell.scheme-dark {
+  --fe-accent: #8ab4f8;
+  --fe-accent-rgb: 138, 180, 248;
+  --fe-bg: #202124;
+  --fe-surface: #303134;
+  --fe-surface-2: #28292c;
+  --fe-border: #3c4043;
+  --fe-text: #e8eaed;
+  --fe-muted: #9aa0a6;
+  --fe-link: #8ab4f8;
+  --fe-input-bg: #303134;
+  /* f0ck-shell.css' dark --black / --white, in f0ckgle's dark grey */
+  --black: #202124;
+  --white: #e8eaed;
 }
 
 html.f0ck-shell[theme="light"] {
@@ -60,7 +80,7 @@ html.f0ck-shell .f0ck-shell-page {
    layer); the f0ck-shell-important layer is declared before it, so these win. */
 @layer f0ck-shell-important {
   html.f0ck-shell {
-    background: #fff !important;
+    background: var(--fg-bg) !important;
     scrollbar-width: auto !important;
   }
 
@@ -68,8 +88,8 @@ html.f0ck-shell .f0ck-shell-page {
     display: flex !important;
     flex-direction: column !important;
     min-height: 100vh !important;
-    background: #fff !important;
-    color: #202124 !important;
+    background: var(--fg-bg) !important;
+    color: var(--fg-text) !important;
     scrollbar-width: auto !important;
     overflow-x: clip;
   }

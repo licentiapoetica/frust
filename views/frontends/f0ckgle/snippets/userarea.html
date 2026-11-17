@@ -5,10 +5,10 @@
 {%- set cur_mode = (mode if mode is number else 0) -%}
 {%- set can_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
 <div class="fg-user">
-  {% if (session and private_messages and not session.is_anon) %}<a class="fg-user-link" href="/messages">F0ckmail<span id="dm-badge" class="fg-dm-badge">0</span></a>{% endif %}
+  {% if (session and private_messages and not session.is_anon) %}<a class="fg-user-link" href="/messages">f0ckmail<span id="dm-badge" class="fg-dm-badge">0</span></a>{% endif %}
   <a class="fg-user-link" href="/mime?back=%2Fp%2F1" title="every f0ck, newest first, no type filter">Browse all f0cks</a>
   <details class="fg-menu fg-apps">
-    <summary title="F0ckgle apps"><img class="fg-icon" src="/s/fe/f0ckgle/img/apps.svg?v={{ mtime("/public/s/fe/f0ckgle/img/apps.svg") }}" alt=""><span class="fg-sr">F0ckgle apps</span></summary>
+    <summary title="f0ckgle apps"><span class="fg-icon fg-icon-apps" aria-hidden="true"></span><span class="fg-sr">f0ckgle apps</span></summary>
     <div class="fg-menu-box fg-apps-box">
       <ul class="fg-apps-grid">
         {% if can_upload %}<li><a href="/upload"><span class="fg-app fg-bg1">U</span>Upload</a></li>{% endif %}
@@ -16,11 +16,11 @@
         <li><a href="/tags"><span class="fg-app fg-bg3">T</span>Tags</a></li>
         <li><a href="/ranking"><span class="fg-app fg-bg4">R</span>Ranking</a></li>
         {% if halls_enabled %}<li><a href="/halls"><span class="fg-app fg-bg1">H</span>Halls</a></li>{% endif %}
-        <li><a href="/random"><span class="fg-app fg-bg2">?</span>Lucky</a></li>
+        <li><a href="/random"><span class="fg-app fg-bg2">?</span>f0cky</a></li>
         {% if session %}
         <li><a href="/notifications"><span class="fg-app fg-bg3">N</span>Alerts</a></li>
         {% if enable_comments %}<li><a href="/subscriptions"><span class="fg-app fg-bg4">S</span>Subscribed</a></li>{% endif %}
-        {% if (private_messages and not session.is_anon) %}<li><a href="/messages"><span class="fg-app fg-bg1">M</span>F0ckmail</a></li>{% endif %}
+        {% if (private_messages and not session.is_anon) %}<li><a href="/messages"><span class="fg-app fg-bg1">M</span>f0ckmail</a></li>{% endif %}
         {% endif %}
         <li><a href="/about"><span class="fg-app fg-bg2">i</span>About</a></li>
         <li><a href="/rules"><span class="fg-app fg-bg3">!</span>Rules</a></li>
@@ -32,6 +32,12 @@
         {% for m in modes %}{% if m != "nsfl" or enable_nsfl %}<li><a href="/mode/{{ loop.index0 }}"{% if loop.index0 == cur_mode %} class="active"{% endif %}>{{ m }}</a></li>{% endif %}{% endfor %}
       </ul>
       {% endif %}
+      {#- light / dark / the device's: the same links as in the footer (snippets/scheme-switch.html) -#}
+      {%- set fg_cur_scheme = (color_scheme if (color_scheme is defined and color_scheme in ["light", "dark", "auto"]) else "light") %}
+      <div class="fg-menu-head">Appearance</div>
+      <ul class="fg-menu-chips">
+        {% for s in [["light", "Light"], ["dark", "Dark"], ["auto", "Device"]] %}<li><a href="/scheme/{{ s[0] }}" data-scheme-set="{{ s[0] }}" rel="nofollow"{% if s[0] == fg_cur_scheme %} aria-current="true"{% endif %}>{{ s[1] }}</a></li>{% endfor %}
+      </ul>
       {% if (frontend_switch and frontends and frontends|length > 1) %}
       <div class="fg-menu-head">Frontend</div>
       <ul class="fg-menu-chips">
@@ -42,12 +48,12 @@
   </details>
   {% if session %}
   <details class="fg-menu fg-account">
-    <summary title="F0ckgle Account: {{ (session.display_name or session.user) }}">{% include "frontends/f0ckgle/snippets/session-avatar.html" %}</summary>
+    <summary title="f0ckgle Account: {{ (session.display_name or session.user) }}">{% include "frontends/f0ckgle/snippets/session-avatar.html" %}</summary>
     <div class="fg-menu-box fg-account-box">
       <div class="fg-account-who">{{ (session.login if (session.is_anon and session.login) else session.user) }}</div>
       <div class="fg-account-big">{% include "frontends/f0ckgle/snippets/session-avatar.html" %}</div>
       <div class="fg-account-hi">Hi, {{ (session.display_name or session.user) }}!</div>
-      <a class="fg-account-manage" href="/settings">Manage your F0ckgle Account</a>
+      <a class="fg-account-manage" href="/settings">Manage your f0ckgle Account</a>
       <ul class="fg-menu-list">
         <li><a href="/user/{{ me|encode_uri_component }}">Your profile</a></li>
         <li><a href="/user/{{ me|encode_uri_component }}/uploads">Your f0cks</a></li>

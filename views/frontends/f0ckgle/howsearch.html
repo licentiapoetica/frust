@@ -15,7 +15,7 @@
 <main class="fg-main">
   <article class="fg-article fg-hs">
     <h1>How Search works</h1>
-    <p class="fg-hs-lead">F0ckgle doesn't crawl the web. It looks through the f0cks on {{ domain }}: their tags, titles, uploaders, favs, comments, sizes and ages. Type words to find tags, add operators to say exactly what you want, and mix them as wildly as you like.</p>
+    <p class="fg-hs-lead">f0ckgle doesn't crawl the web. It looks through the f0cks on {{ domain }}: their tags, titles, uploaders, favs, comments, sizes and ages. Type words to find tags, add operators to say exactly what you want, and mix them as wildly as you like.</p>
     <nav class="fg-hs-toc" aria-label="On this page">
       <a href="#words">Words</a>
       <a href="#exact">Exact tags</a>
@@ -61,7 +61,7 @@
 
     <h2 id="file">The f0ck itself</h2>
     <dl class="fg-hs-ops">
-      {{ op("type:", "kind", "video, image, gif, audio or flash (also is:video and so on).", "type:gif") }}
+      {{ op("type:", "kind", "video, image, gif, audio, flash or youtube, or a file ending like mp4, webm, png (also is:video, is:mp4 and so on).", "type:mp4") }}
       {{ op("ext:", "end", "The file ending.", "ext:webm") }}
       {{ op("rating:", "r", "sfw, nsfw, nsfl, or untagged (none of them).", "rating:sfw") }}
       {{ op("title:", "text", "The title contains the text; title:\"two words\" keeps them together.", "title:fail") }}
@@ -110,7 +110,7 @@
       <li>{{ ex("age:<30d sort:favs") }}: the best of the month.</li>
       <li>{{ ex("size:>50mb sort:big") }}: the heavyweights.</li>
     </ul>
-    <p>Above the results F0ckgle says how it read your search, and what it had to leave out.</p>
+    <p>Above the results f0ckgle says how it read your search, and what it had to leave out.</p>
 
     <h2>What search doesn't show</h2>
     <ul>

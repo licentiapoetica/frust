@@ -1,6 +1,6 @@
 {#- f0ckgle register page (the account card, as the sign-in page), posts to f0ckm's /register. -#}
 {%- set fg_page = "login" -%}
-{%- set fg_title = "Create your F0ckgle Account" -%}
+{%- set fg_title = "Create your f0ckgle Account" -%}
 {% include "frontends/f0ckgle/snippets/head.html" %}
 {% if captcha_enabled %}
 <script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script>
@@ -10,7 +10,7 @@
   <form class="fg-signin-card" method="post" action="/register">
     <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
     <a href="/" class="fg-signin-logo">{% include "frontends/f0ckgle/snippets/logo.html" %}</a>
-    <h1>Create a F0ckgle Account</h1>
+    <h1>Create a f0ckgle Account</h1>
     <p class="fg-signin-sub">for {{ domain }}</p>
     {% if (error is defined and error is string and error) %}<p class="fg-form-error">{{ error }}</p>{% endif %}
     {% if (success is defined and success is string and success) %}<p class="fg-form-ok">{{ success }}</p>{% else %}
@@ -39,7 +39,7 @@
       {% if not (success is defined and success is string and success) %}<button type="submit" class="fg-btn-blue">{{ ("Apply" if registration_apply else "Next") }}</button>{% endif %}
     </div>
   </form>
-  <div class="fg-signin-foot"><span>English (f0ckland)</span><span><a href="/about">Help</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></span></div>
+  <div class="fg-signin-foot"><span>English (f0ckland)</span>{% set fg_scheme_class = "fg-signin-scheme" %}{% include "frontends/f0ckgle/snippets/scheme-switch.html" %}<span><a href="/about">Help</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></span></div>
 </main>
 {#- the rules and terms have to be read before the checkbox gets ticked -#}
 {% include "snippets/tos-consent.html" %}

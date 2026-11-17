@@ -29,7 +29,8 @@
     </div>
     <h1 class="fg-item-title" data-fg-live="title">{% if (enable_oc and item.is_oc) %}<span class="fg-label">OC</span> {% endif %}{{ fg_item_title }}</h1>
 
-    <div class="fg-media">
+    {#- fg-player: a video, which f0ckgle.js hands to f0ckm's player (v0ck) -#}
+    <div class="fg-media{% if (item.mime != "video/youtube" and item.mime.startswith("video")) %} fg-player{% endif %}">
       {% if item.mime == "video/youtube" %}
       <iframe class="fg-media-frame" width="640" height="360" src="https://www.youtube-nocookie.com/embed/{{ item.dest.replace("yt:", "", 1) }}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
       {% elif item.mime.startswith("video") %}
@@ -69,7 +70,7 @@
     <div class="fg-chips" data-fg-live="actions">
       {% if pagination.prev %}<a class="fg-chip" id="fg-prev" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}" title="previous (&larr;)">&lsaquo; Previous</a>{% endif %}
       {% if pagination.next %}<a class="fg-chip" id="fg-next" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}" title="next (&rarr;)">Next &rsaquo;</a>{% endif %}
-      <a class="fg-chip" href="/random" title="random (r)">I'm Feeling Lucky</a>
+      <a class="fg-chip" href="/random" title="random (r)">I'm feeling f0cky</a>
       {% if session %}
       <form method="post" action="/api/v2/togglefav" class="fg-inline fg-ajax" data-fg-refresh="actions kp">
         <input type="hidden" name="postid" value="{{ item.id }}">

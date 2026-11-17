@@ -1,7 +1,10 @@
 /*
  * f0ckgle frontend: a search engine homepage parody. Templates: views/frontends/f0ckgle/.
- * One light look, square corners (no border-radius, CLAUDE.md), sizes in rem so the text size
- * setting (user-fs-<n> on <html>) scales everything.
+ * Light by default, dark on request (views/frontends/README.md "Light and dark": html.scheme-dark,
+ * or html.scheme-auto on a dark device), square corners (no border-radius, CLAUDE.md), sizes in rem
+ * so the text size setting (user-fs-<n> on <html>) scales everything.
+ * Colours come from the --fg-* palette below; only the logo's colours, overlays on media (black
+ * letterbox, badges on thumbnails) and the letter avatars stay the same in both.
  */
 
 :root {
@@ -23,10 +26,181 @@
   --fg-g2: #ea4335;
   --fg-g3: #fbbc05;
   --fg-g4: #34a853;
+  /* the rest of the light palette (dark: html.scheme-dark below) */
+  color-scheme: light;
+  --fg-blue-rgb: 26, 115, 232;
+  --fg-on-blue: #fff;
+  --fg-blue-deep: #0b57d0;
+  --fg-blue-tint: rgba(26, 115, 232, .06);
+  --fg-blue-soft: #e8f0fe;
+  --fg-blue-soft-line: #d2e3fc;
+  --fg-blue-soft-text: #174ea6;
+  --fg-field: #fff;
+  --fg-field-line: #dadce0;
+  --fg-field-label: #444746;
+  --fg-outline: #747775;
+  --fg-line: #ebebeb;
+  --fg-line-soft: #ecedef;
+  --fg-btn-text: #3c4043;
+  --fg-hover-tint: rgba(60, 64, 67, .08);
+  --fg-menu-bg: #e9eef6;
+  --fg-icon: #5f6368;
+  --fg-foot-bg: #f2f2f2;
+  --fg-foot-text: #70757a;
+  --fg-toast-bg: #323232;
+  --fg-toast-text: #fff;
+  --fg-danger: #d93025;
+  --fg-danger-hover: #b3261e;
+  --fg-danger-soft: #fce8e6;
+  --fg-danger-text: #c5221f;
+  --fg-ok-soft: #e6f4ea;
+  --fg-ok-text: #137333;
+  --fg-warn-soft: #fef7e0;
+  --fg-warn-text: #b06000;
+  --fg-sfw: #188038;
+  --fg-nsfw: #c5221f;
+  --fg-nsfl: #7c0a02;
+  --fg-scrim: rgba(32, 33, 36, .6);
+  --fg-login-bg: #f0f4f9;
+  /* f0ckm's upload form (upload.css, made for dark themes) in these colours: .fg-upload-page */
+  --fgu-line: #dadce0;
+  --fgu-line-strong: #bdc1c6;
+  --fgu-field: #fff;
+  --fgu-soft: #f8f9fa;
+  --fgu-hover: #f1f3f4;
+  --fgu-text: #202124;
+  --fgu-muted: #5f6368;
+  --fgu-faint: #80868b;
   --fg-font: arial, sans-serif;
   --fg-logo-font: "Product Sans", "Google Sans", "Century Gothic", "Avenir Next", Futura, arial, sans-serif;
   --fg-col: 652px;
   --fg-gutter: 180px;
+}
+
+/* ── dark: picked (html.scheme-dark, also what scheme-early.js makes of "auto" on a dark device),
+   or "Device" without JavaScript (html.scheme-auto, by the media query). The shared pages in the
+   shell render f0ckm's light theme for "auto" (theme="light", README), so without JavaScript they
+   stay light as a whole there; with it scheme-early.js resolves the class. Keep both blocks the same. ── */
+html.scheme-dark {
+  color-scheme: dark;
+  --fg-bg: #202124;
+  --fg-text: #e8eaed;
+  --fg-muted: #bdc1c6;
+  --fg-dim: #9aa0a6;
+  --fg-link: #8ab4f8;
+  --fg-visited: #c58af9;
+  --fg-blue: #8ab4f8;
+  --fg-blue-hover: #aecbfa;
+  --fg-border: #3c4043;
+  --fg-surface: #303134;
+  --fg-surface-2: #303134;
+  --fg-hover: #3c4043;
+  --fg-shadow: 0 1px 6px #171717;
+  --fg-shadow-menu: 0 2px 10px rgba(0, 0, 0, .6);
+  --fg-blue-rgb: 138, 180, 248;
+  --fg-on-blue: #202124;
+  --fg-blue-deep: #a8c7fa;
+  --fg-blue-tint: rgba(138, 180, 248, .08);
+  --fg-blue-soft: #394457;
+  --fg-blue-soft-line: #4b5d7d;
+  --fg-blue-soft-text: #d2e3fc;
+  --fg-field: #303134;
+  --fg-field-line: #5f6368;
+  --fg-field-label: #c4c7c5;
+  --fg-outline: #8e918f;
+  --fg-line: #3c4043;
+  --fg-line-soft: #3c4043;
+  --fg-btn-text: #e8eaed;
+  --fg-hover-tint: rgba(232, 234, 237, .08);
+  --fg-menu-bg: #2d2e31;
+  --fg-icon: #9aa0a6;
+  --fg-foot-bg: #171717;
+  --fg-foot-text: #bdc1c6;
+  --fg-toast-bg: #e8eaed;
+  --fg-toast-text: #202124;
+  --fg-danger: #f28b82;
+  --fg-danger-hover: #f6aea9;
+  --fg-danger-soft: #4a3637;
+  --fg-danger-text: #f28b82;
+  --fg-ok-soft: #33433b;
+  --fg-ok-text: #81c995;
+  --fg-warn-soft: #413c2d;
+  --fg-warn-text: #fdd663;
+  --fg-sfw: #81c995;
+  --fg-nsfw: #f28b82;
+  --fg-nsfl: #ee675c;
+  --fg-scrim: rgba(0, 0, 0, .6);
+  --fg-login-bg: #131314;
+  --fgu-line: #3c4043;
+  --fgu-line-strong: #5f6368;
+  --fgu-field: #303134;
+  --fgu-soft: #28292c;
+  --fgu-hover: #3c4043;
+  --fgu-text: #e8eaed;
+  --fgu-muted: #9aa0a6;
+  --fgu-faint: #80868b;
+}
+
+@media (prefers-color-scheme: dark) {
+  html.scheme-auto:not(.f0ck-shell) {
+    color-scheme: dark;
+    --fg-bg: #202124;
+    --fg-text: #e8eaed;
+    --fg-muted: #bdc1c6;
+    --fg-dim: #9aa0a6;
+    --fg-link: #8ab4f8;
+    --fg-visited: #c58af9;
+    --fg-blue: #8ab4f8;
+    --fg-blue-hover: #aecbfa;
+    --fg-border: #3c4043;
+    --fg-surface: #303134;
+    --fg-surface-2: #303134;
+    --fg-hover: #3c4043;
+    --fg-shadow: 0 1px 6px #171717;
+    --fg-shadow-menu: 0 2px 10px rgba(0, 0, 0, .6);
+    --fg-blue-rgb: 138, 180, 248;
+    --fg-on-blue: #202124;
+    --fg-blue-deep: #a8c7fa;
+    --fg-blue-tint: rgba(138, 180, 248, .08);
+    --fg-blue-soft: #394457;
+    --fg-blue-soft-line: #4b5d7d;
+    --fg-blue-soft-text: #d2e3fc;
+    --fg-field: #303134;
+    --fg-field-line: #5f6368;
+    --fg-field-label: #c4c7c5;
+    --fg-outline: #8e918f;
+    --fg-line: #3c4043;
+    --fg-line-soft: #3c4043;
+    --fg-btn-text: #e8eaed;
+    --fg-hover-tint: rgba(232, 234, 237, .08);
+    --fg-menu-bg: #2d2e31;
+    --fg-icon: #9aa0a6;
+    --fg-foot-bg: #171717;
+    --fg-foot-text: #bdc1c6;
+    --fg-toast-bg: #e8eaed;
+    --fg-toast-text: #202124;
+    --fg-danger: #f28b82;
+    --fg-danger-hover: #f6aea9;
+    --fg-danger-soft: #4a3637;
+    --fg-danger-text: #f28b82;
+    --fg-ok-soft: #33433b;
+    --fg-ok-text: #81c995;
+    --fg-warn-soft: #413c2d;
+    --fg-warn-text: #fdd663;
+    --fg-sfw: #81c995;
+    --fg-nsfw: #f28b82;
+    --fg-nsfl: #ee675c;
+    --fg-scrim: rgba(0, 0, 0, .6);
+    --fg-login-bg: #131314;
+    --fgu-line: #3c4043;
+    --fgu-line-strong: #5f6368;
+    --fgu-field: #303134;
+    --fgu-soft: #28292c;
+    --fgu-hover: #3c4043;
+    --fgu-text: #e8eaed;
+    --fgu-muted: #9aa0a6;
+    --fgu-faint: #80868b;
+  }
 }
 
 * {
@@ -160,7 +334,7 @@ html:not(.no-js) .nojs-only {
   margin: .6875rem .25rem;
   border: 1px solid var(--fg-surface);
   background: var(--fg-surface);
-  color: #3c4043;
+  color: var(--fg-btn-text);
   font-size: .875rem;
   cursor: pointer;
   text-align: center;
@@ -170,7 +344,7 @@ html:not(.no-js) .nojs-only {
 .fg-btn:hover {
   border-color: var(--fg-border);
   box-shadow: 0 1px 1px rgba(0, 0, 0, .1);
-  color: #202124;
+  color: var(--fg-text);
   text-decoration: none;
 }
 
@@ -189,7 +363,7 @@ html:not(.no-js) .nojs-only {
 
 .fg-btn-blue {
   background: var(--fg-blue);
-  color: #fff;
+  color: var(--fg-on-blue);
 }
 
 .fg-btn-blue:hover {
@@ -198,11 +372,11 @@ html:not(.no-js) .nojs-only {
 }
 
 .fg-btn-danger {
-  background: #d93025;
+  background: var(--fg-danger);
 }
 
 .fg-btn-danger:hover {
-  background: #b3261e;
+  background: var(--fg-danger-hover);
 }
 
 .fg-btn-text {
@@ -211,7 +385,7 @@ html:not(.no-js) .nojs-only {
 }
 
 .fg-btn-text:hover {
-  background: rgba(26, 115, 232, .06);
+  background: var(--fg-blue-tint);
   text-decoration: none;
 }
 
@@ -241,9 +415,9 @@ html:not(.no-js) .nojs-only {
 }
 
 .fg-chip.active {
-  border-color: #d2e3fc;
-  background: #e8f0fe;
-  color: #174ea6;
+  border-color: var(--fg-blue-soft-line);
+  background: var(--fg-blue-soft);
+  color: var(--fg-blue-soft-text);
 }
 
 .fg-chip:disabled {
@@ -258,7 +432,7 @@ html:not(.no-js) .nojs-only {
 }
 
 .fg-chip-danger {
-  color: #d93025;
+  color: var(--fg-danger);
 }
 
 /* ── search box ── */
@@ -269,13 +443,13 @@ html:not(.no-js) .nojs-only {
   max-width: 36rem;
   height: 2.875rem;
   padding: 0 .5rem 0 .875rem;
-  border: 1px solid var(--fg-border);
-  background: var(--fg-bg);
+  border: 1px solid var(--fg-field-line);
+  background: var(--fg-field);
 }
 
 .fg-search:hover,
 .fg-search:focus-within {
-  border-color: rgba(223, 225, 229, 0);
+  border-color: transparent;
   box-shadow: var(--fg-shadow);
 }
 
@@ -305,6 +479,20 @@ html:not(.no-js) .nojs-only {
   height: 1.25rem;
 }
 
+/* icons in the scheme's colours: the SVG file as a mask over the colour */
+.fg-icon-apps,
+.fg-icon-go {
+  background: var(--fg-icon);
+  -webkit-mask: url(/s/fe/f0ckgle/img/apps.svg) center / contain no-repeat;
+  mask: url(/s/fe/f0ckgle/img/apps.svg) center / contain no-repeat;
+}
+
+.fg-icon-go {
+  background: var(--fg-blue);
+  -webkit-mask-image: url(/s/fe/f0ckgle/img/search-blue.svg);
+  mask-image: url(/s/fe/f0ckgle/img/search-blue.svg);
+}
+
 .fg-search-icon {
   display: flex;
   padding: .375rem;
@@ -329,7 +517,7 @@ html:not(.no-js) .nojs-only {
 
 .fg-user-link {
   padding: .3125rem .5rem;
-  color: rgba(0, 0, 0, .87);
+  color: var(--fg-text);
   font-size: .8125rem;
   white-space: nowrap;
 }
@@ -368,7 +556,7 @@ html:not(.no-js) .nojs-only {
 
 .fg-menu > summary:hover,
 .fg-menu[open] > summary {
-  background: rgba(60, 64, 67, .08);
+  background: var(--fg-hover-tint);
 }
 
 .fg-menu-box {
@@ -389,7 +577,7 @@ html:not(.no-js) .nojs-only {
   max-height: calc(100vh - 5rem);
   overflow-y: auto;
   padding: 1rem;
-  background: #e9eef6;
+  background: var(--fg-menu-bg);
 }
 
 .fg-apps-grid {
@@ -414,7 +602,7 @@ html:not(.no-js) .nojs-only {
 }
 
 .fg-apps-grid a:hover {
-  background: #e8f0fe;
+  background: var(--fg-blue-soft);
   text-decoration: none;
 }
 
@@ -461,10 +649,11 @@ html:not(.no-js) .nojs-only {
   text-decoration: none;
 }
 
-.fg-menu-chips a.active {
+.fg-menu-chips a.active,
+.fg-menu-chips a[aria-current="true"] {
   border-color: var(--fg-blue);
-  background: #e8f0fe;
-  color: #174ea6;
+  background: var(--fg-blue-soft);
+  color: var(--fg-blue-soft-text);
 }
 
 .fg-menu-list {
@@ -510,7 +699,7 @@ html:not(.no-js) .nojs-only {
   width: 22rem;
   max-width: calc(100vw - 1rem);
   padding: 1rem;
-  background: #e9eef6;
+  background: var(--fg-menu-bg);
   text-align: center;
 }
 
@@ -539,13 +728,13 @@ html:not(.no-js) .nojs-only {
   display: inline-block;
   margin: .75rem 0 1rem;
   padding: .5rem 1.5rem;
-  border: 1px solid #747775;
-  color: #0b57d0;
+  border: 1px solid var(--fg-outline);
+  color: var(--fg-blue-deep);
   font-weight: 500;
 }
 
 .fg-account-manage:hover {
-  background: rgba(11, 87, 208, .08);
+  background: var(--fg-blue-tint);
   text-decoration: none;
 }
 
@@ -568,7 +757,7 @@ html:not(.no-js) .nojs-only {
   margin-left: .5rem;
   padding: .5625rem 1.4375rem;
   background: var(--fg-blue);
-  color: #fff;
+  color: var(--fg-on-blue);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -593,7 +782,7 @@ html:not(.no-js) .nojs-only {
 }
 
 .fg-home-left a {
-  color: rgba(0, 0, 0, .87);
+  color: var(--fg-text);
   font-size: .8125rem;
 }
 
@@ -661,8 +850,8 @@ html:not(.no-js) .nojs-only {
 /* ── footer ── */
 .fg-foot {
   margin-top: auto;
-  background: #f2f2f2;
-  color: #70757a;
+  background: var(--fg-foot-bg);
+  color: var(--fg-foot-text);
   font-size: .9375rem;
 }
 
@@ -691,7 +880,7 @@ html:not(.no-js) .nojs-only {
 .fg-foot-links a {
   display: inline-block;
   padding: .9375rem;
-  color: #70757a;
+  color: var(--fg-foot-text);
 }
 
 .fg-foot-fe {
@@ -700,6 +889,24 @@ html:not(.no-js) .nojs-only {
 
 .fg-foot-fe a {
   padding: .9375rem .25rem;
+}
+
+/* Appearance: Light · Dark · Device (snippets/scheme-switch.html), the current one marked */
+.fg-scheme a[aria-current="true"] {
+  color: var(--fg-text);
+  font-weight: 700;
+}
+
+.fg-foot-scheme {
+  padding-left: .9375rem;
+}
+
+.fg-foot-links .fg-foot-scheme a {
+  padding: .9375rem .25rem;
+}
+
+.fg-foot-links .fg-foot-scheme a:last-child {
+  padding-right: .9375rem;
 }
 
 /* ── snackbar ── */
@@ -719,8 +926,8 @@ html:not(.no-js) .nojs-only {
   min-width: 18rem;
   max-width: 35rem;
   padding: .875rem 1rem;
-  background: #323232;
-  color: #fff;
+  background: var(--fg-toast-bg);
+  color: var(--fg-toast-text);
   box-shadow: 0 3px 5px -1px rgba(0, 0, 0, .2), 0 6px 10px 0 rgba(0, 0, 0, .14);
   pointer-events: auto;
 }
@@ -735,7 +942,7 @@ html:not(.no-js) .nojs-only {
 
 /* ── results header ── */
 .fg-top {
-  border-bottom: 1px solid #ebebeb;
+  border-bottom: 1px solid var(--fg-line);
 }
 
 .fg-top-row {
@@ -900,8 +1107,8 @@ html:not(.no-js) .nojs-only {
   flex: none;
   width: 1.75rem;
   height: 1.75rem;
-  border: 1px solid #ecedef;
-  background: #f1f3f4;
+  border: 1px solid var(--fg-line-soft);
+  background: var(--fg-surface-2);
 }
 
 .fg-fav-letter {
@@ -954,7 +1161,7 @@ html:not(.no-js) .nojs-only {
   align-self: center;
   width: 5.75rem;
   height: 5.75rem;
-  border: 1px solid #ecedef;
+  border: 1px solid var(--fg-line-soft);
   overflow: hidden;
 }
 
@@ -1184,6 +1391,60 @@ video.fg-media-el {
   width: 100%;
 }
 
+/* ── f0ckm's video player (v0ck.js / v0ck.css, f0ckgle.js starts it) in f0ckgle's colours: the
+   progress bar and knobs in the blue, the settings menu as one of f0ckgle's menus ── */
+.fg-player.v0ck {
+  --accent: var(--fg-blue);
+  --accent-rgb: var(--fg-blue-rgb);
+  --bg: var(--fg-bg);
+  --text-color: var(--fg-text);
+  --font: var(--fg-font);
+}
+
+/* square, as everything in f0ckgle (v0ck.css rounds its menu, buttons and knobs for f0ckm); the
+   loading spinner stays v0ck's ring */
+.fg-player.v0ck,
+.fg-player.v0ck *:not(.v0ck_loader, .v0ck_loader *) {
+  border-radius: 0 !important;
+}
+
+.fg-player .v0ck_settings_menu {
+  box-shadow: var(--fg-shadow-menu);
+}
+
+/* v0ck.css sets font-size 0 on the player and leaves the buttons at the browser's size */
+.fg-player .v0ck_player_button.v0ck_playtime {
+  font-family: var(--fg-font);
+  font-size: .8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fg-player .v0ck_menu_item {
+  font-family: var(--fg-font);
+  font-size: .875rem;
+}
+
+/* f0ckgle has neither f0ckm's blurred background nor flying comments: those switches would do nothing */
+.fg-player .v0ck_bg_row:has(#togglebg),
+.fg-player .v0ck_bg_row:has(#toggledanmaku) {
+  display: none;
+}
+
+/* full screen: the whole screen, not the 70vh of the page, without the frame */
+.fg-player.v0ck:fullscreen,
+.fg-player.v0ck.v0ck_fullscreen {
+  border: 0;
+}
+
+.fg-player.v0ck:fullscreen video.fg-media-el,
+.fg-player.v0ck.v0ck_fullscreen video.fg-media-el {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+}
+
 .fg-media-frame {
   display: block;
   width: 100%;
@@ -1277,7 +1538,7 @@ video.fg-media-el {
 .fg-kp-desc {
   margin: .75rem 0;
   padding-bottom: .75rem;
-  border-bottom: 1px solid #ebebeb;
+  border-bottom: 1px solid var(--fg-line);
 }
 
 .fg-kp-facts {
@@ -1311,9 +1572,9 @@ video.fg-media-el {
   font-weight: 700;
 }
 
-.fg-rating-sfw { color: #188038; }
-.fg-rating-nsfw { color: #c5221f; }
-.fg-rating-nsfl { color: #7c0a02; }
+.fg-rating-sfw { color: var(--fg-sfw); }
+.fg-rating-nsfw { color: var(--fg-nsfw); }
+.fg-rating-nsfl { color: var(--fg-nsfl); }
 .fg-rating-untagged { color: var(--fg-dim); }
 
 .fg-kp-rate {
@@ -1326,7 +1587,7 @@ video.fg-media-el {
 .fg-kp-head {
   margin: 1.25rem 0 .5rem;
   padding-top: .75rem;
-  border-top: 1px solid #ebebeb;
+  border-top: 1px solid var(--fg-line);
   font-size: 1.125rem;
   font-weight: 400;
 }
@@ -1367,7 +1628,7 @@ video.fg-media-el {
 .fg-tag-del:hover,
 .fg-tag .f0ck-exclude-btn:hover,
 .fg-tag .f0ck-exclude-btn:focus-visible {
-  color: #d93025;
+  color: var(--fg-danger);
 }
 
 /* exclude-tag button (form .f0ck-exclude-form, f0ck-core.js) */
@@ -1386,16 +1647,16 @@ video.fg-media-el {
 }
 
 .fg-tag .is-excluded .f0ck-exclude-btn {
-  color: #d93025;
+  color: var(--fg-danger);
 }
 
 .fg-tag.f0ck-tag-excluded {
-  background: #fce8e6;
+  background: var(--fg-danger-soft);
 }
 
 .fg-tag.f0ck-tag-excluded > a:first-child {
   text-decoration: line-through;
-  text-decoration-color: #d93025;
+  text-decoration-color: var(--fg-danger);
 }
 
 .fg-addtag {
@@ -1409,6 +1670,7 @@ video.fg-media-el {
   min-width: 0;
   padding: 0 .75rem;
   border: 1px solid var(--fg-border);
+  background: var(--fg-field);
 }
 
 .fg-addtag input:focus {
@@ -1477,17 +1739,17 @@ video.fg-media-el {
 
 .fg-comment {
   padding: .75rem 0;
-  border-bottom: 1px solid #ebebeb;
+  border-bottom: 1px solid var(--fg-line);
 }
 
 .fg-comment.pinned {
-  background: #fef7e0;
+  background: var(--fg-warn-soft);
   padding: .75rem;
 }
 
 .fg-comment-target,
 .fg-comment:target {
-  background: #e8f0fe;
+  background: var(--fg-blue-soft);
 }
 
 .fg-comment-replies {
@@ -1572,6 +1834,7 @@ video.fg-media-el {
   width: 100%;
   padding: .625rem .75rem;
   border: 1px solid var(--fg-border);
+  background: var(--fg-field);
   resize: vertical;
 }
 
@@ -1658,6 +1921,7 @@ html.no-js .fg-comment-tools {
 .fg-imgcap input {
   padding: .5rem .75rem;
   border: 1px solid var(--fg-border);
+  background: var(--fg-field);
 }
 
 /* ── dialogs (:target, no JavaScript needed) ── */
@@ -1678,7 +1942,7 @@ html.no-js .fg-comment-tools {
 .fg-modal-bg {
   position: absolute;
   inset: 0;
-  background: rgba(32, 33, 36, .6);
+  background: var(--fg-scrim);
 }
 
 .fg-modal-box {
@@ -1799,7 +2063,7 @@ html.no-js .fg-comment-tools {
 
 .fg-radio:has(input:checked) {
   border-color: var(--fg-blue);
-  background: #e8f0fe;
+  background: var(--fg-blue-soft);
 }
 
 .fg-radio input {
@@ -1822,7 +2086,7 @@ html.no-js .fg-comment-tools {
 }
 
 .fg-radio-danger b {
-  color: #d93025;
+  color: var(--fg-danger);
 }
 
 /* expiration: the presets, "Custom…" adds an amount and a unit (shown only while it's picked) */
@@ -1838,7 +2102,7 @@ html.no-js .fg-comment-tools {
   height: 2.25rem;
   padding: 0 .5rem;
   border: 1px solid var(--fg-border);
-  background: var(--fg-bg);
+  background: var(--fg-field);
   color: var(--fg-text);
   font: inherit;
 }
@@ -1868,7 +2132,7 @@ html.no-js .fg-comment-tools {
 }
 
 .fg-countdown.countdown-soon {
-  color: #d93025;
+  color: var(--fg-danger);
 }
 
 /* tag suggestions (#meta): metadata texts can be long, the chips wrap */
@@ -1888,9 +2152,9 @@ html.no-js .fg-comment-tools {
 
 .fg-meta-tag.is-added,
 .is-added > .fg-meta-tag {
-  border-color: #d2e3fc;
-  background: #e8f0fe;
-  color: #174ea6;
+  border-color: var(--fg-blue-soft-line);
+  background: var(--fg-blue-soft);
+  color: var(--fg-blue-soft-text);
   cursor: default;
 }
 
@@ -1928,7 +2192,7 @@ html.no-js .fg-comment-tools {
 
 /* ── sign in / register ── */
 body.fg-page-login {
-  background: #f0f4f9;
+  background: var(--fg-login-bg);
 }
 
 .fg-card-page {
@@ -1973,13 +2237,13 @@ body.fg-page-login {
 .fg-form-ok {
   margin: 0;
   padding: .5rem .75rem;
-  background: #fce8e6;
-  color: #c5221f;
+  background: var(--fg-danger-soft);
+  color: var(--fg-danger-text);
 }
 
 .fg-form-ok {
-  background: #e6f4ea;
-  color: #137333;
+  background: var(--fg-ok-soft);
+  color: var(--fg-ok-text);
 }
 
 /* text field with its label as the placeholder, moving up when filled or focused */
@@ -1993,7 +2257,7 @@ body.fg-page-login {
   display: block;
   width: 100%;
   padding: 1rem .9375rem .75rem;
-  border: 1px solid #747775;
+  border: 1px solid var(--fg-outline);
   background: var(--fg-bg);
   font-size: 1rem;
   outline: 0;
@@ -2009,7 +2273,7 @@ body.fg-page-login {
   top: 1rem;
   padding: 0 .25rem;
   background: var(--fg-bg);
-  color: #444746;
+  color: var(--fg-field-label);
   font-size: 1rem;
   line-height: 1.25rem;
   pointer-events: none;
@@ -2018,8 +2282,8 @@ body.fg-page-login {
 
 .fg-field input:focus,
 .fg-field textarea:focus {
-  border-color: #0b57d0;
-  box-shadow: inset 0 0 0 1px #0b57d0;
+  border-color: var(--fg-blue-deep);
+  box-shadow: inset 0 0 0 1px var(--fg-blue-deep);
 }
 
 .fg-field input:focus + span,
@@ -2032,7 +2296,7 @@ body.fg-page-login {
 
 .fg-field input:focus + span,
 .fg-field textarea:focus + span {
-  color: #0b57d0;
+  color: var(--fg-blue-deep);
 }
 
 .fg-check {
@@ -2050,7 +2314,7 @@ body.fg-page-login {
 
 .fg-signin-more a,
 .fg-signin-more .fg-linkbtn {
-  color: #0b57d0;
+  color: var(--fg-blue-deep);
   font-weight: 500;
 }
 
@@ -2069,13 +2333,29 @@ body.fg-page-login {
   gap: .5rem;
   width: min(28rem, 100%);
   padding: .75rem 0;
-  color: #1f1f1f;
+  color: var(--fg-text);
   font-size: .75rem;
 }
 
 .fg-signin-foot a {
   margin-left: 1.5rem;
-  color: #1f1f1f;
+  color: var(--fg-text);
+}
+
+/* Appearance on the sign-in page (no footer bar there): a line of its own under the language and
+   the links, small links like theirs */
+.fg-signin-foot .fg-signin-scheme {
+  flex-basis: 100%;
+  order: 3;
+}
+
+.fg-signin-foot .fg-signin-scheme a {
+  margin-left: .5rem;
+  color: var(--fg-muted);
+}
+
+.fg-signin-foot .fg-signin-scheme a[aria-current="true"] {
+  color: var(--fg-text);
 }
 
 .fg-page-login .fg-foot {
@@ -2291,11 +2571,11 @@ div.fg-card > form {
 .fg-notifs .fg-result {
   padding: .75rem;
   margin-bottom: 0;
-  border-bottom: 1px solid #ebebeb;
+  border-bottom: 1px solid var(--fg-line);
 }
 
 .fg-notifs .fg-unread {
-  background: #e8f0fe;
+  background: var(--fg-blue-soft);
 }
 
 .fg-comment-snippet {
@@ -2350,7 +2630,7 @@ div.fg-card > form {
   align-items: center;
   gap: .75rem;
   padding: .375rem 0;
-  border-bottom: 1px solid #ebebeb;
+  border-bottom: 1px solid var(--fg-line);
 }
 
 .fg-rank li:last-child {
@@ -2377,19 +2657,20 @@ div.fg-card > form {
 
 /* ── upload page: f0ckm's upload form (upload.css) in f0ckgle's colours ── */
 .fg-upload-page {
-  --accent: #1a73e8;
-  --accent-rgb: 26, 115, 232;
-  --bg: #fff;
-  --bg-form: #f8f9fa;
-  --black: #fff;
-  --white: #202124;
-  --text: #202124;
-  --text-color: #202124;
-  --nav-bg: #fff;
-  --nav-border-color: #dadce0;
-  --dropdown-bg: #fff;
+  --accent: var(--fg-blue);
+  --accent-rgb: var(--fg-blue-rgb);
+  --bg: var(--fg-bg);
+  --bg-form: var(--fg-surface);
+  --black: var(--fg-bg);
+  --white: var(--fg-text);
+  --text: var(--fg-text);
+  --text-color: var(--fg-text);
+  --nav-bg: var(--fg-bg);
+  --nav-border-color: var(--fg-border);
+  --dropdown-bg: var(--fg-bg);
   --navbar-h: 7rem;
-  --upload-opt-color: #1a73e8;
+  --upload-opt-color: var(--fg-blue);
+  /* badge backgrounds under white text: the same in both schemes */
   --badge-sfw: #188038;
   --badge-nsfw: #c5221f;
   --badge-nsfl: #7c0a02;
@@ -2398,18 +2679,9 @@ div.fg-card > form {
 
 /* upload.css is made for dark themes: white text and white-alpha borders and backgrounds are
    hard-coded in it (f0ckm's light theme fixes them in f0ckm.css, which f0ckgle doesn't load). The
-   light versions here, for the upload page and the quick upload dropdown; :is() with the id beats
-   upload.css' selectors. Overlays on top of media (badges, album card actions) stay dark. */
-:is(.fg-upload-page, #upload-drag-modal) {
-  --fgu-line: #dadce0;
-  --fgu-line-strong: #bdc1c6;
-  --fgu-field: #fff;
-  --fgu-soft: #f8f9fa;
-  --fgu-hover: #f1f3f4;
-  --fgu-text: #202124;
-  --fgu-muted: #5f6368;
-  --fgu-faint: #80868b;
-}
+   versions in f0ckgle's colours here (--fgu-* in the palette at the top, light or dark), for the
+   upload page and the quick upload dropdown; :is() with the id beats upload.css' selectors.
+   Overlays on top of media (badges, album card actions) stay dark. */
 
 :is(.fg-upload-page, #upload-drag-modal) .limit-remaining,
 :is(.fg-upload-page, #upload-drag-modal) .drop-zone-prompt,
@@ -2432,7 +2704,7 @@ div.fg-card > form {
 :is(.fg-upload-page, #upload-drag-modal) .drop-zone:hover,
 :is(.fg-upload-page, #upload-drag-modal) .drop-zone.dragover {
   border-color: var(--fg-blue);
-  background: #e8f0fe;
+  background: var(--fg-blue-soft);
 }
 
 :is(.fg-upload-page, #upload-drag-modal) .upload-form-drop-types > span {
@@ -2457,8 +2729,8 @@ div.fg-card > form {
 }
 
 :is(.fg-upload-page, #upload-drag-modal) .upload-mode-tab.active {
-  background: #e8f0fe;
-  color: #174ea6;
+  background: var(--fg-blue-soft);
+  color: var(--fg-blue-soft-text);
 }
 
 /* text fields */
@@ -2519,8 +2791,8 @@ div.fg-card > form {
 }
 
 :is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option input:checked + .rating-label {
-  color: #174ea6;
-  background: #e8f0fe;
+  color: var(--fg-blue-soft-text);
+  background: var(--fg-blue-soft);
 }
 
 :is(.fg-upload-page, #upload-drag-modal) .item-rating-label {
@@ -2534,15 +2806,15 @@ div.fg-card > form {
 }
 
 :is(.fg-upload-page, #upload-drag-modal) .item-burn-container .item-rating-option input:checked + .item-rating-label {
-  background: #e8f0fe;
-  border-color: #174ea6;
-  color: #174ea6;
+  background: var(--fg-blue-soft);
+  border-color: var(--fg-blue-soft-text);
+  color: var(--fg-blue-soft-text);
 }
 
 :is(.fg-upload-page, #upload-drag-modal) .item-burn-container .item-rating-option input[value="1"]:checked + .item-rating-label {
-  background: #fef7e0;
-  border-color: #b06000;
-  color: #b06000;
+  background: var(--fg-warn-soft);
+  border-color: var(--fg-warn-text);
+  color: var(--fg-warn-text);
 }
 
 :is(.fg-upload-page, #upload-drag-modal) .global-redirect-section .upload-checkbox-label {
@@ -2614,7 +2886,7 @@ div.fg-card > form {
 
 :is(.fg-upload-page, #upload-drag-modal) :is(.meta-suggestion, .item-meta-suggestion, .album-choice-btn):hover,
 :is(.fg-upload-page, #upload-drag-modal) :is(.meta-suggestion, .item-meta-suggestion).selected {
-  background: #e8f0fe;
+  background: var(--fg-blue-soft);
   color: var(--fgu-text);
   border-color: var(--fg-blue);
 }
@@ -2654,7 +2926,7 @@ div.fg-card > form {
 
 /* upload-modal.css (the quick upload dropdown and the drop overlay): its dark-only bits */
 #drop-overlay {
-  --shade1: #fff;
+  --shade1: var(--fg-bg);
 }
 
 #drop-overlay .overlay-content,
@@ -2663,15 +2935,15 @@ div.fg-card > form {
 }
 
 #upload-drag-modal .modal-close {
-  border-color: #dadce0;
+  border-color: var(--fg-border);
 }
 
 #upload-drag-modal .upload-title {
-  border-bottom-color: #dadce0;
+  border-bottom-color: var(--fg-border);
 }
 
 #upload-drag-modal .upload-footer {
-  border-top-color: #dadce0;
+  border-top-color: var(--fg-border);
 }
 
 .fg-upload-title {
@@ -2690,7 +2962,7 @@ div.fg-card > form {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(32, 33, 36, .6);
+  background: var(--fg-scrim);
 }
 
 :is(#privacy-consent-modal, #tos-consent-modal) {
@@ -2776,7 +3048,7 @@ div.fg-card > form {
   height: 2.25rem;
   border: 0;
   background: var(--fg-blue);
-  color: #fff;
+  color: var(--fg-on-blue);
   font-weight: 500;
   cursor: pointer;
 }
@@ -2790,8 +3062,8 @@ div.fg-card > form {
 #anon-setup-modal .lm-error {
   margin-top: .75rem;
   padding: .5rem .75rem;
-  background: #fce8e6;
-  color: #c5221f;
+  background: var(--fg-danger-soft);
+  color: var(--fg-danger-text);
 }
 
 #anon-setup-modal .lm-footer {
@@ -2802,19 +3074,20 @@ div.fg-card > form {
 /* ── quick upload ("u", a file dropped anywhere): f0ckm's upload dropdown in f0ckgle's colours ── */
 #upload-drag-modal,
 #drop-overlay {
-  --accent: #1a73e8;
-  --accent-rgb: 26, 115, 232;
-  --bg: #fff;
-  --bg-form: #f8f9fa;
-  --black: #fff;
-  --white: #202124;
-  --text: #202124;
-  --text-color: #202124;
-  --nav-bg: #fff;
-  --nav-border-color: #dadce0;
-  --dropdown-bg: #fff;
+  --accent: var(--fg-blue);
+  --accent-rgb: var(--fg-blue-rgb);
+  --bg: var(--fg-bg);
+  --bg-form: var(--fg-surface);
+  --black: var(--fg-bg);
+  --white: var(--fg-text);
+  --text: var(--fg-text);
+  --text-color: var(--fg-text);
+  --nav-bg: var(--fg-bg);
+  --nav-border-color: var(--fg-border);
+  --dropdown-bg: var(--fg-bg);
   --navbar-h: 7rem;
-  --upload-opt-color: #1a73e8;
+  --upload-opt-color: var(--fg-blue);
+  /* badge backgrounds under white text: the same in both schemes */
   --badge-sfw: #188038;
   --badge-nsfw: #c5221f;
   --badge-nsfl: #7c0a02;

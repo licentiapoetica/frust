@@ -1,0 +1,6 @@
+{#- Light / Dark / Device (README "Light and dark"): plain links to /scheme/<x> (routes/theme.rs sets
+    the scheme cookie and goes back, so they work without JavaScript); with JavaScript
+    scheme-early.js switches in place, no reload, and moves aria-current along. Set fg_scheme_class
+    for the wrapper's class (footer: fg-foot-scheme, sign-in page: fg-signin-scheme). -#}
+{%- set fg_cur_scheme = (color_scheme if (color_scheme is defined and color_scheme in ["light", "dark", "auto"]) else "light") -%}
+<span class="fg-scheme {{ (fg_scheme_class if (fg_scheme_class is defined and fg_scheme_class) else "") }}">Appearance:{% for s in [["light", "Light"], ["dark", "Dark"], ["auto", "Device"]] %} <a href="/scheme/{{ s[0] }}" data-scheme-set="{{ s[0] }}" rel="nofollow"{% if s[0] == fg_cur_scheme %} aria-current="true"{% endif %}>{{ s[1] }}</a>{% endfor %}</span>

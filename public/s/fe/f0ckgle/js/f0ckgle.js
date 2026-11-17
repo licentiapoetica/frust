@@ -7,7 +7,7 @@
 //  - menus (<details>): one open at a time, closed by an outside click or Escape
 //  - keys: "/" focuses the search box; on an item ← → for previous / next, r for random
 //  - custom emojis :name: in comments as pictures, and the emoji picker
-//  - Flash items: starts the Ruffle player
+//  - videos: f0ckm's player (v0ck); Flash items: starts the Ruffle player
 //  - moderators: the × on a tag removes it
 (() => {
   'use strict';
@@ -343,6 +343,25 @@
       location.href = '/random';
     }
   });
+
+  // ── videos play in f0ckm's player (v0ck.js, loaded on a video's page): its controls replace the
+  //    native ones (kept in the page for visitors without JavaScript), it keeps the volume and
+  //    starts the video unless autoplay is off. Autonext (its settings menu, as on f0ckm): at the
+  //    end go to the next f0ck instead of looping (v0ck turns `loop` off while it is on) ──
+  const video = document.querySelector('.fg-player > video#my-video');
+  if (video && window.v0ck) {
+    const autonext = () => { try { return localStorage.getItem('autoplay') === 'true'; } catch { return false; } };
+    if (!window.toggleAutoplay) {
+      window.toggleAutoplay = () => {
+        try { localStorage.setItem('autoplay', autonext() ? 'false' : 'true'); } catch { /* storage blocked */ }
+        document.querySelectorAll('#toggleautoplay').forEach(el => el.classList.toggle('active', autonext()));
+      };
+    }
+    new window.v0ck(video);
+    video.addEventListener('ended', () => {
+      if (autonext()) location.href = page.next || '/random';
+    });
+  }
 
   // ── Flash: the SWF plays in f0ckm's sandboxed Ruffle frame (<f0ck-flash>, /s/js/flash-embed.js,
   //    loaded by the item page); this only starts it in #ruffle-container ──

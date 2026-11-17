@@ -1351,8 +1351,8 @@ mod tests {
         let home = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "session": session }));
         dump("home", &home);
         assert!(home.contains("<form class=\"fg-search\" id=\"fg-search\" action=\"/search\""));
-        assert!(home.contains("<button type=\"submit\" form=\"fg-search\" class=\"fg-btn\">F0ckgle Search</button>"));
-        assert!(home.contains("<a class=\"fg-btn\" href=\"/random\">I'm Feeling Lucky</a>"));
+        assert!(home.contains("<button type=\"submit\" form=\"fg-search\" class=\"fg-btn\">f0ckgle Search</button>"));
+        assert!(home.contains("<a class=\"fg-btn\" href=\"/random\">I'm feeling f0cky</a>"));
         assert!(home.contains("<a href=\"/mode/1\" class=\"active\">NSFW</a>"));
         assert!(home.contains("snippets/frontend-scripts") || home.contains("id=\"footer-data\""));
         let guest = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {} }));
@@ -1505,7 +1505,7 @@ mod tests {
         let shell = render("settings.html", serde_json::json!({ "url": url("/settings", serde_json::json!({})), "session": session,
             "shell_header": "frontends/f0ckgle/shell/header.html", "shell_footer": "frontends/f0ckgle/shell/footer.html" }));
         dump("settings", &shell);
-        assert!(shell.contains("class=\"no-js f0ck-shell\""));
+        assert!(shell.contains("class=\"no-js f0ck-shell scheme-"));
         assert!(shell.contains("<div class=\"f0ck-shell-page\">"));
     }
 

@@ -11,6 +11,7 @@
       {% if (frontend_switch and frontends and frontends|length > 1) %}<span class="fg-foot-fe">Also in:{% for f in frontends %}{% if f != frontend %} <a href="/frontend/{{ f }}">{{ f }}</a>{% endif %}{% endfor %}</span>{% endif %}
     </div>
     <div>
+      {% set fg_scheme_class = "fg-foot-scheme" %}{% include "frontends/f0ckgle/snippets/scheme-switch.html" %}
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
       <a href="/settings">Settings</a>
@@ -25,6 +26,10 @@
 }|tojson }}</script>
 {% include "snippets/frontend-scripts.html" %}
 <script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>
+{%- if (item is defined and item and item.id and item.mime is string and item.mime.startswith("video") and item.mime != "video/youtube") %}
+{#- f0ckm's video player for the item's video (v0ck.css: snippets/head.html), started by f0ckgle.js -#}
+<script src="/s/js/v0ck.js?v={{ mtime("/public/s/js/v0ck.js") }}"></script>
+{%- endif %}
 <script src="/s/fe/f0ckgle/js/f0ckgle.js?v={{ mtime("/public/s/fe/f0ckgle/js/f0ckgle.js") }}"></script>
 {% if session %}{% include "snippets/cap-gate.html" %}{% endif %}
 {%- if not fg_is_shell_foot %}

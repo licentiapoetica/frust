@@ -4,7 +4,7 @@
 {%- set fg_pg = (link.main ~ link.path) -%}
 {%- set fg_sfx = (link.suffix or "") -%}
 <nav class="fg-pages" aria-label="Pages">
-  {% if pagination.prev %}<a class="fg-pg fg-pg-end" href="{{ fg_pg }}{{ pagination.prev }}{{ fg_sfx }}" rel="prev">{% else %}<span class="fg-pg fg-pg-end">{% endif %}<span class="fg-pg-l"><span class="fg-c1">F</span></span><span class="fg-pg-n">{% if pagination.prev %}&lsaquo; Previous{% endif %}</span>{% if pagination.prev %}</a>{% else %}</span>{% endif %}
+  {% if pagination.prev %}<a class="fg-pg fg-pg-end" href="{{ fg_pg }}{{ pagination.prev }}{{ fg_sfx }}" rel="prev">{% else %}<span class="fg-pg fg-pg-end">{% endif %}<span class="fg-pg-l"><span class="fg-c1">f</span></span><span class="fg-pg-n">{% if pagination.prev %}&lsaquo; Previous{% endif %}</span>{% if pagination.prev %}</a>{% else %}</span>{% endif %}
   {% for i in (pagination.cheat or []) %}
   {% if i == pagination.page %}
   <span class="fg-pg fg-pg-cur" aria-current="page"><span class="fg-pg-l fg-c2">0</span><span class="fg-pg-n">{{ i }}</span></span>
