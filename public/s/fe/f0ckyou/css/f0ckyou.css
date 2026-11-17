@@ -1668,7 +1668,7 @@ html.fy-navigating .fy-mast::after {
 /* ── watch page ── */
 .fy-watch {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 31rem);
   gap: 1.5rem;
   max-width: 110rem;
   margin: 0 auto;
@@ -2826,7 +2826,7 @@ body.fy-page-watch {
 .fy-upnext-list {
   display: flex;
   flex-direction: column;
-  gap: .75rem;
+  gap: 1rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2845,7 +2845,7 @@ body.fy-page-watch {
 .fy-upnext-thumb {
   display: block;
   flex: none;
-  width: min(15rem, 52%);
+  width: min(17.5rem, 56%);
   aspect-ratio: 16 / 9;
   overflow: hidden;
   background: var(--fy-thumb-bg);
