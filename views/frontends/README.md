@@ -121,6 +121,23 @@ with `fader-in` / `fader-out`; `f0ckBackground.start({ media, thumb })` draws th
 a picture or Flash's `ambientCanvas` with f0ckm's tuning and switch (`show_background`), and defines
 `window.toggleBackground` (f0ckyou: item.html, f0ckyou.js).
 
+**Light and dark (optional).** A frontend with both a light and a dark look (f0ckgle: light by
+default, f0ckyou: dark by default) lets visitors pick Light, Dark or Device:
+- the choice is the `scheme` cookie (`light`, `dark`, `auto`; none = the frontend's own), set by
+  plain links to `/scheme/<light|dark|auto|default>` (routes/theme.rs; they go back to the page, so
+  they work without JavaScript). Templates get it as `color_scheme` ("" without a choice).
+- `<html>` carries `data-scheme="{{ the choice, else the frontend's own }}"`,
+  `data-scheme-default="light|dark"` and the class `scheme-<the same>`. In `<head>`, before the
+  CSS, `<script src="/s/js/scheme-early.js">` resolves `auto` to `scheme-light` / `scheme-dark`
+  (following the device while the page is open), sets f0ckm's `theme="light"` on shared pages
+  (`html.f0ck-shell`) when light, and updates `<meta name="theme-color" data-light="…" data-dark="…">`.
+- The CSS: the frontend's own palette on `:root`, the other one on `html.scheme-<other>` and again
+  inside `@media (prefers-color-scheme: <other>) { html.scheme-auto { … } }` (no JavaScript). Set
+  `color-scheme` with it, so form controls and scrollbars follow.
+- The switch: links `<a href="/scheme/dark" data-scheme-set="dark">` (scheme-early.js switches in
+  place and marks the current one with `aria-current`; render `aria-current` on the server's choice
+  too). Listen to `f0ck:scheme` (`detail.scheme`, `detail.resolved`) for anything else to redo.
+
 **Pages only one frontend has (optional).** A page that belongs to one frontend's joke or look
 (f0ckgle: `howsearch.html`, "How Search works" at `/help`) is not an own page the others
 must copy. Its route checks `tpl::frontend_has_view(st, req, "<view>")` and answers 404 when the

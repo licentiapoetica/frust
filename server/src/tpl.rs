@@ -1191,6 +1191,10 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     ctx.insert("frontend".into(), json!(frontend));
     ctx.insert("frontends".into(), json!(frontend_names(st, &cfg)));
     ctx.insert("frontend_switch".into(), json!(frontend_switch_enabled(&cfg)));
+    // the colour scheme picked for frontends with a light and a dark look ("" = the frontend's
+    // own): the `scheme` cookie, /scheme/<x> (routes/theme.rs), views/frontends/README.md
+    let scheme = req.and_then(|r| r.cookie("scheme")).filter(|s| matches!(*s, "light" | "dark" | "auto")).unwrap_or("");
+    ctx.insert("color_scheme".into(), json!(scheme));
     // the media filter (mime picker): the "mime" cookie, e.g. "video,audio" (empty: everything)
     if !ctx.contains_key("mime_filter") {
         let mime = req.and_then(|r| r.cookie("mime")).map(crate::util::decode_lossy).unwrap_or_default();

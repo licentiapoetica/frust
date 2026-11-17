@@ -8,6 +8,7 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/theme\/", theme);
     r.get(r"^\/tfull\/", tfull);
     r.get(r"^\/frontend\/(?<name>[A-Za-z0-9_-]{1,32})\/?$", frontend);
+    r.get(r"^\/scheme\/(?<scheme>light|dark|auto|default)\/?$", scheme);
 }
 
 /// These GET links change a setting: a prefetch (a hovered link loaded ahead) gets nothing and
@@ -66,6 +67,27 @@ async fn frontend(st: AppState, req: Req) -> Res {
     let back = req.header("referer").unwrap_or("/");
     let mut r = redirect_code(back, 303);
     if let Some(v) = crate::tpl::frontend_cookie(&st, &cfg, name).and_then(|c| HeaderValue::from_str(&c).ok()) {
+        r.headers_mut().insert(header::SET_COOKIE, v);
+    }
+    r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok(r)
+}
+
+/// `/scheme/<light|dark|auto|default>`: the colour scheme of the frontends that have a light and a
+/// dark look (f0ckgle, f0ckyou; views/frontends/README.md), kept in the `scheme` cookie (`auto`:
+/// the device's, `default`: the frontend's own, clears the cookie). A plain link goes back (303);
+/// with `Accept: application/json` (scheme-early.js switching in place) it answers 204.
+async fn scheme(st: AppState, req: Req) -> Res {
+    if req.is_prefetch() {
+        return Ok(prefetch_ignored());
+    }
+    let cfg = st.cfg();
+    let cookie = match req.param("scheme").unwrap_or("default") {
+        s @ ("light" | "dark" | "auto") => format!("scheme={s}; {}", cookie_options(&cfg, CookieExpiry::MaxAge(365 * 24 * 3600), false)),
+        _ => format!("scheme=; {}", cookie_options(&cfg, CookieExpiry::Expires(crate::http::EXPIRED), false)),
+    };
+    let mut r = if req.accepts_json() { raw(204, "") } else { redirect_code(req.header("referer").unwrap_or("/"), 303) };
+    if let Ok(v) = HeaderValue::from_str(&cookie) {
         r.headers_mut().insert(header::SET_COOKIE, v);
     }
     r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
