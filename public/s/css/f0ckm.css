@@ -8456,8 +8456,12 @@ html.image-expand-active .image-modal-btn {
   display: none !important;
 }
 
+/* also lifts the item page's 16:9 player box (aspect-ratio + max-height, legacy and modern layout),
+   which otherwise keeps the expanded image cut off at the player's size */
 .embed-responsive.is-expanded {
   height: auto !important;
+  aspect-ratio: auto !important;
+  max-height: none !important;
   overflow: visible !important;
 }
 
