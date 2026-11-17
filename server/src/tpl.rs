@@ -1711,8 +1711,19 @@ mod tests {
 
         // a shared page in the shell
         let shell = render("settings.html", serde_json::json!({ "url": url("/settings", serde_json::json!({})), "session": session,
-            "shell_header": "frontends/f0ckyou/shell/header.html", "shell_footer": "frontends/f0ckyou/shell/footer.html" }));
+            "shell_header": "frontends/f0ckyou/shell/header.html", "shell_footer": "frontends/f0ckyou/shell/footer.html",
+            "frontend_settings_prefs": "frontends/f0ckyou/settings-prefs.html", "csrf_token": "tok",
+            "excluded_tags": [{ "id": 4, "tag": "Cats", "normalized": "cats" }] }));
         dump("settings", &shell);
+        // the excluded tags: listed with a remove form each, and a field to add one (works without JavaScript)
+        assert!(shell.contains("<h2 id=\"excluded-tags\">") && shell.contains("<a href=\"#excluded-tags\">"));
+        assert!(shell.contains("<li class=\"settings-excluded-tag\" data-tag=\"Cats\">") && shell.contains("<a href=\"/tag/cats\">#Cats</a>"));
+        assert!(shell.contains("<input type=\"hidden\" name=\"tag_id\" value=\"4\">") && shell.contains("<input type=\"hidden\" name=\"remove\" value=\"1\">"));
+        assert!(shell.contains("<form method=\"post\" action=\"/api/v2/settings/excluded_tags\" class=\"settings-excluded-add\">"));
+        assert!(shell.contains("<p class=\"settings-muted settings-excluded-empty\" hidden>"));
+        assert!(shell.contains("/s/js/views/settings.excluded.js?v="));
+        // and the guide links to it
+        assert!(shell.contains("href=\"/settings#excluded-tags\""));
         assert!(shell.contains("class=\"no-js f0ck-shell\""));
         assert!(shell.contains("<div class=\"f0ck-shell-page\">"));
         assert!(shell.contains("<a href=\"/settings\" class=\"active\" aria-current=\"page\">"), "Settings is the active guide entry");

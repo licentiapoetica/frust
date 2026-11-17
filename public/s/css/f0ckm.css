@@ -36994,6 +36994,70 @@ html[class*="user-fs-"] body {
   gap: 10px;
 }
 
+/* Excluded tags (settings.html, settings.excluded.js): the tags as chips with a remove button, then
+   a field to add one */
+.settings .settings-excluded-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings .settings-excluded-tag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, .15);
+  background: rgba(255, 255, 255, .05);
+}
+
+.settings .settings-excluded-tag a {
+  padding: 4px 4px 4px 10px;
+  color: var(--white);
+  text-decoration: none;
+}
+
+.settings .settings-excluded-tag a:hover {
+  color: var(--accent);
+}
+
+.settings .settings-excluded-remove {
+  display: flex;
+  margin: 0;
+}
+
+.settings .settings-excluded-remove button {
+  padding: 4px 10px;
+  border: 0;
+  background: none;
+  color: var(--white);
+  opacity: .6;
+  cursor: pointer;
+}
+
+.settings .settings-excluded-remove button:hover,
+.settings .settings-excluded-remove button:focus-visible {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.settings .settings-excluded-empty {
+  margin: 12px 0;
+}
+
+.settings .settings-excluded-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 32rem;
+}
+
+.settings .settings-excluded-add input {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
 /* Current password before adding a passkey / generating an API key */
 /* Delete account: "this cannot be undone", and the last question before it is sent */
 .settings .settings-delete-warning {

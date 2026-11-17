@@ -3,6 +3,11 @@
     every preference shows. A group left without any is hidden (settings CSS). -#}
 {%- set fe_prefs = none %}
 {%- if frontend_settings_prefs %}{% import frontend_settings_prefs as fe_settings %}{% set fe_prefs = fe_settings.prefs %}{% endif %}
+{#- Excluded tags (list, remove, add): for the frontends that list "excluded_tags" in their
+    settings-prefs.html (f0ckm has them in its filter dialog); anonymous accounts only when they
+    may exclude tags -#}
+{%- set show_excluded = (not guest and session and fe_prefs is not none and "excluded_tags" in fe_prefs
+    and (not session.is_anon or (anon_permissions and anon_permissions.exclude_tags != false and anon_permissions.filter != false))) %}
 {% include (shell_header or "snippets/header.html") %}
 <div class="pagewrapper">
   <div id="main">
@@ -15,6 +20,9 @@
       <!-- Quick navigation -->
       <nav id="settings-quicknav" aria-label="Settings sections">
         <a href="#preferences"><i class="fa-solid fa-sliders"></i> {{ t("settings.preferences") }}</a>
+        {% if show_excluded %}
+        <a href="#excluded-tags"><i class="fa-solid fa-ban"></i> {{ t("filter.excluded_tags") }}</a>
+        {% endif %}
         {% if not guest %}
         {% if not session.is_anon %}
         <a href="#profile"><i class="fa-solid fa-user-pen"></i> {{ t("settings.profile") }}</a>
@@ -537,6 +545,51 @@
         <button type="submit" class="button button-primary"><i class="fa-solid fa-floppy-disk"></i> {{ t("settings.save") }}</button>
       </div>
       </form>
+
+      {% if show_excluded %}
+      <!-- ═══════════════════════════════ EXCLUDED TAGS ═══════════════════════════════ -->
+      {#- Plain forms to the excluded-tags endpoint (back here without JavaScript, nojs.rs); with it
+          settings.excluded.js sends them with fetch and rebuilds the list from the reply, its rows
+          from the template below -#}
+      <h2 id="excluded-tags"><i class="fa-solid fa-ban"></i> {{ t("filter.excluded_tags") }}</h2>
+      <div class="settings-excluded" id="settings-excluded">
+        <p class="text-muted settings-hint">You won't see f0cks with these tags in the lists.</p>
+        <ul class="settings-excluded-list">
+          {% for tg in (excluded_tags or []) %}
+          <li class="settings-excluded-tag" data-tag="{{ tg.tag }}">
+            <a href="/tag/{{ tg.normalized|encode_uri_component }}">#{{ tg.tag }}</a>
+            <form method="post" action="/api/v2/settings/excluded_tags" class="settings-excluded-remove">
+              <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+              <input type="hidden" name="back" value="/settings#excluded-tags">
+              <input type="hidden" name="tag_id" value="{{ tg.id }}">
+              <input type="hidden" name="remove" value="1">
+              <button type="submit" title="Remove #{{ tg.tag }}" aria-label="Remove #{{ tg.tag }}"><i class="fa-solid fa-xmark"></i></button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="settings-muted settings-excluded-empty"{% if excluded_tags %} hidden{% endif %}>{{ t("filter.no_tags_excluded") }}</p>
+        <form method="post" action="/api/v2/settings/excluded_tags" class="settings-excluded-add">
+          <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+          <input type="hidden" name="back" value="/settings#excluded-tags">
+          <input type="text" name="tagname" class="form-control" placeholder="{{ t("filter.tag_placeholder") }}" aria-label="{{ t("filter.tag_placeholder") }}" autocomplete="off" required>
+          <button type="submit" class="button button-primary"><i class="fa-solid fa-plus"></i> {{ t("filter.exclude_tag") }}</button>
+        </form>
+        <template id="settings-excluded-row">
+          <li class="settings-excluded-tag" data-tag="">
+            <a href=""></a>
+            <form method="post" action="/api/v2/settings/excluded_tags" class="settings-excluded-remove">
+              <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+              <input type="hidden" name="back" value="/settings#excluded-tags">
+              <input type="hidden" name="tag_id" value="">
+              <input type="hidden" name="remove" value="1">
+              <button type="submit"><i class="fa-solid fa-xmark"></i></button>
+            </form>
+          </li>
+        </template>
+      </div>
+      <script src="/s/js/views/settings.excluded.js?v={{ mtime("/public/s/js/views/settings.excluded.js") }}"></script>
+      {% endif %}
 
       {% if (not guest and not session.is_anon) %}
       <!-- ═══════════════════════════════ PROFILE ═══════════════════════════════ -->
