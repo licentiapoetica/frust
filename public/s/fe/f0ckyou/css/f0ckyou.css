@@ -493,10 +493,6 @@ html:not(.no-js) .nojs-only {
   padding: 0 1rem 0 .75rem;
 }
 
-.fy-pill.active .fy-ico {
-  color: var(--fy-red);
-}
-
 .fy-pill-danger:hover {
   background: var(--fy-nsfw);
   color: #fff;
