@@ -1107,8 +1107,11 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   max-width: 64rem;
 }
 
+/* search results and notifications: a centered column */
 .fy-main-list {
   max-width: 80rem;
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .fy-label {
