@@ -312,6 +312,10 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
             ALTER TABLE user_options DROP COLUMN font_size;
         END IF;
     END $$"#,
+    // Burn after read (burn.rs): only the first viewer sees the item; burn_claim is the sha256 of
+    // that viewer's f0ck_burn cookie
+    r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS burn_after_read boolean DEFAULT false NOT NULL"#,
+    r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS burn_claim text"#,
 ];
 
 #[cfg(test)]

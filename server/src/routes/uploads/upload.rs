@@ -56,6 +56,8 @@ struct Ctx {
     manual: bool,
     visibility: i64,
     expires_at: Option<i64>,
+    /// Burn after read (crate::burn); such an upload is at least unlisted.
+    burn: bool,
     slug: String,
     now: i64,
     title: Option<String>,
@@ -254,6 +256,12 @@ async fn process(st: &AppState, req: &Req, cfg: &Config, session: Session, form:
     };
     let now = crate::util::now_secs();
     let expires_at = media::calculate_expires_at(cfg, raw_expiry.as_deref(), now);
+    // Burn after read belongs to the expiring uploads; it keeps the upload out of every listing
+    let burn = s::enable_expiring_uploads(cfg)
+        && media::truthy_flag(req.header("x-upload-burn").map(str::to_string).or_else(|| form.joined("burn_after_read")).as_deref());
+    if burn {
+        visibility = visibility.max(1);
+    }
     let slug = crate::util::generate_slug(11);
 
     if let Some(max_len) = cfg.get("main.comment_max_length").as_f64() {
@@ -342,6 +350,7 @@ async fn process(st: &AppState, req: &Req, cfg: &Config, session: Session, form:
         manual,
         visibility,
         expires_at,
+        burn,
         slug,
         now,
         title: title.take(),
@@ -451,6 +460,7 @@ fn success(cfg: &Config, ctx: &Ctx, item_id: i64, dest: &str, mime: &str, file_u
         "itemid": item_id,
         "slug": if slugs { json!(ctx.slug) } else { Value::Null },
         "visibility": ctx.visibility,
+        "burn_after_read": ctx.burn,
         "manual_approval": ctx.manual,
         "redirect": if ctx.manual { Value::Null } else { Value::String(route.clone()) },
         "url": if ctx.manual { format!("{base}/pending#i{item_id}") } else { format!("{base}{route}") },
@@ -487,9 +497,9 @@ async fn youtube_upload(st: &AppState, req: &Req, cfg: &Config, ctx: &Ctx, video
     let filename = format!("yt:{video_id}");
     let checksum = format!("yt_{video_id}_{}", crate::util::now_ms());
     let item_id = sql!(
-        "insert into items (src, dest, mime, size, checksum, phash, username, userchannel, usernetwork, stamp, active, is_oc, title, visibility, slug, expires_at, uploader_ip) values (",
+        "insert into items (src, dest, mime, size, checksum, phash, username, userchannel, usernetwork, stamp, active, is_oc, title, visibility, slug, expires_at, uploader_ip, burn_after_read) values (",
         yt_url.clone(), ", ", filename.clone(), ", 'video/youtube', 0, ", checksum, ", NULL, ", ctx.owner.clone(), ", 'web', 'web', ", ctx.now as i32, ", ",
-        !ctx.manual, ", ", ctx.is_oc, ", ", ctx.title.clone(), ", ", ctx.visibility as i32, ", ", ctx.slug.clone(), ", ", ctx.expires_at, ", ", ctx.audit_ip.clone(),
+        !ctx.manual, ", ", ctx.is_oc, ", ", ctx.title.clone(), ", ", ctx.visibility as i32, ", ", ctx.slug.clone(), ", ", ctx.expires_at, ", ", ctx.audit_ip.clone(), ", ", ctx.burn,
         ") RETURNING id"
     )
     .fetch_optional(&st.db)
@@ -545,6 +555,9 @@ async fn youtube_upload(st: &AppState, req: &Req, cfg: &Config, ctx: &Ctx, video
             // thumbnail of the unrelated item with that id; album YouTube thumbs come from
             // img.youtube.com, so nothing is generated.
         }
+    }
+    if ctx.burn {
+        crate::burn::reload_item(st, item_id).await;
     }
     success(cfg, ctx, item_id, &filename, "video/youtube", Value::Null)
 }
@@ -825,11 +838,11 @@ async fn file_upload(
     };
 
     let item_id = sql!(
-        "insert into items (src, dest, mime, size, checksum, phash, username, userchannel, usernetwork, stamp, active, is_oc, original_filename, title, width, height, visibility, slug, expires_at, uploader_ip, is_album, album_count) values (",
+        "insert into items (src, dest, mime, size, checksum, phash, username, userchannel, usernetwork, stamp, active, is_oc, original_filename, title, width, height, visibility, slug, expires_at, uploader_ip, is_album, album_count, burn_after_read) values (",
         input_url.clone().unwrap_or_default(), ", ", filename.clone(), ", ", actual.clone(), ", ", size.min(i32::MAX as i64) as i32, ", ", insert_checksum.clone(), ", ", phash.clone(), ", ",
         ctx.owner.clone(), ", 'web', 'web', ", ctx.now as i32, ", ", !ctx.manual, ", ", ctx.is_oc, ", ", original_filename, ", ", ctx.title.clone(), ", ",
         dims.map(|d| d.0), ", ", dims.map(|d| d.1), ", ", ctx.visibility as i32, ", ", ctx.slug.clone(), ", ", ctx.expires_at, ", ", ctx.audit_ip.clone(), ", ",
-        ctx.is_album, ", ", if ctx.is_album { ctx.total_album_items as i32 } else { 0 },
+        ctx.is_album, ", ", if ctx.is_album { ctx.total_album_items as i32 } else { 0 }, ", ", ctx.burn,
         ") RETURNING id"
     )
     .fetch_optional(&st.db)
@@ -933,6 +946,9 @@ async fn file_upload(
 
     let images = cfg.str("websrv.paths.images").filter(|p| !p.is_empty()).unwrap_or("/b");
     let file_url = if ctx.manual { Value::Null } else { Value::String(format!("{}{images}/{filename}", cfg.url_full())) };
+    if ctx.burn {
+        crate::burn::reload_item(st, item_id).await;
+    }
     success(cfg, ctx, item_id, &filename, &actual, file_url)
 }
 

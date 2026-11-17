@@ -42,7 +42,7 @@
         </div>
         {% endif %}
         {% if enable_expiring_uploads != false %}
-        {#- expiration (presets or a custom amount, shown by CSS while "Custom…" is picked) -#}
+        {#- expiration (presets or a custom amount, shown by CSS while "Custom…" is picked) and burn after read -#}
         <div class="w0bm-ul-row w0bm-ul-expiry">
             <span class="w0bm-ul-label">Expires</span>
             <select name="expiry" class="form-control w0bm-ul-expiry-select" aria-label="Expiration">
@@ -63,6 +63,9 @@
                     <option value="weeks">weeks</option>
                 </select>
             </span>
+            <div class="w0bm-ul-seg">
+                <input type="checkbox" name="burn_after_read" value="1" id="w0bm-burn"><label for="w0bm-burn" title="Only the first person to open the link sees it, then it's deleted. Unlisted."><i class="fa fa-fire"></i> Burn after read</label>
+            </div>
         </div>
         {% endif %}
         {% include "frontends/w0bm/partials/flash.html" %}

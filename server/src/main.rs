@@ -5,6 +5,7 @@ mod anon_auth;
 mod app;
 mod audit;
 mod auth;
+mod burn;
 mod bot;
 mod cap;
 mod cap_image;
@@ -203,6 +204,7 @@ fn spawn_background_tasks(st: &state::AppState) {
         loop {
             tokio::time::sleep(Duration::from_secs(30)).await;
             private_items::init(&s).await;
+            burn::init(&s).await;
         }
     });
 
@@ -398,6 +400,7 @@ async fn main() -> Result<()> {
     ensure_nsfl_tag(&st).await;
     settings::load_from_db(&st).await;
     private_items::init(&st).await;
+    burn::init(&st).await;
     if st.cfg().enabled("websrv.halls_enabled") {
         st.update_halls_cache().await;
     }

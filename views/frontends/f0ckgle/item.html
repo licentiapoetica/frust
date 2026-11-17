@@ -108,6 +108,7 @@
       {% if (user and (user.network or user.channel)) %}<div><dt>Channel</dt><dd>{{ user.network }} / {{ user.channel }}</dd></div>{% endif %}
       {% if (halls_enabled and item.primaryHall) %}<div><dt>Halls</dt><dd><a href="/h/{{ item.primaryHall.slug }}">{{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %}, <a href="/h/{{ h.slug }}">{{ h.name }}</a>{% endfor %}</dd></div>{% endif %}
       {% if item.expires_in %}<div><dt>Expires</dt><dd title="{{ item.expires_at }}">{{ item.expires_in }}</dd></div>{% endif %}
+      {% if item.burn_after_read %}<div><dt>Burn after read</dt><dd title="Only the first person to open it sees it, then it's deleted">{{ ("opened, being deleted" if item.burn_claimed else "not opened yet") }}</dd></div>{% endif %}
       {% if (item.visibility and item.visibility > 0) %}<div><dt>Visibility</dt><dd>private</dd></div>{% endif %}
       <div><dt>Rating</dt><dd><span class="fg-rating fg-rating-{{ fg_rating }}">{{ ("unrated" if fg_rating == "untagged" else fg_rating|upper) }}</span></dd></div>
     </dl>

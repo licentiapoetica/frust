@@ -18,6 +18,7 @@ use crate::db::RowExt;
 use crate::http::{Req, Res, json_resp, raw, with_header};
 use crate::sql;
 use crate::state::AppState;
+use crate::util::is_bot_ua as is_bot;
 use axum::http::Method;
 use serde_json::json;
 
@@ -103,17 +104,6 @@ async fn count(st: &AppState, req: &Req, item_id: i32) -> bool {
 fn guest_key(secret: &str, day: &str, ip: &str, ua: &str) -> String {
     let h = crate::util::hmac_sha256_hex(secret.as_bytes(), format!("view|{day}|{ip}|{ua}").as_bytes());
     format!("g:{}", &h[..40])
-}
-
-/// Bots, crawlers, link previews and scripts (by their user agent; none at all counts as one).
-fn is_bot(ua: &str) -> bool {
-    static RE: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
-        regex::Regex::new(
-            r"(?i)bot\b|bot/|crawl|spider|slurp|scrap|facebookexternalhit|embedly|preview|headless|phantom|puppeteer|playwright|selenium|lighthouse|pingdom|uptime|monitor|python|curl|wget|httpclient|http-client|java/|go-http|okhttp|axios|node-fetch|undici|libwww|feed|rss",
-        )
-        .unwrap()
-    });
-    ua.trim().is_empty() || RE.is_match(ua)
 }
 
 /// The request comes from the site's own pages: the browser says so (Sec-Fetch-Site), else the

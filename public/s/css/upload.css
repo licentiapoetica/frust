@@ -386,6 +386,7 @@
 .upload-form.shitpost-mode-active .global-rating-section,
 .upload-form.shitpost-mode-active .global-visibility-section,
 .upload-form.shitpost-mode-active .global-expiry-section,
+.upload-form.shitpost-mode-active .global-burn-section,
 .upload-form.shitpost-mode-active .global-comment-section,
 .upload-form.shitpost-mode-active .global-tag-section {
     display: none !important;
@@ -394,6 +395,7 @@
 .upload-form.shitpost-mode-active.album-mode-active .global-rating-section,
 .upload-form.shitpost-mode-active.album-mode-active .global-visibility-section,
 .upload-form.shitpost-mode-active.album-mode-active .global-expiry-section,
+.upload-form.shitpost-mode-active.album-mode-active .global-burn-section,
 .upload-form.shitpost-mode-active.album-mode-active .global-comment-section,
 .upload-form.shitpost-mode-active.album-mode-active .global-tag-section,
 .upload-form.shitpost-mode-active.album-mode-active .global-oc-section,
@@ -733,23 +735,23 @@
 
 /* Rating and visibility: segmented bars in the style of the mode tabs above. The selected option
    gets an underline, in the rating's colour (SFW/NSFW/NSFL) or the accent for visibility. */
-.upload-form :is(.global-rating-section, .global-visibility-section) .rating-options {
+.upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-options {
     flex-wrap: nowrap;
     gap: 0;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option {
+.upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option {
     flex: 1 1 0;
     min-width: 0;
     margin: 0;
 }
 
-.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option + .rating-option {
+.upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option + .rating-option {
     border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option .rating-label {
+.upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option .rating-label {
     position: relative;
     display: flex;
     align-items: center;
@@ -768,18 +770,18 @@
     transition: color 0.15s, background 0.15s;
 }
 
-.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option .rating-label:hover {
+.upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option .rating-label:hover {
     color: rgba(255, 255, 255, 0.75);
     background: rgba(255, 255, 255, 0.03);
 }
 
-.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option input:checked + .rating-label {
+.upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option input:checked + .rating-label {
     color: var(--white, #fff);
     background: rgba(255, 255, 255, 0.04);
     box-shadow: none;
 }
 
-.upload-form :is(.global-rating-section, .global-visibility-section) .rating-option input:checked + .rating-label::after {
+.upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option input:checked + .rating-label::after {
     content: '';
     position: absolute;
     left: 0;
@@ -799,7 +801,7 @@
     display: none !important;
 }
 
-.upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section, .global-redirect-section) {
+.upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-burn-section, .global-tag-section, .global-comment-section, .global-redirect-section) {
     animation: upload-options-in 0.2s ease-out;
 }
 
@@ -809,7 +811,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section, .global-redirect-section) { animation: none; }
+    .upload-form :is(.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-burn-section, .global-tag-section, .global-comment-section, .global-redirect-section) { animation: none; }
 }
 
 /* Tags */

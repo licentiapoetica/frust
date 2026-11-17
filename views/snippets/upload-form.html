@@ -148,6 +148,20 @@
         </div>
     </div>
 
+    {#- burn after read: the first person to open the link gets it, then it's deleted (unlisted) -#}
+    <div class="form-section global-burn-section upload-await-file">
+        <label>Burn after read</label>
+        <div class="rating-options">
+            <label class="rating-option">
+                <input type="radio" name="burn_after_read" value="" checked>
+                <span class="rating-label"><i class="fa-solid fa-infinity"></i> Off</span>
+            </label>
+            <label class="rating-option" title="Only the first person to open the link sees it, then it's deleted. The upload is unlisted.">
+                <input type="radio" name="burn_after_read" value="1">
+                <span class="rating-label"><i class="fa-solid fa-fire"></i> First view only</span>
+            </label>
+        </div>
+    </div>
     {% endif %}
 
 

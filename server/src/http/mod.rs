@@ -66,6 +66,9 @@ fn is_proxy_addr(ip: std::net::IpAddr) -> bool {
 pub struct OutExtras {
     pub headers: Vec<(HeaderName, HeaderValue)>,
     pub cookies: Vec<String>,
+    /// A burn-after-read file sent to its first viewer: (item id, file name). app.rs counts the
+    /// bytes that go out (crate::burn::track).
+    pub burn: Option<(i64, String)>,
 }
 
 pub struct Req {

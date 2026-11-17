@@ -259,6 +259,8 @@ struct UrlJob {
     visibility: i64,
     slug: String,
     expiry: Option<String>,
+    /// Burn after read (crate::burn); such an upload is at least unlisted.
+    burn: bool,
 }
 
 async fn upload_url(st: AppState, mut req: Req) -> Res {
@@ -349,7 +351,7 @@ async fn upload_url_inner(st: &AppState, cfg: &Config, req: &mut Req) -> anyhow:
         }
     }
     let manual = st.settings.manual_approval();
-    let visibility = target_visibility(cfg, req, &session, field("visibility"));
+    let mut visibility = target_visibility(cfg, req, &session, field("visibility"));
     let expiry = field("expiry")
         .filter(|v| !v.is_empty())
         .or_else(|| req.header("x-upload-expiry").filter(|h| !h.is_empty()).map(str::to_string))
@@ -358,6 +360,11 @@ async fn upload_url_inner(st: &AppState, cfg: &Config, req: &mut Req) -> anyhow:
         Ok(e) => e,
         Err(msg) => return Ok(j(json!({ "success": false, "msg": msg }), 400)),
     };
+    let burn = crate::settings::enable_expiring_uploads(cfg)
+        && media::truthy_flag(field("burn_after_read").or_else(|| req.header("x-upload-burn").map(str::to_string)).as_deref());
+    if burn {
+        visibility = visibility.max(1);
+    }
     let job = UrlJob {
         url,
         owner,
@@ -372,6 +379,7 @@ async fn upload_url_inner(st: &AppState, cfg: &Config, req: &mut Req) -> anyhow:
         visibility,
         slug: crate::util::generate_slug(11),
         expiry,
+        burn,
     };
 
     if let Some(video_id) = yt.filter(|_| cfg.enabled("websrv.enable_youtube_upload")) {
@@ -398,9 +406,9 @@ async fn insert_item(st: &AppState, cfg: &Config, job: &UrlJob, src: &str, dest:
     let now = crate::util::now_secs();
     let expires_at = media::calculate_expires_at(cfg, job.expiry.as_deref(), now);
     let id: i32 = sql!(
-        "INSERT INTO items (src, dest, mime, size, checksum, phash, username, userchannel, usernetwork, stamp, active, is_oc, title, visibility, slug, expires_at) VALUES (",
+        "INSERT INTO items (src, dest, mime, size, checksum, phash, username, userchannel, usernetwork, stamp, active, is_oc, title, visibility, slug, expires_at, burn_after_read) VALUES (",
         src, ", ", dest, ", ", mime, ", ", size as i32, ", ", checksum, ", ", phash, ", ", job.owner.as_str(), ", 'web', 'web', ", now as i32, ", ",
-        !manual, ", ", job.is_oc, ", ", job.title.clone(), ", ", job.visibility as i16, ", ", job.slug.as_str(), ", ", expires_at, ") RETURNING id"
+        !manual, ", ", job.is_oc, ", ", job.title.clone(), ", ", job.visibility as i16, ", ", job.slug.as_str(), ", ", expires_at, ", ", job.burn, ") RETURNING id"
     )
     .fetch_scalar(&st.db)
     .await?
@@ -409,6 +417,9 @@ async fn insert_item(st: &AppState, cfg: &Config, job: &UrlJob, src: &str, dest:
     st.invalidate_upload_count_cache(&job.owner);
     if job.visibility == 2 {
         crate::private_items::add_private(st, id, dest, &job.owner);
+    }
+    if job.burn {
+        crate::burn::reload_item(st, id).await;
     }
     if cfg.enabled("enable_comments") {
         if let Err(e) = sql!("INSERT INTO comment_subscriptions (user_id, item_id) VALUES (", job.user_id as i32, ", ", id as i32, ") ON CONFLICT DO NOTHING")

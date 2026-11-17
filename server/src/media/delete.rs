@@ -180,11 +180,13 @@ pub fn album_thumb_name(dest: &str) -> String {
 /// mark the row deleted + purged.
 pub async fn purge_expired_uploads(st: &AppState) {
     let cfg = st.cfg();
-    if !crate::settings::enable_expiring_uploads(&cfg) {
-        return;
-    }
     let now = crate::util::now_secs();
-    let items = match sql!("SELECT id, dest, mime FROM items WHERE expires_at IS NOT NULL AND expires_at <= ", now, " AND is_purged = false")
+    let mut q = sql!("SELECT id, dest, mime FROM items WHERE expires_at IS NOT NULL AND expires_at <= ", now, " AND is_purged = false");
+    // Opened burn-after-read items go even with the feature switched off since
+    if !crate::settings::enable_expiring_uploads(&cfg) {
+        q.push(" AND burn_after_read");
+    }
+    let items = match q
         .fetch_all(&st.db)
         .await
     {
@@ -219,6 +221,7 @@ pub async fn purge_expired_uploads(st: &AppState) {
             }
             sql!("UPDATE items SET is_deleted = true, is_purged = true, active = false WHERE id = ", id as i32).execute(&st.db).await?;
             crate::private_items::remove_private(st, id, &dest);
+            crate::burn::forget(id);
             anyhow::Ok(())
         }
         .await;

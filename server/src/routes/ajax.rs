@@ -337,6 +337,7 @@ async fn item_random(st: AppState, req: Req) -> Res {
         strict: strict || session.and_then(|s| s.strict_mode).unwrap_or(false),
         subf0ck: q_nonempty(&req, "subf0ck"),
         lang: Some(super::index::req_lang(&st, &req)),
+        req: Some(&req),
         ..base.clone()
     };
     let mut data = f0cklib::getf0ck(&st, &opts).await?;
@@ -429,6 +430,7 @@ async fn item(st: AppState, req: Req) -> Res {
         random,
         subf0ck: q_nonempty(&req, "subf0ck"),
         lang: Some(super::index::req_lang(&st, &req)),
+        req: Some(&req),
         prefetch: req.header("sec-purpose").is_some_and(|v| v.contains("prefetch")) || req.header("purpose") == Some("prefetch"),
         ..base.clone()
     };

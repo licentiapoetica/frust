@@ -563,6 +563,17 @@ pub async fn get_tags(
     Ok(out)
 }
 
+/// Bots, crawlers, link previews and scripts (by their user agent; none at all counts as one).
+pub fn is_bot_ua(ua: &str) -> bool {
+    static RE: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
+        regex::Regex::new(
+            r"(?i)bot\b|bot/|crawl|spider|slurp|scrap|facebookexternalhit|embedly|preview|headless|phantom|puppeteer|playwright|selenium|lighthouse|pingdom|uptime|monitor|python|curl|wget|httpclient|http-client|java/|go-http|okhttp|axios|node-fetch|undici|libwww|feed|rss|whatsapp|iframely|vkshare|mastodon|pleroma|akkoma|misskey|cardyb",
+        )
+        .unwrap()
+    });
+    ua.trim().is_empty() || RE.is_match(ua)
+}
+
 #[cfg(test)]
 mod password_tests {
     use super::*;

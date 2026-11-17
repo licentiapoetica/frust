@@ -29661,9 +29661,23 @@ pre.text-raw {
 }
 
 .badge.badge-warning.item-expiring-badge {
+  padding: 1px 6px;
   background: rgba(255, 170, 0, 0.2);
   color: #ffaa00;
   border: 1px solid rgba(255, 170, 0, 0.4);
+}
+
+.badge.item-expiring-badge > i {
+  margin-right: 3px;
+}
+
+/* burn after read: just the icon (its tooltip says the rest) */
+.badge.item-expiring-badge.item-burn-badge {
+  margin-left: 4px;
+}
+
+.badge.item-expiring-badge.item-burn-badge > i {
+  margin-right: 0;
 }
 
 .badge.badge-dark.item-chan-badge {

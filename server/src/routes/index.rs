@@ -410,6 +410,7 @@ async fn generic(st: AppState, req: Req) -> Res {
         lang: Some(lang),
         // a page loaded ahead of a click, or again by a frontend to swap parts of it, isn't a view
         prefetch: req.is_prefetch(),
+        req: Some(&req),
         tagger: req.query("tagger").filter(|t| !t.is_empty()).map(str::to_string),
         subf0ck: req.query("subf0ck").filter(|t| !t.is_empty()).map(str::to_string),
         ..Default::default()

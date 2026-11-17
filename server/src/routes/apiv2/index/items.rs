@@ -729,7 +729,7 @@ pub(super) async fn set_expiry(st: AppState, mut req: Req) -> Res {
         return j(json!({ "success": false, "msg": "Expiring uploads feature is disabled" }), 403);
     }
     let post = req.post_value().await;
-    let item = match owned_item(&st, &req, "id, username, expires_at, COALESCE(visibility, 0) AS visibility").await? {
+    let item = match owned_item(&st, &req, "id, username, expires_at, COALESCE(visibility, 0) AS visibility, burn_claim").await? {
         Ok(i) => i,
         Err(res) => return res,
     };
@@ -744,7 +744,13 @@ pub(super) async fn set_expiry(st: AppState, mut req: Req) -> Res {
         Err(msg) => return j(json!({ "success": false, "msg": msg }), 400),
     };
     let now = crate::util::now_secs();
-    let target = crate::media::calculate_expires_at(&cfg, raw.as_deref(), now);
+    let mut target = crate::media::calculate_expires_at(&cfg, raw.as_deref(), now);
+    // A burn-after-read item that was opened is on its way out: no later expiry
+    if item.str("burn_claim").is_some() {
+        if let Some(cur) = item.i64("expires_at") {
+            target = Some(target.map_or(cur, |t| t.min(cur)));
+        }
+    }
     sql!("UPDATE items SET expires_at = ", target, " WHERE id = ", id as i32).execute(&st.db).await?;
     let uid = req.session().map(|s| s.id).unwrap_or(0);
     audit_log(&st, uid, "set_item_expiry", "item", &id.to_string(), Some(json!({ "expires_at": target }))).await;

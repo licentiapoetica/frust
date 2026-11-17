@@ -28,6 +28,14 @@ window.f0ckUploadExpiry = window.f0ckUploadExpiry || ((form) => {
     return n > 0 ? String(Math.max(60, Math.round(n * unit))) : 'custom';
 });
 
+// Burn after read of an upload form (its section is hidden in shitpost mode, except for albums)
+window.f0ckUploadBurn = window.f0ckUploadBurn || ((form) => {
+    if (!form) return false;
+    const shitpost = form.classList.contains('shitpost-mode-active') || window.f0ckShitpostMode;
+    if (shitpost && !form.classList.contains('album-mode-active')) return false;
+    return !!form.querySelector('input[name="burn_after_read"]:checked')?.value;
+});
+
 // A custom expiration in seconds, readable ("5 min", "2 h", "3 d")
 window.f0ckExpiryLabel = window.f0ckExpiryLabel || ((secs) => {
     const s = +secs;
@@ -1197,7 +1205,7 @@ window.initUploadForm = (selector) => {
         // Title, rating, visibility, expiry, tags, comment and the redirect checkbox appear once there's
         // something to upload (a file, or a URL)
         const awaiting = activeMode === 'url' ? !hasContent : selectedFiles.length === 0;
-        form.querySelectorAll('.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-tag-section, .global-comment-section, .global-redirect-section')
+        form.querySelectorAll('.global-title-section, .global-rating-section, .global-visibility-section, .global-expiry-section, .global-burn-section, .global-tag-section, .global-comment-section, .global-redirect-section')
             .forEach(sec => sec.classList.toggle('upload-await-file', awaiting));
 
         if (submitBtn) submitBtn.disabled = !(hasContent && hasRating && hasTags);
@@ -2878,6 +2886,7 @@ window.initUploadForm = (selector) => {
                             rating: globalRatingEl ? globalRatingEl.value : 'sfw', 
                             visibility: visibilityVal,
                             expiry: expiryVal,
+                            burn_after_read: window.f0ckUploadBurn(form) || undefined,
                             tags: tags.join(','),
                             comment: comment,
                             is_oc: isOc,
@@ -3021,6 +3030,7 @@ window.initUploadForm = (selector) => {
                 formData.append('rating', globalRatingEl ? globalRatingEl.value : 'sfw');
                 formData.append('visibility', globalVisEl ? globalVisEl.value : '0');
                 formData.append('expiry', window.f0ckUploadExpiry(form));
+                if (window.f0ckUploadBurn(form)) formData.append('burn_after_read', '1');
                 formData.append('tags', tags.join(','));
                 formData.append('is_oc', isOc ? 'true' : 'false');
                 if (titleVal) formData.append('title', titleVal);
@@ -3162,6 +3172,7 @@ window.initUploadForm = (selector) => {
                 const fileRating = isShitpost ? item.rating : (globalRatingEl ? globalRatingEl.value : 'sfw');
                 const fileVisibility = isShitpost ? (item.visibility || globalVisEl?.value || '0') : (globalVisEl?.value || '0');
                 const fileExpiry = isShitpost ? (item.expiry || window.f0ckUploadExpiry(form)) : window.f0ckUploadExpiry(form);
+                const fileBurn = !isShitpost && window.f0ckUploadBurn(form);
                 const fileTags = isShitpost ? item.tags : tags;
                 const fileComment = isShitpost ? item.comment : comment;
                 const fileTitle = isShitpost ? (item.title || '') : titleVal;
@@ -3180,6 +3191,7 @@ window.initUploadForm = (selector) => {
                 formData.append('rating', fileRating);
                 formData.append('visibility', fileVisibility);
                 formData.append('expiry', fileExpiry);
+                if (fileBurn) formData.append('burn_after_read', '1');
                 formData.append('tags', fileTags.join(','));
                 formData.append('is_oc', (isShitpost ? item.is_oc : isOc) ? 'true' : 'false');
                 if (isShitpost) formData.append('is_shitpost', 'true');
@@ -3233,6 +3245,7 @@ window.initUploadForm = (selector) => {
                                 rating: fileRating,
                                 visibility: fileVisibility,
                                 expiry: fileExpiry,
+                                burn_after_read: fileBurn || undefined,
                                 tags: fileTags.join(','),
                                 is_oc: (isShitpost ? item.is_oc : isOc),
                                 comment: fileComment,

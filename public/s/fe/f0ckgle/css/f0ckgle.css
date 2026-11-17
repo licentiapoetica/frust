@@ -2214,24 +2214,24 @@ div.fg-card > form {
 }
 
 /* ratings, visibility, buttons */
-:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-options {
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-options {
   border-color: var(--fgu-line);
 }
 
-:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-option + .rating-option {
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option + .rating-option {
   border-left-color: var(--fgu-line);
 }
 
-:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-option .rating-label {
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option .rating-label {
   color: var(--fgu-muted);
 }
 
-:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-option .rating-label:hover {
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option .rating-label:hover {
   color: var(--fgu-text);
   background: var(--fgu-hover);
 }
 
-:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section) .rating-option input:checked + .rating-label {
+:is(.fg-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option input:checked + .rating-label {
   color: #174ea6;
   background: #e8f0fe;
 }

@@ -64,6 +64,9 @@ pub struct FeedOpts<'a> {
     pub bypass_filter: bool,
     /// getf0ck: a background prefetch (`Sec-Purpose: prefetch`), not a visit — no view is counted
     pub prefetch: bool,
+    /// getf0ck: the request, for burn-after-read items (crate::burn: the claim cookie). Without
+    /// it only their uploader and staff see them.
+    pub req: Option<&'a crate::http::Req>,
     /// getItemPage
     pub target_item_id: Option<String>,
     pub target_item_pinned: Option<bool>,

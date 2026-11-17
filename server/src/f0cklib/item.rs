@@ -263,8 +263,11 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     if visibility == 3 && !session.map(|s| s.admin).unwrap_or(false) {
         return Ok(not_found());
     }
-    // Numeric ids must not enumerate unlisted/private items.
-    if is_numeric && (visibility == 1 || visibility == 2) && !is_owner_or_admin {
+    let burn = actitem.bool("burn_after_read");
+    // Numeric ids must not enumerate unlisted/private items. (A burn item's link is its id when
+    // slugs are off.)
+    let burn_by_id = burn && visibility == 1 && !crate::settings::enable_item_slugs(&cfg);
+    if is_numeric && (visibility == 1 || visibility == 2) && !is_owner_or_admin && !burn_by_id {
         return Ok(not_found());
     }
 
@@ -304,6 +307,21 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
         }
         if blocked {
             return Ok(not_visible(&cfg, itemid, None, true, hall_slug.as_deref(), true));
+        }
+    }
+
+    // Burn after read: the first visitor claims it, everyone after them gets "not found" (crate::burn).
+    // After every other check, so a visitor refused anyway never burns it; a prefetch never claims.
+    if burn && !is_owner_or_admin {
+        if !crate::burn::file_allowed(st, session, &actitem.string("dest")).await {
+            return Ok(not_visible(&cfg, itemid, None, true, hall_slug.as_deref(), true));
+        }
+        let ok = match o.req {
+            Some(r) => crate::burn::reload_if_missing(st, itemid).await && crate::burn::may_view(st, r, itemid, false, !o.prefetch, true).await,
+            None => false,
+        };
+        if !ok {
+            return Ok(not_found());
         }
     }
 
@@ -725,6 +743,8 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             "original_filename": or_null(actitem.val("original_filename")),
             "expires_at": or_null(actitem.val("expires_at")),
             "expires_in": crate::util::expires_in(actitem.val("expires_at")).filter(|_| crate::config::truthy(actitem.val("expires_at"))),
+            "burn_after_read": burn,
+            "burn_claimed": burn && actitem.str("burn_claim").is_some(),
             "is_album": actitem.bool("is_album") && album.len() > 1,
             "album_count": album_count,
             "album": album,

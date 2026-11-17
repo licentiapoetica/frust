@@ -36,6 +36,11 @@ pub async fn handle(State(st): State<AppState>, ConnectInfo(addr): ConnectInfo<S
         Err(e) => e.into_response_for(wants_json),
     };
     let resp = apply_extras(resp, &out.lock());
+    let burn = out.lock().burn.take();
+    let resp = match burn {
+        Some((id, file)) => crate::burn::track(&st, id, file, resp),
+        None => resp,
+    };
     tracing::info!(
         "{:<15}{:<15}{:<15}{}",
         format!("{:.2}ms", start.elapsed().as_secs_f64() * 1000.0),
@@ -385,6 +390,30 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
                 return Ok(Some(raw(401, "Unauthorized")));
             }
             req.set_header("cache-control", private_cache(&path));
+        }
+        // Burn after read: the file only for the item's first viewer (who may claim it right here
+        // by opening the direct URL), its uploader and staff. Last, so a visitor refused anyway
+        // never burns it.
+        if let Some(id) = crate::burn::item_for_path(&path) {
+            let user = match req.cookie("session") {
+                Some(c) => media_user(st, c).await,
+                None => None,
+            };
+            let privileged = user
+                .as_ref()
+                .filter(|u| !u.bool("banned"))
+                .is_some_and(|u| u.bool("admin") || u.bool("is_moderator") || crate::burn::is_owner(id, &u.string("user")));
+            if !crate::burn::may_view(st, req, id, privileged, path.starts_with("/b/"), true).await {
+                return Ok(Some(crate::burn::gone()));
+            }
+            // The first viewer's copy of the file: count what goes out (handle → burn::track); their
+            // browser may keep it to loop or replay it, the item is gone once it's all out
+            if !privileged {
+                if let Some(file) = path.strip_prefix("/b/").and_then(crate::http::files::plain_name) {
+                    req.set_header("cache-control", "private, max-age=86400");
+                    req.out.lock().burn = Some((id, file));
+                }
+            }
         }
         return Ok(None);
     }

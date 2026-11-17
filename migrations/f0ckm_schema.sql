@@ -992,7 +992,9 @@ CREATE TABLE public.items (
     slug character varying(16),
     expires_at bigint,
     views bigint DEFAULT 0 NOT NULL,
-    duration real
+    duration real,
+    burn_after_read boolean DEFAULT false NOT NULL,
+    burn_claim text
 );
 
 

@@ -216,6 +216,11 @@ pub fn resolve_custom_expiry(expiry: Option<String>, amount: Option<&str>, unit:
     Ok(Some(secs.to_string()))
 }
 
+/// A form/header flag ("1", "true", "on", "yes").
+pub fn truthy_flag(v: Option<&str>) -> bool {
+    v.is_some_and(|v| matches!(v.trim().to_lowercase().as_str(), "1" | "true" | "on" | "yes"))
+}
+
 /// The item-id-or-file name must be a plain file name inside a media directory.
 pub fn is_plain_name(name: &str) -> bool {
     !name.is_empty() && name != "." && name != ".." && !name.contains('/') && !name.contains('\\') && !name.contains('\0')
