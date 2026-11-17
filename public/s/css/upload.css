@@ -490,6 +490,70 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* Per-item visibility, expiry and burn after read (shitpost mode) */
+.item-visibility-container,
+.item-expiry-container,
+.item-burn-container {
+    margin-top: 4px;
+}
+
+.item-visibility-container .item-rating-label,
+.item-burn-container .item-rating-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.item-expiry-select,
+.item-expiry-amount,
+.item-expiry-unit {
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    border: 1px solid var(--nav-border-color, rgba(255, 255, 255, 0.1));
+    font-size: 0.85em;
+}
+
+.item-expiry-select {
+    width: 100%;
+    cursor: pointer;
+}
+
+/* amount + unit, only while "Custom…" is picked */
+.item-expiry-custom {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.item-expiry-container:not(:has(.item-expiry-select option[value="custom"]:checked)) .item-expiry-custom {
+    display: none;
+}
+
+.item-expiry-amount {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+}
+
+.item-expiry-unit {
+    flex: 0 0 auto;
+    cursor: pointer;
+}
+
+.item-burn-container .item-rating-option input:checked + .item-rating-label {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* in the amber of the item page's expiring / burn badges */
+.item-burn-container .item-rating-option input[value="1"]:checked + .item-rating-label {
+    background: rgba(255, 170, 0, 0.2);
+    color: #ffaa00;
+    border-color: rgba(255, 170, 0, 0.5);
+}
+
 /* Bigger Previews in Shitpost Mode */
 .upload-form.shitpost-mode-active .file-preview-item {
     display: flex;

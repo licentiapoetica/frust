@@ -2344,7 +2344,8 @@ div.fg-card > form {
 
 /* text fields */
 :is(.fg-upload-page, #upload-drag-modal) :is(.url-input-container input[type="url"], .tag-input-container, .upload-title-input, .upload-comment,
-  .item-tag-input, .item-comment-input, .item-title-input, .album-stage-tags-input, select.upload-form-expiry, input.upload-form-expiry-amount) {
+  .item-tag-input, .item-comment-input, .item-title-input, .album-stage-tags-input, select.upload-form-expiry, input.upload-form-expiry-amount,
+  .item-expiry-select, .item-expiry-amount, .item-expiry-unit) {
   background: var(--fgu-field);
   border-color: var(--fgu-line-strong);
   color: var(--fgu-text);
@@ -2411,6 +2412,18 @@ div.fg-card > form {
 
 :is(.fg-upload-page, #upload-drag-modal) .item-rating-label:hover {
   background: var(--fgu-hover);
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .item-burn-container .item-rating-option input:checked + .item-rating-label {
+  background: #e8f0fe;
+  border-color: #174ea6;
+  color: #174ea6;
+}
+
+:is(.fg-upload-page, #upload-drag-modal) .item-burn-container .item-rating-option input[value="1"]:checked + .item-rating-label {
+  background: #fef7e0;
+  border-color: #b06000;
+  color: #b06000;
 }
 
 :is(.fg-upload-page, #upload-drag-modal) .global-redirect-section .upload-checkbox-label {

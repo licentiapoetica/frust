@@ -17,15 +17,20 @@ window.f0ckGoToPending = window.f0ckGoToPending || ((id) => {
     }
 });
 
+// A custom expiration (amount + minutes/hours/days/weeks) as seconds, 'custom' without an amount
+window.f0ckCustomExpiry = window.f0ckCustomExpiry || ((amount, unit) => {
+    const n = parseFloat(String(amount || '').replace(',', '.'));
+    const secs = { minutes: 60, hours: 3600, days: 86400, weeks: 604800 }[unit] || 60;
+    return n > 0 ? String(Math.max(60, Math.round(n * secs))) : 'custom';
+});
+
 // Expiration of an upload form: a preset, or with "Custom…" the amount and unit as seconds
 // ('custom' alone when the amount is missing, so the server reports it)
 window.f0ckUploadExpiry = window.f0ckUploadExpiry || ((form) => {
     const sel = form && form.querySelector('select[name="expiry"], input[name="expiry"]');
     if (!sel) return 'permanent';
     if (sel.value !== 'custom') return sel.value || 'permanent';
-    const n = parseFloat(String(form.querySelector('[name="expiry_amount"]')?.value || '').replace(',', '.'));
-    const unit = { minutes: 60, hours: 3600, days: 86400, weeks: 604800 }[form.querySelector('[name="expiry_unit"]')?.value] || 60;
-    return n > 0 ? String(Math.max(60, Math.round(n * unit))) : 'custom';
+    return window.f0ckCustomExpiry(form.querySelector('[name="expiry_amount"]')?.value, form.querySelector('[name="expiry_unit"]')?.value);
 });
 
 // Burn after read of an upload form (its section is hidden in shitpost mode, except for albums)
@@ -1838,6 +1843,7 @@ window.initUploadForm = (selector) => {
             let ratingSwitch = '';
             let visibilitySwitch = '';
             let expirySwitch = '';
+            let burnSwitch = '';
             let tagsUI = '';
             let ocUI = '';
             let commentUI = '';
@@ -1871,18 +1877,18 @@ window.initUploadForm = (selector) => {
                     const visValue = (item.visibility !== undefined && item.visibility !== '') ? item.visibility : globalVis;
                     item.visibility = visValue;
                     visibilitySwitch = `
-                        <div class="item-visibility-container item-rating-container" style="margin-top: 4px;">
+                        <div class="item-visibility-container item-rating-container">
                             <label class="item-rating-option">
                                 <input type="radio" name="visibility_${index}" value="0" ${visValue === '0' || visValue === 0 ? 'checked' : ''}>
-                                <span class="item-rating-label sfw" style="display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-globe"></i> Public</span>
+                                <span class="item-rating-label sfw"><i class="fa-solid fa-globe"></i> Public</span>
                             </label>
                             <label class="item-rating-option">
                                 <input type="radio" name="visibility_${index}" value="1" ${visValue === '1' || visValue === 1 ? 'checked' : ''}>
-                                <span class="item-rating-label nsfw" style="display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-link"></i> Unlisted</span>
+                                <span class="item-rating-label nsfw"><i class="fa-solid fa-link"></i> Unlisted</span>
                             </label>
                             <label class="item-rating-option">
                                 <input type="radio" name="visibility_${index}" value="2" ${visValue === '2' || visValue === 2 ? 'checked' : ''}>
-                                <span class="item-rating-label nsfl" style="display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-lock"></i> Private</span>
+                                <span class="item-rating-label nsfl"><i class="fa-solid fa-lock"></i> Private</span>
                             </label>
                         </div>
                     `;
@@ -1893,25 +1899,57 @@ window.initUploadForm = (selector) => {
                 const globalExpiryEl = form.querySelector('select[name="expiry"], input[name="expiry"]');
                 const hasExpirySection = !!globalExpiryEl || window.f0ckEnableExpiringUploads !== false;
                 if (hasExpirySection && globalExpiryEl) {
-                    const globalExpiry = window.f0ckUploadExpiry(form);
-                    const expiryValue = (item.expiry !== undefined && item.expiry !== '') ? item.expiry : globalExpiry;
-                    item.expiry = expiryValue;
-                    const customExpiry = /^\d+$/.test(expiryValue)
-                        ? `<option value="${expiryValue}" selected>Custom (${window.f0ckExpiryLabel(expiryValue)})</option>` : '';
+                    // The item's own choice, first taken from the global fields: the preset (or
+                    // 'custom') with its amount and unit; item.expiry is what gets sent
+                    if (item.expiryChoice === undefined) {
+                        item.expiryChoice = globalExpiryEl.value || 'permanent';
+                        item.expiryAmount = form.querySelector('[name="expiry_amount"]')?.value || '';
+                        item.expiryUnit = form.querySelector('[name="expiry_unit"]')?.value || 'minutes';
+                    }
+                    const choice = item.expiryChoice;
+                    item.expiry = choice === 'custom' ? window.f0ckCustomExpiry(item.expiryAmount, item.expiryUnit) : choice;
+                    const opt = (v, label) => `<option value="${v}" ${choice === v ? 'selected' : ''}>${label}</option>`;
+                    const unitOpt = (v, label) => `<option value="${v}" ${item.expiryUnit === v ? 'selected' : ''}>${label}</option>`;
 
                     expirySwitch = `
-                        <div class="item-expiry-container" style="margin-top: 4px;">
-                            <select class="item-expiry-select" style="width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--nav-border-color, rgba(255,255,255,0.1)); border-radius: 4px; font-size: 0.85em; cursor: pointer;">
-                                <option value="permanent" ${expiryValue === 'permanent' ? 'selected' : ''}>Permanent (Never expires)</option>
-                                <option value="30minutes" ${expiryValue === '30minutes' ? 'selected' : ''}>30 Minutes</option>
-                                <option value="1hour" ${expiryValue === '1hour' ? 'selected' : ''}>1 Hour</option>
-                                <option value="24hours" ${expiryValue === '24hours' ? 'selected' : ''}>24 Hours</option>
-                                <option value="1week" ${expiryValue === '1week' ? 'selected' : ''}>1 Week</option>
-                                <option value="1month" ${expiryValue === '1month' ? 'selected' : ''}>1 Month</option>
-                                ${customExpiry}
+                        <div class="item-expiry-container">
+                            <select class="item-expiry-select" aria-label="Expiration">
+                                ${opt('permanent', 'Permanent (Never expires)')}
+                                ${opt('30minutes', '30 Minutes')}
+                                ${opt('1hour', '1 Hour')}
+                                ${opt('24hours', '24 Hours')}
+                                ${opt('1week', '1 Week')}
+                                ${opt('1month', '1 Month')}
+                                ${opt('custom', 'Custom…')}
                             </select>
+                            <div class="item-expiry-custom">
+                                <input type="number" class="item-expiry-amount" min="0" step="any" placeholder="e.g. 5" aria-label="Custom expiration" value="${window.escapeHtmlUpload(item.expiryAmount)}">
+                                <select class="item-expiry-unit" aria-label="Custom expiration unit">
+                                    ${unitOpt('minutes', 'Minutes')}
+                                    ${unitOpt('hours', 'Hours')}
+                                    ${unitOpt('days', 'Days')}
+                                    ${unitOpt('weeks', 'Weeks')}
+                                </select>
+                            </div>
                         </div>
                     `;
+
+                    // Burn after read (same section as the expiry in the global form)
+                    if (form.querySelector('input[name="burn_after_read"]')) {
+                        if (item.burn === undefined) item.burn = !!form.querySelector('input[name="burn_after_read"]:checked')?.value;
+                        burnSwitch = `
+                            <div class="item-burn-container item-rating-container" title="Only the first person to open the link sees it, then it's deleted. The upload is unlisted.">
+                                <label class="item-rating-option">
+                                    <input type="radio" name="burn_${index}" value="" ${item.burn ? '' : 'checked'}>
+                                    <span class="item-rating-label"><i class="fa-solid fa-infinity"></i> Keep</span>
+                                </label>
+                                <label class="item-rating-option">
+                                    <input type="radio" name="burn_${index}" value="1" ${item.burn ? 'checked' : ''}>
+                                    <span class="item-rating-label"><i class="fa-solid fa-fire"></i> Burn after read</span>
+                                </label>
+                            </div>
+                        `;
+                    }
                 } else {
                     expirySwitch = '';
                 }
@@ -1963,6 +2001,7 @@ window.initUploadForm = (selector) => {
                 ${ratingSwitch}
                 ${visibilitySwitch}
                 ${expirySwitch}
+                ${burnSwitch}
                 ${tagsUI}
                 ${commentUI}
             `;
@@ -1983,13 +2022,29 @@ window.initUploadForm = (selector) => {
                     };
                 });
 
-                // Handle Expiry
+                // Handle Expiry (a preset, or "Custom…" with amount + unit)
                 const expirySelect = infoRow.querySelector('.item-expiry-select');
                 if (expirySelect) {
-                    expirySelect.onchange = () => {
-                        item.expiry = expirySelect.value;
+                    const amountInput = infoRow.querySelector('.item-expiry-amount');
+                    const unitSelect = infoRow.querySelector('.item-expiry-unit');
+                    const sync = () => {
+                        item.expiryChoice = expirySelect.value;
+                        item.expiryAmount = amountInput?.value || '';
+                        item.expiryUnit = unitSelect?.value || 'minutes';
+                        item.expiry = item.expiryChoice === 'custom' ? window.f0ckCustomExpiry(item.expiryAmount, item.expiryUnit) : item.expiryChoice;
                     };
+                    expirySelect.onchange = () => {
+                        sync();
+                        if (expirySelect.value === 'custom') amountInput?.focus();
+                    };
+                    if (amountInput) amountInput.oninput = sync;
+                    if (unitSelect) unitSelect.onchange = sync;
                 }
+
+                // Handle Burn after read
+                infoRow.querySelectorAll('.item-burn-container input').forEach(radio => {
+                    radio.onchange = () => { item.burn = !!radio.value; };
+                });
 
 
                 // Handle Comment
@@ -3172,7 +3227,7 @@ window.initUploadForm = (selector) => {
                 const fileRating = isShitpost ? item.rating : (globalRatingEl ? globalRatingEl.value : 'sfw');
                 const fileVisibility = isShitpost ? (item.visibility || globalVisEl?.value || '0') : (globalVisEl?.value || '0');
                 const fileExpiry = isShitpost ? (item.expiry || window.f0ckUploadExpiry(form)) : window.f0ckUploadExpiry(form);
-                const fileBurn = !isShitpost && window.f0ckUploadBurn(form);
+                const fileBurn = isShitpost ? !!item.burn : window.f0ckUploadBurn(form);
                 const fileTags = isShitpost ? item.tags : tags;
                 const fileComment = isShitpost ? item.comment : comment;
                 const fileTitle = isShitpost ? (item.title || '') : titleVal;
