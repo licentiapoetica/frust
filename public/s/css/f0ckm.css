@@ -13171,11 +13171,13 @@ body.layout-legacy .comment-content img.emoji {
   position: relative;
 }
 
-/* the tie in front of every MOTD (navbar.html) */
+/* the tie in front of every MOTD (navbar.html), its left edge under the brand text's first letter:
+   .navbar-brand's 12px + span.f0ck's 4px + VCR's 1px side bearing = 17px (left 5px + margin 12px;
+   the left 5px moves it along with #motd-display) */
 .motd-icon {
   position: relative;
   left: 5px;
-  margin-left: 5px;
+  margin-left: 12px;
   margin-right: 0.4em;
 }
 
