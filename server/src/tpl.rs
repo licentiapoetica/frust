@@ -1602,6 +1602,10 @@ mod tests {
         // Upload in the masthead opens f0ckm's upload dropdown (f0ck_upload_init.js), /upload without JavaScript
         assert!(page.contains("<a class=\"fy-create\" id=\"nav-upload-link\" href=\"/upload\" title=\"Upload (u)\" aria-haspopup=\"dialog\" aria-expanded=\"false\">"));
         assert!(page.contains("id=\"upload-drag-modal\"") && page.contains("/s/js/f0ck_upload_init.js?v="));
+        // the bell: /notifications without JavaScript, the notifications popover with it (f0ckyou.js)
+        assert!(page.contains("<a class=\"fy-iconbtn\" id=\"fy-notif-btn\" href=\"/notifications\" title=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"fy-notif-pop\">"));
+        assert!(page.contains("<div class=\"fy-menu-box fy-notif-pop\" id=\"fy-notif-pop\" role=\"dialog\" aria-label=\"Notifications\" hidden>"));
+        assert!(page.contains("data-fy-notif-tabs") && page.contains("data-fy-notif-body") && page.contains("data-fy-notif-read"));
         assert!(page.contains("<a class=\"fy-pill\" href=\"#edit\">") && page.contains("<div id=\"edit\" class=\"fy-modal\" data-fy-live=\"edit\">"));
         assert!(page.contains("<form method=\"post\" action=\"/api/v2/items/7/rethumb\" class=\"fy-edit-tool fy-ajax\""));
         assert!(page.contains("<input type=\"hidden\" name=\"visibility\" value=\"3\">"));
@@ -1681,7 +1685,7 @@ mod tests {
             ("subscriptions", serde_json::json!({ "session": session, "items": [{ "id": 7, "user": "al", "thumb": "/t/7.webp" }], "totalCount": 1,
                 "pagination": { "start": 1, "end": 1, "page": 1 }, "link": { "main": "/subscriptions", "path": "?page=" } })),
             ("notifications", serde_json::json!({ "session": session, "activeTab": "user", "tabUnread": { "user": 1 },
-                "notifications": [{ "type": "comment_reply", "from_user": "al", "item_id": 7, "reference_id": 3, "is_read": false, "created_at": "2026-11-15T10:00:00Z" }] })),
+                "notifications": [{ "type": "comment_reply", "from_user": "al", "id": 9, "item_id": 7, "reference_id": 3, "is_read": false, "created_at": "2026-11-15T10:00:00Z" }] })),
             ("ranking", serde_json::json!({ "list": [{ "user": "al", "count": 9 }], "hoster": [{ "part": "youtube.com", "c": 4 }], "favotop": [{ "item_id": 7, "favs": 2 }],
                 "stats": { "total": 10 }, "totalComments": 1, "totalFavs": 2, "totalUsers": 3, "totalAnonUsers": 0, "diskSize": "1 GB" })),
             ("comments_user", serde_json::json!({ "user": al, "comments_page": 2, "has_more": true,
@@ -1693,6 +1697,10 @@ mod tests {
             data["url"] = url(&format!("/{view}"), serde_json::json!({}));
             let html = render(&fe(view), data);
             dump(view, &html);
+            // the popover of the bell takes its rows from this page: each with its id (read on click)
+            if view == "notifications" {
+                assert!(html.contains("<li class=\"fy-notif fy-unread\" data-id=\"9\">") && html.contains("<ol class=\"fy-list fy-notifs\" data-fy-live=\"notifs\">"));
+            }
             assert!(html.contains("/s/fe/f0ckyou/css/f0ckyou.css") && html.contains("<header class=\"fy-mast f0ck-shell-chrome\">"), "{view}: not in f0ckyou's layout");
             assert!(!html.contains("/s/css/f0ckm.css"), "{view}");
             assert!(html.trim_end().ends_with("</html>"), "{view}");

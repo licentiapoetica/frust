@@ -7,7 +7,8 @@
 //    scroll into view
 //  - the f0ckFrontend hooks for the shared live events (views/frontends/README.md), the
 //    notification badge
-//  - menus (<details>): one open at a time, closed by an outside click or Escape
+//  - menus (<details>): one open at a time, closed by an outside click or Escape; the
+//    notifications popover of the bell (the list of /notifications) the same way
 //  - the masthead is see-through at the top of the page, with its background once scrolled
 //  - keys: "/" search; on a f0ck ← → (or Shift+P / Shift+N) previous / next, r random, k play /
 //    pause, j / l back / forward 10 s, m mute, f full screen
@@ -236,6 +237,108 @@
       badge.hidden = !n;
     } catch { /* offline: keep the badge as it is */ }
   };
+
+  // ── the notifications popover: the bell (a link to /notifications without JavaScript) opens it
+  //    under the masthead, like the menus. Its tabs and list are the ones of /notifications,
+  //    fetched (the markup stays the page's); a tab loads into it, a notification clicked is
+  //    read. The masthead is swapped with every page, so everything is looked up when used. ──
+  const notifPop = () => document.getElementById('fy-notif-pop');
+  let notifTab = '';
+  let notifFetch = null;
+  const loadNotifs = async (tab = notifTab) => {
+    const pop = notifPop();
+    if (!pop) return;
+    notifTab = tab;
+    notifFetch?.abort();
+    const ctrl = notifFetch = new AbortController();
+    pop.querySelector('[data-fy-notif-body]')?.classList.add('fy-busy');
+    try {
+      const res = await fetch(`/notifications${tab ? `?tab=${encodeURIComponent(tab)}` : ''}`, {
+        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'text/html' }, signal: ctrl.signal,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const doc = parse(await res.text());
+      const list = doc.querySelector('.fy-notifs');
+      if (!list) throw new Error('no list');
+      const cur = notifPop();
+      if (!cur || ctrl !== notifFetch) return;
+      // the page's region (data-fy-live) is the page's, not this copy
+      list.removeAttribute('data-fy-live');
+      const tabs = doc.querySelector('.fy-chips');
+      const active = tabs?.querySelector('.fy-chip.active');
+      if (active) notifTab = new URL(active.href, location.href).searchParams.get('tab') || notifTab;
+      cur.querySelector('[data-fy-notif-tabs]')?.replaceChildren(...(tabs ? [document.importNode(tabs, true)] : []));
+      const body = cur.querySelector('[data-fy-notif-body]');
+      body?.replaceChildren(document.importNode(list, true));
+      body?.classList.remove('fy-busy');
+    } catch {
+      if (ctrl.signal.aborted) return;
+      const body = notifPop()?.querySelector('[data-fy-notif-body]');
+      body?.replaceChildren(el('p', 'fy-dim fy-notif-pop-error', 'Could not load the notifications.'));
+      body?.classList.remove('fy-busy');
+    }
+  };
+  const notifOpen = () => { const pop = notifPop(); return !!pop && !pop.hidden; };
+  const setNotifOpen = (open) => {
+    const pop = notifPop();
+    const btn = document.getElementById('fy-notif-btn');
+    if (!pop || !btn) return;
+    pop.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    btn.classList.toggle('is-active', open);
+    if (!open) return;
+    menus().forEach(d => { d.open = false; });
+    loadNotifs();
+  };
+  const markAllRead = async () => {
+    try {
+      await send('/api/notifications/read', {});
+      notifBadge();
+      await loadNotifs();
+      if (document.querySelector('[data-fy-live="notifs"]')) refresh(['notifs']);
+    } catch (err) {
+      flash(err.message || 'Something went wrong', 'error');
+    }
+  };
+  // capture: before the in-place link handler, which leaves clicks it finds handled alone
+  document.addEventListener('click', e => {
+    const target = e.target;
+    const plain = e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+    if (target.closest?.('#fy-notif-btn')) {
+      if (!plain) return;
+      e.preventDefault();
+      setNotifOpen(!notifOpen());
+      return;
+    }
+    const pop = notifPop();
+    if (!pop || pop.hidden) return;
+    if (!pop.contains(target)) {
+      setNotifOpen(false);
+      return;
+    }
+    if (target.closest('[data-fy-notif-read]')) {
+      e.preventDefault();
+      markAllRead();
+      return;
+    }
+    const link = target.closest('a[href]');
+    if (!link) return;
+    const url = new URL(link.href, location.href);
+    // a tab: into the popover
+    if (link.matches('.fy-chip') && url.pathname === '/notifications' && url.origin === location.origin) {
+      if (!plain) return;
+      e.preventDefault();
+      loadNotifs(url.searchParams.get('tab') || '');
+      return;
+    }
+    // a notification: read now, and the link goes on
+    const row = link.closest('.fy-notif.fy-unread[data-id]');
+    if (row) {
+      row.classList.remove('fy-unread');
+      send(`/api/notifications/${encodeURIComponent(row.dataset.id)}/read`, {}).then(notifBadge).catch(() => {});
+    }
+    if (plain) setNotifOpen(false);
+  }, true);
 
   // ── forms sent with fetch: the same endpoints and fields, as JSON (they answer JSON then) ──
   const formBody = (form) => {
@@ -468,6 +571,7 @@
     },
     notify() {
       notifBadge();
+      if (notifOpen()) loadNotifs();
       if (document.querySelector('[data-fy-live="notifs"]')) refresh(['notifs']);
     },
     newItem() {
@@ -515,7 +619,9 @@
     if (d.dataset.fyMenu) return;
     d.dataset.fyMenu = '1';
     d.addEventListener('toggle', () => {
-      if (d.open) menus().forEach(o => { if (o !== d) o.open = false; });
+      if (!d.open) return;
+      menus().forEach(o => { if (o !== d) o.open = false; });
+      if (notifOpen()) setNotifOpen(false);
     });
   });
   document.addEventListener('click', e => {
@@ -597,6 +703,7 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       menus().forEach(d => { d.open = false; });
+      if (notifOpen()) setNotifOpen(false);
       if (/^#(report|delete|share)$/.test(location.hash)) location.hash = '_';
       if (drawerOpen()) guideToggle().checked = false;
       return;
@@ -1113,6 +1220,7 @@
     document.getElementById('fy-newpill')?.remove();
     stopPreview();
     menus().forEach(d => { d.open = false; });
+    if (notifOpen()) setNotifOpen(false);
     const toggle = guideToggle();
     if (toggle) toggle.checked = false;
   };

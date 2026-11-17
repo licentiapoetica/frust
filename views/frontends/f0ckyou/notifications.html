@@ -28,7 +28,7 @@
     {% set ref = (n.item_slug or n.item_id) %}
     {% set is_comment = n.type in ["comment", "comment_reply", "mention", "subscription", "upload_comment"] %}
     {% set href = (("/" ~ ref ~ (("#c" ~ n.reference_id) if (is_comment and n.reference_id) else "")) if n.item_id else "") %}
-    <li class="fy-notif{% if not n.is_read %} fy-unread{% endif %}">
+    <li class="fy-notif{% if not n.is_read %} fy-unread{% endif %}" data-id="{{ n.id }}">
       <span class="fy-notif-dot" aria-hidden="true"></span>
       {{ fy.avatar("", "", ((n.from_display_name or n.from_user) if is_comment else domain)) }}
       <div class="fy-notif-text">

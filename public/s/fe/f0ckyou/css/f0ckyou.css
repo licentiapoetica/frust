@@ -3104,6 +3104,117 @@ body.fy-page-watch {
   margin-bottom: 2rem;
 }
 
+/* the popover of the bell (snippets/userarea.html; the list of /notifications, f0ckyou.js) */
+.fy-iconbtn.is-active {
+  background: var(--fy-soft-2);
+}
+
+.fy-notif-pop {
+  display: flex;
+  flex-direction: column;
+  width: 30rem;
+  max-width: calc(100vw - 1rem);
+  max-height: calc(100vh - var(--fy-mast-h) - 1rem);
+  padding: 0;
+  overflow: hidden;
+}
+
+.fy-notif-pop-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: .25rem;
+  padding: .25rem .5rem .25rem 1rem;
+  border-bottom: 1px solid var(--fy-line);
+}
+
+.fy-notif-pop-title {
+  flex: 1;
+  font-size: 1rem;
+}
+
+.fy-notif-pop-tabs {
+  flex: none;
+}
+
+.fy-notif-pop .fy-chips {
+  position: static;
+  margin: 0;
+  padding: .5rem 1rem;
+  background: none;
+}
+
+.fy-notif-pop-body {
+  flex: 1;
+  min-height: 6rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.fy-notif-pop-body.fy-busy {
+  opacity: .6;
+}
+
+.fy-notif-pop .fy-notifs {
+  margin: 0;
+}
+
+.fy-notif-pop .fy-notif {
+  gap: .75rem;
+  padding: .75rem 1rem .75rem 1.5rem;
+}
+
+.fy-notif-pop .fy-notif .fy-ava {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1rem;
+}
+
+.fy-notif-pop .fy-notif-thumb {
+  width: 4.5rem;
+}
+
+.fy-notif-pop .fy-empty {
+  padding: 2rem 1rem;
+}
+
+.fy-notif-pop .fy-empty > .fy-ico {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.fy-notif-pop-loading {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.fy-notif-pop-loading::after {
+  content: "";
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 3px solid var(--fy-soft-2);
+  border-top-color: var(--fy-text);
+  animation: fy-spin .8s linear infinite;
+}
+
+.fy-notif-pop-error {
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.fy-notif-pop-all {
+  flex: none;
+  padding: .75rem 1rem;
+  border-top: 1px solid var(--fy-line);
+  color: var(--fy-blue);
+  text-align: center;
+}
+
+.fy-notif-pop-all:hover {
+  background: var(--fy-soft);
+}
+
 .fy-notif {
   position: relative;
   display: flex;
@@ -3994,6 +4105,15 @@ html.user-fs-150 {
 }
 
 @media (max-width: 520px) {
+  .fy-notif-pop {
+    position: fixed;
+    top: var(--fy-mast-h);
+    right: .5rem;
+    left: .5rem;
+    width: auto;
+    max-width: none;
+  }
+
   /* f0ckYou's own word, or the brand's text next to its picture; a brand of text only stays */
   .fy-logo:not(.fy-logo-custom) .fy-logo-word,
   .fy-logo-custom:has(.fy-logo-img:not([hidden])) .fy-logo-word,

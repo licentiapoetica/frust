@@ -1,7 +1,9 @@
 {#- Masthead, right: Upload (f0ckm's upload dropdown, f0ck_upload_init.js opens it from
     #nav-upload-link; /upload without JavaScript), messages, notifications and the account menu, or the settings
     menu and "Sign in". The menus are <details>, so they open without JavaScript; f0ckyou.js closes
-    them on an outside click. The badges are filled by JavaScript (f0ckyou.js, messages.js). -#}
+    them on an outside click. The bell is a link to /notifications; with JavaScript it opens the
+    notifications popover instead (#fy-notif-pop, the list and tabs of a fetched /notifications,
+    f0ckyou.js). The badges are filled by JavaScript (f0ckyou.js, messages.js). -#}
 {% import "frontends/f0ckyou/snippets/macros.html" as fy %}
 {%- set ua_me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
 {%- set ua_link = "/user/" ~ (ua_me|encode_uri_component) -%}
@@ -9,7 +11,21 @@
 {%- set ua_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
 {% if ua_upload %}<a class="fy-create" id="nav-upload-link" href="/upload" title="Upload (u)" aria-haspopup="dialog" aria-expanded="false">{{ fy.ico("upload") }}<span>Upload</span></a>{% endif %}
 {% if (session and private_messages and not session.is_anon) %}<a class="fy-iconbtn fy-hide-narrow" href="/messages" title="Messages">{{ fy.ico("mail") }}<span id="dm-badge" class="fy-badge">0</span><span class="fy-sr">Messages</span></a>{% endif %}
-{% if session %}<a class="fy-iconbtn" href="/notifications" title="Notifications">{{ fy.ico("bell") }}<span id="fy-notif-badge" class="fy-badge" hidden>0</span><span class="fy-sr">Notifications</span></a>{% endif %}
+{% if session %}
+<div class="fy-menu fy-notif-menu">
+  <a class="fy-iconbtn" id="fy-notif-btn" href="/notifications" title="Notifications" aria-haspopup="dialog" aria-expanded="false" aria-controls="fy-notif-pop">{{ fy.ico("bell") }}<span id="fy-notif-badge" class="fy-badge" hidden>0</span><span class="fy-sr">Notifications</span></a>
+  <div class="fy-menu-box fy-notif-pop" id="fy-notif-pop" role="dialog" aria-label="Notifications" hidden>
+    <div class="fy-notif-pop-head">
+      <span class="fy-notif-pop-title">Notifications</span>
+      <button type="button" class="fy-iconbtn" data-fy-notif-read title="Mark all as read">{{ fy.ico("check") }}<span class="fy-sr">Mark all as read</span></button>
+      <a class="fy-iconbtn" href="/settings" title="Notification settings">{{ fy.ico("settings") }}<span class="fy-sr">Settings</span></a>
+    </div>
+    <div class="fy-notif-pop-tabs" data-fy-notif-tabs></div>
+    <div class="fy-notif-pop-body" data-fy-notif-body><div class="fy-notif-pop-loading" aria-label="Loading"></div></div>
+    <a class="fy-notif-pop-all" href="/notifications">See all notifications</a>
+  </div>
+</div>
+{% endif %}
 {% if (not session or (frontend_switch and frontends and frontends|length > 1)) %}
 <details class="fy-menu fy-more-menu{% if session %} fy-hide-narrow{% endif %}">
   <summary class="fy-iconbtn" title="More">{{ fy.ico("dots") }}<span class="fy-sr">More</span></summary>
