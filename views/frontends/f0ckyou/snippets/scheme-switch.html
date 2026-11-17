@@ -1,0 +1,12 @@
+{#- Appearance: Device theme / Dark theme / Light theme (README "Light and dark"), in the account
+    menu and, for guests, the "More" menu (snippets/userarea.html). Plain links to /scheme/<x>,
+    which set the cookie and come back without JavaScript; scheme-early.js switches in place and
+    moves aria-current (the check mark, f0ckyou.css) along. -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set sw_scheme = (color_scheme if (color_scheme is defined and color_scheme in ["light", "dark", "auto"]) else "dark") -%}
+<div class="fy-menu-head">{{ fy.ico("theme") }}<span>Appearance</span></div>
+<ul class="fy-menu-list fy-scheme-list">
+  {% for s in [["auto", "Device theme"], ["dark", "Dark theme"], ["light", "Light theme"]] %}
+  <li><a href="/scheme/{{ s[0] }}" data-scheme-set="{{ s[0] }}" rel="nofollow"{% if sw_scheme == s[0] %} aria-current="true"{% endif %}>{{ fy.ico("check", "fy-scheme-check") }}<span>{{ s[1] }}</span></a></li>
+  {% endfor %}
+</ul>

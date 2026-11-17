@@ -1645,6 +1645,18 @@ mod tests {
             "can_extract_meta": true, "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice",
             "recommendations": [rec.clone()] }));
         dump("item", &page);
+        // a song: its square cover and the audio element (native controls without JavaScript,
+        // f0ckyou.js puts v0ck on it)
+        let mut song = it.clone();
+        song["mime"] = serde_json::json!("audio/mpeg");
+        song["dest"] = serde_json::json!("/b/7.mp3");
+        song["coverart"] = serde_json::json!("/ca/7.webp");
+        let audio = render(&fe("item"), serde_json::json!({ "url": url("/7", serde_json::json!({})), "tmp": {}, "session": session, "item": song,
+            "pagination": {}, "link": { "main": "/", "suffix": "" } }));
+        dump("item-audio", &audio);
+        assert!(audio.contains("<div class=\"fy-player fy-player-audio\">"));
+        assert!(audio.contains("<img class=\"fy-audio-cover\" src=\"/ca/7.webp\" alt=\"\">"));
+        assert!(audio.contains("<audio id=\"my-video\" class=\"fy-media fy-media-audio\"") && audio.contains(" controls loop src=\"/b/7.mp3\""));
         assert!(page.contains("<body class=\"fy-page-watch\">"));
         assert!(page.contains("<video id=\"my-video\" class=\"fy-media\""));
         assert!(page.contains("<a class=\"fy-btn\" id=\"fy-prev\" href=\"/tag/cat/6\""));
@@ -1809,7 +1821,7 @@ mod tests {
         assert!(shell.contains("/s/js/views/settings.excluded.js?v="));
         // and the guide links to it
         assert!(shell.contains("href=\"/settings#excluded-tags\""));
-        assert!(shell.contains("class=\"no-js f0ck-shell\""));
+        assert!(shell.contains("class=\"no-js f0ck-shell scheme-"));
         assert!(shell.contains("<div class=\"f0ck-shell-page\">"));
         assert!(shell.contains("<a href=\"/settings\" class=\"active\" aria-current=\"page\">"), "Settings is the active guide entry");
     }

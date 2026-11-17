@@ -13,16 +13,21 @@
 {%- else -%}
   {%- set fy_doc_title = "f0ckYou" -%}
 {%- endif -%}
+{#- light or dark (README "Light and dark"): the visitor's pick (the scheme cookie, /scheme/<x>),
+    else f0ckYou's own dark; scheme-early.js resolves "auto" and switches in place; the shared
+    pages in the shell take f0ckm's light theme along -#}
+{%- set fy_scheme = (color_scheme if (color_scheme is defined and color_scheme in ["light", "dark", "auto"]) else "dark") -%}
 <!doctype html>
-<html lang="{{ (lang or "en") }}" class="no-js{% if fy_is_shell %} f0ck-shell{% endif %}{% if user_font_css %} fy-user-font{% endif %}{% if user_font_size %} user-fs-{{ user_font_size }}{% endif %}" data-user-font-class="fy-user-font">
+<html lang="{{ (lang or "en") }}" class="no-js{% if fy_is_shell %} f0ck-shell{% endif %} scheme-{{ fy_scheme }}{% if user_font_css %} fy-user-font{% endif %}{% if user_font_size %} user-fs-{{ user_font_size }}{% endif %}" data-user-font-class="fy-user-font" data-scheme="{{ fy_scheme }}" data-scheme-default="dark"{% if (fy_is_shell and fy_scheme == "light") %} theme="light"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ fy_doc_title }}</title>
   <meta name="description" content="{% if (page_meta is defined and page_meta and page_meta.description) %}{{ page_meta.description }}{% else %}{{ site_description }}{% endif %}">
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <meta name="theme-color" content="#0f0f0f">
-  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="{{ ("#ffffff" if fy_scheme == "light" else "#0f0f0f") }}" data-light="#ffffff" data-dark="#0f0f0f">
+  <meta name="color-scheme" content="{{ ("light dark" if fy_scheme == "auto" else fy_scheme) }}">
+  <script src="/s/js/scheme-early.js?v={{ mtime("/public/s/js/scheme-early.js") }}"></script>
   <link rel="manifest" href="/manifest.json">
   {% if fy_item_ref %}
   <link rel="canonical" href="https://{{ domain }}/{{ fy_item_ref }}">

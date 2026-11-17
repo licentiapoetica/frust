@@ -1,7 +1,8 @@
 /*
  * f0ckyou frontend: a video site layout. Templates: views/frontends/f0ckyou/.
- * One dark look, square corners (no border-radius, CLAUDE.md), sizes in rem so the text size
- * setting (user-fs-<n> on <html>) scales everything.
+ * Dark by default, with a light look (html.scheme-light, or scheme-auto on a light device; the
+ * palettes below, views/frontends/README.md "Light and dark"), square corners (no border-radius,
+ * CLAUDE.md), sizes in rem so the text size setting (user-fs-<n> on <html>) scales everything.
  *
  * The guide (left menu) opens and closes without JavaScript: the checkbox #fy-guide-toggle and the
  * <label>s for it (snippets/chrome.html).
@@ -31,10 +32,160 @@
   --fy-nsfl: #8b0000;
   --fy-fav: #f5c518;
   --fy-shadow: 0 4px 32px rgba(0, 0, 0, .6);
+  /* the colours that change with the look (light: below) */
+  --fy-blue-rgb: 62, 166, 255;
+  --fy-blue-soft: rgba(var(--fy-blue-rgb), .16);
+  --fy-on-text: #0f0f0f;
+  --fy-on-text-hover: #d9d9d9;
+  --fy-on-blue: #0f0f0f;
+  --fy-drawer: #212121;
+  --fy-search-btn: #222;
+  --fy-search-btn-hover: #303030;
+  --fy-search-cancel: invert(1);
+  --fy-default-ava: none;
+  --fy-ava-bg: #3f3f3f;
+  --fy-scrollbar: #555;
+  --fy-line-strong: #717171;
+  --fy-mast-glass: rgba(15, 15, 15, .72);
+  --fy-danger-text: #ff4e45;
+  --fy-error-text: #ff8a80;
+  --fy-ok-text: #7ee08a;
+  --fy-rate-sfw-text: #4cd964;
+  --fy-rate-nsfw-text: #ff6b5e;
+  --fy-rate-nsfl-text: #ff3b3b;
+  /* f0ckm's --white / --black for upload.css (text and its opposite) */
+  --fy-f0ckm-white: #fff;
+  --fy-f0ckm-black: #000;
+  --fy-f0ckm-border: #3f3f3f;
+  /* the upload form's colours where upload.css hard-codes dark ones (the light rules near the end;
+     the dark values only show without JavaScript with "Device theme" on a dark device) */
+  --fy-up-line: rgba(255, 255, 255, .1);
+  --fy-up-line-strong: rgba(255, 255, 255, .2);
+  --fy-up-field: rgba(255, 255, 255, .05);
+  --fy-up-soft: rgba(255, 255, 255, .02);
+  --fy-up-hover: rgba(255, 255, 255, .08);
+  --fy-up-muted: rgba(255, 255, 255, .5);
+  --fy-up-faint: rgba(255, 255, 255, .3);
+  --fy-up-on: rgba(62, 166, 255, .16);
+  --fy-up-on-text: #3ea6ff;
+  --fy-up-warn: rgba(255, 170, 0, .2);
+  --fy-up-warn-text: #ffaa00;
   --fy-font: Roboto, Arial, "Helvetica Neue", sans-serif;
   --fy-mast-h: 3.5rem;
   --fy-guide-w: 15rem;
   --fy-mini-w: 4.5rem;
+}
+
+/* the light look: picked (html.scheme-light; scheme-early.js resolves "auto" to it on a light
+   device), or "the device's" (scheme-auto) on a light device without JavaScript */
+html.scheme-light {
+  color-scheme: light;
+  --fy-bg: #fff;
+  --fy-raised: #f2f2f2;
+  --fy-menu: #fff;
+  --fy-soft: rgba(0, 0, 0, .05);
+  --fy-soft-2: rgba(0, 0, 0, .1);
+  --fy-line: rgba(0, 0, 0, .1);
+  --fy-text: #0f0f0f;
+  --fy-muted: #606060;
+  --fy-blue: #065fd4;
+  --fy-blue-hover: #0b57d0;
+  --fy-input: #fff;
+  --fy-input-line: #ccc;
+  --fy-focus: #1c62b9;
+  --fy-thumb-bg: #e5e5e5;
+  --fy-fav: #c69200;
+  --fy-shadow: 0 4px 32px rgba(0, 0, 0, .1), 0 0 0 1px rgba(0, 0, 0, .06);
+  --fy-blue-rgb: 6, 95, 212;
+  --fy-blue-soft: #def1ff;
+  --fy-on-text: #fff;
+  --fy-on-text-hover: #272727;
+  --fy-on-blue: #fff;
+  --fy-drawer: #fff;
+  --fy-search-btn: #f8f8f8;
+  --fy-search-btn-hover: #f0f0f0;
+  --fy-search-cancel: none;
+  --fy-default-ava: invert(1);
+  --fy-ava-bg: #ccc;
+  --fy-scrollbar: #aaa;
+  --fy-line-strong: #909090;
+  --fy-mast-glass: rgba(255, 255, 255, .8);
+  --fy-danger-text: #cc0000;
+  --fy-error-text: #c5221f;
+  --fy-ok-text: #137333;
+  --fy-rate-sfw-text: #188038;
+  --fy-rate-nsfw-text: #d93025;
+  --fy-rate-nsfl-text: #a50e0e;
+  --fy-f0ckm-white: #0f0f0f;
+  --fy-f0ckm-black: #fff;
+  --fy-f0ckm-border: #e5e5e5;
+  --fy-up-line: #e5e5e5;
+  --fy-up-line-strong: #ccc;
+  --fy-up-field: #fff;
+  --fy-up-soft: #f9f9f9;
+  --fy-up-hover: #f2f2f2;
+  --fy-up-muted: #606060;
+  --fy-up-faint: #909090;
+  --fy-up-on: #def1ff;
+  --fy-up-on-text: #065fd4;
+  --fy-up-warn: #fef7e0;
+  --fy-up-warn-text: #b06000;
+}
+
+@media (prefers-color-scheme: light) {
+  html.scheme-auto {
+    color-scheme: light;
+    --fy-bg: #fff;
+    --fy-raised: #f2f2f2;
+    --fy-menu: #fff;
+    --fy-soft: rgba(0, 0, 0, .05);
+    --fy-soft-2: rgba(0, 0, 0, .1);
+    --fy-line: rgba(0, 0, 0, .1);
+    --fy-text: #0f0f0f;
+    --fy-muted: #606060;
+    --fy-blue: #065fd4;
+    --fy-blue-hover: #0b57d0;
+    --fy-input: #fff;
+    --fy-input-line: #ccc;
+    --fy-focus: #1c62b9;
+    --fy-thumb-bg: #e5e5e5;
+    --fy-fav: #c69200;
+    --fy-shadow: 0 4px 32px rgba(0, 0, 0, .1), 0 0 0 1px rgba(0, 0, 0, .06);
+    --fy-blue-rgb: 6, 95, 212;
+    --fy-blue-soft: #def1ff;
+    --fy-on-text: #fff;
+    --fy-on-text-hover: #272727;
+    --fy-on-blue: #fff;
+    --fy-drawer: #fff;
+    --fy-search-btn: #f8f8f8;
+    --fy-search-btn-hover: #f0f0f0;
+    --fy-search-cancel: none;
+    --fy-default-ava: invert(1);
+    --fy-ava-bg: #ccc;
+    --fy-scrollbar: #aaa;
+    --fy-line-strong: #909090;
+    --fy-mast-glass: rgba(255, 255, 255, .8);
+    --fy-danger-text: #cc0000;
+    --fy-error-text: #c5221f;
+    --fy-ok-text: #137333;
+    --fy-rate-sfw-text: #188038;
+    --fy-rate-nsfw-text: #d93025;
+    --fy-rate-nsfl-text: #a50e0e;
+    --fy-f0ckm-white: #0f0f0f;
+    --fy-f0ckm-black: #fff;
+    --fy-f0ckm-border: #e5e5e5;
+    --fy-up-line: #e5e5e5;
+    --fy-up-line-strong: #ccc;
+    --fy-up-field: #fff;
+    --fy-up-soft: #f9f9f9;
+    --fy-up-hover: #f2f2f2;
+    --fy-up-muted: #606060;
+    --fy-up-faint: #909090;
+    --fy-up-on: #def1ff;
+    --fy-up-on-text: #065fd4;
+    --fy-up-warn: #fef7e0;
+    --fy-up-warn-text: #b06000;
+  }
 }
 
 * {
@@ -44,6 +195,16 @@
 html {
   background: var(--fy-bg);
   color-scheme: dark;
+}
+
+html.scheme-light {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  html.scheme-auto {
+    color-scheme: light;
+  }
 }
 
 body {
@@ -420,16 +581,16 @@ html:not(.no-js) .nojs-only {
 
 .fy-btn-white {
   background: var(--fy-text);
-  color: #0f0f0f;
+  color: var(--fy-on-text);
 }
 
 .fy-btn-white:hover {
-  background: #d9d9d9;
+  background: var(--fy-on-text-hover);
 }
 
 .fy-btn-blue {
   background: var(--fy-blue);
-  color: #0f0f0f;
+  color: var(--fy-on-blue);
 }
 
 .fy-btn-blue:hover {
@@ -469,7 +630,7 @@ html:not(.no-js) .nojs-only {
 
 .fy-btn-signin:hover {
   border-color: transparent;
-  background: rgba(62, 166, 255, .16);
+  background: var(--fy-blue-soft);
 }
 
 .fy-create {
@@ -538,7 +699,7 @@ html:not(.no-js) .nojs-only {
 
 .fy-chip.active {
   background: var(--fy-text);
-  color: #0f0f0f;
+  color: var(--fy-on-text);
 }
 
 .fy-chip:disabled {
@@ -560,7 +721,7 @@ html:not(.no-js) .nojs-only {
   width: 2.25rem;
   height: 2.25rem;
   object-fit: cover;
-  background: #3f3f3f;
+  background: var(--fy-ava-bg);
   color: #fff;
   font-size: 1rem;
   font-weight: 500;
@@ -686,7 +847,7 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
 }
 
 .fy-search input::-webkit-search-cancel-button {
-  filter: invert(1);
+  filter: var(--fy-search-cancel);
 }
 
 .fy-search-go {
@@ -696,13 +857,13 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   width: 4rem;
   height: 2.5rem;
   border: 1px solid var(--fy-input-line);
-  background: #222;
+  background: var(--fy-search-btn);
   color: var(--fy-text);
   cursor: pointer;
 }
 
 .fy-search-go:hover {
-  background: #303030;
+  background: var(--fy-search-btn-hover);
 }
 
 .fy-search-big {
@@ -819,6 +980,20 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   background: var(--fy-soft);
 }
 
+/* Appearance (snippets/scheme-switch.html): the check mark at the current one, as in the menu of
+   a video site; scheme-early.js moves aria-current when one is picked */
+.fy-scheme-list .fy-scheme-check {
+  visibility: hidden;
+}
+
+.fy-scheme-list a[aria-current] .fy-scheme-check {
+  visibility: visible;
+}
+
+.fy-scheme-list a[aria-current] {
+  font-weight: 500;
+}
+
 .fy-menu-head {
   display: flex;
   align-items: center;
@@ -862,7 +1037,7 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
 .fy-menu-chips a.active,
 .fy-guide-chips a.active {
   background: var(--fy-text);
-  color: #0f0f0f;
+  color: var(--fy-on-text);
 }
 
 /* ── the app: guide + page column ── */
@@ -886,7 +1061,7 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   padding: .75rem;
   background: var(--fy-bg);
   scrollbar-width: thin;
-  scrollbar-color: #555 transparent;
+  scrollbar-color: var(--fy-scrollbar) transparent;
 }
 
 .fy-guide-head {
@@ -1025,7 +1200,7 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   display: none;
   height: 100vh;
   padding-top: 0;
-  background: var(--fy-raised);
+  background: var(--fy-drawer);
 }
 
 .fy-page-watch .fy-guide-head {
@@ -1529,7 +1704,7 @@ a.fy-card-all:hover {
   padding: 0 1.25rem;
   border: 0;
   background: var(--fy-blue);
-  color: #0f0f0f;
+  color: var(--fy-on-blue);
   font-weight: 500;
   box-shadow: var(--fy-shadow);
   cursor: pointer;
@@ -1591,7 +1766,7 @@ html.fy-navigating .fy-mast::after {
 
 .fy-pg-cur {
   background: var(--fy-text);
-  color: #0f0f0f;
+  color: var(--fy-on-text);
 }
 
 .fy-pg-end {
@@ -1883,8 +2058,9 @@ html.fy-navigating .fy-mast::after {
 .fy-player.v0ck {
   --accent: var(--fy-red);
   --accent-rgb: 229, 8, 47;
-  --bg: var(--fy-bg);
-  --text-color: var(--fy-text);
+  /* its controls and menus lie on the video: dark in the light look too */
+  --bg: #0f0f0f;
+  --text-color: #f1f1f1;
   --font: var(--fy-font);
 }
 
@@ -1917,6 +2093,62 @@ html.fy-navigating .fy-mast::after {
   object-fit: contain;
 }
 
+/* ── songs in v0ck, as in f0ckm: the cover on a dark 16:9 stage with v0ck's controls under it,
+      always shown (there is no picture for them to get out of the way of). f0ckyou's cover stays
+      square: v0ck's round placeholder (f0ckm's cover disc) is hidden. ── */
+.fy-player-audio.v0ck {
+  position: relative;
+  justify-content: center;
+  width: min(100%, calc(var(--fy-player-h) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 4rem;
+  /* v0ck.js makes the player's background transparent for songs (an inline style) */
+  background: #000 !important;
+}
+
+.fy-player-audio.v0ck > .sidebar-media-placeholder,
+.fy-player-audio.v0ck > audio.fy-media {
+  display: none;
+}
+
+.fy-player-audio.v0ck .fy-audio-cover {
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  box-shadow: 0 0 4rem rgba(var(--accent-rgb), .35);
+}
+
+.fy-player-audio.v0ck .v0ck_player_controls {
+  transform: translateY(0);
+}
+
+.fy-player-audio.v0ck:not(.v0ck_hover),
+.fy-player-audio.v0ck:not(.v0ck_hover) * {
+  cursor: auto !important;
+}
+
+.fy-player-audio.v0ck:not(.v0ck_hover) .v0ck_player_button,
+.fy-player-audio.v0ck:not(.v0ck_hover) input,
+.fy-player-audio.v0ck:not(.v0ck_hover) .v0ck_progress {
+  cursor: pointer !important;
+}
+
+/* ── the blurred background belongs to the dark look: in the light theme there is none (f0ckyou.js
+      doesn't draw it), nor the Background switch in the player's menu. The visitor's own setting
+      stays as it is, so it comes back with the dark theme only if it was on. ── */
+html.scheme-light .fy-bg,
+html.scheme-light .fy-player .v0ck_bg_row:has(#togglebg) {
+  display: none;
+}
+
+@media (prefers-color-scheme: light) {
+  html.scheme-auto .fy-bg {
+    display: none;
+  }
+}
+
 /* ── f0ckm's blurred background (#bg, /s/js/f0ck-bg.js draws it, opacity and tint included) ── */
 .fy-bg {
   position: fixed;
@@ -1942,13 +2174,13 @@ html.no-js .fy-bg {
   display: none;
 }
 
-/* the page lets it through: the window keeps the dark colour, the page itself is see-through */
+/* the page lets it through: the window keeps the page colour, the page itself is see-through */
 body.fy-page-watch {
   background: transparent;
 }
 
 .fy-page-watch .fy-mast {
-  background: rgba(15, 15, 15, .72);
+  background: var(--fy-mast-glass);
   backdrop-filter: blur(1.5rem);
 }
 
@@ -2084,15 +2316,15 @@ body.fy-page-watch {
 }
 
 .fy-tag-rating.fy-rate-sfw > a {
-  color: #4cd964;
+  color: var(--fy-rate-sfw-text);
 }
 
 .fy-tag-rating.fy-rate-nsfw > a {
-  color: #ff6b5e;
+  color: var(--fy-rate-nsfw-text);
 }
 
 .fy-tag-rating.fy-rate-nsfl > a {
-  color: #ff3b3b;
+  color: var(--fy-rate-nsfl-text);
 }
 
 .fy-tag-del,
@@ -2128,7 +2360,7 @@ body.fy-page-watch {
 }
 
 .fy-tag .is-excluded .f0ck-exclude-btn {
-  color: #ff6b5e;
+  color: var(--fy-rate-nsfw-text);
 }
 
 .fy-tag.f0ck-tag-excluded {
@@ -2137,7 +2369,7 @@ body.fy-page-watch {
 
 .fy-tag.f0ck-tag-excluded > a:first-child {
   text-decoration: line-through;
-  text-decoration-color: #ff6b5e;
+  text-decoration-color: var(--fy-rate-nsfw-text);
 }
 
 /* a text field drawn as a line, as the comment field */
@@ -2155,7 +2387,7 @@ body.fy-page-watch {
   min-width: 0;
   padding: .25rem 0;
   border: 0;
-  border-bottom: 1px solid #717171;
+  border-bottom: 1px solid var(--fy-line-strong);
   background: none;
   color: var(--fy-text);
 }
@@ -2313,8 +2545,8 @@ body.fy-page-watch {
 @keyframes fy-comment-flash {
   0%,
   35% {
-    background: rgba(62, 166, 255, .22);
-    box-shadow: 0 0 0 .375rem rgba(62, 166, 255, .22);
+    background: rgba(var(--fy-blue-rgb), .22);
+    box-shadow: 0 0 0 .375rem rgba(var(--fy-blue-rgb), .22);
   }
 
   100% {
@@ -2324,7 +2556,7 @@ body.fy-page-watch {
 }
 
 .fy-comment-target {
-  outline: 2px solid rgba(62, 166, 255, .5);
+  outline: 2px solid rgba(var(--fy-blue-rgb), .5);
   outline-offset: .25rem;
 }
 
@@ -2338,7 +2570,7 @@ body.fy-page-watch {
 @keyframes fy-comment-posted {
   0%,
   40% {
-    outline-color: rgba(62, 166, 255, .5);
+    outline-color: rgba(var(--fy-blue-rgb), .5);
   }
 
   100% {
@@ -2477,7 +2709,7 @@ body.fy-page-watch {
 }
 
 .fy-replies > summary:hover {
-  background: rgba(62, 166, 255, .16);
+  background: var(--fy-blue-soft);
 }
 
 /* custom emojis: f0ckm's picker under the comment field (/s/js/emoji-picker.js, set up by
@@ -2749,9 +2981,9 @@ body.fy-page-watch {
   bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   width: 2.75rem;
   height: 2.75rem;
-  border: 2px solid var(--fy-line);
+  border: 2px solid rgba(255, 255, 255, .2);
   background: rgba(0, 0, 0, .55);
-  color: var(--fy-muted);
+  color: #aaa;
   font-size: 1.25rem;
   cursor: pointer;
 }
@@ -2852,7 +3084,7 @@ body.fy-page-watch {
 #fy-upnext-tag:checked ~ .fy-upnext-tabbar label[for="fy-upnext-tag"],
 #fy-upnext-recs:checked ~ .fy-upnext-tabbar label[for="fy-upnext-recs"] {
   background: var(--fy-text);
-  color: #0f0f0f;
+  color: var(--fy-on-text);
 }
 
 #fy-upnext-tag:focus-visible ~ .fy-upnext-tabbar label[for="fy-upnext-tag"],
@@ -2965,7 +3197,7 @@ body.fy-page-watch {
 .fy-foryou {
   display: inline-block;
   padding: 0 .3125rem;
-  background: rgba(62, 166, 255, .16);
+  background: var(--fy-blue-soft);
   color: var(--fy-blue);
   font-weight: 500;
 }
@@ -3026,6 +3258,11 @@ body.fy-page-watch {
   background: var(--fy-thumb-bg);
 }
 
+/* the grey default picture (img/default.svg, dark grey): light grey in the light look */
+.fy-ava-default {
+  filter: var(--fy-default-ava);
+}
+
 .fy-channel-info {
   min-width: 0;
 }
@@ -3048,7 +3285,7 @@ body.fy-page-watch {
   width: 1.25rem;
   height: 1.25rem;
   background: var(--fy-muted);
-  color: #0f0f0f;
+  color: var(--fy-on-text);
 }
 
 .fy-verified .fy-ico {
@@ -3107,7 +3344,7 @@ body.fy-page-watch {
 
 .fy-tabs a:hover {
   color: var(--fy-text);
-  border-bottom-color: #717171;
+  border-bottom-color: var(--fy-line-strong);
 }
 
 .fy-tabs a.active {
@@ -3692,7 +3929,7 @@ body.fy-page-watch {
 }
 
 .fy-radio-danger b {
-  color: #ff4e45;
+  color: var(--fy-danger-text);
 }
 
 /* expiration: the presets, "Custom…" adds an amount and a unit (shown only while it's picked) */
@@ -3738,7 +3975,7 @@ body.fy-page-watch {
 }
 
 .fy-countdown.countdown-soon {
-  color: #ff4e45;
+  color: var(--fy-danger-text);
 }
 
 .fy-edit-reposts {
@@ -3830,7 +4067,7 @@ body.fy-page-watch {
   padding: .875rem 1.5rem;
   border-left: .25rem solid transparent;
   background: var(--fy-text);
-  color: #0f0f0f;
+  color: var(--fy-on-text);
   box-shadow: var(--fy-shadow);
   pointer-events: auto;
 }
@@ -3909,7 +4146,7 @@ body.fy-page-watch {
 .fy-field textarea {
   width: 100%;
   padding: .875rem 1rem;
-  border: 1px solid #717171;
+  border: 1px solid var(--fy-line-strong);
   background: none;
   color: var(--fy-text);
   font-size: 1rem;
@@ -3960,14 +4197,14 @@ body.fy-page-watch {
   margin: 0;
   padding: .625rem .875rem;
   background: rgba(217, 48, 37, .2);
-  color: #ff8a80;
+  color: var(--fy-error-text);
 }
 
 .fy-form-ok {
   margin: 0;
   padding: .625rem .875rem;
   background: rgba(43, 166, 64, .2);
-  color: #7ee08a;
+  color: var(--fy-ok-text);
 }
 
 .fy-signin-card .register-honeypot {
@@ -4001,22 +4238,22 @@ body.fy-page-watch {
 .fy-upload-page,
 #upload-drag-modal,
 #drop-overlay {
-  --accent: #3ea6ff;
-  --accent-rgb: 62, 166, 255;
-  --bg: #0f0f0f;
-  --bg-form: #212121;
-  --black: #000;
-  --white: #fff;
-  --text: #f1f1f1;
-  --text-color: #f1f1f1;
-  --nav-bg: #212121;
-  --nav-border-color: #3f3f3f;
-  --dropdown-bg: #282828;
+  --accent: var(--fy-blue);
+  --accent-rgb: var(--fy-blue-rgb);
+  --bg: var(--fy-bg);
+  --bg-form: var(--fy-raised);
+  --black: var(--fy-f0ckm-black);
+  --white: var(--fy-f0ckm-white);
+  --text: var(--fy-text);
+  --text-color: var(--fy-text);
+  --nav-bg: var(--fy-raised);
+  --nav-border-color: var(--fy-f0ckm-border);
+  --dropdown-bg: var(--fy-menu);
   --navbar-h: 3.5rem;
-  --upload-opt-color: #f1f1f1;
-  --badge-sfw: #2ba640;
-  --badge-nsfw: #d93025;
-  --badge-nsfl: #8b0000;
+  --upload-opt-color: var(--fy-text);
+  --badge-sfw: var(--fy-sfw);
+  --badge-nsfw: var(--fy-nsfw);
+  --badge-nsfl: var(--fy-nsfl);
   font-family: var(--fy-font);
 }
 
@@ -4027,6 +4264,281 @@ body.fy-page-watch {
 #drop-overlay .overlay-content,
 #upload-drag-modal .modal-content {
   box-shadow: var(--fy-shadow);
+}
+
+/* The light look of the upload form: upload.css hard-codes white text and white-alpha lines and
+   fields (made for dark themes). Not on html.scheme-dark: on scheme-light, and on scheme-auto,
+   which only stays on the page without JavaScript (scheme-early.js resolves it), where the
+   --fy-up-* palette follows the device. Overlays on media (badges, album card actions) stay dark. */
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .limit-remaining,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .drop-zone-prompt,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .gps-privacy-warning span,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .album-stage-audio-name,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) #upload-form .tag-suggestion-meta {
+  color: var(--fy-up-muted) !important;
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-form {
+  background: var(--fy-up-field);
+  border-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .drop-zone {
+  border-color: var(--fy-up-line-strong);
+  background: var(--fy-up-soft);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .drop-zone:hover,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .drop-zone.dragover {
+  border-color: var(--fy-blue);
+  background: var(--fy-up-on);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-form-drop-types > span {
+  border-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-mode-tabs {
+  border-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-mode-tab {
+  color: var(--fy-up-muted);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-mode-tab:first-child {
+  border-right-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-mode-tab:hover {
+  color: var(--fy-text);
+  background: var(--fy-up-hover);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-mode-tab.active {
+  background: var(--fy-up-on);
+  color: var(--fy-up-on-text);
+}
+
+/* text fields */
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) :is(.url-input-container input[type="url"], .tag-input-container, .upload-title-input, .upload-comment,
+  .item-tag-input, .item-comment-input, .item-title-input, .album-stage-tags-input, select.upload-form-expiry, input.upload-form-expiry-amount,
+  .item-expiry-select, .item-expiry-amount, .item-expiry-unit) {
+  background: var(--fy-up-field);
+  border-color: var(--fy-up-line-strong);
+  color: var(--fy-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) :is(.url-input-container input[type="url"], .tag-input-container input, .upload-title-input, .upload-comment,
+  .item-tag-input, .item-comment-input, .item-title-input, .album-stage-tags-input)::placeholder {
+  color: var(--fy-up-faint);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .tag-input-container input {
+  color: var(--fy-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .album-stage-tags-input:focus {
+  background: var(--fy-up-field);
+}
+
+/* tag autocomplete (important in upload.css) */
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-form .tag-suggestions {
+  background: var(--fy-up-field) !important;
+  border-color: var(--fy-up-line) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .2) !important;
+  color: var(--fy-text) !important;
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) #upload-form .tag-suggestion-item:not(:last-child) {
+  border-bottom-color: var(--fy-up-hover) !important;
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) #upload-form .tag-suggestion-item:hover,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) #upload-form .tag-suggestion-item.active {
+  background: var(--fy-up-hover) !important;
+}
+
+/* ratings, visibility, buttons */
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-options {
+  border-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option + .rating-option {
+  border-left-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option .rating-label {
+  color: var(--fy-up-muted);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option .rating-label:hover {
+  color: var(--fy-text);
+  background: var(--fy-up-hover);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-form :is(.global-rating-section, .global-visibility-section, .global-burn-section) .rating-option input:checked + .rating-label {
+  color: var(--fy-up-on-text);
+  background: var(--fy-up-on);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .item-rating-option input:not(:checked) + .item-rating-label {
+  background: var(--fy-up-soft);
+  border-color: var(--fy-up-line);
+  color: var(--fy-up-muted);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .item-rating-option input:not(:checked) + .item-rating-label:hover {
+  background: var(--fy-up-hover);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .item-burn-container .item-rating-option input:checked + .item-rating-label {
+  background: var(--fy-up-on);
+  border-color: var(--fy-up-on-text);
+  color: var(--fy-up-on-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .item-burn-container .item-rating-option input[value="1"]:checked + .item-rating-label {
+  background: var(--fy-up-warn);
+  border-color: var(--fy-up-warn-text);
+  color: var(--fy-up-warn-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .global-redirect-section .upload-checkbox-label {
+  color: var(--fy-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .global-redirect-section .upload-checkbox-label:hover {
+  color: var(--fy-blue);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .btn-upload:disabled {
+  background: var(--fy-up-hover);
+  color: var(--fy-up-faint);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) :is(.btn-add-urls, .btn-add-album-pics, .item-emoji-trigger, .upload-comment-input .input-actions .upload-emoji-trigger) {
+  background: var(--fy-up-soft);
+  border-color: var(--fy-up-line);
+  color: var(--fy-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) :is(.btn-add-urls, .btn-add-album-pics, .item-emoji-trigger, .upload-comment-input .input-actions .upload-emoji-trigger):hover {
+  background: var(--fy-up-hover);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-comment-input .upload-emoji-picker {
+  background: var(--fy-up-field);
+  border-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-comment-input .upload-emoji-picker img:hover {
+  background: var(--fy-up-hover);
+}
+
+/* picked files, suggestions, progress */
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .file-preview-item,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .add-more-item,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .meta-suggestions-container,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .album-choice-container,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .album-staging-container {
+  background: var(--fy-up-soft);
+  border-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .file-preview-item:hover {
+  background: var(--fy-up-hover);
+  border-color: var(--fy-up-line-strong);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .add-more-item,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .album-stage-card.album-stage-add-more {
+  border-color: var(--fy-up-line-strong);
+  color: var(--fy-up-muted);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .album-staging-header {
+  border-bottom-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) :is(.file-name-small, .album-choice-title, .album-staging-title) {
+  color: var(--fy-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) :is(.meta-suggestion, .item-meta-suggestion, .album-choice-btn) {
+  background: var(--fy-up-field);
+  border-color: var(--fy-up-line);
+  color: var(--fy-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) :is(.meta-suggestion, .item-meta-suggestion, .album-choice-btn):hover,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) :is(.meta-suggestion, .item-meta-suggestion).selected {
+  background: var(--fy-up-on);
+  color: var(--fy-text);
+  border-color: var(--fy-blue);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .item-tag-chip {
+  background: var(--fy-up-hover);
+  color: var(--fy-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-form.shitpost-mode-active .file-preview-item {
+  border-bottom-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .upload-progress {
+  background: var(--fy-up-hover);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .progress-bar,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .video-thumbnail-loading {
+  background: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .loading-spinner,
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .sync-spinner .spinner-icon {
+  border-color: var(--fy-up-line-strong);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .sync-spinner {
+  background: var(--fy-up-field);
+  border-color: var(--fy-up-line);
+  color: var(--fy-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .login-required {
+  border-color: var(--fy-up-line-strong);
+}
+
+/* upload-modal.css (the quick upload dropdown and the drop overlay): its dark-only bits */
+html:not(.scheme-dark) #drop-overlay {
+  --shade1: var(--fy-bg);
+}
+
+html:not(.scheme-dark) #upload-drag-modal .modal-close {
+  border-color: var(--fy-up-line-strong);
+}
+
+html:not(.scheme-dark) #upload-drag-modal .upload-title {
+  border-bottom-color: var(--fy-up-line);
+}
+
+html:not(.scheme-dark) #upload-drag-modal .upload-footer {
+  border-top-color: var(--fy-up-line);
+}
+
+/* the picked visibility: upload.css' light green / amber / red, darker for a light page */
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .item-visibility-container .item-rating-option input:checked + .item-rating-label.sfw {
+  color: var(--fy-rate-sfw-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .item-visibility-container .item-rating-option input:checked + .item-rating-label.nsfw {
+  color: var(--fy-up-warn-text);
+}
+
+html:not(.scheme-dark) :is(.fy-upload-page, #upload-drag-modal) .item-visibility-container .item-rating-option input:checked + .item-rating-label.nsfl {
+  color: var(--fy-rate-nsfw-text);
 }
 
 @media (max-width: 792px) {
@@ -4135,7 +4647,7 @@ body.fy-page-watch {
   padding: 0 1.5rem;
   border: 0;
   background: var(--fy-blue);
-  color: #0f0f0f;
+  color: var(--fy-on-blue);
   font-weight: 500;
   cursor: pointer;
 }
@@ -4150,7 +4662,7 @@ body.fy-page-watch {
   margin-top: .75rem;
   padding: .5rem .75rem;
   background: rgba(217, 48, 37, .2);
-  color: #ff8a80;
+  color: var(--fy-error-text);
 }
 
 #anon-setup-modal .lm-footer {

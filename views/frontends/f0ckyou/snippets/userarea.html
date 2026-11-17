@@ -1,6 +1,7 @@
 {#- Masthead, right: Upload (f0ckm's upload dropdown, f0ck_upload_init.js opens it from
     #nav-upload-link; /upload without JavaScript), messages, notifications and the account menu, or the settings
-    menu and "Sign in". The menus are <details>, so they open without JavaScript; f0ckyou.js closes
+    menu and "Sign in"; the account menu, or the "More" menu for guests, has the Appearance switch
+    (snippets/scheme-switch.html). The menus are <details>, so they open without JavaScript; f0ckyou.js closes
     them on an outside click. The bell is a link to /notifications; with JavaScript it opens the
     notifications popover instead (#fy-notif-pop, the list and tabs of a fetched /notifications,
     f0ckyou.js). The badges are filled by JavaScript (f0ckyou.js, messages.js). -#}
@@ -35,6 +36,10 @@
       <li><a href="/about">{{ fy.ico("info") }}<span>About</span></a></li>
       <li><a href="/rules">{{ fy.ico("rules") }}<span>Rules</span></a></li>
     </ul>
+    {% if not session %}
+    <hr>
+    {% include "frontends/f0ckyou/snippets/scheme-switch.html" %}
+    {% endif %}
     {% if (frontend_switch and frontends and frontends|length > 1) %}
     <div class="fy-menu-head">{{ fy.ico("layers") }}<span>Layout</span></div>
     <ul class="fy-menu-chips">
@@ -77,6 +82,7 @@
       {% for f in frontends %}<li><a href="/frontend/{{ f }}"{% if f == frontend %} class="active"{% endif %}>{{ f }}</a></li>{% endfor %}
     </ul>
     {% endif %}
+    {% include "frontends/f0ckyou/snippets/scheme-switch.html" %}
     <hr>
     <ul class="fy-menu-list">
       <li><a href="/settings">{{ fy.ico("settings") }}<span>Settings</span></a></li>

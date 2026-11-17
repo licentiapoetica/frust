@@ -706,15 +706,27 @@
     menus().forEach(d => { if (d.open && !d.contains(e.target)) d.open = false; });
   });
 
-  // ── the player: f0ckm's v0ck for videos (its controls, settings menu, keys ↑ ↓ . ,), the
-  //    native one with a remembered volume for audio; keys; autonext; the blurred background ──
+  // ── the player: f0ckm's v0ck for videos and songs (its controls, settings menu, keys ↑ ↓ . ,),
+  //    as in f0ckm; the native one with a remembered volume where v0ck is missing; keys; autonext;
+  //    the blurred background ──
   const getMedia = () => document.getElementById('my-video');
+  // The blurred background belongs to the dark look: in the light theme it isn't drawn (the canvas
+  // and the player's Background switch are hidden by f0ckyou.css). The visitor's own setting
+  // (show_background) never changes, so back in dark it is on again only if it was on before.
+  const darkLook = () => !window.f0ckScheme || window.f0ckScheme.resolved() !== 'light';
+  let bgArgs = null;
+  document.addEventListener('f0ck:scheme', e => {
+    if (!bgArgs || !window.f0ckBackground) return;
+    if (e.detail?.resolved === 'light') window.f0ckBackground.stop();
+    else window.f0ckBackground.start(bgArgs);
+  });
   const setupPlayer = () => {
   const media = getMedia();
-  const hasV0ck = !!(media instanceof HTMLVideoElement && window.v0ck);
+  const hasV0ck = !!((media instanceof HTMLVideoElement || media instanceof HTMLAudioElement) && window.v0ck);
   if (hasV0ck) {
     // v0ck replaces the native controls (kept in the page for visitors without JavaScript), keeps
-    // the volume in localStorage and starts the video unless autoplay is off
+    // the volume in localStorage and starts the video or song unless autoplay is off. For a song
+    // it also adds f0ckm's round cover; f0ckyou shows its own square one (.fy-player-audio.v0ck)
     new window.v0ck(media);
   } else if (media && 'volume' in media) {
     try {
@@ -725,7 +737,7 @@
       try { localStorage.setItem('volume', String(media.volume)); } catch { /* storage blocked */ }
     });
   }
-  if (media instanceof HTMLVideoElement) {
+  if (media instanceof HTMLMediaElement) {
     media.addEventListener('ended', () => {
       if (!autonext()) return;
       const up = activeList()?.querySelector('a[data-rec]');
@@ -734,17 +746,21 @@
   }
 
   // the blurred background (f0ck-bg.js): the video's frames, the picture, the cover of a song or
-  // the Flash movie, the thumbnail until there is a frame
+  // the Flash movie, the thumbnail until there is a frame. Only in the dark look (bgArgs)
   if (window.f0ckBackground && page.itemId) {
     const image = document.getElementById('f0ck-image');
     const cover = document.querySelector('.fy-audio-cover');
     const ruffleBox = document.getElementById('ruffle-container');
-    window.f0ckBackground.start({
+    bgArgs = {
       media: media instanceof HTMLVideoElement ? media
         : image || cover || (ruffleBox ? () => ruffleBox.querySelector('f0ck-flash')?.ambientCanvas || null : null),
       thumb: `/t/${page.itemId}.webp`,
+    };
+    if (darkLook()) window.f0ckBackground.start(bgArgs);
+    onLeave(() => {
+      bgArgs = null;
+      window.f0ckBackground.stop();
     });
-    onLeave(() => window.f0ckBackground.stop());
   }
   };
   const fullscreen = () => {
@@ -1278,8 +1294,9 @@
 
   // ── pages change in place ──
   // Paths that load as usual: files and the API, the shared pages (they render in the shell with
-  // their own scripts), sign-in / sign-out, settings that change the whole site, the upload page.
-  const FULL = /^\/(?:api|b|t|a|s|ca|tag_image|hall_image|logout|login|register|forgot-password|frontend|settings|messages|admin|mod|pending|privacy|banned|upload|scroller|chan|meme|activity|flash-frame|maintenance)(?:\/|$)|^\/user\/[^/]+\/halls?(?:\/|$)/;
+  // their own scripts), sign-in / sign-out, settings that change the whole site (the light/dark
+  // links switch in place with scheme-early.js), the upload page.
+  const FULL = /^\/(?:api|b|t|a|s|ca|tag_image|hall_image|logout|login|register|forgot-password|frontend|scheme|settings|messages|admin|mod|pending|privacy|banned|upload|scroller|chan|meme|activity|flash-frame|maintenance)(?:\/|$)|^\/user\/[^/]+\/halls?(?:\/|$)/;
   // scripts a page may bring that only need to be there once (custom elements, settings)
   const ONCE = /\/(?:flash-embed|cap-config|cap\.min)\.js$/;
   const loaded = new Set([...document.scripts].map(sc => sc.src && new URL(sc.src, location.href).pathname).filter(Boolean));

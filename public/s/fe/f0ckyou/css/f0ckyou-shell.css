@@ -1,6 +1,9 @@
 /* f0ckyou frontend: the shared pages (settings, messages, admin, mod, pending, banned, user halls)
    in f0ckyou's shell (shell/header.html). /s/css/f0ck-shell.css maps the --fe-* palette below onto
-   f0ckm's theme variables; f0ckm's default (dark) theme fits f0ckyou. */
+   f0ckm's theme variables; f0ckm's default (dark) theme fits f0ckyou. In the light look
+   (html.scheme-light, README "Light and dark") the shell renders with theme="light" (head.html;
+   scheme-early.js for "Device theme"), so f0ckm.css styles the pages with its light theme;
+   f0ck-shell.css sets --black / --white for dark themes, so the light values are set again here. */
 
 html.f0ck-shell {
   --fe-accent: #3ea6ff;
@@ -20,6 +23,95 @@ html.f0ck-shell {
   --fe-navbar-h: 3.5rem;
 }
 
+html.f0ck-shell.scheme-light {
+  --fe-accent: #065fd4;
+  --fe-accent-rgb: 6, 95, 212;
+  --fe-bg: #fff;
+  --fe-surface: #f2f2f2;
+  --fe-surface-2: #fff;
+  --fe-border: #e5e5e5;
+  --fe-text: #0f0f0f;
+  --fe-muted: #606060;
+  --fe-link: #065fd4;
+  --fe-input-bg: #fff;
+}
+
+html.f0ck-shell[theme="light"] {
+  --black: #fff;
+  --white: #0f0f0f;
+  --gray: #e5e5e5;
+  --text: #0f0f0f;
+  --text-color: #0f0f0f;
+  --fg: #0f0f0f;
+  --text-muted: #606060;
+  --nav-bg: #fff;
+  --dropdown-bg: #fff;
+  --dropdown-item-hover: #f2f2f2;
+  --nav-link-hover-bg: #f2f2f2;
+  --metadata-bg: #f9f9f9;
+  --badge-bg: #f2f2f2;
+  --badge-tag: #f2f2f2;
+  --tooltip-bg: #fff;
+  --scrollbar-color: #ccc;
+}
+
+/* "Device theme" on a light device without JavaScript (no theme="light" then: f0ckm.css' light
+   rules stay off, its colours follow) */
+@media (prefers-color-scheme: light) {
+  html.f0ck-shell.scheme-auto {
+    --fe-accent: #065fd4;
+    --fe-accent-rgb: 6, 95, 212;
+    --fe-bg: #fff;
+    --fe-surface: #f2f2f2;
+    --fe-surface-2: #fff;
+    --fe-border: #e5e5e5;
+    --fe-text: #0f0f0f;
+    --fe-muted: #606060;
+    --fe-link: #065fd4;
+    --fe-input-bg: #fff;
+    --black: #fff;
+    --white: #0f0f0f;
+    --gray: #e5e5e5;
+    --text: #0f0f0f;
+    --text-color: #0f0f0f;
+    --fg: #0f0f0f;
+    --text-muted: #606060;
+    --nav-bg: #fff;
+    --dropdown-bg: #fff;
+    --dropdown-item-hover: #f2f2f2;
+    --nav-link-hover-bg: #f2f2f2;
+    --metadata-bg: #f9f9f9;
+    --badge-bg: #f2f2f2;
+    --badge-tag: #f2f2f2;
+    --tooltip-bg: #fff;
+    --scrollbar-color: #ccc;
+  }
+}
+
+/* the settings page keeps its own --st-surface / --st-border (white on dark, f0ckm.css) on .settings,
+   and white text on its picked frontend and main buttons (black on the accent there) */
+html.f0ck-shell[theme="light"] .f0ck-shell-page .settings {
+  --st-surface: #fff;
+  --st-border: #ccc;
+}
+
+html.f0ck-shell[theme="light"] .f0ck-shell-page .settings .settings-frontend-link:is(:hover, .active),
+html.f0ck-shell[theme="light"] .f0ck-shell-page .settings :is(.button-primary, button[type=submit].button):not(:hover, .button-danger) {
+  color: #fff;
+}
+
+@media (prefers-color-scheme: light) {
+  html.f0ck-shell.scheme-auto .f0ck-shell-page .settings {
+    --st-surface: #fff;
+    --st-border: #ccc;
+  }
+
+  html.f0ck-shell.scheme-auto .f0ck-shell-page .settings .settings-frontend-link:is(:hover, .active),
+  html.f0ck-shell.scheme-auto .f0ck-shell-page .settings :is(.button-primary, button[type=submit].button):not(:hover, .button-danger) {
+    color: #fff;
+  }
+}
+
 /* ── the page column next to the guide (html.f0ck-shell: more specific than the
    `all: revert-layer` on .f0ck-shell-page in f0ck-shell.css, which loads after this file) ── */
 html.f0ck-shell .f0ck-shell-page {
@@ -37,7 +129,7 @@ html.f0ck-shell .f0ck-shell-page {
    layer); the f0ck-shell-important layer is declared before it, so these win. */
 @layer f0ck-shell-important {
   html.f0ck-shell {
-    background: #0f0f0f !important;
+    background: var(--fy-bg) !important;
     scrollbar-width: auto !important;
   }
 
@@ -53,8 +145,8 @@ html.f0ck-shell .f0ck-shell-page {
   }
 
   html.f0ck-shell body {
-    background: #0f0f0f !important;
-    color: #f1f1f1 !important;
+    background: var(--fy-bg) !important;
+    color: var(--fy-text) !important;
     scrollbar-width: auto !important;
     overflow-x: clip;
   }
