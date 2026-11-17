@@ -30501,8 +30501,31 @@ body.onara-modal-open #page-modal {
 
 #info-modal .infobox-modal-content .info-expiry-edit-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   width: 100%;
+}
+
+/* Custom expiration: amount + unit on their own row under the select, only while "Custom…" is
+   picked */
+.info-expiry-custom {
+  display: flex;
+  flex: 1 1 100%;
+  order: 1;
+  gap: 6px;
+}
+
+.info-expiry-edit-controls:not(:has(#info-expiry-select option[value="custom"]:checked)) .info-expiry-custom {
+  display: none;
+}
+
+#info-modal .infobox-modal-content .info-expiry-custom select.infobox-select {
+  flex: 0 0 auto;
+}
+
+/* grows into the room the unit leaves; a number field's own width would push the row out */
+#info-modal .infobox-modal-content .info-expiry-custom .info-expiry-amount {
+  width: 0;
 }
 
 /* Small controls inside cards */
@@ -37629,7 +37652,7 @@ html.no-js #subscribe-btn,
 html.no-js .report-item-btn,
 html.no-js #info-modal-close-icon,
 html.no-js #info-modal-close,
-html.no-js #info-modal :is(.infobox-action-btn, .info-expiry-edit-controls, #info-section-tools),
+html.no-js #info-modal :is(.infobox-action-btn:not(#info-set-expiry-btn), #info-section-tools),
 html.no-js #report-modal button.modal-x,
 html.no-js #report-cancel,
 html.no-js #report-submit,

@@ -23663,6 +23663,11 @@ document.addEventListener('click', (e) => {
       if (!itemId || !select) return;
 
       const selectedExpiry = select.value;
+      const body = { expiry: selectedExpiry };
+      if (selectedExpiry === 'custom') {
+        body.expiry_amount = document.getElementById('info-expiry-amount')?.value || '';
+        body.expiry_unit = document.getElementById('info-expiry-unit')?.value || 'minutes';
+      }
 
       setExpiryBtn.disabled = true;
       select.disabled = true;
@@ -23676,7 +23681,7 @@ document.addEventListener('click', (e) => {
           'Content-Type': 'application/json',
           'X-CSRF-Token': csrf
         },
-        body: JSON.stringify({ expiry: selectedExpiry })
+        body: JSON.stringify(body)
       })
         .then(r => r.json())
         .then(data => {

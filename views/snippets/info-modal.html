@@ -65,19 +65,33 @@
                                 {% endif %}
                             </span>
                             {% if can_manage_item %}
-                            <div class="info-expiry-edit-controls">
-                                <select id="info-expiry-select" class="infobox-select" data-item-id="{{ item.id }}">
+                            {#- a plain form without JavaScript; f0ckm.js sends it with fetch. The amount +
+                                unit show while "Custom…" is picked (f0ckm.css) -#}
+                            <form class="info-expiry-edit-controls" method="post" action="/api/v2/items/{{ item.id }}/expiry">
+                                <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
+                                <input type="hidden" name="back" value="{% if url is defined %}{{ url.pathname }}{{ url.search }}{% else %}/{{ item.id }}{% endif %}">
+                                <select id="info-expiry-select" name="expiry" class="infobox-select" data-item-id="{{ item.id }}" aria-label="Expiration">
                                     <option value="permanent" {{ ("selected" if not item.expires_at else "") }}>Permanent</option>
                                     <option value="30minutes">30 Minutes</option>
                                     <option value="1hour">1 Hour</option>
                                     <option value="24hours">24 Hours</option>
                                     <option value="1week">1 Week</option>
                                     <option value="1month">1 Month</option>
+                                    <option value="custom">Custom…</option>
                                 </select>
-                                <button type="button" id="info-set-expiry-btn" class="infobox-action-btn" data-item-id="{{ item.id }}" title="Save Expiration">
+                                <span class="info-expiry-custom">
+                                    <input type="number" id="info-expiry-amount" name="expiry_amount" class="infobox-select info-expiry-amount" min="0" step="any" placeholder="5" aria-label="Custom expiration">
+                                    <select id="info-expiry-unit" name="expiry_unit" class="infobox-select" aria-label="Custom expiration unit">
+                                        <option value="minutes" selected>Minutes</option>
+                                        <option value="hours">Hours</option>
+                                        <option value="days">Days</option>
+                                        <option value="weeks">Weeks</option>
+                                    </select>
+                                </span>
+                                <button type="submit" id="info-set-expiry-btn" class="infobox-action-btn" data-item-id="{{ item.id }}" title="Save Expiration">
                                     <i class="fa-solid fa-check"></i>
                                 </button>
-                            </div>
+                            </form>
                             {% endif %}
                         </div>
                     </div>

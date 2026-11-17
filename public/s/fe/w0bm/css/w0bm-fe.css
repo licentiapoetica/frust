@@ -1459,6 +1459,21 @@ textarea.form-control.w0bm-register-application {
     background: rgba(31, 178, 176, 0.15);
     color: #1fb2b0;
 }
+/* expiration: preset select, the custom amount + unit only while "Custom…" is picked */
+.w0bm-ul .w0bm-ul-expiry .form-control {
+    width: auto;
+    padding: 4px 8px;
+}
+.w0bm-ul-expiry-custom {
+    display: inline-flex;
+    gap: 6px;
+}
+.w0bm-ul .w0bm-ul-expiry .w0bm-ul-expiry-amount {
+    width: 90px;
+}
+.w0bm-ul-expiry:not(:has(.w0bm-ul-expiry-select option[value="custom"]:checked)) .w0bm-ul-expiry-custom {
+    display: none;
+}
 /* the ratings in their tag colours (.w0bm-tag-*), lit up when chosen */
 .w0bm-ul-seg > label.w0bm-ul-sfw { color: #23ff00; }
 .w0bm-ul-seg > label.w0bm-ul-nsfw { color: #ff3030; }

@@ -2177,7 +2177,7 @@ div.fg-card > form {
 
 /* text fields */
 :is(.fg-upload-page, #upload-drag-modal) :is(.url-input-container input[type="url"], .tag-input-container, .upload-title-input, .upload-comment,
-  .item-tag-input, .item-comment-input, .item-title-input, .album-stage-tags-input, select.upload-form-expiry) {
+  .item-tag-input, .item-comment-input, .item-title-input, .album-stage-tags-input, select.upload-form-expiry, input.upload-form-expiry-amount) {
   background: var(--fgu-field);
   border-color: var(--fgu-line-strong);
   color: var(--fgu-text);

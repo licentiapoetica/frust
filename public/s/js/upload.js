@@ -17,6 +17,25 @@ window.f0ckGoToPending = window.f0ckGoToPending || ((id) => {
     }
 });
 
+// Expiration of an upload form: a preset, or with "Custom…" the amount and unit as seconds
+// ('custom' alone when the amount is missing, so the server reports it)
+window.f0ckUploadExpiry = window.f0ckUploadExpiry || ((form) => {
+    const sel = form && form.querySelector('select[name="expiry"], input[name="expiry"]');
+    if (!sel) return 'permanent';
+    if (sel.value !== 'custom') return sel.value || 'permanent';
+    const n = parseFloat(String(form.querySelector('[name="expiry_amount"]')?.value || '').replace(',', '.'));
+    const unit = { minutes: 60, hours: 3600, days: 86400, weeks: 604800 }[form.querySelector('[name="expiry_unit"]')?.value] || 60;
+    return n > 0 ? String(Math.max(60, Math.round(n * unit))) : 'custom';
+});
+
+// A custom expiration in seconds, readable ("5 min", "2 h", "3 d")
+window.f0ckExpiryLabel = window.f0ckExpiryLabel || ((secs) => {
+    const s = +secs;
+    if (s % 86400 === 0) return (s / 86400) + ' d';
+    if (s % 3600 === 0) return (s / 3600) + ' h';
+    return Math.round(s / 60) + ' min';
+});
+
 // ============================================================
 // URL Upload Tracker — single panel, active jobs only
 // ============================================================
@@ -1866,9 +1885,11 @@ window.initUploadForm = (selector) => {
                 const globalExpiryEl = form.querySelector('select[name="expiry"], input[name="expiry"]');
                 const hasExpirySection = !!globalExpiryEl || window.f0ckEnableExpiringUploads !== false;
                 if (hasExpirySection && globalExpiryEl) {
-                    const globalExpiry = globalExpiryEl.value || 'permanent';
+                    const globalExpiry = window.f0ckUploadExpiry(form);
                     const expiryValue = (item.expiry !== undefined && item.expiry !== '') ? item.expiry : globalExpiry;
                     item.expiry = expiryValue;
+                    const customExpiry = /^\d+$/.test(expiryValue)
+                        ? `<option value="${expiryValue}" selected>Custom (${window.f0ckExpiryLabel(expiryValue)})</option>` : '';
 
                     expirySwitch = `
                         <div class="item-expiry-container" style="margin-top: 4px;">
@@ -1879,6 +1900,7 @@ window.initUploadForm = (selector) => {
                                 <option value="24hours" ${expiryValue === '24hours' ? 'selected' : ''}>24 Hours</option>
                                 <option value="1week" ${expiryValue === '1week' ? 'selected' : ''}>1 Week</option>
                                 <option value="1month" ${expiryValue === '1month' ? 'selected' : ''}>1 Month</option>
+                                ${customExpiry}
                             </select>
                         </div>
                     `;
@@ -2842,8 +2864,7 @@ window.initUploadForm = (selector) => {
                 try {
                     const globalVisEl = form.querySelector('input[name="visibility"]:checked');
                     const visibilityVal = globalVisEl ? globalVisEl.value : '0';
-                    const globalExpiryEl = form.querySelector('select[name="expiry"], input[name="expiry"]');
-                    const expiryVal = globalExpiryEl ? globalExpiryEl.value : 'permanent';
+                    const expiryVal = window.f0ckUploadExpiry(form);
 
                     const resp = await fetch('/api/v2/upload-url', {
                         method: 'POST',
@@ -2995,13 +3016,11 @@ window.initUploadForm = (selector) => {
 
                 const globalRatingEl = form.querySelector('input[name="rating"]:checked');
                 const globalVisEl = form.querySelector('input[name="visibility"]:checked');
-                const globalExpiryEl = form.querySelector('select[name="expiry"], input[name="expiry"]');
-
                 const formData = new FormData();
                 formData.append('is_album', 'true');
                 formData.append('rating', globalRatingEl ? globalRatingEl.value : 'sfw');
                 formData.append('visibility', globalVisEl ? globalVisEl.value : '0');
-                formData.append('expiry', globalExpiryEl ? globalExpiryEl.value : 'permanent');
+                formData.append('expiry', window.f0ckUploadExpiry(form));
                 formData.append('tags', tags.join(','));
                 formData.append('is_oc', isOc ? 'true' : 'false');
                 if (titleVal) formData.append('title', titleVal);
@@ -3138,12 +3157,11 @@ window.initUploadForm = (selector) => {
                     catch { break; } // cancelled: keep what's uploaded, skip the rest
                 }
                 const globalVisEl = form.querySelector('input[name="visibility"]:checked');
-                const globalExpiryEl = form.querySelector('select[name="expiry"], input[name="expiry"]');
                 const isUrlItem = isShitpost && item.type === 'url';
                 const file = !isUrlItem ? (item.file || item) : null;
                 const fileRating = isShitpost ? item.rating : (globalRatingEl ? globalRatingEl.value : 'sfw');
                 const fileVisibility = isShitpost ? (item.visibility || globalVisEl?.value || '0') : (globalVisEl?.value || '0');
-                const fileExpiry = isShitpost ? (item.expiry || globalExpiryEl?.value || 'permanent') : (globalExpiryEl?.value || 'permanent');
+                const fileExpiry = isShitpost ? (item.expiry || window.f0ckUploadExpiry(form)) : window.f0ckUploadExpiry(form);
                 const fileTags = isShitpost ? item.tags : tags;
                 const fileComment = isShitpost ? item.comment : comment;
                 const fileTitle = isShitpost ? (item.title || '') : titleVal;

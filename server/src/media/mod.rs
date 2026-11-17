@@ -182,10 +182,38 @@ pub fn calculate_expires_at(cfg: &Config, expiry: Option<&str>, base: i64) -> Op
             if n <= 0 {
                 return None;
             }
-            return Some(if n > 2_000_000_000 { n } else { base + n });
+            return Some(if n > 2_000_000_000 { n } else { base + n.max(MIN_EXPIRY) });
         }
     };
     Some(base + add)
+}
+
+/// Shortest expiration in seconds (the purger runs every 30 s).
+pub const MIN_EXPIRY: i64 = 60;
+/// Longest custom expiration, far below the 2e9 where a number counts as a timestamp.
+const MAX_CUSTOM_EXPIRY: i64 = 10 * 365 * 86400;
+
+/// The forms' custom expiration: `expiry=custom` with `expiry_amount` and `expiry_unit`
+/// (minutes/hours/days/weeks) becomes seconds for [`calculate_expires_at`]; any other value passes
+/// through. Err: a custom expiration without a positive amount.
+pub fn resolve_custom_expiry(expiry: Option<String>, amount: Option<&str>, unit: Option<&str>) -> Result<Option<String>, &'static str> {
+    if !expiry.as_deref().is_some_and(|e| e.trim().eq_ignore_ascii_case("custom")) {
+        return Ok(expiry);
+    }
+    const BAD: &str = "Enter a custom expiration (at least 1 minute)";
+    let unit_secs = match unit.unwrap_or("minutes").trim().to_lowercase().as_str() {
+        "minutes" | "minute" | "min" | "m" => 60.0,
+        "hours" | "hour" | "h" => 3600.0,
+        "days" | "day" | "d" => 86400.0,
+        "weeks" | "week" | "w" => 604800.0,
+        _ => return Err(BAD),
+    };
+    let n: f64 = amount.map(str::trim).filter(|a| !a.is_empty()).and_then(|a| a.replace(',', ".").parse().ok()).ok_or(BAD)?;
+    if !n.is_finite() || n <= 0.0 {
+        return Err(BAD);
+    }
+    let secs = ((n * unit_secs).round() as i64).clamp(MIN_EXPIRY, MAX_CUSTOM_EXPIRY);
+    Ok(Some(secs.to_string()))
 }
 
 /// The item-id-or-file name must be a plain file name inside a media directory.
@@ -271,6 +299,27 @@ mod tests {
         assert_eq!(calculate_expires_at(&c, Some("soon"), 1000), None);
         let off = cfg("enable_expiring_uploads: false");
         assert_eq!(calculate_expires_at(&off, Some("1h"), 1000), None);
+        // a relative number of seconds is at least a minute
+        assert_eq!(calculate_expires_at(&c, Some("5"), 1000), Some(1060));
+    }
+
+    #[test]
+    fn custom_expiry() {
+        let r = |e: &str, a: Option<&str>, u: Option<&str>| resolve_custom_expiry(Some(e.to_string()), a, u);
+        assert_eq!(r("1hour", Some("5"), Some("minutes")), Ok(Some("1hour".into())));
+        assert_eq!(r("custom", Some("5"), Some("minutes")), Ok(Some("300".into())));
+        assert_eq!(r("Custom", Some("1,5"), Some("hours")), Ok(Some("5400".into())));
+        assert_eq!(r("custom", Some("2"), Some("days")), Ok(Some("172800".into())));
+        assert_eq!(r("custom", Some("0.1"), Some("minutes")), Ok(Some("60".into())));
+        assert_eq!(r("custom", Some("99999"), Some("weeks")), Ok(Some(MAX_CUSTOM_EXPIRY.to_string())));
+        assert!(r("custom", Some(""), Some("minutes")).is_err());
+        assert!(r("custom", Some("-3"), Some("minutes")).is_err());
+        assert!(r("custom", Some("NaN"), Some("minutes")).is_err());
+        assert!(r("custom", Some("5"), Some("years")).is_err());
+        assert_eq!(resolve_custom_expiry(None, Some("5"), None), Ok(None));
+        let c = cfg("main: {}");
+        let secs = r("custom", Some("10"), Some("minutes")).unwrap();
+        assert_eq!(calculate_expires_at(&c, secs.as_deref(), 1000), Some(1600));
     }
 
     #[test]

@@ -41,6 +41,30 @@
             </div>
         </div>
         {% endif %}
+        {% if enable_expiring_uploads != false %}
+        {#- expiration (presets or a custom amount, shown by CSS while "Custom…" is picked) -#}
+        <div class="w0bm-ul-row w0bm-ul-expiry">
+            <span class="w0bm-ul-label">Expires</span>
+            <select name="expiry" class="form-control w0bm-ul-expiry-select" aria-label="Expiration">
+                <option value="permanent" selected>Never</option>
+                <option value="30minutes">30 minutes</option>
+                <option value="1hour">1 hour</option>
+                <option value="24hours">24 hours</option>
+                <option value="1week">1 week</option>
+                <option value="1month">1 month</option>
+                <option value="custom">Custom…</option>
+            </select>
+            <span class="w0bm-ul-expiry-custom">
+                <input type="number" name="expiry_amount" class="form-control w0bm-ul-expiry-amount" min="0" step="any" placeholder="e.g. 5" aria-label="Custom expiration">
+                <select name="expiry_unit" class="form-control w0bm-ul-expiry-unit" aria-label="Custom expiration unit">
+                    <option value="minutes" selected>minutes</option>
+                    <option value="hours">hours</option>
+                    <option value="days">days</option>
+                    <option value="weeks">weeks</option>
+                </select>
+            </span>
+        </div>
+        {% endif %}
         {% include "frontends/w0bm/partials/flash.html" %}
         <div class="w0bm-ul-source">
             {% if web_url_upload %}

@@ -354,6 +354,10 @@ async fn upload_url_inner(st: &AppState, cfg: &Config, req: &mut Req) -> anyhow:
         .filter(|v| !v.is_empty())
         .or_else(|| req.header("x-upload-expiry").filter(|h| !h.is_empty()).map(str::to_string))
         .or_else(|| field("expires_at").filter(|v| !v.is_empty()));
+    let expiry = match media::resolve_custom_expiry(expiry, field("expiry_amount").as_deref(), field("expiry_unit").as_deref()) {
+        Ok(e) => e,
+        Err(msg) => return Ok(j(json!({ "success": false, "msg": msg }), 400)),
+    };
     let job = UrlJob {
         url,
         owner,

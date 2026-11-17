@@ -739,6 +739,10 @@ pub(super) async fn set_expiry(st: AppState, mut req: Req) -> Res {
     }
     let id = item.i64("id").unwrap_or(0);
     let raw = present(post.get("expiry")).or_else(|| present(post.get("expires_at"))).and_then(|v| js_str(Some(v)));
+    let raw = match crate::media::resolve_custom_expiry(raw, js_str(post.get("expiry_amount")).as_deref(), js_str(post.get("expiry_unit")).as_deref()) {
+        Ok(r) => r,
+        Err(msg) => return j(json!({ "success": false, "msg": msg }), 400),
+    };
     let now = crate::util::now_secs();
     let target = crate::media::calculate_expires_at(&cfg, raw.as_deref(), now);
     sql!("UPDATE items SET expires_at = ", target, " WHERE id = ", id as i32).execute(&st.db).await?;

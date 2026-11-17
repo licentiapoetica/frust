@@ -2288,6 +2288,33 @@
   font-size: 0.95em;
 }
 
+/* Custom expiration (amount + unit), only while "Custom…" is picked. Without :has() support the
+   row just stays visible. */
+.upload-form .upload-form-expiry-custom {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.upload-form .global-expiry-section:not(:has(select[name="expiry"] option[value="custom"]:checked)) .upload-form-expiry-custom {
+  display: none;
+}
+
+.upload-form input.upload-form-expiry-amount {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  border: 1px solid var(--nav-border-color, rgba(255, 255, 255, 0.1));
+  font-size: 0.95em;
+}
+
+.upload-form select.upload-form-expiry.upload-form-expiry-unit {
+  flex: 0 0 auto;
+  width: auto;
+}
+
 .global-redirect-section .upload-checkbox-label.upload-form-redirect-label {
   display: inline-flex;
   align-items: center;

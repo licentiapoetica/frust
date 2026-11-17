@@ -127,15 +127,27 @@
     {% if enable_expiring_uploads != false %}
     <div class="form-section global-expiry-section upload-await-file">
         <label>Expiration / Self-Destruct</label>
-        <select name="expiry" class="expiry-select upload-form-expiry">
+        <select name="expiry" class="expiry-select upload-form-expiry" aria-label="Expiration">
             <option value="permanent" selected>Permanent (Never expires)</option>
             <option value="30minutes">30 Minutes</option>
             <option value="1hour">1 Hour</option>
             <option value="24hours">24 Hours</option>
             <option value="1week">1 Week</option>
             <option value="1month">1 Month</option>
+            <option value="custom">Custom…</option>
         </select>
+        {#- shown by CSS while "Custom…" is picked (upload.css) -#}
+        <div class="expiry-custom upload-form-expiry-custom">
+            <input type="number" name="expiry_amount" class="upload-form-expiry upload-form-expiry-amount" min="0" step="any" placeholder="e.g. 5" aria-label="Custom expiration">
+            <select name="expiry_unit" class="upload-form-expiry upload-form-expiry-unit" aria-label="Custom expiration unit">
+                <option value="minutes" selected>Minutes</option>
+                <option value="hours">Hours</option>
+                <option value="days">Days</option>
+                <option value="weeks">Weeks</option>
+            </select>
+        </div>
     </div>
+
     {% endif %}
 
 

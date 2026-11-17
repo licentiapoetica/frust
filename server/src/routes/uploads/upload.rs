@@ -248,6 +248,10 @@ async fn process(st: &AppState, req: &Req, cfg: &Config, session: Session, form:
         .map(str::to_string)
         .or_else(|| form.joined("expiry").filter(|v| !v.is_empty()))
         .or_else(|| form.joined("expires_at").filter(|v| !v.is_empty()));
+    let raw_expiry = match media::resolve_custom_expiry(raw_expiry, form.joined("expiry_amount").as_deref(), form.joined("expiry_unit").as_deref()) {
+        Ok(e) => e,
+        Err(msg) => return fail(400, msg),
+    };
     let now = crate::util::now_secs();
     let expires_at = media::calculate_expires_at(cfg, raw_expiry.as_deref(), now);
     let slug = crate::util::generate_slug(11);
