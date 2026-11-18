@@ -3043,7 +3043,8 @@ body.pgm-open #sidebar-left-drag-zone {
     max-height: none !important;
     overflow: visible !important;
     gap: 0;
-    padding: 20px;
+    /* close under the navbar */
+    padding: 6px 20px 20px;
   }
 
   body.layout-legacy .item-layout-container .item-main-content ._204863 {
