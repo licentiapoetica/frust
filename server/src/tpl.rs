@@ -1781,7 +1781,7 @@ mod tests {
         assert!(page.find("/s/js/f0ck-bg.js?v=").unwrap() < page.find("/s/fe/f0ckyou/js/f0ckyou.js?v=").unwrap());
         // the scripts on every page (pages change in place), the canvas only on the watch page
         assert!(home.contains("/s/js/v0ck.js?v=") && !home.contains("id=\"bg\""));
-        // the MOTD in the guide (shown while it's a drawer), not without one, not for who turned it off
+        // the MOTD at the top of the guide, hidden without one, not for who turned it off
         let motd = "<p class=\"fy-guide-motd\"><span class=\"fy-motd-tie\" aria-hidden=\"true\"></span><span class=\"fy-motd-text\">hello</span></p>";
         assert!(page.contains(motd) && home.contains(motd), "MOTD in the guide");
         let guide_at = |h: &str| h.find("<nav class=\"fy-guide f0ck-shell-chrome\"").unwrap();

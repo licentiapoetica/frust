@@ -634,7 +634,7 @@
   window.f0ckFrontend = {
     itemId: page.itemId || null,
     flash,
-    // the MOTD in the guide drawer; plain text, `[label](#bad-apple)` becomes the link that starts
+    // the MOTD at the top of the guide; plain text, `[label](#bad-apple)` becomes the link that starts
     // Bad Apple!! (f0ck-core.js)
     motd(text) {
       document.querySelectorAll('.fy-guide-motd').forEach(el => {

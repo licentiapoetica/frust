@@ -1067,20 +1067,9 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   display: none;
 }
 
-/* the message of the day: only in the guide as a drawer (watch page, narrower screens), under
-   its head; the full guide of wide screens leaves it out */
-.fy-guide-motd {
-  display: none;
-}
-
-.fy-page-watch .fy-guide-motd:not([hidden]) {
+/* the message of the day: at the top of the guide (under its head while it's a drawer) */
+.fy-guide-motd:not([hidden]) {
   display: flex;
-}
-
-@media (max-width: 1312px) {
-  .fy-guide-motd:not([hidden]) {
-    display: flex;
-  }
 }
 
 .fy-guide-motd {
