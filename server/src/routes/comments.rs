@@ -1248,7 +1248,17 @@ fn frame_comment_html(content: &str, link_base: &str, hosts: &[String]) -> Strin
         })
         .collect::<Vec<_>>()
         .join("\n");
+    let html = bad_apple_links(&html);
     comment_fx(&frame_wrap_tags(&frame_wrap_tags(&html, "spoiler", "spoiler"), "blur", "blur-text"))
+}
+
+/// `[label](#bad-apple)` as the link that starts Bad Apple!! (f0ck-core.js), the one bit of Markdown
+/// these comments render, like f0ckMotdLinks does for the MOTD; `[](#bad-apple)` is just the
+/// apple (comment-fx.css). Runs on the escaped text, so the label is escaped already; one that
+/// holds a tag built here (a mention, a link) stays text.
+fn bad_apple_links(html: &str) -> String {
+    static RE: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"\[([^\]\n<]*)\]\(#bad-apple\)").expect("bad apple regex"));
+    RE.replace_all(html, "<a href=\"#bad-apple\">$1</a>").into_owned()
 }
 
 /// The comment text effects [rb] [reich] [krebs] [glitch] [badapple], the same in every frontend:
@@ -1824,6 +1834,9 @@ mod frame_tests {
         assert_eq!(h, "<span class=\"cfx-rb\">a <span class=\"cfx-glitch\" data-glitch=\"0.5\">b</span></span> <span class=\"cfx-reich\">c</span> [krebs]d");
         let a = frame_comment_html("[badapple]click[/BADAPPLE]", "1", &[]);
         assert_eq!(a, "<span class=\"cfx-badapple\" role=\"button\" tabindex=\"0\">click</span>");
+        // [label](#bad-apple) links, [](#bad-apple) is just the apple; the label stays escaped
+        let l = frame_comment_html("hi [](#bad-apple) [don't <b>](#bad-apple) [x](#nope)", "1", &[]);
+        assert_eq!(l, "hi <a href=\"#bad-apple\"></a> <a href=\"#bad-apple\">don&#039;t &lt;b&gt;</a> [x](#nope)");
     }
 
     #[test]

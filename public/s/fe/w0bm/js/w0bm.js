@@ -2046,8 +2046,9 @@
     wrapTag('krebs', 'anim');
     // the same as in the other frontends (f0ck-core.js f0ckCommentFx, /s/css/comment-fx.css)
     wrapTag('glitch', 'cfx-glitch', ' data-glitch="0.5"');
-    // starts Bad Apple!! when clicked (f0ck-core.js)
+    // starts Bad Apple!! when clicked (f0ck-core.js), and so does [label](#bad-apple)
     wrapTag('badapple', 'cfx-badapple', ' role="button" tabindex="0"');
+    s = s.replace(/\[([^\]\n<]*)\]\(#bad-apple\)/g, '<a href="#bad-apple">$1</a>');
     if (emojis) s = s.replace(/:([a-z0-9_\-]+):/g, (m, n) => (emojis[n] ? '<img class="comment_emoji" src="' + escapeHTML(emojis[n]) + '" alt=":' + n + ':" title=":' + n + ':">' : m));
     s = s.replace(/\u0000(\d+)\u0000/g, (m, i) => codes[+i]);
     return s.replace(/\n/g, '<br>');

@@ -686,8 +686,12 @@ window.F0CK_COMMENT_FX = {
   // starts Bad Apple!! when clicked (see the end of this file)
   badapple: 'class="cfx-badapple" role="button" tabindex="0"',
 };
+// `[label](#bad-apple)` in escaped HTML as the link that starts Bad Apple!!; `[](#bad-apple)` is just
+// the apple (comment-fx.css). For renderers without Markdown links (f0ckCommentFx, w0bm); server
+// copy: bad_apple_links in server/src/routes/comments.rs.
+window.f0ckBadAppleLinks = (html) => String(html ?? '').replace(/\[([^\]\n<]*)\]\(#bad-apple\)/g, '<a href="#bad-apple">$1</a>');
 window.f0ckCommentFx = (html) => {
-  let s = String(html ?? '');
+  let s = window.f0ckBadAppleLinks(html);
   for (const [tag, attrs] of Object.entries(window.F0CK_COMMENT_FX)) {
     if (!s.toLowerCase().includes('[/' + tag + ']')) continue;
     // innermost first, so nested tags work (up to 10 levels)
