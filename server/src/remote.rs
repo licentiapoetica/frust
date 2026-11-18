@@ -12,6 +12,9 @@
 //! * `remote_items` maps each mirrored item to its remote id. Item ids stay the remote's when they
 //!   are free here (`remote.keep_ids`), so /123 is the same item on both sites.
 //! * Their avatars come along as `avatar_file` `remote_<id>.webp`, served from the remote by /a/.
+//! * Nothing that identifies chats or chat accounts is kept: channel and network become
+//!   `redacted`, Telegram sources (`tg://…`) are dropped, and uploads whose uploader is only a
+//!   numeric Telegram id go to one `redacted` account ([`redact_existing`] cleans older rows).
 //! * The remote wins on every sync: an item's tags are replaced by the remote's.
 //! * `f0ckm remote-sync --purge` deletes every mirrored item and its files again.
 
@@ -40,6 +43,8 @@ const FAILED_TTL: Duration = Duration::from_secs(600);
 /// Moves the item id sequence past every id in use (never back): explicit ids (`keep_ids`)
 /// don't advance it, and a local upload or a fallback insert must not run into one.
 const SEQ_PAST_MAX: &str = "SELECT setval('public.items_id_seq', GREATEST((SELECT MAX(id) FROM items), (SELECT last_value FROM public.items_id_seq), 1))";
+/// Stands in for the remote's channel / network / chat-only uploaders.
+const REDACTED: &str = "redacted";
 /// New items announced live per sync (more is a backfill, not news).
 const ANNOUNCE_MAX: usize = 30;
 
@@ -298,6 +303,7 @@ async fn create_user(st: &AppState, login: &str, display: &str) -> Result<(i64, 
 /// the remote's oldest item has been reached by an earlier run.
 pub async fn sync(st: &AppState, rc: &RemoteCfg, opts: &SyncOpts) -> Result<SyncReport> {
     let meta = call(rc, &format!("/api/v3/feed/meta?mode={}&eps={FEED_EPS}", rc.mode), None).await?;
+    redact_existing(st, rc).await?;
     let remote_oldest = meta["oldest_id"].as_i64();
     let mut report = SyncReport { remote_total: meta["total_items"].as_i64().unwrap_or(0), ..Default::default() };
 
@@ -391,8 +397,13 @@ async fn mirror_item(st: &AppState, rc: &RemoteCfg, entry: &Value, users: &mut U
     let mime = it["mime"].as_str().unwrap_or("application/octet-stream").to_string();
     let login = it["login"].as_str();
     let display = it["username"].as_str().or(login).unwrap_or("remote");
-    let (uploader_id, uploader) = users.get(st, login, display).await?;
-    users.avatar_from_profile(st, rc, uploader_id, login.unwrap_or(display)).await?;
+    let (uploader_id, uploader) = if is_chat_id_uploader(it["usernetwork"].as_str().unwrap_or(""), display) || login.is_some_and(|l| is_chat_id_uploader(it["usernetwork"].as_str().unwrap_or(""), l)) {
+        users.get(st, Some(REDACTED), REDACTED).await?
+    } else {
+        let u = users.get(st, login, display).await?;
+        users.avatar_from_profile(st, rc, u.0, login.unwrap_or(display)).await?;
+        u
+    };
 
     let existing = sql!("SELECT item_id FROM remote_items WHERE source = ", rc.base.clone(), " AND remote_id = ", rid as i32).fetch_scalar::<i32, _>(&st.db).await?;
     let (item_id, added) = match existing {
@@ -450,6 +461,56 @@ async fn mirror_item(st: &AppState, rc: &RemoteCfg, entry: &Value, users: &mut U
     Ok((item_id, added))
 }
 
+/// A source that only names a chat-app file (`tg://photo/<id>`) is dropped; URLs stay.
+fn redact_src(src: &str) -> String {
+    if src.to_lowercase().starts_with("tg://") { String::new() } else { src.to_string() }
+}
+
+/// An uploader that is only a numeric chat-app id (Telegram users without @name or linked account).
+fn is_chat_id_uploader(network: &str, name: &str) -> bool {
+    let digits = name.trim().trim_start_matches('-');
+    network.eq_ignore_ascii_case("telegram") && !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())
+}
+
+/// Redact mirrored rows from before redaction (or from another source): Telegram-id uploaders go
+/// to the `redacted` account, channel / network / `tg://` sources are blanked, and the accounts
+/// the mirror created for Telegram ids (password `!`, numeric login, no items left) are deleted.
+async fn redact_existing(st: &AppState, rc: &RemoteCfg) -> Result<()> {
+    let leftover = sql!(
+        "SELECT COUNT(*)::bigint FROM items WHERE id IN (SELECT item_id FROM remote_items) AND usernetwork ILIKE 'telegram' AND username ~ '^-?[0-9]+$'"
+    )
+    .fetch_scalar::<i64, _>(&st.db)
+    .await?
+    .unwrap_or(0);
+    if leftover > 0 {
+        let (_, name) = Users::default().get(st, Some(REDACTED), REDACTED).await?;
+        sql!(
+            "UPDATE items SET username = ", name,
+            " WHERE id IN (SELECT item_id FROM remote_items) AND usernetwork ILIKE 'telegram' AND username ~ '^-?[0-9]+$'"
+        )
+        .execute(&st.db)
+        .await?;
+    }
+    let n = sql!(
+        "UPDATE items SET userchannel = ", REDACTED, ", usernetwork = ", REDACTED,
+        ", src = CASE WHEN src ILIKE 'tg://%' THEN '' ELSE src END",
+        " WHERE id IN (SELECT item_id FROM remote_items) AND (userchannel <> ", REDACTED, " OR usernetwork <> ", REDACTED, " OR src ILIKE 'tg://%')"
+    )
+    .execute(&st.db)
+    .await?;
+    let gone = sql!(
+        r#"DELETE FROM "user" u WHERE u.password = '!' AND u.login ~ '^-?[0-9]+$'
+           AND NOT EXISTS (SELECT 1 FROM items i WHERE i.username = u."user")
+           AND NOT EXISTS (SELECT 1 FROM anon_identities a WHERE a.user_id = u.id)"#
+    )
+    .execute(&st.db)
+    .await?;
+    if n + gone > 0 {
+        tracing::info!("[REMOTE] {}: redacted {n} item(s), removed {gone} chat-id account(s)", rc.base);
+    }
+    Ok(())
+}
+
 /// The file name in b/: the remote's, unless an item or a file here already has it.
 async fn local_dest(st: &AppState, remote_dest: &str, rid: i64) -> Result<String> {
     let taken = remote_dest.chars().count() > 60
@@ -466,11 +527,10 @@ async fn insert_item(st: &AppState, rc: &RemoteCfg, it: &Value, rid: i64, remote
     let dest = local_dest(st, remote_dest, rid).await?;
     let host = rc.base.split("://").nth(1).unwrap_or(&rc.base).to_string();
     let checksum = clip(&format!("remote:{host}:{rid}"), 255);
-    let src = clip(it["src"].as_str().unwrap_or(""), 255);
+    let src = clip(&redact_src(it["src"].as_str().unwrap_or("")), 255);
     let size = it["size"].as_i64().unwrap_or(0).clamp(0, i32::MAX as i64) as i32;
     let stamp = it["stamp"].as_i64().unwrap_or_else(crate::util::now_secs) as i32;
-    let channel = clip(it["userchannel"].as_str().unwrap_or(""), 255);
-    let network = clip(it["usernetwork"].as_str().unwrap_or("remote"), 40);
+    let (channel, network) = (REDACTED.to_string(), REDACTED.to_string());
 
     let mut tx = st.db.begin().await?;
     let columns = "src, dest, mime, size, checksum, username, userchannel, usernetwork, stamp, active, has_coverart, visibility, slug";
@@ -938,6 +998,16 @@ mod tests {
         assert_eq!(thumb_name("_blur.webp"), None);
         assert_eq!(thumb_name("12.png"), None);
         assert_eq!(avatar_file_name(56660), "remote_56660.webp");
+    }
+
+    #[test]
+    fn redaction() {
+        assert!(is_chat_id_uploader("telegram", "123456789"));
+        assert!(is_chat_id_uploader("Telegram", "-100123"));
+        assert!(!is_chat_id_uploader("telegram", "flummi"));
+        assert!(!is_chat_id_uploader("libera", "1337"));
+        assert_eq!(redact_src("tg://photo/AQADxyz"), "");
+        assert_eq!(redact_src("https://example.org/a.png"), "https://example.org/a.png");
     }
 
     /// Against a running f0ck-rs: `F0CKM_REMOTE_TEST=http://host:port,login,password cargo test
