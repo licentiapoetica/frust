@@ -635,7 +635,7 @@
     itemId: page.itemId || null,
     flash,
     // the admin changed the site's brand (f0ck-core.js has updated the picture and the text): in a
-    // logo showing it (f0ckYou brand → "use the site's brand"), the play mark only without one
+    // logo showing it (f0ckYou brand → "use the site's brand"), the finger mark only without one
     brand() {
       document.querySelectorAll('.fy-logo.navbar-brand').forEach(logo => {
         const img = logo.querySelector('[data-brand-img]');

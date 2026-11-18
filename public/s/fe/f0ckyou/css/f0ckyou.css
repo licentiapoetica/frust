@@ -302,15 +302,12 @@ html:not(.no-js) .nojs-only {
   background: var(--fy-red);
 }
 
+/* the mark's sign: the Like button's middle finger (icons.svg#like) in white */
 .fy-logo-mark::after {
   content: "";
   position: absolute;
-  top: 26%;
-  bottom: 26%;
-  left: 38%;
-  right: 30%;
-  background: #fff;
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  inset: 0;
+  background: url(/s/fe/f0ckyou/img/finger.svg) center / contain no-repeat;
 }
 
 .fy-logo-word {
@@ -329,7 +326,7 @@ html:not(.no-js) .nojs-only {
 }
 
 /* the site's brand from the admin panel (snippets/logo.html): its picture, or its text in its own
-   font; then f0ckYou's play mark goes */
+   font; then f0ckYou's finger mark goes */
 .fy-logo-img {
   display: block;
   width: auto;
@@ -431,7 +428,7 @@ html:not(.no-js) .nojs-only {
 
 /* f0ckYou's own brand (admin panel → f0ckYou brand, snippets/logo.html): its font
    (/fy-brand-font.css), weight (one of the font's) and size (a percent of the logo's own, for the
-   text and the play mark; crate::settings::BRAND_SIZES) */
+   text and the finger mark; crate::settings::BRAND_SIZES) */
 .fy-logo-word.fy-bfont {
   font-family: 'FyBrandFont', monospace;
 }

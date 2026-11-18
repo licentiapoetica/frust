@@ -49,7 +49,7 @@ pub struct SiteSettings {
     /// Navbar brand text size in percent of the frontend's own (see [`BRAND_SIZES`]), 0 = 100
     pub brand_size: i64,
     /// The f0ckyou frontend's own brand (admin panel → f0ckYou brand), apart from the site's:
-    /// its text (a part in *asterisks* is bold; empty: "f0ck*You*"), its picture, its play mark,
+    /// its text (a part in *asterisks* is bold; empty: "f0ck*You*"), its picture, its finger mark,
     /// font, weight and size like the site brand's; `fy_brand_site`: the site's brand instead
     pub fy_brand_text: String,
     pub fy_brand_image_url: String,

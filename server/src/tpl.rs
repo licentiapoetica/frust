@@ -681,7 +681,7 @@ fn list_dir(dir: &std::path::Path, re: &str) -> Vec<String> {
 }
 
 /// The f0ckyou frontend's own brand (admin panel → f0ckYou brand; snippets/logo.html): `site`
-/// (show the site's brand instead), `image`, `mark` (the play mark, without an image), `text` (as
+/// (show the site's brand instead), `image`, `mark` (the finger mark, without an image), `text` (as
 /// saved), `parts` (the text to show: [{text, em}], a part in *asterisks* is `em`; no text shows
 /// "f0ck*You*", or nothing next to an image), `font` / `weight` (one the family still has) /
 /// `font_css`, `size` (percent, none = 100).
@@ -1557,7 +1557,7 @@ mod tests {
         assert!(home.contains("<li><a href=\"/\" class=\"active\" aria-current=\"page\">"), "Home is the active guide entry");
         assert!(home.contains("<a href=\"/mode/1\" class=\"active\" aria-current=\"true\">NSFW</a>"));
         assert!(home.contains("<sup class=\"fy-logo-cc\">NSFW</sup>"));
-        // no f0ckYou brand set: the play mark and "f0ck*You*", not marked for the site brand (f0ck-core.js)
+        // no f0ckYou brand set: the finger mark and "f0ck*You*", not marked for the site brand (f0ck-core.js)
         assert!(home.contains("<span class=\"fy-logo fy-logo-own\" data-fy-logo><span class=\"fy-logo-mark\" aria-hidden=\"true\"></span><span class=\"fy-logo-word\">f0ck<b>You</b></span><sup class=\"fy-logo-cc\">NSFW</sup></span>"));
         assert!(!home.contains("data-brand-text"));
         // f0ckYou's own brand (admin panel → f0ckYou brand): picture, emphasized text, font, weight, size
@@ -1571,7 +1571,7 @@ mod tests {
         assert!(!own.contains("href=\"/abyss\""));
         let abyss = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "abyss_enabled": true }));
         assert!(abyss.contains("<a href=\"/abyss\"") && abyss.contains("icons.svg?v=") && abyss.contains("#abyss\""), "abyss link");
-        // "use the site's brand": the site brand's picture and text in its font, no play mark
+        // "use the site's brand": the site brand's picture and text in its font, no finger mark
         let branded = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "custom_brand_image": "/s/brand.png",
             "fy_brand": { "site": true, "font_css": "/fy-brand-font.css?v=1" },
             "custom_navbar_brand_text": "MyTube", "brand_font": "VCR", "brand_weight": 700, "brand_case": "upper", "brand_font_css": "/brand-font.css?f=VCR" }));
@@ -2259,7 +2259,7 @@ mod tests {
         assert!(html.contains("<option value=\"M-Regular.woff2\" data-weights="));
         assert!(html.contains("<option value=\"700\" selected>700 Bold</option>"));
         assert!(html.contains("<option value=\"150\" selected>150%</option>"));
-        assert!(html.contains("<input type=\"checkbox\" id=\"fy-brand-mark\" name=\"mark\" value=\"1\"> Play mark"));
+        assert!(html.contains("<input type=\"checkbox\" id=\"fy-brand-mark\" name=\"mark\" value=\"1\"> Finger mark"));
         assert!(html.contains("<button type=\"submit\" id=\"fy-brand-remove-btn\" class=\"adm-btn adm-btn-danger\" disabled>"));
     }
 

@@ -339,7 +339,7 @@
           <div class="adm-row adm-row-wrap">
             <div class="adm-row-text">
               <label for="fy-brand-text-input">Logo text</label>
-              <p>The f0ckYou frontend's logo, set apart from the site's brand above. Put the part to stand out in asterisks, like the "You" of f0ckYou: <code>f0ck*You*</code>. Empty: <code>f0ck*You*</code>, or just the image when one is set. Size scales the text and the play mark.</p>
+              <p>The f0ckYou frontend's logo, set apart from the site's brand above. Put the part to stand out in asterisks, like the "You" of f0ckYou: <code>f0ck*You*</code>. Empty: <code>f0ck*You*</code>, or just the image when one is set. Size scales the text and the finger mark.</p>
             </div>
             <div class="adm-brand">
               <input type="text" id="fy-brand-text-input" name="text" class="adm-text" maxlength="68" value="{{ (fyb.text or "") }}" placeholder="f0ck*You*" autocomplete="off">
@@ -368,10 +368,10 @@
           <div class="adm-row adm-row-wrap">
             <div class="adm-row-text">
               <label for="fy-brand-mark">Logo options</label>
-              <p>The red play mark in front of the text (not with an image). "Use the site's brand" shows the brand from Branding above instead of all this.</p>
+              <p>The red middle-finger mark in front of the text (not with an image). "Use the site's brand" shows the brand from Branding above instead of all this.</p>
             </div>
             <div class="adm-brand">
-              <label class="adm-check"><input type="hidden" name="mark" value="0"><input type="checkbox" id="fy-brand-mark" name="mark" value="1"{% if (fyb.mark is not defined or fyb.mark) %} checked{% endif %}> Play mark</label>
+              <label class="adm-check"><input type="hidden" name="mark" value="0"><input type="checkbox" id="fy-brand-mark" name="mark" value="1"{% if (fyb.mark is not defined or fyb.mark) %} checked{% endif %}> Finger mark</label>
               <label class="adm-check"><input type="hidden" name="site" value="0"><input type="checkbox" id="fy-brand-site" name="site" value="1"{% if fyb.site %} checked{% endif %}> Use the site's brand</label>
               <button type="submit" class="adm-btn adm-btn-primary">Save</button>
             </div>
@@ -380,7 +380,7 @@
         <div class="adm-row adm-row-wrap">
           <div class="adm-row-text">
             <label for="fy-brand-file-input">Logo image</label>
-            <p>Replaces the play mark, with the logo text next to it if set. gif, jpg, png, webp or svg, max 5&nbsp;MB.</p>
+            <p>Replaces the finger mark, with the logo text next to it if set. gif, jpg, png, webp or svg, max 5&nbsp;MB.</p>
           </div>
           <div class="adm-brand">
             <div class="adm-brand-preview">

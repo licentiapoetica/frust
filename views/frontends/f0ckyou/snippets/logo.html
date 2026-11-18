@@ -1,10 +1,10 @@
-{#- The logo: f0ckYou's own brand (admin panel → f0ckYou brand, `fy_brand`): the square play mark,
+{#- The logo: f0ckYou's own brand (admin panel → f0ckYou brand, `fy_brand`): the square finger mark,
     a picture and/or the text, whose *emphasized* part is bold like the "You" of f0ckYou ("f0ck*You*"
     when no text is set), in its own font, weight and size (the font: fy_brand.font_css in
     snippets/head.html). With "use the site's brand" ticked it is the site's brand instead
     (admin panel → branding: image, text, case, font, weight, size, glitch), as in f0ckm, w0bm and
     f0ckv2, marked for f0ck-core.js, which changes it live (.navbar-brand, data-brand-img,
-    data-brand-text); f0ckyou.js (f0ckFrontend.brand) drops the play mark once there is one.
+    data-brand-text); f0ckyou.js (f0ckFrontend.brand) drops the finger mark once there is one.
     f0ckyou.js swaps every [data-fy-logo] on the live event fy_brand.
     The visitor's mode is the little country code. -#}
 {%- set fy_logo_mode = ((modes[mode] if (session and modes and mode is number and mode < modes|length) else "") or "") -%}

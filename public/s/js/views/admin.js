@@ -275,7 +275,7 @@ async function uploadFyBrandImage(form) {
 }
 
 async function removeFyBrandImage(form) {
-  if (!confirm('Remove the f0ckYou logo image? The logo shows its text (and the play mark) again.')) return;
+  if (!confirm('Remove the f0ckYou logo image? The logo shows its text (and the finger mark) again.')) return;
   fyStatus('Removing…', 'busy');
   try {
     await brandPost(form);
