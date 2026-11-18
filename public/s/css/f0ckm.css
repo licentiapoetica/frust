@@ -19000,9 +19000,12 @@ body.layout-modern .user-infobox-block .gapRight > #a_favo.fa-regular::before {
   word-break: break-word;
 }
 
+/* The body sits right of the avatar (40px + 5px gap); keep the same space
+   free on the right so the actions are centered on the whole infobox. */
 .user-infobox-body {
   display: grid;
   grid-template-columns: 1fr auto;
+  padding-right: 45px;
 }
 
 .user-infobox-actions {
