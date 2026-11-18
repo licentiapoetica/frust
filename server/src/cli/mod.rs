@@ -175,7 +175,7 @@ fn config_update(base: &Path, args: &Args) -> Result<i32> {
 /// `f0ckm remote-sync`: mirror the remote f0ck of config.yaml `remote:` (see crate::remote).
 async fn remote_sync(st: &crate::state::AppState, a: &Args) -> Result<i32> {
     let Some(rc) = crate::remote::settings(&st.cfg()) else {
-        eprintln!("No remote source: set remote.enabled, remote.url, remote.username and remote.password in config.yaml");
+        eprintln!("No remote source: set remote.enabled, remote.url and remote.token (or remote.username and remote.password) in config.yaml");
         return Ok(1);
     };
     // Make sure remote_items exists (the server adds it at boot)

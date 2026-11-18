@@ -383,6 +383,12 @@ apis: {}
 remote:
   enabled: false
   url: https://f0ck.example
+  # Either a token, so your password is never on this server: log in on the remote site in a
+  # browser with "keep me signed in" (valid 20 years, otherwise 12 hours) and copy
+  # localStorage "f0ck.access_token" from the developer tools (or F0CKM_REMOTE_TOKEN).
+  # Anyone with the token can use the remote as you until it expires: keep this file private.
+  token: ""
+  # Or a login, used when no token is set:
   username: ""
   password: ""          # or the F0CKM_REMOTE_PASSWORD environment variable
   mode: 3               # what the remote shows: 0 sfw, 1 nsfw, 2 untagged, 3 all

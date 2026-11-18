@@ -55,6 +55,9 @@ pub struct RemoteCfg {
     pub base: String,
     pub username: String,
     pub password: String,
+    /// An access token from logging in elsewhere (the remote site in a browser): used instead of
+    /// logging in, so the password never has to be on this server.
+    pub token: Option<String>,
     /// Remote content filter: 0 sfw, 1 nsfw, 2 untagged, 3 all.
     pub mode: i64,
     pub keep_ids: bool,
@@ -77,13 +80,20 @@ pub fn settings(cfg: &Config) -> Option<RemoteCfg> {
     }
     let username = cfg.str("remote.username").unwrap_or("").trim().to_string();
     let password = std::env::var("F0CKM_REMOTE_PASSWORD").ok().filter(|p| !p.is_empty()).or_else(|| cfg.str("remote.password").map(str::to_string)).unwrap_or_default();
-    if username.is_empty() || password.is_empty() {
+    let token = std::env::var("F0CKM_REMOTE_TOKEN")
+        .ok()
+        .or_else(|| cfg.str("remote.token").map(str::to_string))
+        // Pasted from the browser: maybe quoted, maybe with "Bearer " in front
+        .map(|t| t.trim().trim_matches('"').trim_start_matches("Bearer ").trim().to_string())
+        .filter(|t| !t.is_empty());
+    if token.is_none() && (username.is_empty() || password.is_empty()) {
         return None;
     }
     Some(RemoteCfg {
         base,
         username,
         password,
+        token,
         mode: cfg.int("remote.mode").filter(|m| (0..=3).contains(m)).unwrap_or(3),
         keep_ids: cfg.enabled("remote.keep_ids"),
         interval: cfg.int("remote.interval").unwrap_or(0).max(0) as u64,
@@ -129,6 +139,12 @@ async fn login(rc: &RemoteCfg) -> Result<(String, i64)> {
 
 /// A valid access token, logging in again when the last one expired (or `fresh`).
 async fn token(rc: &RemoteCfg, fresh: bool) -> Result<String> {
+    if let Some(t) = &rc.token {
+        if fresh {
+            bail!("{} doesn't accept remote.token (expired or revoked?): log in there again and copy a new one", rc.base);
+        }
+        return Ok(t.clone());
+    }
     let key = format!("{}\n{}", rc.base, rc.username);
     let mut slot = TOKEN.lock().await;
     if !fresh {
@@ -1054,14 +1070,15 @@ mod tests {
         assert_eq!(redact_src("https://example.org/a.png"), "https://example.org/a.png");
     }
 
-    /// Against a running f0ck-rs: `F0CKM_REMOTE_TEST=http://host:port,login,password cargo test
+    /// Against a running f0ck-rs (a 4th field tests a token instead of logging in):
+    /// `F0CKM_REMOTE_TEST=http://host:port,login,password cargo test
     /// remote::tests::live -- --ignored --nocapture`
     #[tokio::test]
     #[ignore]
     async fn live() {
-        let spec = std::env::var("F0CKM_REMOTE_TEST").expect("F0CKM_REMOTE_TEST=url,login,password");
-        let mut p = spec.splitn(3, ',');
-        let cfg = crate::bot::tests::test_cfg(json!({ "remote": { "enabled": true, "url": p.next(), "username": p.next(), "password": p.next() } }));
+        let spec = std::env::var("F0CKM_REMOTE_TEST").expect("F0CKM_REMOTE_TEST=url,login,password[,token]");
+        let mut p = spec.splitn(4, ',');
+        let cfg = crate::bot::tests::test_cfg(json!({ "remote": { "enabled": true, "url": p.next(), "username": p.next(), "password": p.next(), "token": p.next() } }));
         let rc = settings(&cfg).expect("remote settings");
         let (user, total) = whoami(&rc).await.expect("whoami");
         println!("logged in as {user}, {total} items");
@@ -1094,8 +1111,10 @@ mod tests {
         println!("streamed {dest}: {} bytes, range ok", full.len());
         assert!(proxy(&get(None), &format!("{}/t/999999.webp", rc.base), true).await.is_none());
 
-        let bad = RemoteCfg { password: "wrong".into(), ..rc.clone() };
-        assert!(login(&bad).await.unwrap_err().to_string().contains("refused"));
+        if rc.token.is_none() {
+            let bad = RemoteCfg { password: "wrong".into(), ..rc.clone() };
+            assert!(login(&bad).await.unwrap_err().to_string().contains("refused"));
+        }
     }
 
     #[test]
@@ -1104,7 +1123,12 @@ mod tests {
         assert!(settings(&cfg(json!({ "enabled": false, "url": "https://x", "username": "a", "password": "b" }))).is_none());
         assert!(settings(&cfg(json!({ "enabled": true, "url": "ftp://x", "username": "a", "password": "b" }))).is_none());
         assert!(settings(&cfg(json!({ "enabled": true, "url": "https://x", "username": "", "password": "b" }))).is_none());
+        // A token alone is enough; pasted with quotes or "Bearer " it still works
+        let rc = settings(&cfg(json!({ "enabled": true, "url": "https://x", "token": " \"Bearer abc.def\" " }))).unwrap();
+        assert_eq!(rc.token.as_deref(), Some("abc.def"));
+        assert!(settings(&cfg(json!({ "enabled": true, "url": "https://x", "token": "  " }))).is_none());
         let rc = settings(&cfg(json!({ "enabled": true, "url": "https://x.y/", "username": "a", "password": "b" }))).unwrap();
+        assert!(rc.token.is_none());
         assert_eq!(rc.base, "https://x.y");
         assert_eq!(rc.mode, 3);
         assert!(rc.keep_ids);
