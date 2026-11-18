@@ -1296,6 +1296,20 @@ window.F0ckPageSwap = (() => {
     document.head.appendChild(s);
   }).catch((err) => { loading = null; window.f0ckDebug?.('[konami]', err.message); return null; }));
 
+  // The page's own players (the item's video/audio, Flash) pause while it plays; the ones that were
+  // playing go on when it closes. Its own audio sits in a shadow root, out of reach of this query.
+  const pausePage = () => {
+    const paused = [...document.querySelectorAll('video, audio, f0ck-flash')].filter((m) => {
+      const playing = m.localName === 'f0ck-flash' ? m.isPlaying : !m.paused && !m.ended;
+      if (!playing) return false;
+      try { m.pause(); return true; } catch { return false; }
+    });
+    return () => paused.forEach((m) => {
+      if (!m.isConnected) return;
+      try { m.play()?.catch?.(() => {}); } catch {}
+    });
+  };
+
   window.addEventListener('keydown', (e) => {
     const t = e.target;
     if (e.ctrlKey || e.metaKey || e.altKey || window.BadApple?.active) return;
@@ -1312,7 +1326,11 @@ window.F0ckPageSwap = (() => {
     if (pos === SEQ.length) {
       pos = 0;
       // started from this key press, so the browser lets the song play
-      load().then((ba) => ba?.takeover(options));
+      load().then((ba) => {
+        if (!ba || ba.active) return;
+        const resume = pausePage();
+        ba.takeover({ ...options, onclose: resume });
+      });
     }
   }, true);
 })();
