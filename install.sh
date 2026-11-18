@@ -187,6 +187,19 @@ else
 fi
 [ "${DOMAIN:-}" = localhost ] && DOMAIN=
 
+# The app container runs as UID:GID from .env and must be able to read config.yaml (mode 600) and
+# write f0ckm-data. Without them it runs as 1000:1000, which is a stranger to an installing user with
+# another uid. The checkout's owner is used (also under sudo); a root-owned checkout gets 1000.
+OWNER=$(stat -c %u:%g .)
+if ! grep -q '^UID=' .env; then
+    if [ "${OWNER%%:*}" = 0 ]; then ids=1000:1000; else ids=$OWNER; fi
+    printf 'UID=%s\nGID=%s\n' "${ids%%:*}" "${ids#*:}" | { if [ -w .env ]; then cat >> .env; else as_root tee -a .env >/dev/null; fi; }
+fi
+APP_UID=$(sed -n 's/^UID=//p' .env | tail -n 1)
+APP_GID=$(sed -n 's/^GID=//p' .env | tail -n 1); APP_GID=${APP_GID:-$APP_UID}
+# A .env written under sudo belongs to root; `docker compose` run by the user later has to read it
+[ "$(stat -c %u:%g .env)" = "$OWNER" ] || as_root chown "$OWNER" .env
+
 # ── config.yaml ──────────────────────────────────────────────────────────────────
 # config_example.yaml filled in for this install. A new config.yaml is written from it, and an existing
 # one gets the settings it is missing from it after the build (so new keys never arrive with dev defaults)
@@ -210,6 +223,15 @@ else
     render_config > config.yaml
     chmod 600 config.yaml
     grep -q 'YOUR_SECRET_HERE' config.yaml && warn "invite_secret was not replaced; set it in config.yaml"
+fi
+# f0ckm reads it as the app user
+if [ "$(stat -c %u:%g config.yaml)" != "$APP_UID:$APP_GID" ]; then
+    say "Giving config.yaml to the app user ($APP_UID:$APP_GID, UID/GID in .env)"
+    if [ "$(stat -c %u config.yaml)" = "$(id -u)" ] && [ "$APP_UID" = "$(id -u)" ]; then
+        chgrp "$APP_GID" config.yaml
+    else
+        as_root chown "$APP_UID:$APP_GID" config.yaml
+    fi
 fi
 
 # ── Build and start ──────────────────────────────────────────────────────────────
@@ -301,13 +323,23 @@ import_db() {
 
 compose up -d
 
+# A container that exits gets restarted (restart: unless-stopped), so a crash shows as a restart
+restarts() { docker inspect -f '{{.RestartCount}}' f0ckm 2>/dev/null || echo 0; }
+crashed() {
+    [ "$(restarts)" != "$RESTARTS" ] || [ "$(docker inspect -f '{{.State.Status}}' f0ckm 2>/dev/null)" = exited ] || return 1
+    echo >&2; docker logs --tail 20 f0ckm 2>&1 | sed 's/^/    /' >&2
+    die "f0ckm crashed on start (its log above); fix that and run ./install.sh again"
+}
+RESTARTS=$(restarts)
 say "Waiting for f0ckm to answer"
 for i in $(seq 1 90); do
+    crashed || true
     code=$(docker exec f0ckm curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:1337/ 2>/dev/null || true)
-    [ -n "$code" ] && [ "$code" != 000 ] && break
-    [ "$i" = 90 ] && die "f0ckm did not come up; see: $COMPOSE logs f0ckm"
+    [[ $code =~ ^[1-5][0-9][0-9]$ ]] && break
+    [ "$i" = 90 ] && die "f0ckm did not come up; see: ${SUDO:+sudo }$COMPOSE logs f0ckm"
     sleep 2
 done
+sleep 2; crashed || true
 
 # ── Admin ────────────────────────────────────────────────────────────────────────
 if docker exec f0ckm f0ckm users list 2>/dev/null | awk 'NR > 1 && $4 == "true" { found = 1 } END { exit !found }'; then
