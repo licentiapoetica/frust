@@ -70,10 +70,39 @@ if ! command -v docker >/dev/null 2>&1; then
     [[ $ans =~ ^[Yy] ]] || die "install Docker first: https://docs.docker.com/engine/install/"
     curl -fsSL https://get.docker.com | sh
 fi
+as_root() { if [ "$(id -u)" = 0 ]; then "$@"; else sudo "$@"; fi; }
 SUDO=
-if ! docker info >/dev/null 2>&1; then
-    command -v sudo >/dev/null 2>&1 && sudo docker info >/dev/null 2>&1 && SUDO=sudo \
-        || die "can't talk to Docker. Is it running, and is your user allowed to use it?"
+DOCKER_GROUP_NOTE=
+if ! command docker info >/dev/null 2>&1; then
+    [ "$(id -u)" = 0 ] || command -v sudo >/dev/null 2>&1 \
+        || die "can't talk to Docker. Is it running, and is your user in the docker group?"
+    # Not running: some distros (Arch, Fedora, ...) don't start the service when Docker is installed
+    if ! as_root docker info >/dev/null 2>&1 && command -v systemctl >/dev/null 2>&1; then
+        say "Starting the Docker service"
+        as_root systemctl enable --now docker.service || true
+        for i in $(seq 1 15); do as_root docker info >/dev/null 2>&1 && break; sleep 1; done
+    fi
+    as_root docker info >/dev/null 2>&1 \
+        || die "can't talk to Docker, is it running? (sudo systemctl enable --now docker)"
+    if ! command docker info >/dev/null 2>&1; then
+        # Docker works, but only as root: let this user use it too (from the next login on); this
+        # run goes on through sudo
+        SUDO=sudo
+        me=$(id -un)
+        if [[ " $(id -nG "$me") " == *" docker "* ]]; then
+            DOCKER_GROUP_NOTE="You are in the docker group, but this login doesn't have it yet: log out and back in (or run: newgrp docker) to use docker without sudo."
+        else
+            warn "your user '$me' can't use Docker without sudo (it is not in the docker group)"
+            ans=n; [ -t 0 ] && read -r -p "Add '$me' to the docker group? (docker access equals root access) [Y/n] " ans && ans=${ans:-y}
+            if [[ $ans =~ ^[Yy] ]]; then
+                getent group docker >/dev/null 2>&1 || sudo groupadd docker
+                sudo usermod -aG docker "$me"
+                DOCKER_GROUP_NOTE="Added '$me' to the docker group: log out and back in (or run: newgrp docker) to use docker without sudo; until then use sudo."
+            else
+                DOCKER_GROUP_NOTE="Your user can't use docker without sudo; to change that: sudo usermod -aG docker $me, then log in again."
+            fi
+        fi
+    fi
 fi
 docker() { if [ -n "$SUDO" ]; then sudo docker "$@"; else command docker "$@"; fi; }
 # Compose v2 is the `docker compose` plugin; older installs only have the standalone `docker-compose`
@@ -314,4 +343,5 @@ elif [ -n "$DOMAIN" ]; then
 else
     say "Done: http://localhost:1337"
 fi
-echo "    Logs: $COMPOSE logs -f f0ckm    Settings: config.yaml (picked up live)"
+echo "    Logs: ${SUDO:+sudo }$COMPOSE logs -f f0ckm    Settings: config.yaml (picked up live)"
+[ -z "$DOCKER_GROUP_NOTE" ] || warn "$DOCKER_GROUP_NOTE"
