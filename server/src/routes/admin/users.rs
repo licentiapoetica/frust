@@ -758,7 +758,7 @@ async fn create(st: AppState, mut req: Req) -> Res {
         let uid = row.i64("id").unwrap_or(0);
         sql!(
             "INSERT INTO user_options (user_id, mode, theme, fullscreen, avatar, avatar_file, use_new_layout, disable_autoplay, disable_swiping, use_alternative_infobox) VALUES (",
-            uid as i32, ", 3, 'amoled', 0, NULL, 'default.png', ", st.settings.default_layout() == "modern", ", ",
+            uid as i32, ", 0, 'amoled', 0, NULL, 'default.png', ", st.settings.default_layout() == "modern", ", ",
             cfg.is_false("websrv.enable_autoplay"), ", ", cfg.is_false("websrv.enable_swiping"), ", ", cfg.enabled("websrv.user_alternative_infobox"), ")"
         )
         .execute(&st.db)
