@@ -953,6 +953,28 @@ pub async fn fetch_thumb(st: &AppState, file: &str) -> bool {
     true
 }
 
+/// The thumbnail of an item for building a picture from (tag and list mosaics): `t/<id>.webp`, or
+/// for a mirrored item without it the remote's. With `store_media` that is stored in t/ like on a
+/// view; else it is fetched into tmp/ and the returned [`crate::media::TempPath`] removes it again
+/// when dropped (keep it until the picture is built). None: no thumbnail to be had.
+pub async fn mosaic_thumb(st: &AppState, id: i64) -> Option<(PathBuf, Option<crate::media::TempPath>)> {
+    let cfg = st.cfg();
+    let local = cfg.paths.t.join(format!("{id}.webp"));
+    if local.is_file() {
+        return Some((local, None));
+    }
+    let rc = settings(&cfg)?;
+    if rc.store_media {
+        return fetch_thumb(st, &format!("{id}.webp")).await.then_some((local, None));
+    }
+    let (rc, rid, _) = remote_of(st, id).await?;
+    let tmp = crate::media::TempPath::new(cfg.paths.tmp.join(format!("{}.mosaic.webp", crate::media::queue::genuuid())));
+    if !download(st, &format!("{}/t/{rid}.webp", rc.base), &tmp.path, 20 * 1024 * 1024, true).await {
+        return None;
+    }
+    Some((tmp.path.clone(), Some(tmp)))
+}
+
 /// No thumbnail on the remote: fetch the file and make one here, like for an upload.
 async fn thumb_from_file(st: &AppState, id: i64) -> bool {
     let Ok(Some(r)) = sql!("SELECT dest, mime FROM items WHERE id = ", id as i32).fetch_optional(&st.db).await else { return false };

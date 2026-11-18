@@ -273,12 +273,13 @@ pub async fn image_v(custom_file: &Path, list: &crate::db::Row) -> String {
 
 /// Build a 600x300 mosaic from up to three item thumbnails and serve it.
 pub async fn build_mosaic(st: &AppState, item_ids: &[i64], cache_path: &Path) -> anyhow::Result<Option<Response>> {
-    let cfg = st.cfg();
     let mut inputs: Vec<String> = Vec::new();
-    for id in item_ids {
-        let p = cfg.paths.t.join(format!("{id}.webp"));
-        if tokio::fs::metadata(&p).await.is_ok() {
+    // Thumbnails fetched from a remote f0ck for this picture: removed when it is built
+    let mut _fetched = Vec::new();
+    for &id in item_ids {
+        if let Some((p, tmp)) = crate::remote::mosaic_thumb(st, id).await {
             inputs.push(format!("{}[0]", p.display()));
+            _fetched.extend(tmp);
         }
     }
     if inputs.is_empty() {

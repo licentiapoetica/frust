@@ -40,7 +40,6 @@ fn cache_path(st: &AppState, tag: &str, mode: i64) -> PathBuf {
 
 /// `regenerateTagImage(tag, mode)` — up to 3 random thumbnails side by side, 600×300.
 pub async fn regenerate_tag_image(st: &AppState, tag: &str, mode: i64) -> Option<PathBuf> {
-    let cfg = st.cfg();
     let mode = norm_mode(mode);
     let target = cache_path(st, tag, mode);
     let join = match mode {
@@ -63,11 +62,13 @@ pub async fn regenerate_tag_image(st: &AppState, tag: &str, mode: i64) -> Option
         }
     };
     let mut inputs: Vec<String> = Vec::new();
+    // Thumbnails fetched from a remote f0ck for this picture: removed when it is built
+    let mut _fetched = Vec::new();
     for r in &rows {
         let Some(id) = r.i64("id") else { continue };
-        let p = cfg.paths.t.join(format!("{id}.webp"));
-        if tokio::fs::metadata(&p).await.is_ok() {
+        if let Some((p, tmp)) = crate::remote::mosaic_thumb(st, id).await {
             inputs.push(format!("{}[0]", p.to_string_lossy()));
+            _fetched.extend(tmp);
         }
     }
     if inputs.is_empty() {
