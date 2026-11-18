@@ -396,7 +396,8 @@ remote:
   interval: 0           # minutes between syncs while the server runs (0: only `f0ckm remote-sync`)
   types: []             # only these kinds, e.g. [video] or [video, audio] (video, image, audio); empty: all.
                         # Dropped a kind later? `f0ckm remote-sync --prune` deletes its mirrored items
-  redact_src: false     # true: don't keep the items' source URLs (also blanks ones synced before)
+  redact_src: false     # true: don't keep the items' source URLs (also blanks ones synced before);
+                        # admins: keep them, but only admins see them (item page, search, scroller)
   store_media: false    # true: keep viewed media in b/, t/, ca/ instead of streaming it every time
   max_media_mb: 1024    # with store_media: larger media files aren't kept
 smtp:

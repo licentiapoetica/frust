@@ -57,7 +57,8 @@ async fn run_search(st: &AppState, req: &Req, input: &str, strict: bool, page: i
     };
 
     let owner = crate::settings::session_owner_name(session);
-    let viewer = query::Viewer { user_id: session.map(|s| s.id).unwrap_or(0), owner: owner.as_deref(), admin: session.map(|s| s.admin).unwrap_or(false) };
+    let admin = session.map(|s| s.admin).unwrap_or(false);
+    let viewer = query::Viewer { user_id: session.map(|s| s.id).unwrap_or(0), owner: owner.as_deref(), admin, src_col: crate::remote::src_sql(&st.cfg(), admin) };
     let vis = visitor_filter(&st.cfg(), session);
     let day = crate::util::now_secs() / 86_400;
     let seed = format!("{input}|{day}");
@@ -160,7 +161,8 @@ pub async fn preview(st: &AppState, req: &Req, input: &str, strict: bool) -> any
     }
     let Ok(related_id) = related_id(st, &mut q).await? else { return Ok((q, Some(0))) };
     let owner = crate::settings::session_owner_name(session);
-    let viewer = query::Viewer { user_id: session.map(|s| s.id).unwrap_or(0), owner: owner.as_deref(), admin: session.map(|s| s.admin).unwrap_or(false) };
+    let admin = session.map(|s| s.admin).unwrap_or(false);
+    let viewer = query::Viewer { user_id: session.map(|s| s.id).unwrap_or(0), owner: owner.as_deref(), admin, src_col: crate::remote::src_sql(&st.cfg(), admin) };
     let vis = visitor_filter(&st.cfg(), session);
     let (count, _) = search_sql(&q, &viewer, &vis, related_id, "", 0);
     let n = count.fetch_scalar::<i64, _>(&st.db).await?.unwrap_or(0);
@@ -321,7 +323,7 @@ mod tests {
             ("title:a src:http", false),
             ("100%_cat", false),
         ];
-        let viewer = query::Viewer { user_id: 1, owner: Some("x"), admin: false };
+        let viewer = query::Viewer { user_id: 1, owner: Some("x"), admin: false, src_col: "items.src" };
         let vis = crate::f0cklib::visibility_filter(None);
         let mut sql = String::new();
         let guest_vis = visitor_filter(&crate::media::test_cfg("websrv: {}\n"), None);

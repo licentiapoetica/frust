@@ -644,7 +644,9 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
 
     let domain = cfg.str_or("main.url.domain", "").to_string();
     let username = actitem.string("username");
-    let src = actitem.string("src");
+    // `remote.redact_src: admins`: a mirrored item's source only for admins
+    let src_ok = crate::remote::src_visible(st, itemid, session.is_some_and(|s| s.admin)).await;
+    let src = if src_ok { actitem.string("src") } else { String::new() };
     let mime_now = actitem.string("mime");
     let dest = actitem.string("dest");
     let dest_url = if mime_now != "video/youtube" {
@@ -723,7 +725,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             "author_banner_size": actitem.val("author_banner_size"),
             "author_description": actitem.val("author_description"),
             "title": or_null(actitem.val("title")),
-            "src": { "long": actitem.val("src"), "short": src_short },
+            "src": { "long": if src_ok { actitem.val("src").clone() } else { json!("") }, "short": src_short },
             "thumbnail": format!("{thumbs}/{itemid}.webp"),
             "og_thumbnail": format!("{thumbs}/{itemid}{}.webp", if is_nsfw || is_nsfl { "_blur" } else { "" }),
             "og_url": og_url,

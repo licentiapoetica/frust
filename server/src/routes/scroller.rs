@@ -267,9 +267,9 @@ async fn tag_suggest(st: AppState, req: Req) -> Res {
 }
 
 /// `SELECT` columns of a feed row.
-fn select_cols(nsfl: i64, sid: Option<i32>) -> Sql {
+fn select_cols(nsfl: i64, sid: Option<i32>, src: &str) -> Sql {
     let mut q = Sql::new(&format!(
-        "items.id, items.mime, items.dest, items.username, items.stamp, items.src, items.is_oc,
+        "items.id, items.mime, items.dest, items.username, items.stamp, {src} AS src, items.is_oc,
       uo.display_name, uo.avatar, uo.avatar_file, uo.username_color,
       (SELECT string_agg(t.tag, ', ' ORDER BY ta2.tag_id) FROM tags_assign ta2 JOIN tags t ON t.id = ta2.tag_id
         WHERE ta2.item_id = items.id AND ta2.tag_id > 2 LIMIT 5) AS tag_list,
@@ -405,12 +405,14 @@ async fn feed_inner(st: &AppState, req: &Req) -> anyhow::Result<Response> {
         _ => 3,
     };
     let sid = session.map(|s| s.id as i32).filter(|&i| i != 0);
+    // `remote.redact_src: admins`: mirrored items' sources only for admins
+    let src_col = crate::remote::src_sql(&cfg, session.is_some_and(|s| s.admin));
     let vis = visibility_sql(session);
     const FROM: &str = r#" FROM items LEFT JOIN "user" author_u ON author_u.user = items.username LEFT JOIN user_options uo ON uo.user_id = author_u.id "#;
 
     let rows: Vec<Row> = if let Some(anchor) = anchor {
         let mut q = Sql::new("SELECT ");
-        q.append(&select_cols(nsfl, sid)).push(FROM).push(" WHERE items.id = ").bind(anchor).push(" AND items.active = true AND ").push(&modequery);
+        q.append(&select_cols(nsfl, sid, src_col)).push(FROM).push(" WHERE items.id = ").bind(anchor).push(" AND items.active = true AND ").push(&modequery);
         // The anchor is a deep link: it must respect visibility like every other row.
         q.append(&vis).append(&common).append(&nsfp_sql);
         let anchor_rows = q.fetch_all(&st.db).await?;
@@ -418,7 +420,7 @@ async fn feed_inner(st: &AppState, req: &Req) -> anyhow::Result<Response> {
             Vec::new()
         } else {
             let mut q = Sql::new("SELECT ");
-            q.append(&select_cols(nsfl, sid)).push(FROM).push(" WHERE ").push(&modequery).push(" AND items.active = true ");
+            q.append(&select_cols(nsfl, sid, src_col)).push(FROM).push(" WHERE ").push(&modequery).push(" AND items.active = true ");
             q.append(&vis).append(&common).push(" AND items.id != ").bind(anchor).push(" ");
             q.append(&exclude_sql).append(&mime_sql).append(&tag_sql).append(&nsfp_sql).append(&excl_tags);
             q.push(" ORDER BY random() LIMIT ").bind(limit - 1);
@@ -427,7 +429,7 @@ async fn feed_inner(st: &AppState, req: &Req) -> anyhow::Result<Response> {
         }
     } else {
         let mut q = Sql::new("SELECT ");
-        q.append(&select_cols(nsfl, sid)).push(FROM).push(" WHERE ").push(&modequery).push(" AND items.active = true ");
+        q.append(&select_cols(nsfl, sid, src_col)).push(FROM).push(" WHERE ").push(&modequery).push(" AND items.active = true ");
         q.append(&vis).append(&common).append(&cursor).append(&exclude_sql).append(&mime_sql).append(&tag_sql).append(&nsfp_sql).append(&excl_tags);
         q.push(order).push(" LIMIT ").bind(limit);
         q.fetch_all(&st.db).await?

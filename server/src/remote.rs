@@ -69,7 +69,8 @@ pub struct RemoteCfg {
     pub store_media: bool,
     /// Only these kinds (`video`, `image`, `audio`), each synced on its own; empty: everything.
     pub types: Vec<String>,
-    /// Blank every mirrored item's source URL.
+    /// Blank every mirrored item's source URL (`redact_src: true`; `admins` only hides it, see
+    /// [`src_visible`]).
     pub redact_src: bool,
 }
 
@@ -103,9 +104,47 @@ pub fn settings(cfg: &Config) -> Option<RemoteCfg> {
         interval: cfg.int("remote.interval").unwrap_or(0).max(0) as u64,
         store_media: cfg.truthy("remote.store_media"),
         types: media_types(cfg.get("remote.types")),
-        redact_src: cfg.truthy("remote.redact_src"),
+        redact_src: src_policy(cfg) == SrcPolicy::Drop,
         max_bytes: cfg.int("remote.max_media_mb").filter(|m| *m > 0).unwrap_or(1024) as u64 * 1024 * 1024,
     })
+}
+
+/// `remote.redact_src`: what happens to mirrored items' source URLs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SrcPolicy {
+    /// Kept and shown like any other item's (`false`).
+    Keep,
+    /// Kept, but only admins see them (`admins`).
+    Admins,
+    /// Not kept (`true`).
+    Drop,
+}
+
+/// Read straight from the config (not [`settings`]): hiding sources doesn't need the login.
+pub fn src_policy(cfg: &Config) -> SrcPolicy {
+    match cfg.get("remote.redact_src") {
+        Value::String(s) if matches!(s.trim().to_lowercase().as_str(), "admins" | "admin") => SrcPolicy::Admins,
+        v if crate::config::truthy(v) => SrcPolicy::Drop,
+        _ => SrcPolicy::Keep,
+    }
+}
+
+/// SQL for `items.src` as this viewer may see it: blank for mirrored items unless admin, with
+/// `redact_src: admins` (search, feeds).
+pub fn src_sql(cfg: &Config, admin: bool) -> &'static str {
+    if !admin && src_policy(cfg) == SrcPolicy::Admins {
+        "(CASE WHEN items.id IN (SELECT item_id FROM remote_items) THEN '' ELSE items.src END)"
+    } else {
+        "items.src"
+    }
+}
+
+/// Whether this viewer may see item `id`'s source (the item page).
+pub async fn src_visible(st: &AppState, id: i64, admin: bool) -> bool {
+    if admin || src_policy(&st.cfg()) != SrcPolicy::Admins {
+        return true;
+    }
+    !matches!(sql!("SELECT 1 AS x FROM remote_items WHERE item_id = ", id as i32).fetch_optional(&st.db).await, Ok(Some(_)))
 }
 
 /// The remote's media kinds (its feed filters by these): `video`, `image`, `audio`.
@@ -1167,6 +1206,18 @@ mod tests {
         assert_eq!(thumb_name("_blur.webp"), None);
         assert_eq!(thumb_name("12.png"), None);
         assert_eq!(avatar_file_name(56660), "remote_56660.webp");
+    }
+
+    #[test]
+    fn src_policies() {
+        let p = |v: Value| src_policy(&crate::bot::tests::test_cfg(json!({ "remote": { "redact_src": v } })));
+        assert_eq!(p(json!(false)), SrcPolicy::Keep);
+        assert_eq!(p(Value::Null), SrcPolicy::Keep);
+        assert_eq!(p(json!(true)), SrcPolicy::Drop);
+        assert_eq!(p(json!("Admins")), SrcPolicy::Admins);
+        let cfg = crate::bot::tests::test_cfg(json!({ "remote": { "redact_src": "admins" } }));
+        assert_eq!(src_sql(&cfg, true), "items.src");
+        assert!(src_sql(&cfg, false).contains("remote_items"));
     }
 
     #[test]

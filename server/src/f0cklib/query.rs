@@ -785,6 +785,9 @@ pub struct Viewer<'a> {
     pub user_id: i64,
     pub owner: Option<&'a str>,
     pub admin: bool,
+    /// `items.src` as this viewer may search it ([`crate::remote::src_sql`]: a mirrored item's
+    /// source can be admins-only).
+    pub src_col: &'static str,
 }
 
 /// `%text%` for ILIKE, the user's own `%`, `_` and `\` taken literally.
@@ -862,7 +865,11 @@ fn term_sql(term: &Term, v: &Viewer) -> Sql {
     match term {
         Term::Tag { .. } | Term::Wild(_) => in_tags(tag_match(term).expect("a tag term")),
         Term::Title(s) => sql!("items.title ILIKE ", contains_pattern(s)),
-        Term::Src(s) => sql!("items.src ILIKE ", contains_pattern(s)),
+        Term::Src(s) => {
+            let mut q = Sql::new(v.src_col);
+            q.push(" ILIKE ").bind(contains_pattern(s));
+            q
+        }
         Term::User(n) => {
             let p = name_pattern(n);
             sql!(r#"(items.username ILIKE "#, p.clone(), r#" OR items.username IN (SELECT "user" FROM "user" WHERE login ILIKE "#, p, "))")
@@ -904,7 +911,7 @@ fn term_sql(term: &Term, v: &Viewer) -> Sql {
             Flag::Private => Sql::new("items.visibility = 2"),
             Flag::Expiring => Sql::new("items.expires_at IS NOT NULL"),
             Flag::HasTitle => Sql::new("COALESCE(btrim(items.title), '') <> ''"),
-            Flag::HasSrc => Sql::new("items.src ILIKE 'http%'"),
+            Flag::HasSrc => Sql::new(&format!("{} ILIKE 'http%'", v.src_col)),
             Flag::HasComments => Sql::new("EXISTS (SELECT 1 FROM comments hc WHERE hc.item_id = items.id AND hc.is_deleted IS NOT TRUE)"),
             Flag::HasFavs => Sql::new("EXISTS (SELECT 1 FROM favorites hf WHERE hf.item_id = items.id)"),
             Flag::HasTags => Sql::new(&format!(
@@ -1126,7 +1133,7 @@ mod tests {
 
     #[test]
     fn sql_is_bound() {
-        let v = Viewer { user_id: 1, owner: Some("al"), admin: false };
+        let v = Viewer { user_id: 1, owner: Some("al"), admin: false, src_col: "items.src" };
         let q = parse("cat% -user:a_b views:>3", false, true);
         let c = conditions(&q, &v, Some(9));
         let text = c.sql();
