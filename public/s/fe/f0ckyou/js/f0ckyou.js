@@ -184,13 +184,45 @@
     });
   };
 
+  // ── mods edit a comment in place, as in f0ckm (snippets/comments.html): Edit swaps the text for
+  //    the field with the emoji picker, Cancel brings the text back, Save (the .fy-ajax form) sends
+  //    it and the list is swapped in. The links work without JavaScript too (#edit-c<id>). ──
+  const endEdit = (form, restore = true) => {
+    const ta = form.elements.content;
+    ta._f0ckEmojiPicker?.close();
+    if (restore) ta.value = ta.defaultValue;
+    form.closest('.fy-comment')?.classList.remove('fy-editing');
+  };
+  document.addEventListener('click', e => {
+    const open = e.target.closest('.fy-edit-link');
+    const cancel = !open && e.target.closest('.fy-edit-cancel');
+    if (!open && !cancel) return;
+    e.preventDefault();
+    if (cancel) {
+      endEdit(cancel.closest('form'));
+      return;
+    }
+    const form = document.getElementById(`edit-c${open.dataset.edit}`);
+    if (!form) return;
+    // one at a time
+    document.querySelectorAll('.fy-comment.fy-editing .fy-comment-edit').forEach(f => { if (f !== form) endEdit(f); });
+    form.closest('.fy-comment').classList.add('fy-editing');
+    const ta = form.elements.content;
+    if (window.f0ckEmojiPicker) {
+      window.f0ckEmojiPicker.attach({ textarea: ta, trigger: form.querySelector('.fy-emoji-btn'), box: form.querySelector('.f0ck-ep'), onChange: growField });
+    }
+    growField(ta);
+    ta.focus({ preventScroll: true });
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+  });
+
   // ── the comment field grows with its lines (rows, not an inline height) ──
   const growField = ta => {
     if (!ta) return;
     ta.rows = Math.min(12, Math.max(1, ta.value.split('\n').length));
   };
   document.addEventListener('input', e => {
-    if (e.target.matches?.('#comment-form textarea')) growField(e.target);
+    if (e.target.matches?.('#comment-form textarea, .fy-comment-edit textarea')) growField(e.target);
   });
 
   // ── live regions: swap [data-fy-live="name"] in from a fresh render of this page ──
@@ -218,6 +250,14 @@
           const el = document.importNode(next, true);
           // an opened box (the description) stays open
           if (cur.tagName === 'DETAILS' && cur.open) el.open = true;
+          // a comment being edited stays in edit: its field (text, cursor, emoji picker) goes along
+          cur.querySelectorAll('.fy-comment.fy-editing').forEach(c => {
+            const form = c.querySelector(':scope > .fy-comment-main > .fy-comment-edit');
+            const twin = el.querySelector(`#${c.id} > .fy-comment-main > .fy-comment-edit`);
+            if (!form || !twin) return;
+            twin.replaceWith(form);
+            form.closest('.fy-comment').classList.add('fy-editing');
+          });
           cur.replaceWith(el);
           decorate(el);
         }
@@ -462,6 +502,8 @@
       // a tag suggestion that is a tag now: checked, no second click
       if ('fyAdded' in form.dataset) form.classList.add('is-added');
       if (form.dataset.fyOk) flash(form.dataset.fyOk, 'success');
+      // an edited comment: back to its (new) text
+      if ('fyEdit' in form.dataset) endEdit(form, false);
       if (action.startsWith('/api/notifications')) notifBadge();
       await refresh((form.dataset.fyRefresh || '').split(/\s+/).filter(Boolean));
       const id = data?.comment?.id;

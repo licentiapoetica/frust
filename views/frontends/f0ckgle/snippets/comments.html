@@ -1,6 +1,6 @@
 {#- Comments under an item as "Discussions and forums". The server sends them as static_comments
     (routes/comments.rs static_item_comments, text effects included), so they need no JavaScript.
-    With JavaScript, f0ckgle.js posts, replies and deletes with fetch and swaps in the list
+    With JavaScript, f0ckgle.js posts, replies, edits and deletes with fetch and swaps in the list
     (data-fg-live) from a fresh render of the page, also when a comment arrives live, and shows the
     custom emojis :name: as pictures (the server copy has them as text). Reply without
     JavaScript: a link (?reply=<id>) that fills the form's parent_id. -#}
@@ -16,6 +16,21 @@
     {% for b in (c.backlinks or []) %}<a href="#c{{ b }}" class="fg-quote">&gt;&gt;{{ b }}</a> {% endfor %}
   </div>
   <div class="fg-comment-body">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+  {% if is_mod_or_admin %}
+  {#- mods edit a comment in place, as in f0ckm: Edit swaps the text for this field (with the
+      emoji picker), Cancel brings the text back. Without JavaScript the Edit link opens it
+      (#edit-c<id>, :target) and Cancel goes back to #c<id>. -#}
+  <form method="post" action="/api/comments/{{ c.id }}/edit" class="fg-comment-edit fg-ajax" id="edit-c{{ c.id }}" data-fg-refresh="comments" data-fg-edit>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="back" value="{{ here_path }}#c{{ c.id }}">
+    <textarea name="content" rows="3" required aria-label="Edit comment #{{ c.id }}"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}>{{ (c.content or "") }}</textarea>
+    <div class="fg-emoji-box" id="fg-emoji-box-e{{ c.id }}" hidden></div>
+    <div class="fg-comment-tools">
+      <button type="button" class="fg-chip fg-chip-small js-only fg-emoji-btn" aria-expanded="false" aria-controls="fg-emoji-box-e{{ c.id }}" title="Emojis">&#9786; Emojis</button>
+      <span class="fg-edit-buttons"><a class="fg-btn-text fg-edit-cancel" href="#c{{ c.id }}">Cancel</a><button type="submit" class="fg-btn-blue">Save</button></span>
+    </div>
+  </form>
+  {% endif %}
   <div class="fg-comment-actions">
     {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" data-reply="{{ c.id }}" data-name="{{ (c.name or "anonymous") }}">Reply</a>{% endif %}
     {% if session and (is_mod_or_admin or (allow_comment_deletion and c.username and (c.username|lower) == me)) %}
@@ -25,6 +40,7 @@
       <button type="submit" class="fg-linkbtn">Delete</button>
     </form>
     {% endif %}
+    {% if is_mod_or_admin %}<a href="#edit-c{{ c.id }}" class="fg-edit-link" data-edit="{{ c.id }}">Edit</a>{% endif %}
   </div>
 </div>
 {%- endmacro -%}

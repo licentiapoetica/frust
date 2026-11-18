@@ -1820,6 +1820,58 @@ video.fg-media-el {
   color: var(--fg-dim);
 }
 
+/* mods edit a comment in place, as in f0ckm: the field takes the text's place (and the actions
+   go) while .fg-editing is on the comment (f0ckgle.js), or without JavaScript while the form is
+   the :target (#edit-c<id>) */
+.fg-comment-edit {
+  display: none;
+}
+
+.fg-comment-edit:target,
+.fg-comment.fg-editing .fg-comment-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .5rem;
+  margin: .25rem 0 .5rem 2.375rem;
+}
+
+.fg-comment:has(> .fg-comment-edit:target) > :is(.fg-comment-body, .fg-comment-actions),
+.fg-comment.fg-editing > :is(.fg-comment-body, .fg-comment-actions) {
+  display: none;
+}
+
+.fg-comment-edit textarea {
+  width: 100%;
+  padding: .625rem .75rem;
+  border: 1px solid var(--fg-border);
+  background: var(--fg-field);
+  color: inherit;
+  font: inherit;
+  resize: vertical;
+}
+
+.fg-comment-edit textarea:focus {
+  border-color: var(--fg-blue);
+  outline: 0;
+}
+
+.fg-edit-buttons {
+  display: flex;
+  gap: .5rem;
+  margin-left: auto;
+}
+
+.fg-edit-cancel {
+  background: none;
+  color: var(--fg-link);
+}
+
+.fg-edit-cancel:hover {
+  background: var(--fg-surface);
+  text-decoration: none;
+}
+
 .fg-comment-form {
   display: flex;
   flex-direction: column;

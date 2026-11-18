@@ -1414,12 +1414,19 @@ mod tests {
         let tags = serde_json::json!([{ "id": 1, "tag": "sfw", "normalized": "sfw", "can_exclude": false }, { "id": 9, "tag": "Cat", "normalized": "cat", "can_exclude": true, "is_excluded": true }]);
         let it = serde_json::json!({ "id": 7, "username": "al", "mime": "video/mp4", "dest": "/b/7.mp4", "size": "1 MB", "tags": tags, "timestamp": { "timeago": "1 day ago", "timefull": "x" },
             "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" } });
-        let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x", "replies": [] });
+        let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content": "hi <b>", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x", "replies": [] });
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it,
             "pagination": { "prev": 8, "next": 6 }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_manage_item": true, "can_extract_meta": true,
             "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice" }));
         dump("item", &page);
         assert!(page.contains("<a class=\"fg-chip\" id=\"fg-prev\" href=\"/tag/cat/8\""));
+        // mods edit comments in place (as in f0ckm): Edit opens the form in the text's place (#edit-c3,
+        // :target without JavaScript), the text escaped in the field, with the emoji picker
+        assert!(page.contains("<form method=\"post\" action=\"/api/comments/3/edit\" class=\"fg-comment-edit fg-ajax\" id=\"edit-c3\" data-fg-refresh=\"comments\" data-fg-edit>"));
+        assert!(page.contains("aria-label=\"Edit comment #3\">hi &lt;b&gt;</textarea>"));
+        assert!(page.contains("<a href=\"#edit-c3\" class=\"fg-edit-link\" data-edit=\"3\">Edit</a>"));
+        assert!(page.contains("fg-emoji-btn\" aria-expanded=\"false\" aria-controls=\"fg-emoji-box-e3\""));
+        assert!(page.contains("fg-edit-cancel\" href=\"#c3\">Cancel</a>"));
         assert!(page.contains("<input type=\"hidden\" name=\"action\" value=\"remove\">"));
         assert!(page.contains("<form method=\"post\" action=\"/api/v2/item/7/rating\" class=\"fg-inline fg-ajax\" data-fg-refresh=\"kp\">"));
         assert!(page.contains("class=\"f0ck-exclude-form is-excluded\" data-tag-id=\"9\""));
@@ -1678,13 +1685,20 @@ mod tests {
             "timestamp": { "timeago": "1 day ago", "timefull": "x" }, "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" }, "views": "12345" });
         let rec = serde_json::json!({ "id": 9, "slug": null, "title": null, "tags": ["cat", "dog"], "username": "al", "display_name": "Al", "mime": "video/mp4",
             "stamp": 1_794_700_000, "views": 1, "personalized": true, "rating_class": "nsfw", "has_coverart": false, "duration": 3725, "dest": "r.webm" });
-        let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
+        let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content": "hi <b>", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
             "replies": [{ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content_html": "yo", "attachments_html": "", "timeago": "now", "iso": "x" }] });
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it.clone(),
             "pagination": { "prev": 6, "next": 8, "cheat": [4, 5, 6, 7, 8, 9] }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_manage_item": true,
             "can_extract_meta": true, "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice",
             "recommendations": [rec.clone()] }));
         dump("item", &page);
+        // mods edit comments in place (as in f0ckm): Edit opens the form in the text's place (#edit-c3,
+        // :target without JavaScript), the text escaped in the field, with the emoji picker
+        assert!(page.contains("<form method=\"post\" action=\"/api/comments/3/edit\" class=\"fy-comment-edit fy-ajax\" id=\"edit-c3\" data-fy-refresh=\"comments\" data-fy-edit>"));
+        assert!(page.contains("aria-label=\"Edit comment #3\">hi &lt;b&gt;</textarea>"));
+        assert!(page.contains("<a href=\"#edit-c3\" class=\"fy-edit-link\" data-edit=\"3\">Edit</a>"));
+        assert!(page.contains("fy-emoji-btn\" aria-expanded=\"false\" aria-controls=\"fy-emoji-box-e3\""));
+        assert!(page.contains("fy-edit-cancel\" href=\"#c3\">Cancel</a>"));
         // a song: its square cover and the audio element (native controls without JavaScript,
         // f0ckyou.js puts v0ck on it)
         let mut song = it.clone();

@@ -1435,6 +1435,8 @@ pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Se
             "username_color": if anon { Value::Null } else { c.get("username_color").cloned().unwrap_or(Value::Null) },
             "avatar_src": avatar,
             "banner": banner.map(|b| json!({ "file": b, "position": pos, "size": size })),
+            // the text as written, for the mods' edit field (the frontends' item pages)
+            "content": &content,
             "content_html": frame_comment_html(&content, "", &hosts),
             "attachments_html": frame_attachments_html(&files, &content),
             "timeago": created.map(|t| crate::util::time_ago(&tr, (now - t.with_timezone(&chrono::Utc)).num_seconds().max(0))).unwrap_or_default(),

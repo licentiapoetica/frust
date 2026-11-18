@@ -1,7 +1,7 @@
 {#- Comments under the player: the count, the form (your square avatar, the field, emojis, Comment),
     then the threads. The server sends them as static_comments (routes/comments.rs
     static_item_comments, text effects included), so they need no JavaScript. With JavaScript,
-    f0ckyou.js posts, replies and deletes with fetch and swaps in the list (data-fy-live) from a fresh
+    f0ckyou.js posts, replies, edits and deletes with fetch and swaps in the list (data-fy-live) from a fresh
     render of the page, also when a comment arrives live, and shows the custom emojis :name: as
     pictures (the server copy has them as text). Reply without JavaScript: a link (?reply=<id>) that
     fills the form's parent_id. -#}
@@ -20,6 +20,23 @@
       {% for b in (c.backlinks or []) %}<a href="#c{{ b }}" class="fy-quote">&gt;&gt;{{ b }}</a> {% endfor %}
     </div>
     <div class="fy-comment-body">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+    {% if is_mod_or_admin %}
+    {#- mods edit a comment in place, as in f0ckm: Edit swaps the text for this field (with the
+        emoji picker), Cancel brings the text back. Without JavaScript the Edit link opens it
+        (#edit-c<id>, :target) and Cancel goes back to #c<id>. -#}
+    <form method="post" action="/api/comments/{{ c.id }}/edit" class="fy-comment-edit fy-ajax" id="edit-c{{ c.id }}" data-fy-refresh="comments" data-fy-edit>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ here_path }}#c{{ c.id }}">
+      <textarea name="content" rows="2" required aria-label="Edit comment #{{ c.id }}"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}>{{ (c.content or "") }}</textarea>
+      <div class="f0ck-ep" id="fy-emoji-box-e{{ c.id }}" hidden></div>
+      <div class="fy-comment-tools">
+        <button type="button" class="fy-iconbtn js-only fy-emoji-btn" aria-expanded="false" aria-controls="fy-emoji-box-e{{ c.id }}" title="Emojis">{{ fy.ico("smile") }}<span class="fy-sr">Emojis</span></button>
+        <span class="fy-grow"></span>
+        <a class="fy-btn-text fy-edit-cancel" href="#c{{ c.id }}">Cancel</a>
+        <button type="submit" class="fy-btn-blue">Save</button>
+      </div>
+    </form>
+    {% endif %}
     <div class="fy-comment-actions">
       {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" data-reply="{{ c.id }}" data-name="{{ (c.name or "anonymous") }}">Reply</a>{% endif %}
       {% if session and (is_mod_or_admin or (allow_comment_deletion and c.username and (c.username|lower) == me)) %}
@@ -29,6 +46,7 @@
         <button type="submit" class="fy-linkbtn">Delete</button>
       </form>
       {% endif %}
+      {% if is_mod_or_admin %}<a href="#edit-c{{ c.id }}" class="fy-edit-link" data-edit="{{ c.id }}">Edit</a>{% endif %}
     </div>
   </div>
 </div>

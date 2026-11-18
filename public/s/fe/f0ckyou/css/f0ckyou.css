@@ -2711,6 +2711,46 @@ body.fy-page-watch {
   text-decoration: none;
 }
 
+/* mods edit a comment in place, as in f0ckm: the field takes the text's place (and the actions
+   go) while .fy-editing is on the comment (f0ckyou.js), or without JavaScript while the form is
+   the :target (#edit-c<id>) */
+.fy-comment-edit {
+  display: none;
+}
+
+.fy-comment-edit:target,
+.fy-comment.fy-editing .fy-comment-edit {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin: .25rem 0 .5rem;
+}
+
+.fy-comment-main:has(> .fy-comment-edit:target) > :is(.fy-comment-body, .fy-comment-actions),
+.fy-comment.fy-editing > .fy-comment-main > :is(.fy-comment-body, .fy-comment-actions) {
+  display: none;
+}
+
+.fy-comment-edit textarea {
+  width: 100%;
+  min-height: 1.875rem;
+  padding: .25rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--fy-line-strong);
+  background: none;
+  color: var(--fy-text);
+  font: inherit;
+  font-size: .875rem;
+  line-height: 1.25rem;
+  resize: none;
+}
+
+.fy-comment-edit textarea:focus {
+  border-bottom-color: var(--fy-text);
+  box-shadow: 0 1px 0 var(--fy-text);
+  outline: 0;
+}
+
 .fy-replies {
   margin-left: 3.5rem;
 }

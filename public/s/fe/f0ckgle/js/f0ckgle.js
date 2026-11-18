@@ -75,17 +75,17 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => emojify(document.body));
   else emojify(document.body);
   window.addEventListener('f0ck:emojis_updated', () => {
-    const box = document.getElementById('fg-emoji-box');
-    if (box) box.replaceChildren();
+    document.querySelectorAll('.fg-emoji-box').forEach(box => box.replaceChildren());
     emojify(document.body);
   });
 
-  // the emoji picker under the comment field: inserts :name: at the cursor
+  // the emoji picker under a comment field (the comment form, a comment being edited): inserts
+  // :name: at the cursor of the field of its form
   document.addEventListener('click', async e => {
     const btn = e.target.closest('.fg-emoji-btn');
-    const box = document.getElementById('fg-emoji-box');
+    const box = btn && document.getElementById(btn.getAttribute('aria-controls'));
     if (!btn || !box) return;
-    const ta = document.querySelector('#comment-form textarea');
+    const ta = btn.closest('form')?.querySelector('textarea');
     if (!box.childElementCount) {
       const map = (await window.f0ckLoadEmojis?.()) || {};
       const names = Object.keys(map).sort();
@@ -118,6 +118,36 @@
     btn.setAttribute('aria-expanded', String(!box.hidden));
   });
 
+  // ── mods edit a comment in place, as in f0ckm (snippets/comments.html): Edit swaps the text for
+  //    the field with the emoji picker, Cancel brings the text back, Save (the .fg-ajax form) sends
+  //    it and the list is swapped in. The links work without JavaScript too (#edit-c<id>). ──
+  const endEdit = (form, restore = true) => {
+    const ta = form.elements.content;
+    if (restore) ta.value = ta.defaultValue;
+    const box = form.querySelector('.fg-emoji-box');
+    if (box) box.hidden = true;
+    form.querySelector('.fg-emoji-btn')?.setAttribute('aria-expanded', 'false');
+    form.closest('.fg-comment')?.classList.remove('fg-editing');
+  };
+  document.addEventListener('click', e => {
+    const open = e.target.closest('.fg-edit-link');
+    const cancel = !open && e.target.closest('.fg-edit-cancel');
+    if (!open && !cancel) return;
+    e.preventDefault();
+    if (cancel) {
+      endEdit(cancel.closest('form'));
+      return;
+    }
+    const form = document.getElementById(`edit-c${open.dataset.edit}`);
+    if (!form) return;
+    // one at a time
+    document.querySelectorAll('.fg-comment.fg-editing .fg-comment-edit').forEach(f => { if (f !== form) endEdit(f); });
+    form.closest('.fg-comment').classList.add('fg-editing');
+    const ta = form.elements.content;
+    ta.focus({ preventScroll: true });
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+  });
+
   // ── live regions: swap [data-fg-live="name"] in from a fresh render of this page ──
   const pageUrl = () => {
     const u = new URL(location.href);
@@ -140,6 +170,14 @@
         const next = doc.querySelector(`[data-fg-live="${n}"]`);
         if (cur && next) {
           const el = document.importNode(next, true);
+          // a comment being edited stays in edit: its field (text, cursor, emoji picker) goes along
+          cur.querySelectorAll('.fg-comment.fg-editing').forEach(c => {
+            const form = c.querySelector(':scope > .fg-comment-edit');
+            const twin = el.querySelector(`#${c.id} > .fg-comment-edit`);
+            if (!form || !twin) return;
+            twin.replaceWith(form);
+            form.closest('.fg-comment').classList.add('fg-editing');
+          });
           cur.replaceWith(el);
           emojify(el);
         }
@@ -217,6 +255,8 @@
       // a tag suggestion that is a tag now: checked, no second click
       if ('fgAdded' in form.dataset) form.classList.add('is-added');
       if (form.dataset.fgOk) flash(form.dataset.fgOk, 'success');
+      // an edited comment: back to its (new) text
+      if ('fgEdit' in form.dataset) endEdit(form, false);
       await refresh((form.dataset.fgRefresh || '').split(/\s+/).filter(Boolean));
       const id = data?.comment?.id;
       const el = id && document.getElementById(`c${id}`);
