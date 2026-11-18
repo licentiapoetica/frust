@@ -11827,12 +11827,10 @@ input#s_avatar {
   display: flex;
   align-items: center;
   gap: 6px;
-  /* no vertical padding: the avatar fills the button's height;
-     the sides match, so the avatar doesn't touch the left edge */
-  padding-top: 0;
-  padding-bottom: 0;
-  padding-left: 5px;
-  padding-right: 5px;
+  /* the same space on all four sides of the avatar: the button grows with it (not .nav-user-btn's
+     2rem) */
+  height: auto;
+  padding: 5px;
   transition: border-color 0.2s, background 0.2s;
 }
 
