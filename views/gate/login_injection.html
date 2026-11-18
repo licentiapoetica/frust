@@ -44,9 +44,15 @@
         <input type="password" name="password" placeholder="Password (min. 20 characters)" autocomplete="off" required minlength="20" class="gate-input" />
         <input type="password" name="password_confirm" placeholder="Confirm password" autocomplete="off" required minlength="20" class="gate-input" />
         {% if registration_apply %}
-        <input type="text" name="token" placeholder="Invite token (if you have one)" autocomplete="off" class="gate-input" />
-        <textarea name="application" maxlength="1000" rows="4" placeholder="No token? Tell us why you want an account (min. 20 characters)" class="gate-input gate-textarea"></textarea>
-        <input type="email" name="email" placeholder="{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}" autocomplete="off" class="gate-input" />
+        {#- An invite token or an application: the answer shows one of them (CSS :has()) -#}
+        <div class="gate-invite-choice" role="radiogroup" aria-label="Do you have an invite token?">
+          <span>Do you have an invite token?</span>
+          <label class="gate-kmsi"><input type="radio" name="has_invite" value="yes" required> Yes</label>
+          <label class="gate-kmsi"><input type="radio" name="has_invite" value="no" required> No, I want to apply</label>
+        </div>
+        <input type="text" name="token" placeholder="Invite token" autocomplete="off" class="gate-input reg-if-token" />
+        <textarea name="application" maxlength="1000" rows="4" placeholder="Tell us why you want an account (min. 20 characters)" class="gate-input gate-textarea reg-if-apply"></textarea>
+        <input type="email" name="email" placeholder="{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}" autocomplete="off" class="gate-input reg-if-apply" />
         {% else %}
         <input type="text" name="token" placeholder="Invite token" autocomplete="off" class="gate-input" />
         {% endif %}

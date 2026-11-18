@@ -17,13 +17,21 @@
     <label class="fg-field"><input type="text" name="username" placeholder=" " autocomplete="username" required><span>Username</span></label>
     <label class="fg-field"><input type="password" name="password" placeholder=" " autocomplete="new-password" required minlength="20"><span>Password (min. 20 characters)</span></label>
     <label class="fg-field"><input type="password" name="password_confirm" placeholder=" " autocomplete="new-password" required minlength="20"><span>Confirm</span></label>
+    {#- the token of an invite link (early.js: /?register=1&token=…, /register: /?invite=…) -#}
+    {%- set invite_token = (token if (token is defined and token) else (((url.qs.token or url.qs.invite) or "") if (url is defined and url and url.qs) else "")) %}
     {% if registration_apply %}
-    {#- Registration by application: an invite token, or a message for the admins -#}
-    <label class="fg-field"><input type="text" name="token" placeholder=" " autocomplete="off" value="{{ (token if token is defined else "") }}"><span>Invite token (if you have one)</span></label>
-    <label class="fg-field"><textarea name="application" maxlength="1000" rows="4" placeholder=" "></textarea><span>No token? Tell us why you want an account (min. 20 characters)</span></label>
-    <label class="fg-field"><input type="email" name="email" placeholder=" " autocomplete="email"><span>{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}</span></label>
+    {#- Registration by application: an invite token, or a message for the admins. The answer shows
+        one of them (CSS :has(), no JavaScript needed); the server ignores the other -#}
+    <div class="fg-invite-choice" role="radiogroup" aria-label="Do you have an invite token?">
+      <span class="fg-invite-q">Do you have an invite token?</span>
+      <label class="fg-check"><input type="radio" name="has_invite" value="yes" required{% if invite_token %} checked{% endif %}> Yes</label>
+      <label class="fg-check"><input type="radio" name="has_invite" value="no" required> No, I want to apply</label>
+    </div>
+    <label class="fg-field reg-if-token"><input type="text" name="token" placeholder=" " autocomplete="off" value="{{ invite_token }}"><span>Invite token</span></label>
+    <label class="fg-field reg-if-apply"><textarea name="application" maxlength="1000" rows="4" placeholder=" "></textarea><span>Tell us why you want an account (min. 20 characters)</span></label>
+    <label class="fg-field reg-if-apply"><input type="email" name="email" placeholder=" " autocomplete="email"><span>{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}</span></label>
     {% elif not registration_open %}
-    <label class="fg-field"><input type="text" name="token" placeholder=" " autocomplete="off" value="{{ (token if token is defined else "") }}" required><span>Invite token</span></label>
+    <label class="fg-field"><input type="text" name="token" placeholder=" " autocomplete="off" value="{{ invite_token }}" required><span>Invite token</span></label>
     {% elif registration_require_mail_andor_token %}
     <label class="fg-field"><input type="email" name="email" placeholder=" " autocomplete="email" required><span>Email</span></label>
     {% endif %}

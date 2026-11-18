@@ -18,18 +18,25 @@
         </div>
     </div>
     {% if registration_apply %}
-    {#- Registration by application: an invite token, or a message for the admins -#}
-    <div class="form-group">
+    {#- Registration by application: an invite token, or a message for the admins. The answer shows
+        one of them (CSS :has(), no JavaScript needed); the server ignores the other -#}
+    {%- set has_invite_link = ((token is defined and token) or (url and url.qs and url.qs.invite)) %}
+    <div class="form-group w0bm-invite-choice" role="radiogroup" aria-label="Do you have an invite token?">
+        <span>Do you have an invite token?</span>
+        <label class="radio-inline"><input type="radio" name="has_invite" value="yes" required{% if has_invite_link %} checked{% endif %}> Yes</label>
+        <label class="radio-inline"><input type="radio" name="has_invite" value="no" required> No, I want to apply</label>
+    </div>
+    <div class="form-group reg-if-token">
         <div class="reg_username">
-            <input class="form-control" placeholder="Invite token (if you have one)" name="token" type="text" value="{% if (token is defined and token) %}{{ token }}{% elif (url and url.qs and url.qs.invite) %}{{ url.qs.invite }}{% endif %}" autocomplete="off">
+            <input class="form-control" placeholder="Invite token" name="token" type="text" value="{% if (token is defined and token) %}{{ token }}{% elif (url and url.qs and url.qs.invite) %}{{ url.qs.invite }}{% endif %}" autocomplete="off">
         </div>
     </div>
-    <div class="form-group">
+    <div class="form-group reg-if-apply">
         <div class="reg_username">
-            <textarea class="form-control w0bm-register-application" placeholder="No token? Tell us why you want an account (min. 20 characters)" name="application" maxlength="1000" rows="4"></textarea>
+            <textarea class="form-control w0bm-register-application" placeholder="Tell us why you want an account (min. 20 characters)" name="application" maxlength="1000" rows="4"></textarea>
         </div>
     </div>
-    <div class="form-group">
+    <div class="form-group reg-if-apply">
         <div class="reg_username">
             <input class="form-control" placeholder="{{ ("E-Mail (needed to apply)" if registration_apply_email else "E-Mail (optional)") }}" name="email" type="email" autocomplete="email">
         </div>

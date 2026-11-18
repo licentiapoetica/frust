@@ -4495,6 +4495,31 @@ body.fy-page-watch {
   cursor: pointer;
 }
 
+/* Registration by application: "Do you have an invite token?" shows either the token field or the
+   application (message + email), never both; no JavaScript needed */
+form:not(:has(input[name="has_invite"][value="yes"]:checked)) .reg-if-token,
+form:not(:has(input[name="has_invite"][value="no"]:checked)) .reg-if-apply {
+  display: none !important;
+}
+
+.fy-invite-choice {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.fy-invite-q {
+  font-weight: 500;
+}
+
+.fy-invite-choice .fy-check {
+  align-items: center;
+}
+
+.fy-invite-choice input {
+  margin: 0;
+}
+
 .fy-signin-more {
   display: flex;
   flex-wrap: wrap;

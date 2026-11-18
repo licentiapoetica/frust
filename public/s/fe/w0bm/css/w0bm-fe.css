@@ -1392,6 +1392,20 @@ textarea.form-control.w0bm-register-application {
     resize: vertical;
     min-height: 80px;
 }
+
+/* Registration by application: "Do you have an invite token?" shows either the token field or the
+   application (message + email), never both; no JavaScript needed */
+form:not(:has(input[name="has_invite"][value="yes"]:checked)) .reg-if-token,
+form:not(:has(input[name="has_invite"][value="no"]:checked)) .reg-if-apply {
+    display: none !important;
+}
+.w0bm-invite-choice > span {
+    display: block;
+    margin-bottom: 4px;
+}
+.w0bm-invite-choice .radio-inline {
+    cursor: pointer;
+}
 .w0bm-ul textarea.form-control {
     resize: vertical;
     min-height: 64px;

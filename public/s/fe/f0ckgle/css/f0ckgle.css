@@ -2357,6 +2357,32 @@ body.fg-page-login {
   gap: .5rem;
 }
 
+/* Registration by application: "Do you have an invite token?" shows either the token field or the
+   application (message + email), never both; no JavaScript needed */
+form:not(:has(input[name="has_invite"][value="yes"]:checked)) .reg-if-token,
+form:not(:has(input[name="has_invite"][value="no"]:checked)) .reg-if-apply {
+  display: none !important;
+}
+
+.fg-invite-choice {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.fg-invite-q {
+  font-weight: 500;
+}
+
+.fg-invite-choice .fg-check {
+  cursor: pointer;
+}
+
+.fg-invite-choice input {
+  margin: 0;
+  accent-color: var(--fg-blue);
+}
+
 .fg-signin-more {
   display: flex;
   flex-wrap: wrap;

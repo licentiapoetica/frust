@@ -335,6 +335,7 @@ const AUTH_ERRORS: &[(&str, &str)] = &[
     ("token_invalid", "Invalid or used invite token"),
     ("token_expired", "Invalid, used or expired invite token"),
     ("app_required", "An invite token or a message why you want an account is required."),
+    ("app_both", "Fill in either an invite token or an application, not both."),
     ("app_length", "Tell us in 20 to 1000 characters why you want an account."),
     ("app_email", "A valid email is required to apply."),
     ("app_anon", "Anonymous accounts request an invite in their settings."),
@@ -662,6 +663,21 @@ pub(crate) struct NewUser<'a> {
     pub activation_token: Option<&'a str>,
 }
 
+/// Registration by application: either an invite token or an application, never both. The answer
+/// to the forms' "Do you have an invite token?" (`has_invite`: `yes` / `no`) picks one and drops what
+/// was typed into the other (a field hidden after switching the answer is still sent). Without an
+/// answer (older forms, scripts) both filled in is refused, rather than trying only the token and
+/// losing the application. Returns the token and application to go on with.
+fn invite_or_application(has_invite: Option<&str>, token: Option<String>, application: String) -> Result<(Option<String>, String), &'static str> {
+    match has_invite {
+        Some("yes") if token.is_none() => Err("Invite token is required for registration."),
+        Some("yes") => Ok((token, String::new())),
+        Some("no") => Ok((None, application)),
+        _ if token.is_some() && !application.is_empty() => Err("Fill in either an invite token or an application, not both."),
+        _ => Ok((token, application)),
+    }
+}
+
 /// Insert a regular account with its default options (registration, an approved application).
 /// The new user's id.
 pub(crate) async fn insert_user(st: &AppState, conn: &mut sqlx::PgConnection, u: NewUser<'_>) -> anyhow::Result<i32> {
@@ -694,8 +710,10 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
     let email = req.post_str("email").await.filter(|e| !e.is_empty());
     let password = req.post_str("password").await.filter(|p| !p.is_empty());
     let password_confirm = req.post_str("password_confirm").await;
-    let token = req.post_str("token").await.map(|t| t.trim().to_string()).filter(|t| !t.is_empty());
-    let application = req.post_str("application").await.map(|m| m.trim().to_string()).unwrap_or_default();
+    let mut token = req.post_str("token").await.map(|t| t.trim().to_string()).filter(|t| !t.is_empty());
+    let mut application = req.post_str("application").await.map(|m| m.trim().to_string()).unwrap_or_default();
+    // The application forms ask "Do you have an invite token?" first: `yes` or `no`
+    let has_invite = req.post_str("has_invite").await;
     let honeypot = req.post_str("email_confirm_field").await.filter(|h| !h.is_empty());
     let captcha = req.post_str("cap-token").await;
     let cap_image_id = req.post_str("cap-image-id").await;
@@ -765,6 +783,12 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
 
     let mut activated = true;
     let mut activation_token: Option<String> = None;
+    if !registration_open && st.settings.registration_applications(&cfg) {
+        match invite_or_application(has_invite.as_deref(), token.take(), std::mem::take(&mut application)) {
+            Ok((t, a)) => (token, application) = (t, a),
+            Err(msg) => render_error!(msg),
+        }
+    }
     // No token while registration is closed: an application, when the site takes them
     let applying = !registration_open && token.is_none() && st.settings.registration_applications(&cfg);
     if !registration_open && token.is_none() && !applying {
@@ -1039,6 +1063,25 @@ mod low_severity_tests {
         for bad in ["admin", "@x", "a@", "a b@c.d", "a@b\n"] {
             assert!(!super::valid_email(bad), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn invite_token_or_application() {
+        use super::invite_or_application as pick;
+        let tok = || Some("abc".to_string());
+        let app = || "please let me in, I upload a lot".to_string();
+        // the answer keeps one and drops what was typed into the other field
+        assert_eq!(pick(Some("yes"), tok(), app()), Ok((tok(), String::new())));
+        assert_eq!(pick(Some("no"), tok(), app()), Ok((None, app())));
+        assert_eq!(pick(Some("yes"), None, app()), Err("Invite token is required for registration."));
+        assert_eq!(pick(Some("no"), None, String::new()), Ok((None, String::new())));
+        // no answer: both filled in is refused, one alone goes through as before
+        assert_eq!(pick(None, tok(), app()), Err("Fill in either an invite token or an application, not both."));
+        assert_eq!(pick(Some("maybe"), tok(), app()), Err("Fill in either an invite token or an application, not both."));
+        assert_eq!(pick(None, tok(), String::new()), Ok((tok(), String::new())));
+        assert_eq!(pick(None, None, app()), Ok((None, app())));
+        // the refusal travels to the no-JS modal as a code
+        assert_eq!(super::auth_code(super::AUTH_ERRORS, "Fill in either an invite token or an application, not both."), Some("app_both"));
     }
 
     #[test]

@@ -854,6 +854,27 @@ html:where(.gate-cloudflare),
   display: none !important;
 }
 
+/* Registration by application: "Do you have an invite token?" shows either the token field or the
+   application (message + email), never both; no JavaScript needed */
+#gate-modal form:not(:has(input[name="has_invite"][value="yes"]:checked)) .reg-if-token,
+#gate-modal form:not(:has(input[name="has_invite"][value="no"]:checked)) .reg-if-apply {
+  display: none !important;
+}
+
+#gate-modal .gate-invite-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #333;
+}
+
+#gate-modal .gate-invite-choice .gate-kmsi {
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+}
+
 #gate-modal .gate-kmsi {
   font-size: 12px;
   color: #555;

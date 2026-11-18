@@ -581,15 +581,24 @@
           </button>
         </label>
         {% if registration_apply %}
-        {#- Registration by application (routes/register.rs): an invite token, or a message for the admins -#}
-        <label class="lm-field">
+        {#- Registration by application (routes/register.rs): an invite token, or a message for the admins.
+            The answer shows one of them (CSS :has(), no JavaScript needed); the server ignores the other -#}
+        {%- set has_invite_link = (url is defined and url.qs and url.qs.invite) %}
+        <div class="lm-invite-choice" role="radiogroup" aria-label="{{ t("auth.have_invite") }}">
+          <span class="lm-invite-q">{{ t("auth.have_invite") }}</span>
+          <div class="lm-invite-opts">
+            <label class="lm-invite-opt"><input type="radio" name="has_invite" value="yes" required{% if has_invite_link %} checked{% endif %} /><span><i class="fa-solid fa-ticket"></i>{{ t("auth.have_invite_yes") }}</span></label>
+            <label class="lm-invite-opt"><input type="radio" name="has_invite" value="no" required /><span><i class="fa-solid fa-pen-to-square"></i>{{ t("auth.have_invite_no") }}</span></label>
+          </div>
+        </div>
+        <label class="lm-field reg-if-token">
           <i class="fa-solid fa-ticket lm-field-icon"></i>
-          <input class="lm-input" type="text" name="token" placeholder="{{ t("auth.invite_token_optional") }}" aria-label="{{ t("auth.invite_token_optional") }}" autocomplete="off" spellcheck="false"{% if (url is defined and url.qs and url.qs.invite) %} value="{{ url.qs.invite }}"{% endif %} />
+          <input class="lm-input" type="text" name="token" placeholder="{{ t("auth.invite_token") }}" aria-label="{{ t("auth.invite_token") }}" autocomplete="off" spellcheck="false"{% if has_invite_link %} value="{{ url.qs.invite }}"{% endif %} />
         </label>
-        <label class="lm-field">
+        <label class="lm-field reg-if-apply">
           <textarea class="lm-textarea" name="application" maxlength="1000" rows="4" placeholder="{{ t("auth.application_placeholder") }}" aria-label="{{ t("auth.application_placeholder") }}"></textarea>
         </label>
-        <label class="lm-field">
+        <label class="lm-field reg-if-apply">
           <i class="fa-solid fa-envelope lm-field-icon"></i>
           <input class="lm-input" type="email" name="email" placeholder="{{ t("auth.email_apply_required" if registration_apply_email else "auth.email_apply_optional") }}" aria-label="{{ t("auth.email_apply_required" if registration_apply_email else "auth.email_apply_optional") }}" autocomplete="email" />
         </label>

@@ -20,13 +20,21 @@
       <label class="fy-field"><span>Username</span><input type="text" name="username" autocomplete="username" required></label>
       <label class="fy-field"><span>Password (min. 20 characters)</span><input type="password" name="password" autocomplete="new-password" required minlength="20"></label>
       <label class="fy-field"><span>Confirm</span><input type="password" name="password_confirm" autocomplete="new-password" required minlength="20"></label>
+      {#- the token of an invite link (early.js: /?register=1&token=…, /register: /?invite=…) -#}
+      {%- set invite_token = (token if (token is defined and token) else (((url.qs.token or url.qs.invite) or "") if (url is defined and url and url.qs) else "")) %}
       {% if registration_apply %}
-      {#- Registration by application: an invite token, or a message for the admins -#}
-      <label class="fy-field"><span>Invite token (if you have one)</span><input type="text" name="token" autocomplete="off" value="{{ (token if token is defined else "") }}"></label>
-      <label class="fy-field"><span>No token? Tell us why you want an account (min. 20 characters)</span><textarea name="application" maxlength="1000" rows="4"></textarea></label>
-      <label class="fy-field"><span>{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}</span><input type="email" name="email" autocomplete="email"></label>
+      {#- Registration by application: an invite token, or a message for the admins. The answer shows
+          one of them (CSS :has(), no JavaScript needed); the server ignores the other -#}
+      <div class="fy-invite-choice" role="radiogroup" aria-label="Do you have an invite token?">
+        <span class="fy-invite-q">Do you have an invite token?</span>
+        <label class="fy-check"><input type="radio" name="has_invite" value="yes" required{% if invite_token %} checked{% endif %}> Yes</label>
+        <label class="fy-check"><input type="radio" name="has_invite" value="no" required> No, I want to apply</label>
+      </div>
+      <label class="fy-field reg-if-token"><span>Invite token</span><input type="text" name="token" autocomplete="off" value="{{ invite_token }}"></label>
+      <label class="fy-field reg-if-apply"><span>Tell us why you want an account (min. 20 characters)</span><textarea name="application" maxlength="1000" rows="4"></textarea></label>
+      <label class="fy-field reg-if-apply"><span>{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}</span><input type="email" name="email" autocomplete="email"></label>
       {% elif not registration_open %}
-      <label class="fy-field"><span>Invite token</span><input type="text" name="token" autocomplete="off" value="{{ (token if token is defined else "") }}" required></label>
+      <label class="fy-field"><span>Invite token</span><input type="text" name="token" autocomplete="off" value="{{ invite_token }}" required></label>
       {% elif registration_require_mail_andor_token %}
       <label class="fy-field"><span>Email</span><input type="email" name="email" autocomplete="email" required></label>
       {% endif %}

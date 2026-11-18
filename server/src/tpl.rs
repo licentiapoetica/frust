@@ -2288,11 +2288,55 @@ mod tests {
             "registration_apply": true, "registration_apply_email": false, "url": { "pathname": "/", "search": "", "qs": {} } });
         for view in forms {
             let html = render(view, &ctx);
+            if let Ok(dir) = std::env::var("F0CKM_DUMP_REGISTER") {
+                std::fs::write(PathBuf::from(dir).join(view.replace('/', "_")), &html).unwrap();
+            }
             assert!(html.contains("name=\"application\""), "{view}: no message field");
             assert!(html.contains("name=\"email\""), "{view}: no email field");
             // the token is optional here
             let token = html.split("name=\"token\"").nth(1).unwrap_or_else(|| panic!("{view}: no token field"));
             assert!(!token.split('>').next().unwrap().contains("required"), "{view}: token still required");
+            // "Do you have an invite token?" yes / no shows either the token or the application (CSS :has())
+            assert_eq!(html.matches("name=\"has_invite\"").count(), 2, "{view}: no invite question");
+            assert!(html.contains("value=\"yes\"") && html.contains("value=\"no\""), "{view}");
+            let tag = |name: &str| {
+                let start = html.find(&format!("name=\"{name}\"")).unwrap();
+                // the field or a wrapper up to three tags before it (icon, inner div) carries the class
+                let open = html[..start].rmatch_indices('<').nth(3).map_or(0, |(i, _)| i);
+                html[open..start + html[start..].find('>').unwrap()].to_string()
+            };
+            assert!(tag("token").contains("reg-if-token"), "{view}: token field not tied to the answer");
+            for f in ["application", "email"] {
+                assert!(tag(f).contains("reg-if-apply"), "{view}: {f} not tied to the answer");
+            }
+            // nothing is preselected without an invite link
+            assert!(!html.contains("value=\"yes\" required checked"), "{view}");
+        }
+        // an invite link answers "yes" and fills in the token
+        ctx["url"]["qs"]["invite"] = serde_json::json!("abc123");
+        for view in ["snippets/navbar.html", "frontends/w0bm/partials/registerform.html"] {
+            let html = render(view, &ctx);
+            assert!(html.contains("value=\"yes\" required checked"), "{view}");
+            assert!(html.contains("value=\"abc123\""), "{view}");
+        }
+        ctx["url"]["qs"] = serde_json::json!({});
+        for view in ["register.html", "frontends/f0ckv2/register.html", "frontends/f0ckgle/register.html", "frontends/f0ckyou/register.html"] {
+            ctx["token"] = serde_json::json!("abc123");
+            assert!(render(view, &ctx).contains("value=\"yes\" required checked"), "{view}");
+        }
+        ctx.as_object_mut().unwrap().remove("token");
+        // the frontends' early.js turns invite links into /?register=1&token=…
+        ctx["url"]["qs"] = serde_json::json!({ "register": "1", "token": "abc123" });
+        for view in ["frontends/f0ckv2/register.html", "frontends/f0ckgle/register.html", "frontends/f0ckyou/register.html"] {
+            let html = render(view, &ctx);
+            assert!(html.contains("value=\"yes\" required checked") && html.contains("value=\"abc123\""), "{view}");
+        }
+        ctx["url"]["qs"] = serde_json::json!({});
+        // the CSS that does the showing is in every stylesheet these forms use
+        for css in ["public/s/css/f0ckm.css", "public/s/css/gate.css", "public/s/fe/f0ckgle/css/f0ckgle.css", "public/s/fe/f0ckyou/css/f0ckyou.css",
+            "public/s/fe/f0ckv2/css/f0ckv2.css", "public/s/fe/w0bm/css/w0bm-fe.css"] {
+            let text = std::fs::read_to_string(root.join(css)).unwrap();
+            assert!(text.contains("[value=\"no\"]:checked)) .reg-if-apply"), "{css}");
         }
         ctx["registration_apply"] = serde_json::json!(false);
         for view in forms {
