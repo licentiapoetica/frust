@@ -323,14 +323,40 @@ pub fn new_state(cfg: config::Config, db: sqlx::PgPool, i18n: Arc<i18n::I18n>, t
 }
 
 /// Wait for postgres, create the schema on an empty database and apply the startup migrations.
+///
+/// The migrations also run while the site is live (CLI commands like `remote-sync`, a second
+/// container). `ALTER TABLE ... IF NOT EXISTS` takes its exclusive lock even when there is nothing
+/// to do, and while it waits behind a running query every new query on that table queues behind
+/// it: one slow query froze every item page for seconds. So each statement only waits briefly for
+/// its lock and tries again later instead of holding the queue.
 pub async fn prepare_db(st: &state::AppState) {
+    const ATTEMPTS: u32 = 20;
     wait_for_db(st).await;
+    let mut conn = match st.db.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::warn!("[BOOT] startup migrations skipped, no database connection: {e}");
+            return;
+        }
+    };
+    let _ = sqlx::raw_sql("SET lock_timeout = '500ms'").execute(&mut *conn).await;
     for m in migrations::STARTUP_MIGRATIONS {
-        if let Err(e) = sqlx::raw_sql(*m).execute(&st.db).await {
-            let first = m.lines().next().unwrap_or("").trim();
-            tracing::warn!("[BOOT] startup migration failed ({first}): {e}");
+        let first = m.lines().next().unwrap_or("").trim();
+        for attempt in 1..=ATTEMPTS {
+            match sqlx::raw_sql(*m).execute(&mut *conn).await {
+                Ok(_) => break,
+                // 55P03 lock_not_available: the table is busy, try again in a moment
+                Err(e) if attempt < ATTEMPTS && e.as_database_error().and_then(|d| d.code()).as_deref() == Some("55P03") => {
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+                Err(e) => {
+                    tracing::warn!("[BOOT] startup migration failed ({first}): {e}");
+                    break;
+                }
+            }
         }
     }
+    let _ = sqlx::raw_sql("RESET lock_timeout").execute(&mut *conn).await;
 }
 
 #[tokio::main]
