@@ -56,8 +56,7 @@ fn like(name: &str) -> String {
 }
 
 fn hall_custom_dir(st: &AppState) -> std::path::PathBuf {
-    let s = st.cfg().paths.s.clone();
-    s.parent().map(|p| p.join("hall_custom")).unwrap_or_else(|| s.join("../hall_custom"))
+    crate::routes::halls::custom_dir(st)
 }
 
 // ── Users list ──────────────────────────────────────────────────────────────

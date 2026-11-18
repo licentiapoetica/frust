@@ -132,12 +132,18 @@ pub fn mosaic_cache(mut r: Response, mode: i64) -> Response {
     r
 }
 
+/// `public/hall_custom` (beside `s/`, not `s/../`: the ImageMagick policy refuses paths with `../`).
 pub fn custom_dir(st: &AppState) -> PathBuf {
-    st.cfg().paths.s.join("../hall_custom")
+    beside_s(&st.cfg().paths.s, "hall_custom")
 }
 
+/// `public/hall_cache`, where the built list pictures are kept.
 pub fn cache_dir(st: &AppState) -> PathBuf {
-    st.cfg().paths.s.join("../hall_cache")
+    beside_s(&st.cfg().paths.s, "hall_cache")
+}
+
+fn beside_s(s: &Path, name: &str) -> PathBuf {
+    s.parent().map(|p| p.join(name)).unwrap_or_else(|| PathBuf::from("public").join(name))
 }
 
 fn webp(code: u16, body: Vec<u8>, cache: &'static str) -> Response {
@@ -340,6 +346,16 @@ async fn hall_image(st: AppState, req: Req) -> Res {
 #[cfg(test)]
 mod tests {
     use super::list_url;
+
+    /// The list picture dirs sit beside `s/` without a `../` in the path: the ImageMagick policy
+    /// (proc.rs) refuses those, and every built picture failed into the favicon placeholder.
+    #[test]
+    fn list_dirs_have_no_dotdot() {
+        let p = super::beside_s(std::path::Path::new("/opt/f0ckm/public/s"), "hall_cache");
+        assert_eq!(p, std::path::PathBuf::from("/opt/f0ckm/public/hall_cache"));
+        assert!(!p.to_string_lossy().contains(".."));
+        assert!(include_str!("../magick-policy-uploads.xml").contains(r#"pattern="*../*""#), "the rule this guards against");
+    }
 
     /// An empty list's picture: its name (escaped) on a colour of its own, as an SVG.
     #[test]
