@@ -284,9 +284,12 @@
   window.f0ckFrontend = {
     itemId: page.itemId || null,
     flash,
+    // plain text; `[label](#bad-apple)` becomes the link that starts Bad Apple!! (f0ck-core.js)
     motd(text) {
       document.querySelectorAll('.fg-motd').forEach(el => {
-        el.querySelector('.fg-motd-text').textContent = text || '';
+        const t = el.querySelector('.fg-motd-text');
+        t.textContent = text || '';
+        window.f0ckMotdLinks?.(t);
         el.hidden = !String(text || '').trim();
       });
     },
@@ -312,6 +315,7 @@
       if (page.itemId) refresh(['comments', 'comments-head', 'actions', 'kp']);
     },
   };
+  document.querySelectorAll('.fg-motd-text').forEach(el => window.f0ckMotdLinks?.(el));
 
   // ── menus ──
   const menus = () => [...document.querySelectorAll('details.fg-menu')];

@@ -2006,7 +2006,7 @@
   };
 
   // w0bm's simplemd for f0ckm comments: greentext, links, media, mentions, emojis, timestamps,
-  // [spoiler] [blur] [rb] [reich] [krebs] [glitch], **bold**, *italic*, `code`
+  // [spoiler] [blur] [rb] [reich] [krebs] [glitch] [badapple], **bold**, *italic*, `code`
   function renderComment(text) {
     const codes = [];
     let s = escapeHTML(text || '').replace(/&#x2F;/g, '/').replace(/&#x3D;/g, '=').replace(/&#x60;/g, '`');
@@ -2046,6 +2046,8 @@
     wrapTag('krebs', 'anim');
     // the same as in the other frontends (f0ck-core.js f0ckCommentFx, /s/css/comment-fx.css)
     wrapTag('glitch', 'cfx-glitch', ' data-glitch="0.5"');
+    // starts Bad Apple!! when clicked (f0ck-core.js)
+    wrapTag('badapple', 'cfx-badapple', ' role="button" tabindex="0"');
     if (emojis) s = s.replace(/:([a-z0-9_\-]+):/g, (m, n) => (emojis[n] ? '<img class="comment_emoji" src="' + escapeHTML(emojis[n]) + '" alt=":' + n + ':" title=":' + n + ':">' : m));
     s = s.replace(/\u0000(\d+)\u0000/g, (m, i) => codes[+i]);
     return s.replace(/\n/g, '<br>');
@@ -2230,7 +2232,7 @@
     }
   });
 
-  // Comment tools of a form: [rb] [reich] [krebs] [glitch] [spoiler] (.w0bm-fmt, formatText) and the
+  // Comment tools of a form: [rb] [reich] [krebs] [glitch] [badapple] [spoiler] (.w0bm-fmt, formatText) and the
   // emoji box (.emoji-shit opens .emojis-box). Used by the item's comment form and the upload's
   // first comment.
   function commentTools(root, ta) {

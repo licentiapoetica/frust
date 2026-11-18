@@ -1251,13 +1251,15 @@ fn frame_comment_html(content: &str, link_base: &str, hosts: &[String]) -> Strin
     comment_fx(&frame_wrap_tags(&frame_wrap_tags(&html, "spoiler", "spoiler"), "blur", "blur-text"))
 }
 
-/// The comment text effects [rb] [reich] [krebs] [glitch], the same in every frontend: server copy
-/// of `f0ckCommentFx` (public/s/js/f0ck-core.js); styles in public/s/css/comment-fx.css.
-const COMMENT_FX: [(&str, &str); 4] = [
+/// The comment text effects [rb] [reich] [krebs] [glitch] [badapple], the same in every frontend:
+/// server copy of `f0ckCommentFx` (public/s/js/f0ck-core.js); styles in public/s/css/comment-fx.css.
+/// [badapple] starts Bad Apple!! when clicked (f0ck-core.js; with JavaScript only).
+const COMMENT_FX: [(&str, &str); 5] = [
     ("rb", "class=\"cfx-rb\""),
     ("reich", "class=\"cfx-reich\""),
     ("krebs", "class=\"cfx-krebs\""),
     ("glitch", "class=\"cfx-glitch\" data-glitch=\"0.5\""),
+    ("badapple", "class=\"cfx-badapple\" role=\"button\" tabindex=\"0\""),
 ];
 
 fn comment_fx(html: &str) -> String {
@@ -1820,6 +1822,8 @@ mod frame_tests {
     fn comment_effects() {
         let h = frame_comment_html("[rb]a [glitch]b[/glitch][/rb] [REICH]c[/reich] [krebs]d", "1", &[]);
         assert_eq!(h, "<span class=\"cfx-rb\">a <span class=\"cfx-glitch\" data-glitch=\"0.5\">b</span></span> <span class=\"cfx-reich\">c</span> [krebs]d");
+        let a = frame_comment_html("[badapple]click[/BADAPPLE]", "1", &[]);
+        assert_eq!(a, "<span class=\"cfx-badapple\" role=\"button\" tabindex=\"0\">click</span>");
     }
 
     #[test]

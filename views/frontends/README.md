@@ -197,13 +197,17 @@ body; `tpl::tests::text_sizes_have_css` checks them all).
   - Frontends never copy it and never open their own socket.
   - When f0ckm.js gets a helper that shared scripts call, move it to `f0ck-core.js` or give it a
     fallback there.
-- **Comment text effects** (`[rb]` `[reich]` `[krebs]` `[glitch]`) look the same everywhere.
+- **Comment text effects** (`[rb]` `[reich]` `[krebs]` `[glitch]` `[badapple]`) look the same everywhere.
   - Every comment renderer runs its escaped HTML through `window.f0ckCommentFx` (f0ck-core.js);
     the no-JS comments get the server copy (`comment_fx`, server/src/routes/comments.rs).
   - Pages with comments load `/s/css/comment-fx.css`, plus `/s/css/glitchfx.css` and
     `/s/js/glitchfx.js` for `[glitch]`. GlitchFX picks up comments added later by itself.
   - A new effect goes into all three places: `F0CK_COMMENT_FX`, `COMMENT_FX` and comment-fx.css.
   - w0bm keeps its own classes for the first three (its theme CSS); `[glitch]` is shared.
+  - `[badapple]` (`.cfx-badapple`) starts Bad Apple!! when clicked, like a link to `#bad-apple`
+    (f0ck-core.js; switched by `websrv.bad_apple`). A MOTD shown as plain text goes through
+    `window.f0ckMotdLinks(el)` after every change, so `[label](#bad-apple)` becomes that link
+    (Markdown renderers make it themselves).
 - **Exclude-tag button** next to each tag of an item (not the rating tags): a plain form
   `.f0ck-exclude-form` posting to `/api/v2/settings/excluded_tags` (`remove=1` when the tag is
   excluded already), so it works without JavaScript. f0ck-core.js sends it with fetch and updates

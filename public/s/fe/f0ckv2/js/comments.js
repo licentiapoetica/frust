@@ -5,7 +5,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // escaped text -> links, >>quotes, >greentext, @mentions, line breaks, and the comment effects
-  // [rb] [reich] [krebs] [glitch] shared with every frontend (f0ck-core.js, /s/css/comment-fx.css)
+  // [rb] [reich] [krebs] [glitch] [badapple] shared with every frontend (f0ck-core.js, /s/css/comment-fx.css)
   // custom emojis :name: (shared loader in f0ck-core.js; loaded before the first render)
   let emojis = null;
   const emojiReady = () => (window.f0ckLoadEmojis ? window.f0ckLoadEmojis().then(m => { emojis = m; }) : Promise.resolve());

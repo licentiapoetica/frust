@@ -9,7 +9,7 @@
  *   f0ckPasskeyLogin (WebAuthn login of registered users),
  *   F0ckLive (the live WebSocket /api/notifications/ws: tab id, reconnect, active pings)
  *
- * f0ckCommentFx (comment text effects [rb] [reich] [krebs] [glitch], see the end of the file),
+ * f0ckCommentFx (comment text effects [rb] [reich] [krebs] [glitch] [badapple], see the end of the file),
  * f0ckLoadEmojis / f0ckEmojify (custom emojis :name: in comments, for the frontends' renderers),
  * updateBrandImage / updateBrandText / updateBrandStyle / applyBrandEvent (the navbar brand, see below),
  * the exclude-tag buttons of the frontends' tag lists (f0ckAddExcludeButton, f0ckSyncExcluded, see below),
@@ -673,7 +673,7 @@ window.F0ckLive.onMessage((d) => {
 })();
 
 // ── Comment text effects ────────────────────────────────────────────────────────────────────
-// [rb] [reich] [krebs] [glitch]: w0bm's text modifiers, so a comment looks the same in every
+// [rb] [reich] [krebs] [glitch] [badapple]: w0bm's text modifiers, so a comment looks the same in every
 // frontend. Runs on the renderer's already escaped HTML; only these spans are added. Styles:
 // /s/css/comment-fx.css; [glitch] carries data-glitch, which /s/js/glitchfx.js animates (it picks up
 // comments added later by itself). Server copy for the no-JavaScript comments: comment_fx in
@@ -683,6 +683,8 @@ window.F0CK_COMMENT_FX = {
   reich: 'class="cfx-reich"',
   krebs: 'class="cfx-krebs"',
   glitch: 'class="cfx-glitch" data-glitch="0.5"',
+  // starts Bad Apple!! when clicked (see the end of this file)
+  badapple: 'class="cfx-badapple" role="button" tabindex="0"',
 };
 window.f0ckCommentFx = (html) => {
   let s = String(html ?? '');
@@ -1273,15 +1275,50 @@ window.F0ckPageSwap = (() => {
   setInterval(tick, 1000);
 })();
 
-// Konami code (↑↑↓↓←→←→BA): "Bad Apple!!" played with fake desktop windows over the whole page (npm
-// package bad-apple-virus, copied to /s/bad-apple/ by `npm run vendor`; Esc closes it). The player is
-// fetched only once ↑↑↓↓ has been typed. From then on the keys that continue the code don't reach the
-// site's own shortcuts (← → and a are prev/next on item pages), so typing it never leaves the page.
+// "Bad Apple!!" played with fake desktop windows over the whole page (package bad-apple-virus, from
+// GitHub, copied to /s/bad-apple/ by `npm run vendor`; Esc closes it). Three ways to start it:
+//  - the Konami code (↑↑↓↓←→←→BA). The player is fetched once ↑↑↓↓ has been typed; from then on the
+//    keys that continue the code don't reach the site's own shortcuts (← → and a are prev/next on
+//    item pages), so typing it never leaves the page;
+//  - a link to #bad-apple, e.g. `[Don't click](#bad-apple)` in the MOTD (Markdown in f0ckm and w0bm;
+//    f0ckMotdLinks for the frontends that show the MOTD as plain text);
+//  - `[badapple]text[/badapple]` in comments (f0ckCommentFx → .cfx-badapple).
 // websrv.bad_apple (snippets/f0ck-core-script.html): data-bad-apple="<theme>" on this script's tag,
-// data-bad-apple-silent without sound; no attribute = switched off.
+// data-bad-apple-silent without sound; no attribute = switched off. While on, <html> has the class
+// f0ck-bad-apple, which makes the links look clickable (comment-fx.css).
 (() => {
   const tag = document.currentScript;
-  if (!tag || !tag.hasAttribute('data-bad-apple')) return;
+  const on = !!tag && tag.hasAttribute('data-bad-apple');
+
+  // `[label](#bad-apple)` in a plain-text MOTD (f0ckv2, f0ckgle) as a link, or as its label while
+  // it's switched off. Works on the element's text nodes, so the rest stays text.
+  const MOTD_LINK = /\[([^\]\n]+)\]\(#bad-apple\)/g;
+  window.f0ckMotdLinks = (el) => {
+    if (!el) return;
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walk.nextNode()) if (walk.currentNode.nodeValue.includes('](#bad-apple)')) nodes.push(walk.currentNode);
+    for (const node of nodes) {
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      const text = node.nodeValue;
+      for (const m of text.matchAll(MOTD_LINK)) {
+        frag.append(text.slice(last, m.index));
+        if (on) {
+          const a = document.createElement('a');
+          a.href = '#bad-apple';
+          a.textContent = m[1];
+          frag.append(a);
+        } else frag.append(m[1]);
+        last = m.index + m[0].length;
+      }
+      frag.append(text.slice(last));
+      node.replaceWith(frag);
+    }
+  };
+
+  if (!on) return;
+  document.documentElement.classList.add('f0ck-bad-apple');
   const options = { theme: tag.dataset.badApple || 'classic' };
   if (tag.hasAttribute('data-bad-apple-silent')) options.audio = [];
   const SEQ = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
@@ -1294,7 +1331,7 @@ window.F0ckPageSwap = (() => {
     s.onload = () => (window.BadApple ? resolve(window.BadApple) : reject(new Error('BadApple missing')));
     s.onerror = () => reject(new Error('could not load ' + s.src));
     document.head.appendChild(s);
-  }).catch((err) => { loading = null; window.f0ckDebug?.('[konami]', err.message); return null; }));
+  }).catch((err) => { loading = null; window.f0ckDebug?.('[bad-apple]', err.message); return null; }));
 
   // The page's own players (the item's video/audio, Flash) pause while it plays; the ones that were
   // playing go on when it closes. Its own audio sits in a shadow root, out of reach of this query.
@@ -1310,9 +1347,33 @@ window.F0ckPageSwap = (() => {
     });
   };
 
+  // Call it from a click or key press: the browser lets the song play then.
+  const start = () => load().then((ba) => {
+    if (!ba || ba.active) return;
+    const resume = pausePage();
+    ba.takeover({ ...options, onclose: resume });
+  });
+
+  // links and [badapple] in comments: before the page's own click handlers (comment clicks, ajax links)
+  const TRIGGER = 'a[href="#bad-apple"], .cfx-badapple';
+  window.addEventListener('click', (e) => {
+    const el = e.target instanceof Element && e.target.closest(TRIGGER);
+    if (!el || e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    start();
+  }, true);
+
   window.addEventListener('keydown', (e) => {
     const t = e.target;
     if (e.ctrlKey || e.metaKey || e.altKey || window.BadApple?.active) return;
+    // [badapple] is a role=button span: Enter and Space start it like a click
+    if ((e.key === 'Enter' || e.key === ' ') && t instanceof Element && t.matches('.cfx-badapple')) {
+      e.preventDefault();
+      e.stopPropagation();
+      start();
+      return;
+    }
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) { pos = 0; return; }
     const k = e.key && e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (k !== SEQ[pos]) {
@@ -1325,12 +1386,7 @@ window.F0ckPageSwap = (() => {
     if (pos === ARMED) load();
     if (pos === SEQ.length) {
       pos = 0;
-      // started from this key press, so the browser lets the song play
-      load().then((ba) => {
-        if (!ba || ba.active) return;
-        const resume = pausePage();
-        ba.takeover({ ...options, onclose: resume });
-      });
+      start();
     }
   }, true);
 })();

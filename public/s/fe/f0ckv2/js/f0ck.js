@@ -632,12 +632,16 @@ window.v2Page.onPage(() => {
     }, kind === 'error' ? 6000 : 3500);
   };
   // the MOTD box (item page, between the player and the metadata)
+  // (plain text; `[label](#bad-apple)` becomes the link that starts Bad Apple!!, f0ck-core.js)
   fe.motd = (text) => {
     document.querySelectorAll('.v2-motd').forEach(box => {
-      box.querySelector('.v2-motd-text').textContent = text || '';
+      const el = box.querySelector('.v2-motd-text');
+      el.textContent = text || '';
+      window.f0ckMotdLinks?.(el);
       box.hidden = !String(text || '').trim();
     });
   };
+  document.querySelectorAll('.v2-motd-text').forEach(el => window.f0ckMotdLinks?.(el));
   // the shared settings page lists every site theme: keep the ones f0ckv2's CSS has
   const themeSelect = document.getElementById('website_theme_select');
   if(themeSelect && themes.length) {

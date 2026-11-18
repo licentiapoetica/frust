@@ -26,6 +26,7 @@
             <h4 class="adm-editor-tips-title">Preview Tip</h4>
             <p class="adm-editor-tips-text">You can use <strong>Markdown</strong> syntax like <code># Header</code>, <code>**bold**</code>, <code>[links](url)</code>, or standard HTML. The message updates instantly site-wide when you click Save.
             </p>
+            {% if bad_apple is defined and bad_apple %}<p class="adm-editor-tips-text"><code>[Don't click](#bad-apple)</code> makes a link that starts Bad Apple!! (the Konami code's easter egg). In comments: <code>[badapple]text[/badapple]</code>.</p>{% endif %}
         </div>
     </div>
 

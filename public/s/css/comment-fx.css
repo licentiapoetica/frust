@@ -1,5 +1,5 @@
 /*
- * comment-fx.css: the comment text effects [rb] [reich] [krebs] [glitch] (w0bm's text modifiers),
+ * comment-fx.css: the comment text effects [rb] [reich] [krebs] [glitch] [badapple] (w0bm's text modifiers),
  * the same in every frontend. Markup: window.f0ckCommentFx in /s/js/f0ck-core.js, and its server
  * copy for the no-JavaScript comments (comment_fx in server/src/routes/comments.rs).
  * [glitch] is animated by /s/js/glitchfx.js (data-glitch on the span).
@@ -56,6 +56,31 @@
 /* [glitch]: GlitchFX filters the element's box, so it needs one */
 .cfx-glitch {
   display: inline-block;
+}
+
+/* [badapple] in comments and links to #bad-apple (the MOTD): start "Bad Apple!!" when clicked
+   (f0ck-core.js). Clickable only while it's switched on (websrv.bad_apple → html.f0ck-bad-apple);
+   otherwise plain text with its apple. */
+.cfx-badapple::before,
+html.f0ck-bad-apple a[href="#bad-apple"]::before {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.2em;
+  vertical-align: -0.15em;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%3E%3Cpath%20fill='%23d8262b'%20d='M8%204.6C6.7%203.5%203.3%203.4%202.9%206.6c-.4%202.8%201.4%206.7%203.1%207.1.7.2%201.3-.3%202-.3s1.3.5%202%20.3c1.7-.4%203.5-4.3%203.1-7.1C12.7%203.4%209.3%203.5%208%204.6z'/%3E%3Cpath%20fill='%2345a033'%20d='M8.3%204.2c.3-1.7%201.5-2.7%203.2-2.8-.2%201.7-1.4%202.7-3.2%202.8z'/%3E%3Cpath%20fill='none'%20stroke='%236b4423'%20stroke-width='.9'%20stroke-linecap='round'%20d='M8%204.7c0-1.2-.4-2.1-1.1-2.8'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+html.f0ck-bad-apple .cfx-badapple {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+html.f0ck-bad-apple .cfx-badapple:hover,
+html.f0ck-bad-apple .cfx-badapple:focus-visible {
+  text-decoration-style: solid;
 }
 
 @media (prefers-reduced-motion: reduce) {
