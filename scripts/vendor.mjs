@@ -24,6 +24,12 @@ const FILES = [
   ['@cap.js/widget/cap.min.js', 's/cap/cap.min.js'],
   ['@cap.js/widget/LICENSE', 's/cap/LICENSE'],
   ['@cap.js/wasm/browser/cap_wasm_bg.wasm', 's/cap/cap_wasm_bg.wasm'],
+  // Bad Apple!! (the Konami code, f0ck-core.js): the player finds the frames and the song next to it
+  ['bad-apple-virus/web/bad-apple.js', 's/bad-apple/bad-apple.js'],
+  ['bad-apple-virus/web/bad-apple.frames.gz', 's/bad-apple/bad-apple.frames.gz'],
+  ['bad-apple-virus/web/bad-apple.ogg', 's/bad-apple/bad-apple.ogg'],
+  ['bad-apple-virus/web/bad-apple.mp3', 's/bad-apple/bad-apple.mp3'],
+  ['bad-apple-virus/LICENSE', 's/bad-apple/LICENSE'],
 ];
 
 // Ruffle (Flash emulator): everything the browser loads, plus licenses; no source maps

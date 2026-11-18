@@ -26,6 +26,7 @@ public/s/js/marked.min.js
 public/s/cap/cap.min.js
 public/s/cap/cap_wasm_bg.wasm
 public/s/cap/LICENSE
+public/s/bad-apple/
 public/s/img/navbar
 public/s/maintenance
 public/s/img/manifest

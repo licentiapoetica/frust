@@ -78,7 +78,7 @@ on dev machine:
 ```bash
 cp config_example.yaml config.yaml          # main.development: true uses localhost:5454 for the database
 cargo build --release --manifest-path server/Cargo.toml
-npm ci && npm run vendor                    # browser libraries (Ruffle, Cap, marked, JSZip) into public/s
+npm ci && npm run vendor                    # browser libraries (Ruffle, Cap, marked, JSZip, Bad Apple) into public/s
 ./server/target/release/f0ckm seed
 ./server/target/release/f0ckm create-admin admin
 STORAGE_DIR=f0ckm-data ./server/target/release/f0ckm
@@ -131,11 +131,14 @@ Passwords left out on the command line are read from stdin.
 
 ### Browser libraries
 
-JSZip, marked, the Cap captcha (@cap.js/widget, @cap.js/wasm) and Ruffle come from npm:
-`package.json` names them, `package-lock.json` pins exact versions and checksums. `npm ci` installs
-them and `npm run vendor` (`scripts/vendor.mjs`) copies the files the site serves into `public/s/`
-(`js/jszip.min.js`, `js/marked.min.js`, `cap/`, `ruffle/`). These copies are not in git; the Docker
-build does both steps itself.
+JSZip, marked, the Cap captcha (@cap.js/widget, @cap.js/wasm) and Ruffle come from npm, and
+bad-apple-virus (the Konami code easter egg, ↑↑↓↓←→←→BA) straight from GitHub
+(`github:licentiapoetica/bad_apple_virus`; `.npmrc` allows git dependencies for this project's own
+dependencies only). `package.json` names them, `package-lock.json` pins exact versions, checksums and
+the GitHub commit. `npm ci` installs them and `npm run vendor` (`scripts/vendor.mjs`) copies the files
+the site serves into `public/s/` (`js/jszip.min.js`, `js/marked.min.js`, `cap/`, `ruffle/`,
+`bad-apple/`). These copies are not in git; the Docker build does both steps itself.
+To take a newer commit of bad-apple-virus: `npm install github:licentiapoetica/bad_apple_virus && npm run vendor`.
 
 Updates: merge the Dependabot PR (it changes both files), then run `npm ci && npm run vendor` locally
 or rebuild the image. Major versions can change APIs, so try those before merging.

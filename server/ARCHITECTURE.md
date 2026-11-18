@@ -160,6 +160,6 @@ Templates in `views/` are MiniJinja now (converted automatically from flummpress
 
 * `f0ckm help` lists the CLI commands (`server/src/cli/`): setup (seed, create-admin, users, API keys),
   media maintenance (import, regen, rehash, clean, …) and build steps (build-css, check-templates).
-* Browser libraries (Ruffle, Cap, marked, JSZip) are npm packages pinned in `package-lock.json`, not
+* Browser libraries (Ruffle, Cap, marked, JSZip, bad-apple-virus) are npm packages pinned in `package-lock.json`, not
   in git: `npm ci && npm run vendor` copies them into `public/s/` (the Docker build does this itself).
 * Tests: `cargo test --offline` in `server/`; templates: `f0ckm check-templates`.

@@ -1272,3 +1272,41 @@ window.F0ckPageSwap = (() => {
   tick();
   setInterval(tick, 1000);
 })();
+
+// Konami code (↑↑↓↓←→←→BA): "Bad Apple!!" played with fake desktop windows over the whole page (npm
+// package bad-apple-virus, copied to /s/bad-apple/ by `npm run vendor`; Esc closes it). The player is
+// fetched only once ↑↑↓↓ has been typed. From then on the keys that continue the code don't reach the
+// site's own shortcuts (← → and a are prev/next on item pages), so typing it never leaves the page.
+(() => {
+  const SEQ = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  const ARMED = 4;
+  let pos = 0, loading = null;
+  const load = () => loading || (loading = new Promise((resolve, reject) => {
+    if (window.BadApple) return resolve(window.BadApple);
+    const s = document.createElement('script');
+    s.src = '/s/bad-apple/bad-apple.js';
+    s.onload = () => (window.BadApple ? resolve(window.BadApple) : reject(new Error('BadApple missing')));
+    s.onerror = () => reject(new Error('could not load ' + s.src));
+    document.head.appendChild(s);
+  }).catch((err) => { loading = null; window.f0ckDebug?.('[konami]', err.message); return null; }));
+
+  window.addEventListener('keydown', (e) => {
+    const t = e.target;
+    if (e.ctrlKey || e.metaKey || e.altKey || window.BadApple?.active) return;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) { pos = 0; return; }
+    const k = e.key && e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (k !== SEQ[pos]) {
+      // ↑ is the only key that starts the code again: ↑↑↑↓↓… still counts
+      pos = k === 'ArrowUp' ? (pos === 2 ? 2 : 1) : 0;
+      return;
+    }
+    pos++;
+    if (pos > ARMED) { e.preventDefault(); e.stopImmediatePropagation(); }
+    if (pos === ARMED) load();
+    if (pos === SEQ.length) {
+      pos = 0;
+      // started from this key press, so the browser lets the song play
+      load().then((ba) => ba?.takeover({ theme: 'classic' }));
+    }
+  }, true);
+})();

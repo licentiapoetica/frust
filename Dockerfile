@@ -13,11 +13,11 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --locked \
     && cp target/release/f0ckm /usr/local/bin/f0ckm
 
-# ── 2. Browser libraries (jszip, marked, Cap captcha, Ruffle) ───────────────────
+# ── 2. Browser libraries (jszip, marked, Cap captcha, Ruffle, Bad Apple) ───────
 # Versions and checksums come from package-lock.json; scripts/vendor.mjs copies the served files.
 FROM node:26-alpine AS vendor
 WORKDIR /vendor
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY scripts/vendor.mjs ./scripts/
 RUN node scripts/vendor.mjs /out
