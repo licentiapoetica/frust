@@ -337,6 +337,8 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     // favorites' primary key starts with user_id: lookups by item (an item's favs, deleting an
     // item) scanned the whole key
     r#"CREATE INDEX IF NOT EXISTS idx_favorites_item_id ON favorites(item_id)"#,
+    // tag lookups by name (`normalized = (select slugify($1))`) scanned every tag
+    r#"CREATE INDEX IF NOT EXISTS idx_tags_normalized ON tags(normalized)"#,
 ];
 
 #[cfg(test)]

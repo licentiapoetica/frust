@@ -83,6 +83,7 @@ DROP TRIGGER IF EXISTS tags_bi ON public.tags;
 DROP TRIGGER IF EXISTS tags_assign_ad ON public.tags_assign;
 DROP TRIGGER IF EXISTS global_chat_notify ON public.global_chat;
 DROP INDEX IF EXISTS public.tags_assign_tag_id_idx;
+DROP INDEX IF EXISTS public.idx_tags_normalized;
 DROP INDEX IF EXISTS public.items_phash;
 DROP INDEX IF EXISTS public.idx_webauthn_credentials_user_id;
 DROP INDEX IF EXISTS public.idx_user_video_views_video_id;
@@ -2845,6 +2846,13 @@ CREATE INDEX items_phash ON public.items USING btree (phash);
 --
 
 CREATE INDEX tags_assign_tag_id_idx ON public.tags_assign USING btree (tag_id);
+
+
+--
+-- Name: idx_tags_normalized; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_tags_normalized ON public.tags USING btree (normalized);
 
 
 --
