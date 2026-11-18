@@ -5706,8 +5706,11 @@ body.layout-legacy .scroll-to-bottom svg {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  max-height: var(--comment-banner-max-height, 300px);
+  /* As tall as the banner itself (cropped to 1200x360 = 10:3, shown full width) but never taller than
+     the comment, so the fade below ends where the image ends instead of cutting it off half-opaque. */
+  width: 100%;
+  aspect-ratio: 10 / 3;
+  max-height: min(100%, var(--comment-banner-max-height, 300px));
   background-image: var(--author-banner, none);
   background-position: var(--author-banner-position, center top);
   background-size: var(--author-banner-size, 100% auto);
@@ -5718,11 +5721,6 @@ body.layout-legacy .scroll-to-bottom svg {
   pointer-events: none;
   -webkit-mask-image: var(--comment-banner-mask, linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%));
   mask-image: var(--comment-banner-mask, linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%));
-}
-
-.comment.tall-comment::before {
-  -webkit-mask-image: var(--comment-banner-mask, linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 50%));
-  mask-image: var(--comment-banner-mask, linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 50%));
 }
 
 .comment.deleted {
