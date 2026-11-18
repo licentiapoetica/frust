@@ -669,7 +669,7 @@ if (window.__dmLoaded) {
             // 4. Link renderer
             renderer.link = function (href, title, text) {
                 if (typeof href === 'object' && href !== null) {
-                    title = href.title; text = href.text || text; href = href.href;
+                    title = href.title; text = (href.text ?? text) || ''; href = href.href;
                 }
                 if (!href) return text || '';
                 const titleAttr = title ? ` title="${title}"` : '';

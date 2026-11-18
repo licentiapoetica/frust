@@ -1766,7 +1766,7 @@ class CommentSystem {
             renderer.link = (href, title, text) => {
                 if (typeof href === 'object' && href !== null) {
                     title = href.title;
-                    text = href.text || text;
+                    text = (href.text ?? text) || '';
                     href = href.href;
                 }
                 if (!href) return text || '';

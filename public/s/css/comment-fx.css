@@ -72,6 +72,11 @@ html.f0ck-bad-apple a[href="#bad-apple"]::before {
   background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%3E%3Cpath%20fill='%23d8262b'%20d='M8%204.6C6.7%203.5%203.3%203.4%202.9%206.6c-.4%202.8%201.4%206.7%203.1%207.1.7.2%201.3-.3%202-.3s1.3.5%202%20.3c1.7-.4%203.5-4.3%203.1-7.1C12.7%203.4%209.3%203.5%208%204.6z'/%3E%3Cpath%20fill='%2345a033'%20d='M8.3%204.2c.3-1.7%201.5-2.7%203.2-2.8-.2%201.7-1.4%202.7-3.2%202.8z'/%3E%3Cpath%20fill='none'%20stroke='%236b4423'%20stroke-width='.9'%20stroke-linecap='round'%20d='M8%204.7c0-1.2-.4-2.1-1.1-2.8'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
+/* `[](#bad-apple)`: no label, just the apple */
+html.f0ck-bad-apple a[href="#bad-apple"]:empty::before {
+  margin-right: 0;
+}
+
 html.f0ck-bad-apple .cfx-badapple {
   cursor: pointer;
   text-decoration: underline dotted;

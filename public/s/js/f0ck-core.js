@@ -1291,8 +1291,9 @@ window.F0ckPageSwap = (() => {
   const on = !!tag && tag.hasAttribute('data-bad-apple');
 
   // `[label](#bad-apple)` in a plain-text MOTD (f0ckv2, f0ckgle) as a link, or as its label while
-  // it's switched off. Works on the element's text nodes, so the rest stays text.
-  const MOTD_LINK = /\[([^\]\n]+)\]\(#bad-apple\)/g;
+  // it's switched off; `[](#bad-apple)` is just the apple (comment-fx.css). Works on the element's
+  // text nodes, so the rest stays text.
+  const MOTD_LINK = /\[([^\]\n]*)\]\(#bad-apple\)/g;
   window.f0ckMotdLinks = (el) => {
     if (!el) return;
     const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);

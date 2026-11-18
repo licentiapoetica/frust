@@ -216,7 +216,7 @@
 
             renderer.link = function (href, title, text) {
                 if (typeof href === 'object' && href !== null) {
-                    title = href.title; text = href.text || text; href = href.href;
+                    title = href.title; text = (href.text ?? text) || ''; href = href.href;
                 }
                 if (!href) return text || '';
                 text = text || '';
