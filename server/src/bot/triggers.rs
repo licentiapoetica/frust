@@ -186,6 +186,16 @@ fn js_date(stamp: i64) -> String {
     chrono::Local.timestamp_opt(stamp, 0).single().map(|d| d.format("%a %b %d %Y %H:%M:%S").to_string()).unwrap_or_default()
 }
 
+/// The bot's line about an item: `{title} - {rating} - {id} - by {user} - {size} - {mime} - {date}`,
+/// without the title part when the item has none. The parts come already formatted for the client.
+fn info_line(title: Option<&str>, rating: &str, id: &str, user: &str, size: &str, mime: &str, date: &str) -> String {
+    let rest = format!("{rating} - {id} - by {user} - {size} - {mime} - {date}");
+    match title {
+        Some(t) => format!("{t} - {rest}"),
+        None => rest,
+    }
+}
+
 async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
     let cfg = rt.st.cfg();
     let Some(re) = rt.regex(&f0ckgag_pattern(&cfg)) else { return Ok(()) };
@@ -214,7 +224,8 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
     let size = format!("~{}", crate::util::format_size(row.val("size")));
     let date = js_date(row.i64("stamp").unwrap_or(0));
     let (user, mime) = (row.string("username"), row.string("mime"));
-    let title = super::chat_title(row.str("title")).map(|t| format!("title: {t}"));
+    let title = super::chat_title(row.str("title"));
+    let esc = crate::util::escape_html;
     match e.kind {
         Kind::Matrix => {
             let color = match rating.as_str() {
@@ -222,25 +233,9 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
                 "nsfw" => "#ff0000",
                 _ => "#888888",
             };
-            let esc = crate::util::escape_html;
-            let body = [Some(format!("ID: {id}")), Some(rating.clone()), Some(format!("user: {user}")), title.clone(), Some(size.clone()), Some(mime.clone()), Some(date.clone())]
-                .into_iter()
-                .flatten()
-                .collect::<Vec<_>>()
-                .join(" - ");
-            let html = [
-                Some(format!("ID: {id}")),
-                Some(format!("<font color=\"{color}\"><b>{}</b></font>", esc(&rating))),
-                Some(format!("user: {}", esc(&user))),
-                title.as_deref().map(esc),
-                Some(esc(&size)),
-                Some(esc(&mime)),
-                Some(esc(&date)),
-            ]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
-            .join(" - ");
+            let body = info_line(title.as_deref(), &rating, &format!("[{id}]"), &user, &size, &mime, &date);
+            let rating_html = format!("<font color=\"{color}\"><b>{}</b></font>", esc(&rating));
+            let html = info_line(title.as_deref().map(esc).as_deref(), &rating_html, &format!("[{id}]"), &esc(&user), &esc(&size), &esc(&mime), &esc(&date));
             e.reply_rich(&body, &html).await;
         }
         _ => {
@@ -251,12 +246,11 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
                     "nsfw" => "red",
                     _ => "brown",
                 };
-                (format!("ID: {id}"), format!("[color={color}]{rating}[/color]"))
+                (format!("[{id}]"), format!("[color={color}]{rating}[/color]"))
             } else {
                 (super::item_url(&rt.st, id).await.replace("http://", "https://"), rating)
             };
-            let parts = [Some(head), Some(r), Some(format!("user: {user}")), title, Some(size), Some(mime), Some(date)];
-            e.reply(&parts.into_iter().flatten().collect::<Vec<_>>().join(" - ")).await;
+            e.reply(&info_line(title.as_deref(), &r, &head, &user, &size, &mime, &date)).await;
         }
     }
     Ok(())
@@ -626,6 +620,16 @@ mod tests {
         assert_eq!(t("https://f0ck.me/notifications"), None);
         assert!(g.is_match("https://f0ck.me/user/x/favs/77"));
         assert!(!g.is_match("https://example.com/1234"));
+    }
+
+    #[test]
+    fn info_line_order() {
+        let d = "Sun Mar 16 2025 14:14:13";
+        assert_eq!(
+            info_line(Some("PUN☆PUN☆マンの逆襲"), "sfw", "[33348]", "wizard", "~1021.05 kB", "video/webm", d),
+            "PUN☆PUN☆マンの逆襲 - sfw - [33348] - by wizard - ~1021.05 kB - video/webm - Sun Mar 16 2025 14:14:13"
+        );
+        assert_eq!(info_line(None, "nsfw", "[1]", "x", "~1 kB", "image/png", d), "nsfw - [1] - by x - ~1 kB - image/png - Sun Mar 16 2025 14:14:13");
     }
 
     #[test]
