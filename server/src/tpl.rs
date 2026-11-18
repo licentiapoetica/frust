@@ -1509,6 +1509,33 @@ mod tests {
         assert!(shell.contains("<div class=\"f0ck-shell-page\">"));
     }
 
+    /// f0ckv2's media filter goes through /mime (the `mime` cookie wins over a /video path, so plain
+    /// /video links showed mixed items while f0ckm's picker had set one): back to the listing, an
+    /// item page back to itself; only the types the site offers.
+    #[test]
+    fn f0ckv2_filter_sets_the_mime_cookie() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let session = serde_json::json!({ "user": "bob", "id": 1 });
+        let render = |data: serde_json::Value| {
+            let mut ctx = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "session": session, "frontend": "f0ckv2",
+                "scroller_mime_cats": ["video", "image", "audio"], "filter_mimes": ["image", "video", "audio", "flash"] });
+            ctx.as_object_mut().unwrap().extend(data.as_object().unwrap().clone());
+            env.get_template("frontends/f0ckv2/snippets/navbar.html").unwrap().render(to_jvalue(&ctx)).unwrap()
+        };
+        let tag = render(serde_json::json!({ "url": { "pathname": "/tag/cat/p/2", "search": "", "qs": {} }, "tmp": { "tag": "cat", "mime": "video" } }));
+        assert!(tag.contains("<a href=\"/mime?back=%2Ftag%2Fcat%2F\">all</a>"), "{tag}");
+        assert!(tag.contains("<a href=\"/mime?video=1&amp;back=%2Ftag%2Fcat%2F\" class=\"active\">video</a>"));
+        assert!(tag.contains("<a href=\"/mime?audio=1&amp;back=%2Ftag%2Fcat%2F\">audio</a>"));
+        assert!(!tag.contains("flash=1"), "no Flash without enable_swf");
+        assert!(!tag.contains("href=\"/tag/cat/video\""));
+        let item = render(serde_json::json!({ "url": { "pathname": "/tag/cat/7", "search": "", "qs": {} }, "tmp": { "tag": "cat" }, "item": { "id": 7 } }));
+        assert!(item.contains("<a href=\"/mime?back=%2Ftag%2Fcat%2F7\" class=\"active\">all</a>"), "{item}");
+        assert!(item.contains("<a href=\"/mime?image=1&amp;back=%2Ftag%2Fcat%2F7\">image</a>"));
+        let one = render(serde_json::json!({ "url": { "pathname": "/", "search": "", "qs": {} }, "tmp": {}, "scroller_mime_cats": ["video"] }));
+        assert!(!one.contains("/mime?"), "one type: nothing to filter");
+    }
+
     /// f0ckYou (the video site parody): its own pages render for guests and members, with the forms
     /// that make them work without JavaScript (and live with it, f0ckyou.js). F0CKM_DUMP_F0CKYOU=<dir> writes them out.
     #[test]

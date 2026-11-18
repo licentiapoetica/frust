@@ -14,14 +14,30 @@
             </ul>
           </li>
           {% endif %}
-          <li class="v2-mm-col">
+          {#- The media filter sets the `mime` cookie with /mime, like f0ckm's type picker: the cookie
+              wins over a /video path (routes/index.rs feed_mime), so a plain /video link showed mixed
+              items while one was set. Back to the listing (page 1); an item page stays where it is
+              (its prev / next follow the filter). Only the types the site has and the visitor may
+              filter by (scroller_mime_cats, Flash with enable_swf, filter_mimes); none for one type. -#}
+          {%- set v2_cats = (scroller_mime_cats if (scroller_mime_cats is defined and scroller_mime_cats is sequence) else ["video", "image", "audio"]) -%}
+          {%- set v2_ok = (filter_mimes if (filter_mimes is defined and filter_mimes is sequence) else ["image", "video", "audio", "flash"]) -%}
+          {%- set v2_types = (["audio"] if ("audio" in v2_cats and "audio" in v2_ok) else [])
+              + (["video"] if ("video" in v2_cats and "video" in v2_ok) else [])
+              + (["image"] if ("image" in v2_cats and "image" in v2_ok) else [])
+              + (["flash"] if (enable_swf and "flash" in v2_ok) else []) -%}
+          {%- set v2_back = ((url.pathname ~ (url.search or "")) if (item is defined and item and url is defined and url and url.pathname) else filter_base)|encode_uri_component -%}
+          {%- set v2_mime = (tmp.mime if (tmp and tmp.mime) else "") -%}
+          {% if v2_types|length > 1 %}
+          <li class="v2-mm-col" id="v2-filter">
             <span class="v2-mm-head">filter</span>
             <ul>
-              {% for f in [["", "all"], ["audio", "audio"], ["video", "video"], ["image", "image"]] %}
-              <li><a href="{{ filter_base }}{{ f[0] }}"{% if (f[0] == ((tmp.mime if (tmp and tmp.mime) else ""))) %} class="active"{% endif %}>{{ f[1] }}</a></li>
+              <li><a href="/mime?back={{ v2_back }}"{% if not v2_mime %} class="active"{% endif %}>all</a></li>
+              {% for t in v2_types %}
+              <li><a href="/mime?{{ t }}=1&amp;back={{ v2_back }}"{% if t == v2_mime %} class="active"{% endif %}>{{ t }}</a></li>
               {% endfor %}
             </ul>
           </li>
+          {% endif %}
           {% if session and modes %}
           <li class="v2-mm-col">
             <span class="v2-mm-head">mode</span>

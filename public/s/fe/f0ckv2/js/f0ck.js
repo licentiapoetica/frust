@@ -546,9 +546,9 @@ window.v2Page.onPage(() => {
   // </touch dropdowns>
 
   // <soft view switch> filter and mode change the listing in place, without reloading the page.
-  // Listings load again (<navigation>); on an item page a mode change only refreshes prev/next and
-  // the pagination (the player keeps playing).
-  // The links stay plain links without JavaScript (/mode/<n> redirects, the filter is a listing URL).
+  // Listings load again (<navigation>); on an item page they only refresh prev/next and the
+  // pagination (the player keeps playing).
+  // The links stay plain links without JavaScript (/mode/<n> and /mime?<type>=1&back=… redirect).
   const softSwap = (doc, sels) => sels.forEach(sel => {
     const cur = document.querySelector(sel), next = doc.querySelector(sel);
     if(cur && next) cur.replaceWith(next);
@@ -559,13 +559,23 @@ window.v2Page.onPage(() => {
     return new DOMParser().parseFromString(await res.text(), 'text/html');
   };
   // a listing: the whole page again (<navigation>)
+  const isListing = () => !!document.querySelector('.pagewrapper > #main');
+  const isItem = () => !!document.querySelector('.container[data-item-id]');
   const softLoad = (url, push) => window.v2Nav.go(url, push ? {} : { replace: true, keepScroll: true });
+  // an item page: the new prev / next (and the menu's marks), loaded ahead again
+  const softItem = async doc => {
+    softSwap(doc, ['.pagination-wrapper', '#view-settings', 'a#prev', 'a#next']);
+    ['#next', '#prev'].forEach(sel => {
+      const n = document.querySelector(sel);
+      if(n && window.v2Nav.navigable(n)) window.v2Nav.prefetch(n.href);
+    });
+  };
   v2On(document, 'click', async e => {
     const a = e.target.closest('#view-settings a[href]');
     if(!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || a.dataset.theme) return;
     const href = a.getAttribute('href');
     const isMode = /^\/mode\/\d$/.test(href);
-    const isFilter = !isMode && a.closest('.v2-mm-col') && a.closest('.v2-mm-col').querySelector('.v2-mm-head')?.textContent.trim() === 'filter';
+    const isFilter = !isMode && /^\/mime\?/.test(href);
     if(!isMode && !isFilter) return;
     e.preventDefault();
     if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -579,16 +589,14 @@ window.v2Page.onPage(() => {
         document.cookie = 'ratings=; path=/; max-age=0; SameSite=Lax';
         // pages loaded ahead (a hovered link to this very page, the item's neighbours) show the old mode
         window.v2Nav.forget();
-        if(document.querySelector('.pagewrapper > #main')) await softLoad(location.href, false);
-        else {
-          softSwap(await fetchDoc(location.href), ['.pagination-wrapper', '#view-settings', 'a#prev', 'a#next']);
-          ['#next', '#prev'].forEach(sel => {
-            const n = document.querySelector(sel);
-            if(n && window.v2Nav.navigable(n)) window.v2Nav.prefetch(n.href);
-          });
-        }
+        if(isListing()) await softLoad(location.href, false);
+        else await softItem(await fetchDoc(location.href));
       } else {
-        await softLoad(href, true);
+        // /mime sets the `mime` cookie and redirects back: to the listing's first page, or to this
+        // item (an item page keeps playing, only its neighbours change)
+        window.v2Nav.forget();
+        if(isItem() && !isListing()) await softItem(await fetchDoc(href));
+        else await softLoad(href, true);
       }
     } catch(err) {
       location.href = href;
