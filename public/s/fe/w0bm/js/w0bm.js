@@ -2233,7 +2233,7 @@
     }
   });
 
-  // Comment tools of a form: [rb] [reich] [krebs] [glitch] [badapple] [spoiler] (.w0bm-fmt, formatText) and the
+  // Comment tools of a form: [rb] [reich] [krebs] [glitch] [spoiler] (.w0bm-fmt, formatText) and the
   // emoji box (.emoji-shit opens .emojis-box). Used by the item's comment form and the upload's
   // first comment.
   function commentTools(root, ta) {
