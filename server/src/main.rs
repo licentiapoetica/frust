@@ -30,6 +30,7 @@ mod nojs;
 mod private_items;
 mod proc;
 mod pwa;
+mod remote;
 mod routes;
 mod security;
 mod smtp;
@@ -191,6 +192,9 @@ fn spawn_background_tasks(st: &state::AppState) {
 
     // Postgres LISTEN → live event socket (/api/notifications/ws)
     routes::notifications::spawn_listener(st);
+
+    // A remote f0ck mirrored as a data source (remote.interval, see remote.rs)
+    remote::spawn_sync(st);
 
     // Expired DM attachments (every 6 hours)
     routes::messages::spawn_cleanup(st);

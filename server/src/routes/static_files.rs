@@ -10,7 +10,13 @@ pub fn register(r: &mut Router) {
     // Item media: one plain file name, exactly the one the private/rating gates checked (app.rs)
     r.get(r"^\/b\/", |st: AppState, req: Req| async move {
         match plain_name(req.path.strip_prefix("/b/").unwrap_or("")) {
-            Some(name) => Ok(serve_file(&req, &st.cfg().paths.b.join(name), None).await),
+            Some(name) => {
+                // Items mirrored from a remote f0ck: streamed through, or stored on first request (remote.rs)
+                if let Some(r) = crate::remote::serve_file(&st, &req, &name).await {
+                    return Ok(r);
+                }
+                Ok(serve_file(&req, &st.cfg().paths.b.join(name), None).await)
+            }
             None => Ok(not_found()),
         }
     });
@@ -28,7 +34,15 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/t\/(?<file>.+)$", thumb);
     r.get(r"^\/ca\/(?<file>.+)$", cover);
     r.get(r"^\/memes\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.memes, "/memes/").await) });
-    r.get(r"^\/a\/", |st: AppState, req: Req| async move { Ok(serve_dir(&req, &st.cfg().paths.a, "/a/").await) });
+    r.get(r"^\/a\/", |st: AppState, req: Req| async move {
+        // Avatars of users mirrored from a remote f0ck (remote.rs)
+        if let Some(name) = plain_name(req.path.strip_prefix("/a/").unwrap_or("")) {
+            if let Some(r) = crate::remote::serve_avatar(&st, &req, &name).await {
+                return Ok(r);
+            }
+        }
+        Ok(serve_dir(&req, &st.cfg().paths.a, "/a/").await)
+    });
     r.get(r"^\/robots\.txt$", |st: AppState, _req: Req| async move { public_file(&st, "robots.txt", "text/plain").await });
     r.get(r"^\/manifest\.json$", |st: AppState, _req: Req| async move {
         let (cfg, favicon) = (st.cfg(), st.settings.favicon_url());
@@ -109,6 +123,9 @@ async fn cover(st: AppState, req: Req) -> Res {
     if is_hidden_media(&st, &file).await {
         return Ok(not_found_plain());
     }
+    if let Some(r) = crate::remote::serve_cover(&st, &req, &file).await {
+        return Ok(r);
+    }
     let p = st.cfg().paths.ca.join(&file);
     if p.is_file() { Ok(image(&req, &p, &file).await) } else { Ok(not_found_plain()) }
 }
@@ -118,6 +135,9 @@ async fn thumb(st: AppState, req: Req) -> Res {
     let Some(file) = media_file(&req) else { return Ok(not_found_plain()) };
     if is_hidden_media(&st, &file).await {
         return Ok(not_found_plain());
+    }
+    if let Some(r) = crate::remote::serve_thumb(&st, &req, &file).await {
+        return Ok(r);
     }
     let path = cfg.paths.t.join(&file);
     if path.is_file() {

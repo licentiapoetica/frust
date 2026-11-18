@@ -374,6 +374,22 @@ mimes:
   application/x-bzip2: bz2
   application/x-xz: xz
 apis: {}
+# A remote f0ck (f0ck-rs, API v3) as a data source: f0ckm shows that site's content as seen through
+# your account there, to test how it looks here. `f0ckm remote-sync` copies its items, tags,
+# uploaders and favs into this database (no media); media files, thumbnails and cover art are
+# streamed through from the remote when viewed. Better on a test database: the remote's uploaders
+# become local accounts that can't log in, and a remote login that exists here maps to that account.
+# `f0ckm remote-sync --purge` deletes every mirrored item again.
+remote:
+  enabled: false
+  url: https://f0ck.example
+  username: ""
+  password: ""          # or the F0CKM_REMOTE_PASSWORD environment variable
+  mode: 3               # what the remote shows: 0 sfw, 1 nsfw, 2 untagged, 3 all
+  keep_ids: true        # same item ids as the remote where they are free here
+  interval: 0           # minutes between syncs while the server runs (0: only `f0ckm remote-sync`)
+  store_media: false    # true: keep viewed media in b/, t/, ca/ instead of streaming it every time
+  max_media_mb: 1024    # with store_media: larger media files aren't kept
 smtp:
   enabled: false
   host: smtp.example.com

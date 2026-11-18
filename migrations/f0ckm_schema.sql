@@ -18,6 +18,7 @@ ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_admin_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_video_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.remote_items DROP CONSTRAINT IF EXISTS remote_items_item_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.item_view_marks DROP CONSTRAINT IF EXISTS item_view_marks_item_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_sessions DROP CONSTRAINT IF EXISTS user_sessions_user_id_fkey;
@@ -139,6 +140,8 @@ ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS webauthn_credentials_cred_id_key;
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_pkey;
+ALTER TABLE IF EXISTS ONLY public.remote_items DROP CONSTRAINT IF EXISTS remote_items_source_remote_id_key;
+ALTER TABLE IF EXISTS ONLY public.remote_items DROP CONSTRAINT IF EXISTS remote_items_pkey;
 ALTER TABLE IF EXISTS ONLY public.item_view_marks DROP CONSTRAINT IF EXISTS item_view_marks_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_pubkeys DROP CONSTRAINT IF EXISTS user_pubkeys_pkey;
 ALTER TABLE IF EXISTS ONLY public.user_options DROP CONSTRAINT IF EXISTS user_options_user_id;
@@ -228,6 +231,7 @@ DROP TABLE IF EXISTS public.webauthn_credentials;
 DROP SEQUENCE IF EXISTS public.user_warnings_id_seq;
 DROP TABLE IF EXISTS public.user_warnings;
 DROP TABLE IF EXISTS public.user_video_views;
+DROP TABLE IF EXISTS public.remote_items;
 DROP TABLE IF EXISTS public.item_view_marks;
 DROP TABLE IF EXISTS public.user_sessions;
 DROP SEQUENCE IF EXISTS public.user_sessions_id_seq;
@@ -1626,6 +1630,19 @@ CREATE TABLE public.item_view_marks (
 
 
 --
+-- Name: remote_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.remote_items (
+    item_id integer NOT NULL,
+    source character varying(255) NOT NULL,
+    remote_id integer NOT NULL,
+    remote_dest character varying(255) NOT NULL,
+    synced_at bigint DEFAULT 0 NOT NULL
+);
+
+
+--
 -- Name: user_video_views; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2370,6 +2387,22 @@ ALTER TABLE ONLY public.user_pubkeys
 
 ALTER TABLE ONLY public.item_view_marks
     ADD CONSTRAINT item_view_marks_pkey PRIMARY KEY (item_id, viewer);
+
+
+--
+-- Name: remote_items remote_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.remote_items
+    ADD CONSTRAINT remote_items_pkey PRIMARY KEY (item_id);
+
+
+--
+-- Name: remote_items remote_items_source_remote_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.remote_items
+    ADD CONSTRAINT remote_items_source_remote_id_key UNIQUE (source, remote_id);
 
 
 --
@@ -3257,6 +3290,14 @@ ALTER TABLE ONLY public.user_sessions
 
 ALTER TABLE ONLY public.item_view_marks
     ADD CONSTRAINT item_view_marks_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: remote_items remote_items_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.remote_items
+    ADD CONSTRAINT remote_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES public.items(id) ON DELETE CASCADE;
 
 
 --

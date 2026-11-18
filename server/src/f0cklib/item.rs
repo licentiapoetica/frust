@@ -536,7 +536,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     let mut has_coverart = false;
     if actitem.str("mime").map(|m| m.starts_with("audio/")).unwrap_or(false) {
         let ca = cfg.paths.ca.join(format!("{itemid}.webp"));
-        if nonempty_file(&ca) {
+        if nonempty_file(&ca) || crate::remote::has_cover(st, itemid).await {
             has_coverart = true;
         } else if let Some(audio) = crate::http::files::safe_join(&cfg.paths.b, &actitem.string("dest")) {
             if audio.exists() {
