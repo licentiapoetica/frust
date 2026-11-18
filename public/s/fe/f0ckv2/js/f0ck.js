@@ -574,8 +574,19 @@ window.v2Page.onPage(() => {
         const res = await fetch(href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' } });
         const data = await res.json().catch(() => ({}));
         if(!res.ok || data.success === false) { fe.flash?.(data.msg || 'mode not allowed', 'error'); return; }
+        // the listings filter by a `ratings` cookie (left by f0ckm's rating buttons) before the mode;
+        // the server drops it only for the plain link
+        document.cookie = 'ratings=; path=/; max-age=0; SameSite=Lax';
+        // pages loaded ahead (a hovered link to this very page, the item's neighbours) show the old mode
+        window.v2Nav.forget();
         if(document.querySelector('.pagewrapper > #main')) await softLoad(location.href, false);
-        else softSwap(await fetchDoc(location.href), ['.pagination-wrapper', '#view-settings', 'a#prev', 'a#next']);
+        else {
+          softSwap(await fetchDoc(location.href), ['.pagination-wrapper', '#view-settings', 'a#prev', 'a#next']);
+          ['#next', '#prev'].forEach(sel => {
+            const n = document.querySelector(sel);
+            if(n && window.v2Nav.navigable(n)) window.v2Nav.prefetch(n.href);
+          });
+        }
       } else {
         await softLoad(href, true);
       }
@@ -863,6 +874,8 @@ window.v2Page.onPage(() => {
   };
 
   window.v2Nav = { go, reload: () => go(location.href, { replace: true, keepScroll: true }), navigable, prefetch,
+    // a setting changed by a plain GET (/mode/N): the kept pages are stale
+    forget: () => prefetched.clear(),
     // the address was changed in place (the endless grid shows another page's number): back / forward
     // compare against it
     setShown: href => { shownPath = pathKey(href); } };
