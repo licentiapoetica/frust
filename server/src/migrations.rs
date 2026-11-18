@@ -316,6 +316,20 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     // that viewer's f0ck_burn cookie
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS burn_after_read boolean DEFAULT false NOT NULL"#,
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS burn_claim text"#,
+    // Items mirrored from a remote f0ck (remote.rs): the remote's id and file name per item
+    r#"CREATE TABLE IF NOT EXISTS remote_items (
+      item_id integer NOT NULL,
+      source character varying(255) NOT NULL,
+      remote_id integer NOT NULL,
+      remote_dest character varying(255) NOT NULL,
+      synced_at bigint DEFAULT 0 NOT NULL,
+      CONSTRAINT remote_items_pkey PRIMARY KEY (item_id),
+      CONSTRAINT remote_items_source_remote_id_key UNIQUE (source, remote_id),
+      CONSTRAINT remote_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+    )"#,
+    // favorites' primary key starts with user_id: lookups by item (an item's favs, deleting an
+    // item) scanned the whole key
+    r#"CREATE INDEX IF NOT EXISTS idx_favorites_item_id ON favorites(item_id)"#,
 ];
 
 #[cfg(test)]

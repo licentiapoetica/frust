@@ -38,6 +38,14 @@ Media:
   autotag <from_id> [<to_id>] [--dry-run]   Rate untagged images sfw/nsfw via the configured NSFW APIs
   clean [--dry-run] [--yes]                 Find missing media and delete unreferenced files
 
+Remote source (config.yaml `remote:`, a f0ck-rs site seen through your account there):
+  remote-sync [--full] [--limit <n>] [--thumbs]
+                                            Mirror its items, tags, uploaders and favs (no media:
+                                            streamed when viewed, or kept with remote.store_media;
+                                            --thumbs: with store_media, fetch thumbnails now;
+                                            --full: refresh every mirrored item, not only new ones)
+  remote-sync --purge [--yes]               Delete every mirrored item and its files again
+
 Config:
   config-update [--from <file>|-] [--dry-run]
                                             Add settings missing from config.yaml, with their comments,
@@ -96,6 +104,7 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
     // Everything else needs the config and the database.
     let known = [
         "seed", "create-admin", "users", "import", "regen", "rehash", "find-duplicates", "autotag", "clean",
+        "remote-sync",
     ];
     if !known.contains(&cmd) {
         eprintln!("Unknown command: {cmd}\n\n{HELP}");
@@ -122,6 +131,7 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
         "find-duplicates" => maintenance::find_duplicates(&st).await,
         "autotag" => maintenance::autotag(&st, &Args::parse(args, &["--dry-run"], &[])?).await,
         "clean" => maintenance::clean(&st, &Args::parse(args, &["--dry-run", "--yes", "-y"], &[])?).await,
+        "remote-sync" => remote_sync(&st, &Args::parse(args, &["--full", "--thumbs", "--purge", "--yes", "-y"], &["--limit"])?).await,
         _ => unreachable!(),
     }
 }
@@ -159,6 +169,34 @@ fn config_update(base: &Path, args: &Args) -> Result<i32> {
         println!("  {k}");
     }
     Ok(0)
+}
+
+/// `f0ckm remote-sync`: mirror the remote f0ck of config.yaml `remote:` (see crate::remote).
+async fn remote_sync(st: &crate::state::AppState, a: &Args) -> Result<i32> {
+    let Some(rc) = crate::remote::settings(&st.cfg()) else {
+        eprintln!("No remote source: set remote.enabled, remote.url, remote.username and remote.password in config.yaml");
+        return Ok(1);
+    };
+    // Make sure remote_items exists (the server adds it at boot)
+    crate::prepare_db(st).await;
+    if a.flag(&["--purge"]) {
+        if !a.flag(&["--yes", "-y"]) && !confirm(&format!("Delete every item mirrored from {} and its files?", rc.base)) {
+            return Ok(1);
+        }
+        let n = crate::remote::purge(st, &rc.base).await?;
+        println!("Deleted {n} mirrored item(s). The accounts created for remote users are kept.");
+        return Ok(0);
+    }
+    let limit = match a.value(&["--limit"]) {
+        Some(v) => Some(v.parse::<usize>().map_err(|_| anyhow::anyhow!("--limit needs a number"))?),
+        None => None,
+    };
+    let (user, total) = crate::remote::whoami(&rc).await?;
+    println!("Logged in to {} as {user}: {total} item(s) visible (mode {}).", rc.base, rc.mode);
+    let opts = crate::remote::SyncOpts { full: a.flag(&["--full"]), limit, thumbs: a.flag(&["--thumbs"]), announce: false, verbose: true };
+    let r = crate::remote::sync(st, &rc, &opts).await?;
+    println!("Done: {} new, {} updated, {} failed (remote total {}).", r.added, r.updated, r.failed, r.remote_total);
+    Ok(if r.failed > 0 { 1 } else { 0 })
 }
 
 /// Line numbers (1-based) that contain a tab, e.g. "12, 117".
