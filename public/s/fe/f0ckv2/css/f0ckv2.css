@@ -114,7 +114,12 @@ html:not([theme^="f0ck95"]) .container .metadata {
   border-left: 1px solid var(--img-border-color);
   border-right: 1px solid var(--img-border-color);
 }
-/* the comments header sits right under the metadata: no line between them */
+/* without comments (disabled, or hidden from guests) the metadata closes the frame */
+html:not([theme^="f0ck95"]) .container .metadata {
+  border-bottom: 1px solid var(--img-border-color);
+}
+/* the comments header sits right under the metadata: no line between them
+   (#comments makes this beat the rule above) */
 .container:has(#comments) .metadata {
   border-bottom: 0;
 }

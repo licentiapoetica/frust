@@ -5604,9 +5604,11 @@ body.layout-legacy .blahlol {
 
 /* Comments hidden ("c"): nothing below closes the box, so it gets its own bottom border.
    comments-sliding = the comments are sliding up behind it or back down (comments.js); the border
-   stays for the whole slide in both directions */
+   stays for the whole slide in both directions. Same without any comment box (comments disabled in
+   the config, or hidden from guests). */
 body.layout-legacy.comments-hidden .blahlol,
-body.layout-legacy.comments-sliding .blahlol {
+body.layout-legacy.comments-sliding .blahlol,
+body.layout-legacy:not(:has(#comments-container)) .blahlol {
   border-bottom: 1px solid var(--nav-border-color);
 }
 
