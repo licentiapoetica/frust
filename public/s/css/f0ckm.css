@@ -30984,6 +30984,11 @@ body:has(#force-password-modal) {
   border-radius: 0;
 }
 
+/* Register has more to fill in (invite question, application message): a wider box */
+#register-modal .login-modal-content {
+  max-width: 520px;
+}
+
 /* Header */
 :is(#login-modal #modal-login-view, #register-modal #modal-register-view, #anon-setup-modal #anon-setup-view, #anon-passkey-modal #anon-passkey-view) .lm-header {
   text-align: center;
