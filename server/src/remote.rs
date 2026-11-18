@@ -204,12 +204,18 @@ pub async fn whoami(rc: &RemoteCfg) -> Result<(String, i64)> {
 /// Local accounts by remote login / display name, created on first use.
 #[derive(Default)]
 struct Users {
+    /// The remote's base URL, recorded with the accounts made for it (`remote_users`).
+    source: String,
     by_key: HashMap<String, (i64, String)>,
     /// Local accounts whose avatar was looked at in this sync.
     avatar_done: HashSet<i64>,
 }
 
 impl Users {
+    fn new(rc: &RemoteCfg) -> Users {
+        Users { source: rc.base.clone(), ..Default::default() }
+    }
+
     /// The local account for a remote user: same login here, else a new one that can't log in.
     /// `login` is unknown for fav users (the remote only sends their display name).
     async fn get(&mut self, st: &AppState, login: Option<&str>, name: &str) -> Result<(i64, String)> {
@@ -222,7 +228,7 @@ impl Users {
         let find = || sql!(r#"SELECT id, "user" FROM "user" WHERE LOWER(login) = "#, login.clone(), r#" OR LOWER("user") = "#, login.clone(), " ORDER BY (LOWER(login) = ", login.clone(), ") DESC, id LIMIT 1");
         let u = match find().fetch_optional(&st.db).await? {
             Some(r) => (r.i64("id").unwrap_or(0), r.string("user")),
-            None => create_user(st, &login, if name.is_empty() { &login } else { name }).await?,
+            None => create_user(st, &self.source, &login, if name.is_empty() { &login } else { name }).await?,
         };
         self.by_key.insert(login, u.clone());
         Ok(u)
@@ -271,7 +277,9 @@ fn clip(s: &str, n: usize) -> String {
     s.chars().take(n).collect()
 }
 
-async fn create_user(st: &AppState, login: &str, display: &str) -> Result<(i64, String)> {
+/// A local account for a remote user, recorded in `remote_users` so purge and cleanup only ever
+/// delete accounts the mirror made (password `!` alone also marks passkey-only accounts).
+async fn create_user(st: &AppState, source: &str, login: &str, display: &str) -> Result<(i64, String)> {
     // "user" is unique and is what items.username refers to
     let base = clip(display, 36);
     let mut name = base.clone();
@@ -294,6 +302,7 @@ async fn create_user(st: &AppState, login: &str, display: &str) -> Result<(i64, 
     )
     .execute(&mut *tx)
     .await?;
+    sql!("INSERT INTO remote_users (user_id, source) VALUES (", id, ", ", clip(source, 255), ") ON CONFLICT DO NOTHING").execute(&mut *tx).await?;
     tx.commit().await?;
     Ok((id as i64, name))
 }
@@ -316,7 +325,7 @@ pub async fn sync(st: &AppState, rc: &RemoteCfg, opts: &SyncOpts) -> Result<Sync
     let oldest_known = known.iter().min().copied();
     let backfilled = matches!((oldest_known, remote_oldest), (Some(k), Some(o)) if k <= o);
 
-    let mut users = Users::default();
+    let mut users = Users::new(rc);
     let mut older: Option<i64> = None;
     let mut first = true;
     let mut announced = 0;
@@ -483,7 +492,7 @@ async fn redact_existing(st: &AppState, rc: &RemoteCfg) -> Result<()> {
     .await?
     .unwrap_or(0);
     if leftover > 0 {
-        let (_, name) = Users::default().get(st, Some(REDACTED), REDACTED).await?;
+        let (_, name) = Users::new(rc).get(st, Some(REDACTED), REDACTED).await?;
         sql!(
             "UPDATE items SET username = ", name,
             " WHERE id IN (SELECT item_id FROM remote_items) AND usernetwork ILIKE 'telegram' AND username ~ '^-?[0-9]+$'"
@@ -499,9 +508,10 @@ async fn redact_existing(st: &AppState, rc: &RemoteCfg) -> Result<()> {
     .execute(&st.db)
     .await?;
     let gone = sql!(
-        r#"DELETE FROM "user" u WHERE u.password = '!' AND u.login ~ '^-?[0-9]+$'
+        r#"DELETE FROM "user" u WHERE u.id IN (SELECT user_id FROM remote_users) AND u.password = '!' AND u.login ~ '^-?[0-9]+$'
            AND NOT EXISTS (SELECT 1 FROM items i WHERE i.username = u."user")
-           AND NOT EXISTS (SELECT 1 FROM anon_identities a WHERE a.user_id = u.id)"#
+           AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = u.id)
+           AND NOT EXISTS (SELECT 1 FROM tags_assign t WHERE t.user_id = u.id)"#
     )
     .execute(&st.db)
     .await?;
@@ -590,8 +600,34 @@ async fn announce(st: &AppState, item_id: i64) {
     let _ = sql!("SELECT pg_notify('new_item', ", payload.to_string(), ")").execute(&st.db).await;
 }
 
-/// Delete every mirrored item of `base` (rows cascade) and its files; the number deleted.
-pub async fn purge(st: &AppState, base: &str) -> Result<usize> {
+/// The accounts a purge of `base` deletes (id, name): the ones the mirror made for it
+/// (`remote_users`), and accounts from before that table that can only be the mirror's (password
+/// `!` without passkey or anonymous identity, not the ghost), as long as nothing outside the
+/// mirrored items belongs to them (items, comments, tags; favs and avatars go with the account).
+pub async fn purge_accounts(st: &AppState, base: &str) -> Result<Vec<(i64, String)>> {
+    let mirrored = || sql!("SELECT item_id FROM remote_items WHERE source = ", base.to_string());
+    let mut q = sql!(r#"SELECT u.id, u."user" FROM "user" u WHERE (u.id IN (SELECT user_id FROM remote_users WHERE source = "#, base.to_string());
+    q.push(
+        r#") OR (u.id NOT IN (SELECT user_id FROM remote_users) AND u.password = '!' AND u.login <> 'deleted_user'
+            AND NOT EXISTS (SELECT 1 FROM anon_identities a WHERE a.user_id = u.id)
+            AND NOT EXISTS (SELECT 1 FROM webauthn_credentials w WHERE w.user_id = u.id)))
+          AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = u.id)
+          AND NOT EXISTS (SELECT 1 FROM items i WHERE i.username = u."user" AND i.id NOT IN ("#,
+    );
+    q.append(&mirrored()).push(")) AND NOT EXISTS (SELECT 1 FROM tags_assign t WHERE t.user_id = u.id AND t.item_id NOT IN (");
+    q.append(&mirrored()).push(r#")) ORDER BY u."user""#);
+    Ok(q.fetch_all(&st.db).await?.iter().map(|r| (r.i64("id").unwrap_or(0), r.string("user"))).collect())
+}
+
+/// The number of items mirrored from `base`.
+pub async fn mirrored_count(st: &AppState, base: &str) -> Result<i64> {
+    Ok(sql!("SELECT COUNT(*)::bigint FROM remote_items WHERE source = ", base.to_string()).fetch_scalar::<i64, _>(&st.db).await?.unwrap_or(0))
+}
+
+/// Start over: delete every mirrored item of `base` (rows cascade) and its files, then the
+/// accounts from [`purge_accounts`] with their avatar files. (items, accounts) deleted.
+pub async fn purge(st: &AppState, base: &str) -> Result<(usize, usize)> {
+    let accounts = purge_accounts(st, base).await?;
     let rows = sql!("SELECT i.id, i.dest FROM items i JOIN remote_items r ON r.item_id = i.id WHERE r.source = ", base.to_string()).fetch_all(&st.db).await?;
     let cfg = st.cfg();
     for r in &rows {
@@ -605,8 +641,16 @@ pub async fn purge(st: &AppState, base: &str) -> Result<usize> {
         }
     }
     sql!("DELETE FROM items WHERE id IN (SELECT item_id FROM remote_items WHERE source = ", base.to_string(), ")").execute(&st.db).await?;
+    let ids: Vec<i32> = accounts.iter().map(|(id, _)| *id as i32).collect();
+    for f in sql!("SELECT avatar_file FROM user_options WHERE user_id = ANY(", ids.clone(), r") AND avatar_file LIKE 'remote\_%'").fetch_scalar_list::<String, _>(&st.db).await? {
+        // Shared by every account with that remote avatar; kept while another one still uses it
+        if crate::media::is_plain_name(&f) && sql!("SELECT 1 AS x FROM user_options WHERE avatar_file = ", f.clone(), " AND NOT (user_id = ANY(", ids.clone(), ")) LIMIT 1").fetch_optional(&st.db).await?.is_none() {
+            let _ = tokio::fs::remove_file(cfg.paths.a.join(&f)).await;
+        }
+    }
+    sql!(r#"DELETE FROM "user" WHERE id = ANY("#, ids, ")").execute(&st.db).await?;
     st.caches.feed_count.clear();
-    Ok(rows.len())
+    Ok((rows.len(), accounts.len()))
 }
 
 /// The periodic sync while the server runs (`remote.interval` minutes; re-read every minute so

@@ -327,6 +327,13 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       CONSTRAINT remote_items_source_remote_id_key UNIQUE (source, remote_id),
       CONSTRAINT remote_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
     )"#,
+    // Accounts remote.rs made for remote users (only these are ever deleted by purge/cleanup)
+    r#"CREATE TABLE IF NOT EXISTS remote_users (
+      user_id integer NOT NULL,
+      source character varying(255) NOT NULL,
+      CONSTRAINT remote_users_pkey PRIMARY KEY (user_id),
+      CONSTRAINT remote_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE CASCADE
+    )"#,
     // favorites' primary key starts with user_id: lookups by item (an item's favs, deleting an
     // item) scanned the whole key
     r#"CREATE INDEX IF NOT EXISTS idx_favorites_item_id ON favorites(item_id)"#,

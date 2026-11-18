@@ -44,7 +44,8 @@ Remote source (config.yaml `remote:`, a f0ck-rs site seen through your account t
                                             streamed when viewed, or kept with remote.store_media;
                                             --thumbs: with store_media, fetch thumbnails now;
                                             --full: refresh every mirrored item, not only new ones)
-  remote-sync --purge [--yes]               Delete every mirrored item and its files again
+  remote-sync --purge [--yes]               Start over: delete every mirrored item, its files and the
+                                            accounts made for remote users
 
 Config:
   config-update [--from <file>|-] [--dry-run]
@@ -180,11 +181,18 @@ async fn remote_sync(st: &crate::state::AppState, a: &Args) -> Result<i32> {
     // Make sure remote_items exists (the server adds it at boot)
     crate::prepare_db(st).await;
     if a.flag(&["--purge"]) {
-        if !a.flag(&["--yes", "-y"]) && !confirm(&format!("Delete every item mirrored from {} and its files?", rc.base)) {
+        let items = crate::remote::mirrored_count(st, &rc.base).await?;
+        let accounts = crate::remote::purge_accounts(st, &rc.base).await?;
+        let names: Vec<&str> = accounts.iter().map(|(_, n)| n.as_str()).collect();
+        println!("Mirrored from {}: {items} item(s); accounts made for remote users: {}", rc.base, accounts.len());
+        if !names.is_empty() {
+            println!("  {}", names.join(", "));
+        }
+        if !a.flag(&["--yes", "-y"]) && !confirm("Delete these items, their files and these accounts?") {
             return Ok(1);
         }
-        let n = crate::remote::purge(st, &rc.base).await?;
-        println!("Deleted {n} mirrored item(s). The accounts created for remote users are kept.");
+        let (n, u) = crate::remote::purge(st, &rc.base).await?;
+        println!("Deleted {n} mirrored item(s) and {u} account(s). `f0ckm remote-sync` starts from scratch now.");
         return Ok(0);
     }
     let limit = match a.value(&["--limit"]) {
