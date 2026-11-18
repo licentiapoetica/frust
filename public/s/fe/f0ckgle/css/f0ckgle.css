@@ -3781,13 +3781,15 @@ html.gchat-skin-f0ckgle .gchat-msg-actions {
   right: 6px;
   bottom: auto;
   flex-direction: row;
+  transform: none;
 }
 
 html.gchat-skin-f0ckgle .gchat-msg-self .gchat-msg-actions {
-  top: auto;
-  bottom: 8px;
+  top: 50%;
+  bottom: auto;
   left: 6px;
   right: auto;
+  transform: translateY(-50%);
 }
 
 html.gchat-skin-f0ckgle :is(.gchat-reply-btn, .gchat-del-btn) {

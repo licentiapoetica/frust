@@ -5391,11 +5391,12 @@ html.gchat-skin-f0ckyou .gchat-bubble a {
 
 html.gchat-skin-f0ckyou .gchat-msg-actions,
 html.gchat-skin-f0ckyou .gchat-msg-self .gchat-msg-actions {
-  top: 3px;
+  top: 50%;
   right: 8px;
   bottom: auto;
   left: auto;
   flex-direction: row;
+  transform: translateY(-50%);
 }
 
 html.gchat-skin-f0ckyou :is(.gchat-reply-btn, .gchat-del-btn) {

@@ -2491,13 +2491,15 @@ html.gchat-skin-f0ckv2 .gchat-bubble {
   font-size: 1em;
 }
 
+/* at the line's end, in the middle of the message's lines */
 html.gchat-skin-f0ckv2 .gchat-msg-actions,
 html.gchat-skin-f0ckv2 .gchat-msg-self .gchat-msg-actions {
-  top: 0;
+  top: 50%;
   right: 2px;
   bottom: auto;
   left: auto;
   flex-direction: row;
+  transform: translateY(-50%);
 }
 
 html.gchat-skin-f0ckv2 :is(.gchat-reply-btn, .gchat-del-btn) {

@@ -539,8 +539,11 @@
 }
 
 .gchat-msg-self .gchat-msg-actions {
+  top: 50%;
   right: auto;
+  bottom: auto;
   left: 4px;
+  transform: translateY(-50%);
 }
 
 .gchat-msg-self .gchat-reply-btn {

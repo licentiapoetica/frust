@@ -3994,6 +3994,7 @@ html.gchat-skin-w0bm .gchat-msg-self .gchat-msg-actions {
     right: 8px;
     left: auto;
     flex-direction: row;
+    transform: none;
 }
 
 html.gchat-skin-w0bm :is(.gchat-reply-btn, .gchat-del-btn) {
