@@ -782,7 +782,15 @@
     "online": "{n} online",
     "guests": "{n} gasten",
     "guest": "{n} gast",
-    "users": "Wie is er online"
+    "users": "Wie is er online",
+    "cmd_title": "Chatcommando's (team)",
+    "cmd_none": "Er zijn geen chatcommando's.",
+    "cmd_help": "deze lijst (alleen jij ziet hem)",
+    "cmd_settopic": "een onderwerp boven de chat vastzetten, voor iedereen",
+    "cmd_cleartopic": "het onderwerp verwijderen",
+    "cmd_setbackground": "achtergrond van de berichten; css na de url, standaard: center / cover no-repeat",
+    "cmd_clearbg": "de achtergrond verwijderen",
+    "cmd_clear": "alle berichten verwijderen, voor iedereen"
   },
   "scroller": {
     "just_now": "zojuist",

@@ -776,7 +776,15 @@
     "online": "{n} da",
     "guests": "{n} Gaffer",
     "guest": "{n} Gaffer",
-    "users": "Wer schwafelt mit"
+    "users": "Wer schwafelt mit",
+    "cmd_title": "Geschwafel-Befehle (Obrigkeit)",
+    "cmd_none": "Hier gibt's nix zu befehlen.",
+    "cmd_help": "diese Liste (nur für dich)",
+    "cmd_settopic": "ein Thema übers Geschwafel nageln, für alle",
+    "cmd_cleartopic": "das Thema abreißen",
+    "cmd_setbackground": "Tapete hinter dem Geschwafel; CSS nach der URL, sonst: center / cover no-repeat",
+    "cmd_clearbg": "die Tapete abreißen",
+    "cmd_clear": "alles Geschwafel wegmachen, für alle"
   },
   "scroller": {
     "just_now": "gerade eben",

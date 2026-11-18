@@ -618,11 +618,42 @@
         updateCount(input);
     }
 
+    // A note only this visitor sees (not sent): /help
+    function appendNote(title, rows) {
+        const container = document.getElementById('gchat-messages');
+        if (!container) return;
+        const note = document.createElement('div');
+        note.className = 'gchat-note-msg';
+        note.innerHTML = `<div class="gchat-note-title">${esc(title)}</div>` + (rows.length
+            ? `<dl class="gchat-note-list">${rows.map(([cmd, what]) => `<dt><code>${esc(cmd)}</code></dt><dd>${esc(what)}</dd>`).join('')}</dl>`
+            : '');
+        container.appendChild(note);
+        scrollToBottom(true);
+    }
+
+    const STAFF_COMMANDS = [
+        ['/help',                          t('chat_cmd_help', 'this list (only you see it)')],
+        ['/settopic <text>',               t('chat_cmd_settopic', 'pin a topic above the chat, for everyone')],
+        ['/cleartopic',                    t('chat_cmd_cleartopic', 'remove the topic')],
+        ['/setbackground <url> [css]',     t('chat_cmd_setbackground', "the messages' background; css after the url, default: center / cover no-repeat")],
+        ['/clearbg',                       t('chat_cmd_clearbg', 'remove the background')],
+        ['/clear',                         t('chat_cmd_clear', 'delete every message, for everyone')],
+    ];
+
     async function sendMessage() {
         const input = document.getElementById('gchat-input');
         if (!input) return;
         const raw = input.value.trim();
         if (!raw) return;
+
+        // /help: the commands, shown only here
+        if (raw === '/help') {
+            const isAdmin = window.f0ckSession.is_admin || window.f0ckSession.is_moderator;
+            if (isAdmin) appendNote(t('chat_cmd_title', 'Chat commands (staff)'), STAFF_COMMANDS);
+            else appendNote(t('chat_cmd_none', 'There are no chat commands.'), []);
+            clearInput(input);
+            return;
+        }
 
         // Admin slash commands
         if (raw === '/clear') {

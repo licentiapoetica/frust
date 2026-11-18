@@ -786,7 +786,15 @@
     "online": "{n} online",
     "guests": "{n} Gäste",
     "guest": "{n} Gast",
-    "users": "Wer ist online"
+    "users": "Wer ist online",
+    "cmd_title": "Chat-Befehle (Team)",
+    "cmd_none": "Es gibt keine Chat-Befehle.",
+    "cmd_help": "diese Liste (nur du siehst sie)",
+    "cmd_settopic": "ein Thema über dem Chat anheften, für alle",
+    "cmd_cleartopic": "das Thema entfernen",
+    "cmd_setbackground": "Hintergrund der Nachrichten; CSS nach der URL, Standard: center / cover no-repeat",
+    "cmd_clearbg": "den Hintergrund entfernen",
+    "cmd_clear": "alle Nachrichten löschen, für alle"
   },
   "scroller": {
     "just_now": "gerade eben",

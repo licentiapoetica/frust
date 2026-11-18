@@ -785,7 +785,15 @@
     "online": "{n} online",
     "guests": "{n} guests",
     "guest": "{n} guest",
-    "users": "Who's online"
+    "users": "Who's online",
+    "cmd_title": "Chat commands (staff)",
+    "cmd_none": "There are no chat commands.",
+    "cmd_help": "this list (only you see it)",
+    "cmd_settopic": "pin a topic above the chat, for everyone",
+    "cmd_cleartopic": "remove the topic",
+    "cmd_setbackground": "the messages' background; css after the url, default: center / cover no-repeat",
+    "cmd_clearbg": "remove the background",
+    "cmd_clear": "delete every message, for everyone"
   },
   "scroller": {
     "just_now": "just now",

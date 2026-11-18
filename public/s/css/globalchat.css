@@ -592,6 +592,39 @@
   outline: none;
 }
 
+/* a note only this visitor sees (/help) */
+.gchat-note-msg {
+  margin: 4px;
+  padding: 8px 10px;
+  background: var(--gc-hover);
+  border-left: 3px solid var(--gc-accent);
+  font-size: .82em;
+}
+
+.gchat-note-title {
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.gchat-note-list {
+  margin: 0;
+}
+
+/* the command, its description under it (the panel can be narrow) */
+.gchat-note-list dt {
+  margin-top: 5px;
+}
+
+.gchat-note-list dd {
+  margin: 0 0 0 10px;
+  color: var(--gc-muted);
+}
+
+.gchat-note-list code {
+  color: var(--gc-accent);
+  font-family: monospace;
+}
+
 /* ── embedded media ── */
 .gchat-embed-img,
 .gchat-embed-video,
