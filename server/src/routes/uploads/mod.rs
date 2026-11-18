@@ -64,7 +64,7 @@ pub(crate) async fn api_key_session(st: &AppState, key: &str) -> anyhow::Result<
 
 /// Tag id by normalized name, creating the tag when missing.
 pub(crate) async fn ensure_tag(st: &AppState, name: &str) -> anyhow::Result<Option<i64>> {
-    let find = || sql!("select id from tags where normalized = slugify(", name, ") limit 1");
+    let find = || sql!("select id from tags where normalized = (select slugify(", name, ")) limit 1");
     if let Some(r) = find().fetch_optional(&st.db).await? {
         return Ok(r.i64("id"));
     }

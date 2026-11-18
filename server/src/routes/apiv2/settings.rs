@@ -266,7 +266,7 @@ async fn find_tag(st: &AppState, id: Option<i64>, name: &str) -> anyhow::Result<
             Ok(id) => sql!("select id, tag, normalized from tags where id = ", id).fetch_optional(&st.db).await,
             Err(_) => Ok(None),
         },
-        None => sql!("select id, tag, normalized from tags where normalized = slugify(", name, ") or tag = ", name).fetch_optional(&st.db).await,
+        None => sql!("select id, tag, normalized from tags where normalized = (select slugify(", name, ")) or tag = ", name).fetch_optional(&st.db).await,
     }
 }
 

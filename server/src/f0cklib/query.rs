@@ -812,13 +812,13 @@ pub fn tag_match(term: &Term) -> Option<Sql> {
         Term::Tag { text, exact: false } => sql!(
             "(t.tag ILIKE ",
             contains_pattern(text),
-            " OR (slugify(",
+            " OR ((select slugify(",
             text.as_str(),
-            ") <> '' AND t.normalized LIKE '%' || slugify(",
+            ")) <> '' AND t.normalized LIKE (select '%' || slugify(",
             text.as_str(),
-            ") || '%'))"
+            ") || '%')))"
         ),
-        Term::Tag { text, exact: true } => sql!("(lower(t.tag) = lower(", text.as_str(), ") OR (slugify(", text.as_str(), ") <> '' AND t.normalized = slugify(", text.as_str(), ")))"),
+        Term::Tag { text, exact: true } => sql!("(lower(t.tag) = lower(", text.as_str(), ") OR ((select slugify(", text.as_str(), ")) <> '' AND t.normalized = (select slugify(", text.as_str(), "))))"),
         Term::Wild(p) => sql!("t.tag ILIKE ", wild_pattern(p)),
         _ => return None,
     })

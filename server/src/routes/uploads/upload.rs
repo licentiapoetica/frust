@@ -1062,7 +1062,7 @@ async fn album_items(
             }
         } else if let Some(sub_id) = sub_id {
             for t in &ctx.tags {
-                if let Ok(Some(r)) = sql!("SELECT id FROM tags WHERE normalized = slugify(", t.clone(), ") LIMIT 1").fetch_optional(&st.db).await {
+                if let Ok(Some(r)) = sql!("SELECT id FROM tags WHERE normalized = (select slugify(", t.clone(), ")) LIMIT 1").fetch_optional(&st.db).await {
                     if let Some(tag_id) = r.i64("id") {
                         let _ = sql!("INSERT INTO album_items_tags_assign (album_item_id, tag_id, user_id) VALUES (", sub_id as i32, ", ", tag_id as i32, ", ", uid as i32, ") ON CONFLICT DO NOTHING")
                             .execute(&st.db)

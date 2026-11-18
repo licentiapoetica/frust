@@ -791,9 +791,9 @@ async fn tags_suggest(st: AppState, req: Req) -> Res {
     }
     let res = sql!(
         r#"select tag, count(tags_assign.tag_id) as tagged from "tags" left join "tags_assign" on "tags_assign".tag_id = "tags".id
-        where normalized like '%' || slugify("#,
+        where normalized like (select '%' || slugify("#,
         q.map(str::to_string),
-        r#") || '%' group by "tags".id having count(tags_assign.tag_id) > 0 order by tagged desc limit 15"#
+        r#") || '%') group by "tags".id having count(tags_assign.tag_id) > 0 order by tagged desc limit 15"#
     )
     .fetch_all(&st.db)
     .await;

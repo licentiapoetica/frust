@@ -530,9 +530,9 @@ pub(crate) fn tag_filter_sql(tag: &str, is_strict: bool, tagger: Option<&str>, w
           select ta.item_id from tags_assign ta
           join tags t on t.id = ta.tag_id
           join "user" u on u.id = ta.user_id
-          where t.normalized like '%' || slugify("#,
+          where t.normalized like (select '%' || slugify("#,
                 term.as_str(),
-                r#") || '%'
+                r#") || '%')
           and u.user ilike "#,
                 tagger,
                 r#"
@@ -541,9 +541,9 @@ pub(crate) fn tag_filter_sql(tag: &str, is_strict: bool, tagger: Option<&str>, w
           join album_items_tags_assign aita on aita.album_item_id = ai.id
           join tags t on t.id = aita.tag_id
           join "user" u on u.id = aita.user_id
-          where t.normalized like '%' || slugify("#,
+          where t.normalized like (select '%' || slugify("#,
                 term.as_str(),
-                r#") || '%'
+                r#") || '%')
           and u.user ilike "#,
                 tagger,
                 "\n        ))"
@@ -592,17 +592,17 @@ pub(crate) fn tag_filter_sql(tag: &str, is_strict: bool, tagger: Option<&str>, w
         }
         if with_albums {
             q.append(&sql!(
-                "and (items.id in (\n            select ta.item_id from tags_assign ta join tags t on t.id = ta.tag_id where t.normalized like '%' || slugify(",
+                "and (items.id in (\n            select ta.item_id from tags_assign ta join tags t on t.id = ta.tag_id where t.normalized like (select '%' || slugify(",
                 term.as_str(),
-                ") || '%'\n          ) or items.id in (\n            select ai.item_id from album_items ai join album_items_tags_assign aita on aita.album_item_id = ai.id join tags t on t.id = aita.tag_id where t.normalized like '%' || slugify(",
+                ") || '%')\n          ) or items.id in (\n            select ai.item_id from album_items ai join album_items_tags_assign aita on aita.album_item_id = ai.id join tags t on t.id = aita.tag_id where t.normalized like (select '%' || slugify(",
                 term.as_str(),
-                ") || '%'\n          ))"
+                ") || '%')\n          ))"
             ));
         } else {
             q.append(&sql!(
-                "and items.id in (select ta.item_id from tags_assign ta join tags t on t.id = ta.tag_id where t.normalized like '%' || slugify(",
+                "and items.id in (select ta.item_id from tags_assign ta join tags t on t.id = ta.tag_id where t.normalized like (select '%' || slugify(",
                 term.as_str(),
-                ") || '%')"
+                ") || '%'))"
             ));
         }
     }

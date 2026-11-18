@@ -590,12 +590,12 @@ fn tag_condition(tag: &str, strict: bool) -> (Vec<String>, bool, Sql) {
         for term in &terms {
             tag_cond.append(&sql!(
                 " and (items.id in (select ta.item_id from tags_assign ta join tags t on t.id = ta.tag_id \
-                 where t.normalized like '%' || slugify(",
+                 where t.normalized like (select '%' || slugify(",
                 term.as_str(),
-                ") || '%') or items.id in (select ai.item_id from album_items ai join album_items_tags_assign aita on aita.album_item_id = ai.id \
-                 join tags t on t.id = aita.tag_id where t.normalized like '%' || slugify(",
+                ") || '%')) or items.id in (select ai.item_id from album_items ai join album_items_tags_assign aita on aita.album_item_id = ai.id \
+                 join tags t on t.id = aita.tag_id where t.normalized like (select '%' || slugify(",
                 term.as_str(),
-                ") || '%'))"
+                ") || '%')))"
             ));
         }
     }
@@ -721,7 +721,7 @@ pub async fn get_tag_feed_items(st: &AppState, o: &TagFeedOpts<'_>) -> anyhow::R
                 if i > 0 {
                     sq.push(" OR ");
                 }
-                sq.push("t.normalized LIKE '%' || slugify(").bind(term.as_str()).push(") || '%'");
+                sq.push("t.normalized LIKE (select '%' || slugify(").bind(term.as_str()).push(") || '%')");
             }
         }
         sq.push(") ORDER BY ai.item_id, ai.order_index ASC");

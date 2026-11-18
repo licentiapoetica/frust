@@ -322,12 +322,12 @@ async fn audit_null_target(st: &AppState, uid: i32, action: &str, details: Optio
 
 /// Existing tag id by normalized name, or a newly created tag.
 async fn find_or_create_tag(st: &AppState, name: &str) -> anyhow::Result<Option<i32>> {
-    if let Some(id) = sql!(r#"SELECT id FROM "tags" WHERE normalized = slugify("#, name, ") LIMIT 1").fetch_scalar::<i32, _>(&st.db).await? {
+    if let Some(id) = sql!(r#"SELECT id FROM "tags" WHERE normalized = (select slugify("#, name, ")) LIMIT 1").fetch_scalar::<i32, _>(&st.db).await? {
         return Ok(Some(id));
     }
     match sql!(r#"INSERT INTO "tags" (tag) VALUES ("#, name, ") RETURNING id").fetch_scalar::<i32, _>(&st.db).await {
         Ok(id) => Ok(id),
-        Err(_) => Ok(sql!(r#"SELECT id FROM "tags" WHERE normalized = slugify("#, name, ") LIMIT 1").fetch_scalar::<i32, _>(&st.db).await?),
+        Err(_) => Ok(sql!(r#"SELECT id FROM "tags" WHERE normalized = (select slugify("#, name, ")) LIMIT 1").fetch_scalar::<i32, _>(&st.db).await?),
     }
 }
 
