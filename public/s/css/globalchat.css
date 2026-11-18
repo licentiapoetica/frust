@@ -1127,7 +1127,7 @@ html.gchat-closed #gchat-widget {
   font-size: 1.1rem;
   cursor: pointer;
   opacity: .8;
-  transition: opacity .15s, transform .15s;
+  transition: opacity .15s;
 }
 
 html.gchat-closed #gchat-reopen-bubble {
@@ -1136,7 +1136,6 @@ html.gchat-closed #gchat-reopen-bubble {
 
 #gchat-reopen-bubble:hover {
   opacity: 1;
-  transform: translateY(-2px);
 }
 
 .gchat-reopen-label {

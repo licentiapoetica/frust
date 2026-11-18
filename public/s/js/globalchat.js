@@ -7,8 +7,10 @@
  * Loaded by snippets/globalchat.html (f0ckm's footer and snippets/frontend-scripts.html). The look is
  * a skin: the structure is in /s/css/globalchat.css, each frontend styles it in its own CSS under
  * html.gchat-skin-<frontend> (f0ckm: f0ckm.css). The page data blocks:
- *   #gchat-skin        { skin, title, placeholder, open, online, guests, guests_one, users }
- *                      (snippets/globalchat.html); <count>_one: the text for 1 (online_one, guests_one)
+ *   #gchat-skin        { skin, title, placeholder, open, online, guests, guests_one, users, bar }
+ *                      (snippets/globalchat.html); <count>_one: the text for 1 (online_one, guests_one);
+ *                      bar: a bar the closed launcher sits beside, its height as --gc-bar-h (f0ckm:
+ *                      the right sidebar's footer)
  *   #gchat-skin-texts  the frontend's own texts, optional (views/frontends/<fe>/snippets/chat.html):
  *                      title, placeholder, open, online ("{n}"), guests ("{n}"), badge (chip next to
  *                      the title), greeting (top of the message list, "{name}"), intro (text under
@@ -46,6 +48,9 @@
     const isPhone    = () => phoneMQ.matches;
     // whether new messages are seen: the open phone chat, or the expanded desktop panel
     const chatShown  = () => (isPhone() ? mobileOpen : !isMinimized && !isClosed);
+    // how much of the bottom edge the docked chat (or the closed launcher) takes: --gc-dock-h
+    // (f0ckm: the sidebar's drag handle stays above it); set up in init
+    let updateDock   = () => {};
     const ytOembedCache = new Map(); // videoId → {title, author_name}
 
     // ── i18n + skin ──────────────────────────────────────────────────────────
@@ -606,10 +611,19 @@
         if (el) el.textContent = `${input.value.length}/${input.maxLength > 0 ? input.maxLength : 500}`;
     }
 
-    // Grows the field with its text, up to 4 lines (rows, not a height style)
+    // Grows the field with its text, up to 4 lines (rows, not a height style). One line: a skin may give
+    // the input row a fixed height (f0ckm: the sidebar bar's); more: .gchat-input-multi lets it grow.
     function autoGrow(input) {
+        const area = document.getElementById('gchat-input-area');
+        area?.classList.remove('gchat-input-multi');
         input.rows = 1;
-        while (input.rows < 4 && input.scrollHeight > input.clientHeight + 1) input.rows++;
+        // a second line overflows by a whole line; a font's taller glyphs (or the placeholder's) only by
+        // a pixel or two, which must not count
+        const line = parseFloat(getComputedStyle(input).lineHeight) || 16;
+        if (input.value && input.scrollHeight > input.clientHeight + line / 2) {
+            area?.classList.add('gchat-input-multi');
+            while (input.rows < 4 && input.scrollHeight > input.clientHeight + 1) input.rows++;
+        }
     }
 
     function clearInput(input) {
@@ -740,6 +754,7 @@
         const panel = document.getElementById('gchat-panel');
         const btn   = document.getElementById('gchat-minimize-btn');
         if (panel) panel.classList.toggle('gchat-minimized', isMinimized);
+        requestAnimationFrame(() => updateDock());
         if (btn) {
             btn.title = isMinimized ? t('chat_expand','Expand') : t('chat_minimize','Minimize');
             btn.innerHTML = ico(isMinimized ? 'up' : 'down');
@@ -1253,6 +1268,7 @@
                 localStorage.setItem('f0ck_chat_float_y', Math.round(r.top));
             }
             applyFloatMode();
+            updateDock();
         });
 
         // Drag-to-move in float mode — drag the header
@@ -1342,12 +1358,14 @@
             isClosed = true;
             localStorage.setItem('f0ck_chat_closed', '1');
             document.documentElement.classList.add('gchat-closed');
+            updateDock();
         }
         function reopenChat() {
             isClosed = false;
             localStorage.removeItem('f0ck_chat_closed');
             document.documentElement.classList.remove('gchat-closed');
             clampGeo();
+            updateDock();
             if (isMinimized) { setMinimized(false); } else { loadHistory(); }
         }
 
@@ -1396,7 +1414,38 @@
         phoneMQ.addEventListener('change', () => {
             if (!isPhone()) closeMobile();
             clampGeo();
+            updateDock();
         });
+
+        // The bar the launcher lines up with (skin.bar): its height as --gc-bar-h on <html>, kept up
+        // to date (it grows with its content; f0ckm swaps the sidebar on page loads)
+        if (skin.bar) {
+            let barEl = null;
+            const barRO = new ResizeObserver(() => applyBar());
+            const applyBar = () => {
+                const h = barEl?.isConnected ? barEl.offsetHeight : 0;
+                if (h) document.documentElement.style.setProperty('--gc-bar-h', h + 'px');
+                else document.documentElement.style.removeProperty('--gc-bar-h');
+            };
+            const pickBar = () => {
+                let el = null;
+                // the one at the bottom of the window (a page may have more than one)
+                try {
+                    el = [...document.querySelectorAll(skin.bar)].filter(e => e.offsetHeight)
+                        .sort((a, b) => Math.abs(window.innerHeight - a.getBoundingClientRect().bottom)
+                                      - Math.abs(window.innerHeight - b.getBoundingClientRect().bottom))[0] || null;
+                } catch (_) {}
+                if (el !== barEl) {
+                    if (barEl) barRO.unobserve(barEl);
+                    barEl = el;
+                    if (el) barRO.observe(el);
+                }
+                applyBar();
+            };
+            pickBar();
+            document.addEventListener('f0ck:contentLoaded', pickBar);
+            window.addEventListener('resize', pickBar);
+        }
 
         // the launcher: phones always (collapsed chat), desktop when the chat is closed
         const launcher = document.createElement('button');
@@ -1407,6 +1456,19 @@
         launcher.addEventListener('click', () => (isPhone() ? openMobile() : reopenChat()));
         document.body.appendChild(launcher);
         updateBadge();
+
+        updateDock = () => {
+            const el = isPhone() ? null : (isClosed ? launcher : (isFloating ? null : panel));
+            const top = el ? el.getBoundingClientRect().top : window.innerHeight;
+            const h = Math.max(0, Math.round(window.innerHeight - top));
+            if (h) document.documentElement.style.setProperty('--gc-dock-h', h + 'px');
+            else document.documentElement.style.removeProperty('--gc-dock-h');
+        };
+        const dockRO = new ResizeObserver(() => updateDock());
+        dockRO.observe(panel);
+        dockRO.observe(launcher);
+        window.addEventListener('resize', () => updateDock());
+        updateDock();
 
         document.getElementById('gchat-close-btn').addEventListener('click', e => {
             e.stopPropagation();
@@ -1658,6 +1720,7 @@
 
         // If user had previously closed the chat, hide on load and show the launcher
         if (isClosed) document.documentElement.classList.add('gchat-closed');
+        updateDock();
     }
 
     if (document.readyState === 'loading') {

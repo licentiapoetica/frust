@@ -13,7 +13,8 @@
   "online": t("chat.online")|string,
   "guests": t("chat.guests")|string,
   "guests_one": t("chat.guest")|string,
-  "users": t("chat.users")|string
+  "users": t("chat.users")|string,
+  "bar": (".global-sidebar-right-footer, .item-sidebar-right-footer, .index-sidebar-right-footer" if gchat_name == "f0ckm" else "")
 }|tojson }}</script>
 {% if gchat_name != "f0ckm" %}{% include ("frontends/" ~ gchat_name ~ "/snippets/chat.html") ignore missing %}{% endif %}
 <script src="/s/js/globalchat.js?v={{ mtime("/public/s/js/globalchat.js") }}"></script>

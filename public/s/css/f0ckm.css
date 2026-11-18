@@ -19160,15 +19160,90 @@ html.gchat-skin-f0ckm {
   --gc-top-gap: var(--navbar-h, 50px);
 }
 
-/* --sidebar-w is 0 on body while the sidebar is hidden */
+/* beside the right sidebar: --motd-room is its width (0 while hidden), already the end state while it
+   slides and what shows of it while dragged (see the MOTD), so the chat moves with it */
 html.gchat-skin-f0ckm body {
-  --gc-right: calc(var(--sidebar-w, 300px) + 18px);
+  --gc-right: var(--motd-room, var(--sidebar-w, 300px));
 }
 
 html.gchat-skin-f0ckm #gchat-reopen-bubble {
-  right: 18px;
-  bottom: 18px;
   color: var(--accent, #9f0);
+}
+
+/* closed: on the bottom edge, flush against the right sidebar (the screen's edge while it is hidden),
+   as tall as the sidebar's footer bar (--gc-bar-h, globalchat.js); phones keep the corner button
+   (globalchat.css) */
+@media (min-width: 601px) {
+  html.gchat-skin-f0ckm #gchat-reopen-bubble {
+    right: var(--motd-room, var(--sidebar-w, 0px));
+    bottom: 0;
+    height: var(--gc-bar-h, 42px);
+    min-width: var(--gc-bar-h, 42px);
+  }
+
+  /* docked: its bottom line as tall as the sidebar's footer bar, so the edges line up (the minimized
+     bar, the input area; the panel's own bottom border counts) */
+  html.gchat-skin-f0ckm #gchat-panel.gchat-minimized:not(.gchat-floating) {
+    height: var(--gc-bar-h, 42px);
+    max-height: var(--gc-bar-h, 42px);
+  }
+
+  html.gchat-skin-f0ckm #gchat-panel.gchat-minimized:not(.gchat-floating) #gchat-header {
+    flex: 1;
+    height: auto;
+  }
+
+  /* one line: exactly the bar's height (the panel's bottom border counts), the field and the buttons
+     fill it, the text in the middle; more lines (.gchat-input-multi, globalchat.js): it grows */
+  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) #gchat-input-area:not(.gchat-input-multi) {
+    /* a very low bar: not below 40px, the field must stay usable */
+    height: max(calc(var(--gc-bar-h, 42px) - 1px), 40px);
+  }
+
+  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) #gchat-input-area:not(.gchat-input-multi) #gchat-input-row {
+    flex: 1;
+    min-height: 0;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  /* the line in the middle: the field is the row minus its 1px top border, 12px padding and the
+     field's 2px border */
+  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) #gchat-input-area:not(.gchat-input-multi) #gchat-input {
+    min-height: 0;
+    padding-top: max(0px, calc((max(calc(var(--gc-bar-h, 42px) - 1px), 40px) - 15px - 1.4em) / 2));
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+
+  /* the send and emoji buttons: squares as tall as the one-line field, at the bottom when it grows */
+  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) :is(#gchat-send-btn, #gchat-emoji-btn) {
+    /* the row minus its 1px top border and 12px padding */
+    --gc-row-in: calc(max(calc(var(--gc-bar-h, 42px) - 1px), 40px) - 13px);
+    flex: 0 0 auto;
+    align-self: flex-end;
+    width: var(--gc-row-in);
+    height: var(--gc-row-in);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  /* the sidebar's drag handle (a strip down to the bottom, its pill in the middle) ends above the docked
+     chat, so the pill centres in the space left over it (--gc-dock-h, globalchat.js; inline bottom: 0
+     from f0ckm.js) */
+  html.gchat-skin-f0ckm #sidebar-drag-zone {
+    bottom: var(--gc-dock-h, 0px) !important;
+  }
+}
+
+/* glide with the sidebar, in its timing: toggle 0.6s, swipe 0.3s (f0ckm.js sidebarSlideStart) */
+html.gchat-skin-f0ckm body:is(.sidebar-right-closing, .sidebar-right-opening) :is(#gchat-reopen-bubble, #gchat-widget) {
+  transition: right .6s cubic-bezier(0.45, 0, 0.2, 1), opacity .15s;
+}
+
+html.gchat-skin-f0ckm body.sidebar-right-swipe :is(#gchat-reopen-bubble, #gchat-widget) {
+  transition-duration: .3s, .15s;
+  transition-timing-function: ease-in-out;
 }
 
 html.gchat-skin-f0ckm #gchat-title {
