@@ -214,17 +214,20 @@ fn cors(st: &AppState, req: &Req) -> Option<Response> {
     (req.method == Method::OPTIONS).then(|| raw(204, ""))
 }
 
-/// Thumbnails and cover art keep their URL when they are regenerated (rethumb, Flash capture,
-/// `f0ckm regen`), so browsers must ask every time; the 304 from Last-Modified/ETag keeps it cheap.
-const THUMB_CACHE: &str = "public, no-cache";
+/// Thumbnails and cover art: fresh for an hour, then shown from the cache at once while the browser
+/// revalidates in the background. Never `no-cache`: that costs a round trip per thumbnail on every
+/// page view, which makes a grid crawl. They keep their URL when regenerated (rethumb, Flash
+/// capture); the `rethumb` live event makes open tabs refetch them (f0ck-core.js), and the next
+/// background revalidation catches `f0ckm regen`.
+const THUMB_CACHE: &str = "public, max-age=3600, stale-while-revalidate=604800";
 
 fn is_thumb_path(p: &str) -> bool {
     p.starts_with("/t/") || p.starts_with("/ca/")
 }
 
-/// `private` variant for gated media: thumbnails revalidate, everything else is cached for an hour.
+/// `private` variant for gated media (never in a shared cache), same lifetimes as the public one.
 fn private_cache(p: &str) -> &'static str {
-    if is_thumb_path(p) { "private, no-cache" } else { "private, max-age=3600" }
+    if is_thumb_path(p) { "private, max-age=3600, stale-while-revalidate=604800" } else { "private, max-age=3600" }
 }
 
 fn static_cache_headers(st: &AppState, req: &Req) {

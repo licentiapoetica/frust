@@ -589,6 +589,18 @@ window.F0ckLive.onMessage((d) => {
   if (d.type === 'maintenance' && d.data && d.data.enabled && !(window.f0ckSession && window.f0ckSession.is_admin)) location.reload();
 });
 
+// ── Regenerated thumbnails ────────────────────────────────────────────────────────────────
+// Thumbnails are cached for an hour under the same URL (app.rs THUMB_CACHE). On a rethumb, fetch
+// them past the cache once so the browser's copy is the new one: pages rendered later with the plain
+// /t/<id>.webp URL show it in every frontend. (f0ckm.js also swaps the images on the open page.)
+window.F0ckLive.onMessage((d) => {
+  if (d.type !== 'rethumb' || !d.data || !d.data.item_id) return;
+  const id = encodeURIComponent(String(d.data.item_id));
+  const urls = [`/t/${id}.webp`, `/t/${id}_blur.webp`];
+  if (d.data.has_coverart) urls.push(`/ca/${id}.webp`);
+  urls.forEach((u) => { fetch(u, { cache: 'reload', credentials: 'same-origin' }).catch(() => {}); });
+});
+
 // ── Navbar brand ──────────────────────────────────────────────────────────────────────────
 // The image and the text set in the admin panel (live event brand_image, admin.js after a save).
 // Every frontend that shows them marks them inside .navbar-brand: <img data-brand-img> and
