@@ -367,14 +367,28 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             q.append(&where_clause).push(" ").append(&order_by).push(" LIMIT ").bind(limit);
             return q;
         }
-        let mut q = Sql::new("select items.id, items.slug from items left join tags_assign on tags_assign.item_id = items.id left join tags on tags.id = tags_assign.tag_id ");
+        // No joins the conditions don't read: tag filters are subqueries, and only the favs of a
+        // user need favorites + "user". Left-joining them anyway multiplied every item by its tags
+        // and favs before the group by (seconds per item page once a feed mixes ratings).
+        let mut q = Sql::new("select items.id, items.slug from items ");
         if fav_user {
             q.push(r#"inner join favorites on favorites.item_id = items.id inner join "user" on "user".id = favorites.user_id "#);
-        } else {
-            q.push(r#"left join favorites on favorites.item_id = items.id left join "user" on "user".id = favorites.user_id "#);
         }
         q.push("where ").append(&conditions()).push(" ").append(&where_clause);
         q.push(" group by items.id, items.slug ").append(&order_by).push(" limit ").bind(limit);
+        q
+    };
+    // The `n` items closest to `id`: up to n on each side, walked in id order, then the nearest n.
+    // (Ordering every item of the context by abs(id - x) sorted the whole feed.)
+    let nearest = |id: i32, n: i64| -> Sql {
+        let mut q = Sql::new("select * from ((");
+        q.append(&neighbour(sql!("and items.id < ", id), Sql::new("order by items.id desc"), n))
+            .push(") union all (")
+            .append(&neighbour(sql!("and items.id > ", id), Sql::new("order by items.id asc"), n))
+            .push(") ) near order by abs(near.id - ")
+            .bind(id)
+            .push(") asc limit ")
+            .bind(n);
         q
     };
     let id32 = itemid as i32;
@@ -393,7 +407,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
             neighbour(sql!("and items.id < ", id32), Sql::new("order by items.id desc"), 1),
             neighbour(Sql::empty(), Sql::new("order by items.id asc"), 1),
             neighbour(Sql::empty(), Sql::new("order by items.id desc"), 1),
-            neighbour(sql!("and items.id != ", id32), sql!("order by abs(items.id - ", id32, ") asc"), 7),
+            nearest(id32, 7),
         ];
         let (a, b, c, d, e) = tokio::try_join!(
             qs[0].fetch_all(&st.db),

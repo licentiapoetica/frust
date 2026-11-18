@@ -327,6 +327,9 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
       CONSTRAINT remote_items_source_remote_id_key UNIQUE (source, remote_id),
       CONSTRAINT remote_items_item_id_fkey FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
     )"#,
+    // favorites' primary key starts with user_id: lookups by item (an item's favs, deleting an
+    // item) scanned the whole key
+    r#"CREATE INDEX IF NOT EXISTS idx_favorites_item_id ON favorites(item_id)"#,
 ];
 
 #[cfg(test)]

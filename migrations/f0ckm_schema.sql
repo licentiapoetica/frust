@@ -118,6 +118,7 @@ DROP INDEX IF EXISTS public.idx_items_active_id;
 DROP INDEX IF EXISTS public.idx_invite_tokens_used_at;
 DROP INDEX IF EXISTS public.idx_invite_tokens_created_by;
 DROP INDEX IF EXISTS public.idx_global_chat_created_at;
+DROP INDEX IF EXISTS public.idx_favorites_item_id;
 DROP INDEX IF EXISTS public.idx_dm_att_sender;
 DROP INDEX IF EXISTS public.idx_dm_att_recipient;
 DROP INDEX IF EXISTS public.idx_dm_att_expires;
@@ -2563,6 +2564,13 @@ CREATE INDEX idx_dm_att_recipient ON public.dm_attachments USING btree (recipien
 --
 
 CREATE INDEX idx_dm_att_sender ON public.dm_attachments USING btree (sender_id);
+
+
+--
+-- Name: idx_favorites_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_favorites_item_id ON public.favorites USING btree (item_id);
 
 
 --
