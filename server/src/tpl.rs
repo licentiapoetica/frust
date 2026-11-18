@@ -936,6 +936,8 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("enable_swf", json!(cfg.truthy("websrv.enable_swf")));
     put("enable_archive", json!(cfg.truthy("websrv.enable_archive")));
     put("enable_danmaku", json!(cfg.enabled("websrv.enable_danmaku")));
+    // the Konami code's player (snippets/f0ck-core-script.html → f0ck-core.js); null when switched off
+    put("bad_apple", bad_apple(cfg));
     put("enable_item_title", json!(cfg.enabled("websrv.enable_item_title")));
     put("enable_global_chat", json!(cfg.truthy("websrv.enable_global_chat")));
     put("embed_youtube_in_comments", json!(cfg.enabled("websrv.embed_youtube_in_comments")));
@@ -964,6 +966,17 @@ fn bool_or(v: Option<&Value>) -> Option<bool> {
 }
 
 /// Render a page: globals, then `data`, then per-request values (the old patched `tpl.render`).
+/// `websrv.bad_apple` for the Konami code: `{ theme, sound }`, or null when `enabled: false`.
+/// On by default; an unknown theme falls back to classic (Windows 98, square corners).
+fn bad_apple(cfg: &Config) -> Value {
+    if !cfg.enabled("websrv.bad_apple.enabled") {
+        return Value::Null;
+    }
+    let theme = cfg.str_or("websrv.bad_apple.theme", "classic");
+    let theme = if ["classic", "win10", "xp", "breeze"].contains(&theme) { theme } else { "classic" };
+    json!({ "theme": theme, "sound": cfg.enabled("websrv.bad_apple.sound") })
+}
+
 pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> String {
     let cfg = st.cfg();
     let mut data = match data {
@@ -2297,6 +2310,25 @@ mod tests {
         let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
         let v: i64 = env.render_str(r#"{{ mtime("/public/s/js/f0ck-core.js") }}"#, ()).unwrap().parse().unwrap();
         assert!(v > 0);
+    }
+
+    /// websrv.bad_apple reaches f0ck-core.js' script tag: on by default (classic, with sound),
+    /// gone with enabled: false, unknown themes fall back to classic.
+    #[test]
+    fn bad_apple_config_reaches_the_script_tag() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let tag = |yaml: &str| {
+            let cfg = crate::media::test_cfg(yaml);
+            let html = env.get_template("snippets/f0ck-core-script.html").unwrap().render(to_jvalue(&json!({ "bad_apple": bad_apple(&cfg) }))).unwrap();
+            html.lines().find(|l| l.contains("f0ck-core.js")).unwrap().to_string()
+        };
+        let on = tag("websrv: {}");
+        assert!(on.contains(r#"data-bad-apple="classic""#) && !on.contains("silent"), "{on}");
+        let xp = tag("websrv: { bad_apple: { theme: xp, sound: false } }");
+        assert!(xp.contains(r#"data-bad-apple="xp""#) && xp.contains("data-bad-apple-silent"), "{xp}");
+        assert!(tag("websrv: { bad_apple: { theme: '\"><script>' } }").contains(r#"data-bad-apple="classic""#));
+        assert!(!tag("websrv: { bad_apple: { enabled: false } }").contains("data-bad-apple"));
     }
 
     /// Every navbar brand size has its rule in each frontend's CSS.

@@ -172,6 +172,10 @@ websrv:
   enable_tor_hs: false
   enable_global_chat: false
   enable_danmaku: true
+  bad_apple:          # Konami code (↑↑↓↓←→←→BA): "Bad Apple!!" played with desktop windows over the page
+    enabled: true
+    theme: classic    # classic (Windows 98), win10, xp, breeze (xp and breeze have rounded corners)
+    sound: true       # false: the windows play silently and the song isn't downloaded
   private_messages: false
   dm_attachments: true
   dm_unencrypted: false

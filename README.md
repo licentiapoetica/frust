@@ -139,6 +139,7 @@ the GitHub commit. `npm ci` installs them and `npm run vendor` (`scripts/vendor.
 the site serves into `public/s/` (`js/jszip.min.js`, `js/marked.min.js`, `cap/`, `ruffle/`,
 `bad-apple/`). These copies are not in git; the Docker build does both steps itself.
 To take a newer commit of bad-apple-virus: `npm install github:licentiapoetica/bad_apple_virus && npm run vendor`.
+Its setting is `websrv.bad_apple` in config.yaml (`enabled`, `theme`, `sound`).
 
 Updates: merge the Dependabot PR (it changes both files), then run `npm ci && npm run vendor` locally
 or rebuild the image. Major versions can change APIs, so try those before merging.

@@ -38,7 +38,7 @@
         <a href="/">back</a>
       </p>
     </form>
-    <script src="/s/js/f0ck-core.js?v={{ mtime("/public/s/js/f0ck-core.js") }}"></script>
+    {% include "snippets/f0ck-core-script.html" %}
     {% if enable_anonymous_access %}
     {#- "login as anonymous" (passkey.js, shared dialog) -#}
     {% include "snippets/anon-login.html" %}

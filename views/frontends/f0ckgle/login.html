@@ -34,7 +34,7 @@
   </form>
   <div class="fg-signin-foot"><span>English (f0ckland)</span>{% set fg_scheme_class = "fg-signin-scheme" %}{% include "frontends/f0ckgle/snippets/scheme-switch.html" %}<span><a href="/about">Help</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></span></div>
 </main>
-<script src="/s/js/f0ck-core.js?v={{ mtime("/public/s/js/f0ck-core.js") }}"></script>
+{% include "snippets/f0ck-core-script.html" %}
 {% if enable_anonymous_access %}
 {#- "Use a guest account": login as anonymous (passkey.js, shared dialog) -#}
 {% include "snippets/anon-login.html" %}

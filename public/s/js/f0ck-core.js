@@ -1277,7 +1277,13 @@ window.F0ckPageSwap = (() => {
 // package bad-apple-virus, copied to /s/bad-apple/ by `npm run vendor`; Esc closes it). The player is
 // fetched only once ↑↑↓↓ has been typed. From then on the keys that continue the code don't reach the
 // site's own shortcuts (← → and a are prev/next on item pages), so typing it never leaves the page.
+// websrv.bad_apple (snippets/f0ck-core-script.html): data-bad-apple="<theme>" on this script's tag,
+// data-bad-apple-silent without sound; no attribute = switched off.
 (() => {
+  const tag = document.currentScript;
+  if (!tag || !tag.hasAttribute('data-bad-apple')) return;
+  const options = { theme: tag.dataset.badApple || 'classic' };
+  if (tag.hasAttribute('data-bad-apple-silent')) options.audio = [];
   const SEQ = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
   const ARMED = 4;
   let pos = 0, loading = null;
@@ -1306,7 +1312,7 @@ window.F0ckPageSwap = (() => {
     if (pos === SEQ.length) {
       pos = 0;
       // started from this key press, so the browser lets the song play
-      load().then((ba) => ba?.takeover({ theme: 'classic' }));
+      load().then((ba) => ba?.takeover(options));
     }
   }, true);
 })();

@@ -313,7 +313,7 @@
 <script src="/s/js/glitchfx.js?v={{ mtime("/public/s/js/glitchfx.js") }}"></script>
 {#- the item's view: counted without JavaScript by this image, with it by f0ck-core.js -#}
 {% include "snippets/view-beacon.html" %}
-<script src="/s/js/f0ck-core.js?v={{ mtime("/public/s/js/f0ck-core.js") }}"></script>
+{% include "snippets/f0ck-core-script.html" %}
 <script src="/s/js/f0ckm.js?v={{ ts|safe }}"></script>
 <script src="/s/js/sidebar-activity.js?v={{ ts|safe }}"></script>
 <script src="/s/js/flash_yank.js?v={{ ts|safe }}"></script>

@@ -8,7 +8,7 @@
 <script src="/s/js/marked.min.js?v={{ mtime("/public/s/js/marked.min.js") }}" defer></script>
 {#- the item's view: counted without JavaScript by this image, with it by f0ck-core.js -#}
 {% include "snippets/view-beacon.html" %}
-<script src="/s/js/f0ck-core.js?v={{ mtime("/public/s/js/f0ck-core.js") }}"></script>
+{% include "snippets/f0ck-core-script.html" %}
 {% if enable_anonymous_access %}
 {#- "Login as anonymous": any element with class trigger-login-anon opens it (passkey.js) -#}
 {% include "snippets/anon-login.html" %}

@@ -320,7 +320,7 @@ mod tests {
         assert!(add_missing(&text, &text).unwrap().1.is_empty());
         let trimmed: String = text.lines().filter(|l| !l.starts_with("  socks:") && !l.starts_with("    enabled: true") && !l.starts_with("  meme_creator:")).map(|l| format!("{l}\n")).collect();
         let (out, added) = add_missing(&trimmed, &text).unwrap();
-        assert_eq!(added, ["main.socks", "websrv.meme_creator", "websrv.csp.enabled"]);
+        assert_eq!(added, ["main.socks", "websrv.bad_apple.enabled", "websrv.meme_creator", "websrv.csp.enabled"]);
         assert_eq!(parse_yaml(&out).unwrap(), parse_yaml(&text).unwrap());
     }
 }
