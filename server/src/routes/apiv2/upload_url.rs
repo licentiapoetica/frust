@@ -152,7 +152,7 @@ async fn add_tag(st: &AppState, item_id: i64, name: &str, user_id: i64) {
 }
 
 async fn save_comment(st: &AppState, item_id: i64, user_id: i64, content: &str) {
-    if content.trim().is_empty() {
+    if content.trim().is_empty() || !st.cfg().enabled("enable_comments") {
         return;
     }
     let filtered = crate::social::helpers::apply_word_filter(st, content).await;

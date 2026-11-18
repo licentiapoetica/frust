@@ -88,6 +88,7 @@
             </div>
             <input id="w0bm-file" name="file" type="file" class="w0bm-ul-fileinput" accept="{{ allowed_mimes }}">
         </div>
+        {% if enable_comments %}
         {#- the first comment with the item page's tools (w0bm.js commentTools): effects and emojis -#}
         <div class="w0bm-ul-comment">
             <textarea id="ulcomment" class="form-control" placeholder="First comment (optional)" name="comment" rows="2" aria-label="First comment"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
@@ -103,6 +104,7 @@
                 <div class="emojis"></div>
             </div>
         </div>
+        {% endif %}
         <button id="btn-upload" type="submit" class="btn btn-primary btn-sm w0bm-btn-upload"><span class="laz0r">Fire the laz0r</span>
             <span class="" id="laz0r-fire"></span>
             <span class="hidden-xs" id="shoop-laz0r"></span>

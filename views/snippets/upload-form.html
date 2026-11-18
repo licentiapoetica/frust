@@ -1,4 +1,4 @@
-<form id="upload-form" class="upload-form {{ ("shitpost-mode-active" if shitpost_mode else "") }}" enctype="multipart/form-data" data-mimes='{{ mimes_json }}' data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ min_tags }}" data-comment-max-length="{{ comment_max_length }}" data-enable-swf="{{ ("1" if enable_swf else "0") }}" data-enable-archive="{{ ("1" if enable_archive else "0") }}" data-albums="{{ ("1" if albums_enabled else "0") }}">
+<form id="upload-form" class="upload-form {{ ("shitpost-mode-active" if shitpost_mode else "") }}" enctype="multipart/form-data" data-mimes='{{ mimes_json }}' data-max-bytes="{{ max_file_size_bytes }}" data-min-tags="{{ min_tags }}" data-comment-max-length="{{ comment_max_length }}" data-enable-swf="{{ ("1" if enable_swf else "0") }}" data-enable-archive="{{ ("1" if enable_archive else "0") }}" data-albums="{{ ("1" if albums_enabled else "0") }}" data-comments="{{ ("1" if enable_comments else "0") }}">
     <div class="form-section">
         <div class="upload-mode-tabs">
             <button type="button" class="upload-mode-tab active" data-mode="file">
@@ -191,6 +191,7 @@
         </div>
     </div>
 
+    {% if enable_comments %}
     <div class="form-section global-comment-section upload-await-file">
         <label>{{ t("upload.comment") }} <span class="upload-form-optional">{{ t("upload.comment_optional") }}</span></label>
         <div class="upload-comment-input comment-input">
@@ -198,6 +199,7 @@
             <div class="input-actions"></div>
         </div>
     </div>
+    {% endif %}
 
     <div class="form-section global-redirect-section upload-await-file">
         <label class="checkbox-container upload-checkbox-label upload-form-redirect-label">

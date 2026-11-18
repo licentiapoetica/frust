@@ -546,6 +546,8 @@ window.initUploadForm = (selector) => {
     const minTags = parseInt(form.getAttribute('data-min-tags') || '0');
     const commentMaxLenAttr = form.getAttribute('data-comment-max-length');
     const commentMaxLen = (commentMaxLenAttr && commentMaxLenAttr !== 'null') ? parseInt(commentMaxLenAttr) : null;
+    // enable_comments off: no comment box, neither the global one nor the per-file ones (shitpost mode)
+    const commentsEnabled = form.getAttribute('data-comments') !== '0';
 
     const isShitpost = form.classList.contains('shitpost-mode-active') || !!window.f0ckShitpostMode;
     // Config-driven shitpost overrides
@@ -1975,16 +1977,18 @@ window.initUploadForm = (selector) => {
                     `;
                 }
 
-                const commentPlaceholder = window.f0ckI18n?.upload_comment_placeholder || 'AddComment...';
-                const maxLenHtml = (commentMaxLen !== null && !isNaN(commentMaxLen)) ? ` maxlength="${commentMaxLen}"` : '';
-                commentUI = `
-                    <div class="item-comment-container">
-                        <textarea class="item-comment-input" placeholder="${window.escapeHtmlUpload(commentPlaceholder)}"${maxLenHtml}>${window.escapeHtmlUpload(item.comment || '')}</textarea>
-                        <div class="item-comment-actions">
-                            <button type="button" class="item-emoji-trigger" title="Emoji">&#x263A;</button>
+                if (commentsEnabled) {
+                    const commentPlaceholder = window.f0ckI18n?.upload_comment_placeholder || 'AddComment...';
+                    const maxLenHtml = (commentMaxLen !== null && !isNaN(commentMaxLen)) ? ` maxlength="${commentMaxLen}"` : '';
+                    commentUI = `
+                        <div class="item-comment-container">
+                            <textarea class="item-comment-input" placeholder="${window.escapeHtmlUpload(commentPlaceholder)}"${maxLenHtml}>${window.escapeHtmlUpload(item.comment || '')}</textarea>
+                            <div class="item-comment-actions">
+                                <button type="button" class="item-emoji-trigger" title="Emoji">&#x263A;</button>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             }
 
             const fileNameStr = isUrl ? item.url : file.name;

@@ -406,7 +406,7 @@ async fn add_common_tags(st: &AppState, ctx: &Ctx, item_id: i64, extra: &[&str])
 }
 
 async fn insert_comment(st: &AppState, ctx: &Ctx, item_id: i64) {
-    if ctx.comment.is_empty() {
+    if ctx.comment.is_empty() || !st.cfg().enabled("enable_comments") {
         return;
     }
     let content = crate::wordfilter::apply_word_filter(st, &ctx.comment).await;
