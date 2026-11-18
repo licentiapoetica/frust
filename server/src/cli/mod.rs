@@ -46,6 +46,7 @@ Remote source (config.yaml `remote:`, a f0ck-rs site seen through your account t
                                             --full: refresh every mirrored item, not only new ones)
   remote-sync --purge [--yes]               Start over: delete every mirrored item, its files and the
                                             accounts made for remote users
+  remote-sync --prune [--yes]               Delete mirrored items of kinds no longer in remote.types
 
 Config:
   config-update [--from <file>|-] [--dry-run]
@@ -132,7 +133,7 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
         "find-duplicates" => maintenance::find_duplicates(&st).await,
         "autotag" => maintenance::autotag(&st, &Args::parse(args, &["--dry-run"], &[])?).await,
         "clean" => maintenance::clean(&st, &Args::parse(args, &["--dry-run", "--yes", "-y"], &[])?).await,
-        "remote-sync" => remote_sync(&st, &Args::parse(args, &["--full", "--thumbs", "--purge", "--yes", "-y"], &["--limit"])?).await,
+        "remote-sync" => remote_sync(&st, &Args::parse(args, &["--full", "--thumbs", "--purge", "--prune", "--yes", "-y"], &["--limit"])?).await,
         _ => unreachable!(),
     }
 }
@@ -195,12 +196,27 @@ async fn remote_sync(st: &crate::state::AppState, a: &Args) -> Result<i32> {
         println!("Deleted {n} mirrored item(s) and {u} account(s). `f0ckm remote-sync` starts from scratch now.");
         return Ok(0);
     }
+    if a.flag(&["--prune"]) {
+        if rc.types.is_empty() {
+            println!("remote.types is empty (every kind is synced): nothing to prune.");
+            return Ok(0);
+        }
+        let n = crate::remote::prune_count(st, &rc).await?;
+        println!("Mirrored items that aren't {}: {n}", rc.types.join(" / "));
+        if n == 0 || (!a.flag(&["--yes", "-y"]) && !confirm("Delete them and their files?")) {
+            return Ok(if n == 0 { 0 } else { 1 });
+        }
+        let (items, accounts) = crate::remote::prune(st, &rc).await?;
+        println!("Deleted {items} item(s) and {accounts} account(s) left without anything.");
+        return Ok(0);
+    }
     let limit = match a.value(&["--limit"]) {
         Some(v) => Some(v.parse::<usize>().map_err(|_| anyhow::anyhow!("--limit needs a number"))?),
         None => None,
     };
     let (user, total) = crate::remote::whoami(&rc).await?;
     println!("Logged in to {} as {user}: {total} item(s) visible (mode {}).", rc.base, rc.mode);
+    println!("Syncing: {}{}", if rc.types.is_empty() { "every kind".to_string() } else { rc.types.join(", ") }, if rc.redact_src { ", without source URLs" } else { "" });
     let opts = crate::remote::SyncOpts { full: a.flag(&["--full"]), limit, thumbs: a.flag(&["--thumbs"]), announce: false, verbose: true };
     let r = crate::remote::sync(st, &rc, &opts).await?;
     println!("Done: {} new, {} updated, {} failed (remote total {}).", r.added, r.updated, r.failed, r.remote_total);

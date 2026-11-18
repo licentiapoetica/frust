@@ -67,6 +67,10 @@ pub struct RemoteCfg {
     pub max_bytes: u64,
     /// Keep fetched media in b/, t/, ca/ (false: stream it through, nothing is written).
     pub store_media: bool,
+    /// Only these kinds (`video`, `image`, `audio`), each synced on its own; empty: everything.
+    pub types: Vec<String>,
+    /// Blank every mirrored item's source URL.
+    pub redact_src: bool,
 }
 
 /// The remote source, when `remote.enabled` is on and a URL and login are set.
@@ -98,8 +102,31 @@ pub fn settings(cfg: &Config) -> Option<RemoteCfg> {
         keep_ids: cfg.enabled("remote.keep_ids"),
         interval: cfg.int("remote.interval").unwrap_or(0).max(0) as u64,
         store_media: cfg.truthy("remote.store_media"),
+        types: media_types(cfg.get("remote.types")),
+        redact_src: cfg.truthy("remote.redact_src"),
         max_bytes: cfg.int("remote.max_media_mb").filter(|m| *m > 0).unwrap_or(1024) as u64 * 1024 * 1024,
     })
+}
+
+/// The remote's media kinds (its feed filters by these): `video`, `image`, `audio`.
+const MEDIA_TYPES: [&str; 3] = ["video", "image", "audio"];
+
+/// `remote.types`: a list or a comma-separated string, plurals allowed; unknown names are left out.
+fn media_types(v: &Value) -> Vec<String> {
+    let raw: Vec<String> = match v {
+        Value::Array(a) => a.iter().filter_map(|t| t.as_str().map(str::to_string)).collect(),
+        Value::String(s) => s.split(',').map(str::to_string).collect(),
+        _ => vec![],
+    };
+    let mut out: Vec<String> = Vec::new();
+    for t in raw {
+        let t = t.trim().to_lowercase();
+        let t = t.strip_suffix('s').filter(|s| MEDIA_TYPES.contains(s)).map(str::to_string).unwrap_or(t);
+        if MEDIA_TYPES.contains(&t.as_str()) && !out.contains(&t) {
+            out.push(t);
+        }
+    }
+    out
 }
 
 // ── HTTP ────────────────────────────────────────────────────────────────────
@@ -323,30 +350,54 @@ async fn create_user(st: &AppState, source: &str, login: &str, display: &str) ->
     Ok((id as i64, name))
 }
 
-/// Sync the remote into the database. Without `full`, only items not mirrored yet are fetched
-/// (plus the newest page again, for tags added since); the walk stops at the mirrored range once
-/// the remote's oldest item has been reached by an earlier run.
-pub async fn sync(st: &AppState, rc: &RemoteCfg, opts: &SyncOpts) -> Result<SyncReport> {
-    let meta = call(rc, &format!("/api/v3/feed/meta?mode={}&eps={FEED_EPS}", rc.mode), None).await?;
-    redact_existing(st, rc).await?;
-    let remote_oldest = meta["oldest_id"].as_i64();
-    let mut report = SyncReport { remote_total: meta["total_items"].as_i64().unwrap_or(0), ..Default::default() };
+/// State shared by the passes of one sync.
+struct Run {
+    users: Users,
+    report: SyncReport,
+    announced: usize,
+}
 
-    let mut known: HashSet<i64> = sql!("SELECT remote_id::bigint AS remote_id FROM remote_items WHERE source = ", rc.base.clone())
-        .fetch_scalar_list::<i64, _>(&st.db)
-        .await?
-        .into_iter()
-        .collect();
+/// Sync the remote into the database: one pass per `remote.types` entry (each with the remote's
+/// feed for that kind), or one over everything. Without `full`, only items not mirrored yet are
+/// fetched (plus the newest page again, for tags added since); a pass stops at the mirrored range
+/// once an earlier run reached the remote's oldest item of its kind.
+pub async fn sync(st: &AppState, rc: &RemoteCfg, opts: &SyncOpts) -> Result<SyncReport> {
+    redact_existing(st, rc).await?;
+    let mut run = Run { users: Users::new(rc), report: SyncReport::default(), announced: 0 };
+    let lanes: Vec<Option<&str>> = if rc.types.is_empty() { vec![None] } else { rc.types.iter().map(|t| Some(t.as_str())).collect() };
+    for lane in lanes {
+        if sync_lane(st, rc, opts, lane, &mut run).await? {
+            break; // --limit reached
+        }
+    }
+    st.caches.feed_count.clear();
+    Ok(run.report)
+}
+
+/// One pass over the remote feed, of one kind (`video`, ...) or of everything. True when
+/// `opts.limit` was reached.
+async fn sync_lane(st: &AppState, rc: &RemoteCfg, opts: &SyncOpts, lane: Option<&str>, run: &mut Run) -> Result<bool> {
+    let mime_q = lane.map(|t| format!("&mime={t}")).unwrap_or_default();
+    let meta = call(rc, &format!("/api/v3/feed/meta?mode={}&eps={FEED_EPS}{mime_q}", rc.mode), None).await?;
+    let remote_oldest = meta["oldest_id"].as_i64();
+    run.report.remote_total += meta["total_items"].as_i64().unwrap_or(0);
+    if opts.verbose {
+        println!("[REMOTE] {}: {} item(s) there", lane.unwrap_or("all types"), meta["total_items"].as_i64().unwrap_or(0));
+    }
+
+    let mut q = sql!("SELECT r.remote_id::bigint AS remote_id FROM remote_items r JOIN items i ON i.id = r.item_id WHERE r.source = ", rc.base.clone());
+    if let Some(t) = lane {
+        q.push(" AND split_part(i.mime, '/', 1) = ").bind(t.to_string());
+    }
+    let mut known: HashSet<i64> = q.fetch_scalar_list::<i64, _>(&st.db).await?.into_iter().collect();
     let newest_known = known.iter().max().copied();
     let oldest_known = known.iter().min().copied();
     let backfilled = matches!((oldest_known, remote_oldest), (Some(k), Some(o)) if k <= o);
 
-    let mut users = Users::new(rc);
     let mut older: Option<i64> = None;
     let mut first = true;
-    let mut announced = 0;
-    'pages: loop {
-        let mut path = format!("/api/v3/feed?mode={}&eps={FEED_EPS}", rc.mode);
+    loop {
+        let mut path = format!("/api/v3/feed?mode={}&eps={FEED_EPS}{mime_q}", rc.mode);
         if let Some(o) = older {
             path.push_str(&format!("&older={o}"));
         }
@@ -360,9 +411,9 @@ pub async fn sync(st: &AppState, rc: &RemoteCfg, opts: &SyncOpts) -> Result<Sync
             let bulk = call(rc, "/api/v3/items/bulk", Some(&json!({ "ids": chunk, "include_tags": true, "include_favorites": true, "mode": rc.mode }))).await?;
             for entry in bulk["items"].as_array().cloned().unwrap_or_default() {
                 let rid = entry["item"]["id"].as_i64().unwrap_or(0);
-                match mirror_item(st, rc, &entry, &mut users).await {
+                match mirror_item(st, rc, &entry, &mut run.users).await {
                     Ok((item_id, true)) => {
-                        report.added += 1;
+                        run.report.added += 1;
                         known.insert(rid);
                         if opts.verbose {
                             println!("  + #{rid} -> item {item_id} ({})", entry["item"]["mime"].as_str().unwrap_or("?"));
@@ -371,24 +422,24 @@ pub async fn sync(st: &AppState, rc: &RemoteCfg, opts: &SyncOpts) -> Result<Sync
                             fetch_thumb(st, &format!("{item_id}.webp")).await;
                         }
                         // Only items newer than everything mirrored before are news
-                        if opts.announce && announced < ANNOUNCE_MAX && newest_known.is_some_and(|n| rid > n) {
-                            announced += 1;
+                        if opts.announce && run.announced < ANNOUNCE_MAX && newest_known.is_some_and(|n| rid > n) {
+                            run.announced += 1;
                             announce(st, item_id).await;
                         }
-                        if opts.limit.is_some_and(|l| report.added >= l) {
-                            break 'pages;
+                        if opts.limit.is_some_and(|l| run.report.added >= l) {
+                            return Ok(true);
                         }
                     }
-                    Ok((_, false)) => report.updated += 1,
+                    Ok((_, false)) => run.report.updated += 1,
                     Err(e) => {
-                        report.failed += 1;
+                        run.report.failed += 1;
                         eprintln!("[REMOTE] #{rid}: {e:#}");
                     }
                 }
             }
         }
         if opts.verbose {
-            println!("[REMOTE] page down to #{page_min}: {} added, {} updated so far", report.added, report.updated);
+            println!("[REMOTE] page down to #{page_min}: {} added, {} updated so far", run.report.added, run.report.updated);
         }
 
         if page["atStart"] == Value::Bool(true) || remote_oldest.is_some_and(|o| page_min <= o) || page_min <= 1 {
@@ -406,9 +457,7 @@ pub async fn sync(st: &AppState, rc: &RemoteCfg, opts: &SyncOpts) -> Result<Sync
         }
         first = false;
     }
-
-    st.caches.feed_count.clear();
-    Ok(report)
+    Ok(false)
 }
 
 /// Mirror one `items/bulk` entry; (local item id, newly added).
@@ -516,13 +565,16 @@ async fn redact_existing(st: &AppState, rc: &RemoteCfg) -> Result<()> {
         .execute(&st.db)
         .await?;
     }
-    let n = sql!(
+    let mut n = sql!(
         "UPDATE items SET userchannel = ", REDACTED, ", usernetwork = ", REDACTED,
         ", src = CASE WHEN src ILIKE 'tg://%' THEN '' ELSE src END",
         " WHERE id IN (SELECT item_id FROM remote_items) AND (userchannel <> ", REDACTED, " OR usernetwork <> ", REDACTED, " OR src ILIKE 'tg://%')"
     )
     .execute(&st.db)
     .await?;
+    if rc.redact_src {
+        n += sql!("UPDATE items SET src = '' WHERE id IN (SELECT item_id FROM remote_items WHERE source = ", rc.base.clone(), ") AND src <> ''").execute(&st.db).await?;
+    }
     let gone = sql!(
         r#"DELETE FROM "user" u WHERE u.id IN (SELECT user_id FROM remote_users) AND u.password = '!' AND u.login ~ '^-?[0-9]+$'
            AND NOT EXISTS (SELECT 1 FROM items i WHERE i.username = u."user")
@@ -553,7 +605,7 @@ async fn insert_item(st: &AppState, rc: &RemoteCfg, it: &Value, rid: i64, remote
     let dest = local_dest(st, remote_dest, rid).await?;
     let host = rc.base.split("://").nth(1).unwrap_or(&rc.base).to_string();
     let checksum = clip(&format!("remote:{host}:{rid}"), 255);
-    let src = clip(&redact_src(it["src"].as_str().unwrap_or("")), 255);
+    let src = if rc.redact_src { String::new() } else { clip(&redact_src(it["src"].as_str().unwrap_or("")), 255) };
     let size = it["size"].as_i64().unwrap_or(0).clamp(0, i32::MAX as i64) as i32;
     let stamp = it["stamp"].as_i64().unwrap_or_else(crate::util::now_secs) as i32;
     let (channel, network) = (REDACTED.to_string(), REDACTED.to_string());
@@ -645,8 +697,16 @@ pub async fn mirrored_count(st: &AppState, base: &str) -> Result<i64> {
 pub async fn purge(st: &AppState, base: &str) -> Result<(usize, usize)> {
     let accounts = purge_accounts(st, base).await?;
     let rows = sql!("SELECT i.id, i.dest FROM items i JOIN remote_items r ON r.item_id = i.id WHERE r.source = ", base.to_string()).fetch_all(&st.db).await?;
+    delete_items(st, &rows).await?;
+    delete_accounts(st, &accounts.iter().map(|(id, _)| *id as i32).collect::<Vec<_>>()).await?;
+    st.caches.feed_count.clear();
+    Ok((rows.len(), accounts.len()))
+}
+
+/// Mirrored items (rows of id, dest) and their stored files.
+async fn delete_items(st: &AppState, rows: &[crate::db::Row]) -> Result<()> {
     let cfg = st.cfg();
-    for r in &rows {
+    for r in rows {
         let id = r.i64("id").unwrap_or(0);
         let dest = r.string("dest");
         if crate::media::is_plain_name(&dest) {
@@ -656,8 +716,58 @@ pub async fn purge(st: &AppState, base: &str) -> Result<(usize, usize)> {
             let _ = tokio::fs::remove_file(dir.join(name)).await;
         }
     }
-    sql!("DELETE FROM items WHERE id IN (SELECT item_id FROM remote_items WHERE source = ", base.to_string(), ")").execute(&st.db).await?;
-    let ids: Vec<i32> = accounts.iter().map(|(id, _)| *id as i32).collect();
+    let ids: Vec<i32> = rows.iter().filter_map(|r| r.i64("id")).map(|i| i as i32).collect();
+    sql!("DELETE FROM items WHERE id = ANY(", ids, ")").execute(&st.db).await?;
+    Ok(())
+}
+
+/// The mirror's own items whose kind isn't in `remote.types` (any more): (id, dest) rows.
+async fn off_type_items(st: &AppState, rc: &RemoteCfg) -> Result<Vec<crate::db::Row>> {
+    if rc.types.is_empty() {
+        return Ok(vec![]);
+    }
+    sql!(
+        "SELECT i.id, i.dest FROM items i JOIN remote_items r ON r.item_id = i.id WHERE r.source = ", rc.base.clone(),
+        " AND NOT (split_part(i.mime, '/', 1) = ANY(", rc.types.clone(), "))"
+    )
+    .fetch_all(&st.db)
+    .await
+}
+
+/// How many mirrored items `prune` would delete.
+pub async fn prune_count(st: &AppState, rc: &RemoteCfg) -> Result<usize> {
+    Ok(off_type_items(st, rc).await?.len())
+}
+
+/// Delete the mirrored items of kinds no longer in `remote.types` (and their files), then the
+/// accounts the mirror made that have nothing left. (items, accounts) deleted.
+pub async fn prune(st: &AppState, rc: &RemoteCfg) -> Result<(usize, usize)> {
+    let rows = off_type_items(st, rc).await?;
+    if rows.is_empty() {
+        return Ok((0, 0));
+    }
+    delete_items(st, &rows).await?;
+    let orphans = sql!(
+        r#"SELECT u.id FROM "user" u WHERE u.id IN (SELECT user_id FROM remote_users WHERE source = "#, rc.base.clone(),
+        r#") AND NOT EXISTS (SELECT 1 FROM items i WHERE i.username = u."user")
+            AND NOT EXISTS (SELECT 1 FROM favorites f WHERE f.user_id = u.id)
+            AND NOT EXISTS (SELECT 1 FROM tags_assign t WHERE t.user_id = u.id)
+            AND NOT EXISTS (SELECT 1 FROM comments c WHERE c.user_id = u.id)"#
+    )
+    .fetch_scalar_list::<i32, _>(&st.db)
+    .await?;
+    delete_accounts(st, &orphans).await?;
+    st.caches.feed_count.clear();
+    Ok((rows.len(), orphans.len()))
+}
+
+/// Delete accounts the mirror made, with their remote avatar files when nobody else uses them.
+async fn delete_accounts(st: &AppState, ids: &[i32]) -> Result<()> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let cfg = st.cfg();
+    let ids = ids.to_vec();
     for f in sql!("SELECT avatar_file FROM user_options WHERE user_id = ANY(", ids.clone(), r") AND avatar_file LIKE 'remote\_%'").fetch_scalar_list::<String, _>(&st.db).await? {
         // Shared by every account with that remote avatar; kept while another one still uses it
         if crate::media::is_plain_name(&f) && sql!("SELECT 1 AS x FROM user_options WHERE avatar_file = ", f.clone(), " AND NOT (user_id = ANY(", ids.clone(), ")) LIMIT 1").fetch_optional(&st.db).await?.is_none() {
@@ -665,8 +775,7 @@ pub async fn purge(st: &AppState, base: &str) -> Result<(usize, usize)> {
         }
     }
     sql!(r#"DELETE FROM "user" WHERE id = ANY("#, ids, ")").execute(&st.db).await?;
-    st.caches.feed_count.clear();
-    Ok((rows.len(), accounts.len()))
+    Ok(())
 }
 
 /// The periodic sync while the server runs (`remote.interval` minutes; re-read every minute so
@@ -1058,6 +1167,13 @@ mod tests {
         assert_eq!(thumb_name("_blur.webp"), None);
         assert_eq!(thumb_name("12.png"), None);
         assert_eq!(avatar_file_name(56660), "remote_56660.webp");
+    }
+
+    #[test]
+    fn types() {
+        assert_eq!(media_types(&json!(["video", "Images", "foo", "video"])), vec!["video", "image"]);
+        assert_eq!(media_types(&json!("audio, videos")), vec!["audio", "video"]);
+        assert!(media_types(&Value::Null).is_empty());
     }
 
     #[test]
