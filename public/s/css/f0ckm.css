@@ -19195,32 +19195,36 @@ html.gchat-skin-f0ckm #gchat-reopen-bubble {
   }
 
   /* one line: exactly the bar's height (the panel's bottom border counts), the field and the buttons
-     fill it, the text in the middle; more lines (.gchat-input-multi, globalchat.js): it grows */
+     fill it, the text in the middle; more lines (.gchat-input-multi, globalchat.js): it grows.
+     --gc-in-h: the area's height, its 1px top border included */
+  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) {
+    --gc-in-h: calc(var(--gc-bar-h, 42px) - 1px);
+  }
+
   html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) #gchat-input-area:not(.gchat-input-multi) {
-    /* a very low bar: not below 40px, the field must stay usable */
-    height: max(calc(var(--gc-bar-h, 42px) - 1px), 40px);
+    height: var(--gc-in-h);
   }
 
   html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) #gchat-input-area:not(.gchat-input-multi) #gchat-input-row {
     flex: 1;
     min-height: 0;
-    padding-top: 6px;
-    padding-bottom: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
   }
 
-  /* the line in the middle: the field is the row minus its 1px top border, 12px padding and the
-     field's 2px border */
+  /* the line in the middle: the field is the area minus its 1px top border, the row's 8px padding and
+     the field's 2px border */
   html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) #gchat-input-area:not(.gchat-input-multi) #gchat-input {
     min-height: 0;
-    padding-top: max(0px, calc((max(calc(var(--gc-bar-h, 42px) - 1px), 40px) - 15px - 1.4em) / 2));
+    padding-top: max(0px, calc((var(--gc-in-h) - 11px - 1.4em) / 2));
     padding-bottom: 0;
     overflow: hidden;
   }
 
   /* the send and emoji buttons: squares as tall as the one-line field, at the bottom when it grows */
   html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) :is(#gchat-send-btn, #gchat-emoji-btn) {
-    /* the row minus its 1px top border and 12px padding */
-    --gc-row-in: calc(max(calc(var(--gc-bar-h, 42px) - 1px), 40px) - 13px);
+    /* the area minus its 1px top border and the row's 8px padding */
+    --gc-row-in: calc(var(--gc-in-h) - 9px);
     flex: 0 0 auto;
     align-self: flex-end;
     width: var(--gc-row-in);
