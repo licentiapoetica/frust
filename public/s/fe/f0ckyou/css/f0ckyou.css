@@ -1067,6 +1067,49 @@ html:not(.no-js):not(.fy-scrolled) .fy-mast {
   display: none;
 }
 
+/* the message of the day: only in the guide as a drawer (watch page, narrower screens), under
+   its head; the full guide of wide screens leaves it out */
+.fy-guide-motd {
+  display: none;
+}
+
+.fy-page-watch .fy-guide-motd:not([hidden]) {
+  display: flex;
+}
+
+@media (max-width: 1312px) {
+  .fy-guide-motd:not([hidden]) {
+    display: flex;
+  }
+}
+
+.fy-guide-motd {
+  gap: .75rem;
+  margin: 0 0 .75rem;
+  padding: .25rem .75rem .75rem;
+  border-bottom: 1px solid var(--fy-line);
+  color: var(--fy-text);
+  font-size: .875rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.fy-guide-motd a {
+  color: var(--fy-blue);
+}
+
+/* the tie in front of every MOTD (Font Awesome's black-tie as an icon file) */
+.fy-motd-tie {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: .05rem;
+  background: var(--fy-muted);
+  -webkit-mask: url(/s/img/motd-tie.svg) center / contain no-repeat;
+  mask: url(/s/img/motd-tie.svg) center / contain no-repeat;
+}
+
 .fy-guide hr {
   margin: .75rem 0;
   border: 0;

@@ -634,6 +634,16 @@
   window.f0ckFrontend = {
     itemId: page.itemId || null,
     flash,
+    // the MOTD in the guide drawer; plain text, `[label](#bad-apple)` becomes the link that starts
+    // Bad Apple!! (f0ck-core.js)
+    motd(text) {
+      document.querySelectorAll('.fy-guide-motd').forEach(el => {
+        const t = el.querySelector('.fy-motd-text');
+        t.textContent = text || '';
+        window.f0ckMotdLinks?.(t);
+        el.hidden = !String(text || '').trim();
+      });
+    },
     // the admin changed the site's brand (f0ck-core.js has updated the picture and the text): in a
     // logo showing it (f0ckYou brand → "use the site's brand"), the finger mark only without one
     brand() {
@@ -671,6 +681,7 @@
       if (msg && msg.type === 'fy_brand') refreshLogo();
     },
   };
+  document.querySelectorAll('.fy-motd-text').forEach(el => window.f0ckMotdLinks?.(el));
 
   // ── the logo: f0ckYou's own brand changed (admin panel → f0ckYou brand, live event fy_brand):
   //    every logo and the brand font's stylesheet come from a fresh render of this page ──
@@ -1398,6 +1409,7 @@
     if (tab && next.querySelector(`#${tab}`)) next.querySelector(`#${tab}`).checked = true;
     document.querySelector('.fy-content').replaceWith(next);
     ['.fy-mast', '.fy-guide', '.fy-mini'].forEach(sel => swapOne(doc, sel));
+    document.querySelectorAll('.fy-guide .fy-motd-text').forEach(el => window.f0ckMotdLinks?.(el));
     const data = document.getElementById('fy-data');
     const nextData = doc.getElementById('fy-data');
     if (data && nextData) data.textContent = nextData.textContent;

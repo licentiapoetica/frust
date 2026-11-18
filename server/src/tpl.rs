@@ -1781,7 +1781,16 @@ mod tests {
         assert!(page.find("/s/js/f0ck-bg.js?v=").unwrap() < page.find("/s/fe/f0ckyou/js/f0ckyou.js?v=").unwrap());
         // the scripts on every page (pages change in place), the canvas only on the watch page
         assert!(home.contains("/s/js/v0ck.js?v=") && !home.contains("id=\"bg\""));
-        assert!(!page.contains("fy-motd") && !home.contains("fy-motd"));
+        // the MOTD in the guide (shown while it's a drawer), not without one, not for who turned it off
+        let motd = "<p class=\"fy-guide-motd\"><span class=\"fy-motd-tie\" aria-hidden=\"true\"></span><span class=\"fy-motd-text\">hello</span></p>";
+        assert!(page.contains(motd) && home.contains(motd), "MOTD in the guide");
+        let guide_at = |h: &str| h.find("<nav class=\"fy-guide f0ck-shell-chrome\"").unwrap();
+        assert!(home.find(motd).unwrap() > guide_at(&home));
+        let no_motd = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {}, "session": session, "motd": "" }));
+        assert!(no_motd.contains("<p class=\"fy-guide-motd\" hidden>"));
+        let off = render(&fe("index"), serde_json::json!({ "url": url("/", serde_json::json!({})), "tmp": {},
+            "session": { "user": "bob", "id": 1, "show_motd": false } }));
+        assert!(!off.contains("fy-guide-motd"));
         assert!(page.contains("<b class=\"fy-views-count\" data-views=\"12345\">12,345 views</b>"), "a bigint view count comes as text");
         assert!(home.contains("<div class=\"fy-card-sub\">1.2K views &middot; <time"));
         assert!(page.contains("<button type=\"button\" class=\"fy-iconbtn js-only fy-emoji-btn\""));
