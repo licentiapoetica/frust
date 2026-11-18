@@ -109,7 +109,7 @@
                         {% endif %}
                         <div class="stat-tags">{{ t("profile.stat_tags") }} <a href="/user/{{ user.user }}/tags">{{ count.tags }}</a></div>
                         {% if (not user.is_ghost and userhalls_enabled) %}
-                        <div class="stat-halls">{{ t("profile.stat_halls") }} <a href="/user/{{ user.user }}/halls">{{ count.halls }}</a></div>
+                        <div class="stat-halls">{{ t("profile.stat_halls") }} <a href="/user/{{ user.user }}/lists">{{ count.halls }}</a></div>
                         {% endif %}
                     {% endif %}
 

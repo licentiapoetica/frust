@@ -1,0 +1,121 @@
+{#- f0ckv2: a user's own halls (/user/<name>/lists, routes/user_halls.rs list_halls) under their profile
+    head, as cover cards. The owner (or an admin: manage_qs) creates, edits and deletes them here with
+    plain forms (views/frontends/README.md, "Halls"): the edit and delete boxes are :target modals.
+    With JavaScript f0ck.js sends the forms (.v2-hall-form) and swaps [data-v2-live] from a fresh copy
+    of the page. -#}
+{% include "frontends/f0ckv2/snippets/header.html" %}
+{%- set uname = (user.user or ownerUser.user or "") -%}
+{%- set ulink = "/user/" ~ (uname|lower|encode_uri_component) -%}
+{%- set page_path = ulink ~ "/lists" -%}
+{%- set mq = (manage_qs or "") -%}
+{%- set hm = ((session.mode if session else 0) or 0) -%}
+<div id="main">
+  <div class="profile_head{% if (user_banner_enabled and user.banner_file) %} v2-has-banner{% endif %}"{% if (user_banner_enabled and user.banner_file) %} style="--banner: url('/a/{{ user.banner_file }}')"{% endif %}>
+    <div class="profile_head_avatar">
+      <img class="v2-profile-ava" src="{% if user.avatar_file and user.avatar_file != "default.png" %}/a/{{ user.avatar_file }}{% elif user.avatar %}/t/{{ user.avatar }}.webp{% else %}/s/fe/f0ckv2/img/default.png{% endif %}" alt="" />
+    </div>
+    <div class="layersoffear">
+      <div class="profile_head_username">
+        <a href="{{ ulink }}"{% if user.username_color %} class="v2-namecolor" style="--user-color: {{ user.username_color }}"{% endif %}>{% if user.admin %}&#11088;&nbsp;{% endif %}{{ (user.display_name or uname) }}</a>{% if user.display_name and user.display_name != uname %} <span class="v2-dim">@{{ uname }}</span>{% endif %}
+      </div>
+      <div class="v2-profile-links">
+        <a class="badge badge-dark" href="{{ ulink }}/uploads">f0cks</a>
+        <a class="badge badge-dark" href="{{ ulink }}/favs">favs</a>
+        {% if enable_comments %}<a class="badge badge-dark" href="{{ ulink }}/comments">comments</a>{% endif %}
+        <a class="badge badge-dark" href="{{ ulink }}/tags">tags</a>
+        <a class="badge badge-light" href="{{ page_path }}" aria-current="page">lists: {{ (hallsList or [])|length }}</a>
+      </div>
+    </div>
+  </div>
+  <div class="index-container v2-uhalls-page">
+    <h2>lists of <a href="{{ ulink }}">{{ uname|lower }}</a></h2>
+    {% if can_manage %}
+    <form method="post" action="/api/v2/me/lists{{ mq }}" class="v2-form v2-hall-form v2-uhall-create" data-done="list created" data-reset>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ page_path }}">
+      <input type="text" name="name" class="v2-input" placeholder="name of the new list" required maxlength="100" autocomplete="off" aria-label="name of the new list">
+      <button type="submit">create list</button>
+    </form>
+    {% endif %}
+    <div data-v2-live="uhalls">
+      {% if hallsList %}
+      <div class="v2-uhalls">
+        {% for h in hallsList %}
+        {%- set hlink = ulink ~ "/list/" ~ (h.slug|encode_uri_component) -%}
+        {%- set hn = ((h.total_items or 0)|int) -%}
+        <div class="v2-uhall" id="uhall-{{ h.slug }}">
+          <a class="v2-uhall-cover" href="{{ hlink }}" style="--thumb: url('/user_list_image/{{ ownerUser.id }}/{{ h.slug|encode_uri_component }}?m={{ hm }}&v={{ h.image_v }}')" aria-label="{{ h.name }}">{% if h.is_private %}<span class="badge badge-light v2-uhall-lock">private</span>{% endif %}</a>
+          <div class="v2-uhall-meta">
+            <a class="v2-uhall-name" href="{{ hlink }}">{{ h.name }}</a>
+            <span class="badge badge-dark">{{ hn }} f0ck{{ ("" if hn == 1 else "s") }}</span>
+          </div>
+          {% if h.description %}<p class="v2-uhall-desc">{{ h.description }}</p>{% endif %}
+          {% if can_manage %}
+          <div class="v2-uhall-tools">
+            <a class="v2-btn" href="#hall-{{ h.slug }}">edit</a>
+            <a class="v2-btn" href="#hall-{{ h.slug }}-delete">delete</a>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="v2-empty">{% if can_manage %}no lists yet: give the first one a name above, or add a f0ck to a new list from its page{% else %}no lists{% endif %}</p>
+      {% endif %}
+
+      {% if can_manage %}
+      {% for h in (hallsList or []) %}
+      {%- set hapi = "/api/v2/me/lists/" ~ (h.slug|encode_uri_component) -%}
+      {%- set hn = ((h.total_items or 0)|int) -%}
+      <div id="hall-{{ h.slug }}" class="v2-modal">
+        <a href="#_" class="v2-modal-bg" aria-label="close"></a>
+        <div class="v2-modal-box v2-uhall-box">
+          <div class="f0cks-header"><span>edit list: {{ h.name }}</span><a href="#_">&#215;</a></div>
+          <form method="post" action="{{ hapi }}{{ mq }}" class="v2-form v2-hall-form v2-uhall-edit" data-done="saved" data-close>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ page_path }}">
+            <label>name <input type="text" name="name" class="v2-input" value="{{ h.name }}" required maxlength="100"></label>
+            <label>description <textarea name="description" class="v2-input" rows="3" maxlength="500">{{ (h.description or "") }}</textarea></label>
+            <div class="v2-uhall-vis" role="radiogroup" aria-label="visibility">
+              <label><input type="radio" name="is_private" value="0"{% if not h.is_private %} checked{% endif %}> public</label>
+              <label><input type="radio" name="is_private" value="1"{% if h.is_private %} checked{% endif %}> private (only you see it)</label>
+            </div>
+            <div><button type="submit">save</button></div>
+          </form>
+          {% if enable_userhall_image_upload %}
+          <div class="v2-uhall-pic">
+            <img src="/user_list_image/{{ ownerUser.id }}/{{ h.slug|encode_uri_component }}?m={{ hm }}&v={{ h.image_v }}" alt="" loading="lazy">
+            <form method="post" action="{{ hapi }}/image{{ mq }}" enctype="multipart/form-data" class="v2-form v2-hall-form" data-done="picture uploaded" data-close>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="back" value="{{ page_path }}">
+              <label>{{ ("new picture" if h.custom_image else "own picture (instead of the f0cks)") }} <input type="file" name="file" accept="image/gif,image/jpeg,image/png,image/webp" required data-v2-autosubmit></label>
+              <button type="submit" class="nojs-only">upload</button>
+            </form>
+            {% if h.custom_image %}
+            <form method="post" action="{{ hapi }}/image/delete{{ mq }}" class="v2-form v2-hall-form" data-done="picture removed" data-close>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="back" value="{{ page_path }}">
+              <button type="submit">remove picture</button>
+            </form>
+            {% endif %}
+          </div>
+          {% endif %}
+          <div class="v2-uhall-danger"><a href="#hall-{{ h.slug }}-delete">delete this list</a></div>
+        </div>
+      </div>
+      <div id="hall-{{ h.slug }}-delete" class="v2-modal">
+        <a href="#_" class="v2-modal-bg" aria-label="close"></a>
+        <form method="post" action="{{ hapi }}/delete{{ mq }}" class="v2-modal-box v2-form v2-hall-form" data-done="list deleted" data-close>
+          <div class="f0cks-header"><span>delete list: {{ h.name }}</span><a href="#_">&#215;</a></div>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="back" value="{{ page_path }}">
+          <p>the list goes, its {{ hn }} f0ck{{ ("" if hn == 1 else "s") }} stay on the site.</p>
+          <div class="v2-uhall-confirm"><button type="submit">delete</button> <a href="#_">cancel</a></div>
+        </form>
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% include "frontends/f0ckv2/snippets/footer.html" %}

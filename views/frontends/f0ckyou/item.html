@@ -106,6 +106,10 @@
           <button type="submit" class="fy-pill{% if isSubscribed %} fy-pill-on{% endif %}" title="{{ ("Stop getting its new comments" if isSubscribed else "Get its new comments") }}" aria-pressed="{{ ("true" if isSubscribed else "false") }}">{{ fy.ico(("bell-on" if isSubscribed else "bell")) }}<span>{{ ("Subscribed" if isSubscribed else "Subscribe") }}</span></button>
         </form>
         {% endif %}
+        {% if ((my_hall_choices is defined) or (hall_choices is defined)) %}
+        {%- set fy_saved = ((my_hall_choices if my_hall_choices is defined else []) + (hall_choices if hall_choices is defined else []))|selectattr("has_item")|list -%}
+        <a class="fy-pill{% if fy_saved %} fy-pill-on{% endif %}" href="#save" title="Save to a playlist">{{ fy.ico("playlist-add") }}<span>{{ ("Saved" if fy_saved else "Save") }}</span></a>
+        {% endif %}
         {% else %}
         <a class="fy-pill" href="/?login=1" title="Sign in to like">{{ fy.ico("like") }}<span>{{ (fy_likes|locale_number if fy_likes else "Like") }}</span></a>
         {% endif %}
@@ -134,7 +138,7 @@
         <div><dt>Source</dt><dd>{% if (item.src and item.src.short and (item.src.short|lower) != (domain|lower)) %}<a href="{{ item.src.long }}" target="_blank" rel="noopener noreferrer">{{ item.src.short }}</a>{% elif (item.src and item.src.long) %}{{ (item.src.short or item.src.long) }}{% else %}hidden{% endif %}</dd></div>
         <div><dt>File</dt><dd><a href="{{ item.dest }}" target="_blank">{{ (item.original_filename or item.mime) }}</a></dd></div>
         {% if (user and (user.network or user.channel)) %}<div><dt>Channel</dt><dd>{{ user.network }} / {{ user.channel }}</dd></div>{% endif %}
-        {% if (halls_enabled and item.primaryHall) %}<div><dt>Halls</dt><dd><a href="/h/{{ item.primaryHall.slug }}">{{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %}, <a href="/h/{{ h.slug }}">{{ h.name }}</a>{% endfor %}</dd></div>{% endif %}
+        {% if (halls_enabled and item.primaryHall) %}<div><dt>Playlists</dt><dd><a href="/list/{{ item.primaryHall.slug }}">{{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %}, <a href="/list/{{ h.slug }}">{{ h.name }}</a>{% endfor %}</dd></div>{% endif %}
         {% if item.expires_in %}<div><dt>Expires</dt><dd title="{{ item.expires_at }}">{{ item.expires_in }}</dd></div>{% endif %}
         {% if item.burn_after_read %}<div><dt>Burn after read</dt><dd title="Only the first person to open it sees it, then it's deleted">{{ ("opened, being deleted" if item.burn_claimed else "not opened yet") }}</dd></div>{% endif %}
         {% if (item.visibility and item.visibility > 0) %}<div><dt>Visibility</dt><dd>{{ fy.ico("lock") }} {{ (["public", "unlisted", "private", "unavailable (451)"][(item.visibility|int)] if (item.visibility|int) <= 3 else "private") }}</dd></div>{% endif %}
@@ -207,6 +211,69 @@
     <p class="fy-dim"><a href="{{ item.dest }}" target="_blank">Direct link to the file</a></p>
   </div>
 </div>
+{% if ((my_hall_choices is defined) or (hall_choices is defined)) %}
+{#- Save to a playlist (the visitor's halls; staff also the site's): a row per playlist, ticked when
+    the f0ck is in it; a click puts it in or takes it out (a plain form with the explicit action, back
+    to #save). With JavaScript f0ckyou.js sends it and the rows come again from the page
+    (data-fy-live="save", inside the dialog so it stays open). -#}
+<div id="save" class="fy-modal">
+  <a href="#_" class="fy-modal-bg" aria-label="close"></a>
+  <div class="fy-modal-box fy-save-box">
+    <div class="fy-modal-head"><h2>Save to&hellip;</h2><a href="#_" aria-label="close">{{ fy.ico("close") }}</a></div>
+    <div class="fy-save" data-fy-live="save">
+      {% if my_hall_choices is defined %}
+      <ul class="fy-save-list">
+        {% for h in my_hall_choices %}
+        <li>
+          <form method="post" action="/api/v2/me/list-items" class="fy-ajax" data-fy-refresh="save actions" data-fy-ok="{{ ("Removed from " if h.has_item else "Saved to ") ~ h.name }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ here }}#save">
+            <input type="hidden" name="item_id" value="{{ item.id }}">
+            <input type="hidden" name="hall" value="{{ h.slug }}">
+            <input type="hidden" name="action" value="{{ ("remove" if h.has_item else "add") }}">
+            <button type="submit" class="fy-save-row{% if h.has_item %} is-on{% endif %}" role="checkbox" aria-checked="{{ ("true" if h.has_item else "false") }}"><span class="fy-save-check">{{ fy.ico("check") }}</span><span class="fy-save-name">{{ h.name }}</span>{% if h.is_private %}<span class="fy-save-lock" title="Private">{{ fy.ico("lock") }}</span>{% endif %}</button>
+          </form>
+        </li>
+        {% else %}
+        <li class="fy-dim fy-save-none">You have no playlists yet.</li>
+        {% endfor %}
+      </ul>
+      <details class="fy-save-new"{% if not my_hall_choices %} open{% endif %}>
+        <summary>{{ fy.ico("plus") }}<span>Create new playlist</span></summary>
+        <form method="post" action="/api/v2/me/list-items" class="fy-save-newform fy-ajax" data-fy-refresh="save actions" data-fy-ok="Playlist created">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="back" value="{{ here }}#save">
+          <input type="hidden" name="item_id" value="{{ item.id }}">
+          <input type="hidden" name="action" value="add">
+          <label for="fy-save-name">Title</label>
+          <input type="text" id="fy-save-name" name="new_name" maxlength="100" required placeholder="Choose a title">
+          <div class="fy-modal-btns"><button type="submit" class="fy-btn-blue">Create</button></div>
+        </form>
+      </details>
+      {% endif %}
+      {% if hall_choices is defined %}
+      <h3 class="fy-save-sec">{{ fy.ico("shield") }}<span>Site playlists</span></h3>
+      <ul class="fy-save-list">
+        {% for h in hall_choices %}
+        <li>
+          <form method="post" action="/mod/lists/{{ ("remove" if h.has_item else "add") }}" class="fy-ajax" data-fy-refresh="save actions desc" data-fy-ok="{{ ("Removed from " if h.has_item else "Saved to ") ~ h.name }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ here }}#save">
+            <input type="hidden" name="id" value="{{ item.id }}">
+            <input type="hidden" name="hall" value="{{ h.slug }}">
+            <button type="submit" class="fy-save-row{% if h.has_item %} is-on{% endif %}" role="checkbox" aria-checked="{{ ("true" if h.has_item else "false") }}"><span class="fy-save-check">{{ fy.ico("check") }}</span><span class="fy-save-name">{{ h.name }}</span></button>
+          </form>
+        </li>
+        {% else %}
+        <li class="fy-dim fy-save-none">The site has no playlists yet (Mod &rarr; Halls).</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    <div class="fy-modal-btns">{% if my_hall_choices is defined %}<a class="fy-btn-text" href="/user/{{ (session.user or "")|lower|encode_uri_component }}/lists">Your playlists</a>{% endif %}<a href="#_" class="fy-btn-blue">Done</a></div>
+  </div>
+</div>
+{% endif %}
 <div id="report" class="fy-modal">
   <a href="#_" class="fy-modal-bg" aria-label="close"></a>
   <form method="post" action="/api/v2/report" class="fy-modal-box fy-ajax" data-fy-close data-fy-ok="Thanks for reporting.">

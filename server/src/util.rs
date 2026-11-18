@@ -319,7 +319,7 @@ pub fn gen_link(env: &LinkEnv) -> Value {
         link.push(encode_uri_component(t));
     }
     if let Some(h) = env.hall {
-        link.push("h".into());
+        link.push("list".into());
         link.push(encode_uri_component(h));
     }
     if let Some(u) = env.user {

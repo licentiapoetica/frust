@@ -1,0 +1,128 @@
+{#- f0ckyou: a user's halls as the Playlists tab of their channel (routes/user_halls.rs list_halls):
+    playlist cards (the cover with the count on a side panel), and for the owner (or an admin,
+    can_manage) a "New playlist" dialog and an Edit dialog per playlist (title, description,
+    visibility, cover picture, delete with a confirmation step). Dialogs open with :target; every
+    action is a plain form (manage_qs: ?user_id= for an admin), so it all works without JavaScript.
+    With JavaScript f0ckyou.js sends them with fetch and swaps the list in from a fresh render
+    (data-fy-live="playlists"); the cover upload goes as multipart (.fy-cover-form). -#}
+{% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{%- set pl_owner = (user if (user is defined and user and user.user) else ownerUser) -%}
+{%- set pl_name = (pl_owner.display_name or pl_owner.user or "") -%}
+{%- set fy_title = "Playlists by " ~ pl_name -%}
+{%- set fy_page = "channel" -%}
+{%- set fy_is_me = (session and ((session.user|lower) == ((ownerUser.user or "")|lower))) -%}
+{%- set fy_nav = ("halls_user" if fy_is_me else "none") -%}
+{%- set here = ((url.pathname ~ url.search) if (url and url.pathname) else ("/user/" ~ ((ownerUser.user or "")|lower|encode_uri_component) ~ "/lists")) -%}
+{%- set pl_link = "/user/" ~ ((ownerUser.user or "")|lower|encode_uri_component) ~ "/list/" -%}
+{%- set pl_qs = (manage_qs if (manage_qs is defined and manage_qs) else "") -%}
+{%- set pl_manage = (can_manage is defined and can_manage) -%}
+{% include "frontends/f0ckyou/snippets/head.html" %}
+{% include "frontends/f0ckyou/snippets/chrome.html" %}
+<main class="fy-main">
+  {%- set ch_user = pl_owner -%}
+  {%- set ch_tab = "halls" -%}
+  {% include "frontends/f0ckyou/snippets/channel-head.html" %}
+  <div class="fy-playlists" data-fy-live="playlists">
+    <div class="fy-shelf-head fy-pl-head">
+      <h2>{{ ("Your playlists" if fy_is_me else "Playlists") }} <span class="fy-dim">{{ (hallsList or [])|length }}</span></h2>
+      {% if pl_manage %}<a class="fy-btn" href="#pl-new">{{ fy.ico("plus") }}<span>New playlist</span></a>{% endif %}
+    </div>
+    {% if hallsList %}
+    <div class="fy-grid">
+      {% for h in hallsList %}
+      {%- set pl_href = pl_link ~ (h.slug|encode_uri_component) -%}
+      <article class="fy-card fy-card-hall" id="pl-{{ h.slug }}">
+        <a class="fy-thumb" href="{{ pl_href }}"><img src="/user_list_image/{{ ownerUser.id }}/{{ h.slug|encode_uri_component }}?m={{ ((session.mode if session else 0) or 0) }}&v={{ h.image_v }}" alt="" loading="lazy" data-pl-cover="{{ h.slug }}"><span class="fy-hall-side">{{ fy.ico("playlist") }}<span>{{ (h.total_items or 0)|locale_number }}</span></span></a>
+        <div class="fy-card-meta">
+          <div class="fy-card-text">
+            <h3 class="fy-card-title"><a href="{{ pl_href }}">{{ h.name }}</a></h3>
+            <span class="fy-card-sub fy-pl-vis">{% if h.is_private %}{{ fy.ico("lock") }}<span>Private</span>{% else %}<span>Public</span>{% endif %}<span>&middot; Playlist</span></span>
+            {% if h.description %}<span class="fy-card-sub fy-pl-desc">{{ h.description }}</span>{% endif %}
+            <a class="fy-card-sub fy-card-all" href="{{ pl_href }}">View full playlist</a>
+          </div>
+          {% if pl_manage %}<a class="fy-pl-edit" href="#pl-edit-{{ h.slug }}" title="Edit playlist" aria-label="Edit {{ h.name }}">{{ fy.ico("edit") }}</a>{% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% elif pl_manage %}
+    <div class="fy-empty">{{ fy.ico("playlist") }}<h2>{{ ("You have no playlists yet" if fy_is_me else "No playlists yet") }}</h2><p>Save f0cks to a playlist with Save on a f0ck, or make one here.</p><a class="fy-btn-blue" href="#pl-new">{{ fy.ico("plus") }}<span>New playlist</span></a></div>
+    {% else %}
+    <div class="fy-empty">{{ fy.ico("playlist") }}<h2>No playlists</h2><p>This channel has no public playlists.</p></div>
+    {% endif %}
+
+    {% if pl_manage %}
+    <div id="pl-new" class="fy-modal">
+      <a href="#_" class="fy-modal-bg" aria-label="close"></a>
+      <form method="post" action="/api/v2/me/lists{{ pl_qs }}" class="fy-modal-box fy-edit-form fy-ajax" data-fy-refresh="playlists" data-fy-close data-fy-ok="Playlist created">
+        <div class="fy-modal-head"><h2>New playlist</h2><a href="#_" aria-label="close">{{ fy.ico("close") }}</a></div>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}">
+        <label for="pl-new-name">Title</label>
+        <input type="text" id="pl-new-name" name="name" maxlength="100" required placeholder="Choose a title">
+        <label for="pl-new-desc">Description</label>
+        <textarea id="pl-new-desc" name="description" rows="3" maxlength="1000" placeholder="Add a description"></textarea>
+        <div class="fy-modal-btns"><a href="#_" class="fy-btn-text">Cancel</a><button type="submit" class="fy-btn-blue">Create</button></div>
+      </form>
+    </div>
+    {% for h in hallsList %}
+    {%- set pl_api = "/api/v2/me/lists/" ~ (h.slug|encode_uri_component) -%}
+    <div id="pl-edit-{{ h.slug }}" class="fy-modal">
+      <a href="#_" class="fy-modal-bg" aria-label="close"></a>
+      <div class="fy-modal-box fy-edit-box">
+        <div class="fy-modal-head"><h2>Edit playlist</h2><a href="#_" aria-label="close">{{ fy.ico("close") }}</a></div>
+        <form method="post" action="{{ pl_api }}{{ pl_qs }}" class="fy-edit-form fy-ajax" data-fy-refresh="playlists" data-fy-close data-fy-ok="Playlist saved">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="back" value="{{ here }}#pl-{{ h.slug }}">
+          <label for="pl-name-{{ h.slug }}">Title</label>
+          <input type="text" id="pl-name-{{ h.slug }}" name="name" maxlength="100" required value="{{ h.name }}">
+          <label for="pl-desc-{{ h.slug }}">Description</label>
+          <textarea id="pl-desc-{{ h.slug }}" name="description" rows="3" maxlength="1000" placeholder="Add a description">{{ (h.description or "") }}</textarea>
+          <span class="fy-edit-legend" id="pl-vis-{{ h.slug }}">Visibility</span>
+          <div class="fy-edit-vis" role="radiogroup" aria-labelledby="pl-vis-{{ h.slug }}">
+            <label class="fy-radio"><input type="radio" name="is_private" value="0"{% if not h.is_private %} checked{% endif %}><span><b>Public</b><span class="fy-dim">Anyone can see it on your channel.</span></span></label>
+            <label class="fy-radio"><input type="radio" name="is_private" value="1"{% if h.is_private %} checked{% endif %}><span><b>Private</b><span class="fy-dim">Only you can see it.</span></span></label>
+          </div>
+          <div class="fy-modal-btns"><a href="#_" class="fy-btn-text">Cancel</a><button type="submit" class="fy-btn-blue">Save</button></div>
+        </form>
+        {% if enable_userhall_image_upload %}
+        <section class="fy-edit-sec">
+          <h3>{{ fy.ico("image") }}<span>Cover</span></h3>
+          <p class="fy-dim">{{ ("Your own picture." if h.custom_image else "Made from f0cks in the playlist. Upload a picture to use your own (gif, jpg, png or webp, up to 10 MB).") }}</p>
+          <form method="post" action="{{ pl_api }}/image{{ pl_qs }}" enctype="multipart/form-data" class="fy-cover-form" data-pl-slug="{{ h.slug }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ here }}#pl-{{ h.slug }}">
+            <input type="file" name="file" accept="image/gif,image/jpeg,image/png,image/webp" required aria-label="Cover picture">
+            <button type="submit" class="fy-btn">{{ fy.ico("upload") }}<span>Upload</span></button>
+          </form>
+          {% if h.custom_image %}
+          <form method="post" action="{{ pl_api }}/image/delete{{ pl_qs }}" class="fy-ajax" data-fy-refresh="playlists" data-fy-close data-fy-ok="Cover removed">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ here }}#pl-{{ h.slug }}">
+            <button type="submit" class="fy-pill">{{ fy.ico("close") }}<span>Remove the picture</span></button>
+          </form>
+          {% endif %}
+        </section>
+        {% endif %}
+        <section class="fy-edit-sec">
+          <h3>{{ fy.ico("trash") }}<span>Delete</span></h3>
+          <p class="fy-dim">The f0cks stay; only the playlist goes.</p>
+          <div><a class="fy-pill fy-pill-danger" href="#pl-del-{{ h.slug }}">{{ fy.ico("trash") }}<span>Delete playlist</span></a></div>
+        </section>
+      </div>
+    </div>
+    <div id="pl-del-{{ h.slug }}" class="fy-modal">
+      <a href="#pl-edit-{{ h.slug }}" class="fy-modal-bg" aria-label="back"></a>
+      <form method="post" action="{{ pl_api }}/delete{{ pl_qs }}" class="fy-modal-box fy-ajax" data-fy-refresh="playlists" data-fy-close data-fy-ok="Playlist deleted">
+        <div class="fy-modal-head"><h2>Delete playlist?</h2><a href="#pl-edit-{{ h.slug }}" aria-label="back">{{ fy.ico("close") }}</a></div>
+        <p>&ldquo;{{ h.name }}&rdquo; will be deleted for good. The f0cks in it stay.</p>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}">
+        <div class="fy-modal-btns"><a href="#pl-edit-{{ h.slug }}" class="fy-btn-text">Cancel</a><button type="submit" class="fy-btn-blue fy-btn-danger">Delete</button></div>
+      </form>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+</main>
+{% include "frontends/f0ckyou/snippets/footer.html" %}

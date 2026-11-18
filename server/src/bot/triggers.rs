@@ -171,7 +171,7 @@ async fn recover(rt: Arc<Runtime>, e: Message) -> Result<()> {
 fn f0ckgag_pattern(cfg: &Config) -> String {
     let host = cfg.str("main.url.regex").filter(|s| !s.is_empty()).map(str::to_string).unwrap_or_else(|| regex::escape(cfg.domain()));
     format!(
-        r"(?i)(https?://{host})(/(?:video|image|audio|tag/[^/\s]+|user/[^/\s]+(?:/favs)?|h/[^/\s]+))?/([0-9]+|[A-Za-z0-9_-]{{11}}|b/[A-Za-z0-9_-]+\.[A-Za-z0-9]{{1,5}})(?:[^A-Za-z0-9_-]|$)"
+        r"(?i)(https?://{host})(/(?:video|image|audio|tag/[^/\s]+|user/[^/\s]+(?:/favs|/list/[^/\s]+)?|list/[^/\s]+|h/[^/\s]+))?/([0-9]+|[A-Za-z0-9_-]{{11}}|b/[A-Za-z0-9_-]+\.[A-Za-z0-9]{{1,5}})(?:[^A-Za-z0-9_-]|$)"
     )
 }
 
@@ -619,6 +619,10 @@ mod tests {
         // longer path words aren't slugs
         assert_eq!(t("https://f0ck.me/notifications"), None);
         assert!(g.is_match("https://f0ck.me/user/x/favs/77"));
+        // lists (once halls: /h/ links still work)
+        assert!(g.is_match("https://f0ck.me/list/best/77"));
+        assert!(g.is_match("https://f0ck.me/user/x/list/mine/77"));
+        assert!(g.is_match("https://f0ck.me/h/best/77"));
         assert!(!g.is_match("https://example.com/1234"));
     }
 

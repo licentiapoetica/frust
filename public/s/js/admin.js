@@ -963,14 +963,14 @@
     if (typeof ModAction === 'undefined') return alert('Error: ModAction module not loaded');
 
     ModAction.confirm(
-      'Delete All Halls',
-      'Permanently delete <strong>ALL halls</strong> for <strong>' + escHTML(name) + '</strong>? <strong>This cannot be undone.</strong>',
+      'Delete All Lists',
+      'Permanently delete <strong>ALL lists</strong> for <strong>' + escHTML(name) + '</strong>? <strong>This cannot be undone.</strong>',
       async () => {
         const data = await post('/api/v2/admin/users/bulk-delete-halls', { user_id: id });
         if (data.success) {
           showFlash(data.msg, 'success');
         } else {
-          throw new Error(data.msg || 'Failed to delete halls');
+          throw new Error(data.msg || 'Failed to delete lists');
         }
       },
       { hideReason: true, confirmText: 'Delete Everything' }

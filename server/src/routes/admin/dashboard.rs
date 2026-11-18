@@ -41,7 +41,7 @@ pub fn register(r: &mut Router) {
     r.get_g(r"^\/admin\/terms\/?$", Guard::Auth, |st, req| text_page(st, req, PageText::Terms));
     r.post_g(r"^\/admin\/terms\/?$", Guard::Auth, |st, req| text_save(st, req, PageText::Terms));
 
-    r.get_g(r"^\/admin\/halls\/?$", Guard::ModAuth, halls_page);
+    r.get_g(r"^\/admin\/lists\/?$", Guard::ModAuth, halls_page);
     r.get_g(r"^\/admin\/chat\/?$", Guard::Auth, chat_page);
     r.get_g(r"^\/admin\/koepfe\/?$", Guard::Auth, koepfe_page);
     r.get_g(r"^\/api\/v2\/admin\/koepfe\/?$", Guard::Auth, koepfe_list);

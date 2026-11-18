@@ -3185,6 +3185,272 @@ html.user-fs-150 {
 }
 
 /* ── narrow screens ── */
+/* ── a user's halls (user-halls.html): saved collections ── */
+.fg-halls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .75rem;
+}
+
+.fg-halls-bar .fg-stats {
+  margin: 0;
+}
+
+.fg-halls-new:hover {
+  color: var(--fg-on-blue);
+  text-decoration: none;
+}
+
+.fg-halls {
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1.5rem 1.25rem;
+}
+
+.fg-hall {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* the picture is 2:1 (600 × 300, routes/user_halls.rs) */
+.fg-hall-img {
+  aspect-ratio: 2 / 1;
+  border: 1px solid var(--fg-border);
+}
+
+.fg-hall-private {
+  color: var(--fg-dim);
+}
+
+.fg-card-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--fg-muted);
+  font-size: .8125rem;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+/* Edit on the picture's corner */
+.fg-hall-edit {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  border-color: transparent;
+  background: var(--fg-bg);
+  box-shadow: var(--fg-shadow);
+}
+
+.fg-hall-edit:hover {
+  background: var(--fg-hover);
+}
+
+/* the fields of the halls dialogs: f0ckgle's floating labels (.fg-field), not the plain dialog fields */
+.fg-modal-box .fg-field input[type="text"],
+.fg-modal-box .fg-field textarea {
+  padding: 1rem .9375rem .75rem;
+  border: 1px solid var(--fg-outline);
+  background: var(--fg-bg);
+}
+
+.fg-modal-box .fg-field input[type="text"]:focus,
+.fg-modal-box .fg-field textarea:focus {
+  border-color: var(--fg-blue-deep);
+}
+
+.fg-hall-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: .5rem;
+}
+
+.fg-hall-pic {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem 1rem;
+}
+
+.fg-hall-pic img {
+  flex: none;
+  align-self: flex-start;
+  width: 10rem;
+  aspect-ratio: 2 / 1;
+  border: 1px solid var(--fg-border);
+  background: var(--fg-surface-2);
+  object-fit: cover;
+}
+
+.fg-hall-pic-tools {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .5rem;
+}
+
+.fg-hall-pic-tools .fg-btn-text {
+  padding: 0 .75rem;
+}
+
+/* a file field as a chip: the real input stays focusable but invisible over it */
+.fg-file {
+  position: relative;
+  overflow: hidden;
+}
+
+.fg-file:focus-within {
+  outline: 2px solid var(--fg-blue);
+  outline-offset: 1px;
+}
+
+.fg-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* without JavaScript the chosen file shows its name (the input as it is) and Upload sends it */
+html.no-js .fg-file {
+  height: auto;
+  padding: .25rem .5rem;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+html.no-js .fg-file input {
+  position: static;
+  display: block;
+  max-width: 100%;
+  opacity: 1;
+}
+
+/* ── the item's "Save to a hall" dialog (item.html #halls): one row per hall ── */
+.fg-halls-box {
+  width: min(28rem, 100%);
+}
+
+.fg-halls-sub {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .25rem 0 0;
+  color: var(--fg-muted);
+  font-size: .875rem;
+  font-weight: 500;
+}
+
+/* the site's halls (staff) under the visitor's */
+.fg-hall-new + .fg-halls-sub,
+.fg-modal-box > .fg-dim + .fg-halls-sub {
+  padding-top: .75rem;
+  border-top: 1px solid var(--fg-border);
+}
+
+.fg-hall-picks {
+  display: flex;
+  flex-direction: column;
+  max-height: 18rem;
+  margin: 0 -1.5rem;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.fg-hall-picks form {
+  margin: 0;
+}
+
+.fg-hall-pick {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: .5rem 1.5rem;
+  border: 0;
+  background: none;
+  color: var(--fg-text);
+  font-size: .9375rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fg-hall-pick:hover,
+.fg-hall-pick:focus-visible {
+  background: var(--fg-hover);
+  outline: 0;
+}
+
+.fg-hall-pick:disabled {
+  cursor: progress;
+  opacity: .6;
+}
+
+/* the checkbox: an empty square, a ticked blue one when the f0ck is in the hall */
+.fg-hall-box {
+  position: relative;
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--fg-icon);
+}
+
+.fg-hall-pick[aria-pressed="true"] .fg-hall-box {
+  border-color: var(--fg-blue);
+  background: var(--fg-blue);
+}
+
+.fg-hall-pick[aria-pressed="true"] .fg-hall-box::after {
+  content: "";
+  position: absolute;
+  left: .3125rem;
+  top: .0625rem;
+  width: .3125rem;
+  height: .625rem;
+  border: solid var(--fg-on-blue);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.fg-hall-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fg-hall-pick .fg-hall-private,
+.fg-hall-count {
+  flex: none;
+  color: var(--fg-dim);
+  font-size: .8125rem;
+}
+
+.fg-hall-new {
+  display: flex;
+  align-items: stretch;
+  gap: .5rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--fg-border);
+}
+
+.fg-hall-new .fg-field {
+  flex: 1 1 auto;
+}
+
+.fg-hall-new .fg-btn-blue {
+  height: auto;
+}
+
 @media (max-width: 1100px) {
   :root {
     --fg-gutter: 1.5rem;

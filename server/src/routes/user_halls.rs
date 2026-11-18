@@ -1,7 +1,7 @@
-//! User halls: browse pages, thumbnails and the `/api/v2/me/halls` API
+//! User halls: browse pages, thumbnails and the `/api/v2/me/lists` API
 //! (port of src/inc/routes/user_halls.mjs and src/user_hall_image_handler.mjs).
 
-use super::halls::{basename, build_mosaic, cache_dir, custom_dir, error_page, mode_param, mosaic_mode_join, placeholder, serve_cached, serve_custom};
+use super::halls::{basename, build_mosaic, custom_dir, error_page, mode_param, mosaic_mode_join, placeholder, serve_cached, serve_custom};
 use crate::db::{Row, RowExt};
 use crate::http::{Req, Res, Router, html, json_raw, raw, redirect};
 use crate::session::Session;
@@ -15,22 +15,29 @@ use axum::response::Response;
 use serde_json::{Value, json};
 
 pub fn register(r: &mut Router) {
-    r.get(r"^\/user\/(?<owner>[^/]+)\/halls\/?$", list_halls);
-    r.get(r"^\/user\/(?<owner>[^/]+)\/hall\/(?<slug>[^/]+)(?:\/p\/(?<page>\d+))?\/?$", hall_grid);
-    r.get(r"^\/user\/(?<owner>[^/]+)\/hall\/(?<slug>[^/]+)\/(?<itemid>\d+)\/?$", hall_item);
-    r.get(r"^\/user_hall_image\/(?<userId>\d+)\/(?<slug>.+)$", user_hall_image);
-    r.get(r"^\/api\/v2\/me\/halls\/?$", api_list);
-    r.post(r"^\/api\/v2\/me\/halls\/?$", api_create);
-    r.patch(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/?$", api_update);
-    r.delete(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/?$", api_delete);
-    r.post(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/items\/?$", api_add_item);
-    r.delete(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/items\/(?<itemid>\d+)\/?$", api_remove_item);
+    r.get(r"^\/user\/(?<owner>[^/]+)\/lists\/?$", list_halls);
+    r.get(r"^\/user\/(?<owner>[^/]+)\/list\/(?<slug>[^/]+)(?:\/p\/(?<page>\d+))?\/?$", hall_grid);
+    // the item by number or by its 11-character link name, as everywhere else
+    r.get(r"^\/user\/(?<owner>[^/]+)\/list\/(?<slug>[^/]+)\/(?<itemid>[a-zA-Z0-9_-]{11}|\d+)\/?$", hall_item);
+    r.get(r"^\/user_list_image\/(?<userId>\d+)\/(?<slug>.+)$", user_hall_image);
+    // f0ckm's item halls dialog, rendered for f0ckm.js (snippets/halls-dialog.html)
+    r.get(r"^\/item-lists\/(?<itemid>\d+)\/?$", item_halls_dialog);
+    r.get(r"^\/api\/v2\/me\/lists\/?$", api_list);
+    r.post(r"^\/api\/v2\/me\/lists\/?$", api_create);
+    r.patch(r"^\/api\/v2\/me\/lists\/(?<slug>[^/]+)\/?$", api_update);
+    r.delete(r"^\/api\/v2\/me\/lists\/(?<slug>[^/]+)\/?$", api_delete);
+    // The same as plain form posts (the halls page without JavaScript; nojs.rs sends them back)
+    r.post(r"^\/api\/v2\/me\/lists\/(?<slug>[^/]+)\/?$", api_update);
+    r.post(r"^\/api\/v2\/me\/lists\/(?<slug>[^/]+)\/delete\/?$", api_delete);
+    r.post(r"^\/api\/v2\/me\/lists\/(?<slug>[^/]+)\/image\/delete\/?$", api_image_delete);
+    r.post(r"^\/api\/v2\/me\/lists\/(?<slug>[^/]+)\/items\/?$", api_add_item);
+    r.delete(r"^\/api\/v2\/me\/lists\/(?<slug>[^/]+)\/items\/(?<itemid>\d+)\/?$", api_remove_item);
     // One form for the halls dialog of an item (works as a plain form without JavaScript)
-    r.post(r"^\/api\/v2\/me\/hall-items\/?$", api_item_form);
-    r.post(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/image\/?$", api_image_stub);
-    r.delete(r"^\/api\/v2\/me\/halls\/(?<slug>[^/]+)\/image\/?$", api_image_delete);
+    r.post(r"^\/api\/v2\/me\/list-items\/?$", api_item_form);
+    r.post(r"^\/api\/v2\/me\/lists\/(?<slug>[^/]+)\/image\/?$", api_image_stub);
+    r.delete(r"^\/api\/v2\/me\/lists\/(?<slug>[^/]+)\/image\/?$", api_image_delete);
     // index.mjs bypass middleware (multipart upload, needs the raw body)
-    r.pre(Method::POST, r"^\/api\/v2\/me\/halls\/([^/]+)\/image$", None, image_upload);
+    r.pre(Method::POST, r"^\/api\/v2\/me\/lists\/([^/]+)\/image$", None, image_upload);
 }
 
 /// `slugify` of user_halls.mjs: lowercase, runs of non-alphanumerics → `-`, trimmed dashes.
@@ -70,6 +77,28 @@ fn require_login(req: &Req) -> Result<&Session, Response> {
     Err(r)
 }
 
+/// The user whose halls a request manages: the visitor's own, or for an admin the `user_id` in the
+/// query (the halls page of another user: its forms and scripts add `?user_id=`). None for an
+/// unusable `user_id`.
+fn target_user(req: &Req, s: &Session) -> Option<i64> {
+    if s.admin {
+        if let Some(q) = req.query("user_id").filter(|q| !q.is_empty()) {
+            return js_number(q).filter(|f| f.fract() == 0.0 && f.is_finite() && *f > 0.0 && *f <= i32::MAX as f64).map(|f| f as i64);
+        }
+    }
+    Some(s.id)
+}
+
+/// A checkbox / radio / JSON boolean: true, "true", "1", "on", 1.
+fn truthy_flag(v: &Value) -> bool {
+    match v {
+        Value::Bool(b) => *b,
+        Value::Number(n) => n.as_f64() == Some(1.0),
+        Value::String(s) => matches!(s.as_str(), "true" | "1" | "on"),
+        _ => false,
+    }
+}
+
 /// Private halls only resolve for their owner or an admin.
 async fn resolve_hall(st: &AppState, owner: &str, slug: &str, viewer: Option<&Session>) -> Option<Row> {
     let hall = halls::get_user_hall_by_owner_name(st, owner, slug).await?;
@@ -104,20 +133,46 @@ async fn list_halls(st: AppState, req: Req) -> Res {
     let Some(owner) = owner else { return Ok(error_page(&st, &req, "User not found", 404)) };
     let owner_id = owner.i64("id").unwrap_or(0);
     let viewer = req.session().map(|s| s.id);
-    let list = halls::get_user_halls(&st, owner_id, req.mode, &excluded, viewer).await;
+    let is_owner = viewer == Some(owner_id);
+    let is_admin = req.session().is_some_and(|s| s.admin);
+    // The owner sees their private halls; an admin managing someone else's too
+    let mut list = halls::get_user_halls(&st, owner_id, req.mode, &excluded, if is_admin { Some(owner_id) } else { viewer }).await;
+    // image_v: the custom picture's time, for the picture URLs (`?v=`): a changed or removed
+    // picture gets a new URL, so the browser doesn't show its old copy
+    for h in list.iter_mut() {
+        let file = custom_dir(&st).join(format!("u_{owner_id}_{}.webp", basename(&h.string("slug"))));
+        let v = crate::routes::halls::image_v(&file, h).await;
+        h.insert("image_v".into(), json!(v));
+    }
+    // The profile bits the frontends show in the page head (avatar, banner, colour), as on the
+    // user's comments page
+    let profile = sql!(
+        r#"SELECT "user".id, "user".user, "user".admin, "user".created_at, user_options.avatar, user_options.avatar_file, user_options.username_color,
+                  user_options.display_name, user_options.banner_file, user_options.banner_position, user_options.banner_size
+           FROM "user" LEFT JOIN user_options ON "user".id = user_options.user_id WHERE "user".id = "#,
+        owner_id as i32
+    )
+    .fetch_optional(&st.db)
+    .await?
+    .map(Value::Object)
+    .unwrap_or_else(|| Value::Object(owner.clone()));
     let owner_user = owner.string("user");
     let cfg = st.cfg();
     let data = json!({
         "hallsList": list,
         "ownerUser": owner,
-        "isOwner": viewer == Some(owner_id),
+        "user": profile,
+        "isOwner": is_owner,
+        // may change these halls: the owner or an admin (whose forms add ?user_id=)
+        "can_manage": !is_anonymize_session(&cfg, req.session()) && (is_owner || is_admin) && !req.session().is_some_and(Session::is_anonymous_user),
+        "manage_qs": if is_admin && !is_owner { format!("?user_id={owner_id}") } else { String::new() },
         "tmp": null,
         "hidePagination": true,
         "session": req.session_value(),
         "page_meta": {
-            "title": format!("{owner_user}'s Halls"),
+            "title": format!("{owner_user}'s Lists"),
             "description": format!("Browse {owner_user}'s personal collections"),
-            "url": format!("https://{}/user/{}/halls", cfg.domain(), crate::util::encode_uri_component(&owner_user)),
+            "url": format!("https://{}/user/{}/lists", cfg.domain(), crate::util::encode_uri_component(&owner_user)),
         }
     });
     let view = if req.is_xhr() { "user-halls-partial" } else { "user-halls" };
@@ -149,7 +204,7 @@ async fn hall_grid(st: AppState, req: Req) -> Res {
     let owner_name = decode(req.param("owner"));
     let slug = decode(req.param("slug"));
     let Some(hall) = resolve_hall(&st, &owner_name, &slug, req.session()).await else {
-        return Ok(error_page(&st, &req, "Hall not found", 404));
+        return Ok(error_page(&st, &req, "List not found", 404));
     };
     let mut opts = feed_opts(&req, &slug, &owner_name);
     opts.insert("page".into(), req.param("page").map(|p| json!(p)).unwrap_or(Value::Null));
@@ -167,7 +222,7 @@ async fn hall_grid(st: AppState, req: Req) -> Res {
         data.insert(
             "link".into(),
             json!({
-                "main": format!("/user/{}/hall/{}/", crate::util::encode_uri_component(&hall_owner), crate::util::encode_uri_component(&hall_slug)),
+                "main": format!("/user/{}/list/{}/", crate::util::encode_uri_component(&hall_owner), crate::util::encode_uri_component(&hall_slug)),
                 "path": "p/",
                 "suffix": ""
             }),
@@ -181,9 +236,9 @@ async fn hall_grid(st: AppState, req: Req) -> Res {
     data.insert(
         "page_meta".into(),
         json!({
-            "title": format!("{} — {hall_owner}'s Hall", hall.string("name")),
+            "title": format!("{} — {hall_owner}'s List", hall.string("name")),
             "description": description,
-            "url": format!("https://{}/user/{}/hall/{}", cfg.domain(), crate::util::encode_uri_component(&hall_owner), crate::util::encode_uri_component(&hall_slug)),
+            "url": format!("https://{}/user/{}/list/{}", cfg.domain(), crate::util::encode_uri_component(&hall_owner), crate::util::encode_uri_component(&hall_slug)),
         }),
     );
     let view = if req.is_xhr() { "index-partial" } else { "index" };
@@ -221,7 +276,7 @@ async fn hall_item(st: AppState, req: Req) -> Res {
     let slug = decode(req.param("slug"));
     let item_id = req.param("itemid").unwrap_or("").to_string();
     if resolve_hall(&st, &owner_name, &slug, req.session()).await.is_none() {
-        return Ok(error_page(&st, &req, "Hall not found", 404));
+        return Ok(error_page(&st, &req, "List not found", 404));
     }
     let mut opts = feed_opts(&req, &slug, &owner_name);
     opts.insert("itemid".into(), json!(item_id));
@@ -350,6 +405,8 @@ async fn hall_item(st: AppState, req: Req) -> Res {
             }
         }
 
+        // the item's number (the URL may name it by its link name)
+        let item_id = item.get("id").and_then(crate::config::as_int).map(|i| i.to_string()).unwrap_or(item_id.clone());
         if session.is_some() || !cfg.truthy("main.hide_comments_from_public") {
             let prefetch = [("x-purpose", "prefetch"), ("purpose", "prefetch"), ("sec-purpose", "prefetch")].iter().any(|(h, v)| req.header(h) == Some(*v));
             if let Some(s) = session.filter(|s| s.id != 0 && !prefetch) {
@@ -370,8 +427,25 @@ async fn hall_item(st: AppState, req: Req) -> Res {
     }
 
     let mut data = Value::Object(data);
+    crate::routes::index::add_hall_choices(&st, &req, &mut data, req.session().filter(|s| !s.user.is_empty())).await;
     crate::routes::index::add_recommendations(&st, &req, &mut data).await;
     Ok(html(crate::tpl::render(&st, Some(&req), "item", data)))
+}
+
+/// `GET /item-lists/<id>`: the body of f0ckm's halls dialog for an item (the same partial the item
+/// page renders into it for visitors without JavaScript), so f0ckm.js shows the current state after
+/// every change without a second copy of the markup.
+async fn item_halls_dialog(st: AppState, req: Req) -> Res {
+    let Some(s) = req.session().filter(|s| !s.user.is_empty() && !s.is_anonymous_user()) else {
+        return Ok(crate::http::html_code(String::new(), 401));
+    };
+    let Some(item_id) = req.param("itemid").and_then(|i| i.parse::<i32>().ok()) else {
+        return Ok(crate::http::html_code(String::new(), 404));
+    };
+    let mut data = Value::Object(crate::routes::index::hall_choices(&st, s, item_id).await);
+    data["item"] = json!({ "id": item_id });
+    data["session"] = req.session_value();
+    Ok(html(crate::tpl::render(&st, Some(&req), "snippets/halls-dialog", data)))
 }
 
 // ── Thumbnail ───────────────────────────────────────────────────────────────
@@ -389,19 +463,21 @@ async fn user_hall_image(st: AppState, req: Req) -> Res {
     let user_id: i64 = req.param("userId").and_then(|u| u.parse().ok()).unwrap_or(0);
     let slug = decode(req.param("slug"));
     let safe = basename(&slug);
-    let m = crate::routes::halls::mosaic_mode_for(&st.cfg(), &req, mode_param(&req).0);
-    let (mode, mode_str) = (Some(m), m.to_string());
+    let m = crate::routes::halls::norm_mode(crate::routes::halls::mosaic_mode_for(&st.cfg(), &req, mode_param(&req).0));
+    let mode = Some(m);
+    // set once the list may be shown: an empty one gets its name on a colour (list_fallback)
+    let mut name: Option<String> = None;
     let r: anyhow::Result<Option<Response>> = async {
         // A private hall's picture only for its owner and staff (checked before any cached copy)
         let Some(hall) = halls::get_user_hall(&st, user_id, &slug).await else { return Ok(None) };
         if hall.bool("is_private") && !req.session().is_some_and(|s| s.id == user_id || s.is_admin_or_mod()) {
             return Ok(None);
         }
+        name = Some(hall.string("name"));
         if let Some(r) = serve_custom(&req, &custom_dir(&st).join(format!("u_{user_id}_{safe}.webp"))).await {
             return Ok(Some(r));
         }
-        let hash = crate::util::md5(&format!("uh_{user_id}_{safe}_{mode_str}"));
-        let cache_path = cache_dir(&st).join(format!("{hash}.webp"));
+        let cache_path = crate::routes::halls::user_cache_path(&st, user_id, &safe, m);
         if let Some(r) = serve_cached(&cache_path).await {
             return Ok(Some(mosaic_cache_private(r, m, hall.bool("is_private"))));
         }
@@ -409,7 +485,7 @@ async fn user_hall_image(st: AppState, req: Req) -> Res {
         q.push(mosaic_mode_join(mode))
             .push(" WHERE uha.hall_id = ")
             .bind(hall.i64("id").unwrap_or(0) as i32)
-            .push(" AND i.active = true AND COALESCE(i.visibility, 0) = 0 ORDER BY RANDOM() LIMIT 3");
+            .push(" AND i.active = true AND i.is_deleted = false AND COALESCE(i.visibility, 0) = 0 ORDER BY RANDOM() LIMIT 3");
         let ids: Vec<i64> = q.fetch_all(&st.db).await?.iter().filter_map(|r| r.i64("id")).collect();
         if ids.is_empty() {
             return Ok(None);
@@ -420,7 +496,11 @@ async fn user_hall_image(st: AppState, req: Req) -> Res {
     .await;
     match r {
         Ok(Some(resp)) => Ok(resp),
-        Ok(None) => Ok(placeholder()),
+        Ok(None) => Ok(match name {
+            // never a shared cache for a private list's name
+            Some(n) => mosaic_cache_private(crate::routes::halls::list_fallback(&n), m, true),
+            None => placeholder(),
+        }),
         Err(e) => {
             tracing::error!("[USER_HALL_IMAGE] {e:#}");
             Ok(placeholder())
@@ -459,7 +539,10 @@ async fn api_create(st: AppState, mut req: Req) -> Res {
         return disabled();
     }
     let uid = match require_login(&req) {
-        Ok(s) => s.id,
+        Ok(s) => match target_user(&req, s) {
+            Some(u) => u,
+            None => return jr(json!({ "success": false, "msg": "invalid user_id" }), 404),
+        },
         Err(r) => return Ok(r),
     };
     let body = req.post_value().await;
@@ -471,6 +554,11 @@ async fn api_create(st: AppState, mut req: Req) -> Res {
         return jr(json!({ "success": false, "msg": "Name is required" }), 400);
     }
     let result = halls::create_user_hall(&st, uid, &name, &slug, description.as_deref()).await;
+    // A new hall may start private (`is_private`, as in the edit form)
+    if crate::config::truthy(&result["success"]) && body.get("is_private").is_some_and(truthy_flag) {
+        let upd = halls::UserHallUpdate { name: None, new_slug: None, description: None, is_private: Some(true) };
+        halls::update_user_hall(&st, uid, &slug, upd).await;
+    }
     let code = ok_status(&result, 200, 409);
     jr(result, code)
 }
@@ -480,11 +568,18 @@ async fn api_update(st: AppState, mut req: Req) -> Res {
         return disabled();
     }
     let uid = match require_login(&req) {
-        Ok(s) => s.id,
+        Ok(s) => match target_user(&req, s) {
+            Some(u) => u,
+            None => return jr(json!({ "success": false, "msg": "invalid user_id" }), 404),
+        },
         Err(r) => return Ok(r),
     };
     let slug = decode(req.param("slug"));
     let body = req.post_value().await;
+    let name = js_str(body.get("name")).map(|n| n.trim().to_string());
+    if name.as_deref() == Some("") {
+        return jr(json!({ "success": false, "msg": "Name cannot be empty" }), 400);
+    }
     let new_slug = if crate::social::helpers::js_truthy(body.get("slug")) {
         // An input that slugifies to nothing used to blank the slug (making the hall unreachable).
         Some(slugify(&js_str(body.get("slug")).unwrap_or_default())).filter(|s| !s.is_empty())
@@ -495,8 +590,8 @@ async fn api_update(st: AppState, mut req: Req) -> Res {
         None => None,
         Some(v) => Some(if crate::config::truthy(v) { js_str(Some(v)) } else { None }),
     };
-    let is_private = body.get("is_private").map(|v| matches!(v, Value::Bool(true)) || v.as_str() == Some("true") || v.as_f64() == Some(1.0));
-    let update = halls::UserHallUpdate { name: js_str(body.get("name")), new_slug, description, is_private };
+    let is_private = body.get("is_private").map(truthy_flag);
+    let update = halls::UserHallUpdate { name, new_slug, description: description.map(|d| d.map(|d| d.trim().to_string())), is_private };
     let result = halls::update_user_hall(&st, uid, &slug, update).await;
     let code = ok_status(&result, 200, 400);
     jr(result, code)
@@ -511,18 +606,13 @@ async fn api_delete(st: AppState, req: Req) -> Res {
         Err(r) => return Ok(r),
     };
     let slug = decode(req.param("slug"));
-    let mut target = Some(s.id);
-    if s.admin {
-        if let Some(q) = req.query("user_id").filter(|q| !q.is_empty()) {
-            target = js_number(q).filter(|f| f.fract() == 0.0 && f.is_finite()).map(|f| f as i64);
-        }
-    }
-    let Some(target) = target else {
+    let Some(target) = target_user(&req, s) else {
         // `+qs.user_id` was NaN: the old delete query failed.
         return jr(json!({ "success": false, "message": "invalid user_id" }), 404);
     };
     let result = halls::delete_user_hall(&st, target, &slug).await;
     let _ = tokio::fs::remove_file(custom_dir(&st).join(format!("u_{target}_{}.webp", basename(&slug)))).await;
+    crate::routes::halls::clear_user_list(&st, target, &slug).await;
     let code = ok_status(&result, 200, 404);
     jr(result, code)
 }
@@ -541,7 +631,7 @@ async fn api_add_item(st: AppState, mut req: Req) -> Res {
     .filter(|n| *n != 0.0 && n.is_finite());
     let Some(item_id) = item_id else { return jr(json!({ "success": false, "msg": "Missing item_id" }), 400) };
     let Some(hall) = halls::get_user_hall(&st, uid, &slug).await else {
-        return jr(json!({ "success": false, "msg": "Hall not found" }), 404);
+        return jr(json!({ "success": false, "msg": "List not found" }), 404);
     };
     let result = if item_id.fract() != 0.0 || item_id.abs() > i32::MAX as f64 {
         // the old query failed on non-integer ids
@@ -549,11 +639,14 @@ async fn api_add_item(st: AppState, mut req: Req) -> Res {
     } else {
         halls::add_item_to_user_hall(&st, hall.i64("id").unwrap_or(0), item_id as i64, uid).await
     };
+    if crate::config::truthy(&result["success"]) {
+        crate::routes::halls::clear_user_list(&st, uid, &slug).await;
+    }
     let code = ok_status(&result, 200, 409);
     jr(result, code)
 }
 
-/// `POST /api/v2/me/hall-items`: the item halls dialog as one plain form (no JavaScript needed).
+/// `POST /api/v2/me/list-items`: the item halls dialog as one plain form (no JavaScript needed).
 /// Fields: `item_id`, `hall` (slug of one of the visitor's halls), `action` ("add" or "remove"),
 /// and `new_name`: with no `hall` picked, "add" creates a hall of that name first.
 async fn api_item_form(st: AppState, mut req: Req) -> Res {
@@ -588,10 +681,10 @@ async fn api_item_form(st: AppState, mut req: Req) -> Res {
         }
     }
     if slug.is_empty() {
-        return jr(json!({ "success": false, "msg": "Choose a hall or enter a new name." }), 400);
+        return jr(json!({ "success": false, "msg": "Choose a list or enter a new name." }), 400);
     }
     let Some(hall) = halls::get_user_hall(&st, uid, &slug).await else {
-        return jr(json!({ "success": false, "msg": "Hall not found" }), 404);
+        return jr(json!({ "success": false, "msg": "List not found" }), 404);
     };
     let hall_id = hall.i64("id").unwrap_or(0);
     let mut result = if remove {
@@ -600,7 +693,9 @@ async fn api_item_form(st: AppState, mut req: Req) -> Res {
         halls::add_item_to_user_hall(&st, hall_id, item_id, uid).await
     };
     if crate::config::truthy(&result["success"]) {
-        result["msg"] = json!(if remove { "Removed from hall" } else { "Added to hall" });
+        // the list's picture shows its f0cks: build it again
+        crate::routes::halls::clear_user_list(&st, uid, &slug).await;
+        result["msg"] = json!(if remove { "Removed from list" } else { "Added to list" });
         result["hall"] = json!({ "slug": slug, "name": hall.get("name").cloned().unwrap_or(Value::Null) });
         if let Some(c) = created {
             result["created"] = c;
@@ -618,9 +713,12 @@ async fn api_remove_item(st: AppState, req: Req) -> Res {
     let slug = decode(req.param("slug"));
     let item_id: i64 = req.param("itemid").and_then(|i| i.parse().ok()).unwrap_or(0);
     let Some(hall) = halls::get_user_hall(&st, uid, &slug).await else {
-        return jr(json!({ "success": false, "msg": "Hall not found" }), 404);
+        return jr(json!({ "success": false, "msg": "List not found" }), 404);
     };
     let result = halls::remove_item_from_user_hall(&st, hall.i64("id").unwrap_or(0), item_id).await;
+    if crate::config::truthy(&result["success"]) {
+        crate::routes::halls::clear_user_list(&st, uid, &slug).await;
+    }
     let code = ok_status(&result, 200, 500);
     jr(result, code)
 }
@@ -632,26 +730,21 @@ async fn api_image_stub(_st: AppState, req: Req) -> Res {
     jr(json!({ "success": false, "msg": "Send as multipart/form-data" }), 400)
 }
 
-/// Clear the mosaic cache of a user hall (modes 0–2).
-async fn clear_mosaic_cache(st: &AppState, user_id: i64, safe_slug: &str) {
-    for m in 0..=2 {
-        let h = crate::util::md5(&format!("uh_{user_id}_{safe_slug}_{m}"));
-        let _ = tokio::fs::remove_file(cache_dir(st).join(format!("{h}.webp"))).await;
-    }
-}
-
 async fn api_image_delete(st: AppState, req: Req) -> Res {
     let uid = match require_login(&req) {
-        Ok(s) => s.id,
+        Ok(s) => match target_user(&req, s) {
+            Some(u) => u,
+            None => return jr(json!({ "success": false, "msg": "invalid user_id" }), 404),
+        },
         Err(r) => return Ok(r),
     };
     let slug = decode(req.param("slug"));
     let Some(hall) = halls::get_user_hall(&st, uid, &slug).await else {
-        return jr(json!({ "success": false, "msg": "Hall not found" }), 404);
+        return jr(json!({ "success": false, "msg": "List not found" }), 404);
     };
     let safe = basename(&slug);
     let _ = tokio::fs::remove_file(custom_dir(&st).join(format!("u_{uid}_{safe}.webp"))).await;
-    clear_mosaic_cache(&st, uid, &safe).await;
+    crate::routes::halls::clear_user_list(&st, uid, &safe).await;
     sql!("UPDATE user_halls SET custom_image = false WHERE id = ", hall.i64("id").unwrap_or(0) as i32).execute(&st.db).await?;
     jr(json!({ "success": true }), 200)
 }
@@ -664,38 +757,53 @@ async fn image_upload(st: AppState, mut req: Req) -> Res {
         // bypass inactive → the normal stub route
         return api_image_stub(st, req).await;
     }
-    let slug = basename(&decode(req.path.strip_prefix("/api/v2/me/halls/").and_then(|p| p.strip_suffix("/image"))));
+    let slug = basename(&decode(req.path.strip_prefix("/api/v2/me/lists/").and_then(|p| p.strip_suffix("/image"))));
     let Some(session) = req.session().cloned() else { return jr(json!({ "success": false, "msg": "Unauthorized" }), 403) };
-    let token = req.header("x-csrf-token").or_else(|| req.query("csrf_token")).map(str::to_string);
+    let ajax = crate::auth::is_ajax(&req);
     let expected = session.csrf_token.clone().unwrap_or_default();
-    if token.as_deref().map(|t| expected.is_empty() || !crate::util::ct_eq(t, &expected)).unwrap_or(true) {
+    let token = req.header("x-csrf-token").or_else(|| req.query("csrf_token")).map(str::to_string);
+    // A plain form post (no JavaScript) can't set the header: its `csrf_token` field is checked
+    // once the body is read, and it goes back to its `back` field (the pipeline only reads that
+    // from urlencoded bodies, crate::nojs).
+    let form_post = token.is_none() && !ajax;
+    let bad_token = |t: Option<&str>| t.map(|t| expected.is_empty() || !crate::util::ct_eq(t, &expected)).unwrap_or(true);
+    if !form_post && bad_token(token.as_deref()) {
         return jr(json!({ "success": false, "msg": "Invalid CSRF token" }), 403);
     }
-    let Some(hall) = sql!("SELECT id FROM user_halls WHERE user_id = ", session.id as i32, " AND slug = ", &slug, " LIMIT 1").fetch_optional(&st.db).await? else {
-        return jr(json!({ "success": false, "msg": "Hall not found" }), 404);
+    let ct = req.content_type().to_string();
+    let Some(boundary) = boundary_of(&ct) else {
+        return jr(json!({ "success": false, "msg": "Invalid content type" }), 400);
     };
-    match upload_inner(&st, &mut req, &session, &slug, hall.i64("id").unwrap_or(0)).await {
-        Ok(r) => Ok(r),
-        Err(e) => {
-            // The error can hold SQL or paths: only a reference goes to the client
-            jr(json!({ "success": false, "msg": crate::util::log_error(&format!("{e:#}"), "[USER_HALL_IMG] Upload error") }), 500)
+    let body = match req.body_bytes(MAX_IMAGE + 64 * 1024).await {
+        Ok(b) => b,
+        Err(_) => return jr(json!({ "success": false, "msg": "File too large (10 MB max)" }), 400),
+    };
+    let back = multipart_text(&body, &boundary, "back").and_then(|b| crate::nojs::safe_back(&b));
+    let resp = async {
+        if form_post && bad_token(multipart_text(&body, &boundary, "csrf_token").as_deref()) {
+            return jr(json!({ "success": false, "msg": "Invalid CSRF token" }), 403);
+        }
+        let Some(uid) = target_user(&req, &session) else { return jr(json!({ "success": false, "msg": "invalid user_id" }), 404) };
+        let Some(hall) = sql!("SELECT id FROM user_halls WHERE user_id = ", uid as i32, " AND slug = ", &slug, " LIMIT 1").fetch_optional(&st.db).await? else {
+            return jr(json!({ "success": false, "msg": "List not found" }), 404);
+        };
+        match upload_inner(&st, &body, &boundary, uid, &slug, hall.i64("id").unwrap_or(0)).await {
+            Ok(r) => Ok(r),
+            Err(e) => {
+                // The error can hold SQL or paths: only a reference goes to the client
+                jr(json!({ "success": false, "msg": crate::util::log_error(&format!("{e:#}"), "[USER_HALL_IMG] Upload error") }), 500)
+            }
         }
     }
+    .await;
+    crate::routes::profile_media::finish_form(&st, ajax, back.filter(|_| form_post), resp).await
 }
 
 const MAX_IMAGE: usize = 10 * 1024 * 1024;
 
-async fn upload_inner(st: &AppState, req: &mut Req, session: &Session, slug: &str, hall_id: i64) -> anyhow::Result<Response> {
+async fn upload_inner(st: &AppState, body: &[u8], boundary: &str, uid: i64, slug: &str, hall_id: i64) -> anyhow::Result<Response> {
     let cfg = st.cfg();
-    let ct = req.content_type().to_string();
-    let Some(boundary) = boundary_of(&ct) else {
-        return Ok(json_raw(&json!({ "success": false, "msg": "Invalid content type" }), 400));
-    };
-    let body = match req.body_bytes(MAX_IMAGE + 64 * 1024).await {
-        Ok(b) => b,
-        Err(_) => return Ok(json_raw(&json!({ "success": false, "msg": "File too large (10 MB max)" }), 400)),
-    };
-    let file = multipart_file(&body, &boundary, "file");
+    let file = multipart_file(body, boundary, "file");
     if file.as_ref().map(|(_, d)| d.len() > MAX_IMAGE).unwrap_or(false) {
         return Ok(json_raw(&json!({ "success": false, "msg": "File too large (10 MB max)" }), 400));
     }
@@ -708,8 +816,8 @@ async fn upload_inner(st: &AppState, req: &mut Req, session: &Session, slug: &st
     let custom = custom_dir(st);
     tokio::fs::create_dir_all(&custom).await?;
     let tmp_dir = if cfg.paths.tmp.as_os_str().is_empty() { std::path::PathBuf::from("/tmp") } else { cfg.paths.tmp.clone() };
-    let tmp = tmp_dir.join(format!("uhall_{}_{slug}_tmp", session.id));
-    let final_path = custom.join(format!("u_{}_{slug}.webp", session.id));
+    let tmp = tmp_dir.join(format!("uhall_{uid}_{slug}_tmp"));
+    let final_path = custom.join(format!("u_{uid}_{slug}.webp"));
     tokio::fs::write(&tmp, &data).await?;
     let tmp_s = tmp.display().to_string();
     let actual = crate::proc::spawn("file", &["--mime-type", "-b", &tmp_s]).await.map(|o| o.stdout_str().trim().to_string());
@@ -735,9 +843,9 @@ async fn upload_inner(st: &AppState, req: &mut Req, session: &Session, slug: &st
         tracing::error!("[USER_HALL_IMG] Magick error: {e}");
         return Ok(json_raw(&json!({ "success": false, "msg": "Failed to process image" }), 500));
     }
-    clear_mosaic_cache(st, session.id, slug).await;
+    crate::routes::halls::clear_user_list(st, uid, slug).await;
     sql!("UPDATE user_halls SET custom_image = true WHERE id = ", hall_id as i32).execute(&st.db).await?;
-    tracing::info!("[USER_HALL_IMG] Uploaded custom image for: {slug} by user: {}", session.id);
+    tracing::info!("[USER_HALL_IMG] Uploaded custom image for: {slug} of user: {uid}");
     Ok(json_raw(&json!({ "success": true }), 200))
 }
 
@@ -780,7 +888,50 @@ fn multipart_file(body: &[u8], boundary: &str, name: &str) -> Option<(String, Ve
     None
 }
 
+/// A plain (non-file) field `name` of a multipart body, as text.
+fn multipart_text(body: &[u8], boundary: &str, name: &str) -> Option<String> {
+    let delim = format!("--{boundary}");
+    let delim = delim.as_bytes();
+    let mut start = find(body, delim, 0)? + delim.len();
+    while let Some(next) = find(body, delim, start) {
+        let seg_start = (start + 2).min(next);
+        let seg_end = next.saturating_sub(2).max(seg_start);
+        let seg = &body[seg_start..seg_end];
+        start = next + delim.len();
+        let Some(hend) = find(seg, b"\r\n\r\n", 0) else { continue };
+        let headers = String::from_utf8_lossy(&seg[..hend]);
+        let field = headers.split("name=\"").nth(1).and_then(|r| r.split('"').next()).unwrap_or("");
+        if field == name && !headers.contains("filename") {
+            return Some(String::from_utf8_lossy(&seg[hend + 4..]).into_owned());
+        }
+    }
+    None
+}
+
 /// `String(v)` for template-bound values.
 fn jsv(v: &Value) -> String {
     js_str(Some(v)).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::http::Router;
+    use axum::http::Method;
+
+    /// An item in a user's list opens by number and by its link name (a reload of the page).
+    #[test]
+    fn list_item_by_id_or_link_name() {
+        let mut r = Router::new();
+        super::register(&mut r);
+        let m = r.find("/user/x/list/test/Bi42SYenbFL", &Method::GET).expect("link name");
+        assert_eq!(m.params.get("itemid").map(String::as_str), Some("Bi42SYenbFL"));
+        assert_eq!(m.params.get("slug").map(String::as_str), Some("test"));
+        let m = r.find("/user/x/list/test/4711", &Method::GET).expect("number");
+        assert_eq!(m.params.get("itemid").map(String::as_str), Some("4711"));
+        // the list itself and its pages stay the list
+        let m = r.find("/user/x/list/test", &Method::GET).expect("list");
+        assert!(!m.params.contains_key("itemid"));
+        let m = r.find("/user/x/list/test/p/2", &Method::GET).expect("page");
+        assert_eq!(m.params.get("page").map(String::as_str), Some("2"));
+    }
 }

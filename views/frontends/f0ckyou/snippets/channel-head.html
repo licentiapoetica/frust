@@ -1,7 +1,7 @@
 {#- A user's channel header: banner (the profile banner, a database value: the one allowed inline
     style), the square avatar, name, handle, counts, description, buttons, then the channel tabs.
     Set before including: ch_user (the user: at least {user}), ch_tab (home, uploads, favs, tags,
-    comments, halls), ch_count (counts, optional: the profile page's `count`). -#}
+    comments, halls: the Playlists tab), ch_count (counts, optional: the profile page's `count`). -#}
 {% import "frontends/f0ckyou/snippets/macros.html" as fy %}
 {%- set ch_name = (ch_user.user or "") -%}
 {%- set ch_link = "/user/" ~ (ch_name|lower|encode_uri_component) -%}
@@ -11,7 +11,7 @@
     + ([["favs", ch_link ~ "/favs", "Liked"]] if not ch_user.is_ghost else [])
     + ([["tags", ch_link ~ "/tags", "Tags"]] if not ch_user.is_ghost else [])
     + ([["comments", ch_link ~ "/comments", "Comments"]] if (enable_comments and not ch_user.is_ghost) else [])
-    + ([["halls", ch_link ~ "/halls", "Halls"]] if (userhalls_enabled and not ch_user.is_ghost) else []) -%}
+    + ([["halls", ch_link ~ "/lists", "Playlists"]] if (userhalls_enabled and not ch_user.is_ghost) else []) -%}
 <section class="fy-channel">
   {% if (ch_user.banner_file and user_banner_enabled) %}<div class="fy-banner" style="--fy-banner: url('/a/{{ ch_user.banner_file }}')"></div>{% endif %}
   <div class="fy-channel-head">

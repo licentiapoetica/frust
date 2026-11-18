@@ -279,8 +279,8 @@ pub async fn getf0cks(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> 
     if let (Some(uh), Some(owner)) = (&f.user_hall_obj, f.user_hall_owner.as_deref().filter(|o| !o.is_empty())) {
         let owner_name = uh.str("owner_name").filter(|s| !s.is_empty()).unwrap_or(owner).to_string();
         let slug = uh.string("slug");
-        link["main"] = json!(format!("/user/{}/hall/{}/", encode_uri_component(&owner_name), encode_uri_component(&slug)));
-        link["mainDisplay"] = json!(format!("/user/{owner_name}/hall/{slug}/"));
+        link["main"] = json!(format!("/user/{}/list/{}/", encode_uri_component(&owner_name), encode_uri_component(&slug)));
+        link["mainDisplay"] = json!(format!("/user/{owner_name}/list/{slug}/"));
         link["path"] = json!("p/");
         link["suffix"] = json!("");
     }

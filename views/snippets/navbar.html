@@ -22,7 +22,7 @@
         {% endif %}
         {% if halls_enabled %}
         <div class="nav-user-dropdown nav-halls-dropdown">
-          <a href="/halls" class="nav-halls-btn" title="{{ t("nav.halls") }}">
+          <a href="/lists" class="nav-halls-btn" title="{{ t("nav.halls") }}">
             <i class="fa-solid fa-layer-group"></i>
           </a>
         </div>
@@ -62,7 +62,7 @@
           {% else %}
           <a href="/user/{{ session.user|lower }}">{{ t("nav.profile") }}</a>
           {% if userhalls_enabled %}
-          <a href="/user/{{ session.user|lower }}/halls">{{ t("nav.my_halls") }}</a>
+          <a href="/user/{{ session.user|lower }}/lists">{{ t("nav.my_halls") }}</a>
           {% endif %}
           {% endif %}
           {% if manual_approval %}
@@ -248,17 +248,17 @@
       <a href="/tags" title="{{ t("nav.tags") }}"><i class="fa-solid fa-tags"></i><span class="nav-link-label">{{ t("nav.tags") }}</span></a>
       {% if halls_enabled %}
       <div class="nav-links-item">
-        <a href="/halls" class="nav-halls-btn" title="{{ t("nav.halls") }}">
+        <a href="/lists" class="nav-halls-btn" title="{{ t("nav.halls") }}">
           <i class="fa-solid fa-layer-group"></i><span class="nav-link-label">{{ t("nav.halls") }}</span>
         </a>
         <div class="nav-user-menu">
-          <a href="/halls" class="navbar-halls-overview"><i class="fa-solid fa-building-columns"></i> Overview</a>
+          <a href="/lists" class="navbar-halls-overview"><i class="fa-solid fa-building-columns"></i> Overview</a>
           {% if (halls is defined and (halls|length > 0)) %}
             {% for key, h in halls|entries %}
-              <a href="/h/{{ h.slug }}">{{ h.name }}</a>
+              <a href="/list/{{ h.slug }}">{{ h.name }}</a>
             {% endfor %}
           {% else %}
-            <a href="/h/legendary">Legendary</a>
+            <a href="/list/legendary">Legendary</a>
           {% endif %}
         </div>
       </div>

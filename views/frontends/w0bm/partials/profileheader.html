@@ -20,7 +20,7 @@
         <span id="comments-user"> <a href="/user/{{ user.user|lower }}/comments"><i class="fa fa-commenting"></i> <span class="w0bm-stat-n">{{ (count.comments or 0) }}</span> <span class="w0bm-stat-l">Comments</span></a></span>
         <span id="favs-user"><a href="/user/{{ user.user|lower }}/favs"><i class="fa fa-heart"></i> <span class="w0bm-stat-n">{{ (count.favs or 0) }}</span> <span class="w0bm-stat-l">Favorites</span></a></span>
         <span id="tags-user"><a href="/user/{{ user.user|lower }}/tags"><i class="fa fa-tags"></i> <span class="w0bm-stat-n">{{ (count.tags or 0) }}</span> <span class="w0bm-stat-l">Tags</span></a></span>
-        {% if userhalls_enabled %}<span id="halls-user"><a href="/user/{{ user.user|lower }}/halls"><i class="fa fa-clone"></i> <span class="w0bm-stat-n">{{ (count.halls or 0) }}</span> <span class="w0bm-stat-l">Halls</span></a></span>{% endif %}
+        {% if userhalls_enabled %}<span id="halls-user"><a href="/user/{{ user.user|lower }}/lists"><i class="fa fa-clone"></i> <span class="w0bm-stat-n">{{ (count.halls or 0) }}</span> <span class="w0bm-stat-l">Lists</span></a></span>{% endif %}
         {% endif %}
     </div>
     {% if user.description %}<div class="w0bm-userdesc">{{ user.description }}</div>{% endif %}

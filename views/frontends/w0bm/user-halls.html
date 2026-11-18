@@ -1,0 +1,143 @@
+{#- A user's own halls (/user/<name>/lists) in w0bm's category tiles, like halls.html. Their owner
+    (or an admin: manage_qs) gets "New hall" and, per hall, an edit dialog (picture, name,
+    description, public / private) and a delete dialog that asks first. Plain forms with `back`
+    (views/frontends/README.md, Halls), opened with :target without JavaScript; w0bm.js sends them
+    with fetch and takes #w0bm-userhalls / #w0bm-uh-modals again from a fresh render of the page. -#}
+{% extends "frontends/w0bm/layout.html" %}
+{#- the index's column (w0bm's .fucklaravel), so these pages are as wide as the index -#}
+{% block mainclass %}w0bm-main-profile{% endblock %}
+{% block innerclass %}fucklaravel{% endblock %}
+{% block bodyclass %}w0bm-userhalls-page{% endblock %}
+{% block title %}{{ (ownerUser.user or user.user) }}'s Lists - {{ domain }}{% endblock %}
+{% block modals %}
+{%- set uh_name = (ownerUser.user or user.user or "") -%}
+{%- set uh_link = "/user/" ~ (uh_name|lower|encode_uri_component) -%}
+{%- set uh_qs = (manage_qs or "") -%}
+{%- set uh_img = "/user_list_image/" ~ ownerUser.id ~ "/" -%}
+<div id="w0bm-uh-modals">
+{% if can_manage %}
+{% for hall in (hallsList or []) %}
+{%- set uh_id = "w0bm-uh-" ~ hall.slug -%}
+<div class="modal fade" id="{{ uh_id }}-edit" tabindex="-1" role="dialog" aria-labelledby="{{ uh_id }}-edit-title">
+    <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                <h4 class="modal-title" id="{{ uh_id }}-edit-title">Edit list <small>{{ hall.name }}</small></h4>
+            </div>
+            {% if enable_userhall_image_upload %}
+            <div class="modal-body w0bm-uh-body w0bm-uh-pic">
+                <label for="{{ uh_id }}-file">Picture</label>
+                <div class="w0bm-uh-picrow">
+                    <img class="w0bm-uh-preview" data-uh-img="{{ hall.slug }}" src="{{ uh_img }}{{ hall.slug }}?m={{ mode }}&v={{ hall.image_v }}" alt="" loading="lazy">
+                    <div class="w0bm-uh-picforms">
+                        <form method="post" action="/api/v2/me/lists/{{ hall.slug }}/image{{ uh_qs }}" enctype="multipart/form-data" class="w0bm-uh-form" data-uh="image" data-slug="{{ hall.slug }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            {% include "frontends/w0bm/partials/back.html" %}
+                            <input type="file" id="{{ uh_id }}-file" name="file" accept="image/gif,image/jpeg,image/png,image/webp">
+                            <button type="submit" class="btn btn-primary btn-sm w0bm-nojs-only">Upload</button>
+                        </form>
+                        {% if hall.custom_image %}
+                        <form method="post" action="/api/v2/me/lists/{{ hall.slug }}/image/delete{{ uh_qs }}" class="w0bm-uh-form" data-uh="image-delete" data-slug="{{ hall.slug }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            {% include "frontends/w0bm/partials/back.html" %}
+                            <button type="submit" class="btn btn-danger btn-sm"><i class="fa fa-times"></i> Remove picture</button>
+                        </form>
+                        {% endif %}
+                        <p class="help-block">gif, jpg, png or webp, 10 MB at most. Without one the list shows three of its f0cks.</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <form method="post" action="/api/v2/me/lists/{{ hall.slug }}{{ uh_qs }}" class="w0bm-uh-form" data-uh="save" data-slug="{{ hall.slug }}">
+                <div class="modal-body w0bm-uh-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    {% include "frontends/w0bm/partials/back.html" %}
+                    <div class="form-group">
+                        <label for="{{ uh_id }}-name">Name</label>
+                        <input class="form-control" type="text" id="{{ uh_id }}-name" name="name" value="{{ hall.name }}" maxlength="100" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ uh_id }}-desc">Description</label>
+                        <textarea class="form-control" id="{{ uh_id }}-desc" name="description" rows="3" maxlength="1000">{{ (hall.description or "") }}</textarea>
+                    </div>
+                    <div class="form-group w0bm-uh-vis">
+                        <label class="radio-inline"><input type="radio" name="is_private" value="0"{% if not hall.is_private %} checked{% endif %}> Public</label>
+                        <label class="radio-inline"><input type="radio" name="is_private" value="1"{% if hall.is_private %} checked{% endif %}> <i class="fa fa-lock"></i> Private <small>(only {{ ("you" if isOwner else uh_name) }})</small></label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="#{{ uh_id }}-delete" class="btn btn-primary w0bm-edit-delete" data-toggle="modal" data-target="#{{ uh_id }}-delete"><i class="fa fa-trash"></i> Delete</a>
+                    <a href="#_" class="btn btn-default" data-dismiss="modal">Close</a>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade w0bm-dialog" id="{{ uh_id }}-delete" tabindex="-1" role="dialog" aria-labelledby="{{ uh_id }}-delete-title">
+    <a href="#_" class="w0bm-modal-shade" aria-hidden="true" tabindex="-1"></a>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="post" action="/api/v2/me/lists/{{ hall.slug }}/delete{{ uh_qs }}" class="w0bm-uh-form" data-uh="delete" data-slug="{{ hall.slug }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {% include "frontends/w0bm/partials/back.html" %}
+                <div class="modal-header">
+                    <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
+                    <h4 class="modal-title" id="{{ uh_id }}-delete-title">Delete list?</h4>
+                </div>
+                <div class="modal-body w0bm-dialog-body">
+                    <p>"{{ hall.name }}" goes away for good. Its {{ (hall.total_items or 0) }} f0ck{{ ("" if (hall.total_items or 0) == 1 else "s") }} stay on the site.</p>
+                </div>
+                <div class="modal-footer">
+                    <a href="#{{ uh_id }}-edit" class="btn btn-default" data-toggle="modal" data-target="#{{ uh_id }}-edit">Cancel</a>
+                    <button type="submit" class="btn btn-danger"><i class="fa fa-trash"></i> Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+</div>
+{% endblock %}
+{% block content %}
+{%- set uh_name = (ownerUser.user or user.user or "") -%}
+{%- set uh_link = "/user/" ~ (uh_name|lower|encode_uri_component) -%}
+{%- set uh_qs = (manage_qs or "") -%}
+{%- set uh_img = "/user_list_image/" ~ ownerUser.id ~ "/" -%}
+<div id="w0bm-userhalls">
+<div class="page-header">
+    {#- id="index": the heading size and spacing of index / search / tags (w0bmcustom.css h3#index) -#}
+    <h3 id="index"{% if user.username_color %} class="w0bm-usercolor" style="--user-color: {{ user.username_color }}"{% endif %}>{{ (user.display_name or uh_name) }}'s Lists <small><a href="{{ uh_link }}">back to profile</a></small></h3>
+</div>
+{% if can_manage %}
+<form method="post" action="/api/v2/me/lists{{ uh_qs }}" class="w0bm-uh-form w0bm-uh-new" data-uh="create">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% include "frontends/w0bm/partials/back.html" %}
+    <label class="sr-only" for="w0bm-uh-newname">Name of the new list</label>
+    <div class="w0bm-hallrow">
+        <input class="form-control" type="text" id="w0bm-uh-newname" name="name" maxlength="100" required placeholder="Name of the new list" autocomplete="off">
+        <button type="submit" class="btn btn-primary"><i class="fa fa-plus"></i> New list</button>
+    </div>
+</form>
+{% endif %}
+<div class="extraction_point w0bm-hallgrid" id="categories">
+    {% for hall in (hallsList or []) %}
+    <div id="w0bm-uh-{{ hall.slug }}" class="col-sm-6 col-md-4 category">
+        <div class="thumbnail">
+            <a href="{{ uh_link }}/list/{{ hall.slug }}"><img class="holocene w0bm-uh-cover" data-uh-img="{{ hall.slug }}" src="{{ uh_img }}{{ hall.slug }}?m={{ mode }}&v={{ hall.image_v }}" alt="" loading="lazy"></a>
+            <div class="caption">
+                <h3><span class="w0bm-card-name" title="{{ hall.name }}">{{ hall.name }}</span> <small>{{ (hall.total_items or 0) }}</small>{% if hall.is_private %} <span class="label label-default" title="Only {{ ("you" if isOwner else uh_name) }} can see it"><i class="fa fa-lock"></i> private</span>{% endif %}</h3>
+                <p class="w0bm-card-desc">{{ (hall.description or "") }}</p>
+                <p><a href="{{ uh_link }}/list/{{ hall.slug }}" class="btn btn-primary" role="button">View</a>{% if can_manage %} <a href="#w0bm-uh-{{ hall.slug }}-edit" class="btn btn-default" role="button" data-toggle="modal" data-target="#w0bm-uh-{{ hall.slug }}-edit"><i class="fa fa-pencil"></i> Edit</a>{% endif %}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% if not (hallsList and (hallsList|length)) %}<p><i>{{ ("No lists yet … make one above, or put a f0ck into a new list with the + under it." if can_manage else "No lists yet …") }}</i></p>{% endif %}
+</div>
+<div class="clearfix"></div>
+</div>
+{% endblock %}

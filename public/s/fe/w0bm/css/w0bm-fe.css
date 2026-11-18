@@ -1112,8 +1112,13 @@ span#halls-user > a {
 .w0bm-taglist .label small {
     color: #1fb2b0;
 }
+/* The hall picture fills a 190px band at the top of the tile (w0bmcustom.css meant .holocene to,
+   but that rule sits nested under a theme button and never applies) */
 .w0bm-hallgrid .thumbnail .holocene {
+    height: 190px;
     background-image: var(--hall-image);
+    background-size: cover;
+    background-position: center;
 }
 /* Tag and hall cards (tags.html, tags_user.html, halls.html): a grid of cards that are all the same
    size, at most three to a row (1 / 2 / 3), in the same container width as the index. The name
@@ -2925,7 +2930,8 @@ a.w0bm-iconbtn#w0bm-editbtn {
     display: flex;
     gap: 5px;
 }
-.w0bm-hallrow > select {
+.w0bm-hallrow > select,
+.w0bm-hallrow > input {
     flex: 1 1 auto;
     min-width: 0;
 }
@@ -2939,6 +2945,89 @@ a.w0bm-iconbtn#w0bm-editbtn {
 .w0bm-hall-mylink {
     display: inline-block;
     margin-top: 15px;
+}
+
+/* ── A user's halls (user-halls.html): the tiles of halls.html, "New hall" above them, an edit
+   and a delete dialog per hall ─────────────────────────────────────────────────────────────── */
+.w0bm-uh-new {
+    max-width: 460px;
+    margin: 0 0 20px;
+}
+.w0bm-uh-new .w0bm-hallrow > input {
+    height: auto;
+}
+/* the picture is an <img> (w0bm.js swaps its src after a new upload), filling the tile's top
+   like halls.html's background picture */
+.w0bm-hallgrid .thumbnail img.holocene {
+    display: block;
+    width: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+.w0bm-hallgrid .caption > p:last-child > .btn + .btn {
+    margin-left: 5px;
+}
+.w0bm-hallgrid .caption > h3 > .label {
+    font-size: 11px;
+    align-self: center;
+}
+.modal-body.w0bm-uh-body {
+    display: block;
+}
+.modal-body.w0bm-uh-pic {
+    padding-bottom: 0;
+}
+.w0bm-uh-body label {
+    font-family: Oswald, sans-serif;
+    font-weight: normal;
+    color: #1fb2b0;
+}
+.w0bm-uh-body .radio-inline {
+    font-family: inherit;
+    color: inherit;
+}
+.w0bm-uh-vis {
+    margin-bottom: 0;
+}
+.w0bm-uh-picrow {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+}
+.w0bm-uh-preview {
+    flex: 0 0 auto;
+    width: 160px;
+    height: 80px;
+    object-fit: cover;
+    border: 1px solid #353434;
+}
+.w0bm-uh-picforms {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.w0bm-uh-picforms > form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.w0bm-uh-picforms input[type="file"] {
+    max-width: 100%;
+}
+.w0bm-uh-picforms .help-block {
+    margin: 0;
+    font-size: 12px;
+}
+@media (max-width: 480px) {
+    .w0bm-uh-picrow {
+        flex-direction: column;
+    }
+    .w0bm-uh-preview {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 2 / 1;
+    }
 }
 
 /* ── Confirm / reason dialog (w0bmDialog in w0bm.js, template in partials/body-end.html) ─── */
@@ -3280,8 +3369,9 @@ html[data-w0bm-theme="DARK"] :is(.w0bm-report-cat, .w0bm-mime):hover,
 html[data-w0bm-theme="DARK"] :is(.w0bm-report-cat, .w0bm-mime):has(input:checked) {
     border-color: #1fb2b0;
 }
-html[data-w0bm-theme="DARK"] .w0bm-hallform + .w0bm-hallform {
-    border-top-color: #1c1c1c;
+html[data-w0bm-theme="DARK"] .w0bm-hallform + .w0bm-hallform,
+html[data-w0bm-theme="DARK"] .w0bm-uh-preview {
+    border-color: #1c1c1c;
 }
 html[data-w0bm-theme="DARK"] .w0bm-mode-group > .btn:not(.active) {
     background-color: #000;

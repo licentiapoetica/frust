@@ -4102,6 +4102,255 @@ body.fy-page-watch {
   cursor: default;
 }
 
+/* ── playlists (halls): a channel's Playlists tab (user-halls.html) ── */
+.fy-pl-head {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.fy-pl-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.fy-pl-head h2 .fy-dim {
+  margin-left: .375rem;
+  font-weight: 400;
+}
+
+.fy-pl-vis {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.fy-pl-vis .fy-ico {
+  width: .875rem;
+  height: .875rem;
+}
+
+.fy-pl-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+/* the owner's Edit next to the title, like the ⋮ of a video card */
+.fy-pl-edit {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: -.375rem -.5rem 0 0;
+  color: var(--fy-text);
+}
+
+.fy-pl-edit:hover {
+  background: var(--fy-soft-2);
+}
+
+.fy-pl-edit .fy-ico {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.fy-edit-form > label,
+.fy-edit-legend {
+  color: var(--fy-muted);
+  font-size: .8125rem;
+}
+
+/* its cover: a file field and Upload */
+.fy-cover-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+
+.fy-cover-form input[type="file"] {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--fy-muted);
+  font-size: .8125rem;
+}
+
+.fy-cover-form input[type="file"]::file-selector-button {
+  height: 2.25rem;
+  margin-right: .75rem;
+  padding: 0 1rem;
+  border: 0;
+  background: var(--fy-soft);
+  color: var(--fy-text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fy-cover-form input[type="file"]::file-selector-button:hover {
+  background: var(--fy-soft-2);
+}
+
+/* ── Save to… (the watch page's #save): a row per playlist with its tick box ── */
+.fy-save-box {
+  width: min(24rem, 100%);
+  gap: .5rem;
+}
+
+.fy-save {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  margin: 0 -1.5rem;
+}
+
+.fy-save-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fy-save-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: .375rem 1.5rem;
+  border: 0;
+  background: none;
+  color: var(--fy-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fy-save-row:hover {
+  background: var(--fy-soft);
+}
+
+.fy-save-row:disabled {
+  opacity: .6;
+  cursor: progress;
+}
+
+.fy-save-check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--fy-text);
+}
+
+.fy-save-check .fy-ico {
+  width: 1rem;
+  height: 1rem;
+  visibility: hidden;
+}
+
+.fy-save-row.is-on .fy-save-check {
+  border-color: var(--fy-blue);
+  background: var(--fy-blue);
+  color: var(--fy-on-blue);
+}
+
+.fy-save-row.is-on .fy-save-check .fy-ico {
+  visibility: visible;
+}
+
+.fy-save-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fy-save-lock {
+  display: flex;
+  flex: none;
+  color: var(--fy-muted);
+}
+
+.fy-save-lock .fy-ico {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.fy-save-none {
+  padding: .375rem 1.5rem;
+}
+
+.fy-save-sec {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .5rem 0 0;
+  padding: .75rem 1.5rem .25rem;
+  border-top: 1px solid var(--fy-line);
+  color: var(--fy-muted);
+  font-size: .875rem;
+  font-weight: 500;
+}
+
+.fy-save-sec .fy-ico {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* "Create new playlist": opens its form below (<details>, no JavaScript needed) */
+.fy-save-new {
+  border-top: 1px solid var(--fy-line);
+}
+
+.fy-save-new > summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.75rem;
+  padding: .375rem 1.5rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.fy-save-new > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fy-save-new > summary:hover {
+  background: var(--fy-soft);
+}
+
+.fy-save-new > summary .fy-ico {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.fy-save-new[open] > summary {
+  color: var(--fy-muted);
+}
+
+.fy-save-newform {
+  display: flex;
+  flex-direction: column;
+  gap: .375rem;
+  padding: 0 1.5rem .5rem;
+}
+
+.fy-save-newform label {
+  color: var(--fy-muted);
+  font-size: .8125rem;
+}
+
 /* while f0ckyou.js reads the suggestions again */
 .fy-meta-busy .fy-modal-box {
   opacity: .6;

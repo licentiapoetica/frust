@@ -1801,9 +1801,77 @@
       }
       sync();
       const name = opt ? (opt.dataset.name || opt.value) : '';
-      flash('success', (remove ? 'Removed from ' : 'Added to ') + (name ? '"' + name + '"' : 'hall'));
+      flash('success', (remove ? 'Removed from ' : 'Added to ') + (name ? '"' + name + '"' : 'list'));
     });
   });
+
+  // ── A user's halls (user-halls.html) ──────────────────────────────────────────────────
+  // Plain forms (new hall, edit, picture, delete), sent with fetch here; then the halls and their
+  // dialogs come again from a fresh render of the page (#w0bm-userhalls, #w0bm-uh-modals).
+  // Picking a picture uploads it right away.
+  if ($('#w0bm-userhalls')) {
+    const uhDone = { create: 'List created', save: 'Saved', delete: 'List deleted', image: 'Picture changed', 'image-delete': 'Picture removed' };
+    const uhRefresh = async () => {
+      const page = await fetchPage(location.href).catch(() => null);
+      const doc = page && new DOMParser().parseFromString(page.html, 'text/html');
+      if (!doc || !doc.getElementById('w0bm-userhalls')) return;
+      $$('.modal.w0bm-modal-open').forEach(closeModal);
+      ['w0bm-userhalls', 'w0bm-uh-modals'].forEach((id) => {
+        const cur = document.getElementById(id);
+        const fresh = doc.getElementById(id);
+        if (cur && fresh) cur.replaceWith(document.adoptNode(fresh));
+      });
+    };
+    // multipart (the picture): api() sends urlencoded
+    const uhUpload = async (form) => {
+      const fd = new FormData(form);
+      fd.delete('back');
+      prefetched.clear();
+      try {
+        const res = await fetch(form.getAttribute('action'), {
+          method: 'POST', body: fd, credentials: 'same-origin',
+          headers: { 'X-CSRF-Token': csrf(), 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+        });
+        let data = null;
+        try { data = await res.json(); } catch { /* not JSON */ }
+        const ok = res.ok && !(data && data.success === false);
+        return { ok, data, msg: (data && (data.msg || data.message)) || (ok ? '' : 'Error ' + res.status) };
+      } catch {
+        return { ok: false, data: null, msg: 'Network error' };
+      }
+    };
+    on(document, 'submit', async (e) => {
+      const form = e.target;
+      if (!(form instanceof HTMLFormElement) || !form.matches('form.w0bm-uh-form')) return;
+      e.preventDefault();
+      const kind = form.dataset.uh;
+      const slug = form.dataset.slug || '';
+      if (kind === 'image' && !form.querySelector('input[type="file"]')?.files.length) { flash('error', 'Pick a picture first'); return; }
+      const btn = e.submitter || form.querySelector('[type="submit"]');
+      if (btn) btn.disabled = true;
+      const r = kind === 'image' ? await uhUpload(form) : await api(form.getAttribute('action'), { body: new FormData(form) });
+      if (btn) btn.disabled = false;
+      if (!r.ok) { flash('error', r.msg || 'Error'); return; }
+      flash('success', uhDone[kind] || 'Done');
+      await uhRefresh();
+      // the same picture URL: load it anew
+      if (kind === 'image' || kind === 'image-delete') {
+        $$('img[data-uh-img]').filter((img) => img.dataset.uhImg === slug).forEach((img) => {
+          const u = new URL(img.getAttribute('src'), location.href);
+          u.searchParams.set('v', Date.now());
+          img.setAttribute('src', u.pathname + u.search);
+        });
+      }
+      const created = kind === 'create' && r.data && r.data.hall && r.data.hall.slug;
+      if (created) document.getElementById('w0bm-uh-' + created)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+    on(document, 'change', (e) => {
+      const input = e.target;
+      if (input instanceof HTMLInputElement && input.type === 'file' && input.files.length && input.form?.matches('form.w0bm-uh-form[data-uh="image"]')) {
+        input.form.requestSubmit();
+      }
+    });
+  }
 
   // ── Tags ──────────────────────────────────────────────────────────────────────────────
   const tagDisplay = $('#tag-display');

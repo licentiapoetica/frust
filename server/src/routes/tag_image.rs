@@ -154,6 +154,8 @@ async fn on_tags_changed(st: &AppState, payload: &str) {
     if names.is_empty() {
         return;
     }
+    // the lists it is in show it in their pictures too (its rating decides the sfw / nsfw ones)
+    super::halls::clear_lists_of_item(st, item_id as i64).await;
     tracing::info!("[TAG_IMAGE] Tag change on item {item_id}, regenerating cache for {} tag(s)", names.len());
     for tag in names {
         remove_cached(st, &tag).await;
@@ -166,8 +168,9 @@ async fn on_tags_changed(st: &AppState, payload: &str) {
     }
 }
 
-/// Deterministic SVG placeholder (gradient + tag name).
-fn fallback_svg(tag: &str) -> String {
+/// Deterministic SVG placeholder (gradient + tag name). Also the picture of an empty list
+/// (routes/halls.rs `list_fallback`).
+pub fn fallback_svg(tag: &str) -> String {
     let hash = crate::util::md5(tag);
     let esc: String = tag
         .chars()

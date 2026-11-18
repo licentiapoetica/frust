@@ -1,0 +1,71 @@
+{#- The body of the item's halls dialog (#halls-modal, snippets/footer.html): the visitor's halls and,
+    for staff, the site's, each a plain form that puts the item in or takes it out (the opposite of
+    has_item), and a form for a new hall with the item in it. Rendered into the item page for visitors
+    without JavaScript (back to the page with the dialog open); f0ckm.js loads it from
+    /item-lists/<id> and sends the forms with fetch. Data: item.id, my_hall_choices, hall_choices
+    (routes/index.rs hall_choices). -#}
+{%- set hd_back = ((url.pathname ~ (url.search or "")) if (url is defined and url) else "/") ~ "#halls-modal" -%}
+<div class="hd" data-item-id="{{ item.id }}">
+  {% if my_hall_choices is defined %}
+  <section class="hd-section">
+    <h4 class="hd-label">{{ t("hall.my_halls") }}</h4>
+    {% if my_hall_choices %}
+    <ul class="hd-list">
+      {% for h in my_hall_choices %}
+      <li>
+        <form method="post" action="/api/v2/me/list-items" class="hd-form" data-hall-kind="mine">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="item_id" value="{{ item.id }}">
+          <input type="hidden" name="hall" value="{{ h.slug }}">
+          <input type="hidden" name="action" value="{{ ("remove" if h.has_item else "add") }}">
+          <input type="hidden" name="back" value="{{ hd_back }}">
+          <button type="submit" class="hd-row{% if h.has_item %} is-in{% endif %}" aria-pressed="{{ ("true" if h.has_item else "false") }}" title="{{ (t("hall.remove_btn") if h.has_item else t("hall.add_btn")) }}">
+            <i class="hd-check {{ ("fa-solid fa-square-check" if h.has_item else "fa-regular fa-square") }}" aria-hidden="true"></i>
+            <span class="hd-name">{{ h.name }}</span>
+            {% if h.is_private %}<i class="hd-lock fa-solid fa-lock" title="{{ t("common.private") }}" aria-hidden="true"></i>{% endif %}
+            <span class="hd-count">{{ (h.total_items or 0) }}</span>
+          </button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hd-empty">{{ t("hall.no_halls") }}</p>
+    {% endif %}
+    <form method="post" action="/api/v2/me/list-items" class="hd-form hd-new" data-hall-kind="new">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="item_id" value="{{ item.id }}">
+      <input type="hidden" name="action" value="add">
+      <input type="hidden" name="back" value="{{ hd_back }}">
+      <input type="text" name="new_name" class="hd-new-input" maxlength="100" placeholder="{{ t("hall.new_name_placeholder") }}" aria-label="{{ t("hall.new_name_placeholder") }}" autocomplete="off" required>
+      <button type="submit" class="hd-new-btn"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{ t("hall.create_and_add") }}</button>
+    </form>
+    {% if session and session.user %}<a class="hd-manage" href="/user/{{ session.user|lower|encode_uri_component }}/lists"><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ t("hall.manage_mine") }}</a>{% endif %}
+  </section>
+  {% endif %}
+  {% if hall_choices is defined %}
+  <section class="hd-section hd-site">
+    <h4 class="hd-label">{{ t("hall.site_halls") }}</h4>
+    {% if hall_choices %}
+    <ul class="hd-list">
+      {% for h in hall_choices %}
+      <li>
+        <form method="post" action="{{ ("/mod/lists/remove" if h.has_item else "/mod/lists/add") }}" class="hd-form" data-hall-kind="site">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="id" value="{{ item.id }}">
+          <input type="hidden" name="hall" value="{{ h.slug }}">
+          <input type="hidden" name="back" value="{{ hd_back }}">
+          <button type="submit" class="hd-row{% if h.has_item %} is-in{% endif %}" aria-pressed="{{ ("true" if h.has_item else "false") }}" title="{{ (t("hall.remove_btn") if h.has_item else t("hall.add_btn")) }}">
+            <i class="hd-check {{ ("fa-solid fa-square-check" if h.has_item else "fa-regular fa-square") }}" aria-hidden="true"></i>
+            <span class="hd-name">{{ h.name }}</span>
+          </button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hd-empty">{{ t("hall.no_site_halls") }}</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>

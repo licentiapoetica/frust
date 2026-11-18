@@ -1,5 +1,5 @@
-{#- f0ckyou index: the home feed and every listing (/p/2, /tag/x, /h/x, /user/x/uploads, /user/x/favs,
-    /video, ...) as a grid of video cards under a header for what is listed (a hashtag, a hall, the
+{#- f0ckyou index: the home feed and every listing (/p/2, /tag/x, /list/x, /user/x/uploads, /user/x/favs,
+    /video, ...) as a grid of video cards under a header for what is listed (a hashtag, a hall = playlist, the
     user's channel) and the media chips. /?login=1 and /?register=1 are the sign-in pages. -#}
 {% import "frontends/f0ckyou/snippets/macros.html" as fy %}
 {% if (private_society and not session) %}
@@ -23,7 +23,7 @@
   {%- set fy_q = tmp.tag|lower -%}
   {%- set fy_nav = "none" -%}
 {%- elif tmp and tmp.hall -%}
-  {%- set fy_chip_base = "/h/" ~ ((tmp.hall.slug if tmp.hall.slug else tmp.hall)|encode_uri_component) ~ "/" -%}
+  {%- set fy_chip_base = "/list/" ~ ((tmp.hall.slug if tmp.hall.slug else tmp.hall)|encode_uri_component) ~ "/" -%}
   {%- set fy_title = (tmp.hall.name if tmp.hall.name else tmp.hall) -%}
   {%- set fy_q = "" -%}
   {%- set fy_nav = "halls" -%}
@@ -59,8 +59,14 @@
     <span class="fy-listhead-ico">{{ fy.ico("playlist") }}</span>
     <div>
       <h1 class="fy-listhead-title">{{ fy_title }}</h1>
-      <p class="fy-dim">Hall &middot; {{ (total or 0)|locale_number }} f0cks{% if tmp.userHallOwner %} &middot; by <a href="/user/{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner)|lower|encode_uri_component }}/halls">{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner) }}</a>{% endif %}</p>
-      {% if (tmp.hall and tmp.hall.description) %}<p class="fy-listhead-desc">{{ tmp.hall.description }}</p>{% endif %}
+      <p class="fy-dim">Playlist &middot; {{ (total or 0)|locale_number }} f0cks{% if tmp.userHallOwner %} &middot; by <a href="/user/{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner)|lower|encode_uri_component }}/lists">{{ (tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner) }}</a>{% endif %}</p>
+      {% if (tmp.hall and tmp.hall.description) %}<p class="fy-listhead-desc">{{ tmp.hall.description }}</p>
+      {% elif (tmp.userHall and tmp.userHall is mapping and tmp.userHall.description) %}<p class="fy-listhead-desc">{{ tmp.userHall.description }}</p>{% endif %}
+      {#- the owner edits it on the Playlists tab of their channel (user-halls.html: its Edit dialog) -#}
+      {%- set fy_uh_owner = ((tmp.userHallOwner.user if tmp.userHallOwner.user else tmp.userHallOwner) if tmp.userHallOwner else "") -%}
+      {% if (tmp.userHall and tmp.userHall is mapping and session and fy_uh_owner and ((session.user|lower) == (fy_uh_owner|lower) or session.admin)) %}
+      <p class="fy-listhead-desc"><a class="fy-btn" href="/user/{{ fy_uh_owner|lower|encode_uri_component }}/lists#pl-edit-{{ tmp.userHall.slug }}">{{ fy.ico("edit") }}<span>Edit playlist</span></a></p>
+      {% endif %}
     </div>
   </header>
   {% endif %}

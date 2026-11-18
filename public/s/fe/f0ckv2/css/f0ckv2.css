@@ -2088,6 +2088,246 @@ html[class*="user-fs-"] :is(#privacy-consent-modal, #tos-consent-modal) .pc-cont
     max-height: calc(100vh / var(--fs-zoom) - 120px);
   }
 }
+
+/* ── halls: the item's halls box (#halls) and a user's halls (user-halls.html) ─── */
+#a_halls > .iconset {
+  fill: var(--accent);
+}
+
+html[theme="paper"] #a_halls > .iconset {
+  fill: var(--white);
+}
+
+html[theme="f0ck95"] #a_halls > .iconset {
+  fill: var(--black);
+}
+
+.v2-hallbox {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.v2-hallbox-head {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--accent);
+  font-weight: bold;
+}
+
+.v2-hallbox-head > a {
+  font-weight: normal;
+}
+
+ul.v2-hall-list {
+  list-style: none;
+  padding: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 2px;
+}
+
+ul.v2-hall-list form {
+  margin: 0;
+}
+
+button.v2-hall-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 6px;
+  border: 1px solid var(--black);
+  background: var(--badge-tag);
+  color: var(--white);
+  font-family: var(--font);
+  text-align: left;
+  cursor: pointer;
+  line-height: 1.6;
+}
+
+button.v2-hall-row:hover,
+button.v2-hall-row:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+button.v2-hall-row.v2-hall-in {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.v2-hall-mark {
+  width: 1em;
+  text-align: center;
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.v2-hall-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-hall-count {
+  opacity: .6;
+}
+
+.v2-hall-none {
+  opacity: .6;
+  padding: 2px 6px;
+}
+
+form.v2-hall-new,
+form.v2-uhall-create {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+form.v2-hall-new .v2-input {
+  flex: 1;
+  min-width: 0;
+}
+
+form.v2-hall-form.v2-busy {
+  opacity: .5;
+  pointer-events: none;
+}
+
+/* a user's halls */
+.v2-uhalls-page form.v2-uhall-create {
+  justify-content: center;
+  margin: 5px 0 10px;
+}
+
+.v2-uhalls {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  margin-bottom: 35px;
+  text-align: left;
+}
+
+.v2-uhall {
+  display: flex;
+  flex-direction: column;
+  background: var(--metadata-bg);
+  border: 1px solid var(--black);
+  min-width: 0;
+}
+
+a.v2-uhall-cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 1;
+  background: var(--badge-tag) var(--thumb) center / cover no-repeat;
+}
+
+a.v2-uhall-cover:hover {
+  opacity: .8;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.v2-uhall-lock {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+}
+
+.v2-uhall-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 6px 0;
+}
+
+a.v2-uhall-name {
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+p.v2-uhall-desc {
+  margin: 2px 6px 0;
+  font-size: 12px;
+  opacity: .8;
+  overflow-wrap: anywhere;
+}
+
+.v2-uhall-tools {
+  display: flex;
+  gap: 4px;
+  padding: 4px 6px 6px;
+  margin-top: auto;
+}
+
+.v2-uhall-box label {
+  display: grid;
+  gap: 2px;
+}
+
+.v2-uhall-box .v2-input,
+.v2-uhall-box textarea.v2-input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+form.v2-uhall-edit {
+  display: grid;
+  gap: 6px;
+}
+
+.v2-uhall-vis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.v2-uhall-vis label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.v2-uhall-pic {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid var(--black);
+  padding-top: 6px;
+}
+
+.v2-uhall-pic img {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  background: var(--badge-tag);
+}
+
+.v2-uhall-pic form {
+  margin: 0;
+}
+
+.v2-uhall-danger {
+  border-top: 1px solid var(--black);
+  padding-top: 6px;
+  text-align: right;
+}
+
+.v2-uhall-danger a,
+.v2-uhall-confirm button {
+  color: #ff6b6b;
+}
+
+.v2-uhall-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* ── Site chat as an IRC window (structure: /s/css/globalchat.css, texts: snippets/chat.html):
    "[12:34] <nick> text" lines in the theme's colours, the channel as the title, a topic bar, a
    prompt. f0ck95 / f0ck95d: a Windows 95 window. ── */

@@ -1,6 +1,6 @@
-{#- f0ckyou halls: the site's halls as playlist cards (the cover with the count on a side panel). -#}
+{#- f0ckyou halls (called playlists here): the site's halls as playlist cards (the cover with the count on a side panel). -#}
 {% import "frontends/f0ckyou/snippets/macros.html" as fy %}
-{%- set fy_title = "Halls" -%}
+{%- set fy_title = "Playlists" -%}
 {%- set fy_page = "results" -%}
 {%- set fy_nav = "halls" -%}
 {%- set hl_m = ((session.mode if session else 0) or 0) -%}
@@ -8,26 +8,26 @@
 {% include "frontends/f0ckyou/snippets/chrome.html" %}
 <main class="fy-main">
   <header class="fy-listhead">
-    <h1 class="fy-listhead-title">Halls</h1>
-    <p class="fy-dim">{{ (hallsList or [])|length }} collections of f0cks</p>
+    <h1 class="fy-listhead-title">Playlists</h1>
+    <p class="fy-dim">{{ (hallsList or [])|length }} playlist{{ ("" if (hallsList or [])|length == 1 else "s") }} of {{ domain }}</p>
   </header>
   {% if hallsList %}
   <div class="fy-grid">
     {% for h in hallsList %}
     <article class="fy-card fy-card-hall">
-      <a class="fy-thumb" href="/h/{{ h.slug }}"><img src="/hall_image/{{ h.slug }}?m={{ hl_m }}" alt="" loading="lazy">{% if h.rating and h.rating != "sfw" %}<span class="fy-badge-tl fy-rate-{{ h.rating }}">{{ h.rating|upper }}</span>{% endif %}<span class="fy-hall-side">{{ fy.ico("playlist") }}<span>{{ (h.total_items or 0)|locale_number }}</span></span></a>
+      <a class="fy-thumb" href="/list/{{ h.slug }}"><img src="/list_image/{{ h.slug }}?m={{ hl_m }}&v={{ h.image_v }}" alt="" loading="lazy">{% if h.rating and h.rating != "sfw" %}<span class="fy-badge-tl fy-rate-{{ h.rating }}">{{ h.rating|upper }}</span>{% endif %}<span class="fy-hall-side">{{ fy.ico("playlist") }}<span>{{ (h.total_items or 0)|locale_number }}</span></span></a>
       <div class="fy-card-meta">
         <div class="fy-card-text">
-          <h3 class="fy-card-title"><a href="/h/{{ h.slug }}">{{ h.name }}</a></h3>
+          <h3 class="fy-card-title"><a href="/list/{{ h.slug }}">{{ h.name }}</a></h3>
           {% if h.description %}<div class="fy-card-sub">{{ h.description }}</div>{% endif %}
-          <a class="fy-card-sub fy-card-all" href="/h/{{ h.slug }}">View full hall</a>
+          <a class="fy-card-sub fy-card-all" href="/list/{{ h.slug }}">View full playlist</a>
         </div>
       </div>
     </article>
     {% endfor %}
   </div>
   {% else %}
-  <div class="fy-empty"><h2>No halls yet</h2></div>
+  <div class="fy-empty"><h2>No playlists yet</h2></div>
   {% endif %}
 </main>
 {% include "frontends/f0ckyou/snippets/footer.html" %}

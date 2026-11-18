@@ -1,17 +1,17 @@
 {#- f0ckgle halls: the site's halls as image results. -#}
-{%- set fg_title = "Halls" -%}
+{%- set fg_title = "Lists" -%}
 {%- set fg_page = "results" -%}
 {%- set fg_tab = "" -%}
 {%- set fg_m = ((session.mode if session else 0) or 0) -%}
 {% include "frontends/f0ckgle/snippets/head.html" %}
 {% include "frontends/f0ckgle/snippets/topbar.html" %}
 <main class="fg-main fg-main-wide">
-  <p class="fg-stats">About {{ (hallsList or [])|length }} halls</p>
+  <p class="fg-stats">About {{ (hallsList or [])|length }} lists</p>
   {% if hallsList %}
   <div class="fg-grid">
     {% for h in hallsList %}
-    <a class="fg-card" href="/h/{{ h.slug }}">
-      <span class="fg-card-img"><img src="/hall_image/{{ h.slug }}?m={{ fg_m }}" alt="" loading="lazy">{% if h.rating and h.rating != "sfw" %}<span class="fg-card-badge">{{ h.rating|upper }}</span>{% endif %}</span>
+    <a class="fg-card" href="/list/{{ h.slug }}">
+      <span class="fg-card-img"><img src="/list_image/{{ h.slug }}?m={{ fg_m }}&v={{ h.image_v }}" alt="" loading="lazy">{% if h.rating and h.rating != "sfw" %}<span class="fg-card-badge">{{ h.rating|upper }}</span>{% endif %}</span>
       <span class="fg-card-src"><span class="fg-fav fg-fav-letter">H</span>{{ (h.total_items or 0) }} f0cks</span>
       <span class="fg-card-title">{{ h.name }}</span>
       {% if h.description %}<span class="fg-card-desc">{{ h.description }}</span>{% endif %}
@@ -19,7 +19,7 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="fg-none"><p>No halls yet.</p></div>
+  <div class="fg-none"><p>No lists yet.</p></div>
   {% endif %}
 </main>
 {% include "frontends/f0ckgle/snippets/footer.html" %}

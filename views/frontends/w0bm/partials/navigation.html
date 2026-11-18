@@ -19,7 +19,7 @@
             <ul class="nav navbar-nav navbar-left">
                 <li><a href="/tags"><i class="fa fa-tags"></i><span class="hidden-sm"> Tags</span></a></li>
                 {% if halls_enabled %}
-                <li><a href="/halls"><i class="fa fa-clone"></i><span class="hidden-sm"> Halls</span></a></li>
+                <li><a href="/lists"><i class="fa fa-clone"></i><span class="hidden-sm"> Lists</span></a></li>
                 {% endif %}
                 <li><a href="/?view=index"><i class="fa fa-list"></i><span class="hidden-sm"> Index</span></a></li>
                 {% include "frontends/w0bm/partials/themechanger.html" %}
@@ -52,7 +52,7 @@
                         <li><a href="/pending"><i class="fa fa-clock-o"></i> Pending{% if session.own_pending_count %} <span class="badge">{{ session.own_pending_count }}</span>{% endif %}</a></li>
                         {% endif %}
                         {% if (userhalls_enabled and not session.is_anon) %}
-                        <li><a href="/user/{{ session.user|lower }}/halls"><i class="fa fa-clone"></i> My Halls</a></li>
+                        <li><a href="/user/{{ session.user|lower }}/lists"><i class="fa fa-clone"></i> My Lists</a></li>
                         {% endif %}
                         {% if (session.admin or session.is_moderator) %}
                         <li role="separator" class="divider"></li>

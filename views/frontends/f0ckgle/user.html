@@ -29,7 +29,7 @@
       <div><dt>Favs</dt><dd><a href="{{ ulink }}/favs">{{ (count.favs or 0) }}</a></dd></div>
       {% if enable_comments %}<div><dt>Comments</dt><dd><a href="{{ ulink }}/comments">{{ (count.comments or 0) }}</a></dd></div>{% endif %}
       <div><dt>Tags</dt><dd><a href="{{ ulink }}/tags">{{ (count.tags or 0) }}</a></dd></div>
-      {% if userhalls_enabled %}<div><dt>Halls</dt><dd><a href="{{ ulink }}/halls">{{ (count.halls or 0) }}</a></dd></div>{% endif %}
+      {% if userhalls_enabled %}<div><dt>Lists</dt><dd><a href="{{ ulink }}/lists">{{ (count.halls or 0) }}</a></dd></div>{% endif %}
       {% endif %}
     </dl>
     {% if not user.is_ghost %}

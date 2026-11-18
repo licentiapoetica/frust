@@ -920,11 +920,11 @@ async fn csrf_middleware(st: &AppState, req: &mut Req) -> Result<Option<Response
         return Ok(None);
     }
     let cfg = st.cfg();
-    static HALLS: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"^/api/v2/admin/halls(/|$)").unwrap());
+    static HALLS: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"^/api/v2/admin/lists(/|$)").unwrap());
     if cfg.enabled("websrv.halls_enabled") && HALLS.is_match(p) {
         return Ok(None);
     }
-    static USER_HALL_IMG: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"^/api/v2/me/halls/[^/]+/image$").unwrap());
+    static USER_HALL_IMG: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"^/api/v2/me/lists/[^/]+/image$").unwrap());
     // The upload checks its token itself; DELETE of the image doesn't, so it stays checked here
     if req.method == Method::POST && cfg.enabled("websrv.userhalls_enabled") && cfg.enabled("websrv.enable_userhall_image_upload") && USER_HALL_IMG.is_match(p) {
         return Ok(None);

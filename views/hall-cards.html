@@ -1,7 +1,7 @@
 {% for key, hall in hallsList|entries %}
-<a href="/h/{{ hall.slug }}" class="tag-card">
+<a href="/list/{{ hall.slug }}" class="tag-card">
     <div class="tag-card-image">
-        <img src="/hall_image/{{ hall.slug }}?m={{ session.mode }}" loading="lazy" alt="{{ hall.name }}">
+        <img src="/list_image/{{ hall.slug }}?m={{ session.mode }}&v={{ hall.image_v }}" loading="lazy" alt="{{ hall.name }}">
         <span class="tag-card-image-title">{{ hall.name }}</span>
         {% if hall.rating == "nsfw" %}
         <span class="hall-rating-badge hall-rating-nsfw">NSFW</span>

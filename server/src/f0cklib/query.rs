@@ -355,7 +355,7 @@ fn operator(key: &str, value: &str, who_ok: bool, q: &mut Query) -> Option<Op> {
                 Op::Done
             }
         },
-        "hall" | "in" => Op::Term(Term::Hall(v.to_string())),
+        "list" | "hall" | "in" => Op::Term(Term::Hall(v.to_string())),
         "is" | "has" => match flag_of(&lv) {
             Some(Flag::MyFav | Flag::Mine) if !who_ok => {
                 q.notes.push(format!("{key}:{lv} isn't available here"));
@@ -548,7 +548,7 @@ pub(crate) fn describe(neg: bool, t: &Term) -> String {
         Term::Mime(m) => format!("type {}", m.trim_end_matches("/%")),
         Term::Ext(e) => format!(".{e} files"),
         Term::Rating(r) => r.to_uppercase(),
-        Term::Hall(h) => format!("in the hall {h}"),
+        Term::Hall(h) => format!("in the list {h}"),
         Term::Is(f) => flag_name(*f).to_string(),
         Term::Num { field, lo, lo_incl, hi, hi_incl } => {
             let n = |v: f64| if v.fract() == 0.0 { format!("{}", v as i64) } else { format!("{v}") };
@@ -621,7 +621,7 @@ pub const OPERATORS: &[OpDoc] = &[
     OpDoc { values: &["sfw", "nsfw", "nsfl", "untagged"], ..op_doc("rating", "r", "sfw, nsfw, nsfl, or untagged", "rating:sfw", "file") },
     OpDoc { aliases: &["intitle"], ..op_doc("title", "text", "the title contains the text", "title:fail", "file") },
     OpDoc { aliases: &["source", "url", "site"], ..op_doc("src", "text", "the source address contains the text", "src:youtube", "file") },
-    OpDoc { aliases: &["in"], ..op_doc("hall", "name", "in that hall", "hall:best", "file") },
+    OpDoc { aliases: &["in", "hall"], ..op_doc("list", "name", "in that list", "list:best", "file") },
     OpDoc { featured: true, values: IS_VALUES, ..op_doc("is", "what", "oc, fav (yours), mine, pinned, expiring, private, a type or a rating", "is:oc", "file") },
     OpDoc { featured: true, values: HAS_VALUES, ..op_doc("has", "what", "title, src, comments, favs, tags or cover", "has:comments", "file") },
     OpDoc { aliases: &["like", "similar"], ..op_doc("related", "f0ck", "shares tags with that f0ck (number or link name)", "related:1", "file") },

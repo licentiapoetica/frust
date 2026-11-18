@@ -1,4 +1,4 @@
-{#- The small knowledge panel at the top of a user's sub-page (tags, comments): avatar, what this
+{#- The small knowledge panel at the top of a user's sub-page (tags, comments, halls): avatar, what this
     page lists (fg_user_what), links back to the profile and the other lists. -#}
 {%- set uname = (user.user or "") -%}
 {%- set ulink = "/user/" ~ (uname|lower|encode_uri_component) -%}
@@ -7,7 +7,7 @@
     <img class="fg-kp-ava fg-kp-ava-small" src="{% if user.avatar_file and user.avatar_file != "default.png" %}/a/{{ user.avatar_file }}{% elif user.avatar %}/t/{{ user.avatar }}.webp{% else %}/s/fe/f0ckgle/img/default.svg{% endif %}" alt="">
     <div>
       <h1 class="fg-kp-title">{{ fg_user_what }} by <a href="{{ ulink }}">{{ (user.display_name or uname) }}</a></h1>
-      <div class="fg-kp-sub"><a href="{{ ulink }}/uploads">Uploads</a> &middot; <a href="{{ ulink }}/favs">Favs</a> &middot; <a href="{{ ulink }}/tags">Tags</a>{% if enable_comments %} &middot; <a href="{{ ulink }}/comments">Comments</a>{% endif %}</div>
+      <div class="fg-kp-sub"><a href="{{ ulink }}/uploads">Uploads</a> &middot; <a href="{{ ulink }}/favs">Favs</a> &middot; <a href="{{ ulink }}/tags">Tags</a>{% if enable_comments %} &middot; <a href="{{ ulink }}/comments">Comments</a>{% endif %}{% if userhalls_enabled %} &middot; <a href="{{ ulink }}/lists">Lists</a>{% endif %}</div>
     </div>
   </div>
 </section>

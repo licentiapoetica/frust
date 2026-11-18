@@ -21,12 +21,12 @@
     + ([[fy_ulink ~ "/comments", "comment", "Your comments", "comments"]] if enable_comments else [])
     + [[fy_ulink ~ "/tags", "hash", "Your tags", "tags_user"]]
     + ([["/settings#excluded-tags", "ban", "Excluded tags", "excluded"]] if (not session.is_anon or (anon_permissions and anon_permissions.exclude_tags != false and anon_permissions.filter != false)) else [])
-    + ([[fy_ulink ~ "/halls", "playlist", "Your halls", "halls_user"]] if userhalls_enabled else [])
+    + ([[fy_ulink ~ "/lists", "playlist", "Your playlists", "halls_user"]] if userhalls_enabled else [])
     + [["/notifications", "bell", "Notifications", "notifs"]]
     + ([["/messages", "mail", "Messages", "messages"]] if (private_messages and not session.is_anon) else [])
     + ([["/pending", "clock", "Pending" ~ ((" (" ~ session.own_pending_count ~ ")") if session.own_pending_count else ""), "pending"]] if (manual_approval and not session.is_anon) else [])) if session else [] -%}
 {%- set fy_explore = [["/tags", "hash", "Tags", "tags"], ["/ranking", "trophy", "Ranking", "ranking"]]
-    + ([["/halls", "playlist", "Halls", "halls"]] if halls_enabled else [])
+    + ([["/lists", "playlist", "Playlists", "halls"]] if halls_enabled else [])
     + ([["/upload", "upload", "Upload", "upload"]] if fy_can_upload else []) -%}
 {%- set fy_staff_links = (([["/admin", "shield", "Admin console", "admin"]] if session.admin else [])
     + [["/mod", "shield", "Mod", "mod"], ["/mod/reports", "flag", "Reports", "reports"]]

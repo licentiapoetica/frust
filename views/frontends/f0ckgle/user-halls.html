@@ -1,0 +1,136 @@
+{#- f0ckgle: a user's halls (/user/<name>/lists) as Google's saved collections: the slim knowledge
+    panel of the user, then each hall as a card (its picture, name, count, private). Whoever may
+    manage them (can_manage: the owner, or an admin with manage_qs = ?user_id=<id>) gets "New hall"
+    and an Edit dialog per hall (name, description, public / private, picture, delete with a
+    confirmation step). All of it is plain forms and :target dialogs, so it works without
+    JavaScript (views/frontends/README.md "Halls"); with it f0ckgle.js sends them with fetch and
+    swaps the list and the dialogs in from a fresh render (data-fg-live). -#}
+{%- set uname = (user.user or ownerUser.user or "") -%}
+{%- set ulink = "/user/" ~ (uname|lower|encode_uri_component) -%}
+{%- set here = ((url.pathname ~ url.search) if (url and url.pathname) else (ulink ~ "/lists")) -%}
+{%- set qs = (manage_qs if (manage_qs is defined and manage_qs) else "") -%}
+{%- set fg_m = ((session.mode if session else 0) or 0) -%}
+{%- set fg_halls = (hallsList if (hallsList is defined and hallsList is sequence) else []) -%}
+{%- set fg_title = "Lists by " ~ (user.display_name or uname) -%}
+{%- set fg_page = "results" -%}
+{%- set fg_q = "user:" ~ (uname|lower) ~ " lists" -%}
+{%- set fg_tab = "" -%}
+{%- set fg_tab_base = ulink ~ "/uploads/" -%}
+{% include "frontends/f0ckgle/snippets/head.html" %}
+{% include "frontends/f0ckgle/snippets/topbar.html" %}
+<main class="fg-main fg-main-wide">
+  {%- set fg_user_what = "Lists" -%}
+  {% include "frontends/f0ckgle/snippets/user-head.html" %}
+
+  <div data-fg-live="halls">
+    <div class="fg-halls-bar">
+      <p class="fg-stats">{{ fg_halls|length }} list{{ ("" if (fg_halls|length) == 1 else "s") }}</p>
+      {% if can_manage %}<a class="fg-btn-blue fg-halls-new" href="#new-hall"><span aria-hidden="true">+</span> New list</a>{% endif %}
+    </div>
+    {% if fg_halls %}
+    <div class="fg-grid fg-halls">
+      {% for h in fg_halls %}
+      {%- set h_link = ulink ~ "/list/" ~ (h.slug|encode_uri_component) -%}
+      {%- set h_count = ((h.total_items or 0)|int) -%}
+      <article class="fg-hall" id="h-{{ h.slug }}">
+        <a class="fg-card" href="{{ h_link }}">
+          <span class="fg-card-img fg-hall-img"><img src="/user_list_image/{{ ownerUser.id }}/{{ h.slug|encode_uri_component }}?m={{ fg_m }}&v={{ h.image_v }}" alt="" loading="lazy" data-fg-hall-img="{{ h.slug }}">{% if h.is_private %}<span class="fg-card-badge">Private</span>{% endif %}</span>
+          <span class="fg-card-src"><span class="fg-fav fg-fav-letter">H</span>{{ h_count|locale_number }} f0ck{{ ("" if h_count == 1 else "s") }}{% if h.is_private %} &middot; <span class="fg-hall-private">Private</span>{% endif %}</span>
+          <span class="fg-card-title">{{ h.name }}</span>
+          {% if h.description %}<span class="fg-card-desc">{{ h.description }}</span>{% endif %}
+        </a>
+        {% if can_manage %}<a class="fg-chip fg-chip-small fg-hall-edit" href="#hall-{{ h.slug }}" aria-label="Edit {{ h.name }}">Edit</a>{% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="fg-none">
+      {% if can_manage %}
+      <p>No lists yet.</p>
+      <p class="fg-dim">Lists are your collections of f0cks. Make one here, or with "Add to list" on any f0ck.</p>
+      {% else %}
+      <p>Your search &ndash; <b>user:{{ uname|lower }} lists</b> &ndash; did not match any lists.</p>
+      <p class="fg-dim">{{ (user.display_name or uname) }} has no public lists.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</main>
+
+{% if can_manage %}
+<div id="new-hall" class="fg-modal">
+  <a href="#_" class="fg-modal-bg" aria-label="close"></a>
+  <form method="post" action="/api/v2/me/lists{{ qs }}" class="fg-modal-box fg-ajax" data-fg-refresh="halls hall-dialogs" data-fg-close data-fg-ok="List created">
+    <div class="fg-modal-head"><h2>New list</h2><a href="#_" aria-label="close">&#215;</a></div>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="back" value="{{ here }}">
+    <label class="fg-field"><input type="text" name="name" maxlength="100" required placeholder=" " autocomplete="off"><span>Name</span></label>
+    <div class="fg-modal-btns"><a href="#_" class="fg-btn-text">Cancel</a><button type="submit" class="fg-btn-blue">Create</button></div>
+  </form>
+</div>
+
+<div data-fg-live="hall-dialogs">
+  {% for h in fg_halls %}
+  {%- set h_act = "/api/v2/me/lists/" ~ (h.slug|encode_uri_component) -%}
+  <div id="hall-{{ h.slug }}" class="fg-modal">
+    <a href="#_" class="fg-modal-bg" aria-label="close"></a>
+    <div class="fg-modal-box fg-edit-box" data-fg-live="hall-{{ h.slug }}">
+      <div class="fg-modal-head"><h2>Edit list</h2><a href="#_" aria-label="close">&#215;</a></div>
+      <form method="post" action="{{ h_act }}{{ qs }}" class="fg-hall-form fg-ajax" data-fg-refresh="halls hall-dialogs" data-fg-close data-fg-ok="List saved">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}">
+        <label class="fg-field"><input type="text" name="name" maxlength="100" required placeholder=" " autocomplete="off" value="{{ h.name }}"><span>Name</span></label>
+        <label class="fg-field"><textarea name="description" rows="3" maxlength="1000" placeholder=" ">{{ (h.description or "") }}</textarea><span>Description</span></label>
+        <div class="fg-edit-vis">
+          <label class="fg-radio"><input type="radio" name="is_private" value="0"{% if not h.is_private %} checked{% endif %}><span><b>Public</b><span class="fg-dim">Everyone can see it on your profile.</span></span></label>
+          <label class="fg-radio"><input type="radio" name="is_private" value="1"{% if h.is_private %} checked{% endif %}><span><b>Private</b><span class="fg-dim">Only you see it.</span></span></label>
+        </div>
+        <div class="fg-modal-btns"><a href="#_" class="fg-btn-text">Cancel</a><button type="submit" class="fg-btn-blue">Save</button></div>
+      </form>
+      {% if enable_userhall_image_upload %}
+      <section class="fg-edit-sec">
+        <h3>Picture</h3>
+        <div class="fg-hall-pic">
+          <img src="/user_list_image/{{ ownerUser.id }}/{{ h.slug|encode_uri_component }}?m={{ fg_m }}&v={{ h.image_v }}" alt="" loading="lazy" data-fg-hall-img="{{ h.slug }}">
+          <div class="fg-hall-pic-tools">
+            <p class="fg-dim">{{ ("Your own picture." if h.custom_image else "Made from the f0cks in it. Upload a picture of your own (gif, jpg, png or webp, max 10 MB).") }}</p>
+            <form method="post" action="{{ h_act }}/image{{ qs }}" enctype="multipart/form-data" class="fg-edit-row fg-ajax" data-fg-refresh="halls hall-{{ h.slug }}" data-fg-bust="{{ h.slug }}" data-fg-ok="Picture saved">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="back" value="{{ here }}#hall-{{ h.slug }}">
+              <label class="fg-chip fg-file"><input type="file" name="file" accept="image/gif,image/jpeg,image/png,image/webp" required data-fg-autosubmit><span class="js-only">Choose picture</span></label>
+              <button type="submit" class="fg-chip nojs-only">Upload</button>
+            </form>
+            {% if h.custom_image %}
+            <form method="post" action="{{ h_act }}/image/delete{{ qs }}" class="fg-inline fg-ajax" data-fg-refresh="halls hall-{{ h.slug }}" data-fg-bust="{{ h.slug }}" data-fg-ok="Picture removed">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="back" value="{{ here }}#hall-{{ h.slug }}">
+              <button type="submit" class="fg-btn-text">Remove picture</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+      {% endif %}
+      <section class="fg-edit-sec">
+        <h3>Delete</h3>
+        <div class="fg-edit-row">
+          <a class="fg-chip fg-chip-danger" href="#hall-{{ h.slug }}-delete">Delete list</a>
+          <span class="fg-dim">The f0cks stay; only the list goes.</span>
+        </div>
+      </section>
+    </div>
+  </div>
+  <div id="hall-{{ h.slug }}-delete" class="fg-modal">
+    <a href="#hall-{{ h.slug }}" class="fg-modal-bg" aria-label="back"></a>
+    <form method="post" action="{{ h_act }}/delete{{ qs }}" class="fg-modal-box fg-ajax" data-fg-refresh="halls hall-dialogs" data-fg-close data-fg-ok="List deleted">
+      <div class="fg-modal-head"><h2>Delete &ldquo;{{ h.name }}&rdquo;?</h2><a href="#hall-{{ h.slug }}" aria-label="back">&#215;</a></div>
+      <p class="fg-dim">The list and its list of {{ ((h.total_items or 0)|int)|locale_number }} f0ck{{ ("" if ((h.total_items or 0)|int) == 1 else "s") }} will be deleted. The f0cks themselves stay.</p>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ here }}">
+      <div class="fg-modal-btns"><a href="#hall-{{ h.slug }}" class="fg-btn-text">Cancel</a><button type="submit" class="fg-btn-blue fg-btn-danger">Delete</button></div>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% include "frontends/f0ckgle/snippets/footer.html" %}

@@ -645,7 +645,7 @@ async fn bulk_delete_halls(st: AppState, mut req: Req) -> Res {
             let _ = tokio::fs::remove_file(custom.join(format!("u_{uid}_{slug}.webp"))).await;
         }
         crate::audit::log(&st, sid(&req), "admin_bulk_delete_halls", "user", uid.to_string(), json!({ "count": count })).await;
-        Ok(json!({ "success": true, "count": count, "msg": format!("Successfully deleted {count} halls and all assignments.") }))
+        Ok(json!({ "success": true, "count": count, "msg": format!("Successfully deleted {count} lists and all assignments.") }))
     }
     .await;
     answer(r, 200)

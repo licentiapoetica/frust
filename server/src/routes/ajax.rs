@@ -16,7 +16,7 @@ use serde_json::{Value, json};
 pub fn register(r: &mut Router) {
     r.get(r"^\/ajax\/item\/random", item_random);
     r.get(r"^\/ajax\/item\/(?<itemid>[a-zA-Z0-9_-]{11}|\d+)", item);
-    r.exact(axum::http::Method::GET, "/ajax/halls", None, halls);
+    r.exact(axum::http::Method::GET, "/ajax/lists", None, halls);
     r.get(r"^\/ajax\/items", items);
 }
 
@@ -89,10 +89,10 @@ fn context_url(itemid: &str, c: &Context) -> String {
         url = format!("/tag/{}/{itemid}", enc(t));
     }
     if let Some(h) = c.hall {
-        url = format!("/h/{}/{itemid}", enc(h));
+        url = format!("/list/{}/{itemid}", enc(h));
     }
     if let (Some(uh), Some(owner)) = (c.user_hall, c.user_hall_owner) {
-        url = format!("/user/{}/hall/{}/{itemid}", enc(owner), enc(uh));
+        url = format!("/user/{}/list/{}/{itemid}", enc(owner), enc(uh));
     } else if let Some(u) = c.user {
         url = if c.fav { format!("/user/{}/favs/{itemid}", enc(u)) } else { format!("/user/{}/{itemid}", enc(u)) };
     } else if c.fav {
@@ -464,7 +464,7 @@ async fn item(st: AppState, req: Req) -> Res {
     Ok(json_body(&out))
 }
 
-// ── /ajax/halls ─────────────────────────────────────────────────────────────
+// ── /ajax/lists ─────────────────────────────────────────────────────────────
 
 async fn halls(st: AppState, _req: Req) -> Res {
     let halls = crate::social::halls::get_halls(&st).await;
@@ -523,7 +523,7 @@ async fn items(st: AppState, req: Req) -> Res {
         data["success"] = json!(true);
         if !crate::config::truthy(&data["link"]) {
             data["link"] = if let Some(h) = &hall {
-                json!({ "main": format!("/h/{}/", enc(h)), "path": "p/", "suffix": "" })
+                json!({ "main": format!("/list/{}/", enc(h)), "path": "p/", "suffix": "" })
             } else if let Some(t) = &tag {
                 json!({ "main": format!("/tag/{}/", enc(t)), "path": "p/", "suffix": "" })
             } else {

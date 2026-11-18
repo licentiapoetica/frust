@@ -105,7 +105,7 @@ async fn add_item_to_hall_inner(st: &AppState, item_id: i64, hall_input: &str, u
             None => {
                 let name = hall_input.trim();
                 if name.is_empty() || generated.is_empty() {
-                    anyhow::bail!("Invalid hall name");
+                    anyhow::bail!("Invalid list name");
                 }
                 // `description` is NOT NULL with default '' — the old code passed null here,
                 // which failed for new halls without a description; keep the column default.
@@ -141,7 +141,7 @@ async fn add_item_to_hall_inner(st: &AppState, item_id: i64, hall_input: &str, u
     .execute(&st.db)
     .await?;
     if n == 0 {
-        return Ok(failure("Item is already in this hall"));
+        return Ok(failure("Already in this list"));
     }
     Ok(json!({ "success": true }))
 }
@@ -152,7 +152,7 @@ pub async fn update_hall_metadata(st: &AppState, hall_slug: &str, description: O
     match r {
         Ok(0) => {
             tracing::error!("[F0CKLIB] Error updating hall metadata: Hall not found");
-            failure("Hall not found")
+            failure("List not found")
         }
         Ok(_) => {
             st.update_halls_cache().await;
@@ -171,7 +171,7 @@ pub async fn remove_item_from_hall(st: &AppState, item_id: i64, hall_slug: &str)
         Ok(Some(h)) => h,
         Ok(None) => {
             tracing::error!("[F0CKLIB] Error removing item from hall: Hall not found");
-            return failure("Hall not found");
+            return failure("List not found");
         }
         Err(e) => return failure(e.to_string()),
     };
@@ -288,7 +288,7 @@ pub async fn create_user_hall(st: &AppState, user_id: i64, name: &str, slug: &st
         }
         let exists = sql!("SELECT id FROM user_halls WHERE user_id = ", user_id as i32, " AND slug = ", slug, " LIMIT 1").fetch_optional(&st.db).await?;
         if exists.is_some() {
-            return Ok(failure("A hall with this slug already exists"));
+            return Ok(failure("A list with this name already exists"));
         }
         let row = sql!(
             "INSERT INTO user_halls (user_id, name, slug, description) VALUES (",
@@ -324,7 +324,7 @@ pub struct UserHallUpdate {
 pub async fn update_user_hall(st: &AppState, user_id: i64, slug: &str, u: UserHallUpdate) -> Value {
     let r: anyhow::Result<Value> = async {
         let Some(hall) = sql!("SELECT id FROM user_halls WHERE user_id = ", user_id as i32, " AND slug = ", slug, " LIMIT 1").fetch_optional(&st.db).await? else {
-            return Ok(failure("Hall not found"));
+            return Ok(failure("List not found"));
         };
         let hall_id = hall.i64("id").unwrap_or(0) as i32;
         if let Some(ns) = u.new_slug.as_deref().filter(|s| !s.is_empty() && *s != slug) {
@@ -354,9 +354,9 @@ pub async fn update_user_hall(st: &AppState, user_id: i64, slug: &str, u: UserHa
 
 /// `f0cklib.deleteUserHall(userId, slug)`
 pub async fn delete_user_hall(st: &AppState, user_id: i64, slug: &str) -> Value {
-    let Ok(uid) = i32::try_from(user_id) else { return failure("Hall not found") };
+    let Ok(uid) = i32::try_from(user_id) else { return failure("List not found") };
     match sql!("DELETE FROM user_halls WHERE user_id = ", uid, " AND slug = ", slug).execute(&st.db).await {
-        Ok(0) => failure("Hall not found"),
+        Ok(0) => failure("List not found"),
         Ok(_) => json!({ "success": true }),
         Err(e) => {
             tracing::error!("[F0CKLIB] Error deleting user hall: {e}");
@@ -384,7 +384,7 @@ pub async fn add_item_to_user_hall(st: &AppState, hall_id: i64, item_id: i64, ad
         .execute(&st.db)
         .await?;
         if n == 0 {
-            return Ok(failure("Item is already in this hall"));
+            return Ok(failure("Already in this list"));
         }
         Ok(json!({ "success": true }))
     }

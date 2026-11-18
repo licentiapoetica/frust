@@ -16,11 +16,11 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/favs(?:\/p\/(?<page>\d+))?\/?(?:\?.*)?$", favs_redirect);
     r.get(r"^\/favs\/(?<itemid>[a-zA-Z0-9_-]{11}|\d+)$", favs_item);
     r.get(
-        r"^\/user\/(?<user>[^/]+)\/(?<itemid>(?!(?:f0cks|uploads|favs|comments|tags|halls)$)[a-zA-Z0-9_-]+)$",
+        r"^\/user\/(?<user>[^/]+)\/(?<itemid>(?!(?:f0cks|uploads|favs|comments|tags|halls|lists)$)[a-zA-Z0-9_-]+)$",
         generic,
     );
     r.get(
-        r"^(?!\/(s|b|t|ca|a|4|login|register|settings|about|terms|rules|api|logout|auth|admin|comments|notifications|feed)\/)\/?(?:\/tag\/(?<tag>.+?))?(?:\/h\/(?<hall>.+?))?(?:\/user\/(?<user>.+?)\/(?<mode>f0cks|uploads|favs))?(?:\/(?<mime>(?:video|audio|image)(?:,(?:video|audio|image))*))?(?:\/p\/(?<page>\d+))?(?:\/(?<itemid>[a-zA-Z0-9_-]{11}|\d+))?\/?(?:\?.*)?$",
+        r"^(?!\/(s|b|t|ca|a|4|login|register|settings|about|terms|rules|api|logout|auth|admin|comments|notifications|feed)\/)\/?(?:\/tag\/(?<tag>.+?))?(?:\/list\/(?<hall>.+?))?(?:\/user\/(?<user>.+?)\/(?<mode>f0cks|uploads|favs))?(?:\/(?<mime>(?:video|audio|image)(?:,(?:video|audio|image))*))?(?:\/p\/(?<page>\d+))?(?:\/(?<itemid>[a-zA-Z0-9_-]{11}|\d+))?\/?(?:\?.*)?$",
         generic,
     );
     r.get(r"^\/(about)$", about);
@@ -448,7 +448,7 @@ async fn generic(st: AppState, req: Req) -> Res {
             data["success"] = json!(true);
             if !crate::config::truthy(&data["link"]) {
                 data["link"] = if let Some(h) = p("hall") {
-                    json!({ "main": format!("/h/{}/", crate::util::encode_uri_component(&h)), "path": "p/", "suffix": "" })
+                    json!({ "main": format!("/list/{}/", crate::util::encode_uri_component(&h)), "path": "p/", "suffix": "" })
                 } else if let Some(t) = &req_tag {
                     json!({ "main": format!("/tag/{}/", crate::util::encode_uri_component(t)), "path": "p/", "suffix": "" })
                 } else {
@@ -563,21 +563,7 @@ async fn generic(st: AppState, req: Req) -> Res {
                 }
             }
         }
-        // The halls to pick from in the item's halls dialog, rendered with the page so it also works
-        // without JavaScript (frontends/w0bm: partials/hallmodal.html). Site halls for staff, own halls
-        // for members. Full page loads only.
-        if !req.is_xhr() {
-            if let Some(s) = page_session.filter(|s| !s.is_anonymous_user()) {
-                if (s.admin || s.is_moderator) && cfg.enabled("websrv.halls_enabled") {
-                    let rows = sql!("SELECT slug, name FROM halls ORDER BY name ASC").fetch_all(&st.db).await.unwrap_or_default();
-                    data["hall_choices"] = json!(rows);
-                }
-                if cfg.enabled("websrv.userhalls_enabled") {
-                    let rows = sql!("SELECT slug, name, is_private FROM user_halls WHERE user_id = ", s.id as i32, " ORDER BY name ASC").fetch_all(&st.db).await.unwrap_or_default();
-                    data["my_hall_choices"] = json!(rows);
-                }
-            }
-        }
+        add_hall_choices(&st, &req, &mut data, page_session).await;
         add_recommendations(&st, &req, &mut data).await;
         // Comments for visitors without JavaScript (full page loads only; the SPA uses /api/comments)
         if !req.is_xhr() && cfg.enabled("enable_comments") && (sref.is_some() || !cfg.truthy("main.hide_comments_from_public")) {
@@ -628,6 +614,52 @@ fn req_with_session(req: &Req, session: Option<Session>) -> Req {
 }
 
 /// Booleans the item templates use (precomputed in the old route).
+/// The halls to pick from in an item's halls dialog, rendered with the page so the dialog also works
+/// without JavaScript (every frontend's item page; f0ckm: snippets/footer.html). Site halls for staff
+/// (`hall_choices`), the visitor's own halls for members (`my_hall_choices`, with `is_private` and
+/// `total_items`); each with `has_item`: whether the item is in it already. Full page loads only.
+pub(crate) async fn add_hall_choices(st: &AppState, req: &Req, data: &mut Value, page_session: Option<&Session>) {
+    if req.is_xhr() {
+        return;
+    }
+    let Some(item_id) = data["item"]["id"].as_i64().and_then(|i| i32::try_from(i).ok()) else { return };
+    let Some(s) = page_session.filter(|s| !s.is_anonymous_user()) else { return };
+    if let Value::Object(m) = data {
+        m.extend(hall_choices(st, s, item_id).await);
+    }
+}
+
+/// `hall_choices` / `my_hall_choices` of [`add_hall_choices`] for a member and an item.
+pub(crate) async fn hall_choices(st: &AppState, s: &Session, item_id: i32) -> serde_json::Map<String, Value> {
+    let cfg = st.cfg();
+    let mut out = serde_json::Map::new();
+    if (s.admin || s.is_moderator) && cfg.enabled("websrv.halls_enabled") {
+        let rows = sql!(
+            "SELECT h.slug, h.name, EXISTS (SELECT 1 FROM halls_assign ha WHERE ha.hall_id = h.id AND ha.item_id = ",
+            item_id,
+            ") AS has_item FROM halls h ORDER BY h.name ASC"
+        )
+        .fetch_all(&st.db)
+        .await
+        .unwrap_or_default();
+        out.insert("hall_choices".into(), json!(rows));
+    }
+    if cfg.enabled("websrv.userhalls_enabled") {
+        let rows = sql!(
+            "SELECT uh.slug, uh.name, uh.is_private, EXISTS (SELECT 1 FROM user_halls_assign a WHERE a.hall_id = uh.id AND a.item_id = ",
+            item_id,
+            ") AS has_item, (SELECT COUNT(*) FROM user_halls_assign a WHERE a.hall_id = uh.id) AS total_items FROM user_halls uh WHERE uh.user_id = ",
+            s.id as i32,
+            " ORDER BY uh.name ASC"
+        )
+        .fetch_all(&st.db)
+        .await
+        .unwrap_or_default();
+        out.insert("my_hall_choices".into(), json!(rows));
+    }
+    out
+}
+
 pub(crate) fn item_template_flags(cfg: &crate::config::Config, data: &mut Value, session: Option<&Session>, real_session: Option<&Session>) {
     let is_anon = session.map(|s| s.is_anon || s.user == "anonymous" || s.user.starts_with("anon_")).unwrap_or(false);
     let item_user = data["item"]["username"].as_str().unwrap_or("").to_string();

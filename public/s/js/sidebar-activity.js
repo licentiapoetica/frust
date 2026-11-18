@@ -1563,7 +1563,7 @@
                 ids.add(decodeURIComponent(segments[2]).trim());
             }
         } else if (segments.length === 1) {
-            const forbidden = ['s', 'b', 't', 'ca', 'a', 'login', 'register', 'settings', 'about', 'terms', 'rules', 'api', 'logout', 'auth', 'admin', 'mod', 'comments', 'notifications', 'feed', 'upload', 'tags', 'halls', 'ranking', 'abyss', 'random', 'scroller', 'p'];
+            const forbidden = ['s', 'b', 't', 'ca', 'a', 'login', 'register', 'settings', 'about', 'terms', 'rules', 'api', 'logout', 'auth', 'admin', 'mod', 'comments', 'notifications', 'feed', 'upload', 'tags', 'halls', 'lists', 'list', 'ranking', 'abyss', 'random', 'scroller', 'p'];
             if (!forbidden.includes(segments[0])) {
                 ids.add(decodeURIComponent(segments[0]).trim());
             }
@@ -2652,7 +2652,7 @@
     const handleRandomAction = () => {
         // If pool-based random is active, the context hasn't changed — skip reload
         if (window._randomPool && window._randomPool.items && window._randomPool.items.length > 1) {
-            // Context is stable (same tag/hall/user): f0ckm.js focuses the picked item in the tag feed
+            // Context is stable (same tag/list/user): f0ckm.js focuses the picked item in the tag feed
             // (sidebarFocusTagItem) — highlighting here would still see the old item
             return;
         }

@@ -12,6 +12,7 @@
       <span class="populateME">{{ item_ref }}{% if (enable_item_title and item.title) %} - <span class="v2-item-title">{{ item.title }}</span>{% endif %}</span>
     </div>
     <div class="gapRight">
+      {% if ((my_hall_choices is defined) or (hall_choices is defined)) %}<a href="#halls" class="v2-iconlink" id="a_halls" title="add to a list"><svg class="iconset"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#layers"></use></svg></a>{% endif %}
       <a href="#report" class="v2-iconlink" id="a_report" title="report this f0ck"><svg class="iconset"><use href="/s/fe/f0ckv2/img/iconset.svg?v={{ mtime("/public/s/fe/f0ckv2/img/iconset.svg") }}#warning"></use></svg></a>
       {% if session %}
       <form method="post" action="/api/v2/togglefav" class="v2-iconform" id="f_favo">
@@ -124,15 +125,14 @@
     <span class="badge badge-dark"><a class="dest-link" href="{{ item.dest }}" target="_blank">{{ item.mime }}</a> / {{ item.size }}</span>
     <span class="badge badge-dark"><time class="timeago" tooltip="{{ item.timestamp.timefull }}" data-full="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></span>
     <span class="badge badge-dark">{{ phrase }}</span>
-    {% if (enable_oc and item.is_oc) or (halls_enabled and item.primaryHall) or item.expires_in or item.burn_after_read or (item.visibility and item.visibility > 0) %}
-    <span class="badge badge-dark v2-extra">
+    {#- always there (hidden while empty): f0ck.js swaps it after a hall change (data-v2-live) -#}
+    <span class="badge badge-dark v2-extra" data-v2-live="extra"{% if not ((enable_oc and item.is_oc) or (halls_enabled and item.primaryHall) or item.expires_in or item.burn_after_read or (item.visibility and item.visibility > 0)) %} hidden{% endif %}>
       {% if enable_oc and item.is_oc %}<span class="badge badge-light" tooltip="Original Content">OC</span>{% endif %}
-      {% if (halls_enabled and item.primaryHall) %}<a class="badge badge-light" href="/h/{{ item.primaryHall.slug }}">hall: {{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %} <a class="badge badge-light" href="/h/{{ h.slug }}">{{ h.name }}</a>{% endfor %}{% endif %}
+      {% if (halls_enabled and item.primaryHall) %}<a class="badge badge-light" href="/list/{{ item.primaryHall.slug }}">list: {{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %} <a class="badge badge-light" href="/list/{{ h.slug }}">{{ h.name }}</a>{% endfor %}{% endif %}
       {% if item.expires_in %}<span class="badge badge-light" tooltip="{{ item.expires_at }}">expires {{ item.expires_in }}</span>{% endif %}
       {% if item.burn_after_read %}<span class="badge badge-light" tooltip="{{ ("Opened by its first viewer: it's being deleted" if item.burn_claimed else "Only the first person to open it sees it, then it's deleted") }}">burn after read</span>{% endif %}
       {% if (item.visibility and item.visibility > 0) %}<span class="badge badge-light">private</span>{% endif %}
     </span>
-    {% endif %}
     <span class="badge badge-dark" id="tags">
       {%- set v2_rating = (item.tags or [])|selectattr("normalized", "in", ["sfw", "nsfw", "nsfl"])|list %}
       {% if not v2_rating %}<span class="badge badge-untagged mr-2" data-rating="untagged" tooltip="unrated">?</span>{% endif %}
@@ -179,6 +179,70 @@
       <div><button type="submit">send report</button> <span class="v2-report-msg" role="status"></span></div>
     </form>
   </div>
+  {% if ((my_hall_choices is defined) or (hall_choices is defined)) %}
+  {#- the item's halls (views/frontends/README.md, "Halls"): one form per hall, add or remove (the
+      opposite of has_item), a new hall of your own with the item in it; site halls for staff.
+      f0ck.js sends the forms and swaps the box and the hall badges (data-v2-live) -#}
+  <div id="halls" class="v2-modal">
+    <a href="#_" class="v2-modal-bg" aria-label="close"></a>
+    <div class="v2-modal-box v2-hallbox" data-v2-live="hallbox">
+      <div class="f0cks-header"><span>lists: f0ck {{ item_ref }}</span><a href="#_">&#215;</a></div>
+      {% if my_hall_choices is defined %}
+      <div class="v2-hallbox-head">my lists <a href="/user/{{ (session.user or "")|lower|encode_uri_component }}/lists">manage</a></div>
+      <ul class="v2-hall-list">
+        {% for h in my_hall_choices %}
+        <li>
+          <form method="post" action="/api/v2/me/list-items" class="v2-hall-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ here }}#halls">
+            <input type="hidden" name="item_id" value="{{ item.id }}">
+            <input type="hidden" name="hall" value="{{ h.slug }}">
+            <input type="hidden" name="action" value="{{ ("remove" if h.has_item else "add") }}">
+            <button type="submit" class="v2-hall-row{% if h.has_item %} v2-hall-in{% endif %}" aria-pressed="{{ ("true" if h.has_item else "false") }}" title="{{ ("remove from" if h.has_item else "add to") }} {{ h.name }}">
+              <span class="v2-hall-mark" aria-hidden="true">{{ ("&#10003;" if h.has_item else "+")|safe }}</span>
+              <span class="v2-hall-name">{{ h.name }}</span>
+              {% if h.is_private %}<span class="badge badge-light">private</span>{% endif %}
+              <span class="v2-hall-count">{{ ((h.total_items or 0)|int) }}</span>
+            </button>
+          </form>
+        </li>
+        {% else %}
+        <li class="v2-hall-none">no lists yet</li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="/api/v2/me/list-items" class="v2-form v2-hall-form v2-hall-new" data-reset>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ here }}#halls">
+        <input type="hidden" name="item_id" value="{{ item.id }}">
+        <input type="hidden" name="action" value="add">
+        <input type="text" name="new_name" class="v2-input" placeholder="new list" required maxlength="100" autocomplete="off" aria-label="name of a new list">
+        <button type="submit">create + add</button>
+      </form>
+      {% endif %}
+      {% if hall_choices is defined %}
+      <div class="v2-hallbox-head">site lists <a href="/lists">all</a></div>
+      <ul class="v2-hall-list">
+        {% for h in hall_choices %}
+        <li>
+          <form method="post" action="/mod/lists/{{ ("remove" if h.has_item else "add") }}" class="v2-hall-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ here }}#halls">
+            <input type="hidden" name="id" value="{{ item.id }}">
+            <input type="hidden" name="hall" value="{{ h.slug }}">
+            <button type="submit" class="v2-hall-row{% if h.has_item %} v2-hall-in{% endif %}" aria-pressed="{{ ("true" if h.has_item else "false") }}" title="{{ ("remove from" if h.has_item else "add to") }} {{ h.name }}">
+              <span class="v2-hall-mark" aria-hidden="true">{{ ("&#10003;" if h.has_item else "+")|safe }}</span>
+              <span class="v2-hall-name">{{ h.name }}</span>
+            </button>
+          </form>
+        </li>
+        {% else %}
+        <li class="v2-hall-none">no site lists</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
   {% if is_mod_or_admin %}
   <div id="delete" class="v2-modal">
     <a href="#_" class="v2-modal-bg" aria-label="close"></a>

@@ -26,7 +26,7 @@
         <a class="badge badge-dark" href="{{ ulink }}/favs">favs: {{ (count.favs or 0) }}</a>
         {% if enable_comments %}<a class="badge badge-dark" href="{{ ulink }}/comments">comments: {{ (count.comments or 0) }}</a>{% endif %}
         <a class="badge badge-dark" href="{{ ulink }}/tags">tags: {{ (count.tags or 0) }}</a>
-        {% if userhalls_enabled %}<a class="badge badge-dark" href="{{ ulink }}/halls">halls: {{ (count.halls or 0) }}</a>{% endif %}
+        {% if userhalls_enabled %}<a class="badge badge-dark" href="{{ ulink }}/lists">lists: {{ (count.halls or 0) }}</a>{% endif %}
         {% if (session and private_messages and not is_me and not session.is_anon) %}<a class="badge badge-dark" href="/messages/{{ uname|encode_uri_component }}">message</a>{% endif %}
         {% if is_me %}<a class="badge badge-dark" href="/settings">settings</a>{% endif %}
         {% endif %}

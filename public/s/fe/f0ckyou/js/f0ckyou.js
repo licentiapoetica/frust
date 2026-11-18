@@ -1,6 +1,6 @@
 // f0ckyou frontend: the extras on top of pages that work without JavaScript.
 //  - live actions: the plain forms marked .fy-ajax (comments, replies, likes, subscribe, rating,
-//    tags, report, delete, mark as read) are sent with fetch instead; the parts of the page they
+//    tags, report, delete, mark as read, playlists and Save to…) are sent with fetch instead; the parts of the page they
 //    change (data-fy-refresh → [data-fy-live] regions) are swapped in from a fresh render of the
 //    page, so nothing reloads and the markup stays the server's. Live comments use the same refresh.
 //  - lists keep going: the next page is loaded into the list ([data-fy-feed]) when the page links
@@ -522,6 +522,41 @@
     }
   });
 
+  // A playlist's cover picture (user-halls.html .fy-cover-form): the file goes as multipart, as
+  // without JavaScript; then the dialog closes and the playlists come again from the page. The
+  // picture keeps its address, so the new one is asked for past the browser's copy.
+  document.addEventListener('submit', async e => {
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement) || !form.classList.contains('fy-cover-form')) return;
+    e.preventDefault();
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    try {
+      const res = await fetch(form.getAttribute('action'), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'X-CSRF-Token': csrf() || form.elements.csrf_token?.value || '' },
+        body: new FormData(form),
+      });
+      let data = {};
+      try { data = await res.json(); } catch { data = { success: false, msg: `HTTP ${res.status}` }; }
+      if (!data.success) throw new Error(data.msg || data.message || `HTTP ${res.status}`);
+      const slug = form.dataset.plSlug;
+      if (location.hash) location.hash = '_';
+      flash('Cover uploaded', 'success');
+      await refresh(['playlists']);
+      document.querySelectorAll(`img[data-pl-cover="${CSS.escape(slug)}"]`).forEach(img => {
+        const u = new URL(img.src, location.href);
+        u.searchParams.set('t', Date.now());
+        img.src = u.href;
+      });
+    } catch (err) {
+      flash(err.message || 'Something went wrong', 'error');
+    } finally {
+      if (btn && btn.isConnected) btn.disabled = false;
+    }
+  });
+
   // Tag suggestions (Edit dialog → #meta): the server reads the file's metadata for the page's
   // ?meta=1 render (without JavaScript the link loads it); here its dialog is opened at once and
   // filled from that render. Its contents are swapped, not the dialog, so it stays :target.
@@ -851,8 +886,9 @@
     if (e.key === 'Escape') {
       menus().forEach(d => { d.open = false; });
       if (notifOpen()) setNotifOpen(false);
-      if (/^#(report|delete|share|edit)$/.test(location.hash)) location.hash = '_';
+      if (/^#(report|delete|share|edit|save|pl-new|pl-edit-[\w-]+)$/.test(location.hash)) location.hash = '_';
       else if (location.hash === '#meta') location.hash = 'edit';
+      else if (location.hash.startsWith('#pl-del-')) location.hash = 'pl-edit-' + location.hash.slice(8);
       if (drawerOpen()) guideToggle().checked = false;
       return;
     }
@@ -1349,7 +1385,7 @@
   // Paths that load as usual: files and the API, the shared pages (they render in the shell with
   // their own scripts), sign-in / sign-out, settings that change the whole site (the light/dark
   // links switch in place with scheme-early.js), the upload page.
-  const FULL = /^\/(?:api|b|t|a|s|ca|tag_image|hall_image|logout|login|register|forgot-password|frontend|scheme|settings|messages|admin|mod|pending|privacy|banned|upload|scroller|chan|meme|activity|flash-frame|maintenance)(?:\/|$)|^\/user\/[^/]+\/halls?(?:\/|$)/;
+  const FULL = /^\/(?:api|b|t|a|s|ca|tag_image|list_image|user_list_image|logout|login|register|forgot-password|frontend|scheme|settings|messages|admin|mod|pending|privacy|banned|upload|scroller|chan|meme|activity|flash-frame|maintenance)(?:\/|$)/;
   // scripts a page may bring that only need to be there once (custom elements, settings)
   const ONCE = /\/(?:flash-embed|cap-config|cap\.min)\.js$/;
   const loaded = new Set([...document.scripts].map(sc => sc.src && new URL(sc.src, location.href).pathname).filter(Boolean));
@@ -1474,8 +1510,11 @@
     shown = pathKey(finalUrl.href);
     const hashEl = finalUrl.hash.length > 1 ? document.getElementById(decodeURIComponent(finalUrl.hash.slice(1))) : null;
     if (typeof scroll === 'number') window.scrollTo(0, scroll);
-    else if (hashEl) hashEl.scrollIntoView();
+    else if (hashEl && !hashEl.classList.contains('fy-modal')) hashEl.scrollIntoView();
     else window.scrollTo(0, 0);
+    // a link to a dialog (a playlist's Edit from its grid): history.pushState doesn't move :target,
+    // a fragment navigation does
+    if (hashEl && hashEl.classList.contains('fy-modal')) location.replace(finalUrl.href);
 
     setupPage();
     window.f0ckCountViewFromPage?.();

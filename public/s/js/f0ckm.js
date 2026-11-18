@@ -5,7 +5,8 @@
 window.F0CK_NO_SWIPE_SELECTOR = 'input[type="range"], .f0ck-tuner-row, .f0ck-tuner-subtabs-nav, .f0ck-tuner-mode-bar, [data-no-swipe]';
 
 window.isFilterReloadableView = function () {
-  return !!document.querySelector('.posts, .tags-grid') || /^\/user\/[^/]+\/?$/.test(window.location.pathname);
+  // .uh-grid: a user's lists (their pictures follow the rating filter)
+  return !!document.querySelector('.posts, .tags-grid, .uh-grid') || /^\/user\/[^/]+\/?$/.test(window.location.pathname);
 };
 
 
@@ -114,7 +115,7 @@ window.cancelAnimFrame = (function () {
     return null;
   };
   // ── Random Pool Manager (Fisher-Yates) ────────────────────────────
-  // Preloads all candidate item IDs for the current context (tag/hall/user).
+  // Preloads all candidate item IDs for the current context (tag/list/user).
   // Items are shuffled once; a cursor walks through sequentially → zero duplicates
   // until every item has been seen, then re-shuffles automatically.
   window._randomPool = null;
@@ -163,10 +164,10 @@ window.cancelAnimFrame = (function () {
     const tagMatch = loc.match(/\/tag\/([^/]+)/);
     if (tagMatch) params.append('tag', decodeURIComponent(tagMatch[1]));
 
-    const hallMatch = loc.match(/\/h\/([^/]+)/);
+    const hallMatch = loc.match(/(?<!\/user\/[^/]+)\/list\/([^/]+)/);
     if (hallMatch) params.append('hall', decodeURIComponent(hallMatch[1]));
 
-    const userHallMatch = loc.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
+    const userHallMatch = loc.match(/\/user\/([^/]+)\/list\/([^/]+)/);
     if (userHallMatch) {
       params.append('userHall', decodeURIComponent(userHallMatch[2]));
       params.append('userHallOwner', decodeURIComponent(userHallMatch[1]));
@@ -1683,7 +1684,7 @@ window.cancelAnimFrame = (function () {
         el.classList.remove('show', 'visible');
         // If the modal uses CSS classes for visibility, we must clear the inline display
         // to allow those classes to work later. For others, we force display: none.
-        if (['upload-drag-modal', 'image-modal', 'gchat-img-modal', 'excluded-tags-overlay'].includes(id)) {
+        if (['upload-drag-modal', 'image-modal', 'gchat-img-modal', 'excluded-tags-overlay', 'halls-modal'].includes(id)) {
            el.style.display = '';
         } else {
            el.style.display = 'none';
@@ -2176,10 +2177,10 @@ window.cancelAnimFrame = (function () {
         pageParams.set('id', itemid);
         if (feedBasePath.startsWith('/tag/')) {
           pageParams.set('tag', decodeURIComponent(feedBasePath.replace(/^\/tag\//, '')));
-        } else if (feedBasePath.startsWith('/h/')) {
-          pageParams.set('hall', decodeURIComponent(feedBasePath.replace(/^\/h\//, '')));
-        } else if (feedBasePath.match(/^\/user\/([^/]+)\/hall\/([^/]+)/)) {
-          const m = feedBasePath.match(/^\/user\/([^/]+)\/hall\/([^/]+)/);
+        } else if (feedBasePath.startsWith('/list/')) {
+          pageParams.set('hall', decodeURIComponent(feedBasePath.replace(/^\/list\//, '')));
+        } else if (feedBasePath.match(/^\/user\/([^/]+)\/list\/([^/]+)/)) {
+          const m = feedBasePath.match(/^\/user\/([^/]+)\/list\/([^/]+)/);
           pageParams.set('userHallOwner', decodeURIComponent(m[1]));
           pageParams.set('userHall', decodeURIComponent(m[2]));
         } else if (feedBasePath.match(/^\/user\/([^/]+)\/favs/)) {
@@ -2282,7 +2283,7 @@ window.cancelAnimFrame = (function () {
         window._onaraReturnUrl.match(/\/p\/\d+/) || 
         new URL(window._onaraReturnUrl, window.location.origin).pathname === '/' || 
         window._onaraReturnUrl.includes('/tag/') || 
-        window._onaraReturnUrl.includes('/h/') ||
+        window._onaraReturnUrl.includes('/list/') ||
         window._onaraReturnUrl.includes('/user/')
       );
       if (originWasGrid || !window._onaraReturnUrl) {
@@ -2403,8 +2404,7 @@ window.cancelAnimFrame = (function () {
     if (visModal) visModal.style.display = 'none';
     const reportModal = document.getElementById('report-modal');
     if (reportModal) reportModal.style.display = 'none';
-    const hallsModal = document.getElementById('halls-modal');
-    if (hallsModal) hallsModal.style.display = 'none';
+    if (window.closeHallsDialog) window.closeHallsDialog();
     if (typeof window.closeImageModal === 'function') window.closeImageModal();
     document.body.classList.remove('modal-open');
 
@@ -3013,9 +3013,8 @@ window.cancelAnimFrame = (function () {
         return;
       }
       const hallsModal = document.getElementById('halls-modal');
-      if (hallsModal && getComputedStyle(hallsModal).display !== 'none') {
-        hallsModal.style.display = 'none';
-        document.body.classList.remove('modal-open');
+      if (hallsModal && hallsModal.classList.contains('show')) {
+        window.closeHallsDialog();
         return;
       }
       // Some overlays are hidden by a CSS class rather than an inline display:none, so pick the first one actually shown
@@ -3320,7 +3319,7 @@ window.cancelAnimFrame = (function () {
       const tagMatch = btn.href.match(/\/tag\/([^/?]+)/);
       if (tagMatch) params.append('tag', decodeURIComponent(tagMatch[1]));
       
-      const userHallMatch = btn.href.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
+      const userHallMatch = btn.href.match(/\/user\/([^/]+)\/list\/([^/]+)/);
       if (userHallMatch) {
         params.append('userHall', decodeURIComponent(userHallMatch[2]));
         params.append('userHallOwner', decodeURIComponent(userHallMatch[1]));
@@ -3332,7 +3331,7 @@ window.cancelAnimFrame = (function () {
         }
       }
       
-      const hallMatch = btn.href.match(/\/h\/([^/?]+)/);
+      const hallMatch = btn.href.match(/(?<!\/user\/[^/]+)\/list\/([^/?]+)/);
       if (hallMatch) params.append('hall', decodeURIComponent(hallMatch[1]));
       
       const isStrict = window.f0ckSession?.strict_mode || (localStorage.getItem('search_strict') === 'true');
@@ -11661,17 +11660,17 @@ window.cancelAnimFrame = (function () {
     const urlObj = new URL(url, window.location.origin);
     const pathname = urlObj.pathname;
 
-    const isUserHall = pathname.match(/\/user\/[^/?]+\/hall\/([^/?]+)/);
-    const isUserHalls = pathname.match(/\/user\/[^/?]+\/halls\/?(?:$|\?)/);
-    const isProfile = !isUserHall && !isUserHalls && pathname.match(/\/user\/([^/?]+)(?:$|\?|$)/) && !pathname.match(/\/user\/[^/]+\/(f0cks|favs|comments|hall|halls)/);
+    const isUserHall = pathname.match(/\/user\/[^/?]+\/list\/([^/?]+)/);
+    const isUserHalls = pathname.match(/\/user\/[^/?]+\/lists\/?(?:$|\?)/);
+    const isProfile = !isUserHall && !isUserHalls && pathname.match(/\/user\/([^/?]+)(?:$|\?|$)/) && !pathname.match(/\/user\/[^/]+\/(f0cks|favs|comments|hall|halls|list|lists)/);
     const isUserF0cks = pathname.match(/\/user\/([^/?]+)\/f0cks/);
     const isUserFavs = pathname.match(/\/user\/([^/?]+)\/favs/);
     const isGuestFavs = pathname.match(/^\/favs(?:\/|$|\?)/);
     const isTags = pathname.match(/\/tags\/?(?:$|\?)/);
     const isComments = pathname.match(/\/user\/([^/?]+)\/comments\/?(?:$|\?)/);
     const isNotifs = pathname.match(/\/notifications\/?(?:$|\?)/);
-    const isHall = pathname.match(/\/h\/([^/?]+)(?:$|\?)/);
-    const isHalls = pathname.match(/\/halls\/?(?:$|\?)/);
+    const isHall = pathname.match(/(?<!\/user\/[^/]+)\/list\/([^/?]+)(?:$|\?)/);
+    const isHalls = pathname.match(/^\/lists\/?(?:$|\?)/);
     const isAdmin = !!pathname.match(/^\/admin/);
     const isMod = !!pathname.match(/^\/mod/);
     const isSettings = pathname.match(/\/settings\/?(?:$|\?)/);
@@ -11877,7 +11876,7 @@ window.cancelAnimFrame = (function () {
       const tagMatch = url.match(/\/tag\/([^/?]+)/);
       if (tagMatch) tag = decodeURIComponent(tagMatch[1]);
 
-      const hallMatch = url.match(/\/h\/([^/?]+)/);
+      const hallMatch = url.match(/(?<!\/user\/[^/]+)\/list\/([^/?]+)/);
       if (hallMatch) hall = decodeURIComponent(hallMatch[1]);
 
       const userMatch = url.match(/\/user\/([^/]+)/);
@@ -12653,8 +12652,8 @@ window.cancelAnimFrame = (function () {
     const taggerParam = taggerUrlObj.searchParams.get('tagger');
     if (taggerParam) tagger = decodeURIComponent(taggerParam);
 
-    // User hall: /user/:owner/hall/:slug/:id
-    const userHallMatch = url.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
+    // User hall: /user/:owner/list/:slug/:id
+    const userHallMatch = url.match(/\/user\/([^/]+)\/list\/([^/]+)/);
     if (userHallMatch) {
       userHallOwner = decodeURIComponent(userHallMatch[1]);
       userHall = decodeURIComponent(userHallMatch[2]);
@@ -12668,7 +12667,7 @@ window.cancelAnimFrame = (function () {
       isFavs = true;
     }
     
-    const hallMatch = url.match(/\/h\/([^/?]+)/);
+    const hallMatch = url.match(/(?<!\/user\/[^/]+)\/list\/([^/?]+)/);
     if (hallMatch) hall = decodeURIComponent(hallMatch[1]);
 
     const mimeMatch = url.match(/\/((?:video|audio|image|,)+)(\/|$|\?)/);
@@ -12682,9 +12681,9 @@ window.cancelAnimFrame = (function () {
 
     // If missing and inheritContext is true, check Window Location
     // IMPORTANT: Skip inheritance when target is a bare item URL like /1234 with no context
-    // prefix (/h/, /tag/, /user/). Such URLs come from comment/notification sidebar links and
-    // are explicitly context-free — they must not steal the current page's tag/hall/user.
-    // Prev/next arrows in item view always use explicit /h/foo/<id> or /tag/foo/<id> hrefs
+    // prefix (/list/, /tag/, /user/). Such URLs come from comment/notification sidebar links and
+    // are explicitly context-free — they must not steal the current page's tag/list/user.
+    // Prev/next arrows in item view always use explicit /list/foo/<id> or /tag/foo/<id> hrefs
     // (via link.main), so they are unaffected by this guard.
     // Note: Notification links call loadItemAjax(href, false) to skip inheritance directly.
     const targetUrlObj = new URL(url, window.location.origin);
@@ -12703,7 +12702,7 @@ window.cancelAnimFrame = (function () {
       }
       if (!user && !userHall) {
         const wUserMatch = window.location.href.match(/\/user\/([^/?]+)/);
-        if (wUserMatch && !window.location.href.match(/\/user\/[^/]+\/hall\//) ) {
+        if (wUserMatch && !window.location.href.match(/\/user\/[^/]+\/list\//) ) {
           user = decodeURIComponent(wUserMatch[1]);
           if (window.location.href.match(/\/user\/[^/]+\/favs(\/|$|\?)/)) isFavs = true;
         } else if (window.location.href.match(/\/favs(\/|$|\?)/)) {
@@ -12711,14 +12710,14 @@ window.cancelAnimFrame = (function () {
         }
       }
       if (!userHall) {
-        const wUserHallMatch = window.location.href.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
+        const wUserHallMatch = window.location.href.match(/\/user\/([^/]+)\/list\/([^/]+)/);
         if (wUserHallMatch) {
           userHallOwner = decodeURIComponent(wUserHallMatch[1]);
           userHall = decodeURIComponent(wUserHallMatch[2]);
         }
       }
       if (!hall) {
-        const wHallMatch = window.location.href.match(/\/h\/([^/?]+)/);
+        const wHallMatch = window.location.href.match(/(?<!\/user\/[^/]+)\/list\/([^/?]+)/);
         if (wHallMatch) hall = decodeURIComponent(wHallMatch[1]);
       }
     }
@@ -12788,16 +12787,16 @@ window.cancelAnimFrame = (function () {
   // Item URL for a random pick, in the feed the visitor is in (user hall, user favs, tag, hall or global)
   const randomTargetUrl = (key) => {
     const loc = window.location.href;
-    const userHallM = loc.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
+    const userHallM = loc.match(/\/user\/([^/]+)\/list\/([^/]+)/);
     if (userHallM) {
-      return `/user/${encodeURIComponent(decodeURIComponent(userHallM[1]))}/hall/${encodeURIComponent(decodeURIComponent(userHallM[2]))}/${key}`;
+      return `/user/${encodeURIComponent(decodeURIComponent(userHallM[1]))}/list/${encodeURIComponent(decodeURIComponent(userHallM[2]))}/${key}`;
     }
     const userM = loc.match(/\/user\/([^/]+)/);
     if (userM && loc.match(/\/favs(\/|$|\?)/)) return `/user/${encodeURIComponent(decodeURIComponent(userM[1]))}/favs/${key}`;
     const tagM = loc.match(/\/tag\/([^/]+)/);
     if (tagM) return `/tag/${encodeURIComponent(decodeURIComponent(tagM[1])).replace(/%2C/g, ',').replace(/%20/g, ' ')}/${key}`;
-    const hallM = loc.match(/\/h\/([^/]+)/);
-    if (hallM) return `/h/${encodeURIComponent(decodeURIComponent(hallM[1])).replace(/%20/g, ' ')}/${key}`;
+    const hallM = loc.match(/(?<!\/user\/[^/]+)\/list\/([^/]+)/);
+    if (hallM) return `/list/${encodeURIComponent(decodeURIComponent(hallM[1])).replace(/%20/g, ' ')}/${key}`;
     return `/${key}`;
   };
 
@@ -13229,11 +13228,11 @@ window.cancelAnimFrame = (function () {
         if (isChanUrl) {
           const u = new URL(url, window.location.origin);
           _pushUrl = u.pathname + u.search + u.hash;
-        } else if (userHall && userHallOwner)  _pushUrl = `/user/${encodeURIComponent(userHallOwner)}/hall/${encodeURIComponent(userHall)}/${itemKey}`;
+        } else if (userHall && userHallOwner)  _pushUrl = `/user/${encodeURIComponent(userHallOwner)}/list/${encodeURIComponent(userHall)}/${itemKey}`;
         else if (user)  { _pushUrl = `/user/${encodeURIComponent(user)}/${itemKey}`; if (isFavs) _pushUrl = `/user/${encodeURIComponent(user)}/favs/${itemKey}`; }
         else if (isFavs) _pushUrl = `/favs/${itemKey}`;
         else if (tag)   _pushUrl = `/tag/${encodeURIComponent(tag).replace(/%2C/g,',').replace(/%20/g,' ')}/${itemKey}`;
-        else if (hall)  _pushUrl = `/h/${encodeURIComponent(hall).replace(/%20/g,' ')}/${itemKey}`;
+        else if (hall)  _pushUrl = `/list/${encodeURIComponent(hall).replace(/%20/g,' ')}/${itemKey}`;
         if (tagger && tag) _pushUrl += `?tagger=${encodeURIComponent(tagger)}`;
         if (mime) _pushUrl = _pushUrl.replace(new RegExp(`/${itemKey}$`), `/${mime}/${itemKey}`);
         if (_hash) _pushUrl += _hash;
@@ -13550,7 +13549,7 @@ window.cancelAnimFrame = (function () {
         const u = new URL(url, window.location.origin);
         pushUrl = u.pathname + u.search + u.hash;
       } else if (userHall && userHallOwner) {
-        pushUrl = `/user/${encodeURIComponent(userHallOwner)}/hall/${encodeURIComponent(userHall)}/${itemKey}`;
+        pushUrl = `/user/${encodeURIComponent(userHallOwner)}/list/${encodeURIComponent(userHall)}/${itemKey}`;
       } else if (user) {
         pushUrl = `/user/${encodeURIComponent(user)}/${itemKey}`;
         if (isFavs) pushUrl = `/user/${encodeURIComponent(user)}/favs/${itemKey}`;
@@ -13558,7 +13557,7 @@ window.cancelAnimFrame = (function () {
         pushUrl = `/favs/${itemKey}`;
       }
       else if (tag) pushUrl = `/tag/${encodeURIComponent(tag).replace(/%2C/g, ',').replace(/%20/g, ' ')}/${itemKey}`;
-      else if (hall) pushUrl = `/h/${encodeURIComponent(hall).replace(/%20/g, ' ')}/${itemKey}`;
+      else if (hall) pushUrl = `/list/${encodeURIComponent(hall).replace(/%20/g, ' ')}/${itemKey}`;
       // Append tagger filter so item nav stays in tagger context
       if (tagger && tag) pushUrl += `?tagger=${encodeURIComponent(tagger)}`;
       
@@ -13799,9 +13798,9 @@ window.cancelAnimFrame = (function () {
 
         // ── Client-side random pool: pick locally, load normally ──────
         const wTagMatch = window.location.href.match(/\/tag\/([^/]+)/);
-        const wHallMatch = window.location.href.match(/\/h\/([^/]+)/);
+        const wHallMatch = window.location.href.match(/(?<!\/user\/[^/]+)\/list\/([^/]+)/);
         let wUserHall = null, wUserHallOwner = null;
-        const wUserHallMatch = window.location.href.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
+        const wUserHallMatch = window.location.href.match(/\/user\/([^/]+)\/list\/([^/]+)/);
         if (wUserHallMatch) {
           wUserHallOwner = decodeURIComponent(wUserHallMatch[1]);
           wUserHall = decodeURIComponent(wUserHallMatch[2]);
@@ -14087,8 +14086,8 @@ window.cancelAnimFrame = (function () {
       if (!isSpecialLink && (
         (!pathname.startsWith('/4/') && (
           pathname === '/' ||
-          pathname.startsWith('/halls') ||
-          pathname.startsWith('/h/') ||
+          pathname.startsWith('/lists') ||
+          pathname.startsWith('/list/') ||
           pathname.startsWith('/notifications') ||
           pathname.startsWith('/tag') ||
           pathname.startsWith('/user/') ||
@@ -14113,7 +14112,7 @@ window.cancelAnimFrame = (function () {
         const parts = pathname.split('/').filter(Boolean);
         const isItemLink = isItemPath(pathname);
         if (isItemLink) {
-          // Links inside comment bodies, MOTD, or sidebar suggestions/recommendations should not inherit tag/hall/user context
+          // Links inside comment bodies, MOTD, or sidebar suggestions/recommendations should not inherit tag/list/user context
           const _skipInherit = anyLink.dataset.inheritContext === 'false' || anyLink.closest(".comment, .comment-content, .comment-body, .motd-content, .sidebar-video-card, .sidebar-recommendations-list, #sidebar-recommendations-container");
           loadItemAjax(targetUrl, !_skipInherit);
         } else {
@@ -15361,7 +15360,7 @@ window.cancelAnimFrame = (function () {
       const mimeMatch = window.location.pathname.match(/\/(image|audio|video)(?:\/|$)/);
       if (mimeMatch) ctx.mime = mimeMatch[1];
 
-      const hallMatch = window.location.pathname.match(/\/h\/([^/]+)/);
+      const hallMatch = window.location.pathname.match(/(?<!\/user\/[^/]+)\/list\/([^/]+)/);
       if (hallMatch) ctx.hall = decodeURIComponent(hallMatch[1]);
       const isNotif = window.location.pathname.startsWith('/notifications');
       if (isNotif) ctx.notif = true;
@@ -19444,12 +19443,12 @@ class NotificationSystem {
 
       const tagMatch = url.match(/\/tag\/([^/?]+)/);
       if (tagMatch) tag = decodeURIComponent(tagMatch[1]);
-      const hallMatch = url.match(/\/h\/([^/?]+)/);
+      const hallMatch = url.match(/(?<!\/user\/[^/]+)\/list\/([^/?]+)/);
       if (hallMatch) hall = decodeURIComponent(hallMatch[1]);
 
-      // Detect user-hall pages: /user/<owner>/hall/<slug>
+      // Detect user-hall pages: /user/<owner>/list/<slug>
       // Must be checked BEFORE the generic user match so we don't pollute `user`
-      const userHallMatch = url.match(/\/user\/([^/]+)\/hall\/([^/?]+)/);
+      const userHallMatch = url.match(/\/user\/([^/]+)\/list\/([^/?]+)/);
       if (userHallMatch) {
         userHallOwner = decodeURIComponent(userHallMatch[1]);
         userHall = decodeURIComponent(userHallMatch[2]);
@@ -20467,7 +20466,7 @@ class NotificationSystem {
     if (typeof gridCacheMap !== 'undefined') gridCacheMap.clear();
 
     const isFilteredView = window.location.pathname.includes('/tag/') || 
-                           window.location.pathname.includes('/h/') || 
+                           window.location.pathname.includes('/list/') || 
                            window.location.pathname.includes('/user/');
 
     // UPDATE ITEM VIEW NAVIGATION DYNAMICALLY
@@ -22187,7 +22186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   existingWrap.remove();
                   return;
               }
-              existingWrap.outerHTML = `<span class="badge hall-badge-wrap"><a href="/h/${escapeHtml(hallSlug)}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(hallName || hallSlug)}</a></span>`;
+              existingWrap.outerHTML = `<span class="badge hall-badge-wrap"><a href="/list/${escapeHtml(hallSlug)}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(hallName || hallSlug)}</a></span>`;
               return;
           }
           // Dynamically create container and insert at the appropriate place
@@ -22214,13 +22213,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (action === 'add') {
-          const badgeHtml = `<span class="badge hall-badge-wrap"><a href="/h/${escapeHtml(hallSlug)}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(hallName || hallSlug)}</a></span>`;
+          const badgeHtml = `<span class="badge hall-badge-wrap"><a href="/list/${escapeHtml(hallSlug)}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(hallName || hallSlug)}</a></span>`;
           container.innerHTML = badgeHtml;
       } else if (action === 'remove') {
           const remaining = liveHallBtn ? (liveHallBtn.dataset.halls || '').split(',').filter(Boolean) : [];
           if (remaining.length > 0) {
               const nextSlug = remaining[0];
-              const badgeHtml = `<span class="badge hall-badge-wrap"><a href="/h/${escapeHtml(nextSlug)}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(nextSlug)}</a></span>`;
+              const badgeHtml = `<span class="badge hall-badge-wrap"><a href="/list/${escapeHtml(nextSlug)}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(nextSlug)}</a></span>`;
               container.innerHTML = badgeHtml;
           } else {
               container.innerHTML = '';
@@ -22228,324 +22227,96 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   };
 
+  // ── Halls dialog ────────────────────────────────────────────────────────
+  const hallsModalEl = () => document.getElementById('halls-modal');
+  const loadHallsDialog = async (itemId) => {
+      const body = document.getElementById('halls-modal-body');
+      if (!body || !itemId) return;
+      const r = await fetch('/item-lists/' + encodeURIComponent(itemId), { credentials: 'same-origin' });
+      if (!r.ok) throw new Error((window.f0ckI18n && window.f0ckI18n.hall_load_error) || 'Could not load your lists');
+      body.innerHTML = await r.text();
+  };
+  const closeHallsDialog = () => {
+      const modal = hallsModalEl();
+      if (!modal) return;
+      modal.classList.remove('show', 'is-loading');
+      document.body.classList.remove('modal-open');
+  };
+  const openHallsDialog = async (itemId) => {
+      const modal = hallsModalEl();
+      if (!modal || !itemId) return;
+      modal.dataset.itemId = itemId;
+      // The body may still show another item (rendered with the page, or the last one opened)
+      const shown = modal.querySelector('.hd');
+      if (shown && shown.dataset.itemId !== String(itemId)) shown.remove();
+      modal.classList.add('show', 'is-loading');
+      document.body.classList.add('modal-open');
+      try {
+          await loadHallsDialog(itemId);
+      } catch (err) {
+          if (window.flashMessage) window.flashMessage(err.message, 3000, 'error');
+          closeHallsDialog();
+          return;
+      }
+      modal.classList.remove('is-loading');
+      const first = modal.querySelector('.hd-row, .hd-new-input');
+      if (first) first.focus({ preventScroll: true });
+  };
+  window.closeHallsDialog = closeHallsDialog;
+
+  document.addEventListener('submit', async (e) => {
+      const form = e.target.closest('#halls-modal form.hd-form');
+      if (!form) return;
+      e.preventDefault();
+      if (form.classList.contains('is-busy')) return;
+      const modal = hallsModalEl();
+      const kind = form.dataset.hallKind;
+      const fd = new URLSearchParams(new FormData(form));
+      fd.delete('back');
+      const itemId = (modal && modal.dataset.itemId) || fd.get('item_id') || fd.get('id');
+      const action = form.getAttribute('action');
+      const adding = kind === 'site' ? /\/add$/.test(action) : fd.get('action') !== 'remove';
+      const token = (window.f0ckSession && window.f0ckSession.csrf_token) || '';
+      form.classList.add('is-busy');
+      try {
+          const resp = await fetch(action, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json', 'X-CSRF-Token': token },
+              body: fd
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data.success) throw new Error(data.msg || data.message || 'Error');
+          const nameEl = form.querySelector('.hd-name');
+          const hallSlug = (data.hall && data.hall.slug) || fd.get('hall');
+          const hallName = (data.hall && data.hall.name) || (nameEl ? nameEl.textContent : hallSlug);
+          updateHallBadgeInDom(hallSlug, hallName, adding ? 'add' : 'remove', kind !== 'site');
+          if (window.invalidateItemCache) window.invalidateItemCache(itemId);
+          const i18n = window.f0ckI18n || {};
+          if (window.flashMessage) window.flashMessage(adding ? (i18n.hall_added || 'Added to list!') : (i18n.hall_removed || 'Removed from list!'));
+          await loadHallsDialog(itemId);
+          const again = form.dataset.hallKind === 'new' ? null : hallsModalEl()?.querySelector('.hd-form input[name="hall"][value="' + CSS.escape(hallSlug || '') + '"]');
+          const btn = again && again.form.querySelector('.hd-row');
+          if (btn) btn.focus({ preventScroll: true });
+      } catch (err) {
+          if (window.flashMessage) window.flashMessage(err.message, 3000, 'error');
+      } finally {
+          form.classList.remove('is-busy');
+      }
+  });
+
   document.addEventListener('click', async (e) => {
-    // Add to Hall
+    // Halls dialog (snippets/footer.html #halls-modal; its body is snippets/halls-dialog.html,
+    // loaded from /item-lists/<id>; the forms are sent by the submit listener below)
     const hallBtn = e.target.closest('#a_hall');
     if (hallBtn) {
         e.preventDefault();
-        const itemid = hallBtn.dataset.itemId;
-        const modal = document.getElementById('halls-modal');
-        const select = document.getElementById('hall-select');
-        const error = document.getElementById('halls-modal-error');
-        const confirmBtn = document.getElementById('halls-modal-confirm');
-        const siteHallRemoveBtn = document.getElementById('halls-modal-remove');
-        const cancelBtn = document.getElementById('halls-modal-cancel');
-
-        if (!modal) return window.flashMessage('Error: Halls modal not found', 3000, 'error');
-
-        // Reset — admin-only elements need null guards for regular users
-        if (select) select.innerHTML = '<option value="">-- Choose a Hall --</option>';
-        if (error) error.style.display = 'none';
-        if (confirmBtn) confirmBtn.style.display = 'block';
-        if (siteHallRemoveBtn) siteHallRemoveBtn.style.display = 'none';
-        modal.style.display = 'flex';
-
-        // --- My Halls section ---
-        const myHallsSection = document.getElementById('my-halls-section');
-        const myHallsSelect = document.getElementById('my-hall-select');
-        const myHallsConfirmBtn = document.getElementById('my-halls-modal-confirm');
-        const myHallsCreate = document.getElementById('my-hall-create-wrap');
-        const myHallsNewName = document.getElementById('my-hall-new-name');
-        const myHallsError = document.getElementById('my-halls-modal-error');
-
-        const isLoggedIn = window.f0ckSession && window.f0ckSession.logged_in;
-        const getCsrf = () => (window.f0ckSession && window.f0ckSession.csrf_token) || '';
-        const csrf = getCsrf();
-
-        if (myHallsSection) {
-            myHallsSection.style.display = isLoggedIn ? '' : 'none';
-        }
-        if (myHallsError) myHallsError.style.display = 'none';
-
-        // Load mod/admin site halls (only if the select element exists)
-        if (select) {
-          try {
-              const resp = await fetch('/ajax/halls');
-              const allHalls = await resp.json();
-              allHalls.forEach(h => {
-                  const opt = document.createElement('option');
-                  opt.value = h.slug;
-                  opt.textContent = h.name;
-                  select.appendChild(opt);
-              });
-              // Pre-select current hall
-              const _currentHallSlug = hallBtn.dataset.currentHall
-                  || (window.location.pathname.match(/^\/h\/([^\/]+)/) ? decodeURIComponent(window.location.pathname.match(/^\/h\/([^\/]+)/)[1]) : null)
-                  || (hallBtn.dataset.halls ? hallBtn.dataset.halls.split(",").filter(Boolean)[0] : null);
-              if (_currentHallSlug) select.value = _currentHallSlug;
-
-              // Show Remove button if the selected hall is one the item already belongs to
-              const siteHallsOnItem = (hallBtn.dataset.halls || '').split(',').filter(Boolean);
-              const syncSiteRemoveBtn = () => {
-                  if (!siteHallRemoveBtn) return;
-                  const slug = select.value;
-                  siteHallRemoveBtn.style.display = (slug && siteHallsOnItem.includes(slug)) ? 'inline-block' : 'none';
-              };
-              syncSiteRemoveBtn();
-              select.addEventListener('change', syncSiteRemoveBtn);
-          } catch (err) {
-              console.error('Failed to fetch halls:', err);
-          }
-        }
-
-        // Load user's own halls
-        const myHallsRemoveBtn = document.getElementById('my-halls-modal-remove');
-
-
-        // Determine current user hall context via multiple sources:
-        // 1. data-current-user-hall attribute (set by server when item loaded in hall context, or patched after add)
-        // 2. URL parsing (/user/:owner/hall/:slug/...)
-        // 3. data-user-halls fallback (item already in halls — pick first)
-        let currentUserHall = hallBtn.dataset.currentUserHall || null;
-        let currentUserHallOwner = hallBtn.dataset.currentUserHallOwner || null;
-        if (!currentUserHall) {
-            const urlHallMatch = window.location.pathname.match(/\/user\/([^/]+)\/hall\/([^/]+)/);
-            if (urlHallMatch) {
-                currentUserHallOwner = decodeURIComponent(urlHallMatch[1]);
-                currentUserHall = decodeURIComponent(urlHallMatch[2]);
-            }
-        }
-        const userHallsOnItem = (hallBtn.dataset.userHalls || '').split(',').filter(Boolean);
-        // Fallback: if item is already in user halls but we have no context, pre-select the first one
-        if (!currentUserHall && userHallsOnItem.length > 0) {
-            currentUserHall = userHallsOnItem[0];
-        }
-
-        if (isLoggedIn && myHallsSelect) {
-            myHallsSelect.innerHTML = `<option value="">${window.f0ckI18n?.hall_my_placeholder || '-- My Hall --'}</option>`;
-            try {
-                const resp = await fetch('/api/v2/me/halls');
-                const data = await resp.json();
-                if (data.success && data.halls.length) {
-                    data.halls.forEach(h => {
-                        const opt = document.createElement('option');
-                        opt.value = h.slug;
-                        opt.textContent = h.name + (h.is_private ? ' 🔒' : '');
-                        myHallsSelect.appendChild(opt);
-                    });
-                    // Pre-select
-                    if (currentUserHall) {
-                        myHallsSelect.value = currentUserHall;
-                    }
-                } else if (data.success) {
-                    const opt = document.createElement('option');
-                    opt.value = '';
-                    opt.textContent = window.f0ckI18n?.hall_no_halls || 'No halls yet — create one!';
-                    opt.disabled = true;
-                    myHallsSelect.appendChild(opt);
-                }
-            } catch (err) {
-                console.error('Failed to fetch user halls:', err);
-            }
-
-            // Show Remove when the selected hall is one the item is already in
-            function syncRemoveBtn() {
-                if (!myHallsRemoveBtn) return;
-                const slug = myHallsSelect.value;
-                myHallsRemoveBtn.style.display = (slug && userHallsOnItem.includes(slug)) ? 'inline-block' : 'none';
-            }
-            syncRemoveBtn();
-            myHallsSelect.addEventListener('change', syncRemoveBtn);
-        }
-
-        const close = () => {
-            modal.style.display = 'none';
-            if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = window.f0ckI18n?.hall_add_btn || 'Add to Hall'; confirmBtn.onclick = null; }
-            if (siteHallRemoveBtn) { siteHallRemoveBtn.disabled = false; siteHallRemoveBtn.textContent = window.f0ckI18n?.hall_remove_btn || 'Remove from Hall'; siteHallRemoveBtn.style.display = 'none'; siteHallRemoveBtn.onclick = null; }
-            if (cancelBtn) cancelBtn.onclick = null;
-            if (select) select.onchange = null;
-            if (myHallsConfirmBtn) { myHallsConfirmBtn.disabled = false; myHallsConfirmBtn.textContent = window.f0ckI18n?.hall_add_btn || 'Add'; myHallsConfirmBtn.onclick = null; }
-            modal.onclick = null;
-            if (myHallsRemoveBtn) myHallsRemoveBtn.onclick = null;
-        };
-
-        // Site hall confirm (mod/admin)
-        const onConfirm = async () => {
-            const hallSlug = select.value;
-            if (!hallSlug) {
-                error.textContent = window.f0ckI18n?.hall_select_a_hall || 'Please select a hall.';
-                error.style.display = 'block';
-                return;
-            }
-
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = window.f0ckI18n?.hall_adding || 'Adding...';
-
-            const token = getCsrf();
-            try {
-                const resp = await fetch('/mod/halls/add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRF-Token': token
-                    },
-                    body: `id=${itemid}&hall=${encodeURIComponent(hallSlug)}&csrf_token=${encodeURIComponent(token)}`
-                });
-                const data = await resp.json();
-                if (data.success) {
-                    const hallName = (select.selectedOptions && select.selectedOptions[0]) ? select.selectedOptions[0].textContent : hallSlug;
-                    updateHallBadgeInDom(hallSlug, hallName, 'add', false);
-                    if (window.invalidateItemCache) window.invalidateItemCache(itemid);
-                    if (window.flashMessage) window.flashMessage((window.f0ckI18n && window.f0ckI18n.hall_added) || 'Added to hall!');
-                    if (window.loadItemAjax) window.loadItemAjax(window.location.href, true, { keepMedia: true, skipCache: true });
-                    close();
-                } else {
-                    throw new Error(data.msg || 'Failed to add to hall');
-                }
-            } catch (err) {
-                error.textContent = err.message;
-                error.style.display = 'block';
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = window.f0ckI18n?.hall_add_btn || 'Add to Hall';
-            }
-        };
-
-        // My Hall confirm
-        const onMyHallConfirm = async () => {
-            if (!myHallsSelect || !myHallsConfirmBtn || !myHallsError) return;
-            let hallSlug = myHallsSelect.value;
-            const token = getCsrf();
-
-            // Create new hall inline if requested
-            if (!hallSlug && myHallsNewName && myHallsNewName.value.trim()) {
-                const newName = myHallsNewName.value.trim();
-                const newSlug = newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-                try {
-                    myHallsConfirmBtn.disabled = true;
-                    myHallsConfirmBtn.textContent = window.f0ckI18n?.hall_creating || 'Creating…';
-                    const r = await fetch('/api/v2/me/halls', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-                        body: JSON.stringify({ name: newName, slug: newSlug, csrf_token: token })
-                    });
-                    const d = await r.json();
-                    if (!d.success) throw new Error(d.message || d.msg || 'Failed to create');
-                    hallSlug = newSlug;
-                } catch (err) {
-                    myHallsError.textContent = err.message;
-                    myHallsError.style.display = 'block';
-                    myHallsConfirmBtn.disabled = false;
-                    myHallsConfirmBtn.textContent = window.f0ckI18n?.hall_add_btn || 'Add';
-                    return;
-                }
-            }
-
-            if (!hallSlug) {
-                myHallsError.textContent = window.f0ckI18n?.hall_choose_or_create || 'Choose a hall or enter a new name.';
-                myHallsError.style.display = 'block';
-                return;
-            }
-
-            myHallsConfirmBtn.disabled = true;
-            myHallsConfirmBtn.textContent = window.f0ckI18n?.hall_adding || 'Adding…';
-            try {
-                const resp = await fetch(`/api/v2/me/halls/${encodeURIComponent(hallSlug)}/items`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-                    body: JSON.stringify({ item_id: itemid, csrf_token: token })
-                });
-                const data = await resp.json();
-                if (data.success) {
-                    myHallsConfirmBtn.disabled = false;
-                    myHallsConfirmBtn.textContent = window.f0ckI18n?.hall_add_btn || 'Add';
-                    const hallName = (myHallsSelect && myHallsSelect.selectedOptions && myHallsSelect.selectedOptions[0])
-                        ? myHallsSelect.selectedOptions[0].textContent.replace(/\s*🔒\s*$/, '')
-                        : hallSlug;
-                    updateHallBadgeInDom(hallSlug, hallName, 'add', true);
-                    if (window.invalidateItemCache) window.invalidateItemCache(itemid);
-                    if (window.flashMessage) window.flashMessage((window.f0ckI18n && window.f0ckI18n.hall_added) || 'Added to hall!');
-                    if (window.loadItemAjax) window.loadItemAjax(window.location.href, true, { keepMedia: true, skipCache: true });
-                    close();
-                } else {
-                    throw new Error(data.message || data.msg || 'Failed to add');
-                }
-            } catch (err) {
-                myHallsError.textContent = err.message;
-                myHallsError.style.display = 'block';
-                myHallsConfirmBtn.disabled = false;
-                myHallsConfirmBtn.textContent = window.f0ckI18n?.hall_add_btn || 'Add';
-            }
-        };
-
-        if (confirmBtn) confirmBtn.onclick = onConfirm;
-        if (siteHallRemoveBtn) {
-            siteHallRemoveBtn.onclick = async () => {
-                const hallSlug = select ? select.value : '';
-                if (!hallSlug) return;
-                if (!confirm(`Remove from hall "${hallSlug}"?`)) return;
-                siteHallRemoveBtn.disabled = true;
-                siteHallRemoveBtn.textContent = window.f0ckI18n?.hall_removing || 'Removing…';
-                const token = getCsrf();
-                try {
-                    const resp = await fetch('/mod/halls/remove', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'X-CSRF-Token': token
-                        },
-                        body: `id=${itemid}&hall=${encodeURIComponent(hallSlug)}&csrf_token=${encodeURIComponent(token)}`
-                    });
-                    const data = await resp.json();
-                    if (data.success) {
-                        updateHallBadgeInDom(hallSlug, '', 'remove', false);
-                        if (window.invalidateItemCache) window.invalidateItemCache(itemid);
-                        if (window.flashMessage) window.flashMessage((window.f0ckI18n && window.f0ckI18n.hall_removed) || 'Removed from hall!');
-                        if (window.loadItemAjax) window.loadItemAjax(window.location.href, true, { keepMedia: true, skipCache: true });
-                        close();
-                    } else {
-                        throw new Error(data.msg || 'Failed to remove from hall');
-                    }
-                } catch (err) {
-                    if (error) { error.textContent = err.message; error.style.display = 'block'; }
-                    siteHallRemoveBtn.disabled = false;
-                    siteHallRemoveBtn.textContent = 'Remove from Hall';
-                }
-            };
-        }
-        if (cancelBtn) cancelBtn.onclick = close;
-        if (myHallsConfirmBtn) myHallsConfirmBtn.onclick = onMyHallConfirm;
-        if (myHallsRemoveBtn) {
-            myHallsRemoveBtn.onclick = async () => {
-                const slug = myHallsSelect ? myHallsSelect.value : '';
-                if (!slug) return;
-                myHallsRemoveBtn.disabled = true;
-                myHallsRemoveBtn.textContent = 'Removing…';
-                const token = getCsrf();
-                try {
-                    const resp = await fetch(`/api/v2/me/halls/${encodeURIComponent(slug)}/items/${itemid}`, {
-                        method: 'DELETE',
-                        headers: { 'X-CSRF-Token': token }
-                    });
-                    const data = await resp.json();
-                    if (data.success) {
-                        myHallsRemoveBtn.disabled = false;
-                        myHallsRemoveBtn.textContent = 'Remove';
-                        updateHallBadgeInDom(slug, '', 'remove', true);
-                        if (window.invalidateItemCache) window.invalidateItemCache(itemid);
-                        window.flashMessage((window.f0ckI18n && window.f0ckI18n.hall_removed) || 'Removed from hall!');
-                        if (window.loadItemAjax) window.loadItemAjax(window.location.href, true, { keepMedia: true, skipCache: true });
-                        close();
-                    } else {
-                        throw new Error(data.message || data.msg || 'Failed to remove');
-                    }
-                } catch (err) {
-                    if (myHallsError) { myHallsError.textContent = err.message; myHallsError.style.display = 'block'; }
-                    myHallsRemoveBtn.disabled = false;
-                    myHallsRemoveBtn.textContent = 'Remove';
-                }
-            };
-        }
-        modal.onclick = (ev) => { if (ev.target === modal) close(); };
+        openHallsDialog(hallBtn.dataset.itemId);
+        return;
+    }
+    if (e.target.closest('#halls-modal [data-halls-close]')) {
+        e.preventDefault();
+        closeHallsDialog();
+        return;
     }
 
 
@@ -22553,7 +22324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const removeBtn = e.target.closest('.remove-from-hall');
     if (removeBtn) {
         e.preventDefault();
-        if (!confirm('Remove from this hall?')) return;
+        if (!confirm('Remove from this list?')) return;
 
         const container = document.getElementById('comments-container');
         const itemid = container ? container.dataset.itemId : (document.querySelector('.id-link')?.dataset.itemId || null);
@@ -22562,7 +22333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!itemid || !hallSlug) return window.flashMessage('Error: Missing itemid or hallSlug', 3000, 'error');
 
         const token = (window.f0ckSession && window.f0ckSession.csrf_token) || '';
-        const resp = await fetch('/mod/halls/remove', {
+        const resp = await fetch('/mod/lists/remove', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -22576,7 +22347,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.invalidateItemCache) window.invalidateItemCache(itemid);
             if (window.loadItemAjax) window.loadItemAjax(window.location.href, true, { keepMedia: true, skipCache: true });
         } else {
-            window.flashMessage(data.msg || 'Failed to remove from hall', 3000, 'error');
+            window.flashMessage(data.msg || 'Failed to remove from list', 3000, 'error');
         }
     }
   });

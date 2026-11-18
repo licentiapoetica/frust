@@ -16,6 +16,11 @@
 {%- set fg_rating = ((item.tags or [])|selectattr("normalized", "in", ["sfw", "nsfw", "nsfl"])|map(attribute="normalized")|list) -%}
 {%- set fg_rating = (fg_rating[0] if fg_rating else "untagged") -%}
 {%- set fg_page = "item" -%}
+{#- the halls dialog (#halls): the visitor's halls (my_hall_choices) and, for staff, the site's
+    (hall_choices), each with has_item (routes/index.rs add_hall_choices) -#}
+{%- set fg_my_halls = (my_hall_choices if (my_hall_choices is defined and my_hall_choices is sequence) else none) -%}
+{%- set fg_site_halls = (hall_choices if (hall_choices is defined and hall_choices is sequence) else none) -%}
+{%- set fg_in_halls = ((fg_my_halls|selectattr("has_item")|list|length) if fg_my_halls is not none else 0) -%}
 {%- set fg_q = ((tmp.tag|lower) if (tmp and tmp.tag) else (("user:" ~ (tmp.user|lower)) if (tmp and tmp.user) else "")) -%}
 {%- set fg_tab_base = (link.main if (link and link.main) else "/") -%}
 {%- set fg_tab = "" -%}
@@ -88,6 +93,7 @@
       </form>
       {% endif %}
       {% endif %}
+      {% if (fg_my_halls is not none or fg_site_halls is not none) %}<a class="fg-chip{% if fg_in_halls %} active{% endif %}" href="#halls" title="Add to one of your lists">{{ (("&#10003; In " ~ fg_in_halls ~ " list" ~ ("" if fg_in_halls == 1 else "s")) if fg_in_halls else "+ Add to list")|safe }}</a>{% endif %}
       <a class="fg-chip" href="{{ item.dest }}" target="_blank">Visit</a>
       <a class="fg-chip" href="#report">Report</a>
       {% if (can_manage_item or is_mod_or_admin) %}<a class="fg-chip" href="#edit">Edit</a>{% endif %}
@@ -108,7 +114,7 @@
       <div><dt>File</dt><dd><a href="{{ item.dest }}" target="_blank">{{ item.mime }}</a>, {{ item.size }}</dd></div>
       <div><dt>Source</dt><dd>{% if (item.src and item.src.short and (item.src.short|lower) != (domain|lower)) %}<a href="{{ item.src.long }}" target="_blank" rel="noopener noreferrer">{{ item.src.short }}</a>{% elif (item.src and item.src.long) %}{{ (item.src.short or item.src.long) }}{% else %}hidden{% endif %}</dd></div>
       {% if (user and (user.network or user.channel)) %}<div><dt>Channel</dt><dd>{{ user.network }} / {{ user.channel }}</dd></div>{% endif %}
-      {% if (halls_enabled and item.primaryHall) %}<div><dt>Halls</dt><dd><a href="/h/{{ item.primaryHall.slug }}">{{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %}, <a href="/h/{{ h.slug }}">{{ h.name }}</a>{% endfor %}</dd></div>{% endif %}
+      {% if (halls_enabled and item.primaryHall) %}<div><dt>Lists</dt><dd><a href="/list/{{ item.primaryHall.slug }}">{{ item.primaryHall.name }}</a>{% for h in (item.otherHalls or []) %}, <a href="/list/{{ h.slug }}">{{ h.name }}</a>{% endfor %}</dd></div>{% endif %}
       {% if item.expires_in %}<div><dt>Expires</dt><dd title="{{ item.expires_at }}">{{ item.expires_in }}</dd></div>{% endif %}
       {% if item.burn_after_read %}<div><dt>Burn after read</dt><dd title="Only the first person to open it sees it, then it's deleted">{{ ("opened, being deleted" if item.burn_claimed else "not opened yet") }}</dd></div>{% endif %}
       {% if (item.visibility and item.visibility > 0) %}<div><dt>Visibility</dt><dd>{{ (["public", "unlisted", "private", "unavailable (451)"][(item.visibility|int)] if (item.visibility|int) <= 3 else "private") }}</dd></div>{% endif %}
@@ -179,6 +185,71 @@
     <div class="fg-modal-btns"><a href="#_" class="fg-btn-text">Cancel</a><button type="submit" class="fg-btn-blue">Send</button></div>
   </form>
 </div>
+{% if (fg_my_halls is not none or fg_site_halls is not none) %}
+{#- Add to hall: one row per hall, a checkbox-looking button that adds or removes the f0ck (a plain
+    form each: the action is the opposite of has_item), a new hall with the f0ck in it, and for staff
+    the site's halls. With JavaScript the rows are swapped in place (the box, not the dialog, so it
+    stays open) -#}
+<div id="halls" class="fg-modal">
+  <a href="#_" class="fg-modal-bg" aria-label="close"></a>
+  <div class="fg-modal-box fg-halls-box" data-fg-live="halls-pick">
+    <div class="fg-modal-head"><h2>Save to a list</h2><a href="#_" aria-label="close">&#215;</a></div>
+    {% if fg_my_halls is not none %}
+    {% if fg_site_halls is not none %}<h3 class="fg-halls-sub">Your lists</h3>{% endif %}
+    {% if fg_my_halls %}
+    <ul class="fg-hall-picks">
+      {% for h in fg_my_halls %}
+      <li>
+        <form method="post" action="/api/v2/me/list-items" class="fg-ajax" data-fg-refresh="halls-pick actions" data-fg-ok="{{ ("Removed from " if h.has_item else "Saved to ") ~ h.name }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="back" value="{{ here }}#halls">
+          <input type="hidden" name="item_id" value="{{ item.id }}">
+          <input type="hidden" name="hall" value="{{ h.slug }}">
+          <input type="hidden" name="action" value="{{ ("remove" if h.has_item else "add") }}">
+          <button type="submit" class="fg-hall-pick" aria-pressed="{{ ("true" if h.has_item else "false") }}" title="{{ ("Remove from " if h.has_item else "Add to ") ~ h.name }}"><span class="fg-hall-box" aria-hidden="true"></span><span class="fg-hall-name">{{ h.name }}</span>{% if h.is_private %}<span class="fg-hall-private">Private</span>{% endif %}<span class="fg-hall-count">{{ ((h.total_items or 0)|int)|locale_number }}</span></button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="fg-dim">You have no lists yet. Name one and the f0ck goes in.</p>
+    {% endif %}
+    <form method="post" action="/api/v2/me/list-items" class="fg-hall-new fg-ajax" data-fg-refresh="halls-pick actions" data-fg-clear data-fg-ok="List created">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ here }}#halls">
+      <input type="hidden" name="item_id" value="{{ item.id }}">
+      <input type="hidden" name="action" value="add">
+      <label class="fg-field"><input type="text" name="new_name" maxlength="100" required placeholder=" " autocomplete="off"><span>New list</span></label>
+      <button type="submit" class="fg-btn-blue">Create</button>
+    </form>
+    {% endif %}
+    {% if fg_site_halls is not none %}
+    <h3 class="fg-halls-sub">Site lists <span class="fg-label">staff</span></h3>
+    {% if fg_site_halls %}
+    <ul class="fg-hall-picks">
+      {% for h in fg_site_halls %}
+      <li>
+        <form method="post" action="/mod/lists/{{ ("remove" if h.has_item else "add") }}" class="fg-ajax" data-fg-refresh="halls-pick kp" data-fg-ok="{{ ("Removed from " if h.has_item else "Added to ") ~ h.name }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="back" value="{{ here }}#halls">
+          <input type="hidden" name="id" value="{{ item.id }}">
+          <input type="hidden" name="hall" value="{{ h.slug }}">
+          <button type="submit" class="fg-hall-pick" aria-pressed="{{ ("true" if h.has_item else "false") }}" title="{{ ("Remove from " if h.has_item else "Add to ") ~ h.name }}"><span class="fg-hall-box" aria-hidden="true"></span><span class="fg-hall-name">{{ h.name }}</span></button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="fg-dim">The site has no lists yet.</p>
+    {% endif %}
+    {% endif %}
+    <div class="fg-modal-btns">
+      {% if fg_my_halls is not none %}<a href="/user/{{ (session.user or "")|lower|encode_uri_component }}/lists" class="fg-btn-text">Manage lists</a>{% endif %}
+      <a href="#_" class="fg-btn-blue">Done</a>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% if (can_manage_item or is_mod_or_admin) %}
 {#- Edit (the uploader and staff): everything of f0ckm's info box (snippets/info-modal.html) and item
     tools: the title, visibility, expiration, the file's details, similar uploads, a new thumbnail and

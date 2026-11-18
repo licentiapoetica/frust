@@ -3,41 +3,20 @@
 
 
 {% if session %}
-<div id="halls-modal" class="modal-overlay footer-hidden">
-  <div class="modal-content">
-    <h3>{{ t("hall.modal_title") }}</h3>
-    {% if (session.admin or session.is_moderator) %}
-    <div class="form-group footer-halls-group">
-      <label for="hall-select" class="footer-halls-label">{{ t("hall.site_hall_label") }}</label>
-      <select id="hall-select" class="form-control footer-halls-select">
-        <option value="">{{ t("hall.choose_hall") }}</option>
-      </select>
+{#- The item's halls dialog. Without JavaScript the item's hall link opens it through :target, with its
+    choices rendered into the page (snippets/halls-dialog.html); f0ckm.js opens it with the class
+    is-open and loads the same body from /item-lists/<id>. -#}
+<div id="halls-modal" class="modal-overlay footer-hidden halls-modal" role="dialog" aria-modal="true" aria-labelledby="halls-modal-title">
+  <a href="#_" class="halls-modal-backdrop" tabindex="-1" aria-hidden="true" data-halls-close></a>
+  <div class="modal-content halls-modal-content">
+    <div class="halls-modal-head">
+      <h3 id="halls-modal-title"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ t("hall.modal_title") }}</h3>
+      <a href="#_" class="halls-modal-x" aria-label="{{ t("common.close") }}" title="{{ t("common.close") }}" data-halls-close>&times;</a>
     </div>
-    <div id="halls-modal-error" class="error-msg footer-hidden footer-halls-error"></div>
-    <div class="modal-actions footer-halls-actions footer-halls-actions-site">
-      <button id="halls-modal-confirm" class="btn-primary footer-halls-btn">{{ t("hall.add_btn") }}</button>
-      <button id="halls-modal-remove" class="btn-danger footer-halls-btn footer-hidden">{{ t("hall.remove_btn") }}</button>
-    </div>
-    <hr class="footer-halls-divider">
-    {% endif %}
-    <div id="my-halls-section">
-      <label class="footer-halls-label">{{ t("hall.my_hall_label") }}</label>
-      <div class="footer-halls-my-row">
-        <select id="my-hall-select" class="form-control footer-halls-select footer-halls-my-select">
-          <option value="">{{ t("hall.my_hall_placeholder") }}</option>
-        </select>
-        <button id="my-halls-modal-confirm" class="btn-primary footer-halls-btn footer-halls-btn-nowrap">{{ t("common.add") }}</button>
-        <button id="my-halls-modal-remove" class="btn-secondary footer-halls-btn footer-halls-btn-nowrap footer-hidden">{{ t("common.remove") }}</button>
-      </div>
-      <div class="footer-halls-new-row">
-        <span class="footer-halls-new-label">{{ t("hall.create_new") }}</span>
-        <input type="text" id="my-hall-new-name" placeholder="{{ t("hall.new_name_placeholder") }}" class="footer-halls-new-input">
-      </div>
-      <div id="my-halls-modal-error" class="error-msg footer-hidden footer-halls-my-error"></div>
-    </div>
-
-    <div class="modal-actions footer-halls-actions footer-halls-actions-bottom">
-      <button id="halls-modal-cancel" class="btn-secondary footer-halls-btn">{{ t("common.cancel") }}</button>
+    <div class="halls-modal-body" id="halls-modal-body" aria-live="polite">
+      {% if ((item is defined and item and item.id) and ((my_hall_choices is defined) or (hall_choices is defined))) %}
+      {% include "snippets/halls-dialog.html" %}
+      {% endif %}
     </div>
   </div>
 </div>

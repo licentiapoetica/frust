@@ -23,7 +23,9 @@ struct RefOpts {
 fn parse_referer(referer: &str) -> RefOpts {
     use once_cell::sync::Lazy;
     use regex::Regex;
-    static HALL: Lazy<Regex> = Lazy::new(|| Regex::new(r"/h/([^/]+)").unwrap());
+    // `/list/<slug>` (a site list; a user's is /user/<name>/list/<slug>), or the old `/h/<slug>` of a
+    // page opened before halls became lists
+    static HALL: Lazy<Regex> = Lazy::new(|| Regex::new(r"^/(?:list|h)/([^/]+)").unwrap());
     static TAG: Lazy<Regex> = Lazy::new(|| Regex::new(r"/tag/([^/]+)").unwrap());
     // The old pattern only knew `f0cks|favs`; feed links use `uploads` — accept all three.
     static USER: Lazy<Regex> = Lazy::new(|| Regex::new(r"/user/([^/]+)/(f0cks|uploads|favs)").unwrap());

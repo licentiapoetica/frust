@@ -76,7 +76,7 @@
                 {% endif %}
                 <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:deleteUploads" class="btn-modern btn-files">Del Files</button>
                 <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:deleteComments" class="btn-modern btn-comms">Del Comms</button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:adminBulkDeleteHalls" class="btn-modern btn-comms adm-users-btn-halls" title="Delete all user halls"><i class="fa fa-folder-open"></i> Del Halls</button>
+                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:adminBulkDeleteHalls" class="btn-modern btn-comms adm-users-btn-halls" title="Delete all user lists"><i class="fa fa-folder-open"></i> Del Lists</button>
                 <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:adminReassignUploads" class="btn-modern adm-users-btn-reassign" title="Reassign uploads to another user"><i class="fa fa-right-left"></i> Reassign</button>
                 {% if (u.failed_attempts > 0) %}
                     <button data-username="{{ u.login }}" data-on="click:adminResetLoginAttempts" class="btn-modern btn-pw adm-users-btn-reset-ip" title="Reset Login Attempts"><i class="fa fa-unlock"></i> Reset IP</button>

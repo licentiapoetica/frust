@@ -52,7 +52,7 @@
             return false;
         }
 
-        // Single item path: e.g. /123, /ZLHmYNnj-kK, /tag/foo/ZLHmYNnj-kK, /h/bar/123, etc.
+        // Single item path: e.g. /123, /ZLHmYNnj-kK, /tag/foo/ZLHmYNnj-kK, /list/bar/123, etc.
         return segments.some(s => /^[a-zA-Z0-9_-]{11}$/.test(s) || /^\d+$/.test(s));
     }
 

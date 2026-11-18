@@ -23,7 +23,7 @@
       {% for key, h in hallsList|entries %}
       <div class="hall-manager-card" id="hall-card-{{ h.slug }}" data-slug="{{ h.slug }}">
         <div class="hall-manager-image adm-halls-card-image" title="{{ t("hall.click_upload_hint") }}">
-          <img src="/hall_image/{{ h.slug }}" alt="{{ h.name }}" class="adm-halls-card-img" id="hall-img-{{ h.slug }}">
+          <img src="/list_image/{{ h.slug }}" alt="{{ h.name }}" class="adm-halls-card-img" id="hall-img-{{ h.slug }}">
           <span class="adm-halls-card-name">{{ h.name }}</span>
           {% if h.custom_image %}
           <button class="btn-del-img adm-halls-del-img-btn" title="Remove custom image">✕</button>
@@ -53,7 +53,7 @@
           </div>
           <div class="adm-halls-card-actions">
             <button class="btn-save-hall hm-btn adm-halls-save-btn">{{ t("common.save") }}</button>
-            <a href="/h/{{ h.slug }}" class="hall-view-link hm-btn adm-halls-view-btn">{{ t("common.view") }} →</a>
+            <a href="/list/{{ h.slug }}" class="hall-view-link hm-btn adm-halls-view-btn">{{ t("common.view") }} →</a>
             <span class="adm-halls-post-count">{{ t("hall.posts", {"count": (h.item_count or 0)}) }}</span>
             <button class="btn-delete-hall hm-btn adm-halls-delete-btn">🗑 {{ t("common.delete") }}</button>
           </div>

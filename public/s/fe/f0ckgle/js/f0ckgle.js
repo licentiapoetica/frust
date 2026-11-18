@@ -1,6 +1,6 @@
 // f0ckgle frontend: the extras on top of pages that work without JavaScript.
 //  - live actions: the plain forms marked .fg-ajax (comments, replies, favs, follow, rating, tags,
-//    report, delete) are sent with fetch instead; the parts of the page they change
+//    report, delete, halls) are sent with fetch instead; the parts of the page they change
 //    (data-fg-refresh → [data-fg-live] regions) are swapped in from a fresh render of the page,
 //    so nothing reloads and the markup stays the server's. Live comments use the same refresh.
 //  - the f0ckFrontend hooks for the shared live events (views/frontends/README.md)
@@ -196,12 +196,16 @@
     }
     return body;
   };
+  // body: an object (sent as JSON) or FormData (a file upload, sent as multipart)
   const send = async (url, body, method = 'POST') => {
+    const multipart = body instanceof FormData;
     const res = await fetch(url, {
       method,
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf() },
-      body: JSON.stringify({ ...body, csrf_token: body.csrf_token || csrf() }),
+      headers: multipart
+        ? { Accept: 'application/json', 'X-CSRF-Token': csrf() }
+        : { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf() },
+      body: multipart ? body : JSON.stringify({ ...body, csrf_token: body.csrf_token || csrf() }),
     });
     let data = {};
     try { data = await res.json(); } catch { data = { success: false, msg: `HTTP ${res.status}` }; }
@@ -224,7 +228,12 @@
     e.preventDefault();
     if (form.dataset.fgConfirm && !confirm(form.dataset.fgConfirm)) return;
     const isComment = 'fgComment' in form.dataset;
-    const body = formBody(form);
+    let body = formBody(form);
+    // a file upload (a hall's picture): the form as it is, without the no-JS return address
+    if (form.enctype === 'multipart/form-data') {
+      body = new FormData(form);
+      body.delete('back');
+    }
     if (isComment) {
       body.content = String(body.content || '').trim();
       if (!body.content) return;
@@ -252,12 +261,23 @@
         form.reset();
         if (location.hash) location.hash = '_';
       }
+      if ('fgClear' in form.dataset) form.reset();
       // a tag suggestion that is a tag now: checked, no second click
       if ('fgAdded' in form.dataset) form.classList.add('is-added');
       if (form.dataset.fgOk) flash(form.dataset.fgOk, 'success');
       // an edited comment: back to its (new) text
       if ('fgEdit' in form.dataset) endEdit(form, false);
       await refresh((form.dataset.fgRefresh || '').split(/\s+/).filter(Boolean));
+      // a hall's new picture has the same address: load it again
+      if (form.dataset.fgBust) {
+        const v = Date.now();
+        document.querySelectorAll('img[data-fg-hall-img]').forEach(img => {
+          if (img.dataset.fgHallImg !== form.dataset.fgBust) return;
+          const u = new URL(img.src, location.href);
+          u.searchParams.set('v', v);
+          img.src = u.href;
+        });
+      }
       const id = data?.comment?.id;
       const el = id && document.getElementById(`c${id}`);
       if (el) {
@@ -269,6 +289,14 @@
       if ('fgClose' in form.dataset) window.f0ckCapReset?.();
     } finally {
       buttons.forEach(b => { if (b.isConnected && !form.classList.contains('is-added')) b.disabled = false; });
+    }
+  });
+
+  // a picked file is uploaded at once (without JavaScript the form's Upload button sends it)
+  document.addEventListener('change', e => {
+    const input = e.target;
+    if (input instanceof HTMLInputElement && input.type === 'file' && 'fgAutosubmit' in input.dataset && input.files?.length) {
+      input.form?.requestSubmit();
     }
   });
 
@@ -371,8 +399,10 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       menus().forEach(d => { d.open = false; });
-      if (/^#(report|delete|edit)$/.test(location.hash)) location.hash = '_';
-      else if (location.hash === '#meta') location.hash = 'edit';
+      if (location.hash === '#meta') location.hash = 'edit';
+      // a confirmation goes back to the dialog it came from (a hall's delete → its Edit dialog)
+      else if (/^#hall-.+-delete$/.test(location.hash)) location.hash = location.hash.slice(0, -'-delete'.length);
+      else if (document.querySelector('.fg-modal:target')) location.hash = '_';
       return;
     }
     if (typing(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;

@@ -21,7 +21,7 @@ There are two kinds of pages:
    comments, upload, search and the like. The frontend gets the same data as the default view; see
    `grep -rn 'tpl::render(' server/src/routes`.
 2. **Shared pages.** These are default views that include `shell_header` / `shell_footer`
-   (settings, messages, admin, mod, mod_reports, pending, banned, user halls, privacy). They exist once.
+   (settings, messages, admin, mod, mod_reports, pending, banned, privacy). They exist once.
    - A frontend must **not** override them.
    - `tpl::render` passes `shell_header` / `shell_footer` = the frontend's
      `shell/header.html` / `shell/footer.html`, so they show inside the frontend's chrome.
@@ -30,7 +30,7 @@ There are two kinds of pages:
 ## What a frontend must provide
 
 **Every page.** A frontend has its own template for every own page, in its own look; none may fall
-back to f0ckm's layout: `about`, `comments_user`, `error`, `halls`, `index`, `item`, `login`,
+back to f0ckm's layout: `about`, `comments_user`, `error`, `halls`, `user-halls`, `index`, `item`, `login`,
 `notifications`, `ranking`, `register`, `rules`, `search`, `subscriptions`, `tags`, `tags_user`,
 `terms`, `upload`, `user` (`tpl::FRONTEND_OWN_PAGES`; `f0ckm check-frontends` reports a missing one).
 The shared pages come with the shell (below). Only standalone pages with their own look keep
@@ -153,6 +153,44 @@ default, f0ckyou: dark by default) lets visitors pick Light, Dark or Device:
 - The switch: links `<a href="/scheme/dark" data-scheme-set="dark">` (scheme-early.js switches in
   place and marks the current one with `aria-current`; render `aria-current` on the server's choice
   too). Listen to `f0ck:scheme` (`detail.scheme`, `detail.resolved`) for anything else to redo.
+
+**Lists** (called halls in the code: the `hall*` data, the database, the `halls_enabled` switches). Visitors see
+*lists* (f0ckyou: *playlists*), each frontend in its own look. The page addresses are `/lists`,
+`/list/<slug>`, `/user/<name>/lists` and `/user/<name>/list/<slug>`; the old `/halls`, `/h/…`,
+`/user/<name>/halls` and `/user/<name>/hall/…` redirect there for good (routes/halls.rs `list_url`).
+- Pictures: a list's own uploaded picture, else (like tags) up to three of its f0cks' thumbnails side
+  by side, else its name on a colour of its own (routes/halls.rs; rebuilt when its f0cks change).
+  Site list: `/list_image/<slug>?m=<mode>&v=<image_v>`; a user's: below. `image_v` changes with the
+  picture (the own picture's time, else the count and newest f0ck), so browsers don't keep an old one.
+- `halls.html`: the site's halls (`hallsList`, each with `image_v`). The grid of one hall (`/list/<slug>`,
+  `/user/<name>/list/<slug>`) is `index.html` with `tmp.hall` / `tmp.userHall`.
+- `user-halls.html` (`/user/<name>/lists`, routes/user_halls.rs `list_halls`): a user's own halls.
+  Data: `hallsList` (`id`, `slug`, `name`, `description`, `is_private`, `custom_image`,
+  `total_items`), `user` (the profile: `user`, `display_name`, `avatar`, `avatar_file`,
+  `username_color`, `banner_*`), `ownerUser`, `isOwner`, `can_manage` (the owner or an admin) and
+  `manage_qs` (`?user_id=<id>` when an admin manages someone else's: append it to every action URL).
+  The picture of a hall is `/user_list_image/<ownerUser.id>/<slug>?v=<image_v>`, its grid
+  `/user/<name>/list/<slug>`. With `can_manage` the page offers, as plain forms with `back`:
+  - new hall: `POST /api/v2/me/lists` (`name`, optional `description`, `is_private`);
+  - edit: `POST /api/v2/me/lists/<slug>` (`name`, `description`, `is_private` = `1` / `0`: send an
+    explicit value, e.g. two radios or a hidden `0` before the checkbox);
+  - delete: `POST /api/v2/me/lists/<slug>/delete` (ask first: a `:target` confirmation without
+    JavaScript, an in-page one with it; never `confirm()`);
+  - picture (with `enable_userhall_image_upload`): `POST /api/v2/me/lists/<slug>/image`,
+    multipart with `file`, `csrf_token` and `back` fields; remove it with
+    `POST /api/v2/me/lists/<slug>/image/delete` (only when `custom_image`).
+  With JavaScript these go through `fetch` and the page updates in place (re-render the list from
+  a fresh `fetch` of the page, as f0ckgle/f0ckyou do).
+- **The item's halls dialog.** Every item page lets members put the item into their halls (and staff
+  into the site's), as a `:target` dialog of plain forms:
+  - `my_hall_choices` (members): `slug`, `name`, `is_private`, `total_items`, `has_item`. Per hall
+    a form to `POST /api/v2/me/list-items` (`item_id`, `hall`, `action` = `add` / `remove`, the
+    opposite of `has_item`); a new hall with the item in it: the same endpoint with `new_name`
+    and no `hall`.
+  - `hall_choices` (staff only, `is_mod_or_admin`): `slug`, `name`, `has_item`. `POST
+    /mod/lists/add` or `/mod/lists/remove` (`id` = the item id, `hall`).
+  - a link to `/user/<session.user>/lists` to manage them.
+  Both lists come with full page loads only (`routes/index.rs` `add_hall_choices`).
 
 **Pages only one frontend has (optional).** A page that belongs to one frontend's joke or look
 (f0ckgle: `howsearch.html`, "How Search works" at `/help`) is not an own page the others

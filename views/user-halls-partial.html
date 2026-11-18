@@ -1,34 +1,124 @@
-<div class="container user-halls-page">
-  <div class="user-halls-header">
-    <h3 class="user-halls-title">{{ (t("hall.user_halls_title")).replace("{user}", ownerUser.user, 1) }}</h3>
-    {% if (isOwner or (session and session.admin)) %}
-    <div class="user-halls-create">
-      <input type="text" id="uh-new-name" placeholder="{{ t("hall.new_hall_placeholder") }}" class="user-halls-new-name">
-      <button id="btn-create-uh" class="hm-btn user-halls-btn-create">{{ t("hall.new_hall_btn") }}</button>
-      <span id="uh-create-status" class="user-halls-create-status"></span>
+{#- A user's halls (routes/user_halls.rs list_halls): cards like the site's halls page. Whoever may
+    manage them (can_manage: the owner, or an admin with manage_qs = ?user_id=) gets the new-hall form
+    and per hall an edit dialog (name, description, public/private, picture, delete with a
+    confirmation step). All plain forms: without JavaScript the dialogs open through :target and the
+    posts come back here (server/src/nojs.rs); user-halls-partial.js sends them with fetch and swaps
+    [data-uh-page] from a fresh render of the page. -#}
+{%- set uh_owner = (ownerUser.user or "") -%}
+{%- set uh_base = "/user/" ~ (uh_owner|lower|encode_uri_component) -%}
+{%- set uh_back = uh_base ~ "/lists" -%}
+{%- set uh_count = ((hallsList or [])|length) -%}
+<div class="container uh-page" data-uh-page>
+  <header class="uh-head">
+    <div class="uh-head-text">
+      <h3 class="uh-title"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> {{ t("hall.user_halls_title", {"user": uh_owner}) }}</h3>
+      <p class="uh-sub"><a href="{{ uh_base }}">@{{ uh_owner|lower }}</a> &middot; {{ t("hall.count", {"count": uh_count}) }}</p>
     </div>
+    {% if can_manage %}
+    <form method="post" action="/api/v2/me/lists{{ manage_qs }}" class="uh-create" data-uh-form="create">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="{{ uh_back }}">
+      <input type="text" name="name" class="uh-input" maxlength="100" placeholder="{{ t("hall.new_hall_placeholder") }}" aria-label="{{ t("hall.new_hall_placeholder") }}" autocomplete="off" required>
+      <button type="submit" class="uh-btn uh-btn-accent"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{ t("hall.create") }}</button>
+    </form>
     {% endif %}
-  </div>
-  <div id="uh-config" class="user-halls-config"
-       data-is-admin="{{ ("true" if (session and session.admin) else "false") }}"
-       data-owner-id="{{ ownerUser.id }}"
-       data-owner-user="{{ ownerUser.user }}"
-       data-is-owner="{{ ("true" if isOwner else "false") }}"
-       data-enable-upload="{{ ("true" if enable_userhall_image_upload else "false") }}"
-       data-i18n-hall-posts="{{ t("hall.posts") }}"></div>
+  </header>
 
-  <div id="hall-manager-grid" class="user-halls-grid">
-    {% include "user-hall-cards.html" %}
+  {% if uh_count %}
+  {#- not .tags-grid: f0ckm.js makes that an endless feed of the URL's user (their uploads) -#}
+  <div class="uh-grid">
+    {% for hall in hallsList %}
+    {%- set uh_link = uh_base ~ "/list/" ~ (hall.slug|encode_uri_component) -%}
+    <article class="tag-card uh-card" id="hall-{{ hall.slug }}">
+      <a class="tag-card-image uh-cover" href="{{ uh_link }}">
+        <img src="/user_list_image/{{ ownerUser.id }}/{{ hall.slug|encode_uri_component }}?m={{ (session.mode if session else 0) or 0 }}&v={{ hall.image_v }}" loading="lazy" alt="">
+        {% if hall.is_private %}<span class="uh-badge uh-badge-private"><i class="fa-solid fa-lock" aria-hidden="true"></i> {{ t("common.private") }}</span>{% endif %}
+      </a>
+      <div class="tag-card-content uh-card-content">
+        <a class="tag-name uh-name" href="{{ uh_link }}">{{ hall.name }}</a>
+        {% if hall.description %}<span class="tag-description">{{ hall.description }}</span>{% endif %}
+        <div class="uh-card-foot">
+          <span class="tag-count">{{ t("hall.posts", {"count": (hall.total_items or 0)}) }}</span>
+          {% if can_manage %}<a class="uh-edit-link" href="#uh-edit-{{ hall.slug }}" data-uh-open="uh-edit-{{ hall.slug }}"><i class="fa-solid fa-pen" aria-hidden="true"></i> {{ t("common.edit") }}</a>{% endif %}
+        </div>
+      </div>
+    </article>
+    {% endfor %}
   </div>
+  {% else %}
+  <div class="uh-empty">
+    <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+    <p>{{ (t("hall.no_halls_owner_plain") if can_manage else t("hall.no_halls_guest")) }}</p>
+  </div>
+  {% endif %}
 
-  {% if (not hallsList or not (hallsList|length)) %}
-  <p class="user-halls-empty">
-    {% if isOwner %}
-      {{ t("hall.no_halls_owner") }}
-    {% else %}
-      {{ t("hall.no_halls_guest") }}
-    {% endif %}
-  </p>
+  {% if can_manage %}
+  {% for hall in hallsList %}
+  {%- set uh_api = "/api/v2/me/lists/" ~ (hall.slug|encode_uri_component) -%}
+  <div class="uh-dialog" id="uh-edit-{{ hall.slug }}" role="dialog" aria-modal="true" aria-labelledby="uh-edit-{{ hall.slug }}-title">
+    <a href="#_" class="uh-dialog-backdrop" tabindex="-1" aria-hidden="true" data-uh-close></a>
+    <div class="uh-dialog-box">
+      <div class="uh-dialog-head">
+        <h3 id="uh-edit-{{ hall.slug }}-title">{{ t("hall.edit_title") }}</h3>
+        <a href="#_" class="uh-dialog-x" aria-label="{{ t("common.close") }}" title="{{ t("common.close") }}" data-uh-close>&times;</a>
+      </div>
+      <div class="uh-pic">
+        <img class="uh-pic-img" src="/user_list_image/{{ ownerUser.id }}/{{ hall.slug|encode_uri_component }}?m={{ (session.mode if session else 0) or 0 }}&v={{ hall.image_v }}" alt="">
+        {% if enable_userhall_image_upload %}
+        <div class="uh-pic-actions">
+          <form method="post" action="{{ uh_api }}/image{{ manage_qs }}" enctype="multipart/form-data" class="uh-pic-form" data-uh-form="picture">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ uh_back }}#uh-edit-{{ hall.slug }}">
+            <label class="uh-btn uh-file-label"><i class="fa-solid fa-image" aria-hidden="true"></i> {{ t("hall.choose_picture") }}<input type="file" name="file" class="uh-file" accept="image/gif,image/jpeg,image/png,image/webp" required></label>
+            <button type="submit" class="uh-btn uh-nojs-only">{{ t("hall.upload_picture") }}</button>
+          </form>
+          {% if hall.custom_image %}
+          <form method="post" action="{{ uh_api }}/image/delete{{ manage_qs }}" data-uh-form="picture-remove">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="back" value="{{ uh_back }}#uh-edit-{{ hall.slug }}">
+            <button type="submit" class="uh-btn uh-btn-ghost"><i class="fa-solid fa-xmark" aria-hidden="true"></i> {{ t("hall.remove_picture") }}</button>
+          </form>
+          {% endif %}
+          <p class="uh-hint">{{ t("hall.picture_hint") }}</p>
+        </div>
+        {% endif %}
+      </div>
+      <form method="post" action="{{ uh_api }}{{ manage_qs }}" class="uh-edit-form" data-uh-form="save">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ uh_back }}">
+        <label class="uh-label" for="uh-name-{{ hall.slug }}">{{ t("common.name") }}</label>
+        <input type="text" id="uh-name-{{ hall.slug }}" name="name" class="uh-input" value="{{ hall.name }}" maxlength="100" required>
+        <label class="uh-label" for="uh-desc-{{ hall.slug }}">{{ t("common.description") }}</label>
+        <textarea id="uh-desc-{{ hall.slug }}" name="description" class="uh-input uh-textarea" rows="3" maxlength="1000">{{ (hall.description or "") }}</textarea>
+        <fieldset class="uh-vis">
+          <legend class="uh-label">{{ t("hall.visibility") }}</legend>
+          <label class="uh-vis-opt"><input type="radio" name="is_private" value="0"{% if not hall.is_private %} checked{% endif %}> <i class="fa-solid fa-earth-europe" aria-hidden="true"></i> <span><b>{{ t("hall.public") }}</b> <small>{{ t("hall.public_hint") }}</small></span></label>
+          <label class="uh-vis-opt"><input type="radio" name="is_private" value="1"{% if hall.is_private %} checked{% endif %}> <i class="fa-solid fa-lock" aria-hidden="true"></i> <span><b>{{ t("common.private") }}</b> <small>{{ t("hall.private_hint") }}</small></span></label>
+        </fieldset>
+        <div class="uh-dialog-actions">
+          <a href="#uh-del-{{ hall.slug }}" class="uh-btn uh-btn-danger" data-uh-open="uh-del-{{ hall.slug }}"><i class="fa-solid fa-trash" aria-hidden="true"></i> {{ t("common.delete") }}</a>
+          <span class="uh-spacer"></span>
+          <a href="#_" class="uh-btn uh-btn-ghost" data-uh-close>{{ t("common.cancel") }}</a>
+          <button type="submit" class="uh-btn uh-btn-accent">{{ t("common.save") }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="uh-dialog uh-dialog-confirm" id="uh-del-{{ hall.slug }}" role="alertdialog" aria-modal="true" aria-labelledby="uh-del-{{ hall.slug }}-title">
+    <a href="#_" class="uh-dialog-backdrop" tabindex="-1" aria-hidden="true" data-uh-close></a>
+    <div class="uh-dialog-box">
+      <h3 id="uh-del-{{ hall.slug }}-title">{{ t("hall.delete_title", {"name": hall.name}) }}</h3>
+      <p class="uh-confirm-text">{{ t("hall.delete_text") }}</p>
+      <form method="post" action="{{ uh_api }}/delete{{ manage_qs }}" class="uh-dialog-actions" data-uh-form="delete">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="back" value="{{ uh_back }}">
+        <span class="uh-spacer"></span>
+        <a href="#uh-edit-{{ hall.slug }}" class="uh-btn uh-btn-ghost" data-uh-open="uh-edit-{{ hall.slug }}">{{ t("common.cancel") }}</a>
+        <button type="submit" class="uh-btn uh-btn-danger-solid"><i class="fa-solid fa-trash" aria-hidden="true"></i> {{ t("hall.delete_btn") }}</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
   {% endif %}
 </div>
 
@@ -38,6 +128,6 @@
   </div>
 </div>
 
-{% if (isOwner or (session and session.admin)) %}
+{% if can_manage %}
 <script src="/s/js/views/user-halls-partial.js?v={{ mtime("/public/s/js/views/user-halls-partial.js") }}"></script>
 {% endif %}

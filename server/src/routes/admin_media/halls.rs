@@ -3,7 +3,7 @@
 
 use super::{read_form, send};
 use crate::http::{Req, Res, Router, not_found_route};
-use crate::routes::halls::{cache_dir, custom_dir};
+use crate::routes::halls::custom_dir;
 use crate::session::Session;
 use crate::sql;
 use crate::state::AppState;
@@ -11,11 +11,11 @@ use axum::http::Method;
 use serde_json::{Value, json};
 
 pub fn register(r: &mut Router) {
-    r.pre(Method::POST, r"^\/api\/v2\/admin\/halls\/(?<slug>[^/]+)\/image$", None, image_upload);
-    r.pre(Method::DELETE, r"^\/api\/v2\/admin\/halls\/(?<slug>[^/]+)\/image$", None, image_delete);
-    r.pre(Method::POST, r"^\/api\/v2\/admin\/halls$", None, create);
-    r.pre(Method::DELETE, r"^\/api\/v2\/admin\/halls\/(?<slug>[^/]+)$", None, delete);
-    r.pre(Method::PATCH, r"^\/api\/v2\/admin\/halls\/(?<slug>[^/]+)$", None, update);
+    r.pre(Method::POST, r"^\/api\/v2\/admin\/lists\/(?<slug>[^/]+)\/image$", None, image_upload);
+    r.pre(Method::DELETE, r"^\/api\/v2\/admin\/lists\/(?<slug>[^/]+)\/image$", None, image_delete);
+    r.pre(Method::POST, r"^\/api\/v2\/admin\/lists$", None, create);
+    r.pre(Method::DELETE, r"^\/api\/v2\/admin\/lists\/(?<slug>[^/]+)$", None, delete);
+    r.pre(Method::PATCH, r"^\/api\/v2\/admin\/lists\/(?<slug>[^/]+)$", None, update);
 }
 
 fn msg(code: u16, m: &str) -> Res {
@@ -80,11 +80,7 @@ pub(crate) fn slugify_hall(s: &str) -> String {
 
 /// Remove the cached mosaics of a hall (`md5(slug + '_' + mode).webp` for modes 0–2).
 async fn clear_hall_cache(st: &AppState, slug: &str) {
-    let dir = cache_dir(st);
-    for mode in 0..=2 {
-        let h = crate::util::md5(&format!("{slug}_{mode}"));
-        let _ = tokio::fs::remove_file(dir.join(format!("{h}.webp"))).await;
-    }
+    crate::routes::halls::clear_site_list(st, slug).await;
 }
 
 const MAX_IMAGE: u64 = 10 * 1024 * 1024;
@@ -93,12 +89,12 @@ async fn image_upload(st: AppState, mut req: Req) -> Res {
     let _session = guarded!(st, req);
     let slug = slug_param(&req);
     if slug.is_empty() {
-        return msg(400, "Missing hall slug");
+        return msg(400, "Missing list slug");
     }
     if sql!("SELECT id FROM halls WHERE slug = ", &slug, " LIMIT 1").fetch_optional(&st.db).await?.is_none() {
-        return msg(404, "Hall not found");
+        return msg(404, "List not found");
     }
-    let Some(fslug) = file_slug(&slug).map(str::to_string) else { return msg(400, "Invalid hall slug") };
+    let Some(fslug) = file_slug(&slug).map(str::to_string) else { return msg(400, "Invalid list slug") };
     let cfg = st.cfg();
     let form = match read_form(&mut req, &cfg, MAX_IMAGE + 64 * 1024, "msg").await {
         Ok(f) => f,
@@ -138,10 +134,10 @@ async fn image_delete(st: AppState, req: Req) -> Res {
     let _session = guarded!(st, req);
     let slug = slug_param(&req);
     if slug.is_empty() {
-        return msg(400, "Missing hall slug");
+        return msg(400, "Missing list slug");
     }
     let Some(hall) = sql!("SELECT id, custom_image FROM halls WHERE slug = ", &slug, " LIMIT 1").fetch_optional(&st.db).await? else {
-        return msg(404, "Hall not found");
+        return msg(404, "List not found");
     };
     let dir = custom_dir(&st);
     if let Some(fs) = file_slug(&slug) {
@@ -166,7 +162,7 @@ async fn delete(st: AppState, req: Req) -> Res {
     let session = guarded!(st, req);
     let slug = slug_param(&req);
     if slug.is_empty() {
-        return msg(400, "Missing hall slug");
+        return msg(400, "Missing list slug");
     }
     if let Err(e) = sql!("DELETE FROM halls_assign WHERE hall_id = (SELECT id FROM halls WHERE slug = ", &slug, ")").execute(&st.db).await {
         tracing::warn!("[HALL] halls_assign cleanup failed: {e}");
@@ -181,7 +177,7 @@ async fn delete(st: AppState, req: Req) -> Res {
         crate::audit::log(&st, session.id, "delete_hall", "hall", slug.clone(), json!({ "slug": slug })).await;
     }
     tracing::info!("[HALL] Deleted hall: {slug}");
-    send(json!({ "success": true, "msg": "Hall deleted" }), 200)
+    send(json!({ "success": true, "msg": "List deleted" }), 200)
 }
 
 async fn update(st: AppState, mut req: Req) -> Res {
@@ -218,7 +214,7 @@ async fn update(st: AppState, mut req: Req) -> Res {
         }
         if new_slug != slug {
             if sql!("SELECT id FROM halls WHERE slug = ", &new_slug, " LIMIT 1").fetch_optional(&st.db).await?.is_some() {
-                return msg(409, "A hall with that slug already exists");
+                return msg(409, "A list with that slug already exists");
             }
             let dir = custom_dir(&st);
             if let Some(old) = file_slug(&slug) {
@@ -247,13 +243,13 @@ async fn update(st: AppState, mut req: Req) -> Res {
                 json!({ "old_slug": slug, "new_slug": new_slug, "name": name, "description": description }),
             )
             .await;
-            return send(json!({ "success": true, "msg": "Hall updated", "newSlug": new_slug }), 200);
+            return send(json!({ "success": true, "msg": "List updated", "newSlug": new_slug }), 200);
         }
     }
     apply(slug.clone()).await?;
     st.update_halls_cache().await;
     crate::audit::log(&st, session.id, "update_hall", "hall", slug.clone(), json!({ "name": name, "description": description })).await;
-    send(json!({ "success": true, "msg": "Hall updated" }), 200)
+    send(json!({ "success": true, "msg": "List updated" }), 200)
 }
 
 async fn create(st: AppState, mut req: Req) -> Res {
@@ -272,13 +268,13 @@ async fn create(st: AppState, mut req: Req) -> Res {
         return msg(400, "Could not derive a valid slug from the name");
     }
     if sql!("SELECT id FROM halls WHERE slug = ", &slug, " LIMIT 1").fetch_optional(&st.db).await?.is_some() {
-        return msg(409, "A hall with that slug already exists");
+        return msg(409, "A list with that slug already exists");
     }
     sql!("INSERT INTO halls (name, slug, description, rating) VALUES (", &name, ", ", &slug, ", '', ", &rating, ")").execute(&st.db).await?;
     st.update_halls_cache().await;
     crate::audit::log(&st, session.id, "create_hall", "hall", slug.clone(), json!({ "name": name, "slug": slug })).await;
     tracing::info!("[HALL] Created hall: {slug} - {name}");
-    send(json!({ "success": true, "msg": "Hall created", "slug": slug }), 200)
+    send(json!({ "success": true, "msg": "List created", "slug": slug }), 200)
 }
 
 #[cfg(test)]

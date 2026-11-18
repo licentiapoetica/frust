@@ -572,9 +572,9 @@ pub fn shared_views(views: &std::path::Path) -> Vec<String> {
 /// the visitor-facing full pages the routes render that aren't shared pages. A frontend without one
 /// would show f0ckm's layout there. Standalone pages with their own look (scroller, maintenance,
 /// forgot-password, the 4chan proxy, the meme creator) aren't in it. views/frontends/README.md
-pub const FRONTEND_OWN_PAGES: [&str; 18] = [
+pub const FRONTEND_OWN_PAGES: [&str; 19] = [
     "about", "comments_user", "error", "halls", "index", "item", "login", "notifications", "ranking", "register", "rules", "search",
-    "subscriptions", "tags", "tags_user", "terms", "upload", "user",
+    "subscriptions", "tags", "tags_user", "terms", "upload", "user", "user-halls",
 ];
 
 /// Checks every alternative frontend against the contract in views/frontends/README.md; returns
@@ -1489,6 +1489,45 @@ mod tests {
         let failed = render(&fe("item"), serde_json::json!({ "url": url("/7", serde_json::json!({})), "tmp": {}, "session": session, "item": it.clone(),
             "pagination": {}, "link": { "main": "/", "suffix": "" }, "can_manage_item": true, "can_extract_meta": true, "meta_error": "Extraction failed" }));
         assert!(failed.contains("<p class=\"fg-dim\">Extraction failed</p>"));
+        assert!(!failed.contains("href=\"#halls\""), "no hall lists: no halls dialog");
+
+        // halls: the item's "Save to a hall" dialog (a form per hall, the opposite of has_item; the
+        // site's halls for staff) and a user's halls page with its edit dialogs, all plain forms
+        let halls = render(&fe("item"), serde_json::json!({ "url": url("/7", serde_json::json!({})), "tmp": {}, "session": session, "item": it.clone(),
+            "pagination": {}, "link": { "main": "/", "suffix": "" }, "is_mod_or_admin": true,
+            "my_hall_choices": [{ "slug": "cats", "name": "Cats", "is_private": false, "has_item": true, "total_items": "3" },
+                                { "slug": "secret", "name": "Secret", "is_private": true, "has_item": false, "total_items": "0" }],
+            "hall_choices": [{ "slug": "best", "name": "Best", "has_item": false }] }));
+        dump("item-halls", &halls);
+        assert!(halls.contains("<a class=\"fg-chip active\" href=\"#halls\" title=\"Add to one of your lists\">&#10003; In 1 list</a>"));
+        assert!(halls.contains("<div id=\"halls\" class=\"fg-modal\">") && halls.contains("data-fg-live=\"halls-pick\""));
+        assert!(halls.contains("<input type=\"hidden\" name=\"hall\" value=\"cats\">\n          <input type=\"hidden\" name=\"action\" value=\"remove\">"));
+        assert!(halls.contains("<input type=\"hidden\" name=\"hall\" value=\"secret\">\n          <input type=\"hidden\" name=\"action\" value=\"add\">"));
+        assert!(halls.contains("aria-pressed=\"true\" title=\"Remove from Cats\"") && halls.contains("<span class=\"fg-hall-private\">Private</span>"));
+        assert!(halls.contains("<input type=\"text\" name=\"new_name\""));
+        assert!(halls.contains("<form method=\"post\" action=\"/mod/lists/add\" class=\"fg-ajax\" data-fg-refresh=\"halls-pick kp\""));
+        assert!(halls.contains("<input type=\"hidden\" name=\"back\" value=\"/7#halls\">"));
+        assert!(halls.contains("<a href=\"/user/bob/lists\" class=\"fg-btn-text\">Manage lists</a>"));
+        let al_halls = serde_json::json!({ "user": "al", "id": 2 });
+        let uh = render(&fe("user-halls"), serde_json::json!({ "url": url("/user/al/lists", serde_json::json!({})), "session": session, "user": al_halls, "ownerUser": al_halls,
+            "isOwner": false, "can_manage": true, "manage_qs": "?user_id=2", "enable_userhall_image_upload": true, "userhalls_enabled": true,
+            "hallsList": [{ "id": 1, "slug": "mine", "image_v": "5", "name": "Mine", "description": "my hall", "is_private": true, "custom_image": true, "total_items": "3" }] }));
+        dump("user-halls-manage", &uh);
+        assert!(uh.contains("<h1 class=\"fg-kp-title\">Lists by <a href=\"/user/al\">al</a></h1>"));
+        assert!(uh.contains("<a class=\"fg-card\" href=\"/user/al/list/mine\">") && uh.contains("src=\"/user_list_image/2/mine?m=0&v=5\""));
+        assert!(uh.contains("<form method=\"post\" action=\"/api/v2/me/lists?user_id=2\" class=\"fg-modal-box fg-ajax\""));
+        assert!(uh.contains("<div id=\"hall-mine\" class=\"fg-modal\">") && uh.contains("<form method=\"post\" action=\"/api/v2/me/lists/mine?user_id=2\" class=\"fg-hall-form fg-ajax\""));
+        assert!(uh.contains("name=\"is_private\" value=\"1\" checked>") && uh.contains("name=\"is_private\" value=\"0\">"));
+        assert!(uh.contains("action=\"/api/v2/me/lists/mine/image?user_id=2\" enctype=\"multipart/form-data\""));
+        assert!(uh.contains("action=\"/api/v2/me/lists/mine/image/delete?user_id=2\""));
+        assert!(uh.contains("<div id=\"hall-mine-delete\" class=\"fg-modal\">") && uh.contains("action=\"/api/v2/me/lists/mine/delete?user_id=2\""));
+        for live in ["halls", "hall-dialogs", "hall-mine"] {
+            assert_eq!(uh.matches(&format!("data-fg-live=\"{live}\"")).count(), 1, "{live}");
+        }
+        let guest = render(&fe("user-halls"), serde_json::json!({ "url": url("/user/al/lists", serde_json::json!({})), "user": al_halls, "ownerUser": al_halls,
+            "isOwner": false, "can_manage": false, "manage_qs": "", "hallsList": [] }));
+        dump("user-halls-guest", &guest);
+        assert!(guest.contains("al has no public lists.") && !guest.contains("#new-hall") && !guest.contains("/api/v2/me/lists"));
 
         // profile, error, sign-in
         let user = render(&fe("user"), serde_json::json!({ "url": url("/user/al", serde_json::json!({})), "session": session,
@@ -1515,6 +1554,11 @@ mod tests {
             ("tags", serde_json::json!({ "toptags": [tag], "session": session })),
             ("tags_user", serde_json::json!({ "toptags": [tag], "tagger": "al", "user": al, "pagination": pag, "link": { "main": "/user/al/tags", "path": "?page=" } })),
             ("halls", serde_json::json!({ "hallsList": [{ "slug": "best", "name": "Best", "rating": "nsfw", "total_items": 4, "description": "the best" }] })),
+            // a user's halls, managed by their owner (forms for each hall, the new-hall form)
+            ("user-halls", serde_json::json!({ "session": session, "user": al, "ownerUser": al, "isOwner": true, "can_manage": true, "manage_qs": "",
+                "enable_userhall_image_upload": true, "userhalls_enabled": true,
+                "hallsList": [{ "id": 1, "slug": "mine", "image_v": "5", "name": "Mine", "description": "my hall", "is_private": true, "custom_image": true, "total_items": 3 },
+                              { "id": 2, "slug": "empty", "name": "Empty", "description": null, "is_private": false, "custom_image": false, "total_items": 0 }] })),
             ("subscriptions", serde_json::json!({ "session": session, "items": [{ "id": 7, "user": "al", "thumb": "/t/7.webp" }], "totalCount": 1,
                 "pagination": { "start": 1, "end": 1, "page": 1 }, "link": { "main": "/subscriptions", "path": "?page=" } })),
             ("notifications", serde_json::json!({ "session": session, "activeTab": "user", "tabUnread": { "user": 1 },
@@ -1550,6 +1594,81 @@ mod tests {
     /// f0ckv2's media filter goes through /mime (the `mime` cookie wins over a /video path, so plain
     /// /video links showed mixed items while f0ckm's picker had set one): back to the listing, an
     /// item page back to itself; only the types the site offers.
+    /// f0ckv2's halls: a user's halls page (cards; for the owner / an admin the forms to create, edit,
+    /// picture and delete, as :target boxes) and the item's halls box (add / remove per hall, a new
+    /// hall, the site halls for staff). F0CKM_DUMP_F0CKV2_HALLS=<dir> writes them out.
+    #[test]
+    fn f0ckv2_halls_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let al = serde_json::json!({ "user": "al", "id": 2 });
+        let base = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "frontend": "f0ckv2", "enable_comments": true,
+            "themes_json": "[]", "custom_brand_images_json": "[]", "allowed_comment_images_json": "[]", "nsfl_tag_id": 3, "anon_permissions_json": "{}", "captcha_scopes": [],
+            "userhalls_enabled": true, "halls_enabled": true, "enable_userhall_image_upload": true, "modes": ["sfw", "nsfw", "untagged", "all"],
+            "url": { "pathname": "/user/al/lists", "search": "", "qs": {} }, "user": al, "ownerUser": al,
+            "hallsList": [{ "id": 1, "slug": "mine", "image_v": "5", "name": "Mine", "description": "my hall", "is_private": true, "custom_image": true, "total_items": "3" },
+                          { "id": 2, "slug": "empty", "name": "Empty", "description": null, "is_private": false, "custom_image": false, "total_items": 0 }] });
+        let render = |view: &str, data: serde_json::Value| {
+            let mut ctx = base.clone();
+            ctx.as_object_mut().unwrap().extend(data.as_object().unwrap().clone());
+            env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{view}: {e:#}"))
+        };
+        let dump = |name: &str, html: &str| {
+            if let Ok(dir) = std::env::var("F0CKM_DUMP_F0CKV2_HALLS") {
+                std::fs::write(PathBuf::from(dir).join(format!("{name}.html")), html).unwrap();
+            }
+        };
+        let page = "frontends/f0ckv2/user-halls.html";
+        let admin = render(page, serde_json::json!({ "session": { "user": "bob", "id": 1, "admin": true, "mode": 1, "ruffle_volume": 0.5 }, "isOwner": false, "can_manage": true, "manage_qs": "?user_id=2" }));
+        dump("manage", &admin);
+        assert!(admin.contains("<form method=\"post\" action=\"/api/v2/me/lists?user_id=2\" class=\"v2-form v2-hall-form v2-uhall-create\""));
+        assert!(admin.contains("<form method=\"post\" action=\"/api/v2/me/lists/mine?user_id=2\" class=\"v2-form v2-hall-form v2-uhall-edit\""));
+        assert!(admin.contains("action=\"/api/v2/me/lists/mine/image?user_id=2\" enctype=\"multipart/form-data\""));
+        assert!(admin.contains("action=\"/api/v2/me/lists/mine/image/delete?user_id=2\""), "remove only with a custom picture");
+        assert!(!admin.contains("/api/v2/me/lists/empty/image/delete"));
+        assert!(admin.contains("action=\"/api/v2/me/lists/empty/delete?user_id=2\""));
+        assert!(admin.contains("<input type=\"radio\" name=\"is_private\" value=\"1\" checked>"));
+        assert!(admin.contains("<input type=\"radio\" name=\"is_private\" value=\"0\" checked>"));
+        assert!(admin.contains("<input type=\"hidden\" name=\"back\" value=\"/user/al/lists\">"));
+        assert!(admin.contains("href=\"#hall-mine-delete\"") && admin.contains("<div id=\"hall-mine-delete\" class=\"v2-modal\">"));
+        assert!(admin.contains("--thumb: url('/user_list_image/2/mine?m=1&v=5')"));
+        assert!(admin.contains("<span class=\"badge badge-light v2-uhall-lock\">private</span>"));
+        assert!(admin.contains("<span class=\"badge badge-dark\">3 f0cks</span>"));
+        assert!(admin.contains("/s/fe/f0ckv2/css/f0ckv2.css") && !admin.contains("/s/css/f0ckm.css"));
+        assert!(!admin.contains("border-radius") && !admin.contains("<script>"));
+        let guest = render(page, serde_json::json!({ "isOwner": false, "can_manage": false, "manage_qs": "" }));
+        dump("guest", &guest);
+        assert!(guest.contains("<a class=\"v2-uhall-name\" href=\"/user/al/list/empty\">Empty</a>"));
+        assert!(!guest.contains("v2-hall-form") && !guest.contains("v2-modal\""));
+
+        // the item's halls box
+        let item = serde_json::json!({ "id": 7, "username": "al", "mime": "image/png", "dest": "/b/7.png", "tags": [], "favorites": [],
+            "timestamp": { "timeago": "now", "timefull": "x" }, "src": { "long": "", "short": null },
+            "primaryHall": { "slug": "best", "name": "Best" }, "otherHalls": [] });
+        let item_ctx = serde_json::json!({ "item": item, "session": { "user": "bob", "id": 1, "ruffle_volume": 0.5 }, "url": { "pathname": "/7", "search": "", "qs": {} },
+            "pagination": {}, "link": { "main": "/", "suffix": "" }, "is_mod_or_admin": true,
+            "my_hall_choices": [{ "slug": "mine", "image_v": "5", "name": "Mine", "is_private": true, "total_items": "3", "has_item": true },
+                                { "slug": "other", "name": "Other", "is_private": false, "total_items": 0, "has_item": false }],
+            "hall_choices": [{ "slug": "best", "name": "Best", "has_item": true }, { "slug": "meh", "name": "Meh", "has_item": false }] });
+        let html = render("frontends/f0ckv2/item.html", item_ctx.clone());
+        dump("item", &html);
+        assert!(html.contains("<a href=\"#halls\" class=\"v2-iconlink\" id=\"a_halls\""));
+        assert!(html.contains("<div id=\"halls\" class=\"v2-modal\">"));
+        assert!(html.contains("<input type=\"hidden\" name=\"back\" value=\"/7#halls\">"));
+        assert!(html.contains("<input type=\"hidden\" name=\"hall\" value=\"mine\">\n            <input type=\"hidden\" name=\"action\" value=\"remove\">"));
+        assert!(html.contains("<input type=\"hidden\" name=\"hall\" value=\"other\">\n            <input type=\"hidden\" name=\"action\" value=\"add\">"));
+        assert!(html.contains("name=\"new_name\""));
+        assert!(html.contains("action=\"/mod/lists/remove\"") && html.contains("action=\"/mod/lists/add\""));
+        assert!(html.contains("<a class=\"badge badge-light\" href=\"/list/best\">list: Best</a>"));
+        assert!(html.contains("data-v2-live=\"extra\"") && html.contains("data-v2-live=\"hallbox\""));
+        // the Onara viewer's item box has it too
+        let onara = render("frontends/f0ckv2/ajax-item.html", item_ctx);
+        assert!(onara.contains("<div id=\"halls\" class=\"v2-modal\">"));
+        // a guest: no box
+        let guest_item = render("frontends/f0ckv2/item.html", serde_json::json!({ "item": item, "url": { "pathname": "/7", "search": "", "qs": {} }, "pagination": {}, "link": { "main": "/", "suffix": "" } }));
+        assert!(!guest_item.contains("id=\"halls\"") && !guest_item.contains("a_halls"));
+    }
+
     #[test]
     fn f0ckv2_filter_sets_the_mime_cookie() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
@@ -1708,8 +1827,20 @@ mod tests {
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it.clone(),
             "pagination": { "prev": 6, "next": 8, "cheat": [4, 5, 6, 7, 8, 9] }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_manage_item": true,
             "can_extract_meta": true, "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice",
-            "recommendations": [rec.clone()] }));
+            "recommendations": [rec.clone()],
+            "my_hall_choices": [{ "slug": "mine", "image_v": "5", "name": "Mine", "is_private": true, "has_item": true, "total_items": 2 }, { "slug": "other", "name": "Other", "is_private": false, "has_item": false, "total_items": 0 }],
+            "hall_choices": [{ "slug": "best", "name": "Best", "has_item": false }] }));
         dump("item", &page);
+        // Save to a playlist (#save): a row per playlist with the explicit action, a new playlist,
+        // the site's playlists for staff; the pill says it's saved somewhere
+        assert!(page.contains("<a class=\"fy-pill fy-pill-on\" href=\"#save\" title=\"Save to a playlist\">") && page.contains("<span>Saved</span>"));
+        assert!(page.contains("<div id=\"save\" class=\"fy-modal\">") && page.contains("<div class=\"fy-save\" data-fy-live=\"save\">"));
+        assert!(page.contains("<input type=\"hidden\" name=\"hall\" value=\"mine\">\n            <input type=\"hidden\" name=\"action\" value=\"remove\">"));
+        assert!(page.contains("<input type=\"hidden\" name=\"hall\" value=\"other\">\n            <input type=\"hidden\" name=\"action\" value=\"add\">"));
+        assert!(page.contains("<button type=\"submit\" class=\"fy-save-row is-on\" role=\"checkbox\" aria-checked=\"true\">"));
+        assert!(page.contains("name=\"new_name\"") && page.contains("<input type=\"hidden\" name=\"back\" value=\"/tag/cat/7#save\">"));
+        assert!(page.contains("action=\"/mod/lists/add\"") && page.contains("<span>Site playlists</span>"));
+        assert!(page.contains("<dt>Playlists</dt>") || !page.contains("<dt>Halls</dt>"));
         // mods edit comments in place (as in f0ckm): Edit opens the form in the text's place (#edit-c3,
         // :target without JavaScript), the text escaped in the field, with the emoji picker
         assert!(page.contains("<form method=\"post\" action=\"/api/comments/3/edit\" class=\"fy-comment-edit fy-ajax\" id=\"edit-c3\" data-fy-refresh=\"comments\" data-fy-edit>"));
@@ -1860,6 +1991,11 @@ mod tests {
             ("tags", serde_json::json!({ "toptags": [tag], "session": session })),
             ("tags_user", serde_json::json!({ "toptags": [tag], "tagger": "al", "user": al, "pagination": pag, "link": { "main": "/user/al/tags", "path": "?page=" } })),
             ("halls", serde_json::json!({ "hallsList": [{ "slug": "best", "name": "Best", "rating": "nsfw", "total_items": 4, "description": "the best" }] })),
+            // a user's halls, managed by their owner (forms for each hall, the new-hall form)
+            ("user-halls", serde_json::json!({ "session": session, "user": al, "ownerUser": al, "isOwner": true, "can_manage": true, "manage_qs": "",
+                "enable_userhall_image_upload": true, "userhalls_enabled": true,
+                "hallsList": [{ "id": 1, "slug": "mine", "image_v": "5", "name": "Mine", "description": "my hall", "is_private": true, "custom_image": true, "total_items": 3 },
+                              { "id": 2, "slug": "empty", "name": "Empty", "description": null, "is_private": false, "custom_image": false, "total_items": 0 }] })),
             ("subscriptions", serde_json::json!({ "session": session, "items": [{ "id": 7, "user": "al", "thumb": "/t/7.webp" }], "totalCount": 1,
                 "pagination": { "start": 1, "end": 1, "page": 1 }, "link": { "main": "/subscriptions", "path": "?page=" } })),
             ("notifications", serde_json::json!({ "session": session, "activeTab": "user", "tabUnread": { "user": 1 },
@@ -1875,6 +2011,21 @@ mod tests {
             data["url"] = url(&format!("/{view}"), serde_json::json!({}));
             let html = render(&fe(view), data);
             dump(view, &html);
+            // the Playlists tab: playlist cards, and for the owner the forms (new, edit, cover, delete)
+            if view == "user-halls" {
+                assert!(html.contains("<nav class=\"fy-tabs\" aria-label=\"Channel\">") && html.contains("aria-current=\"page\">Playlists</a>"));
+                assert!(html.contains("<div class=\"fy-playlists\" data-fy-live=\"playlists\">"));
+                assert!(html.contains("src=\"/user_list_image/2/mine?m=0&v=5\"") && html.contains("href=\"/user/al/list/mine\""));
+                assert!(html.contains("action=\"/api/v2/me/lists\" class=\"fy-modal-box fy-edit-form fy-ajax\""));
+                assert!(html.contains("<form method=\"post\" action=\"/api/v2/me/lists/mine\" class=\"fy-edit-form fy-ajax\""));
+                assert!(html.contains("<input type=\"radio\" name=\"is_private\" value=\"1\" checked>"));
+                assert!(html.contains("action=\"/api/v2/me/lists/mine/image\" enctype=\"multipart/form-data\" class=\"fy-cover-form\""));
+                assert!(html.contains("action=\"/api/v2/me/lists/mine/image/delete\"") && !html.contains("/api/v2/me/lists/empty/image/delete"));
+                assert!(html.contains("<div id=\"pl-del-mine\" class=\"fy-modal\">") && html.contains("action=\"/api/v2/me/lists/mine/delete\""));
+                // (the page data's i18n strings are f0ckm's: only the visible page counts)
+                let main = &html[html.find("<main").unwrap()..html.find("</main>").unwrap()];
+                assert!(!main.contains("Hall"), "f0ckyou calls them playlists");
+            }
             // the popover of the bell takes its rows from this page: each with its id (read on click)
             if view == "notifications" {
                 assert!(html.contains("<li class=\"fy-notif fy-unread\" data-id=\"9\">") && html.contains("<ol class=\"fy-list fy-notifs\" data-fy-live=\"notifs\">"));
@@ -1883,6 +2034,10 @@ mod tests {
             assert!(!html.contains("/s/css/f0ckm.css"), "{view}");
             assert!(html.trim_end().ends_with("</html>"), "{view}");
         }
+        // a visitor's look at someone's Playlists tab without any: no forms, the guest's empty state
+        let none = render(&fe("user-halls"), serde_json::json!({ "url": url("/user/al/lists", serde_json::json!({})), "user": al, "ownerUser": al,
+            "isOwner": false, "can_manage": false, "manage_qs": "", "hallsList": [], "userhalls_enabled": true }));
+        assert!(none.contains("This channel has no public playlists.") && !none.contains("/api/v2/me/lists"));
         for page in FRONTEND_OWN_PAGES {
             assert!(root.join("views/frontends/f0ckyou").join(format!("{page}.html")).is_file(), "{page}");
         }
@@ -1930,6 +2085,59 @@ mod tests {
         let ctx = serde_json::json!({ "user": { "user": "al" }, "static_comments": [], "comments_page": 1, "has_more": false });
         let empty = env.get_template("comments_user-partial.html").unwrap().render(to_jvalue(&ctx)).unwrap();
         assert!(empty.contains("user-comments-empty") && !empty.contains("user-comments-pager"), "{empty}");
+    }
+
+    /// f0ckm's halls: a user's halls page with the forms that manage them (works without JavaScript;
+    /// user-halls-partial.js sends them with fetch), and the item's halls dialog.
+    /// F0CKM_DUMP_F0CKM_HALLS=<dir> writes the pages out.
+    #[test]
+    fn f0ckm_halls_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let render = |view: &str, name: &str, ctx: serde_json::Value| {
+            let html = env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{view}: {e:#}"));
+            assert!(!html.contains("border-radius") && !html.contains(" style=\""), "{view}");
+            if let Ok(dir) = std::env::var("F0CKM_DUMP_F0CKM_HALLS") {
+                std::fs::write(PathBuf::from(dir).join(format!("{name}.html")), &html).unwrap();
+            }
+            html
+        };
+        let al = serde_json::json!({ "user": "Al", "id": 2 });
+        let halls = serde_json::json!([{ "id": 1, "slug": "mine", "image_v": "5", "name": "Mine", "description": "my hall", "is_private": true, "custom_image": true, "total_items": 3 },
+            { "id": 2, "slug": "empty", "name": "Empty", "description": null, "is_private": false, "custom_image": false, "total_items": 0 }]);
+        let ctx = |manage: bool, qs: &str| {
+            serde_json::json!({ "csrf_token": "tok", "user": al, "ownerUser": al, "isOwner": manage && qs.is_empty(), "can_manage": manage, "manage_qs": qs,
+                "enable_userhall_image_upload": true, "hallsList": halls, "url": { "pathname": "/user/al/lists", "search": "" } })
+        };
+        // an admin managing someone else's halls: every action names the user
+        let page = render("user-halls-partial.html", "user-halls-admin", ctx(true, "?user_id=2"));
+        assert!(page.contains("<form method=\"post\" action=\"/api/v2/me/lists?user_id=2\" class=\"uh-create\" data-uh-form=\"create\">"), "{page}");
+        assert!(page.contains("action=\"/api/v2/me/lists/mine?user_id=2\" class=\"uh-edit-form\""));
+        assert!(page.contains("action=\"/api/v2/me/lists/mine/delete?user_id=2\""));
+        assert!(page.contains("action=\"/api/v2/me/lists/mine/image?user_id=2\" enctype=\"multipart/form-data\""));
+        assert!(page.contains("action=\"/api/v2/me/lists/mine/image/delete?user_id=2\""));
+        assert!(!page.contains("/api/v2/me/lists/empty/image/delete"), "no custom picture, nothing to remove");
+        assert!(page.contains("<input type=\"radio\" name=\"is_private\" value=\"1\" checked>"));
+        assert!(page.contains("<input type=\"hidden\" name=\"back\" value=\"/user/al/lists\">"));
+        assert!(page.contains("<div class=\"uh-dialog\" id=\"uh-edit-mine\"") && page.contains("id=\"uh-del-mine\""));
+        assert!(page.contains("href=\"/user/al/list/mine\"") && page.contains("src=\"/user_list_image/2/mine?m=0&v=5\"") && !page.contains("tags-grid") && !page.contains("tag-card-image-title"));
+        assert!(page.contains("/s/js/views/user-halls-partial.js"));
+        // a guest: the cards only
+        let guest = render("user-halls-partial.html", "user-halls-guest", ctx(false, ""));
+        assert!(!guest.contains("<form") && !guest.contains("uh-dialog") && !guest.contains("user-halls-partial.js"), "{guest}");
+        assert!(guest.contains("<span class=\"tag-count\">"));
+
+        // the item's halls dialog: one form per hall, the opposite of has_item
+        let dialog = render("snippets/halls-dialog.html", "halls-dialog", serde_json::json!({ "csrf_token": "tok", "item": { "id": 7 }, "session": { "user": "Al" },
+            "url": { "pathname": "/7", "search": "" },
+            "my_hall_choices": [{ "slug": "mine", "image_v": "5", "name": "Mine", "is_private": true, "has_item": true, "total_items": 3 }, { "slug": "other", "name": "Other", "is_private": false, "has_item": false, "total_items": 0 }],
+            "hall_choices": [{ "slug": "best", "name": "Best", "has_item": false }] }));
+        assert!(dialog.contains("<input type=\"hidden\" name=\"hall\" value=\"mine\">\n          <input type=\"hidden\" name=\"action\" value=\"remove\">"), "{dialog}");
+        assert!(dialog.contains("<input type=\"hidden\" name=\"hall\" value=\"other\">\n          <input type=\"hidden\" name=\"action\" value=\"add\">"));
+        assert!(dialog.contains("<input type=\"hidden\" name=\"back\" value=\"/7#halls-modal\">"));
+        assert!(dialog.contains("name=\"new_name\""));
+        assert!(dialog.contains("<form method=\"post\" action=\"/mod/lists/add\" class=\"hd-form\" data-hall-kind=\"site\">"));
+        assert!(dialog.contains("href=\"/user/al/lists\""));
     }
 
     /// w0bm's notification rows name who commented (anonymous for anon accounts and anonymized viewers).
@@ -2498,6 +2706,49 @@ mod tests {
         assert!(!head("").contains("user-font-css"));
         assert_eq!(crate::fonts::user_css_url("My Font-Bold.woff2", None), "/user-font.css?f=My%20Font-Bold.woff2");
         assert_eq!(crate::fonts::user_css_url("X.ttf", Some(300)), "/user-font.css?f=X.ttf&w=300");
+    }
+
+    /// w0bm's user halls page: the tiles, and for whoever manages them the plain forms (new hall,
+    /// edit, picture, delete behind a confirmation dialog) with `back` and the admin's `manage_qs`;
+    /// guests get the tiles only. F0CKM_DUMP_W0BM_HALLS=<dir> writes the pages out.
+    #[test]
+    fn w0bm_user_halls_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let al = serde_json::json!({ "user": "al", "id": 2 });
+        let halls = serde_json::json!([
+            { "id": 1, "slug": "mine", "image_v": "5", "name": "Mine", "description": "my hall", "is_private": true, "custom_image": true, "total_items": 3 },
+            { "id": 2, "slug": "empty", "name": "Empty", "description": null, "is_private": false, "custom_image": false, "total_items": 1 }]);
+        let render = |data: serde_json::Value| {
+            let mut ctx = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "frontend": "w0bm", "mode": 1, "userhalls_enabled": true,
+                "enable_userhall_image_upload": true, "user": al, "ownerUser": al, "hallsList": halls,
+                "url": { "pathname": "/user/al/lists", "search": "", "qs": {} } });
+            ctx.as_object_mut().unwrap().extend(data.as_object().unwrap().clone());
+            env.get_template("frontends/w0bm/user-halls.html").unwrap().render(to_jvalue(&ctx)).unwrap()
+        };
+        let dump = |name: &str, html: &str| {
+            if let Ok(dir) = std::env::var("F0CKM_DUMP_W0BM_HALLS") {
+                std::fs::write(PathBuf::from(dir).join(format!("{name}.html")), html).unwrap();
+            }
+        };
+        let admin = render(serde_json::json!({ "session": { "user": "bob", "id": 1, "admin": true }, "isOwner": false, "can_manage": true, "manage_qs": "?user_id=2" }));
+        dump("manage", &admin);
+        assert!(admin.contains("<form method=\"post\" action=\"/api/v2/me/lists?user_id=2\" class=\"w0bm-uh-form w0bm-uh-new\" data-uh=\"create\">"));
+        assert!(admin.contains("action=\"/api/v2/me/lists/mine?user_id=2\" class=\"w0bm-uh-form\" data-uh=\"save\""));
+        assert!(admin.contains("action=\"/api/v2/me/lists/mine/delete?user_id=2\""));
+        assert!(admin.contains("action=\"/api/v2/me/lists/mine/image?user_id=2\" enctype=\"multipart/form-data\""));
+        assert!(admin.contains("action=\"/api/v2/me/lists/mine/image/delete?user_id=2\""), "remove only with a custom picture");
+        assert!(!admin.contains("/api/v2/me/lists/empty/image/delete"));
+        assert!(admin.contains("<input type=\"radio\" name=\"is_private\" value=\"1\" checked>"));
+        assert!(admin.contains("<input type=\"hidden\" name=\"back\" value=\"/user/al/lists\">"));
+        assert!(admin.contains("href=\"#w0bm-uh-mine-delete\"") && admin.contains("id=\"w0bm-uh-mine-delete\""));
+        assert!(admin.contains("src=\"/user_list_image/2/mine?m=1&v=5\""));
+        assert!(admin.contains("<a href=\"/user/al/list/mine\" class=\"btn btn-primary\" role=\"button\">View</a>"));
+        assert!(!admin.contains("border-radius") && !admin.contains("<script>"));
+        let guest = render(serde_json::json!({ "isOwner": false, "can_manage": false, "manage_qs": "" }));
+        dump("guest", &guest);
+        assert!(guest.contains("<a href=\"/user/al/list/empty\" class=\"btn btn-primary\" role=\"button\">View</a>"));
+        assert!(!guest.contains("w0bm-uh-form") && !guest.contains("-edit\""));
     }
 
     #[test]

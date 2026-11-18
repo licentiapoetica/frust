@@ -42,10 +42,10 @@ pub fn register(r: &mut Router) {
     r.post_g(r"^\/mod\/motd\/?$", ModAuth, motd_save);
     r.post_g(r"^\/mod\/pin\/?", ModAuth, pin);
     r.post_g(r"^\/mod\/unpin\/?", ModAuth, unpin);
-    r.post_g(r"^\/mod\/halls\/add\/?$", ModAuth, halls_add);
-    r.post_g(r"^\/mod\/halls\/remove\/?$", ModAuth, halls_remove);
-    r.post_g(r"^\/mod\/halls\/update\/?$", ModAuth, halls_update);
-    r.get_g(r"^\/mod\/halls\/?$", ModAuth, halls_page);
+    r.post_g(r"^\/mod\/lists\/add\/?$", ModAuth, halls_add);
+    r.post_g(r"^\/mod\/lists\/remove\/?$", ModAuth, halls_remove);
+    r.post_g(r"^\/mod\/lists\/update\/?$", ModAuth, halls_update);
+    r.get_g(r"^\/mod\/lists\/?$", ModAuth, halls_page);
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -1113,6 +1113,7 @@ async fn halls_add(st: AppState, mut req: Req) -> Res {
     let Some(id) = to_id(body.get("id")) else { return jr(200, json!({ "success": false, "msg": "Invalid item id" })) };
     let r = crate::social::halls::add_item_to_hall(&st, id as i64, &hall, Some(sid(&req)), description.as_deref()).await;
     if crate::config::truthy(&r["success"]) {
+        crate::routes::halls::clear_site_list(&st, &hall).await;
         audit_log(&st, sid(&req), "add_to_hall", "item", &id.to_string(), Some(hall_details(&hall, description.as_deref()))).await;
     }
     jr(200, hall_result(&r))
@@ -1127,6 +1128,7 @@ async fn halls_remove(st: AppState, mut req: Req) -> Res {
     let Some(id) = to_id(body.get("id")) else { return jr(200, json!({ "success": false, "msg": "Invalid item id" })) };
     let r = crate::social::halls::remove_item_from_hall(&st, id as i64, &hall).await;
     if crate::config::truthy(&r["success"]) {
+        crate::routes::halls::clear_site_list(&st, &hall).await;
         audit_log(&st, sid(&req), "remove_from_hall", "item", &id.to_string(), Some(json!({ "hall": hall }))).await;
     }
     jr(200, hall_result(&r))
@@ -1137,7 +1139,7 @@ async fn halls_update(st: AppState, mut req: Req) -> Res {
     let hall = js_str(body.get("hall")).unwrap_or_default();
     let description = js_str(body.get("description"));
     if hall.is_empty() {
-        return jr(200, json!({ "success": false, "msg": "Missing hall slug" }));
+        return jr(200, json!({ "success": false, "msg": "Missing list slug" }));
     }
     let r = crate::social::halls::update_hall_metadata(&st, &hall, description.as_deref()).await;
     if crate::config::truthy(&r["success"]) {

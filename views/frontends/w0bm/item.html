@@ -72,7 +72,7 @@
                 {% endif %}
                 <button title="Toggle Background" class="hidden-xs bg-toggle w0bm-js-only" id="togglebg"><i class="fa fa-adjust w0bm-yellow"></i></button>
                 {% if ((hall_choices is defined) or (my_hall_choices is defined)) %}
-                <a class="w0bm-iconbtn" id="w0bm-hallbtn" href="#w0bm-hallmodal" data-toggle="modal" data-target="#w0bm-hallmodal" title="Add to hall" aria-label="Add to hall"><i class="fa fa-plus"></i></a>
+                <a class="w0bm-iconbtn" id="w0bm-hallbtn" href="#w0bm-hallmodal" data-toggle="modal" data-target="#w0bm-hallmodal" title="Add to list" aria-label="Add to list"><i class="fa fa-plus"></i></a>
                 {% endif %}
                 <button class="copylink w0bm-js-only" data-clipboard-text="https://{{ domain }}{{ (url.pathname if (url and url.pathname) else ("/" ~ iid)) }}" title="Copy URL!"><i class="fa fa-link"></i></button>
                 <a title="Report" id="webm_report" class="webm-report w0bm-iconbtn" href="#webmreportmodal" data-toggle="modal" data-target="#webmreportmodal"><i class="fa fa-warning fa-md"></i></a>

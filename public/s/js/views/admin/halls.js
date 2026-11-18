@@ -43,7 +43,7 @@
       var newSlug = slugInput.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
       if (!newSlug) { setStatus("✗ " + (i18n.hall_slug_empty_error || 'Slug cannot be empty'), '#f55'); return; }
       try {
-        var r = await fetch('/api/v2/admin/halls/' + encodeURIComponent(slug), {
+        var r = await fetch('/api/v2/admin/lists/' + encodeURIComponent(slug), {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' },
           body: JSON.stringify({ name: nameInput.value, slug: newSlug, description: descInput.value, rating: ratingInput.value })
@@ -55,8 +55,8 @@
             slug = newSlug;                          // update closure variable — all future fetches use new slug
             card.dataset.slug = newSlug;
             card.id = 'hall-card-' + newSlug;
-            imgEl.src = '/hall_image/' + newSlug + '?v=' + Date.now();
-            if (viewLink) viewLink.href = '/h/' + newSlug;
+            imgEl.src = '/list_image/' + newSlug + '?v=' + Date.now();
+            if (viewLink) viewLink.href = '/list/' + newSlug;
             slugInput.value = newSlug;
           }
           setStatus("✓ " + (i18n.hall_saved || 'Saved'), 'var(--accent)');
@@ -74,14 +74,14 @@
       var fd = new FormData();
       fd.append('file', file);
       try {
-        var r = await fetch('/api/v2/admin/halls/' + encodeURIComponent(slug) + '/image', {
+        var r = await fetch('/api/v2/admin/lists/' + encodeURIComponent(slug) + '/image', {
           method: 'POST',
           headers: { 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' },
           body: fd
         });
         var d = await r.json();
         if (d.success) {
-          imgEl.src = '/hall_image/' + slug + '?v=' + Date.now();
+          imgEl.src = '/list_image/' + slug + '?v=' + Date.now();
           setStatus("✓ " + (i18n.hall_image_uploaded || 'Image uploaded'), 'var(--accent)');
           if (!imgContainer.querySelector('.btn-del-img')) {
             var xBtn = document.createElement('button');
@@ -103,13 +103,13 @@
         e.stopPropagation();
         setStatus(i18n.hall_removing || 'Removing...');
         try {
-          var r = await fetch('/api/v2/admin/halls/' + encodeURIComponent(slug) + '/image', {
+          var r = await fetch('/api/v2/admin/lists/' + encodeURIComponent(slug) + '/image', {
             method: 'DELETE',
             headers: { 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' }
           });
           var d = await r.json();
           if (d.success) {
-            imgEl.src = '/hall_image/' + slug + '?v=' + Date.now();
+            imgEl.src = '/list_image/' + slug + '?v=' + Date.now();
             btn.remove();
             setStatus("✓ " + (i18n.hall_image_removed || 'Image removed'), 'var(--accent)');
           } else { setStatus('✗ ' + d.msg, '#f55'); }
@@ -122,11 +122,11 @@
 
     // Delete hall
     card.querySelector('.btn-delete-hall').addEventListener('click', async function() {
-      var confirmMsg = (i18n.hall_delete_confirm || 'Really delete hall "{slug}"?').replace('{slug}', slug);
+      var confirmMsg = (i18n.hall_delete_confirm || 'Really delete list "{slug}"?').replace('{slug}', slug);
       if (!confirm(confirmMsg)) return;
       setStatus(i18n.hall_deleting || 'Deleting...');
       try {
-        var r = await fetch('/api/v2/admin/halls/' + encodeURIComponent(slug), {
+        var r = await fetch('/api/v2/admin/lists/' + encodeURIComponent(slug), {
           method: 'DELETE',
           headers: { 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' }
         });
@@ -169,7 +169,7 @@
     div.dataset.slug = slug;
     div.innerHTML =
       '<div class="hall-manager-image adm-halls-card-image" title="Click to upload a custom image">' +
-        '<img src="/hall_image/' + slug + '" alt="' + name + '" class="adm-halls-card-img">' +
+        '<img src="/list_image/' + slug + '" alt="' + name + '" class="adm-halls-card-img">' +
         '<span class="adm-halls-card-name">' + name + '</span>' +
         '<input type="file" class="hall-img-upload adm-halls-img-upload" accept="image/*">' +
       '</div>' +
@@ -184,7 +184,7 @@
           '<select class="hall-rating-input adm-halls-input">' + ratingOpts + '</select></div>' +
         '<div class="adm-halls-card-actions">' +
           '<button class="btn-save-hall hm-btn adm-halls-save-btn">' + (i18n.common_save || 'Save') + '</button>' +
-          '<a href="/h/' + slug + '" class="hall-view-link hm-btn adm-halls-view-btn">' + (i18n.common_view || 'View') + ' →</a>' +
+          '<a href="/list/' + slug + '" class="hall-view-link hm-btn adm-halls-view-btn">' + (i18n.common_view || 'View') + ' →</a>' +
           '<span class="adm-halls-post-count">' + (i18n.hall_posts || '{count} posts').replace('{count}', '0') + '</span>' +
           '<button class="btn-delete-hall hm-btn adm-halls-delete-btn">🗑 ' + (i18n.common_delete || 'Delete') + '</button>' +
         '</div>' +
@@ -201,7 +201,7 @@
     createStatus.textContent = i18n.hall_creating || 'Creating...';
     createStatus.style.color = '#888';
     try {
-      var r = await fetch('/api/v2/admin/halls', {
+      var r = await fetch('/api/v2/admin/lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-csrf-token': (window.f0ckSession && window.f0ckSession.csrf_token) || '' },
         body: JSON.stringify({ name: name, slug: slug, rating: rating })

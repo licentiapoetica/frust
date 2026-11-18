@@ -17,7 +17,7 @@ fn not_visible(cfg: &Config, itemid: i64, slug: Option<Value>, blur: bool, hall_
     let domain = cfg.str_or("main.url.domain", "");
     let thumbs = cfg.str_or("websrv.paths.thumbnails", "");
     let og_url = match hall_slug.filter(|h| !h.is_empty()) {
-        Some(h) => format!("https://{domain}/h/{}/{itemid}", encode_uri_component(h)),
+        Some(h) => format!("https://{domain}/list/{}/{itemid}", encode_uri_component(h)),
         None => format!("https://{domain}/{itemid}"),
     };
     let mut item = json!({ "id": itemid });
@@ -506,8 +506,8 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     if let (Some(uh), Some(owner)) = (&user_hall_obj, user_hall_owner.as_deref().filter(|o| !o.is_empty())) {
         let owner_name = uh.str("owner_name").filter(|s| !s.is_empty()).unwrap_or(owner).to_string();
         let slug = uh.string("slug");
-        link["main"] = json!(format!("/user/{}/hall/{}/", encode_uri_component(&owner_name), encode_uri_component(&slug)));
-        link["mainDisplay"] = json!(format!("/user/{owner_name}/hall/{slug}/"));
+        link["main"] = json!(format!("/user/{}/list/{}/", encode_uri_component(&owner_name), encode_uri_component(&slug)));
+        link["mainDisplay"] = json!(format!("/user/{owner_name}/list/{slug}/"));
         link["path"] = json!("");
         link["suffix"] = json!("");
     }
@@ -666,7 +666,7 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
         format!("{label}{title_part} · uploaded by {username}")
     };
     let og_url = match hall_slug.as_deref().filter(|h| !h.is_empty()) {
-        Some(h) => format!("https://{domain}/h/{}/{itemid}", encode_uri_component(h)),
+        Some(h) => format!("https://{domain}/list/{}/{itemid}", encode_uri_component(h)),
         None => format!("https://{domain}/{itemid}"),
     };
     let stamp = actitem.i64("stamp").unwrap_or(0);

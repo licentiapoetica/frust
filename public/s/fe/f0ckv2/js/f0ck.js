@@ -650,6 +650,63 @@ window.v2Page.onPage(() => {
   }
   // </frontend hooks>
 
+  // <halls> the item's halls box (#halls) and a user's halls page (user-halls.html): plain forms
+  // (.v2-hall-form) that work without JavaScript; here they go through fetch and the page's
+  // [data-v2-live] parts are swapped in from a fresh copy of it. data-close: the form's box closes
+  // after it worked, data-reset: it's emptied, data-done: the message shown.
+  const v2Live = async () => {
+    const res = await fetch(location.href, { credentials: 'same-origin', headers: { Accept: 'text/html' } });
+    if(!res.ok) throw new Error(res.status);
+    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+    document.querySelectorAll('[data-v2-live]').forEach(el => {
+      const next = doc.querySelector(`[data-v2-live="${CSS.escape(el.dataset.v2Live)}"]`);
+      if(next) el.replaceWith(next);
+    });
+  };
+  v2On(document, 'submit', async e => {
+    const form = e.target.closest?.('form.v2-hall-form');
+    if(!form || e.defaultPrevented) return;
+    e.preventDefault();
+    if(form.classList.contains('v2-busy')) return;
+    let fd;
+    try { fd = new FormData(form, e.submitter || undefined); } catch { fd = new FormData(form); }
+    fd.delete('back');
+    const multipart = /multipart/i.test(form.getAttribute('enctype') || '');
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || fd.get('csrf_token') || '';
+    form.classList.add('v2-busy');
+    try {
+      let data = {}, ok = false;
+      try {
+        const res = await fetch(form.getAttribute('action'), {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': csrf },
+          body: multipart ? fd : new URLSearchParams(fd)
+        });
+        data = await res.json().catch(() => ({}));
+        ok = res.ok && data.success !== false;
+      } catch {
+        data = { msg: 'network error' };
+      }
+      if(!ok) {
+        fe.flash(data.msg || data.message || 'that did not work', 'error');
+        return;
+      }
+      fe.flash(form.dataset.done || data.msg || 'done', 'success');
+      if(form.hasAttribute('data-reset')) form.reset();
+      if(form.hasAttribute('data-close') && location.hash && location.hash !== '#_') location.replace('#_');
+      await v2Live().catch(() => {});
+    } finally {
+      form.classList.remove('v2-busy');
+    }
+  });
+  // a picked picture uploads right away (the upload button is for visitors without JavaScript)
+  v2On(document, 'change', e => {
+    const input = e.target.closest?.('input[type="file"][data-v2-autosubmit]');
+    if(input && input.files && input.files.length) input.form?.requestSubmit();
+  });
+  // </halls>
+
   // <onara> Escape closes the viewer (an open report / delete box first); the item's thumbnail
   // behind it is scrolled into view
   if(onara) {

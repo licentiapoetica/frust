@@ -140,7 +140,7 @@
                         <a href="/{{ item_href }}" class="id-link" data-item-id="{{ item.id }}">{{ item_label }}</a> — [{% if not is_anonymized %}<a id="a_username" data-username="{{ (item.username or "") }}" {% if (session and not session.is_anon) %} data-author-id="{{ (item.author_id or "") }}" {% endif %} href="/user/{{ item_username_lower }}" {% if ((session and not session.is_anon) and item.author_id) %} tooltip="ID: {{ item.author_id }}" {% endif %} {% if item.author_color %} style="color: {{ item.author_color }}" {% endif %}>{{ ((item.author_display_name or item.username) or "unknown") }}</a>{% else %}<span>anonymous</span>{% endif %}] <span id="oc-badge-container">{% if enable_oc and item.is_oc %} — <span class="oc-badge" tooltip="Original Content">OC</span>{% endif %}</span>
                     </span>
                     <span id="hall-badge-container">{% if (halls_enabled and item.primaryHall) %}<span class="badge hall-badge-wrap">
-                        <a href="/h/{{ item.primaryHall.slug }}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> {{ item.primaryHall.name }}</a>{% if (item.otherHalls and item.otherHalls|length) %}<span class="hall-overflow-pill">+{{ item.otherHalls|length }}<span class="hall-overflow-tooltip">{% for key, oh in item.otherHalls|entries %}<a href="/h/{{ oh.slug }}">{{ oh.name }}</a>{% endfor %}</span></span>{% endif %}
+                        <a href="/list/{{ item.primaryHall.slug }}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> {{ item.primaryHall.name }}</a>{% if (item.otherHalls and item.otherHalls|length) %}<span class="hall-overflow-pill">+{{ item.otherHalls|length }}<span class="hall-overflow-tooltip">{% for key, oh in item.otherHalls|entries %}<a href="/list/{{ oh.slug }}">{{ oh.name }}</a>{% endfor %}</span></span>{% endif %}
                     </span>{% endif %}</span>
                     <span class="badge badge-dark"><a href="/{{ item_href }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>
                     {% if item.expires_at and not item.burn_claimed %}
@@ -187,8 +187,9 @@
                 <i class="iconset fa-solid fa-image" id="a_rethumb" data-item-id="{{ item.id }}" title="Re-upload Thumbnail"></i>
                 {% endif %}
                 {% endif %}
-                {% if halls_enabled %}
-                <i class="iconset fa-solid fa-layer-group" id="a_hall" data-item-id="{{ item.id }}" data-halls="{{ halls_slugs }}" data-user-halls="{{ user_halls_slugs }}" data-current-hall="{{ current_hall_slug }}" data-current-user-hall="{{ current_user_hall_slug }}" data-current-user-hall-owner="{{ current_user_hall_owner }}" title="Add to Hall"></i>
+                {% if (session and not session.is_anon and ((halls_enabled and is_mod_or_admin) or userhalls_enabled)) %}
+                <i class="iconset fa-solid fa-layer-group" id="a_hall" data-item-id="{{ item.id }}" data-halls="{{ halls_slugs }}" data-user-halls="{{ user_halls_slugs }}" data-current-hall="{{ current_hall_slug }}" data-current-user-hall="{{ current_user_hall_slug }}" data-current-user-hall-owner="{{ current_user_hall_owner }}" title="{{ t("hall.modal_title") }}"></i>
+                <a href="#halls-modal" class="iconset fa-solid fa-layer-group nojs-modal-link" title="{{ t("hall.modal_title") }}"></a>
                 {% endif %}
                 {% if is_mod_or_admin %}
                 <i class="iconset fa-solid fa-thumbtack{{ (" active" if item.is_pinned else "") }}" id="a_pin" data-pinned="{{ item.is_pinned }}" title="{{ ("Unpin from main" if item.is_pinned else "Pin to main") }}"></i>

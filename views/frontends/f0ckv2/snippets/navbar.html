@@ -6,7 +6,7 @@
 {%- elif tmp and tmp.tag -%}
   {%- set filter_base = "/tag/" ~ (tmp.tag|encode_uri_component) ~ "/" -%}
 {%- elif tmp and tmp.hall -%}
-  {%- set filter_base = "/h/" ~ ((tmp.hall.slug if tmp.hall.slug else tmp.hall)|encode_uri_component) ~ "/" -%}
+  {%- set filter_base = "/list/" ~ ((tmp.hall.slug if tmp.hall.slug else tmp.hall)|encode_uri_component) ~ "/" -%}
 {%- else -%}
   {%- set filter_base = "/" -%}
 {%- endif -%}
@@ -55,7 +55,7 @@
         <ul class="dropdown-menu">
           <li><a href="/search">search</a></li>
           <li><a href="/tags">tags</a></li>
-          {% if halls_enabled %}<li><a href="/halls">halls</a></li>{% endif %}
+          {% if halls_enabled %}<li><a href="/lists">lists</a></li>{% endif %}
           <li><a href="/ranking">ranking</a></li>
           <li><a href="/about">about</a></li>
         </ul>
@@ -76,7 +76,7 @@
           <li><a href="/terms">terms</a></li>
           <li><a href="/privacy">privacy</a></li>
           <li><a href="/tags">tags</a></li>
-          {% if halls_enabled %}<li><a href="/halls">halls</a></li>{% endif %}
+          {% if halls_enabled %}<li><a href="/lists">lists</a></li>{% endif %}
         </ul>
       </li>
       {% include "frontends/f0ckv2/snippets/nav-common.html" %}
