@@ -3570,9 +3570,11 @@ html.gchat-skin-f0ckgle {
   --gc-online: var(--fg-g4);
   --gc-danger: var(--fg-danger);
   --gc-right: 24px;
-  --gc-bottom: 24px;
+  /* above the footer while it shows (--gc-avoid-h: how much of it, globalchat.js) */
+  --gc-bottom: calc(24px + var(--gc-avoid-h, 0px));
+  --gc-top-gap: calc(48px + var(--gc-avoid-h, 0px));
   --gc-default-w: 380px;
-  --gc-default-h: min(600px, calc(100dvh - 48px));
+  --gc-default-h: min(600px, calc(100dvh - 48px - var(--gc-avoid-h, 0px)));
   --gc-spark-1: #4285f4;
   --gc-spark-2: #9b72cb;
   --gc-spark-3: #d96570;
@@ -3883,7 +3885,7 @@ html.gchat-skin-f0ckgle #gchat-emoji-picker {
 
 /* the launcher after closing: "✦ Ask f0ckgle" */
 html.gchat-skin-f0ckgle #gchat-reopen-bubble {
-  bottom: 24px;
+  bottom: var(--gc-bottom);
   height: 44px;
   padding: 0 18px 0 14px;
   background: var(--fg-bg);
@@ -3907,6 +3909,6 @@ html.gchat-skin-f0ckgle .gchat-reopen-label {
 @media (max-width: 600px) {
   html.gchat-skin-f0ckgle {
     --gc-right: 8px;
-    --gc-bottom: 8px;
+    --gc-bottom: calc(8px + var(--gc-avoid-h, 0px));
   }
 }

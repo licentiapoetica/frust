@@ -11,6 +11,8 @@
  *                      (snippets/globalchat.html); <count>_one: the text for 1 (online_one, guests_one);
  *                      bar: a bar the closed launcher sits beside, its height as --gc-bar-h (f0ckm:
  *                      the right sidebar's footer)
+ *   #gchat-skin-texts  … avoid: an element at the page's end to stay above (f0ckgle: its footer):
+ *                      how much of it shows at the window's bottom, as --gc-avoid-h (on scroll)
  *   #gchat-skin-texts  the frontend's own texts, optional (views/frontends/<fe>/snippets/chat.html):
  *                      title, placeholder, open, online ("{n}"), guests ("{n}"), badge (chip next to
  *                      the title), greeting (top of the message list, "{name}"), intro (text under
@@ -1445,6 +1447,26 @@
             pickBar();
             document.addEventListener('f0ck:contentLoaded', pickBar);
             window.addEventListener('resize', pickBar);
+        }
+
+        // The element to stay above (skin.avoid): how much of it shows at the window's bottom, as
+        // --gc-avoid-h on <html>, on scroll / resize (once per frame)
+        if (skin.avoid) {
+            let avoidFrame = 0;
+            const measureAvoid = () => {
+                avoidFrame = 0;
+                let el = null;
+                try { el = document.querySelector(skin.avoid); } catch (_) {}
+                const h = el ? Math.max(0, Math.round(window.innerHeight - el.getBoundingClientRect().top)) : 0;
+                if (h) document.documentElement.style.setProperty('--gc-avoid-h', h + 'px');
+                else document.documentElement.style.removeProperty('--gc-avoid-h');
+            };
+            const queueAvoid = () => { if (!avoidFrame) avoidFrame = requestAnimationFrame(measureAvoid); };
+            window.addEventListener('scroll', queueAvoid, { passive: true });
+            window.addEventListener('resize', queueAvoid);
+            document.addEventListener('f0ck:contentLoaded', queueAvoid);
+            new ResizeObserver(queueAvoid).observe(document.body);
+            measureAvoid();
         }
 
         // the launcher: phones always (collapsed chat), desktop when the chat is closed
