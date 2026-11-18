@@ -44,7 +44,6 @@ brotli-decompressor = "6"
 minijinja = { version = "3", features = ["serde", "json", "urlencode", "speedups", "builtins", "debug"] }
 minijinja-contrib = { version = "3", features = ["pycompat", "datetime"] }
 chrono = { version = "0.4", features = ["serde"] }
-chrono-tz = "0.10"
 regex = "1"
 fancy-regex = "0.20"
 sha2 = "0.11"
