@@ -3754,3 +3754,184 @@ html body.w0bm-item-page #sidebar > .tags .tagtest > ul.info-nav > label[for='ta
 :where(html.w0bm-user-font *:not(canvas):not(.adm-font-sample):not(.reich):not(.cfx-reich):not(.fa):not([class^="fa-"]):not([class*=" fa-"]):not(.fas):not(.far):not(.fab):not(.glyphicon):not([class*="vjs-"]):not(.force-impact):not(.meme-title)) {
   font-family: 'CustomUserFont', sans-serif !important;
 }
+
+/* ── Site chat as a w0bm panel (structure: /s/css/globalchat.css): the panel heading, each message
+   a small comment panel with its "name · time" footer under it, bootstrap's form-control and
+   btn-primary. ── */
+html.gchat-skin-w0bm {
+    --gc-font: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --gc-size: 13px;
+    --gc-bg: #161618;
+    --gc-fg: #f2f5f4;
+    --gc-muted: #888;
+    --gc-line: #282828;
+    --gc-hover: rgba(255, 255, 255, .05);
+    --gc-head-bg: #3c3c3c;
+    --gc-head-fg: #ccc;
+    --gc-accent: #1fb2b0;
+    --gc-on-accent: #fff;
+    --gc-bubble-bg: rgba(34, 34, 34, .61);
+    --gc-self-bg: rgba(31, 178, 176, .12);
+    --gc-field-bg: #111;
+    --gc-field-fg: #ccc;
+    --gc-field-line: #282828;
+    --gc-pop-bg: #222;
+    --gc-badge-bg: #1fb2b0;
+    --gc-greentext: #789922;
+    --gc-online: #1fb2b0;
+    --gc-top-gap: var(--w0bm-nav-h, 50px);
+    --gc-default-w: 320px;
+    --gc-right: 12px;
+}
+
+html.gchat-skin-w0bm #gchat-panel {
+    border-color: rgba(10, 10, 11, .9);
+}
+
+html.gchat-skin-w0bm #gchat-header {
+    height: 42px;
+    padding: 0 4px 0 15px;
+    border-bottom-color: #282828;
+}
+
+html.gchat-skin-w0bm #gchat-title {
+    font-size: 1em;
+    font-weight: 500;
+}
+
+html.gchat-skin-w0bm .gchat-title-ico {
+    color: #1fb2b0;
+}
+
+html.gchat-skin-w0bm .gchat-badge {
+    font-size: 11px;
+}
+
+html.gchat-skin-w0bm #gchat-topic {
+    background: #1fb2b0;
+    color: #fff;
+    font-weight: 500;
+}
+
+html.gchat-skin-w0bm #gchat-online {
+    background: #222;
+}
+
+html.gchat-skin-w0bm #gchat-messages {
+    gap: 5px;
+    padding: 6px;
+}
+
+/* the comment panel: body, then the footer */
+html.gchat-skin-w0bm .gchat-msg,
+html.gchat-skin-w0bm .gchat-msg-self {
+    flex-direction: row;
+    gap: 6px;
+}
+
+html.gchat-skin-w0bm .gchat-msg-self .gchat-avatar-link {
+    display: flex;
+}
+
+html.gchat-skin-w0bm .gchat-avatar {
+    width: 28px;
+    height: 28px;
+}
+
+html.gchat-skin-w0bm .gchat-bubble-wrap,
+html.gchat-skin-w0bm .gchat-msg-self .gchat-bubble-wrap {
+    flex: 1;
+    align-items: stretch;
+    gap: 0;
+    max-width: none;
+    background: var(--gc-bubble-bg);
+    border: 1px solid rgba(10, 10, 11, .46);
+}
+
+html.gchat-skin-w0bm .gchat-msg-self .gchat-bubble-wrap {
+    border-color: rgba(31, 178, 176, .45);
+}
+
+html.gchat-skin-w0bm .gchat-bubble,
+html.gchat-skin-w0bm .gchat-msg-self .gchat-bubble {
+    padding: 2px 10px 6px;
+    background: none;
+    font-size: 1em;
+}
+
+/* "name · time" on top of the message, reply / delete at the line's free end */
+html.gchat-skin-w0bm .gchat-meta,
+html.gchat-skin-w0bm .gchat-msg-self .gchat-meta {
+    display: flex;
+    gap: 4px;
+    padding: 5px 64px 0 10px;
+    color: #888;
+    font-size: 11px;
+}
+
+html.gchat-skin-w0bm .gchat-username,
+html.gchat-skin-w0bm .gchat-msg-self .gchat-username {
+    display: inline;
+    color: #1fb2b0;
+    font-weight: normal;
+}
+
+html.gchat-skin-w0bm .gchat-username.gchat-user-colored {
+    color: var(--user-color);
+}
+
+/* the time is in the name line: not in the bubble's corner too */
+html.gchat-skin-w0bm .gchat-time {
+    display: inline;
+}
+
+html.gchat-skin-w0bm .gchat-stamp {
+    display: none;
+}
+
+html.gchat-skin-w0bm .gchat-time::before {
+    content: '· ';
+}
+
+html.gchat-skin-w0bm .gchat-bubble .mention {
+    color: #1fb2b0;
+}
+
+html.gchat-skin-w0bm .gchat-msg-actions,
+html.gchat-skin-w0bm .gchat-msg-self .gchat-msg-actions {
+    top: 5px;
+    bottom: auto;
+    right: 8px;
+    left: auto;
+    flex-direction: row;
+}
+
+html.gchat-skin-w0bm :is(.gchat-reply-btn, .gchat-del-btn) {
+    width: 24px;
+    height: 20px;
+}
+
+/* form-control + btn-primary */
+html.gchat-skin-w0bm #gchat-input-area {
+    background: #222;
+}
+
+html.gchat-skin-w0bm #gchat-input {
+    padding: 6px 12px;
+    font-size: 1em;
+}
+
+html.gchat-skin-w0bm #gchat-input:focus {
+    border-color: #1fb2b0;
+}
+
+html.gchat-skin-w0bm #gchat-send-btn {
+    border: 1px solid #1fb2b0;
+}
+
+html.gchat-skin-w0bm #gchat-reopen-bubble {
+    background: #1fb2b0;
+    color: #fff;
+    border-color: #1fb2b0;
+    opacity: .9;
+}

@@ -78,8 +78,16 @@
         }
         break;
       }
+      // the site chat (globalchat.js) and the DM presence dots (messages.js)
+      case 'global_chat':
+      case 'global_chat_delete':
+      case 'global_chat_background':
+      case 'global_chat_topic':
       case 'global_chat_presence':
-        document.dispatchEvent(new CustomEvent('f0ck:global_chat_presence', { detail: data }));
+        document.dispatchEvent(new CustomEvent(`f0ck:${msg.type}`, { detail: data }));
+        break;
+      case 'global_chat_clear':
+        document.dispatchEvent(new CustomEvent('f0ck:global_chat_clear'));
         break;
       case 'comments':
         hook('comments', data);

@@ -3274,3 +3274,371 @@ html.user-fs-150 {
     padding: 0 .25rem;
   }
 }
+
+/* ── Site chat as "f0ckgle Assistant" (structure: /s/css/globalchat.css, texts: snippets/chat.html) ──
+   An AI assistant panel whose answers come from the other users: a floating card, the sparkle,
+   "Hello, <name>" in the gradient, your messages as prompts on the right, the others' as plain
+   answers, the small print under the field. */
+html.gchat-skin-f0ckgle {
+  --gc-font: var(--fg-font);
+  --gc-size: 14px;
+  --gc-bg: var(--fg-bg);
+  --gc-fg: var(--fg-text);
+  --gc-muted: var(--fg-dim);
+  --gc-line: var(--fg-border);
+  --gc-hover: var(--fg-hover-tint);
+  --gc-head-bg: var(--fg-bg);
+  --gc-head-fg: var(--fg-text);
+  --gc-accent: var(--fg-blue);
+  --gc-on-accent: var(--fg-on-blue);
+  --gc-bubble-bg: transparent;
+  --gc-self-bg: var(--fg-surface-2);
+  --gc-self-fg: var(--fg-text);
+  --gc-field-bg: var(--fg-surface);
+  --gc-field-fg: var(--fg-text);
+  --gc-field-line: var(--fg-surface);
+  --gc-pop-bg: var(--fg-bg);
+  --gc-row-hover: var(--fg-hover-tint);
+  --gc-badge-bg: var(--fg-danger);
+  --gc-greentext: var(--fg-ok-text);
+  --gc-online: var(--fg-g4);
+  --gc-danger: var(--fg-danger);
+  --gc-right: 24px;
+  --gc-bottom: 24px;
+  --gc-default-w: 380px;
+  --gc-default-h: min(600px, calc(100dvh - 48px));
+  --gc-spark-1: #4285f4;
+  --gc-spark-2: #9b72cb;
+  --gc-spark-3: #d96570;
+  --gc-spark: linear-gradient(74deg, var(--gc-spark-1) 0%, var(--gc-spark-2) 45%, var(--gc-spark-3) 90%);
+}
+
+html.gchat-skin-f0ckgle .gchat-spark-s1 { stop-color: var(--gc-spark-1); }
+html.gchat-skin-f0ckgle .gchat-spark-s2 { stop-color: var(--gc-spark-2); }
+html.gchat-skin-f0ckgle .gchat-spark-s3 { stop-color: var(--gc-spark-3); }
+
+html.gchat-skin-f0ckgle #gchat-panel {
+  border-color: var(--fg-line);
+}
+
+html.gchat-skin-f0ckgle #gchat-panel.gchat-minimized {
+  width: auto;
+  min-width: 240px;
+}
+
+html.gchat-skin-f0ckgle #gchat-header {
+  height: 42px;
+  padding: 0 6px 0 14px;
+  border-bottom: 0;
+}
+
+html.gchat-skin-f0ckgle #gchat-title {
+  gap: 8px;
+  font-family: var(--fg-logo-font);
+  font-size: 1.05em;
+  font-weight: 500;
+}
+
+html.gchat-skin-f0ckgle .gchat-title-ico {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+html.gchat-skin-f0ckgle .gchat-chip {
+  padding: 2px 6px;
+  border: 0;
+  background: var(--fg-blue-soft);
+  color: var(--fg-blue-soft-text);
+  font-family: var(--fg-font);
+  font-size: .68em;
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+
+html.gchat-skin-f0ckgle .gchat-icon-btn {
+  width: 32px;
+  height: 32px;
+  color: var(--fg-icon);
+  opacity: 1;
+}
+
+/* thinking… : the gradient runs under the header until the live connection is up */
+html.gchat-skin-f0ckgle #gchat-panel.gchat-connecting::after {
+  content: '';
+  position: absolute;
+  top: 42px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gc-spark);
+  background-size: 200% 100%;
+  animation: fg-gchat-think 1.2s linear infinite;
+}
+
+@keyframes fg-gchat-think {
+  from { background-position: 200% 0; }
+  to { background-position: 0 0; }
+}
+
+html.gchat-skin-f0ckgle #gchat-panel.gchat-connecting #gchat-messages {
+  opacity: .5;
+}
+
+html.gchat-skin-f0ckgle #gchat-topic {
+  margin: 0 14px 6px;
+  padding: 8px 12px;
+  background: var(--fg-blue-soft);
+  color: var(--fg-blue-soft-text);
+  font-weight: 400;
+}
+
+html.gchat-skin-f0ckgle #gchat-online {
+  border-bottom: 0;
+}
+
+html.gchat-skin-f0ckgle .gchat-online-inner {
+  padding: 0 14px 6px;
+}
+
+html.gchat-skin-f0ckgle .gchat-online-count::before {
+  display: none;
+}
+
+html.gchat-skin-f0ckgle .gchat-online-avatar {
+  width: 22px;
+  height: 22px;
+}
+
+html.gchat-skin-f0ckgle #gchat-messages {
+  gap: 6px;
+  padding: 4px 8px 14px;
+}
+
+html.gchat-skin-f0ckgle .gchat-intro {
+  margin: 0 6px;
+}
+
+html.gchat-skin-f0ckgle .gchat-intro {
+  padding: 18px 0 8px;
+}
+
+html.gchat-skin-f0ckgle .gchat-greeting {
+  font-family: var(--fg-logo-font);
+  font-size: 1.9em;
+  font-weight: 500;
+  line-height: 1.2;
+  background: var(--gc-spark);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+html.gchat-skin-f0ckgle .gchat-intro-text {
+  margin-top: 2px;
+  color: var(--fg-dim);
+  font-family: var(--fg-logo-font);
+  font-size: 1.35em;
+  line-height: 1.25;
+}
+
+/* answers: the user's avatar, name and time over plain text */
+html.gchat-skin-f0ckgle .gchat-msg {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  column-gap: 10px;
+  padding: 6px;
+}
+
+html.gchat-skin-f0ckgle .gchat-avatar {
+  width: 24px;
+  height: 24px;
+}
+
+html.gchat-skin-f0ckgle .gchat-bubble-wrap {
+  max-width: none;
+}
+
+html.gchat-skin-f0ckgle .gchat-meta {
+  padding-right: 60px;
+}
+
+html.gchat-skin-f0ckgle .gchat-meta {
+  font-size: .78em;
+}
+
+html.gchat-skin-f0ckgle .gchat-username {
+  color: var(--fg-text);
+  font-weight: 500;
+}
+
+html.gchat-skin-f0ckgle .gchat-bubble {
+  padding: 0;
+  font-size: 1em;
+  line-height: 1.6;
+}
+
+html.gchat-skin-f0ckgle .gchat-bubble a {
+  color: var(--fg-link);
+}
+
+/* prompts: yours, on the right */
+html.gchat-skin-f0ckgle .gchat-msg-self {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
+html.gchat-skin-f0ckgle .gchat-msg-self .gchat-bubble-wrap {
+  max-width: 85%;
+}
+
+html.gchat-skin-f0ckgle .gchat-msg-self .gchat-meta {
+  display: none;
+}
+
+html.gchat-skin-f0ckgle .gchat-msg-self .gchat-bubble {
+  padding: 10px 14px;
+}
+
+/* answers: the time on the name line, reply / delete at its free end; prompts: the time in the
+   block's corner, delete in the free space left of it */
+html.gchat-skin-f0ckgle .gchat-time {
+  display: inline;
+}
+
+html.gchat-skin-f0ckgle .gchat-msg:not(.gchat-msg-self) .gchat-stamp {
+  display: none;
+}
+
+html.gchat-skin-f0ckgle .gchat-msg-actions {
+  top: 4px;
+  right: 6px;
+  bottom: auto;
+  flex-direction: row;
+}
+
+html.gchat-skin-f0ckgle .gchat-msg-self .gchat-msg-actions {
+  top: auto;
+  bottom: 8px;
+  left: 6px;
+  right: auto;
+}
+
+html.gchat-skin-f0ckgle :is(.gchat-reply-btn, .gchat-del-btn) {
+  color: var(--fg-icon);
+}
+
+html.gchat-skin-f0ckgle :is(.gchat-yt-card, .gchat-post-card) {
+  background: var(--fg-surface);
+  border-color: var(--fg-border);
+}
+
+/* the field: one grey box, the tools and the count under it, the small print last */
+html.gchat-skin-f0ckgle #gchat-input-area {
+  padding: 0 14px 4px;
+  border-top: 0;
+}
+
+html.gchat-skin-f0ckgle #gchat-input-row {
+  order: 1;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--fg-surface);
+  border: 1px solid var(--fg-surface);
+}
+
+html.gchat-skin-f0ckgle #gchat-input-row:focus-within {
+  background: var(--fg-bg);
+  border-color: var(--fg-blue);
+}
+
+html.gchat-skin-f0ckgle #gchat-input {
+  padding: 8px 4px;
+  background: transparent;
+  border: 0;
+  font-size: 1em;
+}
+
+html.gchat-skin-f0ckgle #gchat-send-btn {
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  color: var(--fg-blue);
+  font-size: 1.1em;
+}
+
+html.gchat-skin-f0ckgle #gchat-send-btn:disabled {
+  color: var(--fg-dim);
+  background: transparent;
+}
+
+html.gchat-skin-f0ckgle #gchat-toolbar {
+  order: 2;
+  display: flex;
+  padding: 4px 0 0;
+}
+
+html.gchat-skin-f0ckgle .gchat-tool-btn {
+  width: 36px;
+  height: 36px;
+  color: var(--fg-icon);
+}
+
+html.gchat-skin-f0ckgle .gchat-tool-btn:hover {
+  background: var(--fg-hover-tint);
+}
+
+html.gchat-skin-f0ckgle .gchat-count {
+  display: block;
+}
+
+html.gchat-skin-f0ckgle .gchat-note {
+  order: 3;
+  padding: 2px 0 8px;
+  color: var(--fg-dim);
+  font-size: .7em;
+  line-height: 1.35;
+}
+
+html.gchat-skin-f0ckgle .gchat-ac {
+  left: 14px;
+  right: 14px;
+  border-color: var(--fg-border);
+}
+
+html.gchat-skin-f0ckgle #gchat-emoji-picker {
+  margin: 0 14px;
+  border: 1px solid var(--fg-border);
+  background: var(--fg-bg);
+}
+
+/* the launcher after closing: "✦ Ask f0ckgle" */
+html.gchat-skin-f0ckgle #gchat-reopen-bubble {
+  bottom: 24px;
+  height: 44px;
+  padding: 0 18px 0 14px;
+  background: var(--fg-bg);
+  color: var(--fg-text);
+  border-color: var(--fg-line);
+  font-family: var(--fg-logo-font);
+  font-size: 1.15rem;
+  opacity: 1;
+}
+
+html.gchat-skin-f0ckgle #gchat-reopen-bubble:hover {
+  background: var(--fg-surface);
+}
+
+html.gchat-skin-f0ckgle .gchat-reopen-label {
+  display: inline;
+  font-size: .82em;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  html.gchat-skin-f0ckgle {
+    --gc-right: 8px;
+    --gc-bottom: 8px;
+  }
+}

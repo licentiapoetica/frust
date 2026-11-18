@@ -755,7 +755,16 @@
     "expand": "Erweitern",
     "slow_down": "Langsamer!",
     "error_send": "Fehler beim Senden",
-    "network_error": "Netzwerkfehler"
+    "network_error": "Netzwerkfehler",
+    "open": "Chat öffnen",
+    "close": "Chat schließen",
+    "float": "Lösen / andocken",
+    "reply": "Antworten",
+    "delete": "Löschen",
+    "online": "{n} online",
+    "guests": "{n} Gäste",
+    "guest": "{n} Gast",
+    "users": "Wer ist online"
   },
   "scroller": {
     "just_now": "gerade eben",

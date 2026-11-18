@@ -1,0 +1,20 @@
+{#- The site chat (globalchat.js) for logged-in visitors, at the end of <body>: f0ckm's footer and
+    snippets/frontend-scripts.html. #gchat-skin names the skin (the frontend; gchat_skin = "f0ckm" from
+    f0ckm's footer, whose layout also shows inside other frontends) and the default texts;
+    a frontend's own texts come from views/frontends/<fe>/snippets/chat.html (#gchat-skin-texts,
+    optional). CSS: snippets/globalchat-head.html. -#}
+{% if (enable_global_chat and session) %}
+{%- set gchat_name = (gchat_skin if (gchat_skin is defined and gchat_skin) else (frontend if (frontend is defined and frontend) else "f0ckm")) %}
+<script type="application/json" id="gchat-skin">{{ {
+  "skin": gchat_name,
+  "title": t("chat.title")|string,
+  "placeholder": t("chat.placeholder")|string,
+  "open": t("chat.open")|string,
+  "online": t("chat.online")|string,
+  "guests": t("chat.guests")|string,
+  "guests_one": t("chat.guest")|string,
+  "users": t("chat.users")|string
+}|tojson }}</script>
+{% if gchat_name != "f0ckm" %}{% include ("frontends/" ~ gchat_name ~ "/snippets/chat.html") ignore missing %}{% endif %}
+<script src="/s/js/globalchat.js?v={{ mtime("/public/s/js/globalchat.js") }}"></script>
+{% endif %}

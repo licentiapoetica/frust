@@ -56,7 +56,9 @@ Usually that goes in the frontend's base layout. It provides:
 - the page data (`window.f0ckSession`, `f0ckI18n`);
 - `f0ck-core.js`;
 - for logged-in visitors: `messages.js` (so DM keys exist on every page) and the live events
-  (`f0ck-frontend.js`).
+  (`f0ck-frontend.js`);
+- with `enable_global_chat`, for logged-in visitors: the site chat (`snippets/globalchat.html`,
+  see "Site chat" below).
 
 **Palette.** Set these on `html.f0ck-shell`; they style the shared pages through `/s/css/f0ck-shell.css`:
 - `--fe-accent`, `--fe-accent-rgb`;
@@ -120,6 +122,20 @@ for a frontend is `/s/js/f0ck-bg.js`: a `<canvas id="bg">` (the admin's tuning i
 with `fader-in` / `fader-out`; `f0ckBackground.start({ media, thumb })` draws the video's frames,
 a picture or Flash's `ambientCanvas` with f0ckm's tuning and switch (`show_background`), and defines
 `window.toggleBackground` (f0ckyou: item.html, f0ckyou.js).
+
+**Site chat.** The chat widget (`/s/js/globalchat.js`) comes with `snippets/frontend-scripts.html`;
+its structure is `/s/css/globalchat.css`, included in the frontend's `<head>` before its own CSS with
+`{% include "snippets/globalchat-head.html" %}`. Each frontend skins it in its own CSS, in its look:
+globalchat.js sets `html.gchat-skin-<frontend>`; set the `--gc-*` colour variables (top of
+globalchat.css) on that class and restyle the rest with `html.gchat-skin-<frontend> #gchat-…`
+(f0ckgle: an AI assistant, f0ckyou: live chat, f0ckv2: IRC, w0bm: bootstrap panels). Own texts
+(title, chip, placeholder, greeting, small print, the reopen button, the online count, the sparkle
+icon) go in `views/frontends/<fe>/snippets/chat.html` as `<script type="application/json"
+id="gchat-skin-texts">` (optional; f0ckgle's is the complete example). The widget sits outside the
+page part of `<body>`, so page swaps keep it. On phones (≤ 600px) the collapsed chat is the launcher button
+(`#gchat-reopen-bubble`, also the reopen button on desktop) and the open chat is full screen
+(`html.gchat-m-open`): the skin applies there too, so check it at phone width; a frontend's fixed bars
+must stay below z-index 100000.
 
 **Light and dark (optional).** A frontend with both a light and a dark look (f0ckgle: light by
 default, f0ckyou: dark by default) lets visitors pick Light, Dark or Device:

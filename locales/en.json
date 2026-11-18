@@ -754,7 +754,16 @@
     "expand": "Expand",
     "slow_down": "Slow down!",
     "error_send": "Error sending",
-    "network_error": "Network error"
+    "network_error": "Network error",
+    "open": "Open chat",
+    "close": "Close chat",
+    "float": "Float / dock",
+    "reply": "Reply",
+    "delete": "Delete",
+    "online": "{n} online",
+    "guests": "{n} guests",
+    "guest": "{n} guest",
+    "users": "Who's online"
   },
   "scroller": {
     "just_now": "just now",

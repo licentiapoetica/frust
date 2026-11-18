@@ -1,0 +1,3 @@
+{#- The site chat's structure (globalchat.css), in <head> before the frontend's own CSS, which skins it
+    (html.gchat-skin-<frontend>, see the top of globalchat.css). With snippets/globalchat.html. -#}
+{% if (enable_global_chat and session) %}<link rel="stylesheet" href="/s/css/globalchat.css?v={{ mtime("/public/s/css/globalchat.css") }}">{% endif %}

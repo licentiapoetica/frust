@@ -20,6 +20,8 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="{% if (custom_favicon and (custom_favicon|length > 0)) %}{{ custom_favicon }}{% else %}/s/fe/w0bm/img/favicon.png{% endif %}">
     <script src="/s/fe/w0bm/js/early.js?v={{ mtime("/public/s/fe/w0bm/js/early.js") }}"></script>
+    {#- the site chat (structure; skinned by this frontend's CSS) -#}
+    {% include "snippets/globalchat-head.html" %}
     <link rel="stylesheet" href="/s/fe/w0bm/css/style.css?v={{ mtime("/public/s/fe/w0bm/css/style.css") }}">
     <link rel="stylesheet" href="/s/fe/w0bm/css/w0bmfonts.css?v={{ mtime("/public/s/fe/w0bm/css/w0bmfonts.css") }}">
     <link rel="stylesheet" href="/s/fe/w0bm/css/font-awesome.min.css?v={{ mtime("/public/s/fe/w0bm/css/font-awesome.min.css") }}">

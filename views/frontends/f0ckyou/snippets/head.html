@@ -38,6 +38,8 @@
   <meta property="og:type" content="website">
   {% endif %}
   <link rel="icon" {% if custom_favicon %}href="{{ custom_favicon }}"{% else %}type="image/svg+xml" href="/s/fe/f0ckyou/img/favicon.svg?v={{ mtime("/public/s/fe/f0ckyou/img/favicon.svg") }}"{% endif %}>
+  {#- the site chat (structure; skinned by this frontend's CSS) -#}
+  {% include "snippets/globalchat-head.html" %}
   <link rel="stylesheet" href="/s/fe/f0ckyou/css/f0ckyou.css?v={{ mtime("/public/s/fe/f0ckyou/css/f0ckyou.css") }}">
   {#- comment effects [rb] [reich] [krebs] [glitch] [badapple], shared with the other frontends -#}
   <link rel="stylesheet" href="/s/css/comment-fx.css?v={{ mtime("/public/s/css/comment-fx.css") }}">

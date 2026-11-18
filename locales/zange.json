@@ -745,7 +745,16 @@
     "expand": "Ausklappen",
     "slow_down": "Gemach, gemach!",
     "error_send": "Sendung fehlgeschlagen",
-    "network_error": "Netzwerkfehler"
+    "network_error": "Netzwerkfehler",
+    "open": "Geschwafel auf",
+    "close": "Geschwafel zu",
+    "float": "Lösen / andocken",
+    "reply": "Zurückschwafeln",
+    "delete": "Wegmachen",
+    "online": "{n} da",
+    "guests": "{n} Gaffer",
+    "guest": "{n} Gaffer",
+    "users": "Wer schwafelt mit"
   },
   "scroller": {
     "just_now": "gerade eben",

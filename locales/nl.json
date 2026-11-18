@@ -751,7 +751,16 @@
     "expand": "Uitvouwen",
     "slow_down": "Langzamer!",
     "error_send": "Versturen mislukt",
-    "network_error": "Netwerkfout"
+    "network_error": "Netwerkfout",
+    "open": "Chat openen",
+    "close": "Chat sluiten",
+    "float": "Losmaken / vastzetten",
+    "reply": "Beantwoorden",
+    "delete": "Verwijderen",
+    "online": "{n} online",
+    "guests": "{n} gasten",
+    "guest": "{n} gast",
+    "users": "Wie is er online"
   },
   "scroller": {
     "just_now": "zojuist",

@@ -631,6 +631,7 @@ pub fn check_frontends(views: &std::path::Path, public: &std::path::Path) -> Vec
         }
         // Its own pages load the shared scripts; nothing copies the page data
         let mut own_includes_scripts = false;
+        let mut includes_chat_head = false;
         let mut stack = vec![dir.clone()];
         while let Some(d) = stack.pop() {
             for e in std::fs::read_dir(&d).into_iter().flatten().flatten() {
@@ -644,6 +645,9 @@ pub fn check_frontends(views: &std::path::Path, public: &std::path::Path) -> Vec
                 if !rel.starts_with("shell/") && text.contains("snippets/frontend-scripts.html") {
                     own_includes_scripts = true;
                 }
+                if text.contains("snippets/globalchat-head.html") {
+                    includes_chat_head = true;
+                }
                 if text.contains("id=\"footer-data\"") {
                     problems.push(format!("{}: copies #footer-data; include snippets/frontend-scripts.html instead", at(&rel)));
                 }
@@ -651,6 +655,20 @@ pub fn check_frontends(views: &std::path::Path, public: &std::path::Path) -> Vec
         }
         if !own_includes_scripts {
             problems.push(format!("views/{FRONTENDS_DIR}/{fe}: no page layout includes snippets/frontend-scripts.html"));
+        }
+        // The site chat (frontend-scripts.html loads it): its structure in <head>, a skin in the
+        // frontend's look (README "Site chat")
+        if !includes_chat_head {
+            problems.push(format!("views/{FRONTENDS_DIR}/{fe}: no <head> includes snippets/globalchat-head.html (the site chat's CSS)"));
+        }
+        let skin = format!("html.gchat-skin-{fe}");
+        let skinned = std::fs::read_dir(public.join("s/fe").join(&fe).join("css"))
+            .into_iter()
+            .flatten()
+            .flatten()
+            .any(|e| read(&e.path()).contains(&skin));
+        if !skinned {
+            problems.push(format!("public/s/fe/{fe}/css: no {skin} rules; skin the site chat in the frontend's look (README \"Site chat\")"));
         }
         // One live socket for everyone: F0ckLive (f0ck-core.js)
         for e in std::fs::read_dir(public.join("s/fe").join(&fe).join("js")).into_iter().flatten().flatten() {
@@ -2395,6 +2413,59 @@ mod tests {
             let css = std::fs::read_to_string(root.join(f)).unwrap();
             for w in crate::fonts::WEIGHTS {
                 assert!(css.contains(&format!("[data-brand-text].brand-font.brand-weight-{w} {{\n  font-weight: {w} !important;")), "{f} {w}");
+            }
+        }
+    }
+
+    /// The site chat comes with every frontend for logged-in visitors (with enable_global_chat): its
+    /// CSS before the frontend's, the skin name, the frontend's own texts, the script; nothing for
+    /// guests. F0CKM_DUMP_GCHAT=<dir> writes the pages out (<frontend>.html).
+    #[test]
+    fn globalchat_in_every_frontend() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let session = serde_json::json!({ "user": "bob", "id": 1, "admin": true, "avatar": 5, "csrf_token": "tok", "ruffle_volume": 0.5 });
+        for fe in ["f0ckm", "f0ckgle", "f0ckyou", "f0ckv2", "w0bm"] {
+            let view = if fe == "f0ckm" { "about.html".to_string() } else { format!("frontends/{fe}/about.html") };
+            let ctx = |session: serde_json::Value| {
+                to_jvalue(&serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "frontend": fe, "frontends": ["f0ckm", fe],
+                    "enable_global_chat": true, "session": session, "mode": 1, "modes": ["sfw", "nsfw", "untagged", "all"],
+                    "url": { "pathname": "/about", "search": "", "qs": {} }, "tmp": {}, "anon_permissions_json": "{}", "captcha_scopes": [],
+                    // the page data blocks' raw values (so the dumped pages run)
+                    "nsfl_tag_id": 3, "comment_display_mode": 0, "comment_max_length": 2000, "fileupload_comments_size": 0, "fileupload_comments_max": 0,
+                    "themes_json": "[]", "allowed_comment_images_json": "[]", "custom_brand_images_json": "[]" }))
+            };
+            let tpl = env.get_template(&view).unwrap_or_else(|e| panic!("{view}: {e}"));
+            let html = tpl.render(ctx(session.clone())).unwrap_or_else(|e| panic!("{view}: {e:#}"));
+            if let Ok(dir) = std::env::var("F0CKM_DUMP_GCHAT") {
+                std::fs::write(PathBuf::from(dir).join(format!("{fe}.html")), &html).unwrap();
+            }
+            let css = html.find("/s/css/globalchat.css").unwrap_or_else(|| panic!("{fe}: no globalchat.css"));
+            let own_css = if fe == "f0ckm" { "/s/css/bundle.css".to_string() } else { format!("/s/fe/{fe}/css/") };
+            assert!(css < html.find(&own_css).unwrap(), "{fe}: globalchat.css after the frontend's CSS");
+            assert!(html.contains("<script type=\"application/json\" id=\"gchat-skin\">"), "{fe}");
+            assert!(html.contains(&format!("\"skin\": \"{fe}\"")), "{fe}");
+            assert!(html.contains("/s/js/globalchat.js?v="), "{fe}");
+            assert_eq!(html.contains("id=\"gchat-skin-texts\""), fe != "f0ckm" && fe != "w0bm", "{fe}");
+            let guest = tpl.render(ctx(serde_json::Value::Null)).unwrap();
+            assert!(!guest.contains("globalchat"), "{fe}: chat for a guest");
+            // f0ckm's layout under another frontend (its 4chan proxy items): f0ckm's skin
+            if fe != "f0ckm" {
+                let f0ckm_page = env.get_template("about.html").unwrap().render(ctx(session.clone())).unwrap();
+                assert!(f0ckm_page.contains("\"skin\": \"f0ckm\"") && !f0ckm_page.contains("gchat-skin-texts"), "{fe}: f0ckm's layout");
+            }
+            // a shared page in the frontend's shell: once
+            if fe != "f0ckm" {
+                let mut sctx = serde_json::to_value(ctx(session.clone())).unwrap();
+                sctx["shell_header"] = format!("frontends/{fe}/shell/header.html").into();
+                sctx["shell_footer"] = format!("frontends/{fe}/shell/footer.html").into();
+                let shell = env.get_template("privacy.html").unwrap().render(to_jvalue(&sctx)).unwrap_or_else(|e| panic!("{fe} shell: {e:#}"));
+                assert!(shell.contains(&format!("\"skin\": \"{fe}\"")), "{fe} shell");
+                assert_eq!(shell.matches("/s/css/globalchat.css").count(), 1, "{fe} shell");
+                assert_eq!(shell.matches("/s/js/globalchat.js").count(), 1, "{fe} shell");
+                if let Ok(dir) = std::env::var("F0CKM_DUMP_GCHAT") {
+                    std::fs::write(PathBuf::from(dir).join(format!("{fe}-shell.html")), &shell).unwrap();
+                }
             }
         }
     }

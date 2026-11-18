@@ -331,9 +331,8 @@
 <script src="/s/js/mention_autocomplete.js?v={{ ts|safe }}"></script>
 <script src="/s/js/user.js?v={{ ts|safe }}"></script>
 {% endif %}
-{% if (enable_global_chat and session) %}
-<script src="/s/js/globalchat.js?v={{ ts|safe }}"></script>
-{% endif %}
+{#- f0ckm's layout: f0ckm's skin, also inside another frontend (its 4chan proxy items) -#}
+{% set gchat_skin = "f0ckm" %}{% include "snippets/globalchat.html" %}
 {% if (session and private_messages) %}
 <script src="/s/js/messages.js?v={{ ts|safe }}"></script>
 {% endif %}

@@ -1,0 +1,11 @@
+{#- The site chat as an IRC window: texts for globalchat.js (snippets/globalchat.html includes this),
+    the look is in f0ckv2.css (html.gchat-skin-f0ckv2). {n}: a count. -#}
+<script type="application/json" id="gchat-skin-texts">{{ {
+  "title": "#" ~ (domain or "f0ck"),
+  "placeholder": "type here…",
+  "online": "{n} users",
+  "users": "/names",
+  "guests": "{n} lurkers",
+  "online_one": "{n} user",
+  "guests_one": "{n} lurker"
+}|tojson }}</script>

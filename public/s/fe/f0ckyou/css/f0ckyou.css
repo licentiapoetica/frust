@@ -4958,3 +4958,297 @@ html.user-fs-150 {
     width: min(11rem, 45%);
   }
 }
+
+/* ── Site chat as the watch page's live chat (structure: /s/css/globalchat.css, texts:
+   snippets/chat.html): one row per message (avatar, name, text), the time on hover, your own name
+   marked, an underlined field with the character count. ── */
+html.gchat-skin-f0ckyou {
+  --gc-font: var(--fy-font);
+  --gc-size: 13px;
+  --gc-bg: var(--fy-bg);
+  --gc-fg: var(--fy-text);
+  --gc-muted: var(--fy-muted);
+  --gc-line: var(--fy-line);
+  --gc-hover: var(--fy-soft);
+  --gc-head-bg: var(--fy-bg);
+  --gc-head-fg: var(--fy-text);
+  --gc-accent: var(--fy-blue);
+  --gc-on-accent: var(--fy-on-blue);
+  --gc-bubble-bg: transparent;
+  --gc-self-bg: transparent;
+  --gc-field-bg: transparent;
+  --gc-field-line: var(--fy-line);
+  --gc-pop-bg: var(--fy-menu);
+  --gc-row-hover: var(--fy-soft);
+  --gc-badge-bg: var(--fy-red);
+  --gc-online: var(--fy-red);
+  --gc-danger: var(--fy-danger-text);
+  --gc-right: 16px;
+  --gc-bottom: 16px;
+  --gc-top-gap: calc(var(--fy-mast-h) + 16px);
+  --gc-default-w: 360px;
+  --gc-default-h: min(560px, calc(100dvh - var(--fy-mast-h) - 32px));
+}
+
+html.gchat-skin-f0ckyou #gchat-header {
+  height: 42px;
+  padding: 0 4px 0 16px;
+  border-bottom-color: var(--fy-line);
+}
+
+html.gchat-skin-f0ckyou #gchat-title {
+  gap: 10px;
+  font-size: 1.15em;
+  font-weight: 400;
+}
+
+html.gchat-skin-f0ckyou .gchat-title-ico {
+  display: none;
+}
+
+html.gchat-skin-f0ckyou .gchat-icon-btn {
+  width: 36px;
+  height: 36px;
+  color: var(--fy-text);
+  opacity: .9;
+  font-size: 1.1em;
+}
+
+html.gchat-skin-f0ckyou .gchat-icon-btn:hover {
+  background: var(--fy-soft);
+}
+
+/* the pinned message */
+html.gchat-skin-f0ckyou #gchat-topic {
+  margin: 8px 12px 0;
+  padding: 8px 12px;
+  background: var(--fy-raised);
+  color: var(--fy-text);
+  border-left: 3px solid var(--fy-blue);
+  font-weight: 400;
+}
+
+html.gchat-skin-f0ckyou .gchat-online-count {
+  font-size: .85em;
+}
+
+/* the red "live" square */
+html.gchat-skin-f0ckyou .gchat-online-count::before {
+  width: 8px;
+  height: 8px;
+}
+
+html.gchat-skin-f0ckyou #gchat-messages {
+  gap: 0;
+  padding: 8px 0;
+  scrollbar-color: var(--fy-scrollbar) transparent;
+}
+
+html.gchat-skin-f0ckyou .gchat-intro {
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  background: var(--fy-soft);
+}
+
+html.gchat-skin-f0ckyou .gchat-intro-text {
+  margin: 0;
+  color: var(--fy-text);
+  font-size: 1em;
+}
+
+/* the row's end (padding-right) stays free for reply / delete */
+html.gchat-skin-f0ckyou .gchat-msg,
+html.gchat-skin-f0ckyou .gchat-msg-self {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 4px 60px 4px 16px;
+}
+
+html.gchat-skin-f0ckyou .gchat-avatar {
+  width: 24px;
+  height: 24px;
+  background: var(--fy-ava-bg);
+}
+
+html.gchat-skin-f0ckyou .gchat-msg-self .gchat-avatar-link {
+  display: flex;
+}
+
+/* time, name and text on one line, wrapping like text */
+html.gchat-skin-f0ckyou .gchat-bubble-wrap {
+  display: block;
+  flex: 1;
+  max-width: none;
+  padding-top: 3px;
+  line-height: 1.45;
+}
+
+html.gchat-skin-f0ckyou .gchat-meta,
+html.gchat-skin-f0ckyou .gchat-msg-self .gchat-meta {
+  display: inline-flex;
+  gap: 8px;
+  margin-right: 8px;
+  font-size: 1em;
+  vertical-align: baseline;
+}
+
+/* the time first, always (showing it on hover moved the text) */
+html.gchat-skin-f0ckyou .gchat-time {
+  display: inline;
+  order: -1;
+  font-size: .85em;
+}
+
+html.gchat-skin-f0ckyou .gchat-stamp {
+  display: none;
+}
+
+html.gchat-skin-f0ckyou .gchat-bubble-wrap,
+html.gchat-skin-f0ckyou .gchat-msg-self .gchat-bubble-wrap {
+  max-width: none;
+}
+
+html.gchat-skin-f0ckyou .gchat-username,
+html.gchat-skin-f0ckyou .gchat-msg-self .gchat-username {
+  display: inline;
+  color: var(--fy-muted);
+  font-weight: 500;
+}
+
+html.gchat-skin-f0ckyou .gchat-username.gchat-user-colored {
+  color: var(--user-color);
+}
+
+/* you: the name on yellow, like the channel owner's */
+html.gchat-skin-f0ckyou .gchat-msg-self .gchat-username {
+  padding: 0 4px;
+  background: var(--fy-fav);
+  color: #0f0f0f;
+}
+
+html.gchat-skin-f0ckyou .gchat-bubble,
+html.gchat-skin-f0ckyou .gchat-msg-self .gchat-bubble {
+  display: inline;
+  padding: 0;
+  font-size: 1em;
+}
+
+html.gchat-skin-f0ckyou .gchat-bubble a {
+  color: var(--fy-blue);
+}
+
+html.gchat-skin-f0ckyou .gchat-msg-actions,
+html.gchat-skin-f0ckyou .gchat-msg-self .gchat-msg-actions {
+  top: 3px;
+  right: 8px;
+  bottom: auto;
+  left: auto;
+  flex-direction: row;
+}
+
+html.gchat-skin-f0ckyou :is(.gchat-reply-btn, .gchat-del-btn) {
+  color: var(--fy-text);
+}
+
+html.gchat-skin-f0ckyou :is(.gchat-yt-card, .gchat-post-card) {
+  background: var(--fy-raised);
+  border-color: transparent;
+}
+
+/* the field: underlined, the tools and the count under it */
+html.gchat-skin-f0ckyou #gchat-input-area {
+  padding: 8px 16px 6px;
+  background: var(--fy-bg);
+}
+
+html.gchat-skin-f0ckyou #gchat-input-row {
+  order: 1;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0;
+}
+
+html.gchat-skin-f0ckyou #gchat-input {
+  padding: 6px 0 5px;
+  border: 0;
+  border-bottom: 1px solid var(--fy-line);
+  font-size: 1.05em;
+}
+
+html.gchat-skin-f0ckyou #gchat-input:focus {
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--fy-text);
+}
+
+html.gchat-skin-f0ckyou #gchat-send-btn {
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  color: var(--fy-muted);
+  font-size: 1.25em;
+}
+
+html.gchat-skin-f0ckyou #gchat-toolbar {
+  order: 2;
+  display: flex;
+  padding: 4px 0 0;
+}
+
+/* the smiley left of the field */
+html.gchat-skin-f0ckyou .gchat-tool-btn {
+  width: 36px;
+  height: 36px;
+  color: var(--fy-muted);
+}
+
+html.gchat-skin-f0ckyou .gchat-tool-btn:hover {
+  background: var(--fy-soft);
+  color: var(--fy-text);
+}
+
+html.gchat-skin-f0ckyou .gchat-count {
+  display: block;
+  font-size: .8em;
+}
+
+html.gchat-skin-f0ckyou .gchat-ac {
+  left: 16px;
+  right: 16px;
+  border-color: var(--fy-line);
+}
+
+html.gchat-skin-f0ckyou #gchat-emoji-picker {
+  background: var(--fy-menu);
+  border-top-color: var(--fy-line);
+}
+
+/* "Show chat" after closing */
+html.gchat-skin-f0ckyou #gchat-reopen-bubble {
+  height: 36px;
+  padding: 0 16px;
+  background: var(--fy-soft);
+  color: var(--fy-text);
+  border: 0;
+  box-shadow: none;
+  font-size: 1rem;
+  opacity: 1;
+}
+
+html.gchat-skin-f0ckyou #gchat-reopen-bubble:hover {
+  background: var(--fy-soft-2);
+  transform: none;
+}
+
+html.gchat-skin-f0ckyou .gchat-reopen-label {
+  display: inline;
+  font-size: .875em;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  html.gchat-skin-f0ckyou {
+    --gc-right: 8px;
+    --gc-bottom: 8px;
+  }
+}

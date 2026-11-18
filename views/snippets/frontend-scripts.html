@@ -20,3 +20,5 @@
 {% include "snippets/upload-modal-frontend.html" %}
 {#- live events (comments, new uploads, notifications, …) for every visitor, like f0ckm.js -#}
 <script src="/s/js/f0ck-frontend.js?v={{ mtime("/public/s/js/f0ck-frontend.js") }}"></script>
+{#- the site chat, skinned by the frontend's CSS (snippets/globalchat-head.html in its <head>) -#}
+{% include "snippets/globalchat.html" %}

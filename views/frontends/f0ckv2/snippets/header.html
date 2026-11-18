@@ -26,6 +26,8 @@
   <meta property="og:image" content="{% if (page_meta is defined and page_meta.image) %}{{ page_meta.image }}{% else %}{{ (custom_favicon or "/s/fe/f0ckv2/img/favicon.gif") }}{% endif %}">
   {% endif %}
   <link rel="icon" {% if custom_favicon %}href="{{ custom_favicon }}"{% else %}type="image/gif" href="/s/fe/f0ckv2/img/favicon.gif"{% endif %} />
+  {#- the site chat (structure; skinned by this frontend's CSS) -#}
+  {% include "snippets/globalchat-head.html" %}
   <link rel="stylesheet" href="/s/fe/f0ckv2/css/f0ck.css?v={{ mtime("/public/s/fe/f0ckv2/css/f0ck.css") }}">
   {#- f0ckm's video player (the newer v0ck) -#}
   <link rel="stylesheet" href="/s/css/v0ck.css?v={{ mtime("/public/s/css/v0ck.css") }}">

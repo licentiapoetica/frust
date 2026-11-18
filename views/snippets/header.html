@@ -36,6 +36,8 @@
   <link rel="stylesheet" href="/s/fa/all.min.css">
   <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
   {% if (not private_society or session) %}
+    {#- the site chat's structure, before f0ckm.css' skin of it -#}
+    {% include "snippets/globalchat-head.html" %}
     {% if (development or (private_society and not session)) %}
     <link rel="stylesheet" href="/s/css/f0ckm.css?v={{ ts }}">
     {% endif %}

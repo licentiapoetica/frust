@@ -1,22 +1,36 @@
 /**
- * globalchat.js — Site-wide persistent chat widget
+ * globalchat.js — Site-wide persistent chat widget, in every frontend.
  * Panel is always visible. Minimize-only.
  * Features: emoji picker, :emoji autocomplete, @user autocomplete,
  *           greentext, [spoiler], [blur]
+ *
+ * Loaded by snippets/globalchat.html (f0ckm's footer and snippets/frontend-scripts.html). The look is
+ * a skin: the structure is in /s/css/globalchat.css, each frontend styles it in its own CSS under
+ * html.gchat-skin-<frontend> (f0ckm: f0ckm.css). The page data blocks:
+ *   #gchat-skin        { skin, title, placeholder, open, online, guests, guests_one, users }
+ *                      (snippets/globalchat.html); <count>_one: the text for 1 (online_one, guests_one)
+ *   #gchat-skin-texts  the frontend's own texts, optional (views/frontends/<fe>/snippets/chat.html):
+ *                      title, placeholder, open, online ("{n}"), guests ("{n}"), badge (chip next to
+ *                      the title), greeting (top of the message list, "{name}"), intro (text under
+ *                      it), note (small print under the input), icon (title icon: chat | spark)
+ * No inline styles: states are classes / the hidden attribute; sizes and positions the visitor drags
+ * are custom properties (--gc-w, --gc-h, --gc-x, --gc-y) the CSS uses.
  */
 (function () {
     'use strict';
 
+    if (window.__f0ckGlobalChat) return;
     if (!window.f0ckSession?.enable_global_chat) return;
     if (!window.f0ckSession?.logged_in) return;
     if (window.location.pathname.startsWith('/abyss')) return;
-
+    window.__f0ckGlobalChat = true;
 
     // Embedded chat images hide their wrapper when they fail to load
-    F0ckActions.define('gchat-hide-parent', (el) => { if (el.parentNode) el.parentNode.style.display = 'none'; });
+    window.F0ckActions?.define('gchat-hide-parent', (el) => { if (el.parentNode) el.parentNode.hidden = true; });
 
     const MAX_VISIBLE_MSGS = 100;
     const RATE_LIMIT_MS    = 800;
+    const HEADER_H         = 42;
 
     let isMinimized  = localStorage.getItem('f0ck_chat_minimized') !== '0';
     let isClosed     = localStorage.getItem('f0ck_chat_closed')    === '1';
@@ -24,7 +38,85 @@
     let customEmojis = null; // name → url
     let unreadCount  = 0;
     let chatFocused  = document.hasFocus();
+    // Phones (<= 600px): a chat button in the corner opens the chat full screen (html.gchat-m-open);
+    // no detach / minimize / resize there, the desktop size and position are kept for desktop
+    const phoneMQ    = window.matchMedia('(max-width: 600px)');
+    const noHoverMQ  = window.matchMedia('(hover: none)');
+    let mobileOpen   = false;
+    const isPhone    = () => phoneMQ.matches;
+    // whether new messages are seen: the open phone chat, or the expanded desktop panel
+    const chatShown  = () => (isPhone() ? mobileOpen : !isMinimized && !isClosed);
     const ytOembedCache = new Map(); // videoId → {title, author_name}
+
+    // ── i18n + skin ──────────────────────────────────────────────────────────
+    function t(key, fallback) { return window.f0ckI18n?.[key] || fallback; }
+
+    function readJson(id) {
+        try { return JSON.parse(document.getElementById(id)?.textContent || 'null') || {}; }
+        catch (_) { return {}; }
+    }
+    const skin = Object.assign({
+        skin:        'f0ckm',
+        title:       t('chat_title', 'Site Chat'),
+        placeholder: t('chat_placeholder', 'Chat…'),
+        open:        t('chat_open', 'Open chat'),
+        online:      t('chat_online', '{n} online'),
+        guests:      t('chat_guests', '{n} guests'),
+        guests_one:  t('chat_guest', '{n} guest'),
+        users:       t('chat_users', "Who's online"),
+        icon:        'chat',
+        badge: '', greeting: '', intro: '', note: ''
+    }, readJson('gchat-skin'));
+    for (const [k, v] of Object.entries(readJson('gchat-skin-texts'))) {
+        if (typeof v === 'string') skin[k] = v;
+    }
+    const skinName = String(skin.skin || 'f0ckm').replace(/[^a-z0-9_-]/gi, '');
+    document.documentElement.classList.add('gchat-skin-' + skinName);
+
+    // A count text: skin.<key>_one when n is 1 (if the skin has it), else skin.<key>
+    function count(key, n) {
+        return fill((n === 1 && skin[key + '_one']) || skin[key], { n });
+    }
+
+    function fill(str, vars) {
+        return String(str || '').replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+    }
+
+    // ── Icons (inline SVG, coloured with currentColor) ───────────────────────
+    const ICONS = {
+        chat:     'M3 4h18v13H8l-5 4z',
+        float:    'M14 3h7v7h-2V6.41l-6.29 6.3-1.42-1.42L17.59 5H14zM3 5h8v2H5v12h12v-6h2v8H3z',
+        dock:     'M3 3h8v2H5v14h14v-6h2v8H3zM21 4.41 15.41 10H19v2h-7V5h2v3.59L19.59 3z',
+        up:       'M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z',
+        down:     'M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z',
+        close:    'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+        send:     'M2.01 21 23 12 2.01 3 2 10l15 2-15 2z',
+        reply:    'M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z',
+        trash:    'M6 7h12v14H6zM15.5 4l-1-1h-5l-1 1H5v2h14V4z',
+        external: 'M19 19H5V5h7V3H3v18h18v-9h-2zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3z',
+        video:    'M2 4h20v16H2zm8 4v8l6-4z',
+        audio:    'M12 3v10.55A4 4 0 1 0 14 17V7h4V3z',
+        image:    'M3 3h18v18H3zm2 14h14l-4.5-6-3.5 4.5-2.5-3z',
+        user:     'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+        comment:  'M2 2h20v16H6l-4 4z',
+        play:     'M8 5v14l11-7z',
+        emoji:    'M15.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm-7 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5zM11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z',
+        users:    'M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+        spark:    'M12 2c.6 5.4 4.6 9.4 10 10-5.4.6-9.4 4.6-10 10-.6-5.4-4.6-9.4-10-10 5.4-.6 9.4-4.6 10-10z'
+    };
+    let sparkSeq = 0;
+    function ico(name, cls = '') {
+        if (name === 'spark') {
+            // The f0ckgle sparkle: its gradient stops are coloured by the skin (.gchat-spark-s1…s3).
+            // Its own gradient id each time: one inside a hidden panel wouldn't paint the others.
+            const gid = `gchat-spark-g${++sparkSeq}`;
+            return `<svg class="gchat-ico gchat-ico-spark ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">` +
+                `<defs><linearGradient id="${gid}" x1="0" y1="1" x2="1" y2="0">` +
+                `<stop offset="0" class="gchat-spark-s1"/><stop offset=".5" class="gchat-spark-s2"/><stop offset="1" class="gchat-spark-s3"/>` +
+                `</linearGradient></defs><path d="${ICONS.spark}" fill="url(#${gid})"/></svg>`;
+        }
+        return `<svg class="gchat-ico gchat-ico-${name} ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${ICONS[name] || ICONS.chat}" fill="currentColor"/></svg>`;
+    }
 
     // Shared IntersectionObserver for lazy-loading embedded images.
     // Images are rendered with data-lazy-src; this observer sets the real src
@@ -45,24 +137,16 @@
     function updateBadge() {
         const badge  = document.getElementById('gchat-badge');
         const bubble = document.getElementById('gchat-reopen-bubble');
-        if (unreadCount > 0) {
-            const label = unreadCount > 99 ? '99+' : String(unreadCount);
-            if (badge) { badge.textContent = label; badge.style.display = 'inline-flex'; }
-            // Bubble badge — create it lazily if it doesn't exist yet
-            if (bubble) {
-                let bb = bubble.querySelector('.gchat-bubble-badge');
-                if (!bb) {
-                    bb = document.createElement('span');
-                    bb.className = 'gchat-bubble-badge';
-                    bubble.appendChild(bb);
-                }
-                bb.textContent = label;
-                bb.style.display = '';
+        const label  = unreadCount > 99 ? '99+' : String(unreadCount);
+        if (badge) { badge.textContent = label; badge.hidden = unreadCount <= 0; }
+        if (bubble) {
+            let bb = bubble.querySelector('.gchat-bubble-badge');
+            if (!bb && unreadCount > 0) {
+                bb = document.createElement('span');
+                bb.className = 'gchat-bubble-badge';
+                bubble.appendChild(bb);
             }
-        } else {
-            if (badge) badge.style.display = 'none';
-            const bb = document.getElementById('gchat-reopen-bubble')?.querySelector('.gchat-bubble-badge');
-            if (bb) bb.style.display = 'none';
+            if (bb) { bb.textContent = label; bb.hidden = unreadCount <= 0; }
         }
     }
 
@@ -73,54 +157,6 @@
 
     window.addEventListener('focus', () => { chatFocused = true;  if (!isMinimized) clearUnread(); });
     window.addEventListener('blur',  () => { chatFocused = false; });
-
-
-    // ── i18n ─────────────────────────────────────────────────────────────────
-    function t(key, fallback) { return window.f0ckI18n?.[key] || fallback; }
-
-    // ── Build widget ─────────────────────────────────────────────────────────
-    function buildWidget() {
-        const widget = document.createElement('div');
-        widget.id = 'gchat-widget';
-        widget.innerHTML = `
-            <div id="gchat-panel" class="${isMinimized ? 'gchat-minimized' : ''}">
-                <div id="gchat-resize-h"></div>
-                <div id="gchat-resize-w"></div>
-                <div id="gchat-resize-e"></div>
-                <div id="gchat-header">
-                    <span id="gchat-title"><i class="fa-solid fa-comments"></i> ${t('chat_title', 'Site Chat')}<span id="gchat-badge" class="gchat-badge" style="display:none"></span></span>
-                    <div class="gchat-header-btns">
-                        <button id="gchat-float-btn" title="Float / Dock" class="gchat-icon-btn">
-                            <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
-                        </button>
-                        <button id="gchat-minimize-btn" title="${isMinimized ? t('chat_expand','Expand') : t('chat_minimize','Minimize')}" class="gchat-icon-btn">
-                            <i class="fa-solid ${isMinimized ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
-                        </button>
-                        <button id="gchat-close-btn" title="${t('chat_close','Close chat')}" class="gchat-icon-btn">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
-                </div>
-                <div id="gchat-topic" style="display:none"></div>
-                <div id="gchat-online"></div>
-                <div id="gchat-messages"></div>
-                <div id="gchat-input-area">
-                    <div id="gchat-toolbar">
-                        <button class="gchat-tool-btn" id="gchat-emoji-btn" title="Emoji">☺</button>
-                        <button class="gchat-tool-btn" id="gchat-spoiler-btn" title="[spoiler]"><span class="spoiler" style="pointer-events:none;font-size:0.7em;padding:0 2px">S</span></button>
-                        <button class="gchat-tool-btn" id="gchat-blur-btn" title="[blur]"><span class="blur-text" style="pointer-events:none;font-size:0.7em;padding:0 2px">B</span></button>
-                    </div>
-                    <div id="gchat-input-row">
-                        <textarea id="gchat-input" placeholder="${t('chat_placeholder','Chat\u2026')}" maxlength="500" rows="1"></textarea>
-                        <button id="gchat-send-btn" title="${t('common_send','Send')}">
-                            <i class="fa-solid fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(widget);
-    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     // Also quotes: the result goes into attribute values (src="…", alt="…")
@@ -134,6 +170,64 @@
         if (msg.avatar_file) return `/a/${msg.avatar_file}`;
         if (msg.avatar)      return `/t/${msg.avatar}.webp`;
         return '/a/default.png';
+    }
+
+    // A user colour (from the database) as the one inline value the CSS uses: --user-color
+    function userColorAttr(color) {
+        return color ? ` style="--user-color:${esc(String(color).replace(/[;{}<>]/g, ''))}"` : '';
+    }
+
+    // ── Build widget ─────────────────────────────────────────────────────────
+    function introHTML() {
+        if (!skin.greeting && !skin.intro) return '';
+        const name = window.f0ckSession.display_name || window.f0ckSession.user || '';
+        return `<div class="gchat-intro">` +
+            (skin.greeting ? `<div class="gchat-greeting">${esc(fill(skin.greeting, { name }))}</div>` : '') +
+            (skin.intro ? `<div class="gchat-intro-text">${esc(fill(skin.intro, { name }))}</div>` : '') +
+        `</div>`;
+    }
+
+    // resize handles: edges and corners (docked, only the free ones: top, left, top-left)
+    const RESIZE_DIRS = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+
+    function buildWidget() {
+        const widget = document.createElement('div');
+        widget.id = 'gchat-widget';
+        widget.innerHTML = `
+            <div id="gchat-panel" class="${isMinimized ? 'gchat-minimized' : ''}">
+                ${RESIZE_DIRS.map(d => `<div class="gchat-rz gchat-rz-${d}" data-rz="${d}"></div>`).join('')}
+                <div id="gchat-header">
+                    <span id="gchat-title">${ico(skin.icon === 'spark' ? 'spark' : 'chat', 'gchat-title-ico')}<span class="gchat-title-text">${esc(skin.title)}</span>${skin.badge ? `<span class="gchat-chip">${esc(skin.badge)}</span>` : ''}<span id="gchat-badge" class="gchat-badge" hidden></span></span>
+                    <div class="gchat-header-btns">
+                        <button type="button" id="gchat-float-btn" title="${esc(t('chat_float', 'Float / Dock'))}" class="gchat-icon-btn">${ico('float')}</button>
+                        <button type="button" id="gchat-minimize-btn" title="${esc(isMinimized ? t('chat_expand','Expand') : t('chat_minimize','Minimize'))}" class="gchat-icon-btn">${ico(isMinimized ? 'up' : 'down')}</button>
+                        <button type="button" id="gchat-close-btn" title="${esc(t('chat_close','Close chat'))}" class="gchat-icon-btn">${ico('close')}</button>
+                    </div>
+                </div>
+                <div id="gchat-topic" hidden></div>
+                <div id="gchat-online" role="button" tabindex="0" title="${esc(skin.users)}" hidden></div>
+                <div id="gchat-messages">${introHTML()}</div>
+                <div id="gchat-input-area">
+                    <div id="gchat-emoji-ac" class="gchat-ac" hidden></div>
+                    <div id="gchat-mention-ac" class="gchat-ac" hidden></div>
+                    <div id="gchat-input-row">
+                        <button type="button" class="gchat-tool-btn" id="gchat-emoji-btn" title="Emoji">${ico('emoji')}</button>
+                        <textarea id="gchat-input" placeholder="${esc(skin.placeholder)}" maxlength="500" rows="1"></textarea>
+                        <button type="button" id="gchat-send-btn" title="${esc(t('common_send','Send'))}">${ico('send')}</button>
+                    </div>
+                    <div id="gchat-toolbar"><span id="gchat-count" class="gchat-count">0/500</span></div>
+                    ${skin.note ? `<div class="gchat-note">${esc(skin.note)}</div>` : ''}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(widget);
+    }
+
+    // Clears the message list but keeps the skin's greeting on top
+    function resetMessages() {
+        const container = document.getElementById('gchat-messages');
+        if (container) container.innerHTML = introHTML();
+        return container;
     }
 
     // ── Build allowed-hosts regex (mirrors comments.js logic) ─────────────────
@@ -234,17 +328,17 @@
             const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
             const thumb    = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
             return `<a class="gchat-yt-card" data-yt-id="${videoId}" href="${watchUrl}" target="_blank" rel="noopener noreferrer">` +
-                `<div class="gchat-yt-thumb-wrap">` +
+                `<span class="gchat-yt-thumb-wrap">` +
                     `<img src="${thumb}" class="gchat-yt-thumb" alt="YouTube thumbnail" loading="lazy">` +
-                    `<div class="gchat-yt-play"><i class="fa-brands fa-youtube"></i></div>` +
-                `</div>` +
-                `<div class="gchat-yt-info">` +
+                    `<span class="gchat-yt-play">${ico('play')}</span>` +
+                `</span>` +
+                `<span class="gchat-yt-info">` +
                     `<span class="gchat-yt-title">…</span>` +
                     `<span class="gchat-yt-author"></span>` +
-                `</div>` +
+                `</span>` +
             `</a>`;
         });
-        
+
         // 6d.1 Vocaroo URLs → iframe embed
         const vocarooRegex = /https?:\/\/(?:www\.)?(?:voca\.ro|vocaroo\.com)\/([a-zA-Z0-9_-]+)[^\s]*/gi;
         html = html.replace(vocarooRegex, (match, vocarooId) => {
@@ -261,7 +355,7 @@
         );
         html = html.replace(siteItemRx, (match, itemId) =>
             `<span class="gchat-item-embed gchat-post-card gchat-post-card--loading" data-item-id="${itemId}">` +
-                `<span class="gchat-post-card__thumb-wrap"><span class="gchat-post-card__thumb-placeholder"><i class="fa-solid fa-spinner fa-spin"></i></span></span>` +
+                `<span class="gchat-post-card__thumb-wrap"><span class="gchat-post-card__thumb-placeholder"><span class="gchat-spin"></span></span></span>` +
                 `<span class="gchat-post-card__info"><span class="gchat-post-card__id">#${itemId}</span></span>` +
             `</span>`
         );
@@ -296,38 +390,52 @@
                 }
             } catch (_) {}
 
-            return `${pre}<a href="${url}" target="_blank" rel="noopener noreferrer">${url}<i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.7em;margin-left:3px;opacity:0.6"></i></a>`;
+            return `${pre}<a href="${url}" class="gchat-link" target="_blank" rel="noopener noreferrer">${url}${ico('external', 'gchat-ico-ext')}</a>`;
         });
 
         return html;
     }
 
+    // A time: short on screen, the full date and time on hover (title) and for machines (datetime)
+    function timeTag(cls, when, short) {
+        const full = when.toLocaleString([], {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+        return `<time class="${cls}" datetime="${esc(when.toISOString())}" title="${esc(full)}">${esc(short)}</time>`;
+    }
+
+    // Every message carries avatar, name and time; the skins decide what shows (f0ckm hides them on
+    // your own messages, f0ckv2 shows an IRC line, f0ckyou a live-chat row).
     function renderMsg(msg) {
         const isSelf      = (msg.username === window.f0ckSession.user);
         const isAdmin     = window.f0ckSession.is_admin || window.f0ckSession.is_moderator;
         const displayName = msg.display_name || msg.username;
-        const color       = msg.username_color ? `style="color:${esc(msg.username_color)}"` : '';
-        const ts          = msg.created_at
-            ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        const when        = msg.created_at ? new Date(msg.created_at) : null;
+        const ts          = when && !isNaN(when)
+            ? when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : '';
-        const content = renderMsgContent(msg.message || '');
-        const msgId   = msg.id ? `data-msg-id="${msg.id}"` : '';
-        const replyUser = esc(msg.username || '');
+        const content  = renderMsgContent(msg.message || '');
+        const msgId    = msg.id ? `data-msg-id="${msg.id}"` : '';
+        const user     = esc(msg.username || '');
+        const userHref = `/user/${encodeURIComponent(msg.username || '')}`;
 
-        return `<div class="gchat-msg ${isSelf ? 'gchat-msg-self' : ''}" ${msgId}>
-            ${!isSelf ? `<a href="/user/${esc(msg.username)}" class="gchat-avatar-link">
-                <img src="${avatarSrc(msg)}" class="gchat-avatar" alt="${esc(displayName)}" loading="lazy">
-            </a>` : ''}
-            <div class="gchat-bubble-wrap">
-                ${!isSelf ? `<span class="gchat-username" ${color}>${esc(displayName)}</span>` : ''}
-                <div class="gchat-bubble">${content}</div>
-                <div class="gchat-msg-actions">
-                    ${ts ? `<span class="gchat-time">${ts}</span>` : ''}
-                    <button class="gchat-reply-btn" data-username="${replyUser}" title="Reply"><i class="fa-solid fa-reply"></i></button>
-                    ${isAdmin && msg.id ? `<button class="gchat-del-btn" data-id="${msg.id}" title="Delete"><i class="fa-solid fa-trash"></i></button>` : ''}
-                </div>
-            </div>
-        </div>`;
+        // No whitespace between the parts: skins that put them on one line (f0ckv2, f0ckyou) set the gaps
+        return `<div class="gchat-msg${isSelf ? ' gchat-msg-self' : ''}" ${msgId}>` +
+            `<a href="${userHref}" class="gchat-avatar-link" tabindex="-1"><img src="${avatarSrc(msg)}" class="gchat-avatar" alt="" loading="lazy"></a>` +
+            `<div class="gchat-bubble-wrap">` +
+                `<div class="gchat-meta">` +
+                    `<a href="${userHref}" class="gchat-username${msg.username_color ? ' gchat-user-colored' : ''}"${userColorAttr(msg.username_color)}>${esc(displayName)}</a>` +
+                    (ts ? timeTag('gchat-time', when, ts) : '') +
+                `</div>` +
+                `<div class="gchat-bubble">${content}${ts ? timeTag('gchat-stamp', when, ts) : ''}</div>` +
+            `</div>` +
+            // reply / delete: shown on hover, in space the skin keeps free for them
+            `<div class="gchat-msg-actions">` +
+                `<button type="button" class="gchat-reply-btn" data-username="${user}" title="${esc(t('chat_reply', 'Reply'))}">${ico('reply')}</button>` +
+                (isAdmin && msg.id ? `<button type="button" class="gchat-del-btn" data-id="${msg.id}" title="${esc(t('chat_delete', 'Delete'))}">${ico('trash')}</button>` : '') +
+            `</div>` +
+        `</div>`;
     }
 
     function scrollToBottom(force = false, smooth = false) {
@@ -341,62 +449,6 @@
             // Double rAF ensures layout is committed before reading scrollHeight
             requestAnimationFrame(() => requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; }));
         }
-    }
-
-    /**
-     * Watch the message container and keep snapping to bottom for durationMs.
-     * Only stops if the user actively scrolls up via wheel / touch / keyboard.
-     * Same logic as the DM snapToBottomSticky.
-     */
-    function startStickyScroll(durationMs = 8000) {
-        const el = document.getElementById('gchat-messages');
-        if (!el) return;
-
-        let userScrolledUp = false;
-
-        const onWheel      = (e) => { if (e.deltaY < 0) userScrolledUp = true; };
-        const onKey        = (e) => { if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) userScrolledUp = true; };
-        let touchStartY = 0;
-        const onTouchStart = (e) => { touchStartY = e.touches[0]?.clientY ?? 0; };
-        const onTouchMove  = (e) => { if ((e.touches[0]?.clientY ?? 0) > touchStartY + 10) userScrolledUp = true; };
-
-        el.addEventListener('wheel',      onWheel,       { passive: true });
-        el.addEventListener('keydown',    onKey,         { passive: true });
-        el.addEventListener('touchstart', onTouchStart,  { passive: true });
-        el.addEventListener('touchmove',  onTouchMove,   { passive: true });
-
-        let ro;
-        const cleanup = () => {
-            el.removeEventListener('wheel',      onWheel);
-            el.removeEventListener('keydown',    onKey);
-            el.removeEventListener('touchstart', onTouchStart);
-            el.removeEventListener('touchmove',  onTouchMove);
-            if (ro) ro.disconnect();
-        };
-
-        if (typeof ResizeObserver !== 'undefined') {
-            // Debounce: batch rapid layout changes (e.g. progressive image renders)
-            // into a single smooth scroll instead of many jarring instant jumps.
-            let debounceTimer = null;
-            ro = new ResizeObserver(() => {
-                if (userScrolledUp) { cleanup(); return; }
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    if (!userScrolledUp) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-                }, 80);
-            });
-            ro.observe(el);
-        } else {
-            setTimeout(() => scrollToBottom(true), 300);
-            setTimeout(() => scrollToBottom(true), 800);
-            setTimeout(() => scrollToBottom(true), 2000);
-        }
-
-        setTimeout(cleanup, durationMs);
-
-        // First snap is instant (no animation — the panel just opened)
-        scrollToBottom(true);
-        setTimeout(() => { if (!userScrolledUp) scrollToBottom(true); }, 150);
     }
 
     async function fetchYtOembed(cardEl) {
@@ -463,9 +515,9 @@
 
         // Media type badge
         let typeBadge = '';
-        if (mime.startsWith('video/')) typeBadge = '<i class="fa-solid fa-film"></i>';
-        else if (mime.startsWith('audio/')) typeBadge = '<i class="fa-solid fa-music"></i>';
-        else if (mime.startsWith('image/')) typeBadge = '<i class="fa-solid fa-image"></i>';
+        if (mime.startsWith('video/')) typeBadge = ico('video');
+        else if (mime.startsWith('audio/')) typeBadge = ico('audio');
+        else if (mime.startsWith('image/')) typeBadge = ico('image');
 
         const card = document.createElement('a');
         card.className = 'gchat-post-card';
@@ -477,8 +529,8 @@
             `</span>` +
             `<span class="gchat-post-card__info">` +
                 `<span class="gchat-post-card__id">#${id}</span>` +
-                `<span class="gchat-post-card__uploader"><i class="fa-solid fa-user"></i> ${uploader}</span>` +
-                `<span class="gchat-post-card__comments"><i class="fa-solid fa-comment"></i> ${commentCount}</span>` +
+                `<span class="gchat-post-card__uploader">${ico('user')} ${uploader}</span>` +
+                `<span class="gchat-post-card__comments">${ico('comment')} ${commentCount}</span>` +
             `</span>`;
 
         wrapEl.replaceWith(card);
@@ -490,30 +542,24 @@
         const div = document.createElement('div');
         div.innerHTML = renderMsg(msg);
         const node = div.firstElementChild;
-        while (container.children.length >= MAX_VISIBLE_MSGS) container.removeChild(container.firstChild);
+        const shown = container.getElementsByClassName('gchat-msg');
+        while (shown.length >= MAX_VISIBLE_MSGS) shown[0].remove();
         container.appendChild(node);
         setTimeout(() => node.classList.add('gchat-msg-in'), 10);
 
         // Wire up spoiler clicks on newly appended msg
-        node.querySelectorAll('.spoiler,.blur-text').forEach(s => {
+        node.querySelectorAll('.gchat-bubble .spoiler, .gchat-bubble .blur-text').forEach(s => {
             s.addEventListener('click', () => s.classList.toggle('revealed'));
         });
 
         // Embedded images: register with lazy observer; scroll on load only for new messages (not history)
-        node.querySelectorAll('.gchat-embed-img img[data-lazy-src]').forEach(img => {
+        node.querySelectorAll('.gchat-embed-img img').forEach(img => {
             // Only snap to bottom on image load for NEW incoming messages, not history.
             // History already scrolls once at the end of loadHistory; an extra scroll
             // here is what causes the double jump.
             if (scrollForce) img.addEventListener('load', () => scrollToBottom(true));
             img.addEventListener('click', () => openImgModal(img.src));
-            img.style.cursor = 'zoom-in';
-            lazyImgObserver.observe(img);
-        });
-        // Already-src'd images (avatars etc.) — same rule
-        node.querySelectorAll('.gchat-embed-img img:not([data-lazy-src])').forEach(img => {
-            if (scrollForce) img.addEventListener('load', () => scrollToBottom(true));
-            img.addEventListener('click', () => openImgModal(img.src));
-            img.style.cursor = 'zoom-in';
+            if (img.dataset.lazySrc) lazyImgObserver.observe(img);
         });
 
         // Wire up YouTube oEmbed cards
@@ -524,10 +570,17 @@
         scrollToBottom(scrollForce);
 
         // Unread badge: count if minimized or window not focused
-        if (isMinimized || !chatFocused) {
+        if (!chatShown() || !chatFocused) {
             unreadCount++;
             updateBadge();
         }
+    }
+
+    // Fades a message out (deleted by a moderator), then removes it
+    function removeMsg(msgEl) {
+        if (!msgEl) return;
+        msgEl.classList.add('gchat-msg-out');
+        setTimeout(() => msgEl.remove(), 200);
     }
 
     async function loadHistory() {
@@ -535,9 +588,8 @@
             const res  = await fetch('/api/chat', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             const data = await res.json();
             if (!data.success) return;
-            const container = document.getElementById('gchat-messages');
+            const container = resetMessages();
             if (!container) return;
-            container.innerHTML = '';
             (data.messages || []).forEach(m => appendMsg(m, false));
             // Double rAF: wait for the browser to commit the layout (panel just became
             // visible from display:none) before reading scrollHeight.
@@ -549,6 +601,23 @@
         }
     }
 
+    function updateCount(input) {
+        const el = document.getElementById('gchat-count');
+        if (el) el.textContent = `${input.value.length}/${input.maxLength > 0 ? input.maxLength : 500}`;
+    }
+
+    // Grows the field with its text, up to 4 lines (rows, not a height style)
+    function autoGrow(input) {
+        input.rows = 1;
+        while (input.rows < 4 && input.scrollHeight > input.clientHeight + 1) input.rows++;
+    }
+
+    function clearInput(input) {
+        input.value = '';
+        autoGrow(input);
+        updateCount(input);
+    }
+
     async function sendMessage() {
         const input = document.getElementById('gchat-input');
         if (!input) return;
@@ -558,24 +627,23 @@
         // Admin slash commands
         if (raw === '/clear') {
             const isAdmin = window.f0ckSession.is_admin || window.f0ckSession.is_moderator;
-            if (!isAdmin) { input.value = ''; return; }
+            if (!isAdmin) { clearInput(input); return; }
             const csrf = window.f0ckSession?.csrf_token;
             try {
                 await fetch('/api/chat', {
                     method: 'DELETE',
                     headers: { 'X-Requested-With': 'XMLHttpRequest', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) }
                 });
-                const container = document.getElementById('gchat-messages');
-                if (container) container.innerHTML = '';
+                resetMessages();
             } catch (e) { console.error('[Chat] Clear error', e); }
-            input.value = '';
+            clearInput(input);
             return;
         }
 
         // /setbackground <url> [css opts]  — e.g. /setbackground https://… center / contain no-repeat
         if (raw.startsWith('/setbackground ') || raw === '/clearbg') {
             const isAdmin = window.f0ckSession.is_admin || window.f0ckSession.is_moderator;
-            if (!isAdmin) { input.value = ''; return; }
+            if (!isAdmin) { clearInput(input); return; }
             const csrf = window.f0ckSession?.csrf_token;
             const headers = { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) };
 
@@ -594,20 +662,20 @@
                     if (!data.success) console.warn('[Chat] setbackground error:', data.msg);
                 } catch (e) { console.error('[Chat] setbackground error', e); }
             }
-            input.value = '';
+            clearInput(input);
             return;
         }
 
         // /settopic <text>  or  /cleartopic
         if (raw.startsWith('/settopic') || raw === '/cleartopic') {
             const isAdmin = window.f0ckSession.is_admin || window.f0ckSession.is_moderator;
-            if (!isAdmin) { input.value = ''; return; }
+            if (!isAdmin) { clearInput(input); return; }
             const csrf = window.f0ckSession?.csrf_token;
             const headers = { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) };
             const topic = raw === '/cleartopic' ? '' : raw.slice('/settopic'.length).trim();
             try { await fetch('/api/chat/topic', { method: 'POST', headers, body: new URLSearchParams({ topic }) }); }
             catch (e) { console.error('[Chat] settopic error', e); }
-            input.value = '';
+            clearInput(input);
             return;
         }
 
@@ -615,8 +683,7 @@
         if (now - lastSent < RATE_LIMIT_MS) { return; }
         lastSent = now;
 
-        input.value = '';
-        input.style.height = 'auto';
+        clearInput(input);
 
         const csrf = window.f0ckSession?.csrf_token;
         try {
@@ -641,10 +708,11 @@
         localStorage.setItem('f0ck_chat_minimized', isMinimized ? '1' : '0');
         const panel = document.getElementById('gchat-panel');
         const btn   = document.getElementById('gchat-minimize-btn');
-        const icon  = btn?.querySelector('i');
         if (panel) panel.classList.toggle('gchat-minimized', isMinimized);
-        if (btn)   btn.title = isMinimized ? t('chat_expand','Expand') : t('chat_minimize','Minimize');
-        if (icon)  icon.className = `fa-solid ${isMinimized ? 'fa-chevron-up' : 'fa-chevron-down'}`;
+        if (btn) {
+            btn.title = isMinimized ? t('chat_expand','Expand') : t('chat_minimize','Minimize');
+            btn.innerHTML = ico(isMinimized ? 'up' : 'down');
+        }
         if (!isMinimized) {
             clearUnread();
             // Wait one rAF so the panel transitions from display:none to its full
@@ -663,6 +731,11 @@
         let picker = null;
         let closeHandler = null;
 
+        const hidePicker = () => {
+            if (picker) picker.classList.remove('gchat-open');
+            if (closeHandler) { document.removeEventListener('click', closeHandler); closeHandler = null; }
+        };
+
         const buildPicker = () => {
             if (picker) { picker.remove(); picker = null; }
             picker = document.createElement('div');
@@ -674,7 +747,7 @@
                     img.src = customEmojis[name];
                     img.title = `:${name}:`;
                     img.loading = 'lazy';
-                    img.onerror = () => { img.style.display = 'none'; };
+                    img.addEventListener('error', () => { img.hidden = true; });
                     img.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const pos = textarea.selectionStart ?? textarea.value.length;
@@ -683,36 +756,33 @@
                         const newPos = pos + name.length + 2;
                         textarea.setSelectionRange(newPos, newPos);
                         textarea.focus();
-                        picker.style.display = 'none';
-                        if (closeHandler) { document.removeEventListener('click', closeHandler); closeHandler = null; }
+                        updateCount(textarea);
+                        hidePicker();
                     });
                     picker.appendChild(img);
                 });
             } else {
-                picker.innerHTML = '<div style="padding:8px;opacity:0.6;font-size:0.85em">No custom emojis</div>';
+                const empty = document.createElement('div');
+                empty.className = 'gchat-emoji-empty';
+                empty.textContent = 'No custom emojis';
+                picker.appendChild(empty);
             }
 
-            // Position above input area
-            const panel = document.getElementById('gchat-panel');
-            panel.appendChild(picker);
+            // Above the input area
+            const area = document.getElementById('gchat-input-area');
+            area.parentNode.insertBefore(picker, area);
         };
 
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             if (!picker) buildPicker();
 
-            const isVisible = picker.style.display !== 'none' && picker.style.display !== '';
-            if (isVisible) {
-                picker.style.display = 'none';
-                if (closeHandler) { document.removeEventListener('click', closeHandler); closeHandler = null; }
+            if (picker.classList.contains('gchat-open')) {
+                hidePicker();
             } else {
-                picker.style.display = 'grid';
+                picker.classList.add('gchat-open');
                 closeHandler = (ev) => {
-                    if (!picker.contains(ev.target) && ev.target !== btn) {
-                        picker.style.display = 'none';
-                        document.removeEventListener('click', closeHandler);
-                        closeHandler = null;
-                    }
+                    if (!picker.contains(ev.target) && !btn.contains(ev.target)) hidePicker();
                 };
                 setTimeout(() => document.addEventListener('click', closeHandler), 0);
             }
@@ -721,17 +791,13 @@
         // Rebuild picker if emojis load after init
         window.addEventListener('f0ck:emojis_ready', (e) => {
             customEmojis = e.detail;
-            if (picker) { picker.remove(); picker = null; } // force rebuild on next open
+            if (picker) { hidePicker(); picker.remove(); picker = null; } // force rebuild on next open
         });
     }
 
-    // ── :emoji inline autocomplete ────────────────────────────────────────────
+    // ── :emoji inline autocomplete (a list above the input, inside the panel) ─
     function setupEmojiAutocomplete(textarea) {
-        const ac = document.createElement('div');
-        ac.id = 'gchat-emoji-ac';
-        ac.style.display = 'none';
-        document.body.appendChild(ac);
-
+        const ac = document.getElementById('gchat-emoji-ac');
         let acMatches = [], acIdx = -1;
 
         const getColon = () => {
@@ -742,16 +808,8 @@
             return { query: m[1].toLowerCase(), colonPos: pos - m[0].length };
         };
 
-        const positionAC = () => {
-            const rect = textarea.getBoundingClientRect();
-            ac.style.left   = rect.left + 'px';
-            ac.style.width  = rect.width + 'px';
-            ac.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
-            ac.style.top    = 'auto';
-        };
-
         const hideAC = () => {
-            ac.style.display = 'none';
+            ac.hidden = true;
             ac.innerHTML = '';
             acMatches = []; acIdx = -1;
         };
@@ -766,12 +824,13 @@
             const newPos = hit.colonPos + insert.length;
             textarea.setSelectionRange(newPos, newPos);
             textarea.focus();
+            updateCount(textarea);
             hideAC();
         };
 
         const setActiveAC = (idx) => {
-            ac.querySelectorAll('.gchat-emoji-ac-item').forEach(el => el.classList.remove('active'));
             const items = ac.querySelectorAll('.gchat-emoji-ac-item');
+            items.forEach(el => el.classList.remove('active'));
             if (idx >= 0 && idx < items.length) {
                 items[idx].classList.add('active');
                 items[idx].scrollIntoView({ block: 'nearest' });
@@ -787,7 +846,7 @@
 
             ac.innerHTML = '';
             acIdx = -1;
-            acMatches.forEach((name, i) => {
+            acMatches.forEach((name) => {
                 const item = document.createElement('div');
                 item.className = 'gchat-emoji-ac-item';
                 const img = document.createElement('img');
@@ -798,8 +857,7 @@
                 item.addEventListener('mousedown', ev => { ev.preventDefault(); insertEmoji(name); });
                 ac.appendChild(item);
             });
-            positionAC();
-            ac.style.display = 'flex';
+            ac.hidden = false;
             // Auto-select first match so Enter works immediately
             setActiveAC(0);
         };
@@ -809,7 +867,7 @@
         textarea.addEventListener('blur',   () => setTimeout(hideAC, 150));
 
         textarea.addEventListener('keydown', e => {
-            if (ac.style.display === 'none') return;
+            if (ac.hidden) return;
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setActiveAC((acIdx + 1) % acMatches.length);
@@ -829,13 +887,9 @@
         });
     }
 
-    // ── @user inline autocomplete (always opens upward) ──────────────────────
+    // ── @user inline autocomplete (a list above the input, inside the panel) ─
     function setupMentionAutocomplete(textarea) {
-        const mac = document.createElement('div');
-        mac.id = 'gchat-mention-ac';
-        mac.style.display = 'none';
-        document.body.appendChild(mac);
-
+        const mac = document.getElementById('gchat-mention-ac');
         let macMatches = [], macIdx = -1;
         const DEBOUNCE = 200;
         let debounceTimer = null;
@@ -848,16 +902,8 @@
             return { query: m[1], atPos: pos - m[0].length };
         };
 
-        const positionMAC = () => {
-            const rect = textarea.getBoundingClientRect();
-            mac.style.left   = rect.left + 'px';
-            mac.style.width  = rect.width + 'px';
-            mac.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
-            mac.style.top    = 'auto';
-        };
-
         const hideMAC = () => {
-            mac.style.display = 'none';
+            mac.hidden = true;
             mac.innerHTML = '';
             macMatches = []; macIdx = -1;
         };
@@ -871,12 +917,13 @@
             textarea.value = before + insert + after;
             textarea.setSelectionRange(hit.atPos + insert.length, hit.atPos + insert.length);
             textarea.focus();
+            updateCount(textarea);
             hideMAC();
         };
 
         const setActiveMAC = (idx) => {
-            mac.querySelectorAll('.gchat-mention-item').forEach(el => el.classList.remove('active'));
             const items = mac.querySelectorAll('.gchat-mention-item');
+            items.forEach(el => el.classList.remove('active'));
             if (idx >= 0 && idx < items.length) {
                 items[idx].classList.add('active');
                 items[idx].scrollIntoView({ block: 'nearest' });
@@ -895,7 +942,7 @@
                 const src = user.avatar_file ? `/a/${user.avatar_file}` : (user.avatar ? `/t/${user.avatar}.webp` : '/a/default.png');
                 const img = document.createElement('img');
                 img.src = src; img.loading = 'lazy';
-                img.onerror = () => { img.src = '/a/default.png'; };
+                img.addEventListener('error', () => { img.src = '/a/default.png'; }, { once: true });
                 const name = document.createElement('span');
                 name.className = 'gchat-mention-name';
                 name.textContent = user.user;
@@ -909,8 +956,7 @@
                 item.addEventListener('mousedown', ev => { ev.preventDefault(); insertMention(user.user); });
                 mac.appendChild(item);
             });
-            positionMAC();
-            mac.style.display = 'flex';
+            mac.hidden = false;
             setActiveMAC(0);
         };
 
@@ -930,7 +976,7 @@
         textarea.addEventListener('blur',  () => setTimeout(hideMAC, 150));
 
         textarea.addEventListener('keydown', e => {
-            if (mac.style.display === 'none') return;
+            if (mac.hidden) return;
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setActiveMAC((macIdx + 1) % macMatches.length);
@@ -949,22 +995,6 @@
         });
     }
 
-    // ── Toolbar button helpers ────────────────────────────────────────────────
-    function insertWrap(textarea, open, close) {
-        const s = textarea.selectionStart, e = textarea.selectionEnd;
-        const v = textarea.value;
-        const selected = v.substring(s, e);
-        if (selected) {
-            textarea.value = v.slice(0, s) + open + selected + close + v.slice(e);
-            textarea.setSelectionRange(s + open.length + selected.length + close.length,
-                                       s + open.length + selected.length + close.length);
-        } else {
-            textarea.value = v.slice(0, s) + open + close + v.slice(s);
-            textarea.setSelectionRange(s + open.length, s + open.length);
-        }
-        textarea.focus();
-    }
-
     // ── Image modal ───────────────────────────────────────────────────────────
     let _imgModal = null;
     function openImgModal(src) {
@@ -978,27 +1008,26 @@
         }
         document.getElementById('gchat-img-modal-img').src = src;
         _imgModal.classList.add('gchat-img-modal-open');
-        document.body.style.overflow = 'hidden';
+        document.documentElement.classList.add('gchat-img-open');
     }
     function closeImgModal() {
         _imgModal?.classList.remove('gchat-img-modal-open');
-        document.body.style.overflow = '';
+        document.documentElement.classList.remove('gchat-img-open');
     }
 
     // ── Init ─────────────────────────────────────────────────────────────────
     function init() {
         buildWidget();
 
-        // Gate chat on SSE connection — block input until stream is live
-        const _panel     = document.getElementById('gchat-panel');
-        const _inputArea = document.getElementById('gchat-input-area');
-        const _messages  = document.getElementById('gchat-messages');
+        const panel    = document.getElementById('gchat-panel');
+        const widget   = document.getElementById('gchat-widget');
+        const textarea = document.getElementById('gchat-input');
+
+        // Gate chat on the live socket — block input until stream is live
         let _sseReady = false;
 
         function setConnecting(connecting) {
-                if (_inputArea) _inputArea.style.opacity       = connecting ? '0.35' : '1';
-                if (_inputArea) _inputArea.style.pointerEvents = connecting ? 'none' : '';
-                if (_messages)  _messages.style.opacity        = connecting ? '0.35' : '1';
+            panel.classList.toggle('gchat-connecting', connecting);
             const sendBtn = document.getElementById('gchat-send-btn');
             if (sendBtn) sendBtn.disabled = connecting;
         }
@@ -1012,10 +1041,8 @@
             setConnecting(false);
         };
         document.addEventListener('f0ck:sse_ready', onSseReady);
-        // Failsafe: if SSE already fired before this ran (e.g. fast reconnect), check flag
-        if (document.documentElement.dataset.sseReady === '1') onSseReady();
 
-        // Absolute fallback: if SSE hasn't connected within 10s, unlock anyway and poll
+        // Absolute fallback: if the socket hasn't connected within 10s, unlock anyway and poll
         let _pollFallback = null;
         const _sseUnlockTimer = setTimeout(() => {
             if (_sseReady) return;
@@ -1039,12 +1066,22 @@
                 } catch (_) {}
             }, 15000);
         }, 10000);
+        // Failsafe: if the socket already opened before this ran (e.g. fast reconnect), check flag
+        if (document.documentElement.dataset.sseReady === '1') onSseReady();
 
-        const textarea = document.getElementById('gchat-input');
+        // ── Size and position: custom properties the CSS reads ───────────────
+        const geo = {};
+        function setGeo(name, px) {
+            if (px == null || Number.isNaN(px)) {
+                delete geo[name];
+                panel.style.removeProperty(`--gc-${name}`);
+            } else {
+                geo[name] = Math.round(px);
+                panel.style.setProperty(`--gc-${name}`, geo[name] + 'px');
+            }
+        }
 
-
-
-        // Returns min top position for float panel (below navbar + MOTD)
+        // Returns min top position for float panel (below the site's top bar + MOTD)
         function getTopBound() {
             const nav  = document.querySelector('nav.navbar');
             const motd = document.getElementById('motd-container');
@@ -1055,160 +1092,123 @@
             return Math.max(0, bound);
         }
 
-        // Restore saved height
-        const panel = document.getElementById('gchat-panel');
-        const savedH = localStorage.getItem('f0ck_chat_height');
-        if (savedH) panel.style.height = savedH + 'px';
+        // Restore saved size
+        const savedH = parseInt(localStorage.getItem('f0ck_chat_height'), 10);
+        if (savedH) setGeo('h', savedH);
+        const savedW = parseInt(localStorage.getItem('f0ck_chat_width'), 10);
+        if (savedW) setGeo('w', savedW);
 
-        // Restore saved width
-        const savedW = localStorage.getItem('f0ck_chat_width');
-        if (savedW) panel.style.width = savedW + 'px';
-
-        // Drag-to-resize height via top invisible strip
-        const resizeH = document.getElementById('gchat-resize-h');
-        function startResizeH(startY, startH, startTop) {
-            const onMove = (clientY) => {
-                const delta = startY - clientY;
-                const maxH  = window.innerHeight * 0.95;
-                const newH  = Math.min(Math.max(startH + delta, 180), maxH);
-                panel.style.height = newH + 'px';
-                if (isFloating) {
-                    const newTop = startTop - (newH - startH);
-                    panel.style.top = Math.max(getTopBound(), newTop) + 'px';
-                }
-            };
-            const onEnd = () => {
-                const h = parseInt(panel.style.height);
-                if (h) localStorage.setItem('f0ck_chat_height', h);
-                if (isFloating) localStorage.setItem('f0ck_chat_float_y', parseInt(panel.style.top));
+        // Mouse + touch drag helper: onMove(clientX, clientY), onEnd()
+        function startDrag(onMove, onEnd) {
+            const mouseMove = mv => onMove(mv.clientX, mv.clientY);
+            const touchMove = mv => { mv.preventDefault(); onMove(mv.touches[0].clientX, mv.touches[0].clientY); };
+            const end = () => {
+                onEnd();
                 document.removeEventListener('mousemove', mouseMove);
-                document.removeEventListener('mouseup',   mouseEnd);
+                document.removeEventListener('mouseup',   end);
                 document.removeEventListener('touchmove', touchMove);
-                document.removeEventListener('touchend',  touchEnd);
+                document.removeEventListener('touchend',  end);
+                panel.classList.remove('gchat-dragging');
             };
-            const mouseMove = mv => onMove(mv.clientY);
-            const mouseEnd  = onEnd;
-            const touchMove = mv => { mv.preventDefault(); onMove(mv.touches[0].clientY); };
-            const touchEnd  = onEnd;
+            panel.classList.add('gchat-dragging');
             document.addEventListener('mousemove', mouseMove);
-            document.addEventListener('mouseup',   mouseEnd);
+            document.addEventListener('mouseup',   end);
             document.addEventListener('touchmove', touchMove, { passive: false });
-            document.addEventListener('touchend',  touchEnd);
+            document.addEventListener('touchend',  end);
         }
-        resizeH.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
-            if (isMinimized) return;
-            e.preventDefault();
-            startResizeH(e.clientY, panel.getBoundingClientRect().height, panel.getBoundingClientRect().top);
-        });
-        resizeH.addEventListener('touchstart', (e) => {
-            if (isMinimized) return;
-            e.preventDefault();
-            startResizeH(e.touches[0].clientY, panel.getBoundingClientRect().height, panel.getBoundingClientRect().top);
-        }, { passive: false });
-
-
-        // Drag-to-resize width from the left handle
-        const resizeW = document.getElementById('gchat-resize-w');
-        function startResizeW(startX, startW, startLeft) {
-            const onMove = (clientX) => {
-                const delta  = startX - clientX;
-                const newW   = Math.min(Math.max(startW + delta, 200), window.innerWidth * 0.6);
-                panel.style.width = newW + 'px';
-                if (isFloating) {
-                    const newLeft = startLeft - (newW - startW);
-                    panel.style.left = Math.max(0, newLeft) + 'px';
-                }
-            };
-            const onEnd = () => {
-                const w = parseInt(panel.style.width);
-                if (w) localStorage.setItem('f0ck_chat_width', w);
-                if (isFloating) localStorage.setItem('f0ck_chat_float_x', parseInt(panel.style.left));
-                document.removeEventListener('mousemove', mouseMove);
-                document.removeEventListener('mouseup',   mouseEnd);
-                document.removeEventListener('touchmove', touchMove);
-                document.removeEventListener('touchend',  touchEnd);
-            };
-            const mouseMove = mv => onMove(mv.clientX);
-            const mouseEnd  = onEnd;
-            const touchMove = mv => { mv.preventDefault(); onMove(mv.touches[0].clientX); };
-            const touchEnd  = onEnd;
-            document.addEventListener('mousemove', mouseMove);
-            document.addEventListener('mouseup',   mouseEnd);
-            document.addEventListener('touchmove', touchMove, { passive: false });
-            document.addEventListener('touchend',  touchEnd);
+        function onPointerDown(el, start, opts = {}) {
+            el.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                if (opts.skip && opts.skip(e)) return;
+                e.preventDefault();
+                start(e.clientX, e.clientY);
+            });
+            el.addEventListener('touchstart', (e) => {
+                if (opts.skip && opts.skip(e)) return;
+                e.preventDefault();
+                start(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: false });
         }
-        resizeW.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
-            e.preventDefault();
-            const r = panel.getBoundingClientRect();
-            startResizeW(e.clientX, r.width, r.left);
-        });
-        resizeW.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const r = panel.getBoundingClientRect();
-            startResizeW(e.touches[0].clientX, r.width, r.left);
-        }, { passive: false });
-
-        // Drag-to-resize width from the RIGHT handle (left edge stays fixed)
-        const resizeE = document.getElementById('gchat-resize-e');
-        function startResizeE(startX, startW) {
-            const onMove = (clientX) => {
-                const delta = clientX - startX;
-                const newW  = Math.min(Math.max(startW + delta, 200), window.innerWidth * 0.6);
-                panel.style.width = newW + 'px';
-            };
-            const onEnd = () => {
-                const w = parseInt(panel.style.width);
-                if (w) localStorage.setItem('f0ck_chat_width', w);
-                document.removeEventListener('mousemove', mouseMove);
-                document.removeEventListener('mouseup',   mouseEnd);
-                document.removeEventListener('touchmove', touchMove);
-                document.removeEventListener('touchend',  touchEnd);
-            };
-            const mouseMove = mv => onMove(mv.clientX);
-            const mouseEnd  = onEnd;
-            const touchMove = mv => { mv.preventDefault(); onMove(mv.touches[0].clientX); };
-            const touchEnd  = onEnd;
-            document.addEventListener('mousemove', mouseMove);
-            document.addEventListener('mouseup',   mouseEnd);
-            document.addEventListener('touchmove', touchMove, { passive: false });
-            document.addEventListener('touchend',  touchEnd);
-        }
-        resizeE.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
-            e.preventDefault();
-            const r = panel.getBoundingClientRect();
-            startResizeE(e.clientX, r.width);
-        });
-        resizeE.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const r = panel.getBoundingClientRect();
-            startResizeE(e.touches[0].clientX, r.width);
-        }, { passive: false });
 
         // ── Float / Dock toggle ───────────────────────────────────────────────
         let isFloating = localStorage.getItem('f0ck_chat_floating') === '1';
 
+        // Drag-to-resize from an edge or corner (data-rz: n, s, e, w, ne, nw, se, sw). Docked, the
+        // panel hangs from the bottom right, so only the top and left edges move; detached, every
+        // edge and corner does and the opposite ones stay put.
+        const MIN_W = 220, MIN_H = 180;
+        panel.querySelectorAll('.gchat-rz').forEach(handle => {
+            const dir = handle.dataset.rz;
+            onPointerDown(handle, (startX, startY) => {
+                const r = panel.getBoundingClientRect();
+                const topBound = isFloating ? getTopBound() : 0;
+                startDrag((x, y) => {
+                    let { left, top, width, height } = r;
+                    if (dir.includes('e')) width = Math.min(Math.max(r.width + (x - startX), MIN_W), window.innerWidth - r.left);
+                    if (dir.includes('w')) {
+                        const maxW = isFloating ? r.right : window.innerWidth * 0.95;
+                        width = Math.min(Math.max(r.width + (startX - x), MIN_W), maxW);
+                        left = r.right - width;
+                    }
+                    if (dir.includes('s')) height = Math.min(Math.max(r.height + (y - startY), MIN_H), window.innerHeight - r.top);
+                    if (dir.includes('n')) {
+                        const maxH = isFloating ? r.bottom - topBound : window.innerHeight * 0.95;
+                        height = Math.min(Math.max(r.height + (startY - y), MIN_H), maxH);
+                        top = r.bottom - height;
+                    }
+                    setGeo('w', width);
+                    setGeo('h', height);
+                    if (isFloating) { setGeo('x', left); setGeo('y', top); }
+                }, () => {
+                    if (geo.w) localStorage.setItem('f0ck_chat_width', geo.w);
+                    if (geo.h) localStorage.setItem('f0ck_chat_height', geo.h);
+                    if (isFloating) {
+                        localStorage.setItem('f0ck_chat_float_x', geo.x);
+                        localStorage.setItem('f0ck_chat_float_y', geo.y);
+                    }
+                });
+            }, { skip: () => isPhone() || isMinimized || (!isFloating && !['n', 'w', 'nw'].includes(dir)) });
+        });
+
+        // Saved sizes / a detached position from a bigger window: pulled back onto the screen (on
+        // load, on resize), not saved, so they come back when the window grows again
+        function clampGeo() {
+            if (isPhone()) return;
+            const topBound = getTopBound();
+            const savedW = parseInt(localStorage.getItem('f0ck_chat_width'), 10);
+            const savedH = parseInt(localStorage.getItem('f0ck_chat_height'), 10);
+            if (savedW) setGeo('w', Math.max(Math.min(savedW, window.innerWidth - 16), Math.min(MIN_W, window.innerWidth - 16)));
+            if (savedH) setGeo('h', Math.max(Math.min(savedH, window.innerHeight - topBound), Math.min(MIN_H, window.innerHeight - topBound)));
+            if (!isFloating) return;
+            const r = panel.getBoundingClientRect();
+            const fx = parseInt(localStorage.getItem('f0ck_chat_float_x'), 10);
+            const fy = parseInt(localStorage.getItem('f0ck_chat_float_y'), 10);
+            const x = Number.isNaN(fx) ? r.left : fx;
+            const y = Number.isNaN(fy) ? r.top : fy;
+            setGeo('x', Math.min(Math.max(0, x), Math.max(0, window.innerWidth - r.width)));
+            setGeo('y', Math.min(Math.max(topBound, y), Math.max(topBound, window.innerHeight - r.height)));
+        }
+        let clampFrame = 0;
+        window.addEventListener('resize', () => {
+            cancelAnimationFrame(clampFrame);
+            clampFrame = requestAnimationFrame(clampGeo);
+        });
+
         function applyFloatMode() {
-            const widget = document.getElementById('gchat-widget');
+            const btn = document.getElementById('gchat-float-btn');
+            panel.classList.toggle('gchat-floating', isFloating);
             if (isFloating) {
-                panel.classList.add('gchat-floating');
-                const fx = localStorage.getItem('f0ck_chat_float_x');
-                const fy = localStorage.getItem('f0ck_chat_float_y');
-                if (fx) panel.style.left = fx + 'px';
-                if (fy) panel.style.top  = Math.max(getTopBound(), parseInt(fy)) + 'px';
-                panel.style.right  = 'auto';
-                panel.style.bottom = 'auto';
-                document.getElementById('gchat-float-btn').innerHTML = '<i class="fa-solid fa-down-left-and-up-right-to-center"></i>';
+                const fx = parseInt(localStorage.getItem('f0ck_chat_float_x'), 10);
+                const fy = parseInt(localStorage.getItem('f0ck_chat_float_y'), 10);
+                if (!Number.isNaN(fx)) setGeo('x', fx);
+                if (!Number.isNaN(fy)) setGeo('y', Math.max(getTopBound(), fy));
+                btn.innerHTML = ico('dock');
             } else {
-                panel.classList.remove('gchat-floating');
-                panel.style.left   = '';
-                panel.style.top    = '';
-                panel.style.right  = '';
-                panel.style.bottom = '';
-                document.getElementById('gchat-float-btn').innerHTML = '<i class="fa-solid fa-up-right-and-down-left-from-center"></i>';
+                setGeo('x', null);
+                setGeo('y', null);
+                btn.innerHTML = ico('float');
             }
+            clampGeo();
         }
         applyFloatMode();
 
@@ -1218,8 +1218,6 @@
             if (isFloating) {
                 // Snap to current visual position so it doesn't jump
                 const r = panel.getBoundingClientRect();
-                panel.style.left = r.left + 'px';
-                panel.style.top  = r.top  + 'px';
                 localStorage.setItem('f0ck_chat_float_x', Math.round(r.left));
                 localStorage.setItem('f0ck_chat_float_y', Math.round(r.top));
             }
@@ -1228,57 +1226,22 @@
 
         // Drag-to-move in float mode — drag the header
         const header = document.getElementById('gchat-header');
-        function startDragMove(startX, startY, offX, offY) {
+        onPointerDown(header, (startX, startY) => {
             const r = panel.getBoundingClientRect();
-            const onMove = (clientX, clientY) => {
-                const newX = Math.max(0,            Math.min(clientX - offX, window.innerWidth  - r.width));
-                const newY = Math.max(getTopBound(), Math.min(clientY - offY, window.innerHeight - r.height));
-                panel.style.left = newX + 'px';
-                panel.style.top  = newY + 'px';
-            };
-            const onEnd = () => {
-                const curY = parseInt(panel.style.top);
-                localStorage.setItem('f0ck_chat_float_x', parseInt(panel.style.left));
-                localStorage.setItem('f0ck_chat_float_y', curY);
-
+            const offX = startX - r.left, offY = startY - r.top;
+            startDrag((clientX, clientY) => {
+                setGeo('x', Math.max(0,             Math.min(clientX - offX, window.innerWidth  - r.width)));
+                setGeo('y', Math.max(getTopBound(), Math.min(clientY - offY, window.innerHeight - r.height)));
+            }, () => {
+                localStorage.setItem('f0ck_chat_float_x', geo.x);
+                localStorage.setItem('f0ck_chat_float_y', geo.y);
                 if (isMinimized) {
-                    const topBound = getTopBound();
-                    const bottomBound = window.innerHeight;
-                    const distToTop = Math.abs(curY - topBound);
-                    const distToBottom = Math.abs(bottomBound - (curY + 42));
+                    const distToTop    = Math.abs(geo.y - getTopBound());
+                    const distToBottom = Math.abs(window.innerHeight - (geo.y + HEADER_H));
                     localStorage.setItem('f0ck_chat_anchor_top', distToTop < distToBottom ? '1' : '0');
                 }
-
-                document.removeEventListener('mousemove', mouseMove);
-                document.removeEventListener('mouseup',   mouseEnd);
-                document.removeEventListener('touchmove', touchMove);
-                document.removeEventListener('touchend',  touchEnd);
-            };
-            const mouseMove = mv => onMove(mv.clientX, mv.clientY);
-            const mouseEnd  = onEnd;
-            const touchMove = mv => { mv.preventDefault(); onMove(mv.touches[0].clientX, mv.touches[0].clientY); };
-            const touchEnd  = onEnd;
-            document.addEventListener('mousemove', mouseMove);
-            document.addEventListener('mouseup',   mouseEnd);
-            document.addEventListener('touchmove', touchMove, { passive: false });
-            document.addEventListener('touchend',  touchEnd);
-        }
-        header.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
-            if (!isFloating) return;
-            if (e.target.closest('button')) return;
-            e.preventDefault();
-            const r = panel.getBoundingClientRect();
-            startDragMove(e.clientX, e.clientY, e.clientX - r.left, e.clientY - r.top);
-        });
-        header.addEventListener('touchstart', (e) => {
-            if (!isFloating) return;
-            if (e.target.closest('button')) return;
-            e.preventDefault();
-            const r = panel.getBoundingClientRect();
-            const t = e.touches[0];
-            startDragMove(t.clientX, t.clientY, t.clientX - r.left, t.clientY - r.top);
-        }, { passive: false });
+            });
+        }, { skip: (e) => isPhone() || !isFloating || !!e.target.closest('button') });
 
         // Minimize toggle — in float mode anchor to bottom edge in both directions
         function toggleMinimized() {
@@ -1300,16 +1263,11 @@
                     setMinimized(true);
 
                     requestAnimationFrame(() => {
-                        let newTop;
-                        if (anchorTop) {
-                            // Anchor to top: keep current top
-                            newTop = Math.max(topBound, curTop);
-                        } else {
-                            // Anchor to bottom: keep current bottom (existing behavior)
-                            newTop = Math.min(bottomBound - 42, Math.max(topBound, curBottom - 42));
-                        }
-                        panel.style.top = newTop + 'px';
-                        localStorage.setItem('f0ck_chat_float_y', newTop);
+                        const newTop = anchorTop
+                            ? Math.max(topBound, curTop)                                           // keep the top
+                            : Math.min(bottomBound - HEADER_H, Math.max(topBound, curBottom - HEADER_H)); // keep the bottom
+                        setGeo('y', newTop);
+                        localStorage.setItem('f0ck_chat_float_y', geo.y);
                     });
                 } else {
                     // Expanding: use saved anchor or default to bottom if not set
@@ -1318,98 +1276,131 @@
 
                     requestAnimationFrame(() => {
                         const fullH  = panel.getBoundingClientRect().height;
-                        const curTop = parseInt(panel.style.top) || 0;
-                        let newTop;
-                        if (wasAnchorTop) {
-                            // Expanding from top anchor: top stays same
-                            newTop = Math.max(topBound, curTop);
-                        } else {
-                            // Expanding from bottom anchor: shift top UP (existing behavior)
-                            newTop = Math.max(topBound, curTop - (fullH - 42));
-                        }
-                        panel.style.top = newTop + 'px';
-                        localStorage.setItem('f0ck_chat_float_y', newTop);
+                        const curTop = geo.y || 0;
+                        const newTop = wasAnchorTop
+                            ? Math.max(topBound, curTop)                            // top stays
+                            : Math.max(topBound, curTop - (fullH - HEADER_H));      // grow upwards
+                        setGeo('y', newTop);
+                        localStorage.setItem('f0ck_chat_float_y', geo.y);
                     });
                 }
             } else {
                 setMinimized(!isMinimized);
-                if (!isMinimized) {
-                    // Normal docked expand
-                    loadHistory();
-                }
             }
         }
 
         document.getElementById('gchat-minimize-btn').addEventListener('click', e => {
             e.stopPropagation(); toggleMinimized();
         });
-        document.getElementById('gchat-header').addEventListener('dblclick', e => {
-            if (!e.target.closest('.gchat-icon-btn')) toggleMinimized();
+        // Docked and minimized, a click on the bar opens it (the bar is the launcher); a double click
+        // toggles, but not right after that click opened it
+        let openedByClick = 0;
+        header.addEventListener('click', e => {
+            if (!isPhone() && isMinimized && !isFloating && !e.target.closest('.gchat-icon-btn')) {
+                openedByClick = Date.now();
+                toggleMinimized();
+            }
+        });
+        header.addEventListener('dblclick', e => {
+            if (isPhone() || e.target.closest('.gchat-icon-btn') || Date.now() - openedByClick < 600) return;
+            toggleMinimized();
         });
 
-        // Close button — hide widget and show reopen bubble
+        // Close button — desktop: hide the widget, the launcher button reopens it (html.gchat-closed)
         function closeChat() {
             isClosed = true;
             localStorage.setItem('f0ck_chat_closed', '1');
-            const widget = document.getElementById('gchat-widget');
-            if (widget) widget.style.display = 'none';
-            buildReopenBubble();
+            document.documentElement.classList.add('gchat-closed');
         }
         function reopenChat() {
             isClosed = false;
             localStorage.removeItem('f0ck_chat_closed');
-            const widget = document.getElementById('gchat-widget');
-            if (widget) widget.style.display = '';
-            const bubble = document.getElementById('gchat-reopen-bubble');
-            if (bubble) bubble.remove();
+            document.documentElement.classList.remove('gchat-closed');
+            clampGeo();
             if (isMinimized) { setMinimized(false); } else { loadHistory(); }
         }
-        function buildReopenBubble() {
-            if (document.getElementById('gchat-reopen-bubble')) return;
-            const el = document.createElement('button');
-            el.id = 'gchat-reopen-bubble';
-            el.title = t('chat_open', 'Open chat');
-            el.innerHTML = '<i class="fa-solid fa-comments"></i>';
-            el.addEventListener('click', reopenChat);
-            document.body.appendChild(el);
+
+        // ── Phones: full screen ───────────────────────────────────────────────
+        // It follows the visible viewport (--gc-vv-h / --gc-vv-top), so the field stays above the
+        // on-screen keyboard; back (button or gesture) closes it: opening adds a history entry.
+        function fitViewport() {
+            const vv = window.visualViewport;
+            if (!mobileOpen || !vv) return;
+            panel.style.setProperty('--gc-vv-h', Math.round(vv.height) + 'px');
+            panel.style.setProperty('--gc-vv-top', Math.round(vv.offsetTop) + 'px');
+            scrollToBottom(false);
         }
+        window.visualViewport?.addEventListener('resize', fitViewport);
+        window.visualViewport?.addEventListener('scroll', fitViewport);
+
+        function openMobile() {
+            if (mobileOpen) return;
+            mobileOpen = true;
+            panel.classList.remove('gchat-minimized');
+            document.documentElement.classList.add('gchat-m-open');
+            try { history.pushState({ ...(history.state || {}), gchat: 1 }, ''); } catch (_) {}
+            fitViewport();
+            clearUnread();
+            loadHistory();
+        }
+        // fromHistory: back was pressed (the entry is gone already); else take our entry off again
+        function closeMobile(fromHistory = false) {
+            if (!mobileOpen) return;
+            mobileOpen = false;
+            document.documentElement.classList.remove('gchat-m-open');
+            panel.classList.toggle('gchat-minimized', isMinimized);
+            panel.style.removeProperty('--gc-vv-h');
+            panel.style.removeProperty('--gc-vv-top');
+            document.querySelectorAll('.gchat-msg-tapped').forEach(m => m.classList.remove('gchat-msg-tapped'));
+            if (!fromHistory && history.state?.gchat) history.back();
+        }
+        // Captured, so it runs before the page's own handlers (f0ckm reloads the page on any back):
+        // closing the chat is all this back does
+        window.addEventListener('popstate', (e) => {
+            if (mobileOpen && !history.state?.gchat) {
+                e.stopImmediatePropagation();
+                closeMobile(true);
+            }
+        }, true);
+        phoneMQ.addEventListener('change', () => {
+            if (!isPhone()) closeMobile();
+            clampGeo();
+        });
+
+        // the launcher: phones always (collapsed chat), desktop when the chat is closed
+        const launcher = document.createElement('button');
+        launcher.type = 'button';
+        launcher.id = 'gchat-reopen-bubble';
+        launcher.title = skin.open;
+        launcher.innerHTML = ico(skin.icon === 'spark' ? 'spark' : 'chat') + `<span class="gchat-reopen-label">${esc(skin.open)}</span>`;
+        launcher.addEventListener('click', () => (isPhone() ? openMobile() : reopenChat()));
+        document.body.appendChild(launcher);
+        updateBadge();
+
         document.getElementById('gchat-close-btn').addEventListener('click', e => {
-            e.stopPropagation(); closeChat();
+            e.stopPropagation();
+            if (isPhone()) closeMobile(); else closeChat();
         });
         // Expose globally for settings page
         window.reopenChat  = reopenChat;
         window.closeChatWidget = closeChat;
-
 
         // Send
         document.getElementById('gchat-send-btn').addEventListener('click', sendMessage);
         textarea.addEventListener('keydown', e => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 // Don't send while emoji or mention autocomplete is active
-                const emojiAC   = document.getElementById('gchat-emoji-ac');
-                const mentionAC = document.getElementById('gchat-mention-ac');
-                if ((emojiAC && emojiAC.style.display !== 'none') ||
-                    (mentionAC && mentionAC.style.display !== 'none')) return;
+                if (!document.getElementById('gchat-emoji-ac').hidden ||
+                    !document.getElementById('gchat-mention-ac').hidden) return;
                 e.preventDefault();
                 sendMessage();
             }
         });
 
-        // Auto-grow
-        textarea.addEventListener('input', function () {
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 80) + 'px';
-        });
+        // Auto-grow + character count
+        textarea.addEventListener('input', () => { autoGrow(textarea); updateCount(textarea); });
 
-        // Toolbar
-        document.getElementById('gchat-spoiler-btn').addEventListener('click', e => {
-            e.preventDefault(); insertWrap(textarea, '[spoiler]', '[/spoiler]');
-        });
-        document.getElementById('gchat-blur-btn').addEventListener('click', e => {
-            e.preventDefault(); insertWrap(textarea, '[blur]', '[/blur]');
-        });
-
-        // @mention autocomplete (always opens upward)
+        // @mention autocomplete
         setupMentionAutocomplete(textarea);
 
         // Emoji features — must complete before loadHistory() so :codes: render correctly
@@ -1424,32 +1415,26 @@
         setupEmojiPicker(textarea);
         setupEmojiAutocomplete(textarea);
 
-        // SSE live messages
-        document.addEventListener('f0ck:global_chat', e => appendMsg(e.detail, !isMinimized));
+        // Live messages
+        document.addEventListener('f0ck:global_chat', e => appendMsg(e.detail, chatShown()));
 
-        // SSE clear — wipe messages instantly for all clients
-        document.addEventListener('f0ck:global_chat_clear', () => {
-            const container = document.getElementById('gchat-messages');
-            if (container) container.innerHTML = '';
-        });
+        // Clear — wipe messages instantly for all clients
+        document.addEventListener('f0ck:global_chat_clear', () => resetMessages());
 
-        // SSE delete — remove a single message for all clients
+        // Delete — remove a single message for all clients
         document.addEventListener('f0ck:global_chat_delete', (e) => {
             const id = e.detail?.id;
             if (!id) return;
-            const msgEl = document.querySelector(`#gchat-messages [data-msg-id="${id}"]`);
-            if (msgEl) {
-                msgEl.style.opacity = '0';
-                msgEl.style.transform = 'scaleY(0)';
-                setTimeout(() => msgEl.remove(), 200);
-            }
+            removeMsg(document.querySelector(`#gchat-messages [data-msg-id="${CSS.escape(String(id))}"]`));
         });
 
-        // ── Chat background helpers ───────────────────────────────────────────
+        // ── Chat background (set by admins with /setbackground: a value from the database) ──
         function applyBackground(css) {
             const msgs = document.getElementById('gchat-messages');
             if (!msgs) return;
-            msgs.style.background = css || '';
+            if (css) msgs.style.setProperty('--gc-room-bg', String(css).replace(/[;{}<>]/g, ''));
+            else msgs.style.removeProperty('--gc-room-bg');
+            panel.classList.toggle('gchat-has-bg', !!css);
         }
 
         // Restore background on load
@@ -1457,22 +1442,16 @@
             if (d.success && d.background) applyBackground(d.background);
         }).catch(() => {});
 
-        // SSE background change — apply instantly to all clients
         document.addEventListener('f0ck:global_chat_background', (e) => {
             applyBackground(e.detail?.background || null);
         });
 
-        // ── Chat topic helpers ────────────────────────────────────────────────
+        // ── Chat topic ────────────────────────────────────────────────────────
         function applyTopic(text) {
             const el = document.getElementById('gchat-topic');
             if (!el) return;
-            if (text) {
-                el.textContent = text;
-                el.style.display = '';
-            } else {
-                el.style.display = 'none';
-                el.textContent = '';
-            }
+            el.textContent = text || '';
+            el.hidden = !text;
         }
 
         // Restore topic on load
@@ -1480,7 +1459,6 @@
             if (d.success && d.topic) applyTopic(d.topic);
         }).catch(() => {});
 
-        // SSE topic change — apply instantly to all clients
         document.addEventListener('f0ck:global_chat_topic', (e) => {
             applyTopic(e.detail?.topic || null);
         });
@@ -1491,42 +1469,115 @@
             if (!el) return;
             if ((!users || users.length === 0) && guestCount === 0) {
                 el.innerHTML = '';
-                el.style.display = 'none';
+                el.hidden = true;
                 return;
             }
-            el.style.display = 'block';
+            el.hidden = false;
             // Show up to 8 avatars, then "+N more" pill
             const MAX_SHOWN = 8;
             const shown  = users.slice(0, MAX_SHOWN);
             const extra  = users.length - shown.length;
             const avatarHTML = shown.map(u => {
                 const name = esc(u.display_name || u.username || '?');
-                const src  = avatarSrc(u);
-                const colorStyle = u.username_color ? `style="border-color:${esc(u.username_color)}"` : '';
-                return `<img src="${src}" class="gchat-online-avatar" title="${name}" alt="${name}" loading="lazy" ${colorStyle}>`;
+                return `<img src="${avatarSrc(u)}" class="gchat-online-avatar${u.username_color ? ' gchat-user-colored' : ''}" title="${name}" alt="${name}" loading="lazy"${userColorAttr(u.username_color)}>`;
             }).join('');
             const extraPill = extra > 0 ? `<span class="gchat-online-extra">+${extra}</span>` : '';
-            
-            let countText = `${users.length} online`;
+
+            let countText = count('online', users.length);
             if (guestCount > 0 && (window.f0ckSession.is_admin || window.f0ckSession.is_moderator)) {
-                countText += ` (${guestCount} guests)`;
+                countText += ` (${count('guests', guestCount)})`;
             }
-            const countLabel = `<span class="gchat-online-count">${countText}</span>`;
-            el.innerHTML = `<div class="gchat-online-inner">${countLabel}<div class="gchat-online-avatars">${avatarHTML}${extraPill}</div></div>`;
+            el.innerHTML = `<div class="gchat-online-inner"><span class="gchat-online-count">${esc(countText)}</span><div class="gchat-online-avatars">${avatarHTML}${extraPill}</div></div>`;
         }
-        document.addEventListener('f0ck:global_chat_presence', (e) => {
-            renderOnline(e.detail?.users || [], e.detail?.guestCount || 0);
+        // ── Who's online: a dialog with everyone, opened from the online bar ──
+        let presence = { users: [], guestCount: 0 };
+        let usersModal = null;
+
+        function renderUsersList() {
+            if (!usersModal) return;
+            const { users, guestCount } = presence;
+            const rows = users.map(u => {
+                const name = u.display_name || u.username || '?';
+                const href = `/user/${encodeURIComponent(u.username || '')}`;
+                return `<li class="gchat-users-item"><a href="${href}" class="gchat-users-link">` +
+                    `<img src="${avatarSrc(u)}" class="gchat-users-avatar${u.username_color ? ' gchat-user-colored' : ''}" alt="" loading="lazy"${userColorAttr(u.username_color)}>` +
+                    `<span class="gchat-users-names"><span class="gchat-users-name${u.username_color ? ' gchat-user-colored' : ''}"${userColorAttr(u.username_color)}>${esc(name)}</span>` +
+                    (u.display_name && u.display_name !== u.username ? `<span class="gchat-users-login">@${esc(u.username)}</span>` : '') +
+                    `</span></a></li>`;
+            }).join('');
+            const guests = guestCount > 0
+                ? `<li class="gchat-users-item gchat-users-guests"><span class="gchat-users-link"><span class="gchat-users-avatar gchat-users-guest-ico">${ico('user')}</span>` +
+                  `<span class="gchat-users-names"><span class="gchat-users-name">${esc(count('guests', guestCount))}</span></span></span></li>`
+                : '';
+            usersModal.querySelector('.gchat-users-count').textContent =
+                count('online', users.length) + (guestCount > 0 ? ` · ${count('guests', guestCount)}` : '');
+            usersModal.querySelector('.gchat-users-list').innerHTML = rows + guests;
+        }
+
+        function closeUsers() {
+            if (!usersModal || usersModal.hidden) return;
+            usersModal.hidden = true;
+            document.getElementById('gchat-online')?.focus();
+        }
+
+        function openUsers() {
+            if (!usersModal) {
+                usersModal = document.createElement('div');
+                usersModal.id = 'gchat-users-modal';
+                usersModal.hidden = true;
+                usersModal.innerHTML =
+                    `<div class="gchat-users-box" role="dialog" aria-modal="true" aria-labelledby="gchat-users-title">` +
+                        `<div class="gchat-users-head">` +
+                            `<span id="gchat-users-title" class="gchat-users-title">${ico('users')}<span>${esc(skin.users)}</span></span>` +
+                            `<button type="button" class="gchat-icon-btn gchat-users-close" title="${esc(t('chat_close_list', 'Close'))}">${ico('close')}</button>` +
+                        `</div>` +
+                        `<div class="gchat-users-count"></div>` +
+                        `<ul class="gchat-users-list"></ul>` +
+                    `</div>`;
+                document.body.appendChild(usersModal);
+                usersModal.addEventListener('click', e => {
+                    if (e.target === usersModal || e.target.closest('.gchat-users-close')) closeUsers();
+                });
+                document.addEventListener('keydown', e => { if (e.key === 'Escape') closeUsers(); });
+            }
+            renderUsersList();
+            usersModal.hidden = false;
+            usersModal.querySelector('.gchat-users-close').focus();
+        }
+
+        const onlineBar = document.getElementById('gchat-online');
+        onlineBar.addEventListener('click', openUsers);
+        onlineBar.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUsers(); }
         });
 
-        // Event delegation: reply + admin delete buttons inside #gchat-messages
-        const msgArea = document.getElementById('gchat-messages');
+        document.addEventListener('f0ck:global_chat_presence', (e) => {
+            presence = { users: e.detail?.users || [], guestCount: e.detail?.guestCount || 0 };
+            renderOnline(presence.users, presence.guestCount);
+            renderUsersList();
+        });
+
+        // Reply + admin delete buttons (event delegation)
         const csrf = () => window.f0ckSession?.csrf_token;
 
         // Clear unread when user interacts with the chat
-        msgArea.addEventListener('mouseenter', clearUnread);
+        document.getElementById('gchat-messages').addEventListener('mouseenter', clearUnread);
         textarea.addEventListener('focus', clearUnread);
 
-        msgArea.addEventListener('click', async (e) => {
+        document.getElementById('gchat-messages').addEventListener('click', async (e) => {
+            // Touch screens have no hover: a tap on a message shows its reply / delete
+            if (noHoverMQ.matches && !e.target.closest('a, button, .spoiler, .blur-text, img, video, audio, iframe')) {
+                const msg = e.target.closest('.gchat-msg');
+                if (msg) {
+                    const was = msg.classList.contains('gchat-msg-tapped');
+                    document.querySelectorAll('.gchat-msg-tapped').forEach(m => m.classList.remove('gchat-msg-tapped'));
+                    msg.classList.toggle('gchat-msg-tapped', !was);
+                }
+            }
+            // A link that leaves the page (profile, item) closes the phone chat
+            const link = e.target.closest('a[href]');
+            if (link && mobileOpen && link.target !== '_blank') closeMobile();
+
             // Reply button
             const replyBtn = e.target.closest('.gchat-reply-btn');
             if (replyBtn) {
@@ -1536,7 +1587,9 @@
                     textarea.value = mention + textarea.value;
                     textarea.setSelectionRange(mention.length, mention.length);
                     textarea.focus();
+                    updateCount(textarea);
                 }
+                replyBtn.closest('.gchat-msg')?.classList.remove('gchat-msg-tapped');
                 return;
             }
 
@@ -1546,21 +1599,13 @@
                 const msgId = delBtn.dataset.id;
                 if (!msgId) return;
                 try {
-                    const res  = await fetch(`/api/chat/${msgId}`, {
+                    const res  = await fetch(`/api/chat/${encodeURIComponent(msgId)}`, {
                         method: 'DELETE',
                         headers: { 'X-Requested-With': 'XMLHttpRequest', ...(csrf() ? { 'X-CSRF-Token': csrf() } : {}) }
                     });
                     const data = await res.json();
-                    if (data.success) {
-                        const msgEl = msgArea.querySelector(`[data-msg-id="${msgId}"]`);
-                        if (msgEl) {
-                            msgEl.style.opacity = '0';
-                            msgEl.style.transform = 'scaleY(0)';
-                            setTimeout(() => msgEl.remove(), 200);
-                        }
-                    }
+                    if (data.success) removeMsg(delBtn.closest('.gchat-msg'));
                 } catch (err) { console.error('[Chat] Delete error', err); }
-                return;
             }
         });
 
@@ -1577,15 +1622,11 @@
                     }
                 } catch (_) {}
             }
-            if (!isMinimized) loadHistory();
+            if (!isMinimized && !isClosed && !isPhone()) loadHistory();
         })();
 
-        // If user had previously closed the chat, hide on load and show bubble
-        if (isClosed) {
-            const widget = document.getElementById('gchat-widget');
-            if (widget) widget.style.display = 'none';
-            buildReopenBubble();
-        }
+        // If user had previously closed the chat, hide on load and show the launcher
+        if (isClosed) document.documentElement.classList.add('gchat-closed');
     }
 
     if (document.readyState === 'loading') {
