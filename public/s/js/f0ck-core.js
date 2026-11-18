@@ -1327,7 +1327,8 @@ window.F0ckPageSwap = (() => {
   const load = () => loading || (loading = new Promise((resolve, reject) => {
     if (window.BadApple) return resolve(window.BadApple);
     const s = document.createElement('script');
-    s.src = '/s/bad-apple/bad-apple.js';
+    // versioned like every other script (/s/ is cached for a day): a new player shows up at once
+    s.src = '/s/bad-apple/bad-apple.js' + (tag.dataset.badAppleV ? '?v=' + encodeURIComponent(tag.dataset.badAppleV) : '');
     s.onload = () => (window.BadApple ? resolve(window.BadApple) : reject(new Error('BadApple missing')));
     s.onerror = () => reject(new Error('could not load ' + s.src));
     document.head.appendChild(s);

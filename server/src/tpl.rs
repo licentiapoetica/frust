@@ -2325,6 +2325,7 @@ mod tests {
         };
         let on = tag("websrv: {}");
         assert!(on.contains(r#"data-bad-apple="classic""#) && !on.contains("silent"), "{on}");
+        assert!(on.contains(r#"data-bad-apple-v=""#), "the player is versioned: {on}");
         let xp = tag("websrv: { bad_apple: { theme: xp, sound: false } }");
         assert!(xp.contains(r#"data-bad-apple="xp""#) && xp.contains("data-bad-apple-silent"), "{xp}");
         assert!(tag("websrv: { bad_apple: { theme: '\"><script>' } }").contains(r#"data-bad-apple="classic""#));

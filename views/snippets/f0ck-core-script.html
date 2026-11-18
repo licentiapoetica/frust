@@ -1,3 +1,4 @@
 {#- f0ck-core.js, the shared client of every frontend. data-bad-apple: the Konami code's player
-    (websrv.bad_apple: the theme; data-bad-apple-silent without sound), left out when it's switched off -#}
-<script src="/s/js/f0ck-core.js?v={{ mtime("/public/s/js/f0ck-core.js") }}"{% if bad_apple is defined and bad_apple %} data-bad-apple="{{ bad_apple.theme }}"{% if not bad_apple.sound %} data-bad-apple-silent{% endif %}{% endif %}></script>
+    (websrv.bad_apple: the theme; data-bad-apple-silent without sound; data-bad-apple-v: the player's
+    version, so a new one isn't hidden by the browser cache), left out when it's switched off -#}
+<script src="/s/js/f0ck-core.js?v={{ mtime("/public/s/js/f0ck-core.js") }}"{% if bad_apple is defined and bad_apple %} data-bad-apple="{{ bad_apple.theme }}" data-bad-apple-v="{{ mtime("/public/s/bad-apple/bad-apple.js") }}"{% if not bad_apple.sound %} data-bad-apple-silent{% endif %}{% endif %}></script>
