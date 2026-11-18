@@ -939,7 +939,7 @@ async fn file_upload(
             if !manual {
                 notify_new_item(&st, &payload).await;
                 if visibility == 0 {
-                    st.bot.notify_matrix(&cfg, &format!("{owner} uploaded a new item {link}")).await;
+                    st.bot.notify_matrix(&cfg, &crate::bot::upload_notice(&st, &owner, "item", item_id).await).await;
                 }
             } else {
                 queue::notify_admins(&st, item_id).await;

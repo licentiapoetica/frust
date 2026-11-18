@@ -590,7 +590,7 @@ async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSou
         if let Err(e) = sql!("SELECT pg_notify('new_item', ", payload.to_string(), ")").execute(&st.db).await {
             tracing::error!("[REHOST] new_item notify failed: {e}");
         }
-        let msg = format!("{} uploaded a new item {}", session.user, crate::bot::item_url(st, item_id).await);
+        let msg = crate::bot::upload_notice(st, &session.user, "item", item_id).await;
         let bst = st.clone();
         tokio::spawn(async move {
             let cfg = bst.cfg();

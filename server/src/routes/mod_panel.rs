@@ -544,7 +544,7 @@ async fn approve(st: AppState, mut req: Req) -> Res {
                     }
                 });
             }
-            st.bot.notify_matrix(&cfg, &message).await;
+            st.bot.notify_matrix(&cfg, &crate::bot::upload_notice(&st, &username, "video", id64).await).await;
             notify(&st, "new_item", &new_item_payload(&item, id64)).await;
         }
     }

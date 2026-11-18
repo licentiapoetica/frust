@@ -192,7 +192,7 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
     let Some(dat) = f0ckgag_target(&re, &e.message) else { return Ok(()) };
     let nsfl = cfg.nsfl_tag_id() as i32;
     let mut q = sql!(
-        "SELECT i.id, i.mime, i.size, i.username, i.stamp,
+        "SELECT i.id, i.mime, i.size, i.username, i.stamp, i.title,
            (SELECT t.tag FROM tags_assign ta JOIN tags t ON t.id = ta.tag_id WHERE ta.item_id = i.id AND ta.tag_id IN (1, 2, ", nsfl, ") ORDER BY ta.tag_id ASC LIMIT 1) AS rating
          FROM items i "
     );
@@ -214,6 +214,7 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
     let size = format!("~{}", crate::util::format_size(row.val("size")));
     let date = js_date(row.i64("stamp").unwrap_or(0));
     let (user, mime) = (row.string("username"), row.string("mime"));
+    let title = super::chat_title(row.str("title")).map(|t| format!("title: {t}"));
     match e.kind {
         Kind::Matrix => {
             let color = match rating.as_str() {
@@ -222,15 +223,23 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
                 _ => "#888888",
             };
             let esc = crate::util::escape_html;
-            let body = [format!("ID: {id}"), rating.clone(), format!("user: {user}"), size.clone(), mime.clone(), date.clone()].join(" - ");
+            let body = [Some(format!("ID: {id}")), Some(rating.clone()), Some(format!("user: {user}")), title.clone(), Some(size.clone()), Some(mime.clone()), Some(date.clone())]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(" - ");
             let html = [
-                format!("ID: {id}"),
-                format!("<font color=\"{color}\"><b>{}</b></font>", esc(&rating)),
-                format!("user: {}", esc(&user)),
-                esc(&size),
-                esc(&mime),
-                esc(&date),
+                Some(format!("ID: {id}")),
+                Some(format!("<font color=\"{color}\"><b>{}</b></font>", esc(&rating))),
+                Some(format!("user: {}", esc(&user))),
+                title.as_deref().map(esc),
+                Some(esc(&size)),
+                Some(esc(&mime)),
+                Some(esc(&date)),
             ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
             .join(" - ");
             e.reply_rich(&body, &html).await;
         }
@@ -246,7 +255,8 @@ async fn f0ckgag(rt: Arc<Runtime>, e: Message) -> Result<()> {
             } else {
                 (super::item_url(&rt.st, id).await.replace("http://", "https://"), rating)
             };
-            e.reply(&[head, r, format!("user: {user}"), size, mime, date].join(" - ")).await;
+            let parts = [Some(head), Some(r), Some(format!("user: {user}")), title, Some(size), Some(mime), Some(date)];
+            e.reply(&parts.into_iter().flatten().collect::<Vec<_>>().join(" - ")).await;
         }
     }
     Ok(())

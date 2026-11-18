@@ -316,6 +316,43 @@ pub async fn item_url(st: &AppState, id: i64) -> String {
     format!("{}/{}", cfg.url_full(), path.unwrap_or_else(|| id.to_string()))
 }
 
+/// Longest title the bot prints, in characters (the site allows 500).
+const CHAT_TITLE_MAX: usize = 200;
+
+/// An item title as one chat line, or None when there is none: line breaks and other control
+/// characters become spaces (a newline would be a second IRC line), runs of whitespace collapse,
+/// long titles end in `…`, and `@room` is broken with a zero-width space so an uploader can't make
+/// the bot ping a whole Matrix room.
+pub fn chat_title(title: Option<&str>) -> Option<String> {
+    let flat = title?.split(|c: char| c.is_whitespace() || c.is_control()).filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ");
+    if flat.is_empty() {
+        return None;
+    }
+    let mut out: String = flat.chars().take(CHAT_TITLE_MAX).collect();
+    // `out` is a prefix of `flat`, so a shorter byte length means it was cut
+    if out.len() < flat.len() {
+        out.push('…');
+    }
+    static ROOM: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"(?i)@(room)").unwrap());
+    Some(ROOM.replace_all(&out, "@\u{200B}${1}").into_owned())
+}
+
+/// An item's title from the database, ready for chat (see [`chat_title`]).
+pub async fn item_title(st: &AppState, id: i64) -> Option<String> {
+    let t = crate::sql!("SELECT title FROM items WHERE id = ", id as i32, " LIMIT 1").fetch_scalar::<String, _>(&st.db).await.ok().flatten();
+    chat_title(t.as_deref())
+}
+
+/// The bot's new-upload notice: `<who> uploaded a new <what> <link>`, plus ` - title: <title>` when
+/// the item has one.
+pub async fn upload_notice(st: &AppState, who: &str, what: &str, id: i64) -> String {
+    let msg = format!("{who} uploaded a new {what} {}", item_url(st, id).await);
+    match item_title(st, id).await {
+        Some(t) => format!("{msg} - title: {t}"),
+        None => msg,
+    }
+}
+
 /// Exponential reconnect backoff: 5 s, 10 s, … capped at 5 minutes.
 pub(crate) struct Backoff(u32);
 
@@ -434,6 +471,19 @@ pub fn start(st: &AppState) {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    #[test]
+    fn chat_title_is_one_safe_line() {
+        assert_eq!(chat_title(None), None);
+        assert_eq!(chat_title(Some(" \n\t ")), None);
+        assert_eq!(chat_title(Some("  cat\r\nPRIVMSG #x :hi\u{0}  dog ")).as_deref(), Some("cat PRIVMSG #x :hi dog"));
+        assert_eq!(chat_title(Some("hey @room and @ROOM")).as_deref(), Some("hey @\u{200B}room and @\u{200B}ROOM"));
+        let long = "ä".repeat(CHAT_TITLE_MAX + 5);
+        let t = chat_title(Some(&long)).unwrap();
+        assert_eq!(t.chars().count(), CHAT_TITLE_MAX + 1);
+        assert!(t.ends_with('…'));
+        assert_eq!(chat_title(Some(&"x".repeat(CHAT_TITLE_MAX))).unwrap().chars().count(), CHAT_TITLE_MAX);
+    }
 
     pub(crate) fn test_cfg(raw: Value) -> Config {
         let p = std::path::PathBuf::from("/tmp/f0ckm-test");
