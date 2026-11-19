@@ -568,11 +568,6 @@
         container.appendChild(node);
         setTimeout(() => node.classList.add('gchat-msg-in'), 10);
 
-        // Wire up spoiler clicks on newly appended msg
-        node.querySelectorAll('.gchat-bubble .spoiler, .gchat-bubble .blur-text').forEach(s => {
-            s.addEventListener('click', () => s.classList.toggle('revealed'));
-        });
-
         // Embedded images: register with lazy observer; scroll on load only for new messages (not history)
         node.querySelectorAll('.gchat-embed-img img').forEach(img => {
             // Only snap to bottom on image load for NEW incoming messages, not history.
@@ -1924,7 +1919,30 @@
         document.getElementById('gchat-messages').addEventListener('mouseenter', clearUnread);
         textarea.addEventListener('focus', clearUnread);
 
+        // [spoiler] / [blur]: a click shows it, the next hides it again. f0ckm.js already reveals any
+        // spoiler on the page on pointerdown, so a plain toggle on click hid it again right away (it
+        // only showed while the button was held): the state before the press decides instead. Noted
+        // on window in the capture phase, before f0ckm's document handler.
+        let pressed = null;
+        window.addEventListener('pointerdown', (e) => {
+            const el = e.target.closest?.('#gchat-messages .spoiler, #gchat-messages .blur-text');
+            pressed = el ? { el, open: el.classList.contains('revealed') } : null;
+        }, true);
+        const setRevealed = (el, open) => {
+            el.classList.toggle('revealed', open);
+            el.querySelectorAll('video, audio, img, iframe').forEach(m => m.classList.toggle('revealed', open));
+        };
+
         document.getElementById('gchat-messages').addEventListener('click', async (e) => {
+            const hiddenEl = e.target.closest('.gchat-bubble .spoiler, .gchat-bubble .blur-text');
+            // links and players inside a shown spoiler work as usual
+            if (hiddenEl && !(hiddenEl.classList.contains('revealed') && e.target.closest('a, video, audio, iframe, button'))) {
+                const wasOpen = pressed?.el === hiddenEl ? pressed.open : hiddenEl.classList.contains('revealed');
+                setRevealed(hiddenEl, !wasOpen);
+                pressed = null;
+                return;
+            }
+
             // Touch screens have no hover: a tap on a message shows its reply / delete
             if (noHoverMQ.matches && !e.target.closest('a, button, .spoiler, .blur-text, img, video, audio, iframe')) {
                 const msg = e.target.closest('.gchat-msg');
