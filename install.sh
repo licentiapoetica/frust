@@ -290,11 +290,13 @@ nginx_plan() {
     if [ -z "$NGX_NAMES" ]; then
         [ "$port" = 1337 ] && [ -z "$ANUBIS_REMOVE" ] && return 0
         warn "your nginx has no server_name $SITE_DOMAIN, so it is left alone; point your proxy at 127.0.0.1:$port by hand"
+        NGX_FILES=()
         return 0
     fi
     if ! grep -qx backend "$info"; then
         [ "$port" = 1337 ] && [ -z "$ANUBIS_REMOVE" ] && return 0
         warn "nginx serves $SITE_DOMAIN, but not with proxy_pass http://127.0.0.1:1337 (an upstream {} or another address?); point it at 127.0.0.1:$port by hand"
+        NGX_FILES=()
         return 0
     fi
     grep -qx noxrealip "$info" && warn "nginx: a location for $SITE_DOMAIN that proxies to f0ckm sets no X-Real-IP; Anubis needs it: add proxy_set_header X-Real-IP \$remote_addr; there"
