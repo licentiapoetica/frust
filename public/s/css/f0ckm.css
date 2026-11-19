@@ -10641,33 +10641,23 @@ table img {
 @media screen and (max-width: 650px) {
 
   .results table.table th,
-  .results table.table td,
-  .admin-users-table th,
-  .admin-users-table td {
+  .results table.table td {
     display: flex;
     padding: 5px;
   }
 
-  /*.results table.table tr td:first-child,
-  .admin-users-table tr td:first-child {
-    float: right;
-  }*/
-
-  .results table.table tbody td,
-  .admin-users-table tbody td {
+  .results table.table tbody td {
     display: block;
     box-shadow: 0px 1px 0px var(--accent);
   }
 
-  .results table.table tbody td:before,
-  .admin-users-table tbody td:before {
+  .results table.table tbody td:before {
     content: attr(data-th);
     display: block;
     text-align: left;
   }
 
-  .results table thead,
-  .admin-users-table thead {
+  .results table thead {
     display: none;
   }
 
@@ -18387,11 +18377,6 @@ i.iconset#a_oc {
     /* Force hide label */
   }
 
-  .user-info-cell {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
   .responsive-table td::before {
     content: attr(data-label);
     position: static;
@@ -18421,22 +18406,6 @@ i.iconset#a_oc {
     width: 100%;
     margin-bottom: 12px;
     text-align: center;
-  }
-
-  .user-actions-row {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px !important;
-    width: 100%;
-    justify-content: stretch !important;
-  }
-
-  .user-actions-row button {
-    margin: 0 !important;
-    width: 100%;
-    justify-content: center;
-    font-size: 0.8em;
-    padding: 10px 5px !important;
   }
 
   /* Fix for ghost users/incomplete rows */
@@ -25478,714 +25447,708 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   font-size: 0.8em;
 }
 
-/* ---- admin/users.html: page <style> block. It applied page-wide while the users page was shown, so keep it keyed on the page via .admin-users-table (zero added specificity) ---- */
-:where(body:has(.admin-users-table)) .admin-users-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 8px;
-  color: var(--white);
+/* ---- admin/users.html + admin/users_list.html: user manager on the .adm skin ---- */
+/* Template- and script-chosen visibility (reset link, empty message) */
+.adm-users .adm-users-hidden {
+  display: none;
 }
 
-:where(body:has(.admin-users-table)) .admin-users-table th {
-  padding: 15px;
-  text-align: left;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 1px;
-  color: #888;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-:where(body:has(.admin-users-table)) .admin-users-table tr {
-  transition: all 0.2s ease;
-}
-
-:where(body:has(.admin-users-table)) .admin-users-table tbody tr {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-:where(body:has(.admin-users-table)) .admin-users-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-:where(body:has(.admin-users-table)) .admin-users-table td {
-  padding: 15px;
-  vertical-align: middle;
-}
-
-:where(body:has(.admin-users-table)) .status-badge {
-  padding: 4px 10px;
-  font-size: 0.75rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  display: inline-block;
-}
-
-:where(body:has(.admin-users-table)) .status-active {
-  background: linear-gradient(135deg, #28a745, #20c997);
-  color: #fff;
-}
-
-:where(body:has(.admin-users-table)) .status-pending {
-  background: linear-gradient(135deg, #f08c00, #ffc107);
-  color: #000;
-}
-
-:where(body:has(.admin-users-table)) .status-banned {
-  background: linear-gradient(135deg, #e03131, #f03e3e);
-  color: #fff;
-}
-
-:where(body:has(.admin-users-table)) .status-system {
-  background: #5c0a0a;
-  color: #ffb3b3;
-  border: 1px solid #8b1a1a;
-}
-
-:where(body:has(.admin-users-table)) .method-tag {
-  font-size: 0.7rem;
-  padding: 2px 8px;
-  background: rgba(var(--accent-rgb, 0, 150, 255), 0.1);
-  border: 1px solid rgba(var(--accent-rgb, 0, 150, 255), 0.2);
-  color: var(--accent);
-}
-
-:where(body:has(.admin-users-table)) .stat-box {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.85rem;
-  color: #ccc;
-  transition: color 0.2s, transform 0.1s;
-}
-
-:where(body:has(.admin-users-table)) .stat-box:hover {
-  color: var(--accent);
-  transform: translateY(-1px);
-}
-
-:where(body:has(.admin-users-table)) .stat-box svg {
-  opacity: 0.6;
-}
-
-:where(body:has(.admin-users-table)) .btn-modern {
-  border: 0;
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  color: #fff;
-  white-space: nowrap;
-}
-
-:where(body:has(.admin-users-table)) .btn-modern:hover {
-  opacity: 0.8;
-}
-
-:where(body:has(.admin-users-table)) .btn-ban {
-  background: #e03131;
-}
-
-:where(body:has(.admin-users-table)) .btn-unban {
-  background: #28a745;
-}
-
-:where(body:has(.admin-users-table)) .btn-files {
-  background: #f08c00;
-}
-
-:where(body:has(.admin-users-table)) .btn-comms {
-  background: #4dabf7;
-}
-
-:where(body:has(.admin-users-table)) .btn-verify {
-  background: #5c7cfa;
-}
-
-:where(body:has(.admin-users-table)) .btn-create {
-  background: linear-gradient(135deg, #5c7cfa, #339af0);
-}
-
-:where(body:has(.admin-users-table)) .btn-role {
-  background: rgba(180, 100, 255, 0.15);
-  color: #c084fc;
-  border: 1px solid rgba(180, 100, 255, 0.3);
-}
-
-:where(body:has(.admin-users-table)) .btn-role:hover {
-  background: rgba(180, 100, 255, 0.25);
-  opacity: 1;
-}
-
-:where(body:has(.admin-users-table)) .legacy-filter-btn {
-  display: inline-flex;
+/* Filters: a GET form without JavaScript, live with it */
+:where(.adm-users) .adm-users-filters {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
-  padding: 0 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.85rem;
-  color: #aaa;
-  white-space: nowrap;
-  user-select: none;
-  transition: all 0.2s ease;
-  height: 42px;
-  box-sizing: border-box;
+  margin-bottom: 16px;
 }
 
-:where(body:has(.admin-users-table)) .legacy-filter-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-:where(body:has(.admin-users-table)) .legacy-filter-btn.active {
-  background: rgba(var(--accent-rgb, 0, 150, 255), 0.15);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-:where(body:has(.admin-users-table)) .legacy-filter-btn input {
-  cursor: pointer;
-  accent-color: var(--accent);
-  width: 15px;
-  height: 15px;
+:where(.adm-users) .adm-users-search {
+  position: relative;
+  flex: 1 1 280px;
+  min-width: 0;
   margin: 0;
 }
 
-:where(body:has(.admin-users-table)) .admin-select-filter {
-  padding: 0 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ccc;
-  font-size: 0.85rem;
-  outline: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  height: 42px;
-  box-sizing: border-box;
+:where(.adm-users) .adm-users-search > i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--adm-muted);
+  font-size: 0.85em;
+  pointer-events: none;
 }
 
-:where(body:has(.admin-users-table)) .admin-select-filter:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-:where(body:has(.admin-users-table)) .admin-select-filter:focus {
-  border-color: var(--accent);
-}
-
-:where(body:has(.admin-users-table)) .admin-select-filter.active {
-  background: rgba(var(--accent-rgb, 0, 150, 255), 0.15);
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-:where(body:has(.admin-users-table)) .admin-select-filter option {
-  background: #1a1a1a;
-  color: #fff;
-}
-
-:where(body:has(.admin-users-table)) .admin-select-filter:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-:where(body:has(.admin-users-table)) .btn-filter-reset {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #aaa;
-  padding: 0 14px;
-  height: 42px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  transition: all 0.2s;
-  box-sizing: border-box;
-  white-space: nowrap;
-}
-
-:where(body:has(.admin-users-table)) .btn-filter-reset:hover {
-  background: rgba(255, 60, 60, 0.15);
-  border-color: rgba(255, 60, 60, 0.3);
-  color: #ff6b6b;
-}
-
-/* Create User Modal */
-:where(body:has(.admin-users-table)) #create-user-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(4px);
-}
-
-:where(body:has(.admin-users-table)) #create-user-modal.open {
-  display: flex;
-}
-
-:where(body:has(.admin-users-table)) .cum-box {
-  background: #141414;
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 30px;
+#main .adm-users .adm-users-search input {
   width: 100%;
-  max-width: 460px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-  position: relative;
-  animation: cum-in 0.2s ease;
+  height: 36px;
+  padding: 0 36px 0 34px;
+  font: inherit;
+  font-size: 0.9em;
 }
 
-@keyframes cum-in {
-  from {
-    transform: translateY(-16px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+:where(.adm-users) .adm-users-spinner {
+  display: none;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border: 2px solid var(--adm-border);
+  border-top-color: var(--adm-accent);
+  animation: adm-users-spin 0.7s linear infinite;
 }
 
-:where(body:has(.admin-users-table)) .cum-box h3 {
-  margin: 0 0 20px;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--white);
-}
-
-:where(body:has(.admin-users-table)) .cum-field {
-  margin-bottom: 14px;
-}
-
-:where(body:has(.admin-users-table)) .cum-field label {
+:where(.adm-users) .adm-users-filters.is-busy .adm-users-spinner {
   display: block;
-  font-size: 0.75rem;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  margin-bottom: 5px;
 }
 
-:where(body:has(.admin-users-table)) .cum-field input,
-:where(body:has(.admin-users-table)) .cum-field select {
-  width: 100%;
-  padding: 10px 14px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-}
-
-:where(body:has(.admin-users-table)) .cum-field input:focus,
-:where(body:has(.admin-users-table)) .cum-field select:focus {
-  border-color: var(--accent);
-}
-
-:where(body:has(.admin-users-table)) .cum-field select option {
-  background: #1a1a1a;
-}
-
-:where(body:has(.admin-users-table)) .cum-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-  justify-content: flex-end;
-}
-
-:where(body:has(.admin-users-table)) .cum-close-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: none;
-  border: none;
-  color: #666;
-  font-size: 1.2rem;
-  cursor: pointer;
-  line-height: 1;
-  transition: color 0.2s;
-}
-
-:where(body:has(.admin-users-table)) .cum-close-btn:hover {
-  color: #fff;
-}
-
-:where(body:has(.admin-users-table)) #cum-error {
-  font-size: 0.8rem;
-  color: #ff6b6b;
-  margin-top: 12px;
-  display: none;
-}
-
-:where(body:has(.admin-users-table)) .user-avatar {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-:where(body:has(.admin-users-table)) .avatar-placeholder {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #333, #111);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  color: var(--accent);
-  font-size: 1.2rem;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-/* ---- admin/users.html + admin/users_list.html (rows; also rendered alone for paging/search) ---- */
-/* Template-chosen visibility (#reset-filters-btn, #no-users-msg); the page script then sets style.display explicitly */
-#main .adm-users-hidden {
-  display: none;
-}
-
-#main .adm-users-modal-icon {
-  margin-right: 8px;
-  color: var(--accent);
-}
-
-#main .adm-users-required {
-  color: #e03131;
-}
-
-#main .adm-users-field-hint {
-  color: #666;
-}
-
-#main .adm-users-field-hint-small {
-  font-size: 0.7rem;
-}
-
-#main .adm-users-btn-cancel {
-  background: #333;
-}
-
-#main .adm-users-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 25px;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-#main .adm-users-btn-create {
-  padding: 11px 18px;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  height: 42px;
-}
-
-#main .adm-users-toolbar {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 25px;
-  flex-wrap: wrap;
-}
-
-#main .adm-users-search-wrap {
-  flex-grow: 1;
-  min-width: 240px;
-  position: relative;
-}
-
-#main .adm-users-search {
-  width: 100%;
-  height: 42px;
-  padding: 0 20px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
-  outline: none;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-}
-
-/* The inline outline/transition used to beat the admin skin's form-control and :focus-visible rules, which out-rank a class */
-#main #user-search.adm-users-search {
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-/* Shown/hidden by the page script (style.display = 'block' / 'none') */
-#main .adm-users-spinner {
-  position: absolute;
-  right: 15px;
-  top: 11px;
-  display: none;
-}
-
-#main .adm-users-spinner-svg {
-  animation: adm-users-rotate 2s linear infinite;
-}
-
-#main .adm-users-spinner-circle {
-  stroke-linecap: round;
-}
-
-@keyframes adm-users-rotate {
-  100% {
+@keyframes adm-users-spin {
+  to {
     transform: rotate(360deg);
   }
 }
 
-#main .adm-users-legacy-icon {
-  opacity: 0.8;
-  margin-right: 4px;
+.adm-users .adm-users-filter {
+  height: 36px;
+  font-size: 0.85em;
 }
 
-#main .adm-users-th-actions {
-  text-align: right;
+/* The admin skin forces form-control borders (important), so a set filter shows as an outline */
+.adm-users .adm-users-filter.is-set {
+  outline: 1px solid var(--adm-accent) !important;
+  outline-offset: -1px;
 }
 
-#main .adm-users-loading-trigger {
-  height: 20px;
-  margin-top: 10px;
-}
-
-#main .adm-users-empty {
-  padding: 40px;
-  text-align: center;
-  color: #666;
-}
-
-#main .adm-users-info {
-  display: flex;
+:where(.adm-users) .adm-users-legacy {
+  display: inline-flex;
   align-items: center;
-  gap: 15px;
-}
-
-#main .adm-users-avatar {
-  width: 45px;
-  height: 45px;
-  border: 2px solid rgba(255,255,255,0.1);
-}
-
-#main .adm-users-avatar-img {
-  object-fit: cover;
-}
-
-#main .adm-users-avatar-letter {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.05);
-  color: var(--accent);
-  font-weight: bold;
-  font-size: 1.2rem;
-}
-
-/* Legacy (ghost) users without an account id */
-#main .adm-users-avatar-ghost {
-  background: #333;
-  color: #666;
-}
-
-#main .adm-users-name {
-  color: #fff;
-  font-weight: 800;
-  font-size: 1.1rem;
-  text-decoration: none;
-  display: block;
-  margin-bottom: 2px;
-}
-
-#main .adm-users-display-name {
-  color: var(--accent);
-}
-
-#main .adm-users-login {
-  font-size: 0.75em;
-  color: #666;
-}
-
-#main .adm-users-email {
-  font-size: 0.8rem;
-  color: #888;
-  letter-spacing: 0.2px;
-}
-
-#main .adm-users-activity {
-  display: flex;
-  align-items: center;
-  gap: 15px;
+  gap: 7px;
+  height: 36px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--adm-border);
+  font-size: 0.85em;
+  color: var(--adm-muted);
+  cursor: pointer;
+  user-select: none;
   white-space: nowrap;
 }
 
-#main .adm-users-stat {
-  text-decoration: none;
+:where(.adm-users) .adm-users-legacy:hover {
+  color: var(--adm-text);
 }
 
-#main .adm-users-stat-icon {
-  opacity: 0.6;
-  font-size: 0.8125rem;
+:where(.adm-users) .adm-users-legacy.is-set {
+  border-color: var(--adm-accent);
+  color: var(--adm-accent);
 }
 
-#main .adm-users-registered {
-  font-size: 0.85rem;
-  color: #eee;
-  font-weight: 600;
-  cursor: help;
+:where(.adm-users) .adm-users-legacy input {
+  margin: 0;
 }
 
-#main .adm-users-age {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #aaa;
+/* The filter button is for visitors without JavaScript; with it, the filters apply on change */
+html:not(.no-js) .adm-users .adm-users-apply {
+  display: none;
 }
 
-#main .adm-users-badge-legacy {
-  background: rgba(255,255,255,0.05);
-  color: #888;
-  border: 1px dashed rgba(255,255,255,0.1);
-}
-
-#main .adm-users-badge-locked {
-  background: rgba(255, 0, 0, 0.1);
-  color: #ff4d4d;
-  border: 1px solid rgba(255, 0, 0, 0.2);
-  font-weight: 700;
-}
-
-#main .adm-users-badge-tries {
-  background: rgba(255, 255, 0, 0.1);
-  color: #ffcc00;
-  border: 1px solid rgba(255, 255, 0, 0.2);
-}
-
-#main .adm-users-actions {
+/* The list: one <details> per user */
+:where(.adm-users) .adm-users-list {
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
 }
 
-#main .adm-users-btn-ips {
-  background: rgba(150, 150, 150, 0.1);
-  color: #aaa;
-  border: 1px solid rgba(150, 150, 150, 0.2);
-  text-decoration: none;
-  display: inline-flex;
+:where(.adm-users) .adm-user {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-left: 3px solid var(--adm-border);
+  transition: border-color 0.15s;
+}
+
+:where(.adm-users) .adm-user.is-pending {
+  border-left-color: #fab005;
+}
+
+:where(.adm-users) .adm-user.is-banned {
+  border-left-color: #fa5252;
+}
+
+:where(.adm-users) .adm-user.is-legacy,
+:where(.adm-users) .adm-user.is-system {
+  border-left-style: dashed;
+}
+
+:where(.adm-users) .adm-user[open] {
+  border-color: var(--adm-accent);
+}
+
+:where(.adm-users) .adm-user-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto minmax(96px, auto) 16px;
+  grid-template-areas: "av who stats status tog";
+  align-items: center;
+  gap: 6px 16px;
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+:where(.adm-users) .adm-user-row::-webkit-details-marker {
+  display: none;
+}
+
+:where(.adm-users) .adm-user-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+:where(.adm-users) .adm-user-row:focus-visible {
+  outline: 2px solid var(--adm-accent);
+  outline-offset: -2px;
+}
+
+:where(.adm-users) .adm-user-avatar {
+  grid-area: av;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border: 1px solid var(--adm-border);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+:where(.adm-users) .adm-user-avatar-letter {
+  display: flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
-  padding: 0 10px;
+  font-weight: 800;
+  font-size: 1.1em;
+  color: var(--adm-accent);
 }
 
-#main .adm-users-btn-halls {
-  background: rgba(255, 0, 255, 0.1);
-  color: #ff00ff;
-  border: 1px solid rgba(255, 0, 255, 0.2);
+:where(.adm-users) .is-legacy .adm-user-avatar-letter {
+  color: var(--adm-muted);
 }
 
-#main .adm-users-btn-reassign {
-  background: rgba(0, 200, 180, 0.1);
-  color: #00c8b4;
-  border: 1px solid rgba(0, 200, 180, 0.2);
+:where(.adm-users) .adm-user-who {
+  grid-area: who;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
-#main .adm-users-btn-reset-ip {
-  background: rgba(255, 204, 0, 0.1);
-  color: #ffcc00;
-  border: 1px solid rgba(255, 204, 0, 0.2);
-}
-
-#main .adm-users-btn-nick {
-  background: rgba(100, 200, 100, 0.1);
-  color: #64c864;
-  border: 1px solid rgba(100, 200, 100, 0.2);
-}
-
-#main .adm-users-btn-rename {
-  background: rgba(255, 165, 0, 0.1);
-  color: #ffa500;
-  border: 1px solid rgba(255, 165, 0, 0.2);
-}
-
-#main .adm-users-btn-password {
-  background: rgba(var(--accent-rgb, 0, 150, 255), 0.1);
-  color: var(--accent, #0096ff);
-  border: 1px solid rgba(var(--accent-rgb, 0, 150, 255), 0.2);
-}
-
-#main .adm-users-btn-lock {
-  background: rgba(255, 100, 0, 0.1);
-  color: #ff6400;
-  border: 1px solid rgba(255, 100, 0, 0.2);
-}
-
-#main .adm-users-btn-groups {
-  background: rgba(74, 222, 128, 0.1);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.2);
-}
-
-#main .adm-users-btn-delete {
-  background: rgba(217, 83, 79, 0.1);
-  color: #d9534f;
-  border: 1px solid rgba(217, 83, 79, 0.2);
-}
-
-#main .adm-users-protected {
-  font-size: 0.8rem;
-  color: #666;
-  font-style: italic;
-  padding: 5px 10px;
-}
-
-/* ---- admin/users.html: content built for the shared mod-action modal (snippets/footer.html, outside #main) ---- */
-/* Two ids: out-ranks the modal's own "#mod-action-modal #mod-action-content strong" colour rule, as the inline style did */
-#mod-action-modal #mod-action-content .adm-users-hint-nick {
-  color: var(--accent);
-}
-
-#mod-action-content .adm-users-modal-select {
-  width: 100%;
-  padding: 8px;
-}
-
-#mod-action-content .adm-users-role-select {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #fff;
-}
-
-#mod-action-content .adm-users-group-option {
+:where(.adm-users) .adm-user-name-line {
   display: flex;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  padding: 8px 12px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
 }
 
-#mod-action-content .adm-users-group-checkbox {
-  width: 18px;
-  height: 18px;
-  accent-color: #4ade80;
+:where(.adm-users) .adm-user-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+  color: var(--adm-text);
+  text-decoration: none;
+}
+
+:where(.adm-users) .adm-user-name:hover {
+  color: var(--adm-accent);
+  text-decoration: none;
+}
+
+:where(.adm-users) .adm-user-login {
+  font-size: 0.8em;
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-user-chip {
+  padding: 0 6px;
+  font-size: 0.65em;
+  font-weight: 800;
+  line-height: 1.7;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  border: 1px solid var(--adm-border);
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-user-chip.is-you {
+  border-color: var(--adm-accent);
+  color: var(--adm-accent);
+}
+
+:where(.adm-users) .adm-user-chip.is-admin {
+  border-color: rgba(250, 82, 82, 0.5);
+  color: #ff8787;
+}
+
+:where(.adm-users) .adm-user-chip.is-mod {
+  border-color: rgba(192, 132, 252, 0.5);
+  color: #c084fc;
+}
+
+:where(.adm-users) .adm-user-chip.is-group {
+  border-color: rgba(64, 192, 87, 0.5);
+  color: #69db7c;
+}
+
+:where(.adm-users) .adm-user-meta,
+:where(.adm-users) .adm-user-ban-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78em;
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-user-ban-note {
+  color: #ff8787;
+}
+
+:where(.adm-users) .adm-user-stats {
+  grid-area: stats;
+  display: flex;
+  gap: 4px;
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+
+:where(.adm-users) .adm-user-stats a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 56px;
+  padding: 2px 6px;
+  color: var(--adm-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+:where(.adm-users) .adm-user-stats a:hover {
+  color: var(--adm-accent);
+  text-decoration: none;
+}
+
+:where(.adm-users) .adm-user-stats i {
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+:where(.adm-users) .adm-user-status {
+  grid-area: status;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+:where(.adm-users) .adm-user-badge {
+  padding: 1px 8px;
+  font-size: 0.66em;
+  font-weight: 800;
+  line-height: 1.8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  border: 1px solid var(--adm-border);
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-user-badge.is-active {
+  border-color: rgba(64, 192, 87, 0.45);
+  background: rgba(64, 192, 87, 0.1);
+  color: #69db7c;
+}
+
+:where(.adm-users) .adm-user-badge.is-pending,
+:where(.adm-users) .adm-user-badge.is-tries {
+  border-color: rgba(250, 176, 5, 0.45);
+  background: rgba(250, 176, 5, 0.1);
+  color: #ffd43b;
+}
+
+:where(.adm-users) .adm-user-badge.is-banned,
+:where(.adm-users) .adm-user-badge.is-locked {
+  border-color: rgba(250, 82, 82, 0.5);
+  background: rgba(250, 82, 82, 0.12);
+  color: #ff8787;
+}
+
+:where(.adm-users) .adm-user-badge.is-legacy,
+:where(.adm-users) .adm-user-badge.is-system {
+  border-style: dashed;
+}
+
+:where(.adm-users) .adm-user-toggle {
+  grid-area: tog;
+  color: var(--adm-muted);
+  font-size: 0.8em;
+  text-align: center;
+  transition: transform 0.15s, color 0.15s;
+}
+
+:where(.adm-users) .adm-user[open] .adm-user-toggle {
+  transform: rotate(180deg);
+  color: var(--adm-accent);
+}
+
+/* The open panel: the actions as small forms, grouped */
+:where(.adm-users) .adm-user-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 18px 24px;
+  padding: 16px 14px 14px;
+  border-top: 1px solid var(--adm-border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+:where(.adm-users) .adm-user-group {
+  min-width: 0;
+}
+
+:where(.adm-users) .adm-user-group h3 {
+  margin: 0 0 8px;
+  font-size: 0.7em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-user-danger h3 {
+  color: #ff8787;
+}
+
+:where(.adm-users) .adm-user-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+
+:where(.adm-users) .adm-user-line-label {
+  flex: 1 1 110px;
+  min-width: 0;
+  font-size: 0.82em;
+  color: var(--adm-text);
+}
+
+.adm-users .adm-user-line .adm-text {
+  flex: 1 1 150px;
+  width: auto;
+  min-width: 0;
+  height: 34px;
+  min-height: 34px;
+  font-size: 0.85em;
+}
+
+.adm-users .adm-user-line .adm-select {
+  flex: 0 0 auto;
+}
+
+.adm-users .adm-user-line .adm-btn {
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 12px;
+}
+
+/* The admin skin paints every submit button as the solid primary one; here only .adm-btn-primary is */
+.adm-users button.adm-btn {
+  min-height: 0;
+  border: 1px solid var(--adm-border);
+  background: transparent;
+  color: var(--adm-text);
+  font-size: 0.82em;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.adm-users button.adm-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--adm-accent);
+  color: var(--adm-text);
+}
+
+.adm-users button.adm-btn-primary {
+  background: var(--adm-accent);
+  border-color: var(--adm-accent);
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.adm-users button.adm-btn-primary:hover:not(:disabled) {
+  background: transparent;
+  color: var(--adm-accent);
+}
+
+.adm-users button.adm-btn-danger {
+  border-color: rgba(250, 82, 82, 0.5);
+  color: #ff8787;
+}
+
+.adm-users button.adm-btn-danger:hover:not(:disabled) {
+  background: rgba(250, 82, 82, 0.15);
+  border-color: #fa5252;
+  color: #ff8787;
+}
+
+/* Ban: the reason gets its own line, duration and button below */
+.adm-users .adm-user-ban .adm-text[name="reason"] {
+  flex-basis: 100%;
+}
+
+.adm-users .adm-user-ban .adm-select {
+  flex: 1 1 auto;
+}
+
+:where(.adm-users) .adm-user-hint {
+  margin: 0 0 8px;
+  font-size: 0.78em;
+  line-height: 1.5;
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-user-hint code {
+  padding: 0 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--adm-text);
+  font-size: 0.95em;
+}
+
+/* Move uploads: the name field with its suggestions (users.js) */
+:where(.adm-users) .adm-user-suggest {
+  position: relative;
+  display: flex;
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+.adm-users .adm-user-suggest .adm-text {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+:where(.adm-users) .adm-user-suggest-list {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: -1px;
+  background: var(--bg, #111);
+  border: 1px solid var(--adm-accent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+:where(.adm-users) .adm-user-suggest-list.is-open {
+  display: block;
+}
+
+:where(.adm-users) .adm-user-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 0.85em;
+  color: var(--adm-text);
   cursor: pointer;
 }
 
-#mod-action-modal #mod-action-content .adm-users-group-name {
-  color: #4ade80;
+:where(.adm-users) .adm-user-suggest-item i {
+  font-size: 0.85em;
+  color: var(--adm-muted);
 }
+
+:where(.adm-users) .adm-user-suggest-item.is-active {
+  background: rgba(var(--accent-rgb, 0, 150, 255), 0.15);
+  color: var(--adm-accent);
+}
+
+:where(.adm-users) .adm-user-suggest-item.is-active i {
+  color: var(--adm-accent);
+}
+
+/* A form being sent by the script */
+:where(.adm-users) .adm-user-form.is-busy {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+:where(.adm-users) .adm-user-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-users-empty {
+  margin: 0;
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--adm-muted);
+  border: 1px dashed var(--adm-border);
+}
+
+/* Paging without JavaScript (with it, the next page loads at the end of the list) */
+:where(.adm-users) .adm-users-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+html:not(.no-js) .adm-users .adm-users-pager {
+  display: none;
+}
+
+:where(.adm-users) .adm-users-pager-page {
+  font-size: 0.82em;
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-users-trigger {
+  height: 1px;
+}
+
+/* Create user: opens with :target without JavaScript (replaceState doesn't clear :target), with it .is-open (users.js) */
+:where(.adm-users) .adm-users-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+html.no-js :where(.adm-users) .adm-users-modal:target,
+:where(.adm-users) .adm-users-modal.is-open {
+  display: flex;
+}
+
+:where(.adm-users) .adm-users-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+:where(.adm-users) .adm-users-modal-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  margin: 0;
+  padding: 20px;
+  background: var(--bg, #111);
+  border: 1px solid var(--adm-border);
+  border-top: 3px solid var(--adm-accent);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+:where(.adm-users) .adm-users-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+:where(.adm-users) .adm-users-modal-head h2 {
+  margin: 0;
+  font-size: 1.1em;
+  font-weight: 800;
+  color: var(--adm-text);
+}
+
+:where(.adm-users) .adm-users-modal-head h2 i {
+  margin-right: 6px;
+  color: var(--adm-accent);
+}
+
+:where(.adm-users) .adm-users-modal-close {
+  color: var(--adm-muted);
+  text-decoration: none;
+}
+
+:where(.adm-users) .adm-users-modal-close:hover {
+  color: var(--adm-text);
+}
+
+:where(.adm-users) .adm-users-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+:where(.adm-users) .adm-users-field > span {
+  font-size: 0.72em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-users-field small {
+  margin-left: 4px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.adm-users .adm-users-field .adm-text {
+  width: 100%;
+  height: 36px;
+}
+
+:where(.adm-users) .adm-users-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+@media (max-width: 720px) {
+  :where(.adm-users) .adm-user-row {
+    grid-template-columns: 40px minmax(0, 1fr) 16px;
+    grid-template-areas:
+      "av who tog"
+      "av stats tog"
+      "av status tog";
+    align-items: start;
+  }
+
+  :where(.adm-users) .adm-user-status {
+    justify-content: flex-start;
+  }
+
+  :where(.adm-users) .adm-user-stats a {
+    padding-left: 0;
+  }
+
+  :where(.adm-users) .adm-user-toggle {
+    align-self: center;
+  }
+}
+
 
 /* ---- admin/cleanup.html: page <style> block. It applied page-wide while the cleanup page was shown, so keep it keyed on the page (zero added specificity) ---- */
 :where(body:has(#cleanup-form)) .switch {

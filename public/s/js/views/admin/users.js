@@ -1,570 +1,414 @@
-        // Row buttons in admin/users_list.html (also rendered alone for paging/search): each calls window[name](button)
-        F0ckActions.define(Object.fromEntries([
-            'activateUser', 'unbanUser', 'banUser', 'deleteUploads', 'deleteComments',
-            'adminBulkDeleteHalls', 'adminReassignUploads', 'adminResetLoginAttempts',
-            'adminSetDisplayName', 'adminRenameUser', 'adminSetPassword', 'adminLockLayout',
-            'adminSetRole', 'adminSetGroups', 'adminDeleteUser'
-        ].map(function(name) { return [name, function(el) { return window[name](el); }]; })));
-        F0ckActions.define({
-            openCreateUserModal: function() { openCreateUserModal(); },
-            closeCreateUserModal: function() { closeCreateUserModal(); },
-            submitCreateUser: function() { submitCreateUser(); }
+// Admin user manager (views/admin/users.html, rows: admin/users_list.html).
+// Without JavaScript the filters are a GET form, paging uses links and every action is a plain form
+// (nojs.rs redirects back). Here the filters apply as you type, the next page loads at the end of the
+// list, and the action forms post with fetch; the affected row is then fetched again from the server
+// (the same template), so the page never reloads.
+(function () {
+    'use strict';
+
+    var root = document.getElementById('admin-users');
+    var dataEl = document.getElementById('admin-users-data');
+    if (!root || !dataEl) return;
+
+    var initial = JSON.parse(dataEl.textContent);
+    var state = {
+        page: initial.page || 1,
+        hasMore: !!initial.hasMore,
+        q: initial.q || '',
+        legacy: !!initial.onlyLegacy,
+        status: initial.status || '',
+        role: initial.role || ''
+    };
+
+    var filters = document.getElementById('user-filters');
+    var searchInput = document.getElementById('user-search');
+    var statusFilter = document.getElementById('status-filter');
+    var roleFilter = document.getElementById('role-filter');
+    var legacyFilter = document.getElementById('legacy-filter');
+    var legacyLabel = legacyFilter.closest('label');
+    var resetLink = document.getElementById('reset-filters-btn');
+    var list = document.getElementById('user-list');
+    var emptyMsg = document.getElementById('no-users-msg');
+    var countEl = document.getElementById('total-count');
+    var labelEl = document.getElementById('total-label');
+    var trigger = document.getElementById('loading-trigger');
+    var modal = document.getElementById('create-user-modal');
+
+    function flash(msg, type) {
+        if (typeof window.showFlash === 'function') window.showFlash(msg, type);
+    }
+
+    function csrf() {
+        if (typeof window.getCsrfToken === 'function') return window.getCsrfToken();
+        return (window.f0ckSession && window.f0ckSession.csrf_token) || '';
+    }
+
+    // ── Filters, search, paging ──────────────────────────────────────────
+
+    function filterParams(page) {
+        var p = new URLSearchParams();
+        if (state.q) p.set('q', state.q);
+        if (state.legacy) {
+            p.set('legacy', '1');
+        } else {
+            if (state.status) p.set('status', state.status);
+            if (state.role) p.set('role', state.role);
+        }
+        if (page && page > 1) p.set('page', page);
+        return p;
+    }
+
+    function syncControls() {
+        var qs = filterParams(0).toString();
+        history.replaceState(history.state, '', location.pathname + (qs ? '?' + qs : ''));
+        resetLink.classList.toggle('adm-users-hidden', !qs);
+        statusFilter.disabled = roleFilter.disabled = state.legacy;
+        statusFilter.classList.toggle('is-set', !!state.status && !state.legacy);
+        roleFilter.classList.toggle('is-set', !!state.role && !state.legacy);
+        legacyLabel.classList.toggle('is-set', state.legacy);
+    }
+
+    // Each load gets a number; a reply that a newer load overtook is dropped
+    var loadSeq = 0;
+    var loading = false;
+
+    async function load(page, append) {
+        var seq = ++loadSeq;
+        loading = true;
+        if (!append) filters.classList.add('is-busy');
+        try {
+            var res = await fetch('/admin/users?' + filterParams(page).toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            var html = await res.text();
+            if (seq !== loadSeq) return;
+            var total = res.headers.get('X-Total-Count');
+            if (total !== null) countEl.textContent = total;
+            var label = res.headers.get('X-Total-Label');
+            if (label) labelEl.textContent = label;
+            var empty = res.headers.get('X-Empty-Msg');
+            if (empty) emptyMsg.textContent = empty;
+            state.hasMore = res.headers.get('X-Has-More') === 'true';
+            state.page = page;
+            if (append) list.insertAdjacentHTML('beforeend', html);
+            else list.innerHTML = html;
+            emptyMsg.classList.toggle('adm-users-hidden', list.children.length > 0);
+        } catch (e) {
+            if (seq === loadSeq) flash('Could not load users: ' + e.message, 'error');
+        } finally {
+            if (seq === loadSeq) {
+                loading = false;
+                filters.classList.remove('is-busy');
+                if (!append) setTimeout(loadMoreIfNear, 50);
+            }
+        }
+    }
+
+    function refresh() {
+        syncControls();
+        load(1, false);
+    }
+
+    var searchTimer;
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+            var q = searchInput.value.trim();
+            if (q === state.q) return;
+            state.q = q;
+            refresh();
+        }, 300);
+    });
+
+    statusFilter.addEventListener('change', function () {
+        state.status = statusFilter.value;
+        refresh();
+    });
+
+    roleFilter.addEventListener('change', function () {
+        state.role = roleFilter.value;
+        refresh();
+    });
+
+    legacyFilter.addEventListener('change', function () {
+        state.legacy = legacyFilter.checked;
+        if (state.legacy) {
+            state.status = state.role = '';
+            statusFilter.value = roleFilter.value = '';
+        }
+        refresh();
+    });
+
+    // Enter in the search field: apply at once instead of the GET form's page load
+    filters.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearTimeout(searchTimer);
+        state.q = searchInput.value.trim();
+        refresh();
+    });
+
+    resetLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        state.q = state.status = state.role = '';
+        state.legacy = false;
+        searchInput.value = statusFilter.value = roleFilter.value = '';
+        legacyFilter.checked = false;
+        refresh();
+    });
+
+    // Infinite scroll: the next page loads once the end of the list is near (400px ahead), and again
+    // right away while it still is (a short page, a tall window), so every user is reachable.
+    var triggerNear = false;
+    function loadMoreIfNear() {
+        if (!triggerNear || !state.hasMore || loading) return;
+        load(state.page + 1, true).then(function () {
+            setTimeout(loadMoreIfNear, 50);
         });
+    }
+    new IntersectionObserver(function (entries) {
+        triggerNear = entries[entries.length - 1].isIntersecting;
+        loadMoreIfNear();
+    }, { rootMargin: '0px 0px 400px 0px' }).observe(trigger);
 
-        function updateUI(id, data, action) {
-            var rowId = id ? id : ('ghost-' + data.username);
-            var statusCell = document.getElementById('status-cell-' + rowId);
-            var actionsDiv = document.getElementById('actions-' + rowId);
-            if (!statusCell || !actionsDiv) return console.error('UI elements not found for ID', rowId);
+    syncControls();
 
-            if (action === 'activate') {
-                statusCell.innerHTML = '<span class="status-badge status-active">Active</span>';
-                var verifyBtn = actionsDiv.querySelector('.btn-verify');
-                if (verifyBtn) verifyBtn.remove();
-            } else if (action === 'ban') {
-                statusCell.innerHTML = '<span class="status-badge status-banned">Banned</span>';
-                var banBtn = actionsDiv.querySelector('.btn-ban');
-                if (banBtn) {
-                    banBtn.textContent = 'Unban';
-                    banBtn.className = 'btn-modern btn-unban';
-                    // We re-bind the onclick via HTML because simple assignment doesn't preserve the 'this' context in the same way with these handlers
-                }
-                var verifyBtn = actionsDiv.querySelector('.btn-verify');
-                if (verifyBtn) verifyBtn.remove();
-            } else if (action === 'unban') {
-                statusCell.innerHTML = '<span class="status-badge status-active">Active</span>';
-                var unbanBtn = actionsDiv.querySelector('.btn-unban');
-                if (unbanBtn) {
-                    unbanBtn.textContent = 'Ban';
-                    unbanBtn.className = 'btn-modern btn-ban';
-                }
+    // ── Rows ─────────────────────────────────────────────────────────────
+
+    // Fetch one row again (exact-name search) and swap it in, keeping it open
+    async function reloadRow(row, login) {
+        var p = new URLSearchParams();
+        p.set('q', '"' + login + '"');
+        if (row.dataset.legacy) p.set('legacy', '1');
+        p.set('open', row.dataset.row);
+        try {
+            var res = await fetch('/admin/users?' + p.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) return;
+            var tpl = document.createElement('template');
+            tpl.innerHTML = await res.text();
+            var fresh = tpl.content.getElementById(row.id);
+            if (!fresh) {
+                // Gone from this listing (a legacy name whose uploads all moved)
+                row.remove();
+                return;
             }
+            row.replaceWith(fresh);
+        } catch (e) {
+            // the action itself went through; the row just keeps its old look
         }
+    }
 
-        async function activateUser(btn) {
-            var id = btn.dataset.id;
-            var userName = btn.dataset.name;
-            
-            ModAction.confirm('Verify User', 'Manually verify account for <strong>' + escHTML(userName) + '</strong>?', async () => {
-                var res = await fetch('/api/v2/admin/users/activate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                    body: JSON.stringify({ user_id: id })
-                });
-                var data = await res.json();
-                if (data.success) {
-                    showFlash(data.msg, 'success');
-                    updateUI(id, data, 'activate');
-                } else {
-                    throw new Error(data.msg || 'Failed to verify user');
-                }
-            }, { hideReason: true });
-        }
-
-        async function banUser(btn) {
-            var id = btn.dataset.id;
-            var userName = btn.dataset.name;
-            
-            ModAction.confirm('Ban User', 'Reason for banning <strong>' + escHTML(userName) + '</strong>?', async (reason) => {
-                var res = await fetch('/api/v2/admin/ban', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                    body: JSON.stringify({ user_id: id, reason: reason, duration: 'permanent' })
-                });
-                var data = await res.json();
-                if (data.success) {
-                    showFlash('User ' + escHTML(userName) + ' banned.', 'success');
-                    updateUI(id, data, 'ban');
-                } else {
-                    throw new Error(data.msg || 'Failed to ban user');
-                }
-            }, { hideReason: false, confirmText: 'Ban User' });
-        }
-
-        async function unbanUser(btn) {
-            var id = btn.dataset.id;
-            var userName = btn.dataset.name;
-            
-            ModAction.confirm('Unban User', 'Unban account for <strong>' + escHTML(userName) + '</strong>?', async () => {
-                var res = await fetch('/api/v2/admin/unban', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                    body: JSON.stringify({ user_id: id })
-                });
-                var data = await res.json();
-                if (data.success) {
-                    showFlash('User ' + escHTML(userName) + ' unbanned.', 'success');
-                    updateUI(id, data, 'unban');
-                } else {
-                    throw new Error(data.msg || 'Failed to unban user');
-                }
-            }, { hideReason: true });
-        }
-
-        async function deleteUploads(btn) {
-            var id = btn.dataset.id;
-            var userName = btn.dataset.name;
-            
-            ModAction.confirm('Delete Uploads', 'Are you SURE you want to delete ALL uploads by <strong>' + escHTML(userName) + '</strong>? This cannot be undone.', async () => {
-                var res = await fetch('/api/v2/admin/users/bulk-delete-items', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                    body: JSON.stringify({ user_id: id, username: btn.dataset.username })
-                });
-                var data = await res.json();
-                if (data.success) {
-                    showFlash(data.msg, 'success');
-                } else {
-                    throw new Error(data.msg || 'Deletion failed');
-                }
-            }, { hideReason: true, confirmText: 'Delete Everything' });
-        }
-
-        async function deleteComments(btn) {
-            var id = btn.dataset.id;
-            var userName = btn.dataset.name;
-            
-            ModAction.confirm('Delete Comments', 'Are you SURE you want to delete ALL comments by <strong>' + escHTML(userName) + '</strong>? This will be permanent.', async () => {
-                var res = await fetch('/api/v2/admin/users/bulk-delete-comments', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                    body: JSON.stringify({ user_id: id, username: btn.dataset.username })
-                });
-                var data = await res.json();
-                if (data.success) {
-                    showFlash(data.msg, 'success');
-                } else {
-                    throw new Error(data.msg || 'Deletion failed');
-                }
-            }, { hideReason: true, confirmText: 'Delete All Comments' });
-        }
-
-        async function adminSetDisplayName(btn) {
-            var id = btn.dataset.id;
-            var userName = btn.dataset.name;
-            var currentDisplay = btn.dataset.display || '';
-
-            var hint = currentDisplay
-                ? 'Current nick: <strong class="adm-users-hint-nick">' + escHTML(currentDisplay) + '</strong><br>Enter a new stylized name, or leave empty to clear it.'
-                : 'Enter a stylized display name for <strong>' + escHTML(userName) + '</strong>. Leave empty to clear.';
-
-            ModAction.confirm('Set Display Name', hint, async (newName) => {
-                var res = await fetch('/api/v2/admin/users/set-display-name', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                    body: JSON.stringify({ user_id: id, display_name: newName || '' })
-                });
-                var data = await res.json();
-                if (data.success) {
-                    showFlash(data.msg || 'Display name updated.', 'success');
-                    // Update button data attribute for next edit
-                    btn.dataset.display = data.display_name || '';
-                    // Refresh the row name link in the table
-                    var rowId = 'user-row-' + id;
-                    var row = document.getElementById(rowId);
-                    if (row) {
-                        var link = row.querySelector('.user-info-cell a');
-                        if (link && data.display_name) {
-                            link.innerHTML = '<span class="adm-users-display-name">' + escHTML(data.display_name) + '</span> <span class="adm-users-login">(' + escHTML(userName) + ')</span>';
-                        } else if (link) {
-                            link.textContent = userName;
-                        }
-                    }
-                } else {
-                    throw new Error(data.msg || 'Failed to set display name');
-                }
-            }, { hideReason: false, singleLine: true, allowEmpty: true, confirmText: 'Set Nick', placeholder: currentDisplay || 'Set nickname' });
-        }
-
-        async function adminLockLayout(btn) {
-            var id = btn.dataset.id;
-            var userName = btn.dataset.name;
-            var isLocked = btn.dataset.locked === '1';
-            var currentMode = btn.dataset.mode || '0';
-
-            if (isLocked) {
-                ModAction.confirm('Unlock Layout', 'Unlock comment layout for <strong>' + escHTML(userName) + '</strong>? They will be able to change it again.', async () => {
-                    var res = await fetch('/api/v2/admin/users/lock-layout', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                        body: JSON.stringify({ user_id: id, lock: false })
-                    });
-                    var data = await res.json();
-                    if (data.success) {
-                        showFlash('Layout unlocked for ' + escHTML(userName), 'success');
-                        btn.dataset.locked = '0';
-                        btn.innerHTML = '<i class="fa fa-lock"></i> Lock';
-                        btn.title = 'Lock Layout';
-                    } else {
-                        throw new Error(data.msg || 'Failed to unlock layout');
-                    }
-                }, { hideReason: true });
-            } else {
-                var hint = 'Select comment display mode to force for <strong>' + escHTML(userName) + '</strong>:<br><br>' +
-                           '<select id="force-mode-select" class="input adm-users-modal-select">' +
-                           '<option value="0" ' + (currentMode == '0' ? 'selected' : '') + '>Tree</option>' +
-                           '<option value="1" ' + (currentMode == '1' ? 'selected' : '') + '>Linear</option>' +
-                           '</select>';
-
-                ModAction.confirm('Lock Layout', hint, async () => {
-                    var mode = document.getElementById('force-mode-select').value;
-                    var res = await fetch('/api/v2/admin/users/lock-layout', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                        body: JSON.stringify({ user_id: id, lock: true, mode: mode })
-                    });
-                    var data = await res.json();
-                    if (data.success) {
-                        showFlash('Layout locked to ' + (mode == '0' ? 'Tree' : 'Linear') + ' for ' + escHTML(userName), 'success');
-                        btn.dataset.locked = '1';
-                        btn.dataset.mode = mode;
-                        btn.innerHTML = '<i class="fa fa-lock-open"></i> Unlock';
-                        btn.title = 'Unlock Layout';
-                    } else {
-                        throw new Error(data.msg || 'Failed to lock layout');
-                    }
-                }, { hideReason: true, confirmText: 'Lock & Apply' });
+    list.addEventListener('submit', async function (e) {
+        var form = e.target.closest('form.adm-user-form');
+        if (!form) return;
+        e.preventDefault();
+        if (form.classList.contains('is-busy')) return;
+        var row = form.closest('.adm-user');
+        var body = new URLSearchParams(new FormData(form, e.submitter));
+        body.delete('back');
+        body.delete('csrf_token');
+        form.classList.add('is-busy');
+        try {
+            var res = await fetch(form.getAttribute('action'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json', 'X-CSRF-Token': csrf() },
+                body: body
+            });
+            var data = await res.json().catch(function () { return {}; });
+            if (!res.ok || data.success === false) throw new Error(data.msg || data.message || ('HTTP ' + res.status));
+            flash(data.msg || data.message || 'Done.', 'success');
+            if (form.dataset.kind === 'delete') {
+                row.remove();
+                countEl.textContent = Math.max(0, (parseInt(countEl.textContent, 10) || 1) - 1);
+                emptyMsg.classList.toggle('adm-users-hidden', list.children.length > 0);
+                return;
             }
+            await reloadRow(row, data.new_login || row.dataset.login);
+        } catch (err) {
+            flash(err.message || 'Something went wrong.', 'error');
+        } finally {
+            form.classList.remove('is-busy');
         }
+    });
 
-        var adminUsersData = JSON.parse(document.getElementById('admin-users-data').textContent);
-        var currentPage = adminUsersData.page;
-        var hasMore = adminUsersData.hasMore;
-        var isLoading = false;
-        var searchQuery = adminUsersData.q;
-        var onlyLegacy = adminUsersData.onlyLegacy;
-        var currentStatus = adminUsersData.status;
-        var currentRole = adminUsersData.role;
+    // ── Move uploads: username suggestions ───────────────────────────────
 
-        var searchInput = document.getElementById('user-search');
-        var statusFilter = document.getElementById('status-filter');
-        var roleFilter = document.getElementById('role-filter');
-        var legacyFilter = document.getElementById('legacy-filter');
-        var legacyFilterLabel = document.getElementById('legacy-filter-label');
-        var resetFiltersBtn = document.getElementById('reset-filters-btn');
-        var totalLabel = document.getElementById('total-label');
-        var tableBody = document.getElementById('user-table-body');
-        var loadingTrigger = document.getElementById('loading-trigger');
-        var noUsersMsg = document.getElementById('no-users-msg');
-        var spinner = document.getElementById('search-spinner');
-        var countSpan = document.getElementById('total-count');
+    var suggestTimer;
+    var suggestSeq = 0;
 
-        function updateUrlAndControls() {
-            var urlParams = new URLSearchParams();
-            if (searchQuery) urlParams.set('q', searchQuery);
-            if (onlyLegacy) {
-                urlParams.set('legacy', '1');
-            } else {
-                if (currentStatus) urlParams.set('status', currentStatus);
-                if (currentRole) urlParams.set('role', currentRole);
-            }
-            var newUrl = window.location.pathname + (urlParams.toString() ? ('?' + urlParams.toString()) : '');
-            window.history.replaceState({}, '', newUrl);
+    function suggestBox(input) {
+        return input.parentNode.querySelector('.adm-user-suggest-list');
+    }
 
-            // Update reset button
-            var hasFilter = !!(searchQuery || onlyLegacy || currentStatus || currentRole);
-            if (resetFiltersBtn) resetFiltersBtn.style.display = hasFilter ? 'inline-flex' : 'none';
+    function closeSuggest(input) {
+        var box = suggestBox(input);
+        box.classList.remove('is-open');
+        box.textContent = '';
+    }
 
-            // Update control states
-            if (statusFilter) {
-                statusFilter.disabled = onlyLegacy;
-                statusFilter.classList.toggle('active', !!currentStatus && !onlyLegacy);
-            }
-            if (roleFilter) {
-                roleFilter.disabled = onlyLegacy;
-                roleFilter.classList.toggle('active', !!currentRole && !onlyLegacy);
-            }
-            if (legacyFilterLabel) {
-                legacyFilterLabel.classList.toggle('active', onlyLegacy);
-            }
+    function setActive(box, idx) {
+        var items = box.querySelectorAll('.adm-user-suggest-item');
+        items.forEach(function (el, i) { el.classList.toggle('is-active', i === idx); });
+        if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+    }
+
+    function activeIndex(box) {
+        var items = Array.prototype.slice.call(box.querySelectorAll('.adm-user-suggest-item'));
+        return items.findIndex(function (el) { return el.classList.contains('is-active'); });
+    }
+
+    function pick(input, name) {
+        input.value = name;
+        closeSuggest(input);
+        input.focus();
+    }
+
+    async function fetchSuggest(input, q) {
+        var seq = ++suggestSeq;
+        try {
+            var res = await fetch('/api/v2/admin/users/search?q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            var data = await res.json();
+            if (seq !== suggestSeq || document.activeElement !== input) return;
+            var skip = (input.dataset.suggestSkip || '').toLowerCase();
+            var names = (Array.isArray(data) ? data : []).map(function (u) { return String(u.user || ''); })
+                .filter(function (n) { return n && n.toLowerCase() !== skip; });
+            var box = suggestBox(input);
+            box.textContent = '';
+            names.forEach(function (n) {
+                var el = document.createElement('span');
+                el.className = 'adm-user-suggest-item';
+                el.setAttribute('role', 'option');
+                el.dataset.name = n;
+                var icon = document.createElement('i');
+                icon.className = 'fa-solid fa-user';
+                el.append(icon, document.createTextNode(n));
+                box.appendChild(el);
+            });
+            box.classList.toggle('is-open', names.length > 0);
+        } catch (e) {
+            // no suggestions; typing the name still works
         }
+    }
 
-        async function fetchUsers(page, q, append) {
-            if (isLoading) return;
-            isLoading = true;
-            if (!append) spinner.style.display = 'block';
+    list.addEventListener('input', function (e) {
+        var input = e.target;
+        if (!input.matches('[data-suggest-users]')) return;
+        clearTimeout(suggestTimer);
+        var q = input.value.trim();
+        if (!q) return closeSuggest(input);
+        suggestTimer = setTimeout(function () { fetchSuggest(input, q); }, 200);
+    });
 
-            try {
-                var params = new URLSearchParams();
-                params.set('page', page);
-                if (q) params.set('q', q);
-                if (onlyLegacy) {
-                    params.set('legacy', '1');
-                } else {
-                    if (currentStatus) params.set('status', currentStatus);
-                    if (currentRole) params.set('role', currentRole);
-                }
-
-                var url = '/admin/users?' + params.toString();
-                var res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                
-                // Update state from headers
-                var total = res.headers.get('X-Total-Count');
-                var hasMoreHeader = res.headers.get('X-Has-More');
-                var totalLabelHeader = res.headers.get('X-Total-Label');
-                var emptyMsgHeader = res.headers.get('X-Empty-Msg');
-                
-                if (total !== null) countSpan.textContent = total;
-                if (totalLabelHeader && totalLabel) totalLabel.textContent = totalLabelHeader;
-                if (emptyMsgHeader && noUsersMsg) noUsersMsg.textContent = emptyMsgHeader;
-                if (hasMoreHeader !== null) hasMore = (hasMoreHeader === 'true');
-
-                var html = await res.text();
-                
-                if (append) {
-                    tableBody.insertAdjacentHTML('beforeend', html);
-                } else {
-                    tableBody.innerHTML = html;
-                }
-                
-                noUsersMsg.style.display = (tableBody.children.length === 0) ? 'block' : 'none';
-            } catch (e) {
-                console.error('Fetch failed', e);
-            } finally {
-                isLoading = false;
-                spinner.style.display = 'none';
-            }
+    list.addEventListener('keydown', function (e) {
+        var input = e.target;
+        if (!input.matches('[data-suggest-users]')) return;
+        var box = suggestBox(input);
+        if (!box.classList.contains('is-open')) return;
+        var count = box.querySelectorAll('.adm-user-suggest-item').length;
+        var idx = activeIndex(box);
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActive(box, Math.min(idx + 1, count - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActive(box, Math.max(idx - 1, 0));
+        } else if (e.key === 'Enter' && idx >= 0) {
+            // take the highlighted name instead of submitting
+            e.preventDefault();
+            pick(input, box.querySelectorAll('.adm-user-suggest-item')[idx].dataset.name);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeSuggest(input);
         }
+    });
 
-        // Search Input Handling (Debounced)
-        var searchTimeout;
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(function() {
-                searchQuery = searchInput.value.trim();
-                currentPage = 1;
-                updateUrlAndControls();
-                fetchUsers(1, searchQuery, false);
-            }, 300);
+    // mousedown, not click: the field keeps its focus, so the list doesn't close first
+    list.addEventListener('mousedown', function (e) {
+        var item = e.target.closest('.adm-user-suggest-item');
+        if (!item) return;
+        e.preventDefault();
+        pick(item.closest('.adm-user-suggest').querySelector('[data-suggest-users]'), item.dataset.name);
+    });
+
+    list.addEventListener('mouseover', function (e) {
+        var item = e.target.closest('.adm-user-suggest-item');
+        if (!item) return;
+        var box = item.parentNode;
+        setActive(box, Array.prototype.indexOf.call(box.children, item));
+    });
+
+    list.addEventListener('focusout', function (e) {
+        if (e.target.matches('[data-suggest-users]')) closeSuggest(e.target);
+    });
+
+    // ── Create user ──────────────────────────────────────────────────────
+
+    var createForm = modal.querySelector('form');
+
+    function openModal() {
+        createForm.reset();
+        modal.classList.add('is-open');
+        setTimeout(function () { createForm.elements.username.focus(); }, 30);
+    }
+
+    function closeModal() {
+        modal.classList.remove('is-open');
+        if (location.hash === '#create-user-modal') history.replaceState(history.state, '', location.pathname + location.search);
+    }
+
+    document.getElementById('create-user-open').addEventListener('click', function (e) {
+        e.preventDefault();
+        openModal();
+    });
+
+    modal.addEventListener('click', function (e) {
+        if (e.target.closest('a[href="#_"]')) {
+            e.preventDefault();
+            closeModal();
+        }
+    });
+
+    // One listener for the whole session (AJAX navigation runs this script again)
+    if (!window.__admUsersEsc) {
+        window.__admUsersEsc = true;
+        document.addEventListener('keydown', function (e) {
+            var m = document.getElementById('create-user-modal');
+            if (e.key === 'Escape' && m && m.classList.contains('is-open')) {
+                m.classList.remove('is-open');
+            }
         });
+    }
 
-        // Status Filter Handling
-        if (statusFilter) {
-            statusFilter.addEventListener('change', function() {
-                currentStatus = this.value;
-                if (currentStatus && onlyLegacy) {
-                    onlyLegacy = false;
-                    if (legacyFilter) legacyFilter.checked = false;
-                }
-                updateUrlAndControls();
-                currentPage = 1;
-                fetchUsers(1, searchQuery, false);
+    createForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (createForm.classList.contains('is-busy')) return;
+        var body = new URLSearchParams(new FormData(createForm));
+        body.delete('back');
+        body.delete('csrf_token');
+        createForm.classList.add('is-busy');
+        try {
+            var res = await fetch(createForm.getAttribute('action'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json', 'X-CSRF-Token': csrf() },
+                body: body
             });
+            var data = await res.json().catch(function () { return {}; });
+            if (!res.ok || data.success === false) throw new Error(data.msg || ('HTTP ' + res.status));
+            closeModal();
+            flash(data.msg || 'User created.', 'success');
+            // Show the new account: search for it exactly
+            state.q = '"' + data.username + '"';
+            state.legacy = false;
+            state.status = state.role = '';
+            searchInput.value = state.q;
+            statusFilter.value = roleFilter.value = '';
+            legacyFilter.checked = false;
+            refresh();
+        } catch (err) {
+            flash(err.message || 'Could not create the user.', 'error');
+        } finally {
+            createForm.classList.remove('is-busy');
         }
+    });
 
-        // Role Filter Handling
-        if (roleFilter) {
-            roleFilter.addEventListener('change', function() {
-                currentRole = this.value;
-                if (currentRole && onlyLegacy) {
-                    onlyLegacy = false;
-                    if (legacyFilter) legacyFilter.checked = false;
-                }
-                updateUrlAndControls();
-                currentPage = 1;
-                fetchUsers(1, searchQuery, false);
-            });
-        }
-
-        // Legacy Only Filter Handling
-        if (legacyFilter) {
-            legacyFilter.addEventListener('change', function() {
-                onlyLegacy = this.checked;
-                if (onlyLegacy) {
-                    currentStatus = '';
-                    currentRole = '';
-                    if (statusFilter) statusFilter.value = '';
-                    if (roleFilter) roleFilter.value = '';
-                }
-                updateUrlAndControls();
-                currentPage = 1;
-                fetchUsers(1, searchQuery, false);
-            });
-        }
-
-        // Reset All Filters
-        if (resetFiltersBtn) {
-            resetFiltersBtn.addEventListener('click', function() {
-                searchQuery = '';
-                searchInput.value = '';
-                onlyLegacy = false;
-                currentStatus = '';
-                currentRole = '';
-                if (legacyFilter) legacyFilter.checked = false;
-                if (statusFilter) statusFilter.value = '';
-                if (roleFilter) roleFilter.value = '';
-                updateUrlAndControls();
-                currentPage = 1;
-                fetchUsers(1, '', false);
-            });
-        }
-
-        // Infinite Scroll: the next page loads once the end of the list is near (400px ahead), and
-        // again right away while it still is (a page that doesn't fill the screen, a tall window), so
-        // scrolling down reaches every user in every frontend's shell.
-        var triggerNear = false;
-        function loadMoreIfNear() {
-            if (!triggerNear || !hasMore || isLoading) return;
-            currentPage++;
-            fetchUsers(currentPage, searchQuery, true).then(function() {
-                setTimeout(loadMoreIfNear, 50);
-            });
-        }
-        var observer = new IntersectionObserver(function(entries) {
-            triggerNear = entries[entries.length - 1].isIntersecting;
-            loadMoreIfNear();
-        }, { rootMargin: '0px 0px 400px 0px' });
-        observer.observe(loadingTrigger);
-
-        // --- Create User Modal ---
-        var createUserModal = document.getElementById('create-user-modal');
-
-        function openCreateUserModal() {
-            document.getElementById('cum-username').value = '';
-            document.getElementById('cum-email').value = '';
-            document.getElementById('cum-password').value = '';
-            document.getElementById('cum-role').value = 'user';
-            document.getElementById('cum-error').style.display = 'none';
-            document.getElementById('cum-error').textContent = '';
-            createUserModal.classList.add('open');
-            setTimeout(function() { document.getElementById('cum-username').focus(); }, 80);
-        }
-
-        function closeCreateUserModal() {
-            createUserModal.classList.remove('open');
-        }
-
-        // Close on backdrop click
-        createUserModal.addEventListener('click', function(e) {
-            if (e.target === createUserModal) closeCreateUserModal();
-        });
-
-        // Close on Escape
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && createUserModal.classList.contains('open')) closeCreateUserModal();
-        });
-
-        async function submitCreateUser() {
-            var btn = document.getElementById('cum-submit-btn');
-            var errEl = document.getElementById('cum-error');
-            var username = document.getElementById('cum-username').value.trim();
-            var email    = document.getElementById('cum-email').value.trim();
-            var password = document.getElementById('cum-password').value;
-            var role     = document.getElementById('cum-role').value;
-
-            errEl.style.display = 'none';
-            errEl.textContent = '';
-
-            if (!username) { errEl.textContent = 'Username is required.'; errEl.style.display = 'block'; return; }
-            if (!password) { errEl.textContent = 'Password is required.'; errEl.style.display = 'block'; return; }
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Creating…';
-
-            try {
-                var res = await fetch('/api/v2/admin/users/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                    body: JSON.stringify({ username, email: email || null, password, role })
-                });
-                var data = await res.json();
-
-                if (data.success) {
-                    closeCreateUserModal();
-                    showFlash(data.msg, 'success');
-                    // If we were filtering by legacy or banned, reset filter so admin can see newly created user
-                    if (onlyLegacy || currentStatus === 'banned') {
-                        onlyLegacy = false;
-                        currentStatus = '';
-                        if (legacyFilter) legacyFilter.checked = false;
-                        if (statusFilter) statusFilter.value = '';
-                        updateUrlAndControls();
-                    }
-                    // Refresh the table from page 1
-                    currentPage = 1;
-                    fetchUsers(1, searchQuery, false);
-                    // Update counter
-                    var cnt = parseInt(countSpan.textContent) || 0;
-                    countSpan.textContent = cnt + 1;
-                } else {
-                    errEl.textContent = data.msg || 'Failed to create user.';
-                    errEl.style.display = 'block';
-                }
-            } catch (e) {
-                errEl.textContent = 'Network error: ' + e.message;
-                errEl.style.display = 'block';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa fa-plus"></i> Create User';
-            }
-        }
-        async function adminSetRole(btn) {
-            var id = btn.dataset.id;
-            var userName = btn.dataset.name;
-            var currentRole = btn.dataset.role || 'user';
-
-            var hint = 'Select the new role for <strong>' + escHTML(userName) + '</strong>:<br><br>' +
-                       '<select id="set-role-select" class="input adm-users-modal-select adm-users-role-select">' +
-                       '<option value="user"'   + (currentRole === 'user'  ? ' selected' : '') + '>User (no special permissions)</option>' +
-                       '<option value="mod"'    + (currentRole === 'mod'   ? ' selected' : '') + '>Moderator</option>' +
-                       '<option value="admin"'  + (currentRole === 'admin' ? ' selected' : '') + '>Admin (full access)</option>' +
-                       '</select>';
-
-            ModAction.confirm('Set Role', hint, async () => {
-                // Use querySelector as fallback since Sanitizer may strip the id attribute
-                var selectEl = document.getElementById('set-role-select') ||
-                               document.querySelector('#mod-action-content select');
-                if (!selectEl) throw new Error('Role selector not found in modal.');
-                var role = selectEl.value;
-                var res = await fetch('/api/v2/admin/users/set-role', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                    body: JSON.stringify({ user_id: id, role })
-                });
-                var data = await res.json();
-                if (data.success) {
-                    showFlash(data.msg, 'success');
-                    // Update button state in place
-                    btn.dataset.role = role;
-                    var labelMap = { user: 'User', mod: 'Mod', admin: 'Admin' };
-                    var labelEl = document.querySelector('.role-label-' + id);
-                    if (labelEl) labelEl.textContent = labelMap[role] || role;
-                } else {
-                    throw new Error(data.msg || 'Failed to set role');
-                }
-            }, { hideReason: true, confirmText: 'Apply Role', unsafeContent: true });
-        }
-
-        async function adminSetGroups(btn) {
-            var id = btn.dataset.id;
-            var userName = btn.dataset.name;
-            var currentGroups = (btn.dataset.groups || '').split(',').map(function(s) { return s.trim().toLowerCase(); }).filter(Boolean);
-            var is4chan = currentGroups.indexOf('4chan') !== -1;
-
-            var hint = 'Manage groups for <strong>' + escHTML(userName) + '</strong>:<br><br>' +
-                       '<label class="adm-users-group-option">' +
-                       '<input type="checkbox" id="group-4chan-checkbox" value="4chan"' + (is4chan ? ' checked' : '') + ' class="adm-users-group-checkbox">' +
-                       '<span><strong class="adm-users-group-name">🍀 4chan</strong> — Grants access to the 4chan catalogue, thread viewer, and rehosting</span>' +
-                       '</label>';
-
-            ModAction.confirm('Manage Groups', hint, async () => {
-                var chk = document.getElementById('group-4chan-checkbox') || document.querySelector('#mod-action-content input[type="checkbox"]');
-                var newGroups = [];
-                if (chk && chk.checked) newGroups.push('4chan');
-
-                var res = await fetch('/api/v2/admin/users/set-groups', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                    body: JSON.stringify({ user_id: id, groups: newGroups })
-                });
-                var data = await res.json();
-                if (data.success) {
-                    showFlash(data.msg, 'success');
-                    btn.dataset.groups = newGroups.join(',');
-                    var labelEl = document.querySelector('.groups-label-' + id);
-                    if (labelEl) labelEl.textContent = newGroups.indexOf('4chan') !== -1 ? '4chan' : 'Groups';
-                } else {
-                    throw new Error(data.msg || 'Failed to update groups');
-                }
-            }, { hideReason: true, confirmText: 'Save Groups', unsafeContent: true });
-        }
+    // Opened through #create-user-modal in the address: the class takes over from :target
+    if (location.hash === '#create-user-modal') openModal();
+})();

@@ -4,123 +4,97 @@
 <div id="main" class="admin-container">
     {% include "snippets/admin-back.html" %}
 
-    <!-- Create User Modal -->
-    <div id="create-user-modal">
-        <div class="cum-box">
-            <button class="cum-close-btn" data-on="click:closeCreateUserModal" title="Close">&times;</button>
-            <h3><i class="fa fa-user-plus adm-users-modal-icon"></i>Create New User</h3>
-
-            <div class="cum-field">
-                <label for="cum-username">Username <span class="adm-users-required">*</span></label>
-                <input type="text" id="cum-username" placeholder="e.g. john_doe" autocomplete="off">
-            </div>
-            <div class="cum-field">
-                <label for="cum-email">Email <span class="adm-users-field-hint">(optional)</span></label>
-                <input type="email" id="cum-email" placeholder="user@example.com" autocomplete="off">
-            </div>
-            <div class="cum-field">
-                <label for="cum-password">Password <span class="adm-users-required">*</span> <span class="adm-users-field-hint adm-users-field-hint-small">(min 20 chars)</span></label>
-                <input type="password" id="cum-password" placeholder="Strong password…" autocomplete="new-password">
-            </div>
-            <div class="cum-field">
-                <label for="cum-role">Role</label>
-                <select id="cum-role">
-                    <option value="user">User</option>
-                    <option value="mod">Moderator</option>
-                    <option value="admin">Admin</option>
-                </select>
-            </div>
-
-            <div id="cum-error"></div>
-
-            <div class="cum-actions">
-                <button class="btn-modern adm-users-btn-cancel" data-on="click:closeCreateUserModal">Cancel</button>
-                <button class="btn-modern btn-create" id="cum-submit-btn" data-on="click:submitCreateUser">
-                    <i class="fa fa-plus"></i> Create User
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- .container: the admin skin's 1200px column, same width and gutters as the back bar above -->
-    <div class="container">
-        <div class="adm-users-header">
+    <div class="container adm adm-users" id="admin-users">
+        <header class="adm-header">
             <div>
-                <h2 class="adm-page-title">User Management</h2>
-                <p class="adm-page-subtitle">Administration hub for <span id="total-count">{{ total }}</span> <span id="total-label">{{ totalLabel }}</span>.</p>
+                <h1 class="adm-title">Users</h1>
+                <p class="adm-subtitle"><strong id="total-count">{{ total }}</strong> <span id="total-label">{{ totalLabel }}</span></p>
             </div>
-            <div>
-                <button class="btn-modern btn-create adm-users-btn-create" data-on="click:openCreateUserModal" title="Create new user">
-                    <i class="fa fa-user-plus"></i> Create User
-                </button>
-            </div>
-        </div>
+            <a href="#create-user-modal" class="adm-btn adm-btn-primary" id="create-user-open"><i class="fa fa-user-plus"></i> Create user</a>
+        </header>
 
-        <!-- Filter & Search Toolbar -->
-        <div class="adm-users-toolbar">
-            <div class="adm-users-search-wrap">
-                <input type="text" id="user-search" class="adm-users-search" placeholder='Search by name or email… use "exact" for exact match' 
-                       value="{{ q }}">
-                <div id="search-spinner" class="adm-users-spinner">
-                    <svg class="spinner adm-users-spinner-svg" width="20" height="20" viewBox="0 0 50 50">
-                        <circle cx="25" cy="25" r="20" fill="none" stroke="var(--accent)" stroke-width="5" stroke-dasharray="90,150" stroke-dashoffset="0" class="adm-users-spinner-circle"></circle>
-                    </svg>
-                </div>
-            </div>
-
-            <!-- Status Filter -->
-            <select id="status-filter" class="admin-select-filter {{ ("active" if status else "") }}" {{ ("disabled" if onlyLegacy else "") }} title="Filter by account status">
-                <option value="">All Statuses</option>
-                <option value="banned" {{ ("selected" if status == "banned" else "") }}>⛔ Banned</option>
-                <option value="active" {{ ("selected" if status == "active" else "") }}>🟢 Active</option>
-                <option value="pending" {{ ("selected" if status == "pending" else "") }}>⏳ Pending</option>
-            </select>
-
-            <!-- Role Filter -->
-            <select id="role-filter" class="admin-select-filter {{ ("active" if role else "") }}" {{ ("disabled" if onlyLegacy else "") }} title="Filter by user role">
-                <option value="">All Roles</option>
-                <option value="staff" {{ ("selected" if role == "staff" else "") }}>Staff (All)</option>
-                <option value="admin" {{ ("selected" if role == "admin" else "") }}>Admins</option>
-                <option value="mod" {{ ("selected" if role == "mod" else "") }}>Moderators</option>
-                <option value="user" {{ ("selected" if role == "user" else "") }}>Regular Users</option>
-            </select>
-
-            <!-- Legacy Only Toggle -->
-            <label id="legacy-filter-label" class="legacy-filter-btn {{ ("active" if onlyLegacy else "") }}" title="Toggle to only show legacy ghost users">
-                <input type="checkbox" id="legacy-filter" {{ ("checked" if onlyLegacy else "") }}>
-                <span><i class="fa fa-ghost adm-users-legacy-icon"></i>Only legacy</span>
+        {# Filters: a plain GET form without JavaScript; with it, results update as you type #}
+        <form class="adm-users-filters" id="user-filters" method="get" action="/admin/users" role="search">
+            <label class="adm-users-search">
+                <i class="fa fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" name="q" id="user-search" value="{{ rawQ }}" placeholder='Name or email; "quotes" for an exact match' autocomplete="off" aria-label="Search users">
+                <span class="adm-users-spinner" aria-hidden="true"></span>
             </label>
+            <select name="status" id="status-filter" class="adm-text adm-select adm-users-filter{% if status %} is-set{% endif %}" aria-label="Status">
+                <option value="">Any status</option>
+                <option value="active"{% if status == "active" %} selected{% endif %}>Active</option>
+                <option value="pending"{% if status == "pending" %} selected{% endif %}>Pending</option>
+                <option value="banned"{% if status == "banned" %} selected{% endif %}>Banned</option>
+            </select>
+            <select name="role" id="role-filter" class="adm-text adm-select adm-users-filter{% if role %} is-set{% endif %}" aria-label="Role">
+                <option value="">Any role</option>
+                <option value="staff"{% if role == "staff" %} selected{% endif %}>Staff</option>
+                <option value="admin"{% if role == "admin" %} selected{% endif %}>Admins</option>
+                <option value="mod"{% if role == "mod" %} selected{% endif %}>Moderators</option>
+                <option value="user"{% if role == "user" %} selected{% endif %}>Users</option>
+            </select>
+            <label class="adm-users-legacy{% if onlyLegacy %} is-set{% endif %}" title="Names that uploaded before accounts existed">
+                <input type="checkbox" name="legacy" value="1" id="legacy-filter"{% if onlyLegacy %} checked{% endif %}>
+                <i class="fa fa-ghost" aria-hidden="true"></i> Legacy only
+            </label>
+            <button type="submit" class="adm-btn adm-users-apply">Filter</button>
+            <a href="/admin/users" class="adm-btn adm-btn-ghost{% if not (((rawQ or status) or role) or onlyLegacy) %} adm-users-hidden{% endif %}" id="reset-filters-btn"><i class="fa fa-rotate-left"></i> Reset</a>
+        </form>
 
-            <!-- Reset Filters Button -->
-            <button id="reset-filters-btn" class="btn-filter-reset{% if not (((q or status) or role) or onlyLegacy) %} adm-users-hidden{% endif %}" title="Reset all filters and search">
-                <i class="fa fa-rotate-left"></i> Reset
-            </button>
+        <div class="adm-users-list" id="user-list">
+            {% include "admin/users_list.html" %}
         </div>
+        <p class="adm-users-empty{% if users|length > 0 %} adm-users-hidden{% endif %}" id="no-users-msg">{{ emptyMsg }}</p>
 
-        <div class="upload-form">
-            <table class="admin-users-table responsive-table">
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Activity</th>
-                        <th>Date</th>
-                        <th>Age</th>
-                        <th>Status</th>
-                        <th class="adm-users-th-actions">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="user-table-body">
-                    {% include "admin/users_list.html" %}
-                </tbody>
-            </table>
-            <div id="loading-trigger" class="adm-users-loading-trigger"></div>
-            <div id="no-users-msg" class="adm-users-empty{% if not (users|length == 0) %} adm-users-hidden{% endif %}">
-                {{ emptyMsg }}
-            </div>
+        {# Paging without JavaScript; with it, the next page loads at the end of the list #}
+        {% if prevUrl or nextUrl %}
+        <nav class="adm-users-pager" aria-label="Pages">
+            {% if prevUrl %}<a class="adm-btn adm-btn-ghost" href="{{ prevUrl }}"><i class="fa fa-arrow-left"></i> Previous</a>{% endif %}
+            <span class="adm-users-pager-page">Page {{ page }}</span>
+            {% if nextUrl %}<a class="adm-btn adm-btn-ghost" href="{{ nextUrl }}">Next <i class="fa fa-arrow-right"></i></a>{% endif %}
+        </nav>
+        {% endif %}
+        <div id="loading-trigger" class="adm-users-trigger"></div>
+
+        {# Create user: opens with :target without JavaScript #}
+        <div id="create-user-modal" class="adm-users-modal" role="dialog" aria-labelledby="create-user-title">
+            <a href="#_" class="adm-users-modal-backdrop" aria-label="Close" tabindex="-1"></a>
+            <form class="adm-users-modal-box adm-user-form" method="post" action="/api/v2/admin/users/create" data-kind="create" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="back" value="{{ back }}">
+                <div class="adm-users-modal-head">
+                    <h2 id="create-user-title"><i class="fa fa-user-plus"></i> Create user</h2>
+                    <a href="#_" class="adm-users-modal-close" aria-label="Close"><i class="fa fa-xmark"></i></a>
+                </div>
+                <label class="adm-users-field">
+                    <span>Username</span>
+                    <input type="text" name="username" class="adm-text" required minlength="2" maxlength="32" pattern="[A-Za-z0-9_.\-]+" placeholder="A-Z, 0-9, _ - ." autocomplete="off">
+                </label>
+                <label class="adm-users-field">
+                    <span>Email <small>optional</small></span>
+                    <input type="email" name="email" class="adm-text" placeholder="user@example.com" autocomplete="off">
+                </label>
+                <label class="adm-users-field">
+                    <span>Password <small>at least 20 characters</small></span>
+                    <input type="password" name="password" class="adm-text" required minlength="20" autocomplete="new-password">
+                </label>
+                <label class="adm-users-field">
+                    <span>Role</span>
+                    <select name="role" class="adm-text adm-select">
+                        <option value="user">User</option>
+                        <option value="mod">Moderator</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </label>
+                <div class="adm-users-modal-actions">
+                    <a href="#_" class="adm-btn adm-btn-ghost">Cancel</a>
+                    <button type="submit" class="adm-btn adm-btn-primary"><i class="fa fa-plus"></i> Create</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <script type="application/json" id="admin-users-data">{{ {"page": page, "hasMore": (true if hasMore else false), "q": q|string, "onlyLegacy": (true if onlyLegacy else false), "status": status|string, "role": role|string}|tojson }}</script>
+    <script type="application/json" id="admin-users-data">{{ {"page": page, "hasMore": (true if hasMore else false), "q": rawQ|string, "onlyLegacy": (true if onlyLegacy else false), "status": status|string, "role": role|string}|tojson }}</script>
     <script src="/s/js/views/admin/users.js?v={{ mtime("/public/s/js/views/admin/users.js") }}"></script>
 </div>
 </div>

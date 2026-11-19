@@ -2831,6 +2831,71 @@ mod tests {
         assert!(!guest.contains("w0bm-uh-form") && !guest.contains("-edit\""));
     }
 
+    /// The admin user manager: every kind of row renders, each action is a plain form (works without
+    /// JavaScript) that returns to its row, and the self/system/legacy rows offer only what applies.
+    /// `F0CKM_DUMP_ADMIN_USERS=<dir>` writes the page out for a look in a browser.
+    #[test]
+    fn admin_users_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let user = |id: Option<i64>, login: &str, extra: serde_json::Value| {
+            let mut u = serde_json::json!({ "id": id, "login": login, "user": login, "email": null, "created_at": "2026-11-18T10:00:00Z",
+                "banned": false, "ban_reason": null, "ban_expires": null, "is_moderator": false, "admin": false, "groups": [], "activated": true,
+                "avatar_file": null, "display_name": null, "force_comment_display_mode": 0, "comment_display_mode": 0, "reg_method": null,
+                "age_days": 1.0, "upload_count": 2.0, "comment_count": 0.0, "failed_attempts": 0.0 });
+            u.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+            u
+        };
+        let users = serde_json::json!([
+            user(Some(1), "bob", serde_json::json!({ "admin": true, "email": "bob@f0ck.test" })),
+            user(Some(2), "yotap", serde_json::json!({ "display_name": "Yo Tap", "groups": ["4chan"], "failed_attempts": 6.0, "force_comment_display_mode": 1, "comment_display_mode": 1 })),
+            user(Some(3), "newbie", serde_json::json!({ "activated": false, "upload_count": 0.0 })),
+            user(Some(4), "troll", serde_json::json!({ "banned": true, "ban_reason": "spam", "ban_expires": "2026-12-01T00:00:00Z", "is_moderator": true })),
+            user(Some(5), "deleted_user", serde_json::json!({ "banned": true, "activated": false })),
+            user(None, "old guy", serde_json::json!({ "reg_method": "Legacy" })),
+        ]);
+        let ctx = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "session": { "user": "bob", "id": 1, "admin": true },
+            "users": users, "back": "/admin/users?q=o", "prevUrl": null, "nextUrl": "/admin/users?q=o&page=2", "openRow": "2", "rawQ": "o", "q": "o",
+            "page": 1, "total": 6, "hasMore": true, "onlyLegacy": false, "status": "", "role": "", "totalLabel": "registered members",
+            "emptyMsg": "No users matched your search.", "totals": {}, "log_user_ips": true, "tmp": null });
+        let html = env.get_template("admin/users.html").unwrap().render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{e:#}"));
+        if let Ok(dir) = std::env::var("F0CKM_DUMP_ADMIN_USERS") {
+            std::fs::write(PathBuf::from(dir).join("users.html"), &html).unwrap();
+        }
+        let row = |id: &str| {
+            let start = html.find(&format!("id=\"user-row-{id}\"")).unwrap_or_else(|| panic!("row {id}"));
+            let end = html[start..].find("</details>").unwrap() + start;
+            html[start..end].to_string()
+        };
+        let page = &html[html.find("id=\"admin-users\"").unwrap()..html.find("id=\"admin-users-data\"").unwrap()];
+        assert!(!page.contains("border-radius") && !page.contains(" style=\"") && !page.contains("<script>"));
+        // the row a plain form came back to is open; the forms return there
+        assert!(row("2").contains(" open>"));
+        assert!(!row("3").contains(" open>"));
+        assert!(row("2").contains("name=\"back\" value=\"/admin/users?q=o&amp;open=2#user-row-2\""));
+        assert!(row("2").contains("Yo Tap") && row("2").contains("@yotap") && row("2").contains(">4chan<"));
+        assert!(row("2").contains("Locked out") && row("2").contains("/api/v2/admin/users/reset-login-attempts"));
+        assert!(row("2").contains("name=\"lock\" value=\"false\""));
+        // pending: verify; banned: unban instead of ban
+        assert!(row("3").contains("/api/v2/admin/users/activate") && row("3").contains(">Pending<"));
+        assert!(row("4").contains("/api/v2/admin/unban") && !row("4").contains("/api/v2/admin/ban\""));
+        assert!(row("4").contains("Banned until") && row("4").contains("spam"));
+        // yourself: no ban, role change or delete
+        let me = row("1");
+        assert!(me.contains(">you<") && !me.contains("/api/v2/admin/ban\"") && !me.contains("set-role") && !me.contains("/api/v2/admin/users/delete\""));
+        // the system ghost and legacy names: content tools only
+        let sys = row("5");
+        assert!(sys.contains("System account") && !sys.contains("users/rename") && !sys.contains("reassign-uploads") && sys.contains("bulk-delete-items"));
+        let legacy = row("ghost-old guy");
+        assert!(legacy.contains("name=\"source_username\" value=\"old guy\"") && legacy.contains("open=ghost-old%20guy") && !legacy.contains("set-password"));
+        // destructive forms need a ticked box, also without JavaScript
+        assert!(row("2").matches("name=\"confirm\" value=\"1\" required").count() == 4);
+        // no-JS filters and paging
+        assert!(html.contains("<form class=\"adm-users-filters\" id=\"user-filters\" method=\"get\" action=\"/admin/users\""));
+        assert!(html.contains("href=\"/admin/users?q=o&amp;page=2\""));
+        assert!(html.contains("<a href=\"#create-user-modal\""));
+    }
+
     #[test]
     fn blank_lines_collapse() {
         assert_eq!(collapse_blank_lines("a\n\n  \nb"), "a\nb");

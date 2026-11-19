@@ -1,103 +1,218 @@
+{# One <details> per user: the summary is the overview row, the panel holds every action as a plain
+   form (no JavaScript needed; users.js posts them with fetch and swaps in the refreshed row).
+   Also rendered alone for search and paging (X-Requested-With). #}
 {% for u in users %}
-<tr id="user-row-{{ (u.id or "ghost-" ~ u.login) }}">
-    <td data-label="User & Contact">
-        <div class="user-info-cell adm-users-info">
-            {% if u.avatar_file %}
-                <img src="/a/{{ u.avatar_file }}" class="user-avatar adm-users-avatar adm-users-avatar-img" alt="Avatar">
-            {% else %}
-                <div class="avatar-placeholder adm-users-avatar adm-users-avatar-letter{% if not u.id %} adm-users-avatar-ghost{% endif %}">{{ ("?" if not u.id else (u.user[0])|upper) }}</div>
-            {% endif %}
-            <div>
-                <a href="/user/{{ u.login }}" target="_blank" class="adm-users-name">{% if u.display_name %}<span class="adm-users-display-name">{{ u.display_name }}</span> <span class="adm-users-login">({{ u.user }})</span>{% else %}{{ u.user }}{% endif %}</a>
-                <div class="adm-users-email">{{ ("Ghost User / Legacy" if not u.id else (u.email or "no email")) }}</div>
-            </div>
-        </div>
-    </td>
-    <td data-label="Activity">
-        <div class="adm-users-activity">
-            <a href="/user/{{ u.login }}" target="_blank" class="stat-box adm-users-stat" title="Uploads">
-                <i class="fa fa-upload adm-users-stat-icon"></i>
-                <strong>{{ u.upload_count }}</strong>
-            </a>
-            <a href="/user/{{ u.login }}/comments" target="_blank" class="stat-box adm-users-stat" title="Comments">
-                <i class="fa fa-comment adm-users-stat-icon"></i>
-                <strong>{{ u.comment_count }}</strong>
-            </a>
-        </div>
-    </td>
-    <td data-label="Registration">
-        <div class="adm-users-registered" tooltip="Method: {{ ("Legacy Account" if u.reg_method == "Legacy" else (("Invite Token: " ~ (u.reg_method[0:8])) ~ "…" if u.reg_method else ("Open Registration" if u.activated else "Email Verification"))) }}">{{ u.created_at|locale_date }}</div>
-    </td>
-    <td data-label="Account Age">
-        <div class="adm-users-age">{{ floor(u.age_days) }} Days</div>
-    </td>
-    <td data-label="Status" id="status-cell-{{ (u.id or "ghost-" ~ u.login) }}">
-        {% if not u.id %}
-            <span class="status-badge adm-users-badge-legacy">Legacy</span>
-        {% elif u.login == "deleted_user" %}
-            {# System ghost that deleted users' content is reassigned to; it is banned only so it can't log in #}
-            <span class="status-badge status-system" title="System account: holds content of deleted users">System</span>
+{% set rid = (u.id or "ghost-" ~ u.login)|string %}
+{% set is_system = u.login == "deleted_user" %}
+{% set is_self = (u.id and session and u.id == session.id) %}
+{% set role_name = ("admin" if u.admin else ("mod" if u.is_moderator else "user")) %}
+{% set has_4chan = (u.groups is defined and u.groups is sequence and "4chan" in u.groups) %}
+{% set row_back = back ~ ("&" if "?" in back else "?") ~ "open=" ~ (rid|urlencode) ~ "#user-row-" ~ rid %}
+<details class="adm-user{% if not u.id %} is-legacy{% elif is_system %} is-system{% elif u.banned %} is-banned{% elif not u.activated %} is-pending{% endif %}" id="user-row-{{ rid }}" data-row="{{ rid }}" data-login="{{ u.login }}"{% if not u.id %} data-legacy="1"{% endif %}{% if openRow == rid %} open{% endif %}>
+    <summary class="adm-user-row">
+        {% if u.avatar_file %}
+        <img src="/a/{{ u.avatar_file }}" class="adm-user-avatar" alt="" loading="lazy">
         {% else %}
-            {% if u.banned %}
-                <span class="status-badge status-banned">Banned</span>
-            {% else %}
-                {% if u.activated %}
-                    <span class="status-badge status-active">Active</span>
-                {% else %}
-                    <span class="status-badge status-pending">Pending</span>
-                {% endif %}
-            {% endif %}
-            
-            {% if (u.failed_attempts > 0) %}
-                {% if (u.failed_attempts >= 5) %}
-                    <span class="status-badge adm-users-badge-locked">IP LOCKED</span>
-                {% else %}
-                    <span class="status-badge adm-users-badge-tries">{{ u.failed_attempts }} Tries</span>
-                {% endif %}
-            {% endif %}
+        <span class="adm-user-avatar adm-user-avatar-letter" aria-hidden="true">{{ ("?" if not u.id else (u.user[0])|upper) }}</span>
         {% endif %}
-    </td>
-    <td data-label="Actions">
-        <div id="actions-{{ (u.id or "ghost-" ~ u.login) }}" class="user-actions-row adm-users-actions">
-            {% if (u.id and u.login != "deleted_user") %}
-                {% if (not u.activated and not u.banned) %}
-                    <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:activateUser" class="btn-modern btn-verify">Verify</button>
-                {% endif %}
-                {% if u.banned %}
-                    <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:unbanUser" class="btn-modern btn-unban">Unban</button>
+
+        <span class="adm-user-who">
+            <span class="adm-user-name-line">
+                <a href="/user/{{ u.login }}" target="_blank" rel="noopener" class="adm-user-name">{{ (u.display_name or u.user) }}</a>
+                {% if u.display_name %}<span class="adm-user-login">@{{ u.user }}</span>{% endif %}
+                {% if is_self %}<span class="adm-user-chip is-you">you</span>{% endif %}
+                {% if u.admin %}<span class="adm-user-chip is-admin">Admin</span>{% elif u.is_moderator %}<span class="adm-user-chip is-mod">Mod</span>{% endif %}
+                {% if has_4chan %}<span class="adm-user-chip is-group">4chan</span>{% endif %}
+                {% if u.force_comment_display_mode %}<span class="adm-user-chip" title="Comment layout locked"><i class="fa fa-lock"></i> {{ ("Linear" if u.comment_display_mode == 1 else "Tree") }}</span>{% endif %}
+            </span>
+            <span class="adm-user-meta">
+                {% if not u.id %}Legacy uploader · first upload {{ u.created_at|locale_date }}
+                {% else %}{{ (u.email or "no email") }} · joined <span title="{{ ("Legacy account" if u.reg_method == "Legacy" else (("Invite token " ~ (u.reg_method[0:8]) ~ "…") if u.reg_method else ("Open registration" if u.activated else "Email verification"))) }}">{{ u.created_at|locale_date }}</span> · {{ floor(u.age_days) }}d{% endif %}
+            </span>
+            {% if u.banned and u.id and not is_system %}
+            <span class="adm-user-ban-note">Banned{% if u.ban_expires %} until {{ u.ban_expires|locale_date }}{% endif %}{% if u.ban_reason %}: {{ u.ban_reason }}{% endif %}</span>
+            {% endif %}
+        </span>
+
+        <span class="adm-user-stats">
+            <a href="/user/{{ u.login }}" target="_blank" rel="noopener" title="Uploads"><i class="fa fa-upload"></i> {{ u.upload_count }}</a>
+            {% if u.id %}<a href="/user/{{ u.login }}/comments" target="_blank" rel="noopener" title="Comments"><i class="fa fa-comment"></i> {{ u.comment_count }}</a>{% endif %}
+        </span>
+
+        <span class="adm-user-status">
+            {% if not u.id %}<span class="adm-user-badge is-legacy">Legacy</span>
+            {% elif is_system %}<span class="adm-user-badge is-system" title="Holds the content of deleted users">System</span>
+            {% elif u.banned %}<span class="adm-user-badge is-banned">Banned</span>
+            {% elif u.activated %}<span class="adm-user-badge is-active">Active</span>
+            {% else %}<span class="adm-user-badge is-pending">Pending</span>{% endif %}
+            {% if u.failed_attempts >= 5 %}<span class="adm-user-badge is-locked" title="Failed logins in the last 10 hours">Locked out</span>
+            {% elif u.failed_attempts > 0 %}<span class="adm-user-badge is-tries" title="Failed logins in the last 10 hours">{{ u.failed_attempts }} failed</span>{% endif %}
+        </span>
+
+        <span class="adm-user-toggle" aria-hidden="true"><i class="fa fa-chevron-down"></i></span>
+    </summary>
+
+    <div class="adm-user-panel">
+        {% if u.id and not is_system %}
+        <section class="adm-user-group">
+            <h3>Access</h3>
+            {% if not u.activated and not u.banned %}
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/activate">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <span class="adm-user-line-label">Email not verified</span>
+                <button type="submit" class="adm-btn adm-btn-primary"><i class="fa fa-check"></i> Verify</button>
+            </form>
+            {% endif %}
+            {% if u.banned %}
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/unban">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <span class="adm-user-line-label">Banned{% if u.ban_reason %}: {{ u.ban_reason }}{% endif %}</span>
+                <button type="submit" class="adm-btn"><i class="fa fa-unlock"></i> Unban</button>
+            </form>
+            {% elif not is_self %}
+            <form class="adm-user-form adm-user-line adm-user-ban" method="post" action="/api/v2/admin/ban">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <input type="text" name="reason" class="adm-text" placeholder="Ban reason (shown to the user)" aria-label="Ban reason" maxlength="500">
+                <select name="duration" class="adm-text adm-select" aria-label="Ban duration">
+                    <option value="1">1 hour</option>
+                    <option value="24">24 hours</option>
+                    <option value="168">7 days</option>
+                    <option value="720">30 days</option>
+                    <option value="permanent" selected>Permanent</option>
+                </select>
+                <button type="submit" class="adm-btn adm-btn-danger"><i class="fa fa-ban"></i> Ban</button>
+            </form>
+            {% endif %}
+            {% if u.failed_attempts > 0 %}
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/reset-login-attempts">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="username" value="{{ u.login }}">
+                <span class="adm-user-line-label">{{ u.failed_attempts }} failed login{{ ("s" if u.failed_attempts != 1 else "") }} in the last 10 hours</span>
+                <button type="submit" class="adm-btn"><i class="fa fa-rotate-left"></i> Reset</button>
+            </form>
+            {% endif %}
+            {% if log_user_ips %}
+            <div class="adm-user-line">
+                <span class="adm-user-line-label">Addresses this account used</span>
+                <a href="/admin/user/{{ u.id }}/ips" class="adm-btn adm-btn-ghost"><i class="fa fa-network-wired"></i> IP history</a>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="adm-user-group">
+            <h3>Profile</h3>
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/set-display-name">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <input type="text" name="display_name" class="adm-text" value="{{ (u.display_name or "") }}" placeholder="Display name (empty: none)" aria-label="Display name" maxlength="100">
+                <button type="submit" class="adm-btn">Set nick</button>
+            </form>
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/rename">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <input type="text" name="new_username" class="adm-text" value="{{ u.user }}" required minlength="2" maxlength="32" pattern="[A-Za-z0-9_.\-]+" aria-label="Username" title="Moves their uploads too and logs them out">
+                <button type="submit" class="adm-btn">Rename</button>
+            </form>
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/set-password">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <input type="password" name="password" class="adm-text" required minlength="20" placeholder="New password (20+ chars)" aria-label="New password" autocomplete="new-password">
+                <button type="submit" class="adm-btn" title="Logs them out; they pick a new one at the next login">Set password</button>
+            </form>
+        </section>
+
+        <section class="adm-user-group">
+            <h3>Permissions</h3>
+            {% if not is_self %}
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/set-role">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <span class="adm-user-line-label">Role</span>
+                <select name="role" class="adm-text adm-select" aria-label="Role">
+                    <option value="user"{% if role_name == "user" %} selected{% endif %}>User</option>
+                    <option value="mod"{% if role_name == "mod" %} selected{% endif %}>Moderator</option>
+                    <option value="admin"{% if role_name == "admin" %} selected{% endif %}>Admin</option>
+                </select>
+                <button type="submit" class="adm-btn">Save</button>
+            </form>
+            {% endif %}
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/set-groups">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <label class="adm-check adm-user-line-label" title="4chan catalogue, thread viewer and rehosting"><input type="checkbox" name="groups" value="4chan"{% if has_4chan %} checked{% endif %}> 4chan group</label>
+                <button type="submit" class="adm-btn">Save</button>
+            </form>
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/lock-layout">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <span class="adm-user-line-label">Comment layout</span>
+                <select name="mode" class="adm-text adm-select" aria-label="Comment layout">
+                    <option value="0"{% if u.comment_display_mode != 1 %} selected{% endif %}>Tree</option>
+                    <option value="1"{% if u.comment_display_mode == 1 %} selected{% endif %}>Linear</option>
+                </select>
+                {% if u.force_comment_display_mode %}
+                <button type="submit" name="lock" value="true" class="adm-btn">Change</button>
+                <button type="submit" name="lock" value="false" class="adm-btn adm-btn-ghost"><i class="fa fa-lock-open"></i> Unlock</button>
                 {% else %}
-                    <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:banUser" class="btn-modern btn-ban">Ban</button>
+                <button type="submit" name="lock" value="true" class="adm-btn"><i class="fa fa-lock"></i> Lock</button>
                 {% endif %}
-            {% endif %}
+            </form>
+        </section>
+        {% elif is_system %}
+        <p class="adm-user-note"><i class="fa fa-shield-halved"></i> System account: it holds what deleted users left behind and can't log in, be renamed or deleted.</p>
+        {% endif %}
 
+        <section class="adm-user-group">
+            <h3>Content</h3>
+            {% if not is_system %}
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/reassign-uploads">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                {% if u.id %}<input type="hidden" name="source_user_id" value="{{ u.id }}">{% else %}<input type="hidden" name="source_username" value="{{ u.login }}">{% endif %}
+                {# Suggestions from /api/v2/admin/users/search (users.js); without JavaScript a plain name field #}
+                <span class="adm-user-suggest">
+                    <input type="text" name="target_username" class="adm-text" required placeholder="Move uploads to user…" aria-label="Move uploads to user" autocomplete="off" data-suggest-users data-suggest-skip="{{ u.login }}">
+                    <span class="adm-user-suggest-list" role="listbox"></span>
+                </span>
+                <button type="submit" class="adm-btn"><i class="fa fa-right-left"></i> Move</button>
+            </form>
+            {% endif %}
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/bulk-delete-items">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ (u.id or "") }}"><input type="hidden" name="username" value="{{ u.login }}">
+                <label class="adm-check adm-user-line-label"><input type="checkbox" name="confirm" value="1" required> Delete all {{ u.upload_count }} upload{{ ("s" if u.upload_count != 1 else "") }}</label>
+                <button type="submit" class="adm-btn adm-btn-danger">Delete</button>
+            </form>
             {% if u.id %}
-                {% if log_user_ips %}
-                <a href="/admin/user/{{ u.id }}/ips" class="btn-modern adm-users-btn-ips" title="View IP History">IP Hist</a>
-                {% endif %}
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:deleteUploads" class="btn-modern btn-files">Del Files</button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:deleteComments" class="btn-modern btn-comms">Del Comms</button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:adminBulkDeleteHalls" class="btn-modern btn-comms adm-users-btn-halls" title="Delete all user lists"><i class="fa fa-folder-open"></i> Del Lists</button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:adminReassignUploads" class="btn-modern adm-users-btn-reassign" title="Reassign uploads to another user"><i class="fa fa-right-left"></i> Reassign</button>
-                {% if (u.failed_attempts > 0) %}
-                    <button data-username="{{ u.login }}" data-on="click:adminResetLoginAttempts" class="btn-modern btn-pw adm-users-btn-reset-ip" title="Reset Login Attempts"><i class="fa fa-unlock"></i> Reset IP</button>
-                {% endif %}
-            {% else %}
-                <button data-id="" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:deleteUploads" class="btn-modern btn-files">Del Legacy Files</button>
-                <button data-id="" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:adminReassignUploads" class="btn-modern adm-users-btn-reassign" title="Reassign uploads to another user"><i class="fa fa-right-left"></i> Reassign</button>
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/bulk-delete-comments">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <label class="adm-check adm-user-line-label"><input type="checkbox" name="confirm" value="1" required> Delete all {{ u.comment_count }} comment{{ ("s" if u.comment_count != 1 else "") }}</label>
+                <button type="submit" class="adm-btn adm-btn-danger">Delete</button>
+            </form>
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/bulk-delete-halls">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <label class="adm-check adm-user-line-label"><input type="checkbox" name="confirm" value="1" required> Delete all their lists</label>
+                <button type="submit" class="adm-btn adm-btn-danger">Delete</button>
+            </form>
             {% endif %}
+        </section>
 
-            {% if (u.id and u.login != "deleted_user") %}
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-display="{{ (u.display_name or "") }}" data-on="click:adminSetDisplayName" class="btn-modern btn-nick adm-users-btn-nick" title="Set stylized display name">✏ Nick</button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:adminRenameUser" class="btn-modern adm-users-btn-rename" title="Rename username (updates all uploads)"><i class="fa fa-at"></i> Rename</button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:adminSetPassword" class="btn-modern btn-pw adm-users-btn-password">Set PW</button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-locked="{{ u.force_comment_display_mode }}" data-mode="{{ u.comment_display_mode }}" data-on="click:adminLockLayout" class="btn-modern adm-users-btn-lock" title="{{ ("Unlock Layout" if u.force_comment_display_mode else "Lock Layout") }}"><i class="fa fa-{{ ("lock-open" if u.force_comment_display_mode else "lock") }}"></i> {{ ("Unlock" if u.force_comment_display_mode else "Lock") }}</button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-role="{{ ("admin" if u.admin else ("mod" if u.is_moderator else "user")) }}" data-on="click:adminSetRole" class="btn-modern btn-role" id="role-btn-{{ u.id }}" title="Change user role"><i class="fa fa-shield-halved"></i> <span class="role-label-{{ u.id }}">{{ ("Admin" if u.admin else ("Mod" if u.is_moderator else "User")) }}</span></button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-groups="{{ (u.groups or [])|join(",") }}" data-on="click:adminSetGroups" class="btn-modern btn-groups adm-users-btn-groups" id="groups-btn-{{ u.id }}" title="Manage user groups"><i class="fa-solid fa-clover"></i> <span class="groups-label-{{ u.id }}">{{ ("4chan" if (u.groups and ("4chan" in u.groups)) else "Groups") }}</span></button>
-                <button data-id="{{ u.id }}" data-name="{{ u.user }}" data-username="{{ u.login }}" data-on="click:adminDeleteUser" class="btn-modern btn-delete adm-users-btn-delete">Delete</button>
-            {% elif u.login == "deleted_user" %}
-                <span class="adm-users-protected">Protected System Account</span>
-            {% endif %}
-        </div>
-    </td>
-</tr>
+        {% if u.id and not is_system and not is_self %}
+        <section class="adm-user-group adm-user-danger">
+            <h3>Account</h3>
+            <p class="adm-user-hint">Deletes the account for good. Their uploads, comments and lists move to <code>deleted_user</code>; everything personal is removed.</p>
+            <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/delete" data-kind="delete">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <label class="adm-check adm-user-line-label"><input type="checkbox" name="confirm" value="1" required> Yes, delete {{ u.user }}</label>
+                <button type="submit" class="adm-btn adm-btn-danger"><i class="fa fa-trash"></i> Delete account</button>
+            </form>
+        </section>
+        {% endif %}
+    </div>
+</details>
 {% endfor %}

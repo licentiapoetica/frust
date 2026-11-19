@@ -90,7 +90,8 @@ async fn users_page(st: AppState, req: Req) -> Res {
             r#"WITH ghost_users AS (
                 SELECT NULL::int as id, i.username as login, i.username as "user", 'Legacy Account' as email,
                        to_timestamp(MIN(i.stamp)) as created_at, false as banned, false as is_moderator, false as admin, ARRAY[]::text[] as groups, true as activated,
-                       NULL::text as avatar_file, NULL::varchar as display_name, 0 as force_comment_display_mode, 0 as comment_display_mode, 'Legacy' as reg_method
+                       NULL::text as avatar_file, NULL::varchar as display_name, 0 as force_comment_display_mode, 0 as comment_display_mode, 'Legacy' as reg_method,
+                       NULL::text as ban_reason, NULL::timestamptz as ban_expires
                 FROM items i
                 WHERE i.username IS NOT NULL AND i.username != ''
                   AND NOT EXISTS (SELECT 1 FROM "user" u WHERE u.login = i.username OR u.user = i.username)"#,
@@ -153,7 +154,7 @@ async fn users_page(st: AppState, req: Req) -> Res {
         }
         let users = sql!(
             r#"WITH filtered_users AS (
-                SELECT u.id, u.login, u.user, u.email, u.created_at, u.banned, u.is_moderator, u.admin, u.groups, u.activated,
+                SELECT u.id, u.login, u.user, u.email, u.created_at, u.banned, u.ban_reason, u.ban_expires, u.is_moderator, u.admin, u.groups, u.activated,
                        uo.avatar_file, uo.display_name, uo.force_comment_display_mode, uo.comment_display_mode,
                        (SELECT token FROM invite_tokens WHERE used_by = u.id ORDER BY created_at DESC LIMIT 1) as reg_method
                 FROM "user" u
@@ -220,9 +221,37 @@ async fn users_page(st: AppState, req: Req) -> Res {
             Value::Object(u)
         })
         .collect();
+    // The filters as a query string (for the no-JS pager and the forms' `back`)
+    let mut filter_qs: Vec<String> = Vec::new();
+    if !raw_q.is_empty() {
+        filter_qs.push(format!("q={}", crate::util::encode_uri_component(&raw_q)));
+    }
+    if only_legacy {
+        filter_qs.push("legacy=1".into());
+    } else {
+        if !status.is_empty() {
+            filter_qs.push(format!("status={}", crate::util::encode_uri_component(&status)));
+        }
+        if !role.is_empty() {
+            filter_qs.push(format!("role={}", crate::util::encode_uri_component(&role)));
+        }
+    }
+    let page_url = |p: i64| {
+        let mut qs = filter_qs.clone();
+        if p > 1 {
+            qs.push(format!("page={p}"));
+        }
+        if qs.is_empty() { "/admin/users".to_string() } else { format!("/admin/users?{}", qs.join("&")) }
+    };
     let data = json!({
         "session": req.session_value(),
         "users": users,
+        "back": page_url(page),
+        // The row whose actions stay open (a plain form's redirect back, a row refreshed by the script)
+        "openRow": req.query("open").unwrap_or(""),
+        "prevUrl": (page > 1).then(|| page_url(page - 1)),
+        "nextUrl": has_more.then(|| page_url(page + 1)),
+        "rawQ": raw_q,
         "q": q,
         "page": page,
         "total": total,
