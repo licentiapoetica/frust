@@ -292,6 +292,11 @@
                 (_, c) => `<span class="blur-text">${c}</span>`);
         } while (html !== prev && ++iter < 10);
 
+        // 3b. [rb] [reich] [krebs] [glitch] [badapple] and [label](#bad-apple): the comments' text
+        //     effects (f0ck-core.js, styles: comment-fx.css; glitchfx.js animates [glitch], also
+        //     around an emoji); the :codes: inside become emojis below
+        if (window.f0ckCommentFx) html = window.f0ckCommentFx(html);
+
         // 4. @mention links
         html = html.replace(/(?<!\[)@([a-zA-Z0-9_\-.]+)/g,
             (_, u) => `<a href="/user/${encodeURIComponent(u)}" class="mention">@${u}</a>`);
