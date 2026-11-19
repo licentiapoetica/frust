@@ -358,9 +358,14 @@ look_copy() {
 look_served() {
     local url="https://$SITE_DOMAIN/.within.website/x/xess/xess.min.css?install-check" body
     command -v curl >/dev/null 2>&1 || return 2
-    body=$(curl -sk --max-time 10 --resolve "$SITE_DOMAIN:443:127.0.0.1" "$url" 2>/dev/null) \
-        || body=$(curl -s --max-time 10 "$url" 2>/dev/null) || return 2
-    [ "$body" = "$(cat public/s/css/anubis.css)" ] || return 1
+    # nginx -s reload returns before the new workers run: the old ones may answer for a moment
+    for i in 1 2 3 4 5 6; do
+        body=$(curl -sk --max-time 10 --resolve "$SITE_DOMAIN:443:127.0.0.1" "$url" 2>/dev/null) \
+            || body=$(curl -s --max-time 10 "$url" 2>/dev/null) || return 2
+        [ "$body" = "$(cat public/s/css/anubis.css)" ] && return 0
+        sleep 1
+    done
+    return 1
 }
 nginx_plan
 # A copy of the look is refreshed on every run, also when nginx needs no change
