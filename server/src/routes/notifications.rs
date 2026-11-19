@@ -25,8 +25,8 @@ use parking_lot::{Mutex, RwLock};
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::time::{Duration, Instant};
 use tokio::sync::{Notify, mpsc};
 
 pub fn register(r: &mut Router) {
@@ -289,6 +289,11 @@ const PING_EVERY: Duration = Duration::from_secs(30);
 const IDLE_LIMIT: Duration = Duration::from_secs(75);
 /// A client whose socket doesn't take a frame within this time is dropped.
 const SEND_TIMEOUT: Duration = Duration::from_secs(15);
+/// A guest stays in the chat's guest count this long after their socket closes, so following a
+/// link (socket closes, the next page opens a new one) doesn't drop them out and back in.
+const GUEST_GRACE: Duration = Duration::from_secs(45);
+/// Connects and disconnects within this window go out as one presence update.
+const PRESENCE_DELAY: Duration = Duration::from_secs(2);
 
 #[derive(Debug, Clone, Copy)]
 struct Prefs {
@@ -314,6 +319,8 @@ pub struct Client {
     /// sha256 of the session cookie, or `guest-<tabId>`.
     session_key: String,
     is_guest: bool,
+    /// Bot/crawler user agent (`util::is_bot_ua`): left out of the guest count.
+    bot: bool,
     tab_id: String,
     ip: String,
     ip_hash: String,
@@ -343,9 +350,30 @@ impl Client {
 pub struct Hub {
     clients: RwLock<HashMap<u64, Arc<Client>>>,
     next_id: AtomicU64,
+    /// Guests whose last socket closed lately, by IP, with the time they stop counting ([`GUEST_GRACE`]).
+    lingering_guests: Mutex<HashMap<String, Instant>>,
+    /// A presence update is already scheduled ([`PRESENCE_DELAY`]).
+    presence_pending: AtomicBool,
+    /// The last presence event sent to everyone; an unchanged one isn't sent again.
+    last_presence: Mutex<String>,
 }
 
-pub static HUB: Lazy<Hub> = Lazy::new(|| Hub { clients: RwLock::new(HashMap::new()), next_id: AtomicU64::new(1) });
+pub static HUB: Lazy<Hub> = Lazy::new(|| Hub {
+    clients: RwLock::new(HashMap::new()),
+    next_id: AtomicU64::new(1),
+    lingering_guests: Mutex::new(HashMap::new()),
+    presence_pending: AtomicBool::new(false),
+    last_presence: Mutex::new(String::new()),
+});
+
+/// Guests in the count: the IPs with an open socket plus those still in their grace period.
+/// Drops expired grace entries.
+fn count_guests<'a>(connected: impl IntoIterator<Item = &'a str>, lingering: &mut HashMap<String, Instant>, now: Instant) -> usize {
+    lingering.retain(|_, until| *until > now);
+    let mut ips: std::collections::HashSet<&str> = connected.into_iter().filter(|ip| !ip.is_empty()).collect();
+    ips.extend(lingering.keys().map(String::as_str));
+    ips.len()
+}
 
 impl Hub {
     fn snapshot(&self) -> Vec<Arc<Client>> {
@@ -365,13 +393,13 @@ impl Hub {
         }
     }
 
-    /// Deduplicated online-user list to everyone.
-    fn broadcast_presence(&self) {
-        let clients = self.snapshot();
+    /// The presence event: deduplicated online users and the guest count (bots left out,
+    /// guests who just left still counted, see [`GUEST_GRACE`]).
+    fn presence_event(&self, clients: &[Arc<Client>]) -> Value {
         let mut seen = std::collections::HashSet::new();
         let mut users = vec![];
-        let mut guests = std::collections::HashSet::new();
-        for c in &clients {
+        let mut guest_ips = vec![];
+        for c in clients {
             match c.user_id {
                 Some(uid) => {
                     if seen.insert(uid) {
@@ -385,17 +413,42 @@ impl Hub {
                         }));
                     }
                 }
-                None => {
-                    if !c.ip.is_empty() {
-                        guests.insert(c.ip.clone());
-                    }
-                }
+                None if !c.bot => guest_ips.push(c.ip.as_str()),
+                None => {}
             }
         }
-        let ev = json!({ "type": "global_chat_presence", "data": { "users": users, "guestCount": guests.len() } });
+        let guests = count_guests(guest_ips, &mut self.lingering_guests.lock(), Instant::now());
+        json!({ "type": "global_chat_presence", "data": { "users": users, "guestCount": guests } })
+    }
+
+    /// Send the presence to everyone, unless nothing changed since the last one.
+    fn broadcast_presence(&self) {
+        let clients = self.snapshot();
+        let ev = self.presence_event(&clients);
+        let text = crate::util::json_string(&ev);
+        {
+            let mut last = self.last_presence.lock();
+            if *last == text {
+                return;
+            }
+            *last = text;
+        }
         for c in &clients {
             c.send(&ev);
         }
+    }
+
+    /// Send the presence after [`PRESENCE_DELAY`], once for all changes in that window.
+    fn schedule_presence(&'static self) {
+        if self.presence_pending.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        tokio::spawn(async move {
+            tokio::time::sleep(PRESENCE_DELAY).await;
+            // Cleared before reading the state, so a change from here on schedules another update
+            self.presence_pending.store(false, Ordering::Release);
+            self.broadcast_presence();
+        });
     }
 }
 
@@ -462,8 +515,16 @@ struct ClientGuard(u64);
 
 impl Drop for ClientGuard {
     fn drop(&mut self) {
-        HUB.clients.write().remove(&self.0);
-        HUB.broadcast_presence();
+        let Some(c) = HUB.clients.write().remove(&self.0) else { return };
+        if c.user_id.is_none() && !c.bot && !c.ip.is_empty() {
+            // Keep counting the guest for a while: most closes are just a page change
+            HUB.lingering_guests.lock().insert(c.ip.clone(), Instant::now() + GUEST_GRACE);
+            tokio::spawn(async {
+                tokio::time::sleep(GUEST_GRACE + Duration::from_secs(1)).await;
+                HUB.schedule_presence();
+            });
+        }
+        HUB.schedule_presence();
     }
 }
 
@@ -512,6 +573,7 @@ async fn socket(st: AppState, mut req: Req) -> Res {
     }
 
     let session = req.session().cloned();
+    let bot = crate::util::is_bot_ua(req.user_agent());
     let ip = req.real_ip();
     let ip_hash = crate::security::hash_ip(&cfg, &ip);
     let fingerprint = session
@@ -541,6 +603,7 @@ async fn socket(st: AppState, mut req: Req) -> Res {
         session: session.clone(),
         session_key,
         is_guest,
+        bot,
         tab_id,
         ip,
         ip_hash,
@@ -611,7 +674,9 @@ async fn run_socket(st: AppState, socket: WebSocket, client: Arc<Client>, mut rx
 
     HUB.clients.write().insert(client.id, client.clone());
     let _guard = ClientGuard(client.id);
-    HUB.broadcast_presence();
+    // The new client gets the presence right away; everyone else with the next batched update
+    client.send(&HUB.presence_event(&HUB.snapshot()));
+    HUB.schedule_presence();
 
     let (mut sink, mut incoming) = socket.split();
     let mut ping = tokio::time::interval_at(tokio::time::Instant::now() + PING_EVERY, PING_EVERY);
@@ -1011,4 +1076,27 @@ async fn enrich_activity(st: &AppState, data: &mut Value) {
     data["item_slug"] = if enable_item_slugs(&st.cfg()) { d.val("item_slug").clone() } else { Value::Null };
     data["visibility"] = d.val("visibility").clone();
     data["item_username"] = d.val("item_username").clone();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn guests_linger_after_leaving() {
+        let now = Instant::now();
+        let mut lingering = HashMap::new();
+        // Two tabs from one IP and a second guest: two guests
+        assert_eq!(count_guests(["1.1.1.1", "1.1.1.1", "2.2.2.2"], &mut lingering, now), 2);
+        // 2.2.2.2 follows a link: its socket is gone, but it still counts
+        lingering.insert("2.2.2.2".to_string(), now + GUEST_GRACE);
+        assert_eq!(count_guests(["1.1.1.1"], &mut lingering, now), 2);
+        // ...and isn't counted twice once the next page connects
+        assert_eq!(count_guests(["1.1.1.1", "2.2.2.2"], &mut lingering, now), 2);
+        // Gone for good after the grace period
+        assert_eq!(count_guests(["1.1.1.1"], &mut lingering, now + GUEST_GRACE), 1);
+        assert!(lingering.is_empty());
+        // No IP: not counted
+        assert_eq!(count_guests([""], &mut lingering, now), 0);
+    }
 }
