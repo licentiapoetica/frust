@@ -1,6 +1,7 @@
 //! Account applications: guests who registered with a message instead of an invite token
 //! (routes/register.rs). Approving creates the account, declining only marks the application; the
-//! applicant sees the state when logging in, and gets a mail when an address was given.
+//! applicant sees the state when logging in, and gets a mail on approval when an address was given
+//! (no mail when declined).
 //!
 //! The page works as plain forms (`back`, see crate::nojs), so it needs no script.
 
@@ -50,22 +51,16 @@ fn posted_id(body: &Value) -> Option<i32> {
     body_truthy(body, "id").then(|| body_id(body, "id")).flatten().map(|id| id as i32)
 }
 
-/// Tell the applicant by mail, when they left an address and mail is set up.
-async fn mail_applicant(st: &AppState, app: &Row, approved: bool) {
+/// Tells an approved applicant that the account exists. Declined ones get no mail.
+async fn mail_approved(st: &AppState, app: &Row) {
     let cfg = st.cfg();
     let Some(to) = app.str("email").filter(|e| !e.is_empty()) else { return };
     if !cfg.truthy("smtp.host") {
         return;
     }
     let name = app.string("username");
-    let (subject, body) = if approved {
-        (
-            "Your account application was approved",
-            format!("Hello {name},\n\nyour application was approved. You can now log in with your username and password:\n\n{}/login\n", cfg.url_full()),
-        )
-    } else {
-        ("Your account application was declined", format!("Hello {name},\n\nyour application for an account on {} was declined.\n", cfg.url_full()))
-    };
+    let subject = "Your account application was approved";
+    let body = format!("Hello {name},\n\nyour application was approved. You can now log in with your username and password:\n\n{}/login\n", cfg.url_full());
     if let Err(e) = crate::smtp::send_mail(&cfg, crate::smtp::Mail { to, subject, body: &body }).await {
         tracing::error!("[SMTP] Send failed: {e}");
     }
@@ -115,7 +110,7 @@ async fn approve(st: AppState, mut req: Req) -> Res {
         Ok(Approved::Created(app)) => {
             let name = app.string("username");
             tracing::info!("[APPLICATIONS] #{id} approved, account {name} created");
-            mail_applicant(&st, &app, true).await;
+            mail_approved(&st, &app).await;
             Ok(json_resp(&json!({ "success": true, "msg": format!("Approved: the account {name} exists now.") }), 200))
         }
         Ok(Approved::Gone) => fail("Application not found or already answered"),
@@ -133,14 +128,13 @@ async fn deny(st: AppState, mut req: Req) -> Res {
     let reviewer = req.session().map(|s| s.id).unwrap_or(0) as i32;
     let app = sql!(
         "UPDATE account_applications SET status = 'denied', reviewed_by = ", reviewer, ", reviewed_at = NOW() WHERE id = ", id,
-        " AND status = 'pending' RETURNING username, email"
+        " AND status = 'pending' RETURNING username"
     )
     .fetch_optional(&st.db)
     .await;
     match app {
         Ok(Some(app)) => {
             tracing::info!("[APPLICATIONS] #{id} declined ({})", app.string("username"));
-            mail_applicant(&st, &app, false).await;
             Ok(json_resp(&json!({ "success": true, "msg": "Application declined." }), 200))
         }
         Ok(None) => fail("Application not found or already answered"),

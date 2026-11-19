@@ -38,7 +38,7 @@
       <input type="text" name="token" class="reg-if-token" placeholder="invite token" autocomplete="off" value="{{ invite_token }}" />
       <textarea name="application" class="v2-register-application reg-if-apply" maxlength="1000" rows="4" placeholder="tell us why you want an account (min. 20 characters)"></textarea>
       <input type="email" name="email" class="reg-if-apply" placeholder="{{ ("mail (needed to apply)" if registration_apply_email else "mail (optional)") }}" autocomplete="email" />
-      {% if application_mail %}<p class="v2-hint reg-if-apply">we'll mail you there when your application is approved or declined.</p>{% endif %}
+      {% if application_mail %}<p class="v2-hint reg-if-apply">we'll mail you there when your application is approved.</p>{% endif %}
       {% elif not registration_open %}
       <input type="text" name="token" placeholder="invite token" autocomplete="off" value="{{ invite_token }}" required />
       {% elif registration_require_mail_andor_token %}

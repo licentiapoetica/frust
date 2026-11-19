@@ -53,7 +53,7 @@
         <input type="text" name="token" placeholder="Invite token" autocomplete="off" class="gate-input reg-if-token" />
         <textarea name="application" maxlength="1000" rows="4" placeholder="Tell us why you want an account (min. 20 characters)" class="gate-input gate-textarea reg-if-apply"></textarea>
         <input type="email" name="email" placeholder="{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}" autocomplete="off" class="gate-input reg-if-apply" />
-        {% if application_mail %}<p class="gate-hint reg-if-apply">We'll email you there when your application is approved or declined.</p>{% endif %}
+        {% if application_mail %}<p class="gate-hint reg-if-apply">We'll email you there when your application is approved.</p>{% endif %}
         {% else %}
         <input type="text" name="token" placeholder="Invite token" autocomplete="off" class="gate-input" />
         {% endif %}
