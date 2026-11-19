@@ -1146,7 +1146,29 @@
         // Drag-to-resize from an edge or corner (data-rz: n, s, e, w, ne, nw, se, sw). Docked, the
         // panel hangs from the bottom right, so only the top and left edges move; detached, every
         // edge and corner does and the opposite ones stay put.
-        const MIN_W = 220, MIN_H = 180;
+        const MIN_W = 220, MIN_H = 180, MIN_MSGS = 80;
+
+        // The height the open panel needs at least: its bars (header, topic, who's online, emoji
+        // picker, input) and MIN_MSGS of messages. As --gc-min-h (globalchat.css: min-height), so
+        // opening the picker in a small chat grows it instead of pushing the input out; resizing
+        // stops there. Again whenever one of the bars changes (picker, topic, a wrapped line).
+        function minPanelH() {
+            const bars = ['gchat-header', 'gchat-topic', 'gchat-online', 'gchat-emoji-box', 'gchat-input-area']
+                .reduce((a, id) => a + (document.getElementById(id)?.offsetHeight || 0), 0);
+            return Math.ceil(bars + MIN_MSGS + (panel.offsetHeight - panel.clientHeight));
+        }
+        function fitPanel() {
+            if (isPhone() || isMinimized) { panel.style.removeProperty('--gc-min-h'); return; }
+            const need = minPanelH();
+            if (parseFloat(panel.style.getPropertyValue('--gc-min-h')) === need) return;
+            panel.style.setProperty('--gc-min-h', need + 'px');
+            // a detached chat that grew stays on the screen
+            if (isFloating) requestAnimationFrame(() => clampGeo());
+        }
+        const fitRO = new ResizeObserver(() => fitPanel());
+        ['gchat-header', 'gchat-topic', 'gchat-online', 'gchat-emoji-box', 'gchat-input-area']
+            .forEach(id => { const el = document.getElementById(id); if (el) fitRO.observe(el); });
+
         panel.querySelectorAll('.gchat-rz').forEach(handle => {
             const dir = handle.dataset.rz;
             onPointerDown(handle, (startX, startY) => {
@@ -1155,7 +1177,7 @@
                 // Minimized: the bar's width (left / right edge), or the side tab's length (top /
                 // bottom edge, its own --gc-tab, at least as long as its icon and buttons)
                 const tab = isMinimized && sideways();
-                const minH = tab ? tabContentHeight() : MIN_H;
+                const minH = tab ? tabContentHeight() : Math.max(MIN_H, minPanelH());
                 startDrag((x, y) => {
                     let { left, top, width, height } = r;
                     if (dir.includes('e')) width = Math.min(Math.max(r.width + (x - startX), MIN_W), (isFloating ? rightBound() : window.innerWidth) - r.left);

@@ -99,6 +99,12 @@
   overflow: hidden;
 }
 
+/* never shorter than its bars and some messages need (--gc-min-h, globalchat.js): a small chat
+   grows when the emoji picker opens instead of pushing the input out */
+#gchat-panel:not(.gchat-minimized) {
+  min-height: var(--gc-min-h, 0px);
+}
+
 #gchat-panel.gchat-floating {
   position: fixed;
   left: var(--gc-x, auto);
@@ -437,6 +443,7 @@ html.gchat-moving * {
 /* ── messages ── */
 #gchat-messages {
   flex: 1;
+  min-height: 80px;
   display: flex;
   flex-direction: column;
   gap: 2px;
