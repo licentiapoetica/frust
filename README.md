@@ -184,8 +184,14 @@ for 7 days, only from the IP that solved it. Scraper swarms on rotating IPs pay 
 **It needs JavaScript:** without it the clearnet site can't be reached. The `.onion` address goes
 straight to f0ckm and keeps working without JavaScript.
 
-Turn it on with `ANUBIS=1 ./install.sh` (a fresh install asks; `ANUBIS=0` turns it off again), or by
-hand in `.env`:
+The installer asks once on every install that hasn't decided yet, also on an existing one (the answer
+is kept as `ANUBIS=1`/`ANUBIS=0` in `.env`). `ANUBIS=1 ./install.sh` turns it on, `ANUBIS=0` off again.
+With your own nginx on the same server the installer switches it too: in the `server {}` blocks for the
+domain it sets `proxy_pass` to `:8923` (back to `:1337` when turned off), adds the check page's look
+and a missing `X-Real-IP`, and puts all their `server_name`s into `ANUBIS_DOMAINS`. It shows the change
+as a diff and asks first, checks it with `nginx -t` (puts the old file back if that fails) and reloads
+nginx once Anubis answers. Unattended: `NGINX_EDIT=1` applies it, `NGINX_EDIT=0` never touches nginx.
+A site that proxies through an `upstream {}` block is left alone with a hint. By hand, in `.env`:
 
 ```bash
 COMPOSE_FILE=docker-compose.yml:docker-compose.anubis.yml
@@ -222,7 +228,8 @@ open tab's requests fail until it is reloaded. Logs: `docker compose logs -f anu
 gate instead of Anubis' mascot ([config/anubis/img](config/anubis/img): gold eyes while checking, an
 ankh when passed, red eyes when turned away). Anubis builds its files into its binary, so the proxy
 in front answers their URLs with these; for your own nginx, inside the site's `server {}` (install.sh
-prints these with the right path when Anubis is on):
+adds these itself, between `# >>> f0ckm anubis` markers; when nginx can't read the checkout it copies
+the files to `/var/lib/f0ckm-anubis/<domain>/`):
 
 ```nginx
 location = /.within.website/x/xess/xess.min.css { alias /path/to/f0ckm/public/s/css/anubis.css; }

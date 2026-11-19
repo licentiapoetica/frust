@@ -14,7 +14,10 @@
 # reverse proxy forwards the domain to 127.0.0.1:1337 (example: config/nginx/own-proxy.example.conf).
 # ANUBIS=1 puts the Anubis bot protection in front (browsers solve a proof of work once; needs JavaScript,
 # the .onion works without; an own proxy then forwards to 127.0.0.1:8923); ANUBIS=0 takes it out again.
-# A fresh install asks; on an existing one only ANUBIS=1/0 changes it.
+# An install that hasn't decided yet (no ANUBIS= in .env) asks once; the answer is kept in .env.
+# An own nginx on this server is switched along: its site for the domain gets proxy_pass to :8923 (or
+# back to :1337), the check page's look and X-Real-IP; the changes are shown and asked for first
+# (unattended: NGINX_EDIT=1 applies them, NGINX_EDIT=0 never touches nginx).
 #
 # Moving an existing site: ./install.sh --import-db dump.sql (or IMPORT_DB=dump.sql) loads a pg_dump
 # (plain .sql, optionally .gz/.zst/.xz/.bz2, or pg_dump -Fc) before f0ckm starts; f0ckm then upgrades it
@@ -153,12 +156,6 @@ else
             ask EMAIL "Email for Let's Encrypt"
             [ -n "${EMAIL:-}" ] || die "an email is needed for the Let's Encrypt certificate"
         fi
-        if [ -z "${ANUBIS:-}" ] && [ -t 0 ]; then
-            echo "Bot protection (Anubis): browsers solve a short proof of work once before they get in."
-            echo "  Stops scrapers, but visitors need JavaScript (the .onion address works without)."
-            read -r -p "Turn it on? [y/N]: " ans
-            case ${ans:-n} in y*|Y*|j*|J*) ANUBIS=1 ;; *) ANUBIS=0 ;; esac
-        fi
     fi
     # Database user and name: f0ckm, or for an imported site the user its dump was made with
     if [ -n "$IMPORT_DB" ]; then
@@ -205,10 +202,33 @@ if ! grep -q '^UID=' .env; then
     printf 'UID=%s\nGID=%s\n' "${ids%%:*}" "${ids#*:}" | { if [ -w .env ]; then cat >> .env; else as_root tee -a .env >/dev/null; fi; }
 fi
 
+# main.url.domain from config.yaml (empty when unreadable or still the example)
+config_domain() {
+    [ -r config.yaml ] || return 0
+    awk '/^main:/ { m = 1; next } /^[^ #]/ { m = 0 } m && /^  url:/ { u = 1; next } m && u && /^  [^ ]/ { u = 0 }
+         m && u && /^    domain:/ { sub(/^    domain:[ \t]*/, ""); gsub(/["'"'"' \t\r]/, ""); print; exit }' config.yaml \
+        | grep -v '^\(example\.com\|localhost\)$' || true
+}
+# The public domain; older .env files (own proxy) have no VIRTUAL_HOST, then config.yaml's
+SITE_DOMAIN=${DOMAIN:-$(config_domain)}
+
 # Bot protection: Anubis runs from docker-compose.anubis.yml, named in COMPOSE_FILE next to the main file
 anubis_on() { grep -q '^COMPOSE_FILE=.*docker-compose\.anubis\.yml' .env; }
 env_sed() { if [ -w .env ]; then sed -i "$1" .env; else as_root sed -i "$1" .env; fi; }
 env_add() { printf '%s\n' "$1" | { if [ -w .env ]; then cat >> .env; else as_root tee -a .env >/dev/null; fi; }; }
+# Asked once per install (fresh or one from before Anubis); ANUBIS= in .env keeps the answer
+if [ -z "${ANUBIS:-}" ] && [ -n "$SITE_DOMAIN" ] && ! anubis_on && ! grep -q '^ANUBIS=' .env && [ -t 0 ]; then
+    echo "Bot protection (Anubis) for $SITE_DOMAIN: browsers solve a short proof of work once before they get in."
+    echo "  Stops scrapers, but visitors need JavaScript (the .onion address works without)."
+    [ "$PROXY" = own ] && echo "  Your proxy then forwards to 127.0.0.1:8923 instead of :1337 (an nginx on this server is set up for that)."
+    read -r -p "Turn it on? [y/N]: " ans
+    case ${ans:-n} in y*|Y*|j*|J*) ANUBIS=1 ;; *) ANUBIS=0 ;; esac
+fi
+if [ -n "${ANUBIS:-}" ]; then
+    case $ANUBIS in 0|1) ;; *) die "ANUBIS must be 1 or 0, not '$ANUBIS'" ;; esac
+    grep -qx "ANUBIS=$ANUBIS" .env || { env_sed '/^ANUBIS=/d'; env_add "ANUBIS=$ANUBIS"; }
+fi
+ANUBIS_REMOVE=
 if [ "${ANUBIS:-}" = 1 ] && ! anubis_on; then
     say "Turning on the Anubis bot protection"
     env_sed '/^COMPOSE_FILE=/d'
@@ -218,24 +238,132 @@ if [ "${ANUBIS:-}" = 1 ] && ! anubis_on; then
 elif [ "${ANUBIS:-}" = 0 ] && anubis_on; then
     say "Turning off the Anubis bot protection"
     env_sed '/^COMPOSE_FILE=/d'
-    docker rm -f f0ckm-anubis >/dev/null 2>&1 || true
+    # Removed once the proxy goes to f0ckm again (after the start below)
+    ANUBIS_REMOVE=1
 fi
-# main.url.domain from config.yaml (empty when unreadable or still the example)
-config_domain() {
-    [ -r config.yaml ] || return 0
-    awk '/^main:/ { m = 1; next } /^[^ #]/ { m = 0 } m && /^  url:/ { u = 1; next } m && u && /^  [^ ]/ { u = 0 }
-         m && u && /^    domain:/ { sub(/^    domain:[ \t]*/, ""); gsub(/["'"'"' \t\r]/, ""); print; exit }' config.yaml \
-        | grep -v '^\(example\.com\|localhost\)$' || true
-}
-# After the check Anubis only sends visitors back to ANUBIS_DOMAINS, else VIRTUAL_HOST; with neither,
-# every visitor gets "redirect domain not allowed". Older .env files (own proxy) may lack both.
-if anubis_on && ! grep -q '^ANUBIS_DOMAINS=.' .env && ! grep -q '^VIRTUAL_HOST=.' .env; then
-    dom=${DOMAIN:-$(config_domain)}
-    if [ -n "$dom" ]; then
-        say "Anubis: sending visitors back to $dom after the check (ANUBIS_DOMAINS in .env)"
-        env_add "ANUBIS_DOMAINS=$dom"
+
+# ── Own nginx ────────────────────────────────────────────────────────────────────
+# An nginx on this server (PROXY=own) gets its site for the domain pointed at Anubis (:8923) or f0ckm
+# (:1337), see scripts/own-nginx.awk. Planned and shown here, written after the start (nginx_apply).
+NGINX=$(command -v nginx 2>/dev/null || true)
+[ -z "$NGINX" ] && [ -x /usr/sbin/nginx ] && NGINX=/usr/sbin/nginx
+NGX_FILES=()      # config files to change, with their new and old text in $NGX_DIR/<n>.new / .old
+NGX_DIR=
+NGX_STATE=        # ok: the site for the domain goes to the right port (after nginx_apply)
+NGX_NAMES=        # the server names of that site
+NGX_LOOK=         # copy of the check page's look nginx can read, when it can't read this checkout
+nginx_plan() {
+    local port=1337 dump f i css img u info names
+    [ "${PROXY:-}" = own ] && [ -n "$SITE_DOMAIN" ] && [ -n "$NGINX" ] && [ "${NGINX_EDIT:-}" != 0 ] || return 0
+    [ "$(id -u)" = 0 ] || command -v sudo >/dev/null 2>&1 || return 0
+    anubis_on && port=8923
+    dump=$(as_root "$NGINX" -T 2>/dev/null) || { warn "nginx -T failed, so your nginx is left alone; point it at 127.0.0.1:$port by hand"; return 0; }
+    NGX_DIR=$(mktemp -d); info=$NGX_DIR/info; : > "$info"
+    # Anubis' check page in f0ckm's look, read by the nginx workers straight from this checkout
+    css=$PWD/public/s/css/anubis.css; img=$PWD/config/anubis/img
+    u=$(ps -o user= -C nginx 2>/dev/null | grep -vx root | head -n 1 || true)
+    [ -n "$u" ] || u=$(printf '%s\n' "$dump" | awk '$1 == "user" { sub(/;.*/, "", $2); print $2; exit }')
+    if [ "$port" = 8923 ] && [ -n "$u" ] && id "$u" >/dev/null 2>&1 \
+            && ! as_root su -s /bin/sh -c 'test -r "$0" && test -r "$1/checking.webp"' "$u" "$css" "$img" 2>/dev/null; then
+        # Not readable for the workers (a home folder): they get a copy, refreshed on every run
+        NGX_LOOK=/var/lib/f0ckm-anubis/$SITE_DOMAIN
+        css=$NGX_LOOK/anubis.css; img=$NGX_LOOK
+    fi
+    i=0
+    while IFS= read -r f; do
+        [ -f "$f" ] || continue
+        i=$((i + 1))
+        as_root cat "$f" > "$NGX_DIR/$i.old" || continue
+        awk -v dom="$SITE_DOMAIN" -v port="$port" -v css="$css" -v img="$img" -v info="$info" \
+            -f scripts/own-nginx.awk "$NGX_DIR/$i.old" > "$NGX_DIR/$i.new" || continue
+        cmp -s "$NGX_DIR/$i.old" "$NGX_DIR/$i.new" || NGX_FILES+=("$i:$f")
+    done < <(printf '%s\n' "$dump" | sed -n 's/^# configuration file \(.*\):$/\1/p' | sort -u)
+
+    names=$(sed -n 's/^names //p' "$info" | tr ' ' '\n' | grep -E '^[A-Za-z0-9.-]+\.[A-Za-z0-9-]+$' | sort -u | tr '\n' ' ' || true)
+    NGX_NAMES=${names% }
+    # Hints only when the proxy has to change (Anubis on, or just turned off)
+    if [ -z "$NGX_NAMES" ]; then
+        [ "$port" = 1337 ] && [ -z "$ANUBIS_REMOVE" ] && return 0
+        warn "your nginx has no server_name $SITE_DOMAIN, so it is left alone; point your proxy at 127.0.0.1:$port by hand"
+        return 0
+    fi
+    if ! grep -qx backend "$info"; then
+        [ "$port" = 1337 ] && [ -z "$ANUBIS_REMOVE" ] && return 0
+        warn "nginx serves $SITE_DOMAIN, but not with proxy_pass http://127.0.0.1:1337 (an upstream {} or another address?); point it at 127.0.0.1:$port by hand"
+        return 0
+    fi
+    grep -qx noxrealip "$info" && warn "nginx: a location for $SITE_DOMAIN that proxies to f0ckm sets no X-Real-IP; Anubis needs it: add proxy_set_header X-Real-IP \$remote_addr; there"
+    NGX_STATE=ok
+    [ ${#NGX_FILES[@]} -gt 0 ] || return 0
+
+    if [ "$port" = 8923 ]; then say "Your nginx serves $SITE_DOMAIN; it has to go to Anubis (127.0.0.1:8923) now:"
+    else say "Your nginx serves $SITE_DOMAIN; it has to go straight to f0ckm (127.0.0.1:1337) again:"; fi
+    for f in "${NGX_FILES[@]}"; do
+        diff -u --label "${f#*:}" --label "${f#*:}" "$NGX_DIR/${f%%:*}.old" "$NGX_DIR/${f%%:*}.new" || true
+    done
+    [ -z "$NGX_LOOK" ] || echo "    (nginx ($u) can't read this checkout, so the check page's look is copied to $NGX_LOOK)"
+    ans=${NGINX_EDIT:-}
+    if [ -z "$ans" ] && [ -t 0 ]; then read -r -p "Change your nginx like this (checked with nginx -t, then reloaded)? [Y/n] " ans; ans=${ans:-y}; fi
+    if [[ $ans =~ ^[Yy1] ]]; then
+        NGINX_EDIT=1
     else
-        warn "set ANUBIS_DOMAINS=<your domain> in .env, or visitors get 'redirect domain not allowed' after the Anubis check"
+        NGX_FILES=(); NGX_STATE=
+        [ -t 0 ] || warn "nginx left alone (NGINX_EDIT=1 ./install.sh applies the changes above)"
+    fi
+}
+# Writes the planned changes once the port they point at answers; puts the old files back when nginx -t fails
+nginx_apply() {
+    local f out
+    [ ${#NGX_FILES[@]} -gt 0 ] || return 0
+    if anubis_on; then
+        for i in $(seq 1 30); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' f0ckm-anubis 2>/dev/null)" = healthy ] && break
+            [ "$i" = 30 ] && { warn "Anubis did not come up, so nginx still goes to f0ckm; see: $COMPOSE logs anubis"; NGX_STATE=; return 0; }
+            sleep 2
+        done
+    fi
+    if [ -n "$NGX_LOOK" ]; then
+        as_root install -d -m 755 "$NGX_LOOK"
+        as_root install -m 644 public/s/css/anubis.css config/anubis/img/checking.webp config/anubis/img/passed.webp \
+            config/anubis/img/denied.webp "$NGX_LOOK/"
+    fi
+    for f in "${NGX_FILES[@]}"; do as_root tee "${f#*:}" < "$NGX_DIR/${f%%:*}.new" >/dev/null; done
+    if out=$(as_root "$NGINX" -t 2>&1); then
+        if command -v systemctl >/dev/null 2>&1 && as_root systemctl is-active --quiet nginx; then
+            as_root systemctl reload nginx
+        else
+            as_root "$NGINX" -s reload
+        fi
+        if anubis_on; then say "nginx: $SITE_DOMAIN now goes through Anubis"; else say "nginx: $SITE_DOMAIN goes straight to f0ckm again"; fi
+    else
+        for f in "${NGX_FILES[@]}"; do as_root tee "${f#*:}" < "$NGX_DIR/${f%%:*}.old" >/dev/null; done
+        printf '%s\n' "$out" | sed 's/^/    /' >&2
+        warn "nginx -t failed with the change, so your nginx config was put back as it was; change it by hand (example below)"
+        NGX_STATE=
+    fi
+}
+nginx_plan
+# A copy of the look is refreshed on every run, also when nginx needs no change
+if [ -n "$NGX_LOOK" ] && [ ${#NGX_FILES[@]} = 0 ] && [ "$NGX_STATE" = ok ] && [ -d "$NGX_LOOK" ]; then
+    as_root install -m 644 public/s/css/anubis.css config/anubis/img/checking.webp config/anubis/img/passed.webp \
+        config/anubis/img/denied.webp "$NGX_LOOK/"
+fi
+
+# After the check Anubis only sends visitors back to ANUBIS_DOMAINS, else VIRTUAL_HOST; with neither,
+# every visitor gets "redirect domain not allowed". Older .env files (own proxy) may lack both, and an
+# own nginx may serve more names (www.) than VIRTUAL_HOST.
+if anubis_on && ! grep -q '^ANUBIS_DOMAINS=.' .env; then
+    doms=$(printf '%s\n' $NGX_NAMES | paste -sd, -)
+    if [ -n "$doms" ] && [ "$doms" != "$SITE_DOMAIN" ]; then
+        say "Anubis: sending visitors back to $doms after the check (ANUBIS_DOMAINS in .env)"
+        env_add "ANUBIS_DOMAINS=$doms"
+    elif ! grep -q '^VIRTUAL_HOST=.' .env; then
+        if [ -n "$SITE_DOMAIN" ]; then
+            say "Anubis: sending visitors back to $SITE_DOMAIN after the check (ANUBIS_DOMAINS in .env)"
+            env_add "ANUBIS_DOMAINS=$SITE_DOMAIN"
+        else
+            warn "set ANUBIS_DOMAINS=<your domain> in .env, or visitors get 'redirect domain not allowed' after the Anubis check"
+        fi
     fi
 fi
 APP_UID=$(sed -n 's/^UID=//p' .env | tail -n 1)
@@ -384,6 +512,14 @@ for i in $(seq 1 90); do
 done
 sleep 2; crashed || true
 
+nginx_apply
+if [ -n "$ANUBIS_REMOVE" ]; then
+    [ "$NGX_STATE" = ok ] || [ "${PROXY:-}" != own ] || [ -z "$SITE_DOMAIN" ] \
+        || warn "Anubis is gone now: point your proxy back at 127.0.0.1:1337"
+    docker rm -f f0ckm-anubis >/dev/null 2>&1 || true
+fi
+[ -z "$NGX_DIR" ] || rm -rf "$NGX_DIR"
+
 # ── Admin ────────────────────────────────────────────────────────────────────────
 if docker exec f0ckm f0ckm users list 2>/dev/null | awk 'NR > 1 && $4 == "true" { found = 1 } END { exit !found }'; then
     say "An admin account already exists"
@@ -407,9 +543,13 @@ if [ -n "$DOMAIN" ] && [ "$PROXY" = nginx ]; then
     say "Done: https://$DOMAIN"
     echo "    The domain's DNS has to point at this server and ports 80/443 must be open;"
     echo "    the certificate is issued within a minute or two after that."
-elif [ -n "$DOMAIN" ]; then
+elif [ -n "$SITE_DOMAIN" ] && [ "$NGX_STATE" = ok ]; then
+    say "Done: https://$SITE_DOMAIN"
+    if anubis_on; then echo "    Your nginx sends it to the Anubis bot protection (127.0.0.1:8923), which passes visitors on to f0ckm."
+    else echo "    Your nginx sends it to f0ckm (127.0.0.1:1337)."; fi
+elif [ -n "$SITE_DOMAIN" ]; then
     if anubis_on; then port=8923; else port=1337; fi
-    say "Done: f0ckm runs on http://127.0.0.1:$port; point your proxy for https://$DOMAIN at it"
+    say "Done: f0ckm runs on http://127.0.0.1:$port; point your proxy for https://$SITE_DOMAIN at it"
     [ "$port" = 8923 ] && echo "    (that is the Anubis bot protection, which passes visitors on to f0ckm on :1337)"
     echo "    nginx site for it (adjust the certificate paths; other proxies need the same headers,"
     echo "    WebSocket upgrade and upload limits). Also in config/nginx/own-proxy.example.conf:"
@@ -421,7 +561,7 @@ elif [ -n "$DOMAIN" ]; then
     else
         keeper=(-e '/With Anubis: its check page/,/^$/d')
     fi
-    sed -e '1,/^$/d' -e "s/f0ck\.example/$DOMAIN/g" -e '/# f0ckm; with Anubis/d' "${keeper[@]}" \
+    sed -e '1,/^$/d' -e "s/f0ck\.example/$SITE_DOMAIN/g" -e '/# f0ckm; with Anubis/d' "${keeper[@]}" \
         -e "s|proxy_pass http://127.0.0.1:1337;|proxy_pass http://127.0.0.1:$port;|" config/nginx/own-proxy.example.conf
     echo
 else
