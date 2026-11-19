@@ -670,6 +670,13 @@
 
   // ─── Passkey manager for registered users (used by settings page) ──────────
 
+  // The token for the API calls: in frontends whose pages don't load header.early.js nothing adds
+  // it to fetch by itself
+  function csrfToken() {
+    return (window.f0ckSession && window.f0ckSession.csrf_token)
+      || document.querySelector('meta[name="csrf-token"]')?.content || '';
+  }
+
   class PasskeyManager {
     async listPasskeys() {
       const res = await fetch('/api/v2/settings/passkeys');
@@ -680,7 +687,7 @@
       // 1. Begin (accounts with a password confirm it)
       const beginData = await window.f0ckWithReauth(() => fetch('/api/v2/settings/passkeys/register/begin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
         body: JSON.stringify({ name: name || 'Passkey', current_password: currentPassword || '' })
       }));
       if (!beginData.success) throw new Error(beginData.msg || 'Server error');
@@ -706,10 +713,9 @@
       const cred = await navigator.credentials.create({ publicKey: pkOpts });
 
       // 2. Finish
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
       const finishRes = await fetch('/api/v2/settings/passkeys/register/finish', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken() },
         body: JSON.stringify({
           challenge: rawChallenge,
           credentialId: arrToB64url(cred.rawId),
@@ -724,10 +730,9 @@
     }
 
     async deletePasskey(credentialId) {
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
       const res = await fetch('/api/v2/settings/passkeys/delete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken() },
         body: JSON.stringify({ credential_id: credentialId })
       });
       const data = await res.json();
