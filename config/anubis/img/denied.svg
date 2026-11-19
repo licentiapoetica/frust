@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>Gate keeper (denied)</title>
+<defs>
+<radialGradient id="void" cx="256" cy="300" r="300" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#161a2b"/><stop offset="0.5" stop-color="#090a12"/><stop offset="1" stop-color="#020203"/></radialGradient>
+<radialGradient id="aura" cx="256" cy="185" r="150" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b3121b" stop-opacity="0.42"/><stop offset="0.55" stop-color="#b3121b" stop-opacity="0.147"/><stop offset="1" stop-color="#b3121b" stop-opacity="0"/></radialGradient>
+<linearGradient id="stone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b241a"/><stop offset="1" stop-color="#120f0a"/></linearGradient>
+<filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+<clipPath id="door"><polygon points="114,100 398,100 392,512 120,512"/></clipPath>
+<clipPath id="body"><path d="M 122 512 C 132 432 170 392 210 378 L 302 378 C 342 392 380 432 390 512 Z"/></clipPath>
+<clipPath id="nemes"><path d="M 198 170 C 172 210 158 250 152 300 L 148 392 L 364 392 L 360 300 C 354 250 340 210 314 170 Z"/></clipPath>
+</defs>
+<polygon points="114,100 398,100 392,512 120,512" fill="url(#void)"/>
+<g clip-path="url(#door)">
+<rect x="0" y="0" width="512" height="512" fill="url(#aura)"/>
+<circle cx="150" cy="150" r="1.2" fill="#a8342a" opacity="0.55"/>
+<circle cx="372" cy="132" r="1.0" fill="#a8342a" opacity="0.55"/>
+<circle cx="140" cy="260" r="0.9" fill="#a8342a" opacity="0.55"/>
+<circle cx="382" cy="236" r="1.3" fill="#a8342a" opacity="0.55"/>
+<circle cx="162" cy="330" r="1.0" fill="#a8342a" opacity="0.55"/>
+<circle cx="366" cy="318" r="0.8" fill="#a8342a" opacity="0.55"/>
+<circle cx="132" cy="196" r="0.8" fill="#a8342a" opacity="0.55"/>
+<circle cx="388" cy="176" r="0.9" fill="#a8342a" opacity="0.55"/>
+<circle cx="176" cy="120" r="0.7" fill="#a8342a" opacity="0.55"/>
+<circle cx="338" cy="122" r="0.8" fill="#a8342a" opacity="0.55"/>
+<g transform="translate(0 58) translate(256 200) scale(0.82) translate(-256 -200)">
+<path d="M 198 170 C 172 210 158 250 152 300 L 148 392 L 364 392 L 360 300 C 354 250 340 210 314 170 Z" fill="#0c0e16" stroke="#a8342a" stroke-opacity="0.35" stroke-width="1.5"/>
+<g clip-path="url(#nemes)" stroke="#c9a24a" stroke-opacity="0.28" stroke-width="2.2" fill="none">
+<path d="M 140 206 Q 256 216 372 206"/>
+<path d="M 140 221 Q 256 231 372 221"/>
+<path d="M 140 236 Q 256 246 372 236"/>
+<path d="M 140 251 Q 256 261 372 251"/>
+<path d="M 140 266 Q 256 276 372 266"/>
+<path d="M 140 281 Q 256 291 372 281"/>
+<path d="M 140 296 Q 256 306 372 296"/>
+<path d="M 140 311 Q 256 321 372 311"/>
+<path d="M 140 326 Q 256 336 372 326"/>
+<path d="M 140 341 Q 256 351 372 341"/>
+<path d="M 140 356 Q 256 366 372 356"/>
+<path d="M 140 371 Q 256 381 372 371"/>
+<path d="M 140 386 Q 256 396 372 386"/>
+</g>
+<path d="M 122 512 C 132 432 170 392 210 378 L 302 378 C 342 392 380 432 390 512 Z" fill="#06070b" stroke="#a8342a" stroke-opacity="0.4" stroke-width="1.5"/>
+<g clip-path="url(#body)" fill="none">
+<path d="M 196 340 A 60 60 0 0 0 316 340" stroke="#c9a24a" stroke-width="5" stroke-opacity="0.85"/>
+<path d="M 184 340 A 72 72 0 0 0 328 340" stroke="#1d2f66" stroke-width="8" stroke-opacity="1"/>
+<path d="M 172 340 A 84 84 0 0 0 340 340" stroke="#c9a24a" stroke-width="3" stroke-opacity="0.7"/>
+<path d="M 160 340 A 96 96 0 0 0 352 340" stroke="#c9a24a" stroke-width="6" stroke-opacity="0.75" stroke-dasharray="3 6"/>
+<path d="M 148 340 A 108 108 0 0 0 364 340" stroke="#1d2f66" stroke-width="6" stroke-opacity="1"/>
+<path d="M 138 340 A 118 118 0 0 0 374 340" stroke="#c9a24a" stroke-width="2" stroke-opacity="0.6"/>
+</g>
+<path d="M 228 292 L 284 292 L 290 352 Q 256 362 222 352 Z" fill="#06070b"/>
+<polygon points="198,250 228,266 224,384 186,386" fill="#0c0e16" stroke="#a8342a" stroke-opacity="0.35" stroke-width="1.2"/>
+<polygon points="314,250 284,266 288,384 326,386" fill="#0c0e16" stroke="#a8342a" stroke-opacity="0.35" stroke-width="1.2"/>
+<g stroke="#c9a24a" stroke-opacity="0.45" stroke-width="2">
+<line x1="190.9" y1="272" x2="225.6" y2="274"/>
+<line x1="321.1" y1="272" x2="286.4" y2="274"/>
+<line x1="191.4" y1="285" x2="225.3" y2="287"/>
+<line x1="320.6" y1="285" x2="286.7" y2="287"/>
+<line x1="191.9" y1="298" x2="225.0" y2="300"/>
+<line x1="320.1" y1="298" x2="287.0" y2="300"/>
+<line x1="192.4" y1="311" x2="224.8" y2="313"/>
+<line x1="319.6" y1="311" x2="287.2" y2="313"/>
+<line x1="193.0" y1="324" x2="224.5" y2="326"/>
+<line x1="319.0" y1="324" x2="287.5" y2="326"/>
+<line x1="193.5" y1="337" x2="224.3" y2="339"/>
+<line x1="318.5" y1="337" x2="287.7" y2="339"/>
+<line x1="194.0" y1="350" x2="224.0" y2="352"/>
+<line x1="318.0" y1="350" x2="288.0" y2="352"/>
+<line x1="194.5" y1="363" x2="223.7" y2="365"/>
+<line x1="317.5" y1="363" x2="288.3" y2="365"/>
+<line x1="195.0" y1="376" x2="223.5" y2="378"/>
+<line x1="317.0" y1="376" x2="288.5" y2="378"/>
+</g>
+<polygon points="238,160 198,40 182,198" fill="#06070b" stroke="#a8342a" stroke-opacity="0.6" stroke-width="1.6" stroke-linejoin="miter"/>
+<polygon points="229,160 200,70 191,186" fill="#0f1119" stroke="#7a5b22" stroke-opacity="0.7" stroke-width="1.2"/>
+<polygon points="274,160 314,40 330,198" fill="#06070b" stroke="#a8342a" stroke-opacity="0.6" stroke-width="1.6" stroke-linejoin="miter"/>
+<polygon points="283,160 312,70 321,186" fill="#0f1119" stroke="#7a5b22" stroke-opacity="0.7" stroke-width="1.2"/>
+<path d="M 186 178 Q 256 138 326 178 L 334 212 C 326 236 302 248 292 264 L 276 312 Q 256 326 236 312 L 220 264 C 210 248 186 236 178 212 Z" fill="#06070b" stroke="#a8342a" stroke-opacity="0.65" stroke-width="1.8"/>
+<path d="M 256 210 L 256 300" stroke="#a8342a" stroke-opacity="0.22" stroke-width="2"/>
+<path d="M 214 182 Q 234 176 248 184 M 298 182 Q 278 176 264 184" fill="none" stroke="#a8342a" stroke-opacity="0.35" stroke-width="1.6"/>
+<ellipse cx="256" cy="314" rx="13" ry="7" fill="#000"/>
+<ellipse cx="252" cy="311" rx="3.5" ry="1.6" fill="#a8342a" opacity="0.5"/>
+<path d="M 182 212 L 214 226 M 330 212 L 298 226" stroke="#a8342a" stroke-opacity="0.3" stroke-width="1.5"/>
+<g filter="url(#glow)" fill="#ff2b1f">
+<path d="M 212 200 Q 226 186 244 193 Q 230 205 212 200 Z"/><path d="M 300 200 Q 286 186 268 193 Q 282 205 300 200 Z"/>
+</g>
+<path d="M 212 200 L 196 208 M 300 200 L 316 208" stroke="#c9a24a" stroke-width="2.2" stroke-opacity="0.8"/>
+<ellipse cx="229" cy="196" rx="1.6" ry="5" fill="#140800"/>
+<ellipse cx="283" cy="196" rx="1.6" ry="5" fill="#140800"/>
+<path d="M 356 512 L 356 156" stroke="#7a5b22" stroke-width="7"/>
+<path d="M 354.5 512 L 354.5 160" stroke="#c9a24a" stroke-width="2" stroke-opacity="0.8"/>
+<path d="M 353 158 L 372 142 L 382 150 L 376 154 L 370 150 L 357 163 Z" fill="#c9a24a" stroke="#7a5b22" stroke-width="1"/>
+</g>
+<ellipse cx="256" cy="508" rx="190" ry="40" fill="#8a93b8" opacity="0.16" filter="url(#soft)"/>
+<ellipse cx="190" cy="496" rx="90" ry="22" fill="#8a93b8" opacity="0.12" filter="url(#soft)"/>
+<ellipse cx="330" cy="500" rx="100" ry="24" fill="#8a93b8" opacity="0.12" filter="url(#soft)"/>
+</g>
+<polygon points="62,100 114,100 120,512 54,512" fill="url(#stone)" stroke="#7a5b22" stroke-width="1.5"/>
+<polygon points="450,100 398,100 392,512 458,512" fill="url(#stone)" stroke="#7a5b22" stroke-width="1.5"/>
+<circle cx="88" cy="150" r="9" stroke="#c9a24a" stroke-opacity="0.55" stroke-width="2" fill="none"/><circle cx="88" cy="150" r="2" fill="#c9a24a" opacity="0.55"/>
+<g stroke="#c9a24a" stroke-opacity="0.55" stroke-width="2" fill="none"><ellipse cx="88" cy="206" rx="5" ry="7"/><path d="M 79 215 L 97 215 M 88 213 L 88 238"/></g>
+<g stroke="#c9a24a" stroke-opacity="0.55" stroke-width="2" fill="none"><path d="M 88 270 L 88 312 M 80 276 L 96 276 M 80 284 L 96 284 M 80 292 L 96 292"/></g>
+<line x1="110" y1="112" x2="113.0" y2="512" stroke="#7a5b22" stroke-width="1" opacity="0.6"/>
+<circle cx="424" cy="150" r="9" stroke="#c9a24a" stroke-opacity="0.55" stroke-width="2" fill="none"/><circle cx="424" cy="150" r="2" fill="#c9a24a" opacity="0.55"/>
+<g stroke="#c9a24a" stroke-opacity="0.55" stroke-width="2" fill="none"><ellipse cx="424" cy="206" rx="5" ry="7"/><path d="M 415 215 L 433 215 M 424 213 L 424 238"/></g>
+<g stroke="#c9a24a" stroke-opacity="0.55" stroke-width="2" fill="none"><path d="M 424 270 L 424 312 M 416 276 L 432 276 M 416 284 L 432 284 M 416 292 L 432 292"/></g>
+<line x1="402" y1="112" x2="399.0" y2="512" stroke="#7a5b22" stroke-width="1" opacity="0.6"/>
+<polygon points="56,72 456,72 456,102 56,102" fill="url(#stone)" stroke="#7a5b22" stroke-width="1.5"/>
+<path d="M 56 72 C 50 56 40 46 32 40 L 480 40 C 472 46 462 56 456 72 Z" fill="#1d1811" stroke="#7a5b22" stroke-width="1.5"/>
+<line x1="56" y1="72" x2="456" y2="72" stroke="#c9a24a" stroke-width="2" opacity="0.7"/>
+<circle cx="256" cy="87" r="9" fill="#c9a24a"/>
+<path d="M 244 84 Q 206 76 164 82 Q 204 92 244 92 Z" fill="#c9a24a" opacity="0.85"/>
+<line x1="224" y1="80" x2="218" y2="91" stroke="#2b241a" stroke-width="1.2"/>
+<line x1="204" y1="80" x2="198" y2="91" stroke="#2b241a" stroke-width="1.2"/>
+<line x1="184" y1="80" x2="178" y2="91" stroke="#2b241a" stroke-width="1.2"/>
+<path d="M 268 84 Q 306 76 348 82 Q 308 92 268 92 Z" fill="#c9a24a" opacity="0.85"/>
+<line x1="288" y1="80" x2="294" y2="91" stroke="#2b241a" stroke-width="1.2"/>
+<line x1="308" y1="80" x2="314" y2="91" stroke="#2b241a" stroke-width="1.2"/>
+<line x1="328" y1="80" x2="334" y2="91" stroke="#2b241a" stroke-width="1.2"/>
+</svg>

@@ -414,8 +414,14 @@ elif [ -n "$DOMAIN" ]; then
     echo "    nginx site for it (adjust the certificate paths; other proxies need the same headers,"
     echo "    WebSocket upgrade and upload limits). Also in config/nginx/own-proxy.example.conf:"
     echo
-    # The example without its header comment, for this domain (and port)
-    sed -e '1,/^$/d' -e "s/f0ck\.example/$DOMAIN/g" -e '/# f0ckm; with Anubis/d' \
+    # The example without its header comment, for this domain (and port); with Anubis also the gate
+    # keeper images from this checkout, otherwise without them
+    if [ "$port" = 8923 ]; then
+        keeper=(-e "s|/path/to/f0ckm|$PWD|g" -e 's|^    # location = /\.within\.website|    location = /.within.website|')
+    else
+        keeper=(-e '/With Anubis: the gate keeper/,/^$/d')
+    fi
+    sed -e '1,/^$/d' -e "s/f0ck\.example/$DOMAIN/g" -e '/# f0ckm; with Anubis/d' "${keeper[@]}" \
         -e "s|proxy_pass http://127.0.0.1:1337;|proxy_pass http://127.0.0.1:$port;|" config/nginx/own-proxy.example.conf
     echo
 else
