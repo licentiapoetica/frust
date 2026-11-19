@@ -3781,6 +3781,11 @@ html.gchat-skin-f0ckgle .gchat-bubble a {
   color: var(--fg-link);
 }
 
+/* custom emojis in messages: as big as f0ckm's (115px; images and .webm videos) */
+html.gchat-skin-f0ckgle .gchat-bubble .emoji {
+  height: 8.2em;
+}
+
 /* prompts: yours, on the right */
 html.gchat-skin-f0ckgle .gchat-msg-self {
   display: flex;
