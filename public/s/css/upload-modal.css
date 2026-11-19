@@ -115,6 +115,13 @@
   border-radius: 0 !important;
 }
 
+/* Spinners are circles, not boxes: keep them round despite the square reset above */
+#upload-drag-modal .modal-content .spinner-icon,
+#upload-drag-modal .modal-content .loading-spinner,
+#upload-drag-modal .modal-content .uut-spinner {
+  border-radius: 50% !important;
+}
+
 /* Header grid (all in --u-rem, like the form below): the 32px close button sits 1 unit from the top and
    right edge, and the title row is exactly 32px + 2 units tall (+ its 1px bottom border), so the button,
    the title and the upload limit share one centre line; the title starts 1 unit from the left edge,
