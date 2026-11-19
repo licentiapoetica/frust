@@ -46,6 +46,14 @@ services:
     depends_on:
       - f0ckm
 
+  # Bundled nginx-proxy: the check page in f0ckm's look. nginx-proxy includes vhost.d/default in the
+  # domain's server {}; the folders (not single files) keep up with a git pull. Own proxy: install.sh.
+  f0ckm-nginx:
+    volumes:
+      - ./config/anubis/nginx-proxy-look.conf:/etc/nginx/vhost.d/default:ro
+      - ./public/s/css:/f0ckm-anubis/css:ro
+      - ./config/anubis/img:/f0ckm-anubis/img:ro
+
   f0ckm:
     environment:
       # nginx-proxy ignores containers with an empty VIRTUAL_HOST, so all traffic for the domain goes
