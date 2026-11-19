@@ -1,0 +1,53 @@
+# Bot protection: Anubis (https://anubis.techaro.lol) in front of f0ckm.
+# Switched on by naming this file in .env next to the main one (install.sh does this with ANUBIS=1):
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.anubis.yml
+#   ANUBIS_KEY=<64 hex characters: openssl rand -hex 32>
+# then `docker compose up -d`. Rules: config/anubis/botPolicy.yaml (README "Bot protection").
+#
+# Traffic: proxy (TLS) -> Anubis :8923 -> f0ckm :1337. The proxy in front must set X-Real-IP to the
+# client's address; Anubis passes it on, f0ckm trusts it from the Docker network.
+#   - Bundled nginx-proxy: the domain moves from the f0ckm container to this one (below).
+#   - Own proxy: forward the domain to 127.0.0.1:8923 instead of :1337.
+# The .onion service keeps going straight to f0ckm (config/tor/torrc).
+
+services:
+  anubis:
+    image: ghcr.io/techarohq/anubis:${ANUBIS_TAG:-v1.28.2}
+    container_name: f0ckm-anubis
+    environment:
+      - BIND=:8923
+      - TARGET=http://f0ckm:1337
+      - POLICY_FNAME=/data/cfg/botPolicy.yaml
+      # Signs the pass cookies; a fixed key keeps them valid across restarts
+      - ED25519_PRIVATE_KEY_HEX=${ANUBIS_KEY:-}
+      # After the check Anubis only redirects back to this site
+      - REDIRECT_DOMAINS=${VIRTUAL_HOST:-localhost}
+      - COOKIE_EXPIRATION_TIME=${ANUBIS_COOKIE_TIME:-168h}
+      # nginx-proxy: route the domain here
+      - VIRTUAL_HOST=${VIRTUAL_HOST:-}
+      - VIRTUAL_PORT=8923
+      - LETSENCRYPT_HOST=${LETSENCRYPT_HOST:-}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-}
+    volumes:
+      - ./config/anubis/botPolicy.yaml:/data/cfg/botPolicy.yaml:ro,Z
+    ports:
+      # Loopback only, for an own proxy on this server
+      - "127.0.0.1:8923:8923"
+    networks:
+      - f0ckm-net
+    healthcheck:
+      test: ["CMD", "anubis", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    depends_on:
+      - f0ckm
+
+  f0ckm:
+    environment:
+      # nginx-proxy ignores containers with an empty VIRTUAL_HOST, so all traffic for the domain goes
+      # through Anubis instead of being split between the two containers
+      - VIRTUAL_HOST=
+      - LETSENCRYPT_HOST=

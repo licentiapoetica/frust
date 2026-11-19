@@ -125,21 +125,7 @@ services:
       retries: 5
       start_period: 5s
 
-  # anubis:
-  #   image: ghcr.io/techarohq/anubis:latest
-  #   container_name: anubis
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - BIND=:3000
-  #     - TARGET=http://f0ckm:1337
-  #     - DIFFICULTY=15
-  #     - POLICY_FNAME=/policy.yaml
-  #   volumes:
-  #     - ./botPolicy.yaml:/policy.yaml:ro
-  #   networks:
-  #     - f0ckm-net
-  #   restart: unless-stopped
+  # Bot protection (Anubis) in front of f0ckm: docker-compose.anubis.yml, switched on in .env
 
   f0ckm-nginx:
     image: nginxproxy/nginx-proxy:latest

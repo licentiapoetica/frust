@@ -176,6 +176,43 @@ uncomment in .env # COMPOSE_PROFILES=f0ckm-nginx to enable nginx proxy with auto
 Leave it out to run your own reverse proxy in front of `127.0.0.1:1337`; see
 [config/nginx/own-proxy.example.conf](config/nginx/own-proxy.example.conf).
 
+## Bot protection (Anubis)
+
+[Anubis](https://anubis.techaro.lol) can sit between the proxy and f0ckm. Every client that calls itself a
+browser solves a small proof of work once (well under a second, no clicking); a cookie then lets it in
+for 7 days, only from the IP that solved it. Scraper swarms on rotating IPs pay again for every IP.
+**It needs JavaScript:** without it the clearnet site can't be reached. The `.onion` address goes
+straight to f0ckm and keeps working without JavaScript.
+
+Turn it on with `ANUBIS=1 ./install.sh` (a fresh install asks; `ANUBIS=0` turns it off again), or by
+hand in `.env`:
+
+```bash
+COMPOSE_FILE=docker-compose.yml:docker-compose.anubis.yml
+ANUBIS_KEY=...   # openssl rand -hex 32; signs the pass cookies, so they survive restarts
+```
+
+then `docker compose up -d`. With the bundled nginx-proxy the domain moves to the Anubis container by
+itself. With your own proxy, forward the domain to `127.0.0.1:8923` instead of `:1337`; it has to set
+`X-Real-IP` (as in [own-proxy.example.conf](config/nginx/own-proxy.example.conf)), which Anubis
+passes on to f0ckm.
+
+The rules are in [config/anubis/botPolicy.yaml](config/anubis/botPolicy.yaml) (apply with
+`docker compose restart anubis`). Without a check pass:
+
+- files (`/b/`, `/t/`, `/a/`, `/s/`, ...), so media linked or embedded elsewhere keeps loading;
+- clients that don't claim to be a browser: API tools, feed readers, and most link-preview bots
+  (Telegram, Slack, WhatsApp, Signal, Twitter/X, Facebook, Mastodon, Matrix, ...);
+- verified search engines, `robots.txt`, `favicon`, `/.well-known/`.
+
+Preview bots that call themselves browsers (Discord, iMessage, Reddit, Bluesky, Teams, LinkedIn) get
+the check page, which carries the page's Open Graph tags, so their previews still show title and
+picture. Known AI crawlers and `HeadlessChrome` are turned away. A swarm with one fixed user agent
+can be blocked outright with a rule (example in the file).
+
+A visitor whose IP changes (a phone switching between Wi-Fi and mobile data) is checked again; an
+open tab's requests fail until it is reloaded. Logs: `docker compose logs -f anubis`.
+
 ## Tor Hidden Service (.onion)
 
 Tor is bundled in `docker-compose.yml` and always runs next to f0ckm. It is the SOCKS proxy for outgoing fetches (`main.socks: socks5h://tor:9050` in `config.yaml`) and serves a hidden service pointing to the application (`f0ckm:1337`).

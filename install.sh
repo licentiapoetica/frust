@@ -12,6 +12,9 @@
 # Leave DOMAIN empty for a local install on http://localhost:1337 without nginx/Let's Encrypt.
 # PROXY=nginx (default) runs the bundled nginx-proxy + Let's Encrypt; PROXY=own skips them, so your own
 # reverse proxy forwards the domain to 127.0.0.1:1337 (example: config/nginx/own-proxy.example.conf).
+# ANUBIS=1 puts the Anubis bot protection in front (browsers solve a proof of work once; needs JavaScript,
+# the .onion works without; an own proxy then forwards to 127.0.0.1:8923); ANUBIS=0 takes it out again.
+# A fresh install asks; on an existing one only ANUBIS=1/0 changes it.
 #
 # Moving an existing site: ./install.sh --import-db dump.sql (or IMPORT_DB=dump.sql) loads a pg_dump
 # (plain .sql, optionally .gz/.zst/.xz/.bz2, or pg_dump -Fc) before f0ckm starts; f0ckm then upgrades it
@@ -150,6 +153,12 @@ else
             ask EMAIL "Email for Let's Encrypt"
             [ -n "${EMAIL:-}" ] || die "an email is needed for the Let's Encrypt certificate"
         fi
+        if [ -z "${ANUBIS:-}" ] && [ -t 0 ]; then
+            echo "Bot protection (Anubis): browsers solve a short proof of work once before they get in."
+            echo "  Stops scrapers, but visitors need JavaScript (the .onion address works without)."
+            read -r -p "Turn it on? [y/N]: " ans
+            case ${ans:-n} in y*|Y*|j*|J*) ANUBIS=1 ;; *) ANUBIS=0 ;; esac
+        fi
     fi
     # Database user and name: f0ckm, or for an imported site the user its dump was made with
     if [ -n "$IMPORT_DB" ]; then
@@ -194,6 +203,22 @@ OWNER=$(stat -c %u:%g .)
 if ! grep -q '^UID=' .env; then
     if [ "${OWNER%%:*}" = 0 ]; then ids=1000:1000; else ids=$OWNER; fi
     printf 'UID=%s\nGID=%s\n' "${ids%%:*}" "${ids#*:}" | { if [ -w .env ]; then cat >> .env; else as_root tee -a .env >/dev/null; fi; }
+fi
+
+# Bot protection: Anubis runs from docker-compose.anubis.yml, named in COMPOSE_FILE next to the main file
+anubis_on() { grep -q '^COMPOSE_FILE=.*docker-compose\.anubis\.yml' .env; }
+env_sed() { if [ -w .env ]; then sed -i "$1" .env; else as_root sed -i "$1" .env; fi; }
+env_add() { printf '%s\n' "$1" | { if [ -w .env ]; then cat >> .env; else as_root tee -a .env >/dev/null; fi; }; }
+if [ "${ANUBIS:-}" = 1 ] && ! anubis_on; then
+    say "Turning on the Anubis bot protection"
+    env_sed '/^COMPOSE_FILE=/d'
+    env_add "COMPOSE_FILE=docker-compose.yml:docker-compose.anubis.yml"
+    # Signs Anubis' pass cookies; a fixed key keeps them valid when the container restarts
+    grep -q '^ANUBIS_KEY=.' .env || env_add "ANUBIS_KEY=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
+elif [ "${ANUBIS:-}" = 0 ] && anubis_on; then
+    say "Turning off the Anubis bot protection"
+    env_sed '/^COMPOSE_FILE=/d'
+    docker rm -f f0ckm-anubis >/dev/null 2>&1 || true
 fi
 APP_UID=$(sed -n 's/^UID=//p' .env | tail -n 1)
 APP_GID=$(sed -n 's/^GID=//p' .env | tail -n 1); APP_GID=${APP_GID:-$APP_UID}
@@ -365,12 +390,15 @@ if [ -n "$DOMAIN" ] && [ "$PROXY" = nginx ]; then
     echo "    The domain's DNS has to point at this server and ports 80/443 must be open;"
     echo "    the certificate is issued within a minute or two after that."
 elif [ -n "$DOMAIN" ]; then
-    say "Done: f0ckm runs on http://127.0.0.1:1337; point your proxy for https://$DOMAIN at it"
+    if anubis_on; then port=8923; else port=1337; fi
+    say "Done: f0ckm runs on http://127.0.0.1:$port; point your proxy for https://$DOMAIN at it"
+    [ "$port" = 8923 ] && echo "    (that is the Anubis bot protection, which passes visitors on to f0ckm on :1337)"
     echo "    nginx site for it (adjust the certificate paths; other proxies need the same headers,"
     echo "    WebSocket upgrade and upload limits). Also in config/nginx/own-proxy.example.conf:"
     echo
-    # The example without its header comment, for this domain
-    sed -e '1,/^$/d' -e "s/f0ck\.example/$DOMAIN/g" config/nginx/own-proxy.example.conf
+    # The example without its header comment, for this domain (and port)
+    sed -e '1,/^$/d' -e "s/f0ck\.example/$DOMAIN/g" -e '/# f0ckm; with Anubis/d' \
+        -e "s|proxy_pass http://127.0.0.1:1337;|proxy_pass http://127.0.0.1:$port;|" config/nginx/own-proxy.example.conf
     echo
 else
     say "Done: http://localhost:1337"
