@@ -802,7 +802,15 @@
     "cmd_cleartopic": "das Thema entfernen",
     "cmd_setbackground": "Hintergrund der Nachrichten; CSS nach der URL, Standard: center / cover no-repeat",
     "cmd_clearbg": "den Hintergrund entfernen",
-    "cmd_clear": "alle Nachrichten löschen, für alle"
+    "cmd_clear": "alle Nachrichten löschen, für alle",
+    "fx_sample": "Text",
+    "fx_spoiler": "verborgen bis zum Klick",
+    "fx_blur": "verschwommen bis zum Klick",
+    "fx_glitch": "glitcht",
+    "fx_rb": "Regenbogen",
+    "fx_reich": "Fraktur",
+    "fx_krebs": "flackernde Farben",
+    "fx_badapple": "spielt Bad Apple!! beim Klick"
   },
   "scroller": {
     "just_now": "gerade eben",

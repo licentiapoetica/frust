@@ -798,7 +798,15 @@
     "cmd_cleartopic": "het onderwerp verwijderen",
     "cmd_setbackground": "achtergrond van de berichten; css na de url, standaard: center / cover no-repeat",
     "cmd_clearbg": "de achtergrond verwijderen",
-    "cmd_clear": "alle berichten verwijderen, voor iedereen"
+    "cmd_clear": "alle berichten verwijderen, voor iedereen",
+    "fx_sample": "Tekst",
+    "fx_spoiler": "verborgen tot je klikt",
+    "fx_blur": "wazig tot je klikt",
+    "fx_glitch": "glitcht",
+    "fx_rb": "regenboog",
+    "fx_reich": "gotisch schrift",
+    "fx_krebs": "flikkerende kleuren",
+    "fx_badapple": "speelt Bad Apple!! bij een klik"
   },
   "scroller": {
     "just_now": "zojuist",

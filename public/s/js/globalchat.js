@@ -222,6 +222,7 @@
                 <div id="gchat-emoji-box" class="gchat-emoji-box" hidden></div>
                 <div id="gchat-input-area">
                     <div id="gchat-mention-ac" class="gchat-ac" hidden></div>
+                    <div id="gchat-tag-ac" class="gchat-ac" role="listbox" hidden></div>
                     <div id="gchat-input-row">
                         <button type="button" class="gchat-tool-btn" id="gchat-emoji-btn" title="Emoji">${ico('emoji')}</button>
                         <textarea id="gchat-input" placeholder="${esc(skin.placeholder)}" maxlength="500" rows="1"></textarea>
@@ -808,6 +809,105 @@
                 return map;
             });
         return load.then(map => { customEmojis = map || {}; return customEmojis; }).catch(() => customEmojis);
+    }
+
+    // ── [tag suggestions: typing "[" (or "[gl") lists the text effects ──────
+    // [spoiler] [blur] (the chat's own) and the comments' effects (F0CK_COMMENT_FX, f0ck-core.js:
+    // [glitch] [rb] [reich] [krebs] [badapple]), each with a live sample; picking one puts
+    // [tag][/tag] in with the cursor between. Like the @user list: arrows, Enter / Tab, Escape.
+    const FX_DESC = {
+        spoiler:  ['chat_fx_spoiler', 'hidden until clicked'],
+        blur:     ['chat_fx_blur', 'blurred until clicked'],
+        glitch:   ['chat_fx_glitch', 'glitches'],
+        rb:       ['chat_fx_rb', 'rainbow'],
+        reich:    ['chat_fx_reich', 'blackletter'],
+        krebs:    ['chat_fx_krebs', 'flickering colours'],
+        badapple: ['chat_fx_badapple', 'plays Bad Apple!! when clicked'],
+    };
+    function fxTags() {
+        const fx = Object.keys(window.F0CK_COMMENT_FX || {});
+        return ['spoiler', 'blur', ...fx.filter(n => n !== 'spoiler' && n !== 'blur')];
+    }
+    // the sample: the effect's own markup (constant attributes from f0ck-core.js) around a word
+    function fxSample(tag) {
+        const word = esc(tag === 'badapple' ? 'Bad Apple!!' : t('chat_fx_sample', 'Text'));
+        if (tag === 'spoiler') return `<span class="spoiler">${word}</span>`;
+        if (tag === 'blur') return `<span class="blur-text">${word}</span>`;
+        const attrs = (window.F0CK_COMMENT_FX || {})[tag];
+        return attrs ? `<span ${attrs}>${word}</span>` : word;
+    }
+
+    function setupTagAutocomplete(textarea) {
+        const ac = document.getElementById('gchat-tag-ac');
+        let matches = [], idx = -1;
+
+        const getBracket = () => {
+            const pos = textarea.selectionStart;
+            if (pos == null || pos !== textarea.selectionEnd) return null;
+            const m = textarea.value.slice(0, pos).match(/\[([a-z]*)$/i);
+            return m ? { query: m[1].toLowerCase(), at: pos - m[0].length } : null;
+        };
+        const hide = () => { ac.hidden = true; ac.innerHTML = ''; matches = []; idx = -1; };
+        const setActive = (i) => {
+            const items = ac.querySelectorAll('.gchat-tag-item');
+            items.forEach(el => el.classList.remove('active'));
+            if (items[i]) { items[i].classList.add('active'); items[i].scrollIntoView({ block: 'nearest' }); }
+            idx = i;
+        };
+        const insert = (tag) => {
+            const hit = getBracket();
+            if (!hit) return;
+            const open = `[${tag}]`;
+            textarea.setRangeText(open + `[/${tag}]`, hit.at, textarea.selectionStart, 'start');
+            textarea.setSelectionRange(hit.at + open.length, hit.at + open.length);
+            textarea.focus();
+            hide();
+            autoGrow(textarea);
+            updateCount(textarea);
+        };
+        const render = () => {
+            const hit = getBracket();
+            if (!hit) return hide();
+            matches = fxTags().filter(n => n.startsWith(hit.query));
+            if (!matches.length) return hide();
+            ac.innerHTML = matches.map(tag => {
+                const [key, fallback] = FX_DESC[tag] || [];
+                return `<div class="gchat-tag-item" role="option" data-tag="${esc(tag)}">` +
+                    `<code class="gchat-tag-name">[${esc(tag)}]</code>` +
+                    `<span class="gchat-tag-sample">${fxSample(tag)}</span>` +
+                    (key ? `<span class="gchat-tag-desc">${esc(t(key, fallback))}</span>` : '') +
+                `</div>`;
+            }).join('');
+            ac.hidden = false;
+            setActive(0);
+        };
+
+        ac.addEventListener('mousedown', (e) => {
+            const item = e.target.closest('.gchat-tag-item');
+            if (!item) return;
+            e.preventDefault();
+            insert(item.dataset.tag);
+        });
+        textarea.addEventListener('input', render);
+        textarea.addEventListener('click', () => { if (getBracket()) render(); else hide(); });
+        textarea.addEventListener('blur', () => setTimeout(hide, 150));
+        textarea.addEventListener('keydown', (e) => {
+            if (ac.hidden) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setActive((idx + 1) % matches.length);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setActive((idx <= 0 ? matches.length : idx) - 1);
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                if (matches[idx >= 0 ? idx : 0]) {
+                    e.preventDefault(); e.stopImmediatePropagation();
+                    insert(matches[idx >= 0 ? idx : 0]);
+                }
+            } else if (e.key === 'Escape') {
+                hide();
+            }
+        });
     }
 
     // ── @user inline autocomplete (a list above the input, inside the panel) ─
@@ -1731,7 +1831,8 @@
             if (e.key === 'Enter' && !e.shiftKey) {
                 // Don't send while the @mention or :emoji suggestions are open: Enter picks one. The
                 // emoji picker only takes the one picked with the arrow keys; none yet: the first
-                if (e.defaultPrevented || !document.getElementById('gchat-mention-ac').hidden) return;
+                if (e.defaultPrevented || !document.getElementById('gchat-mention-ac').hidden ||
+                    !document.getElementById('gchat-tag-ac').hidden) return;
                 const emojiAc = document.querySelector('#gchat-input-area .f0ck-ep-ac:not([hidden])');
                 if (emojiAc) {
                     if (!emojiAc.querySelector('.is-active')) {
@@ -1748,8 +1849,9 @@
         // Auto-grow + character count
         textarea.addEventListener('input', () => { autoGrow(textarea); updateCount(textarea); });
 
-        // @mention autocomplete
+        // @mention and [tag suggestions
         setupMentionAutocomplete(textarea);
+        setupTagAutocomplete(textarea);
 
         // f0ckm's emoji picker (emoji-picker.js, shared with the frontends' comments): sticker-pack
         // tabs, Favorites (synced with the account), hold to preview, :name suggestions; above the

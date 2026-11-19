@@ -801,7 +801,15 @@
     "cmd_cleartopic": "remove the topic",
     "cmd_setbackground": "the messages' background; css after the url, default: center / cover no-repeat",
     "cmd_clearbg": "remove the background",
-    "cmd_clear": "delete every message, for everyone"
+    "cmd_clear": "delete every message, for everyone",
+    "fx_sample": "Text",
+    "fx_spoiler": "hidden until clicked",
+    "fx_blur": "blurred until clicked",
+    "fx_glitch": "glitches",
+    "fx_rb": "rainbow",
+    "fx_reich": "blackletter",
+    "fx_krebs": "flickering colours",
+    "fx_badapple": "plays Bad Apple!! when clicked"
   },
   "scroller": {
     "just_now": "just now",

@@ -792,7 +792,15 @@
     "cmd_cleartopic": "das Thema abreißen",
     "cmd_setbackground": "Tapete hinter dem Geschwafel; CSS nach der URL, sonst: center / cover no-repeat",
     "cmd_clearbg": "die Tapete abreißen",
-    "cmd_clear": "alles Geschwafel wegmachen, für alle"
+    "cmd_clear": "alles Geschwafel wegmachen, für alle",
+    "fx_sample": "Gelaber",
+    "fx_spoiler": "versteckt, bis man draufdrückt",
+    "fx_blur": "verschwommen, bis man draufdrückt",
+    "fx_glitch": "kaputt-flimmern",
+    "fx_rb": "Regenbogenkotze",
+    "fx_reich": "Fraktur",
+    "fx_krebs": "Augenkrebs",
+    "fx_badapple": "spielt Bad Apple!! beim Draufdrücken"
   },
   "scroller": {
     "just_now": "gerade eben",
