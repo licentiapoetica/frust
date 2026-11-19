@@ -520,11 +520,20 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
                 }
             }
 
-            // Forced password change: block API/XHR calls
+            // Forced password change (an admin set the password): API/XHR calls are refused, every
+            // page goes to the change form (routes/password_change.rs), in every frontend
             static PW_EXEMPT: once_cell::sync::Lazy<regex::Regex> =
-                once_cell::sync::Lazy::new(|| regex::Regex::new(r"^/(api/v2/settings/password|logout)(/)?$").unwrap());
-            if session.force_password_change && !PW_EXEMPT.is_match(&path) && (req.is_xhr() || path.starts_with("/api/")) {
-                return Ok(Some(json_raw(&json!({ "success": false, "msg": "Password change required", "force_password_change": true }), 403)));
+                once_cell::sync::Lazy::new(|| regex::Regex::new(r"^/(api/v2/settings/password|password-change|logout|banned|favicon\.ico|robots\.txt)(/)?$").unwrap());
+            if session.force_password_change && !session.is_anon && !PW_EXEMPT.is_match(&path) {
+                if req.is_xhr() || req.accepts_json() || path.starts_with("/api/") {
+                    return Ok(Some(json_raw(
+                        &json!({ "success": false, "msg": "Password change required", "force_password_change": true, "redirect": crate::routes::password_change::PATH }),
+                        403,
+                    )));
+                }
+                let mut r = crate::http::redirect_code(crate::routes::password_change::PATH, 303);
+                r.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("private, no-store"));
+                return Ok(Some(r));
             }
 
             // Admin impersonation overlay

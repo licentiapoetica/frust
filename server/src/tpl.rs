@@ -2477,6 +2477,40 @@ mod tests {
         assert!(!html.contains("style="));
     }
 
+    /// The forced password change page (routes/password_change.rs) renders in f0ckm and in every
+    /// frontend's shell, with a form that works without JavaScript. F0CKM_DUMP_PASSWORD_CHANGE=<dir>
+    /// writes them out.
+    #[test]
+    fn password_change_page_renders_in_every_shell() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let mut shells = vec![(None, None)];
+        for fe in ["f0ckgle", "f0ckyou", "w0bm", "f0ckv2"] {
+            shells.push((Some(format!("frontends/{fe}/shell/header.html")), Some(format!("frontends/{fe}/shell/footer.html"))));
+        }
+        for (header, footer) in shells {
+            let ctx = serde_json::json!({
+                "shell_header": header, "shell_footer": footer, "domain": "f0ck.test", "csrf_token": "tok",
+                "session": { "user": "bob", "login": "bob", "id": 1, "force_password_change": true },
+                "modes": ["sfw", "nsfw", "untagged", "all", "nsfl"], "mode": 1, "anon_permissions_json": "{}", "captcha_scopes": [],
+                "error": "New passwords do not match", "logout_url": "/logout?t=x",
+            });
+            let html = env.get_template("password-change.html").unwrap().render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{header:?}: {e:#}"));
+            if let Ok(dir) = std::env::var("F0CKM_DUMP_PASSWORD_CHANGE") {
+                let name = header.as_deref().and_then(|h| h.split('/').nth(1)).unwrap_or("f0ckm");
+                std::fs::write(format!("{dir}/password-change-{name}.html"), &html).unwrap();
+            }
+            assert!(html.contains("<form id=\"force-password-form\" class=\"force-pw-form\" method=\"post\" action=\"/password-change\">"), "{header:?}");
+            assert!(html.contains("name=\"csrf_token\" value=\"tok\""), "{header:?}");
+            assert!(html.contains("name=\"new_password\"") && html.contains("name=\"new_password_confirm\""), "{header:?}");
+            assert!(html.contains("force-pw-status-error\" role=\"alert\">New passwords do not match</div>"), "{header:?}");
+            assert!(html.contains("href=\"/logout?t=x\""), "{header:?}");
+            assert!(html.contains("/s/js/views/password-change.js"), "{header:?}");
+            let page = &html[html.find("force-pw-main").unwrap()..html.find("/s/js/views/password-change.js").unwrap()];
+            assert!(!page.contains("style="), "{header:?}");
+        }
+    }
+
     #[test]
     fn settings_form_names_its_controls() {
         let s = std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../views/settings.html")).unwrap();

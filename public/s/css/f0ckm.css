@@ -30618,96 +30618,117 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
 }
 
-/* ---- snippets/header.html: forced password change modal (only rendered when the session requires it) ---- */
-body:has(#force-password-modal) #main,
-body:has(#force-password-modal) footer,
-body:has(#force-password-modal) .global-sidebar-right,
-body:has(#force-password-modal) .navbar,
-body:has(#force-password-modal) #bg {
-  display: none !important;
+/* ---- password-change.html: forced password change (shared page, also in other frontends' shell) ---- */
+#main.force-pw-main {
+  padding: 40px 15px;
+  box-sizing: border-box;
 }
 
-body:has(#force-password-modal) {
-  background: #000 !important;
-  overflow: hidden !important;
-}
-
-#force-password-modal.force-pw-modal {
+.force-pw-center {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 100100;
-  background: #000;
+  min-height: 70vh;
 }
 
-#force-password-modal .force-pw-content {
-  background: #1a1a1a;
+.force-pw-content {
+  background: var(--dropdown-bg, #1a1a1a);
+  border: 1px solid rgba(var(--accent-rgb, 153, 255, 0), 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  color: var(--text, #fff);
+  max-width: 500px;
   padding: 40px;
   width: 100%;
-  max-width: 500px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 150, 255, 0.3);
 }
 
-#force-password-modal .force-pw-title {
+.force-pw-title {
   margin-top: 0;
-  color: #fff;
   font-weight: 800;
   letter-spacing: -0.5px;
 }
 
-#force-password-modal .force-pw-desc {
-  color: #ccc;
+.force-pw-desc {
   line-height: 1.6;
+  opacity: 0.8;
 }
 
-#force-password-modal .force-pw-form {
+.force-pw-form {
   margin-top: 30px;
 }
 
-#force-password-modal .force-pw-group {
+/* the account name for password managers, not shown */
+.force-pw-form .force-pw-username {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.force-pw-group {
   margin-bottom: 20px;
 }
 
-#force-password-modal .force-pw-group-last {
+.force-pw-group-last {
   margin-bottom: 25px;
 }
 
-#force-password-modal .force-pw-label {
+.force-pw-label {
   display: block;
   margin-bottom: 8px;
   font-size: 0.8rem;
-  color: #888;
+  opacity: 0.6;
   text-transform: uppercase;
 }
 
-#force-password-modal .force-pw-input {
+.force-pw-input {
   width: 100%;
+  box-sizing: border-box;
   padding: 12px 15px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  color: inherit;
+  font: inherit;
   outline: none;
   transition: border-color 0.2s;
 }
 
-/* Hidden until f0ckm.js shows a message (inline display/background/color) */
-#force-password-modal .force-pw-status {
-  margin-bottom: 15px;
-  font-size: 0.85rem;
-  display: none;
-  padding: 10px;
+.force-pw-input:focus {
+  border-color: var(--accent, #9f0);
 }
 
-#force-password-modal .force-pw-submit {
+html[theme='light'] .force-pw-input,
+html[theme='paper'] .force-pw-input {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.force-pw-status {
+  margin-bottom: 15px;
+  padding: 10px;
+  font-size: 0.85rem;
+}
+
+.force-pw-status.force-pw-hidden {
+  display: none;
+}
+
+.force-pw-status-error {
+  background: rgba(217, 83, 79, 0.2);
+  color: #d9534f;
+}
+
+.force-pw-status-ok {
+  background: rgba(92, 184, 92, 0.2);
+  color: #5cb85c;
+}
+
+.force-pw-submit {
   width: 100%;
   padding: 15px;
-  background: var(--accent, #0096ff);
+  background: var(--accent, #9f0);
   color: #000;
   border: 0;
   font-weight: 800;
@@ -30716,13 +30737,19 @@ body:has(#force-password-modal) {
   letter-spacing: 1px;
 }
 
-#force-password-modal .force-pw-logout {
+.force-pw-submit:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.force-pw-logout {
   margin-top: 20px;
   text-align: center;
 }
 
-#force-password-modal .force-pw-logout-link {
-  color: #666;
+.force-pw-content .force-pw-logout-link {
+  color: inherit;
+  opacity: 0.5;
   font-size: 0.8rem;
   text-decoration: none;
 }

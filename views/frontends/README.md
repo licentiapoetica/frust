@@ -21,7 +21,7 @@ There are two kinds of pages:
    comments, upload, search and the like. The frontend gets the same data as the default view; see
    `grep -rn 'tpl::render(' server/src/routes`.
 2. **Shared pages.** These are default views that include `shell_header` / `shell_footer`
-   (settings, messages, admin, mod, mod_reports, pending, banned, privacy). They exist once.
+   (settings, messages, admin, mod, mod_reports, pending, banned, password-change, privacy). They exist once.
    - A frontend must **not** override them.
    - `tpl::render` passes `shell_header` / `shell_footer` = the frontend's
      `shell/header.html` / `shell/footer.html`, so they show inside the frontend's chrome.

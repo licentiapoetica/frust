@@ -557,44 +557,55 @@ async fn password_disable(st: AppState, mut req: Req) -> Res {
 
 async fn password_change(st: AppState, mut req: Req) -> Res {
     let body = req.post_value().await;
-    let new_password = post_string(&body, "new_password").filter(|p| !p.is_empty());
-    let confirm = post_string(&body, "new_password_confirm").filter(|p| !p.is_empty());
+    match change_password(&st, &req, &body).await? {
+        Ok(()) => j(json!({ "success": true, "msg": "Password updated successfully" }), 200),
+        Err((msg, code)) => fail(msg, code),
+    }
+}
+
+/// Sets the session user's new password (`new_password`, `new_password_confirm`; plus
+/// `current_password` unless an admin forced the change or the account is passkey-only). Shared by
+/// the API above and the forced-change page (routes/password_change.rs). `Err((msg, status))`
+/// refuses.
+pub(crate) async fn change_password(st: &AppState, req: &Req, body: &Value) -> anyhow::Result<Result<(), (&'static str, u16)>> {
+    let new_password = post_string(body, "new_password").filter(|p| !p.is_empty());
+    let confirm = post_string(body, "new_password_confirm").filter(|p| !p.is_empty());
     let (Some(new_password), Some(confirm)) = (new_password, confirm) else {
-        return fail("New password and confirmation are required", 400);
+        return Ok(Err(("New password and confirmation are required", 400)));
     };
     let s = req.session().cloned().unwrap_or_default();
     let Some(user) = sql!(r#"select password, force_password_change from "user" where id = "#, s.id as i32).fetch_optional(&st.db).await? else {
-        return fail("User not found", 404);
+        return Ok(Err(("User not found", 404)));
     };
     let hash = user.string("password");
     // Passkey-only accounts have no current password: setting one turns password login back on
     let password_disabled = hash == PASSWORD_DISABLED;
     if !user.bool("force_password_change") && !password_disabled {
-        let Some(current) = post_string(&body, "current_password").filter(|p| !p.is_empty()) else {
-            return fail("Current password is required", 400);
+        let Some(current) = post_string(body, "current_password").filter(|p| !p.is_empty()) else {
+            return Ok(Err(("Current password is required", 400)));
         };
         if !crate::util::verify_password(current, hash).await {
-            return fail("Incorrect current password", 401);
+            return Ok(Err(("Incorrect current password", 401)));
         }
     }
     if new_password != confirm {
-        return fail("New passwords do not match", 400);
+        return Ok(Err(("New passwords do not match", 400)));
     }
     if new_password.encode_utf16().count() < 20 {
-        return fail("New password must be at least 20 characters long", 400);
+        return Ok(Err(("New password must be at least 20 characters long", 400)));
     }
     let hash = crate::util::hash_password(new_password).await;
     if hash.is_empty() {
-        return Err(anyhow::anyhow!("password hashing failed").into());
+        anyhow::bail!("password hashing failed");
     }
     // A pending reset link (maybe requested by whoever had the account) stops working too
     sql!(r#"update "user" set password = "#, hash, ", force_password_change = false, reset_token = NULL, reset_expires = NULL where id = ", s.id as i32)
         .execute(&st.db)
         .await?;
     // Invalidate all other sessions (Issue 21 fix); this one keeps working with the new flag
-    end_other_sessions(&st, s.id as i32, s.sess_id).await?;
-    refresh_session(&st, &req);
-    j(json!({ "success": true, "msg": "Password updated successfully" }), 200)
+    end_other_sessions(st, s.id as i32, s.sess_id).await?;
+    refresh_session(st, req);
+    Ok(Ok(()))
 }
 
 async fn email(st: AppState, mut req: Req) -> Res {

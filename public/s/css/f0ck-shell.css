@@ -1,5 +1,5 @@
 /*
- * f0ck-shell.css: the shared pages (settings, messages, admin, mod, pending, banned) inside an
+ * f0ck-shell.css: the shared pages (settings, messages, admin, mod, pending, banned, password-change) inside an
  * alternative frontend's chrome (views/frontends/<fe>/shell/). Loaded by snippets/shell-head.html.
  *
  * Those pages are the default views, written for f0ckm.css. It is imported here into a cascade

@@ -6,6 +6,7 @@ pub mod admin_media;
 pub mod admin;
 pub mod apiv2;
 pub mod banned;
+pub mod password_change;
 pub mod index;
 pub mod random;
 pub mod register;
@@ -42,6 +43,7 @@ pub mod comment_upload;
 pub fn build() -> Router {
     let mut r = Router::new();
     banned::register(&mut r);
+    password_change::register(&mut r);
     index::register(&mut r);
     random::register(&mut r);
     register::register(&mut r);

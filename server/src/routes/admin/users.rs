@@ -284,8 +284,12 @@ async fn set_password(st: AppState, mut req: Req) -> Res {
             .fetch_optional(&st.db)
             .await?
             .ok_or_else(|| anyhow::anyhow!("User not found or account is protected."))?;
-        // Invalidate existing sessions
-        sql!(r#"DELETE FROM "user_sessions" WHERE user_id = "#, uid).execute(&st.db).await?;
+        // Invalidate existing sessions (and their cached rows, or they'd work a few seconds longer)
+        for r in sql!(r#"DELETE FROM "user_sessions" WHERE user_id = "#, uid, " RETURNING session").fetch_all(&st.db).await? {
+            if let Some(h) = r.str("session") {
+                st.invalidate_session_cache(h);
+            }
+        }
         crate::audit::log(&st, sid(&req), "admin_reset_password", "user", uid.to_string(), json!({})).await;
         Ok(json!({ "success": true, "msg": "Password updated and user forced to change on next login." }))
     }
