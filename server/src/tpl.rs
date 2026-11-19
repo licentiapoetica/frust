@@ -2506,6 +2506,9 @@ mod tests {
             assert!(html.contains("force-pw-status-error\" role=\"alert\">New passwords do not match</div>"), "{header:?}");
             assert!(html.contains("href=\"/logout?t=x\""), "{header:?}");
             assert!(html.contains("/s/js/views/password-change.js"), "{header:?}");
+            // the passkey offer (password-change.js) is there, hidden until the password is changed
+            assert!(html.contains("<div id=\"force-pw-passkey\" class=\"force-pw-passkey force-pw-hidden\""), "{header:?}");
+            assert!(html.contains("id=\"force-pw-passkey-add\"") && html.contains("data-msg-cancelled=\"Passkey creation was cancelled"), "{header:?}");
             let page = &html[html.find("force-pw-main").unwrap()..html.find("/s/js/views/password-change.js").unwrap()];
             assert!(!page.contains("style="), "{header:?}");
         }

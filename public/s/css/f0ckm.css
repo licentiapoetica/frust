@@ -30692,7 +30692,7 @@ html[theme='paper'] .force-pw-input {
   font-size: 0.85rem;
 }
 
-.force-pw-status.force-pw-hidden {
+.force-pw-content .force-pw-hidden {
   display: none;
 }
 
@@ -30728,7 +30728,30 @@ html[theme='paper'] .force-pw-input {
   text-align: center;
 }
 
-.force-pw-content .force-pw-logout-link {
+/* step 2 (password-change.js): set up a passkey too? */
+.force-pw-passkey .force-pw-status-ok:first-child {
+  margin-bottom: 25px;
+}
+
+.force-pw-passkey-title {
+  margin: 0;
+  font-weight: 800;
+}
+
+.force-pw-passkey-title .fa-fingerprint {
+  color: var(--accent, #9f0);
+  margin-right: 6px;
+}
+
+a.force-pw-continue {
+  display: block;
+  box-sizing: border-box;
+  text-align: center;
+  text-decoration: none;
+}
+
+.force-pw-content .force-pw-logout-link,
+.force-pw-content .force-pw-skip-link {
   color: inherit;
   opacity: 0.5;
   font-size: 0.8rem;

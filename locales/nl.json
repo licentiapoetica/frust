@@ -138,7 +138,17 @@
     "min_chars_placeholder": "Minimaal 20 tekens",
     "confirm_placeholder": "Bevestig nieuw wachtwoord",
     "update_password_btn": "Wachtwoord Bijwerken",
-    "or_logout": "Of uitloggen uit dit account"
+    "or_logout": "Of uitloggen uit dit account",
+    "password_updated": "Wachtwoord gewijzigd.",
+    "passkey_offer_title": "Ook een passkey instellen?",
+    "passkey_offer_desc": "Met een passkey log je in zonder wachtwoord, via je apparaat, browser of wachtwoordbeheerder (Bitwarden, iCloud-sleutelhanger, ...). Je kunt er ook later een toevoegen in de instellingen.",
+    "passkey_name_label": "Naam van de passkey",
+    "passkey_setup_btn": "Passkey instellen",
+    "passkey_skip": "Nu niet",
+    "passkey_added": "Passkey toegevoegd. Je kunt er voortaan mee inloggen.",
+    "passkey_continue": "Doorgaan",
+    "passkey_cancelled": "Het aanmaken van de passkey is geannuleerd of geblokkeerd. Is je wachtwoordbeheerder vergrendeld, ontgrendel hem dan en probeer het opnieuw.",
+    "passkey_failed": "De passkey kon niet worden toegevoegd."
   },
   "settings": {
     "switching": "Omschakelen...",

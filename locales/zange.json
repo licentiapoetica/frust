@@ -135,7 +135,17 @@
     "min_chars_placeholder": "Mindestens 20 Zeichen",
     "confirm_placeholder": "Neues Kennwort bestätigen",
     "update_password_btn": "Kennwort aktualisieren",
-    "or_logout": "Oder von diesem Konto abmelden"
+    "or_logout": "Oder von diesem Konto abmelden",
+    "password_updated": "Kennwort geändert.",
+    "passkey_offer_title": "Möchten Sie zusätzlich einen Passkey einrichten?",
+    "passkey_offer_desc": "Mit einem Passkey melden Sie sich ohne Kennwort an, über Ihr Gerät, Ihren Browser oder Ihren Kennwortmanager (Bitwarden, iCloud-Schlüsselbund, ...). Sie können ihn auch später in den Einstellungen hinzufügen.",
+    "passkey_name_label": "Bezeichnung des Passkeys",
+    "passkey_setup_btn": "Passkey einrichten",
+    "passkey_skip": "Nicht jetzt",
+    "passkey_added": "Passkey hinzugefügt. Sie können sich ab sofort damit anmelden.",
+    "passkey_continue": "Weiter",
+    "passkey_cancelled": "Die Erstellung des Passkeys wurde abgebrochen oder blockiert. Ist Ihr Kennwortmanager gesperrt, entsperren Sie ihn bitte und versuchen Sie es erneut.",
+    "passkey_failed": "Der Passkey konnte nicht hinzugefügt werden."
   },
   "settings": {
     "switching": "Umschaltung wird vorgenommen...",

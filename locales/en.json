@@ -138,7 +138,17 @@
     "min_chars_placeholder": "Minimum 20 characters",
     "confirm_placeholder": "Confirm new password",
     "update_password_btn": "Update Password",
-    "or_logout": "Or logout from this account"
+    "or_logout": "Or logout from this account",
+    "password_updated": "Password updated.",
+    "passkey_offer_title": "Set up a passkey too?",
+    "passkey_offer_desc": "A passkey lets you sign in without your password, using your device, browser or password manager (Bitwarden, iCloud Keychain, ...). You can also add one later in the settings.",
+    "passkey_name_label": "Passkey name",
+    "passkey_setup_btn": "Set up a passkey",
+    "passkey_skip": "Not now",
+    "passkey_added": "Passkey added. You can sign in with it from now on.",
+    "passkey_continue": "Continue",
+    "passkey_cancelled": "Passkey creation was cancelled or blocked. If your password manager is locked, unlock it and try again.",
+    "passkey_failed": "Could not add the passkey."
   },
   "settings": {
     "switching": "Switching...",
