@@ -1,7 +1,8 @@
 /**
  * globalchat.js — Site-wide persistent chat widget, in every frontend.
  * Panel is always visible. Minimize-only.
- * Features: emoji picker, :emoji autocomplete, @user autocomplete,
+ * Features: f0ckm's emoji picker (emoji-picker.js: packs, favourites, :emoji suggestions),
+ *           @user autocomplete,
  *           greentext, [spoiler], [blur]
  *
  * Loaded by snippets/globalchat.html (f0ckm's footer and snippets/frontend-scripts.html). The look is
@@ -218,8 +219,8 @@
                 <div id="gchat-topic" hidden></div>
                 <div id="gchat-online" role="button" tabindex="0" title="${esc(skin.users)}" hidden></div>
                 <div id="gchat-messages">${introHTML()}</div>
+                <div id="gchat-emoji-box" class="gchat-emoji-box" hidden></div>
                 <div id="gchat-input-area">
-                    <div id="gchat-emoji-ac" class="gchat-ac" hidden></div>
                     <div id="gchat-mention-ac" class="gchat-ac" hidden></div>
                     <div id="gchat-input-row">
                         <button type="button" class="gchat-tool-btn" id="gchat-emoji-btn" title="Emoji">${ico('emoji')}</button>
@@ -295,11 +296,14 @@
         html = html.replace(/(?<!\[)@([a-zA-Z0-9_\-.]+)/g,
             (_, u) => `<a href="/user/${encodeURIComponent(u)}" class="mention">@${u}</a>`);
 
-        // 5. Custom emoji :name:
+        // 5. Custom emoji :name: (a .webm one plays as a looping video, as in f0ckm's comments)
         if (customEmojis) {
-            html = html.replace(/:([a-z0-9_]+):/g, (m, name) => {
-                if (customEmojis[name]) return `<img src="${customEmojis[name]}" class="emoji" alt="${m}" title="${m}">`;
-                return m;
+            html = html.replace(/:([a-z0-9_\-]+):/g, (m, name) => {
+                const url = customEmojis[name];
+                if (!url) return m;
+                if (/\.webm(?:$|[?#])/i.test(url))
+                    return `<video src="${esc(url)}" class="emoji" autoplay loop muted playsinline title="${esc(m)}"></video>`;
+                return `<img src="${esc(url)}" class="emoji" alt="${esc(m)}" title="${esc(m)}">`;
             });
         }
 
@@ -788,168 +792,17 @@
         }
     }
 
-    // ── Emoji picker ──────────────────────────────────────────────────────────
-    function setupEmojiPicker(textarea) {
-        const btn = document.getElementById('gchat-emoji-btn');
-        if (!btn) return;
-
-        let picker = null;
-        let closeHandler = null;
-
-        const hidePicker = () => {
-            if (picker) picker.classList.remove('gchat-open');
-            if (closeHandler) { document.removeEventListener('click', closeHandler); closeHandler = null; }
-        };
-
-        const buildPicker = () => {
-            if (picker) { picker.remove(); picker = null; }
-            picker = document.createElement('div');
-            picker.id = 'gchat-emoji-picker';
-
-            if (customEmojis && Object.keys(customEmojis).length > 0) {
-                Object.keys(customEmojis).forEach(name => {
-                    const img = document.createElement('img');
-                    img.src = customEmojis[name];
-                    img.title = `:${name}:`;
-                    img.loading = 'lazy';
-                    img.addEventListener('error', () => { img.hidden = true; });
-                    img.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const pos = textarea.selectionStart ?? textarea.value.length;
-                        const v   = textarea.value;
-                        textarea.value = v.slice(0, pos) + `:${name}:` + v.slice(pos);
-                        const newPos = pos + name.length + 2;
-                        textarea.setSelectionRange(newPos, newPos);
-                        textarea.focus();
-                        updateCount(textarea);
-                        hidePicker();
-                    });
-                    picker.appendChild(img);
-                });
-            } else {
-                const empty = document.createElement('div');
-                empty.className = 'gchat-emoji-empty';
-                empty.textContent = 'No custom emojis';
-                picker.appendChild(empty);
-            }
-
-            // Above the input area
-            const area = document.getElementById('gchat-input-area');
-            area.parentNode.insertBefore(picker, area);
-        };
-
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (!picker) buildPicker();
-
-            if (picker.classList.contains('gchat-open')) {
-                hidePicker();
-            } else {
-                picker.classList.add('gchat-open');
-                closeHandler = (ev) => {
-                    if (!picker.contains(ev.target) && !btn.contains(ev.target)) hidePicker();
-                };
-                setTimeout(() => document.addEventListener('click', closeHandler), 0);
-            }
-        });
-
-        // Rebuild picker if emojis load after init
-        window.addEventListener('f0ck:emojis_ready', (e) => {
-            customEmojis = e.detail;
-            if (picker) { hidePicker(); picker.remove(); picker = null; } // force rebuild on next open
-        });
-    }
-
-    // ── :emoji inline autocomplete (a list above the input, inside the panel) ─
-    function setupEmojiAutocomplete(textarea) {
-        const ac = document.getElementById('gchat-emoji-ac');
-        let acMatches = [], acIdx = -1;
-
-        const getColon = () => {
-            const pos  = textarea.selectionStart;
-            const text = textarea.value.slice(0, pos);
-            const m    = text.match(/:([a-z0-9_]{0,})$/i);
-            if (!m) return null;
-            return { query: m[1].toLowerCase(), colonPos: pos - m[0].length };
-        };
-
-        const hideAC = () => {
-            ac.hidden = true;
-            ac.innerHTML = '';
-            acMatches = []; acIdx = -1;
-        };
-
-        const insertEmoji = (name) => {
-            const hit = getColon();
-            if (!hit) return;
-            const before = textarea.value.slice(0, hit.colonPos);
-            const after  = textarea.value.slice(textarea.selectionStart);
-            const insert = `:${name}:`;
-            textarea.value = before + insert + after;
-            const newPos = hit.colonPos + insert.length;
-            textarea.setSelectionRange(newPos, newPos);
-            textarea.focus();
-            updateCount(textarea);
-            hideAC();
-        };
-
-        const setActiveAC = (idx) => {
-            const items = ac.querySelectorAll('.gchat-emoji-ac-item');
-            items.forEach(el => el.classList.remove('active'));
-            if (idx >= 0 && idx < items.length) {
-                items[idx].classList.add('active');
-                items[idx].scrollIntoView({ block: 'nearest' });
-            }
-            acIdx = idx;
-        };
-
-        const renderAC = () => {
-            const hit = getColon();
-            if (!hit || !customEmojis) return hideAC();
-            acMatches = Object.keys(customEmojis).filter(n => n.includes(hit.query)).slice(0, 30);
-            if (!acMatches.length) return hideAC();
-
-            ac.innerHTML = '';
-            acIdx = -1;
-            acMatches.forEach((name) => {
-                const item = document.createElement('div');
-                item.className = 'gchat-emoji-ac-item';
-                const img = document.createElement('img');
-                img.src = customEmojis[name]; img.alt = name; img.loading = 'lazy';
-                const label = document.createElement('span');
-                label.textContent = `:${name}:`;
-                item.append(img, label);
-                item.addEventListener('mousedown', ev => { ev.preventDefault(); insertEmoji(name); });
-                ac.appendChild(item);
+    // ── Custom emojis: the list (f0ck-core.js, shared with the frontends' comments) ──
+    // name → url for rendering; again after an admin changed them (emojis_updated)
+    function loadEmojiMap() {
+        const load = window.f0ckLoadEmojis
+            ? window.f0ckLoadEmojis()
+            : fetch('/api/v2/emojis').then(r => r.json()).then(d => {
+                const map = {};
+                (d.emojis || []).forEach(e => { if (e.name && e.url) map[e.name] = e.url; });
+                return map;
             });
-            ac.hidden = false;
-            // Auto-select first match so Enter works immediately
-            setActiveAC(0);
-        };
-
-        textarea.addEventListener('input',  () => renderAC());
-        textarea.addEventListener('click',  () => { if (getColon()) renderAC(); });
-        textarea.addEventListener('blur',   () => setTimeout(hideAC, 150));
-
-        textarea.addEventListener('keydown', e => {
-            if (ac.hidden) return;
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                setActiveAC((acIdx + 1) % acMatches.length);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setActiveAC((acIdx <= 0 ? acMatches.length : acIdx) - 1);
-            } else if (e.key === 'Enter' || e.key === 'Tab') {
-                // Insert the active match (always at least 0 after renderAC)
-                const idx = acIdx >= 0 ? acIdx : 0;
-                if (acMatches[idx]) {
-                    e.preventDefault(); e.stopImmediatePropagation();
-                    insertEmoji(acMatches[idx]);
-                }
-            } else if (e.key === 'Escape') {
-                hideAC();
-            }
-        });
+        return load.then(map => { customEmojis = map || {}; return customEmojis; }).catch(() => customEmojis);
     }
 
     // ── @user inline autocomplete (a list above the input, inside the panel) ─
@@ -1849,9 +1702,17 @@
         document.getElementById('gchat-send-btn').addEventListener('click', sendMessage);
         textarea.addEventListener('keydown', e => {
             if (e.key === 'Enter' && !e.shiftKey) {
-                // Don't send while emoji or mention autocomplete is active
-                if (!document.getElementById('gchat-emoji-ac').hidden ||
-                    !document.getElementById('gchat-mention-ac').hidden) return;
+                // Don't send while the @mention or :emoji suggestions are open: Enter picks one. The
+                // emoji picker only takes the one picked with the arrow keys; none yet: the first
+                if (e.defaultPrevented || !document.getElementById('gchat-mention-ac').hidden) return;
+                const emojiAc = document.querySelector('#gchat-input-area .f0ck-ep-ac:not([hidden])');
+                if (emojiAc) {
+                    if (!emojiAc.querySelector('.is-active')) {
+                        e.preventDefault();
+                        emojiAc.querySelector('.f0ck-ep-ac-item')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+                    }
+                    return;
+                }
                 e.preventDefault();
                 sendMessage();
             }
@@ -1863,17 +1724,24 @@
         // @mention autocomplete
         setupMentionAutocomplete(textarea);
 
-        // Emoji features — must complete before loadHistory() so :codes: render correctly
-        // Use existing cache if CommentSystem already loaded emojis (synchronous)
-        if (window.CommentSystem?.emojiCache) {
-            customEmojis = window.CommentSystem.emojiCache;
-        }
-
-        // Also subscribe to the f0ck:emojis_ready event for late-loading
-        window.addEventListener('f0ck:emojis_ready', e => { customEmojis = e.detail; });
-
-        setupEmojiPicker(textarea);
-        setupEmojiAutocomplete(textarea);
+        // f0ckm's emoji picker (emoji-picker.js, shared with the frontends' comments): sticker-pack
+        // tabs, Favorites (synced with the account), hold to preview, :name suggestions; above the
+        // input, styled by globalchat.css and the skin. Not comments.js' emoji cache: that one is
+        // empty on pages without :codes:.
+        window.f0ckEmojiPicker?.attach({
+            textarea,
+            trigger: document.getElementById('gchat-emoji-btn'),
+            box: document.getElementById('gchat-emoji-box'),
+            onChange: (ta) => { autoGrow(ta); updateCount(ta); },
+        });
+        window.addEventListener('f0ck:emojis_updated', () => loadEmojiMap());
+        // the picker shows one row of stickers: the mouse wheel scrolls it sideways
+        document.getElementById('gchat-emoji-box').addEventListener('wheel', (e) => {
+            const grid = e.target.closest('.f0ck-ep-grid');
+            if (!grid || !e.deltaY || grid.scrollWidth <= grid.clientWidth) return;
+            e.preventDefault();
+            grid.scrollLeft += e.deltaY;
+        }, { passive: false });
 
         // Live messages
         document.addEventListener('f0ck:global_chat', e => appendMsg(e.detail, chatShown()));
@@ -2071,17 +1939,7 @@
 
         // Initial history — load emojis first so :codes: render as images from the start
         (async () => {
-            if (!customEmojis) {
-                try {
-                    const r = await fetch('/api/v2/emojis');
-                    const data = await r.json();
-                    if (data.success) {
-                        customEmojis = {};
-                        data.emojis.forEach(e => { customEmojis[e.name] = e.url; });
-                        if (window.CommentSystem) window.CommentSystem.emojiCache = customEmojis;
-                    }
-                } catch (_) {}
-            }
+            await loadEmojiMap();
             if (!isMinimized && !isClosed && !isPhone()) loadHistory();
         })();
 

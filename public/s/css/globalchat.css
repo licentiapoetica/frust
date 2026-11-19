@@ -114,7 +114,7 @@
   max-height: 42px;
 }
 
-#gchat-panel.gchat-minimized :is(#gchat-messages, #gchat-input-area, #gchat-online, #gchat-topic, #gchat-emoji-picker) {
+#gchat-panel.gchat-minimized :is(#gchat-messages, #gchat-input-area, #gchat-online, #gchat-topic, #gchat-emoji-box) {
   display: none !important;
 }
 
@@ -1086,44 +1086,384 @@ span.gchat-post-card--loading {
   text-align: center;
 }
 
-/* ── emoji grid (above the input) ── */
-#gchat-emoji-picker {
-  display: none;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
+/* ── f0ckm's emoji picker (/s/js/emoji-picker.js) above the input: sticker-pack tabs, Favorites,
+   hold to preview, :name suggestions; f0ckm's comment picker in the chat's colours ── */
+:root {
+  --gc-fav: var(--emoji-fav-color, #f5c518);
+}
+
+/* the field: emoji-picker.js puts the textarea into it, the :name list right after */
+#gchat-input-row .f0ck-ep-field {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+#gchat-input-row .f0ck-ep-field > #gchat-input {
+  flex: 1;
+}
+
+#gchat-panel .f0ck-ep {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
-  max-height: 140px;
-  padding: 8px;
-  overflow-y: auto;
-  background: var(--gc-head-bg);
+  /* the tabs and one row of stickers: the chat stays the chat */
+  height: auto;
+  background: var(--gc-pop-bg);
+  color: var(--gc-fg);
   border-top: 1px solid var(--gc-line);
-  scrollbar-width: thin;
+  box-shadow: none;
+  transform-origin: bottom center;
 }
 
-#gchat-emoji-picker.gchat-open {
-  display: grid;
+#gchat-panel .f0ck-ep.is-opening {
+  animation: gchat-ep-in .2s ease forwards;
 }
 
-#gchat-emoji-picker img {
-  width: 36px;
-  height: 36px;
-  padding: 2px;
-  object-fit: contain;
-  cursor: pointer;
+#gchat-panel .f0ck-ep.is-closing {
+  animation: gchat-ep-out .18s ease forwards;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-#gchat-emoji-picker img:hover {
-  background: var(--gc-hover);
+@keyframes gchat-ep-in {
+  from { opacity: 0; transform: translateY(8px) scaleY(.96); }
+  to { opacity: 1; transform: none; }
 }
 
-.gchat-emoji-empty {
-  grid-column: 1 / -1;
-  padding: 8px;
+@keyframes gchat-ep-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(8px) scaleY(.96); }
+}
+
+/* loading / no emojis: one line */
+#gchat-panel .f0ck-ep.is-empty {
+  height: auto;
+}
+
+#gchat-panel .f0ck-ep-notice {
+  padding: 10px 12px;
   color: var(--gc-muted);
   font-size: .85em;
 }
 
-/* ── :emoji and @user suggestions (above the input) ── */
+#gchat-panel .f0ck-ep-notice a {
+  color: var(--gc-accent);
+}
+
+/* the tabs: Favorites, then one per pack */
+#gchat-panel .f0ck-ep-tabs {
+  display: flex;
+  flex: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--gc-line);
+  scrollbar-width: none;
+}
+
+#gchat-panel .f0ck-ep-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+#gchat-panel .f0ck-ep-tab {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 4px;
+  background: none;
+  color: var(--gc-fg);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  opacity: .55;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+#gchat-panel .f0ck-ep-tab:hover,
+#gchat-panel .f0ck-ep-tab:focus-visible {
+  background: var(--gc-hover);
+  opacity: 1;
+}
+
+#gchat-panel .f0ck-ep-tab.is-active {
+  background: var(--gc-hover);
+  border-bottom-color: var(--gc-accent);
+  opacity: 1;
+}
+
+#gchat-panel .f0ck-ep-tab-favs.is-active {
+  border-bottom-color: var(--gc-fav);
+}
+
+#gchat-panel .f0ck-ep-tab-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+#gchat-panel .f0ck-ep-tab-star {
+  color: var(--gc-fav);
+  font-size: 1.2em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Favorites opens by default: a small square under the star */
+#gchat-panel .f0ck-ep-tab.is-default::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: var(--gc-fav);
+  transform: translateX(-50%);
+}
+
+#gchat-panel .f0ck-ep-tab.is-default.is-active::after {
+  display: none;
+}
+
+/* the stickers: one row, scrolled sideways (the mouse wheel too: globalchat.js) */
+#gchat-panel .f0ck-ep-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 64px;
+  height: 72px;
+  padding: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gc-line) transparent;
+}
+
+#gchat-panel .f0ck-ep-grid:has(.f0ck-ep-grid-empty) {
+  display: block;
+}
+
+#gchat-panel .f0ck-ep-grid-empty {
+  padding: 18px 12px;
+  color: var(--gc-muted);
+  font-size: .85em;
+  text-align: center;
+}
+
+#gchat-panel .f0ck-ep-sticker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  padding: 4px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+#gchat-panel .f0ck-ep-sticker:hover,
+#gchat-panel .f0ck-ep-sticker:focus-visible {
+  background: var(--gc-hover);
+}
+
+#gchat-panel .f0ck-ep-sticker .f0ck-ep-media {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* a favourite: a star in the corner (not in the Favorites tab, where all are) */
+#gchat-panel .f0ck-ep-badge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  color: var(--gc-fav);
+  font-size: .6rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+#gchat-panel .f0ck-ep-grid.is-favs .f0ck-ep-badge {
+  display: none;
+}
+
+/* right-click (or hold) a sticker: add to / remove from Favorites */
+#gchat-panel .f0ck-ep-menu {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  z-index: 2;
+  padding: 4px 0;
+  background: var(--gc-bg);
+  border: 1px solid var(--gc-line);
+}
+
+#gchat-panel .f0ck-ep-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: none;
+  color: var(--gc-fg);
+  border: 0;
+  font: inherit;
+  font-size: .85em;
+  text-align: left;
+  cursor: pointer;
+}
+
+#gchat-panel .f0ck-ep-menu-item:hover,
+#gchat-panel .f0ck-ep-menu-item:focus-visible {
+  background: var(--gc-hover);
+}
+
+#gchat-panel .f0ck-ep-menu-star {
+  color: var(--gc-fav);
+}
+
+#gchat-panel .f0ck-ep-menu-item .f0ck-ep-media {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+/* :name suggestions, above the field */
+#gchat-panel .f0ck-ep-ac {
+  position: absolute;
+  top: auto;
+  right: 0;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  max-height: 180px;
+  overflow-y: auto;
+  background: var(--gc-pop-bg);
+  color: var(--gc-fg);
+  border: 1px solid var(--gc-line);
+  scrollbar-width: thin;
+}
+
+#gchat-panel .f0ck-ep-ac-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: .85em;
+  cursor: pointer;
+}
+
+#gchat-panel .f0ck-ep-ac-item:hover,
+#gchat-panel .f0ck-ep-ac-item.is-active {
+  background: var(--gc-hover);
+}
+
+#gchat-panel .f0ck-ep-ac-item .f0ck-ep-media {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+/* the hold-to-preview overlay and the favourites toast are on <body>: plain classes here, a
+   frontend that styles them for its comments (f0ckyou.css) wins, it loads later */
+.f0ck-ep-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 100003;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .8);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+
+.f0ck-ep-preview.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.f0ck-ep-preview .f0ck-ep-media {
+  max-width: min(85vw, 420px);
+  max-height: min(85vh, 420px);
+  object-fit: contain;
+}
+
+.f0ck-ep-preview-fav {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 0, 0, .55);
+  color: rgba(255, 255, 255, .55);
+  border: 2px solid rgba(255, 255, 255, .2);
+  font-size: 1.2em;
+  cursor: pointer;
+}
+
+.f0ck-ep-preview-fav:hover,
+.f0ck-ep-preview-fav.is-fav {
+  color: var(--gc-fav);
+  border-color: var(--gc-fav);
+  background: rgba(0, 0, 0, .75);
+}
+
+.f0ck-ep-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  z-index: 100004;
+  padding: 10px 20px;
+  background: rgba(20, 20, 20, .92);
+  color: #fff;
+  border: 1px solid var(--gc-fav);
+  font-size: .875em;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(20px);
+}
+
+.f0ck-ep-toast.is-in {
+  animation: gchat-toast-in .22s ease forwards;
+}
+
+.f0ck-ep-toast.is-out {
+  animation: gchat-toast-out .3s ease forwards;
+}
+
+@keyframes gchat-toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes gchat-toast-out {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to { opacity: 0; transform: translateX(-50%) translateY(10px); }
+}
+
+/* ── @user suggestions (above the input) ── */
 .gchat-ac {
   position: absolute;
   left: 6px;
@@ -1140,7 +1480,6 @@ span.gchat-post-card--loading {
   scrollbar-width: thin;
 }
 
-.gchat-emoji-ac-item,
 .gchat-mention-item {
   display: flex;
   align-items: center;
@@ -1150,22 +1489,15 @@ span.gchat-post-card--loading {
   cursor: pointer;
 }
 
-.gchat-emoji-ac-item:hover,
-.gchat-emoji-ac-item.active,
 .gchat-mention-item:hover,
 .gchat-mention-item.active {
   background: var(--gc-hover);
 }
 
-.gchat-emoji-ac-item img,
 .gchat-mention-item img {
   width: 22px;
   height: 22px;
   flex-shrink: 0;
-  object-fit: contain;
-}
-
-.gchat-mention-item img {
   object-fit: cover;
 }
 
@@ -1536,14 +1868,10 @@ body.scroller-active #gchat-reopen-bubble {
     min-width: 44px;
   }
 
-  #gchat-widget #gchat-emoji-picker {
-    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-    max-height: 40%;
-  }
-
-  #gchat-widget #gchat-emoji-picker img {
-    width: 44px;
-    height: 44px;
+  /* the picker on a phone: bigger tabs to tap */
+  #gchat-widget .f0ck-ep-tab {
+    width: 48px;
+    height: 48px;
   }
 
   #gchat-widget .gchat-reply-btn,

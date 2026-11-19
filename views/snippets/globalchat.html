@@ -17,5 +17,7 @@
   "bar": (".global-sidebar-right-footer, .item-sidebar-right-footer, .index-sidebar-right-footer" if gchat_name == "f0ckm" else "")
 }|tojson }}</script>
 {% if gchat_name != "f0ckm" %}{% include ("frontends/" ~ gchat_name ~ "/snippets/chat.html") ignore missing %}{% endif %}
+{#- f0ckm's emoji picker (packs, favourites, previews), shared with the frontends' comments -#}
+<script src="/s/js/emoji-picker.js?v={{ mtime("/public/s/js/emoji-picker.js") }}"></script>
 <script src="/s/js/globalchat.js?v={{ mtime("/public/s/js/globalchat.js") }}"></script>
 {% endif %}

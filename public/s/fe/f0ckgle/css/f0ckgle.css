@@ -3909,7 +3909,7 @@ html.gchat-skin-f0ckgle .gchat-ac {
   border-color: var(--fg-border);
 }
 
-html.gchat-skin-f0ckgle #gchat-emoji-picker {
+html.gchat-skin-f0ckgle #gchat-panel .f0ck-ep {
   margin: 0 14px;
   border: 1px solid var(--fg-border);
   background: var(--fg-bg);

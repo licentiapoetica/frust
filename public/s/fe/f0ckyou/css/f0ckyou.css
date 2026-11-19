@@ -5501,7 +5501,7 @@ html.gchat-skin-f0ckyou .gchat-ac {
   border-color: var(--fy-line);
 }
 
-html.gchat-skin-f0ckyou #gchat-emoji-picker {
+html.gchat-skin-f0ckyou #gchat-panel .f0ck-ep {
   background: var(--fy-menu);
   border-top-color: var(--fy-line);
 }
