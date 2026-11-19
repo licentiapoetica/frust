@@ -19165,10 +19165,17 @@ html.gchat-skin-f0ckm {
    slides and what shows of it while dragged (see the MOTD), so the chat moves with it */
 html.gchat-skin-f0ckm body {
   --gc-right: var(--motd-room, var(--sidebar-w, 300px));
+  /* the detached chat stays off the open sidebar (globalchat.css #gchat-float-area) */
+  --gc-float-right: var(--motd-room, 0px);
 }
 
 html.gchat-skin-f0ckm #gchat-reopen-bubble {
   color: var(--accent, #9f0);
+}
+
+/* phones: the chat button sits higher, clear of the comment form's buttons at the bottom */
+html.gchat-skin-f0ckm {
+  --gc-m-bottom: 88px;
 }
 
 /* closed: on the bottom edge, flush against the right sidebar (the screen's edge while it is hidden),
@@ -19195,17 +19202,18 @@ html.gchat-skin-f0ckm #gchat-reopen-bubble {
   }
 
   /* one line: exactly the bar's height (the panel's bottom border counts), the field and the buttons
-     fill it, the text in the middle; more lines (.gchat-input-multi, globalchat.js): it grows.
+     fill it, the text in the middle; more lines (.gchat-input-multi, globalchat.js): it grows. The
+     floating window keeps the same compact row.
      --gc-in-h: the area's height, its 1px top border included */
-  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) {
+  html.gchat-skin-f0ckm #gchat-panel {
     --gc-in-h: calc(var(--gc-bar-h, 42px) - 1px);
   }
 
-  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) #gchat-input-area:not(.gchat-input-multi) {
+  html.gchat-skin-f0ckm #gchat-panel #gchat-input-area:not(.gchat-input-multi) {
     height: var(--gc-in-h);
   }
 
-  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) #gchat-input-area:not(.gchat-input-multi) #gchat-input-row {
+  html.gchat-skin-f0ckm #gchat-panel #gchat-input-area:not(.gchat-input-multi) #gchat-input-row {
     flex: 1;
     min-height: 0;
     padding-top: 4px;
@@ -19214,7 +19222,7 @@ html.gchat-skin-f0ckm #gchat-reopen-bubble {
 
   /* the line in the middle: the field is the area minus its 1px top border, the row's 8px padding and
      the field's 2px border */
-  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) #gchat-input-area:not(.gchat-input-multi) #gchat-input {
+  html.gchat-skin-f0ckm #gchat-panel #gchat-input-area:not(.gchat-input-multi) #gchat-input {
     min-height: 0;
     padding-top: max(0px, calc((var(--gc-in-h) - 11px - 1.4em) / 2));
     padding-bottom: 0;
@@ -19222,7 +19230,7 @@ html.gchat-skin-f0ckm #gchat-reopen-bubble {
   }
 
   /* the send and emoji buttons: squares as tall as the one-line field, at the bottom when it grows */
-  html.gchat-skin-f0ckm #gchat-panel:not(.gchat-floating) :is(#gchat-send-btn, #gchat-emoji-btn) {
+  html.gchat-skin-f0ckm #gchat-panel :is(#gchat-send-btn, #gchat-emoji-btn) {
     /* the area minus its 1px top border and the row's 8px padding */
     --gc-row-in: calc(var(--gc-in-h) - 9px);
     flex: 0 0 auto;
@@ -19235,9 +19243,11 @@ html.gchat-skin-f0ckm #gchat-reopen-bubble {
 
   /* the sidebar's drag handle (a strip down to the bottom, its pill in the middle) ends above the docked
      chat, so the pill centres in the space left over it (--gc-dock-h, globalchat.js; inline bottom: 0
-     from f0ckm.js) */
+     from f0ckm.js); beside a detached chat against the sidebar it takes the bigger free stretch above
+     or below it (--gc-edge-top / --gc-edge-bottom) */
   html.gchat-skin-f0ckm #sidebar-drag-zone {
-    bottom: var(--gc-dock-h, 0px) !important;
+    top: max(var(--navbar-h, 50px), var(--gc-edge-top, 0px)) !important;
+    bottom: var(--gc-edge-bottom, var(--gc-dock-h, 0px)) !important;
   }
 }
 
@@ -19248,6 +19258,16 @@ html.gchat-skin-f0ckm body:is(.sidebar-right-closing, .sidebar-right-opening) :i
 
 html.gchat-skin-f0ckm body.sidebar-right-swipe :is(#gchat-reopen-bubble, #gchat-widget) {
   transition-duration: .3s, .15s;
+  transition-timing-function: ease-in-out;
+}
+
+/* the detached chat the opening sidebar pushes aside (or the closing one lets back) glides along */
+html.gchat-skin-f0ckm body:is(.sidebar-right-closing, .sidebar-right-opening) #gchat-panel.gchat-floating {
+  transition: left .6s cubic-bezier(0.45, 0, 0.2, 1);
+}
+
+html.gchat-skin-f0ckm body.sidebar-right-swipe #gchat-panel.gchat-floating {
+  transition-duration: .3s;
   transition-timing-function: ease-in-out;
 }
 

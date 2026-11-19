@@ -18,7 +18,7 @@
  *                      the title), greeting (top of the message list, "{name}"), intro (text under
  *                      it), note (small print under the input), icon (title icon: chat | spark)
  * No inline styles: states are classes / the hidden attribute; sizes and positions the visitor drags
- * are custom properties (--gc-w, --gc-h, --gc-x, --gc-y) the CSS uses.
+ * are custom properties (--gc-w, --gc-h, --gc-x, --gc-y, --gc-tab: the side tab's length) the CSS uses.
  */
 (function () {
     'use strict';
@@ -96,6 +96,9 @@
         dock:     'M3 3h8v2H5v14h14v-6h2v8H3zM21 4.41 15.41 10H19v2h-7V5h2v3.59L19.59 3z',
         up:       'M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z',
         down:     'M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z',
+        left:     'M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z',
+        right:    'M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z',
+        side:     'M3 3h6v18H3zM11 3h10v2H11zM11 19h10v2H11zM19 5h2v14h-2z',
         close:    'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
         send:     'M2.01 21 23 12 2.01 3 2 10l15 2-15 2z',
         reply:    'M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z',
@@ -206,7 +209,8 @@
                 <div id="gchat-header">
                     <span id="gchat-title">${ico(skin.icon === 'spark' ? 'spark' : 'chat', 'gchat-title-ico')}<span class="gchat-title-text">${esc(skin.title)}</span>${skin.badge ? `<span class="gchat-chip">${esc(skin.badge)}</span>` : ''}<span id="gchat-badge" class="gchat-badge" hidden></span></span>
                     <div class="gchat-header-btns">
-                        <button type="button" id="gchat-float-btn" title="${esc(t('chat_float', 'Float / Dock'))}" class="gchat-icon-btn">${ico('float')}</button>
+                        <button type="button" id="gchat-side-btn" class="gchat-icon-btn" aria-pressed="false" hidden>${ico('side')}</button>
+                        <button type="button" id="gchat-float-btn" title="${esc(t('chat_detach', 'Detach'))}" class="gchat-icon-btn">${ico('float')}</button>
                         <button type="button" id="gchat-minimize-btn" title="${esc(isMinimized ? t('chat_expand','Expand') : t('chat_minimize','Minimize'))}" class="gchat-icon-btn">${ico(isMinimized ? 'up' : 'down')}</button>
                         <button type="button" id="gchat-close-btn" title="${esc(t('chat_close','Close chat'))}" class="gchat-icon-btn">${ico('close')}</button>
                     </div>
@@ -750,6 +754,19 @@
         }
     }
 
+    // The minimize button's arrow points the way the panel moves: docked (and detached near the
+    // bottom) it folds down and opens up; detached near the top it keeps its top edge, so it folds up
+    // and opens down; folded to a side it folds onto that edge and opens away from it. The float code
+    // below sets the detached cases.
+    let minDir = () => (isMinimized ? 'up' : 'down');
+    function minIcon() {
+        return ico(minDir());
+    }
+    function updateMinBtn() {
+        const btn = document.getElementById('gchat-minimize-btn');
+        if (btn) btn.innerHTML = minIcon();
+    }
+
     function setMinimized(val) {
         isMinimized = val;
         localStorage.setItem('f0ck_chat_minimized', isMinimized ? '1' : '0');
@@ -759,7 +776,7 @@
         requestAnimationFrame(() => updateDock());
         if (btn) {
             btn.title = isMinimized ? t('chat_expand','Expand') : t('chat_minimize','Minimize');
-            btn.innerHTML = ico(isMinimized ? 'up' : 'down');
+            btn.innerHTML = minIcon();
         }
         if (!isMinimized) {
             clearUnread();
@@ -1145,6 +1162,8 @@
         if (savedH) setGeo('h', savedH);
         const savedW = parseInt(localStorage.getItem('f0ck_chat_width'), 10);
         if (savedW) setGeo('w', savedW);
+        const savedTab = parseInt(localStorage.getItem('f0ck_chat_tab'), 10);
+        if (savedTab) setGeo('tab', savedTab);
 
         // Mouse + touch drag helper: onMove(clientX, clientY), onEnd()
         function startDrag(onMove, onEnd) {
@@ -1179,7 +1198,92 @@
         }
 
         // ── Float / Dock toggle ───────────────────────────────────────────────
+        // Docked (bottom right, the skin's place), or detached: moved freely (floating) or pinned
+        // where it was docked by the visitor (isPinned: no dragging). Detached against an edge of the
+        // room below it sticks to that edge (side: 'top' / 'bottom' / 'left' / 'right'; slides only
+        // along it until pulled away). The top and the bottom come first (in a corner too): there it
+        // is the usual bar, opening away from the edge; on the left / right it is a vertical tab,
+        // opening sideways.
         let isFloating = localStorage.getItem('f0ck_chat_floating') === '1';
+        let isPinned   = isFloating && localStorage.getItem('f0ck_chat_pinned') === '1';
+        let side       = isFloating ? (localStorage.getItem('f0ck_chat_side') || '') : '';
+        if (!['top', 'bottom', 'left', 'right'].includes(side)) side = '';
+        // stuck to the left or right: the vertical tab when minimized
+        const sideways = () => side === 'left' || side === 'right';
+        // this close to an edge (or the corner when docking) counts as against it: a dragged chat
+        // snaps onto it right away and sticks to it
+        const SNAP = 64;
+
+        // The room the detached chat may use: a hidden fixed box, the window minus what the skin keeps
+        // free (--gc-float-left / --gc-float-right; f0ckm: the right sidebar while it is open). The
+        // top bound is getTopBound (the site's top bar and MOTD).
+        const area = document.createElement('div');
+        area.id = 'gchat-float-area';
+        area.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(area);
+        const leftBound  = () => Math.max(0, area.getBoundingClientRect().left);
+        const bottomBound = () => {
+            const r = area.getBoundingClientRect();
+            return r.height > 0 ? Math.min(r.bottom, window.innerHeight) : window.innerHeight;
+        };
+        const rightBound = () => {
+            const r = area.getBoundingClientRect();
+            return r.width > 0 ? Math.min(r.right, window.innerWidth) : window.innerWidth;
+        };
+        // the edge a detached panel is against: 'top', 'bottom', 'left', 'right' or ''
+        function edgeOf(r) {
+            if (r.top - getTopBound() <= SNAP) return 'top';
+            if (bottomBound() - r.bottom <= SNAP) return 'bottom';
+            if (r.left - leftBound() <= SNAP) return 'left';
+            if (rightBound() - r.right <= SNAP) return 'right';
+            return '';
+        }
+        function setSide(s) {
+            side = s;
+            if (s) localStorage.setItem('f0ck_chat_side', s);
+            else localStorage.removeItem('f0ck_chat_side');
+            panel.classList.toggle('gchat-side', s === 'left' || s === 'right');
+            panel.classList.toggle('gchat-side-left', s === 'left');
+            panel.classList.toggle('gchat-side-right', s === 'right');
+            panel.classList.toggle('gchat-side-top', s === 'top');
+            panel.classList.toggle('gchat-side-bottom', s === 'bottom');
+        }
+        // the widths it changes between: the side tab, and the bar / open panel (the visitor's or the
+        // skin's default); known before a resize animation ends
+        const TAB_W = 42;
+        // the side tab's content: its icon and buttons, the gap between them, its padding and border
+        // (also while it is still forming: they never shrink, globalchat.css)
+        function tabContentHeight() {
+            const hd = document.getElementById('gchat-header');
+            const cs = getComputedStyle(hd);
+            return Math.ceil([...hd.children].reduce((a, c) => a + c.offsetHeight, 0)
+                + (parseFloat(cs.rowGap) || 0) * (hd.children.length - 1)
+                + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 2);
+        }
+        function barWidth() {
+            const cs = getComputedStyle(panel);
+            return parseFloat(cs.getPropertyValue('--gc-w')) || parseFloat(cs.getPropertyValue('--gc-default-w')) || 300;
+        }
+        // Snapping onto an edge, off it, or changing shape there: position and size ease there
+        // together (.gchat-morph, globalchat.css); reshape: a new shape, its header fades in. Once
+        // it has settled the geometry is checked again (not while still dragged).
+        let morphTimer = 0;
+        function morph(reshape = false) {
+            panel.classList.add('gchat-morph');
+            if (reshape) {
+                panel.classList.remove('gchat-reshape');
+                void panel.offsetWidth; // restart the fade
+                panel.classList.add('gchat-reshape');
+            }
+            clearTimeout(morphTimer);
+            morphTimer = setTimeout(() => {
+                panel.classList.remove('gchat-morph', 'gchat-reshape');
+                if (panel.classList.contains('gchat-dragging')) return;
+                clampGeo();
+                updateEdgeUi();
+                updateMinBtn();
+            }, 200);
+        }
 
         // Drag-to-resize from an edge or corner (data-rz: n, s, e, w, ne, nw, se, sw). Docked, the
         // panel hangs from the bottom right, so only the top and left edges move; detached, every
@@ -1190,32 +1294,46 @@
             onPointerDown(handle, (startX, startY) => {
                 const r = panel.getBoundingClientRect();
                 const topBound = isFloating ? getTopBound() : 0;
+                // Minimized: the bar's width (left / right edge), or the side tab's length (top /
+                // bottom edge, its own --gc-tab, at least as long as its icon and buttons)
+                const tab = isMinimized && sideways();
+                const minH = tab ? tabContentHeight() : MIN_H;
                 startDrag((x, y) => {
                     let { left, top, width, height } = r;
-                    if (dir.includes('e')) width = Math.min(Math.max(r.width + (x - startX), MIN_W), window.innerWidth - r.left);
+                    if (dir.includes('e')) width = Math.min(Math.max(r.width + (x - startX), MIN_W), (isFloating ? rightBound() : window.innerWidth) - r.left);
                     if (dir.includes('w')) {
-                        const maxW = isFloating ? r.right : window.innerWidth * 0.95;
+                        const maxW = isFloating ? r.right - leftBound() : window.innerWidth * 0.95;
                         width = Math.min(Math.max(r.width + (startX - x), MIN_W), maxW);
                         left = r.right - width;
                     }
-                    if (dir.includes('s')) height = Math.min(Math.max(r.height + (y - startY), MIN_H), window.innerHeight - r.top);
+                    if (dir.includes('s')) height = Math.min(Math.max(r.height + (y - startY), minH), window.innerHeight - r.top);
                     if (dir.includes('n')) {
                         const maxH = isFloating ? r.bottom - topBound : window.innerHeight * 0.95;
-                        height = Math.min(Math.max(r.height + (startY - y), MIN_H), maxH);
+                        height = Math.min(Math.max(r.height + (startY - y), minH), maxH);
                         top = r.bottom - height;
                     }
-                    setGeo('w', width);
-                    setGeo('h', height);
+                    if (tab) setGeo('tab', height);
+                    else {
+                        setGeo('w', width);
+                        if (!isMinimized) setGeo('h', height);
+                    }
                     if (isFloating) { setGeo('x', left); setGeo('y', top); }
                 }, () => {
+                    if (tab) localStorage.setItem('f0ck_chat_tab', geo.tab);
                     if (geo.w) localStorage.setItem('f0ck_chat_width', geo.w);
                     if (geo.h) localStorage.setItem('f0ck_chat_height', geo.h);
                     if (isFloating) {
                         localStorage.setItem('f0ck_chat_float_x', geo.x);
                         localStorage.setItem('f0ck_chat_float_y', geo.y);
                     }
+                    // stuck to an edge it stays against it
+                    if (side) clampGeo();
+                    updateEdgeUi();
+                    updateMinBtn();
                 });
-            }, { skip: () => isPhone() || isMinimized || (!isFloating && !['n', 'w', 'nw'].includes(dir)) });
+            }, { skip: () => isPhone()
+                || (isMinimized && !(sideways() ? dir === 'n' || dir === 's' : dir === 'e' || dir === 'w'))
+                || (!isFloating && !['n', 'w', 'nw'].includes(dir)) });
         });
 
         // Saved sizes / a detached position from a bigger window: pulled back onto the screen (on
@@ -1233,78 +1351,285 @@
             const fy = parseInt(localStorage.getItem('f0ck_chat_float_y'), 10);
             const x = Number.isNaN(fx) ? r.left : fx;
             const y = Number.isNaN(fy) ? r.top : fy;
-            setGeo('x', Math.min(Math.max(0, x), Math.max(0, window.innerWidth - r.width)));
-            setGeo('y', Math.min(Math.max(topBound, y), Math.max(topBound, window.innerHeight - r.height)));
+            const lb = leftBound(), rb = rightBound();
+            // stuck to a side the CSS holds it there; x still follows, for when it lets go
+            setGeo('x', side === 'left' ? lb
+                : side === 'right' ? Math.max(lb, rb - (isMinimized ? TAB_W : barWidth()))
+                : Math.min(Math.max(lb, x), Math.max(lb, rb - r.width)));
+            // (stuck to the bottom the CSS holds it there too)
+            const bb = bottomBound();
+            setGeo('y', side === 'top' ? topBound
+                : side === 'bottom' ? Math.max(topBound, bb - (isMinimized ? HEADER_H : r.height))
+                : Math.min(Math.max(topBound, y), Math.max(topBound, bb - r.height)));
         }
+        // window resized, or the room changed (f0ckm: the sidebar opened or closed): back into it
         let clampFrame = 0;
-        window.addEventListener('resize', () => {
+        const queueClamp = () => {
             cancelAnimationFrame(clampFrame);
-            clampFrame = requestAnimationFrame(clampGeo);
-        });
+            clampFrame = requestAnimationFrame(() => { clampGeo(); updateEdgeUi(); updateMinBtn(); });
+        };
+        window.addEventListener('resize', queueClamp);
+        new ResizeObserver(queueClamp).observe(area);
+
+        // Detached: anchored to the top when it is nearer the top bound than the bottom edge (open: its
+        // position now; minimized: where it was put, f0ck_chat_anchor_top)
+        function floatAnchorTop() {
+            if (isMinimized) return localStorage.getItem('f0ck_chat_anchor_top') === '1';
+            const r = panel.getBoundingClientRect();
+            return Math.abs(r.top - getTopBound()) < Math.abs(window.innerHeight - r.bottom);
+        }
+        minDir = () => {
+            if (!isFloating || isPhone()) return isMinimized ? 'up' : 'down';
+            if (side === 'top') return isMinimized ? 'down' : 'up';
+            if (side === 'bottom') return isMinimized ? 'up' : 'down';
+            if (side) return isMinimized ? (side === 'left' ? 'right' : 'left') : side;
+            return isMinimized !== floatAnchorTop() ? 'up' : 'down';
+        };
+
+        // Docking a floating chat in the bottom-right corner (where the docked one sits) docks it
+        // there (also when it stuck to the side there); anywhere else it is pinned where it is
+        function inDockCorner() {
+            const r = panel.getBoundingClientRect();
+            return window.innerHeight - r.bottom <= SNAP && rightBound() - r.right <= SNAP;
+        }
+
+        // The float button: detach (docked or pinned), or dock (floating: here, or in the corner);
+        // the side button: only while the detached chat is against an edge
+        function updateEdgeUi() {
+            const floatBtn = document.getElementById('gchat-float-btn');
+            if (!isFloating) {
+                floatBtn.innerHTML = ico('float');
+                floatBtn.title = t('chat_detach', 'Detach');
+            } else if (isPinned) {
+                floatBtn.innerHTML = ico('float');
+                floatBtn.title = t('chat_unpin', 'Move freely');
+            } else {
+                floatBtn.innerHTML = ico('dock');
+                floatBtn.title = inDockCorner() ? t('chat_dock_corner', 'Dock in the corner') : t('chat_dock_here', 'Dock here');
+            }
+            updateDock();
+            const sideBtn = document.getElementById('gchat-side-btn');
+            const edge = isFloating && !isPhone() ? (side || edgeOf(panel.getBoundingClientRect())) : '';
+            sideBtn.hidden = !edge;
+            sideBtn.title = side ? t('chat_side_off', 'Unstick from the edge') : t('chat_side_on', 'Stick to the edge');
+            sideBtn.setAttribute('aria-pressed', side ? 'true' : 'false');
+        }
 
         function applyFloatMode() {
-            const btn = document.getElementById('gchat-float-btn');
             panel.classList.toggle('gchat-floating', isFloating);
+            panel.classList.toggle('gchat-pinned', isFloating && isPinned);
+            setSide(isFloating ? side : '');
             if (isFloating) {
                 const fx = parseInt(localStorage.getItem('f0ck_chat_float_x'), 10);
                 const fy = parseInt(localStorage.getItem('f0ck_chat_float_y'), 10);
                 if (!Number.isNaN(fx)) setGeo('x', fx);
                 if (!Number.isNaN(fy)) setGeo('y', Math.max(getTopBound(), fy));
-                btn.innerHTML = ico('dock');
             } else {
                 setGeo('x', null);
                 setGeo('y', null);
-                btn.innerHTML = ico('float');
             }
             clampGeo();
+            updateEdgeUi();
+            updateMinBtn();
         }
         applyFloatMode();
 
-        document.getElementById('gchat-float-btn').addEventListener('click', () => {
-            isFloating = !isFloating;
-            localStorage.setItem('f0ck_chat_floating', isFloating ? '1' : '0');
-            if (isFloating) {
-                // Snap to current visual position so it doesn't jump
+        document.getElementById('gchat-float-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!isFloating) {
+                // detach where it is, so it doesn't jump
                 const r = panel.getBoundingClientRect();
                 localStorage.setItem('f0ck_chat_float_x', Math.round(r.left));
                 localStorage.setItem('f0ck_chat_float_y', Math.round(r.top));
+                isFloating = true;
+                isPinned = false;
+            } else if (isPinned) {
+                isPinned = false;
+            } else if (inDockCorner()) {
+                isFloating = false;
+            } else {
+                isPinned = true;
             }
+            localStorage.setItem('f0ck_chat_floating', isFloating ? '1' : '0');
+            if (isPinned) localStorage.setItem('f0ck_chat_pinned', '1');
+            else localStorage.removeItem('f0ck_chat_pinned');
             applyFloatMode();
             updateDock();
+        });
+
+        // Stick to the edge it is against (folds onto it, opens away from it, slides only along it),
+        // or let go of it again
+        document.getElementById('gchat-side-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const r = panel.getBoundingClientRect();
+            const next = side ? '' : edgeOf(r);
+            // letting go of a side: from where the CSS held it
+            if (!next) {
+                setGeo('x', r.left);
+                setGeo('y', r.top);
+                localStorage.setItem('f0ck_chat_float_x', geo.x);
+                localStorage.setItem('f0ck_chat_float_y', geo.y);
+            }
+            morph(isMinimized && (sideways() || next === 'left' || next === 'right'));
+            setSide(next);
+            requestAnimationFrame(() => { clampGeo(); updateEdgeUi(); updateMinBtn(); });
         });
 
         // Drag-to-move in float mode — drag the header
         const header = document.getElementById('gchat-header');
         onPointerDown(header, (startX, startY) => {
-            const r = panel.getBoundingClientRect();
-            const offX = startX - r.left, offY = startY - r.top;
+            let r = panel.getBoundingClientRect();
+            let offX = startX - r.left, offY = startY - r.top;
+            // Dragged within SNAP of an edge (the top and the bottom first) it snaps onto it at once,
+            // still held, and sticks (minimized on a side: the tab). Stuck (open or folded) it only
+            // slides along its edge; pulled away from it, it gives a little (--gc-give) and past PULL
+            // (from pullX / pullY, where it got stuck) lets go and follows the pointer again. Pressed
+            // on into the edge it slides against (by PRESS: the top / bottom for a side, a side for the
+            // top / bottom), it sticks to that one instead, in the corner (minimized: tab <-> bar).
+            const PULL = SNAP + 16;
+            const PRESS = 24;
+            let stuck = side, pullX = startX, pullY = startY;
+            const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
+            const giveOf = (away) => (away > 0 ? away * away / (PULL * 4) : 0);
+            const flat = (e) => e === 'top' || e === 'bottom';
+            // stuck to the top / bottom from now on, at x (the bar for a tab); y follows from the edge
+            const stickFlat = (edge, x, clientX, clientY, tb, bb) => {
+                const wasTab = isMinimized && !flat(stuck) && !!stuck;
+                const w = wasTab ? barWidth() : r.width, h = wasTab ? HEADER_H : r.height;
+                const y = edge === 'top' ? tb : bb - h;
+                morph(wasTab);
+                setGeo('x', x);
+                setGeo('y', y);
+                setGeo('give', null);
+                setSide(edge);
+                stuck = edge;
+                pullX = clientX;
+                pullY = clientY;
+                r = { left: x, top: y, width: w, height: h };
+                // the pointer keeps its place on it (no jump)
+                offX = clientX - x;
+                offY = clientY - y;
+            };
+            // stuck to the left / right side from now on, at y (minimized: the tab)
+            const stickSide = (edge, y, clientX, clientY, lb, rb, tb, bb) => {
+                const toTab = isMinimized;
+                morph(toTab && !(stuck === 'left' || stuck === 'right'));
+                setSide(edge);
+                // the tab's length: its own, or its header's content, laid out as the tab already
+                const w = toTab ? TAB_W : r.width;
+                const h = toTab ? Math.max(geo.tab || 0, tabContentHeight()) : r.height;
+                const x = edge === 'left' ? lb : rb - w;
+                y = clamp(y, tb, bb - h);
+                setGeo('x', x);
+                setGeo('y', y);
+                setGeo('give', null);
+                stuck = edge;
+                pullX = clientX;
+                pullY = clientY;
+                r = { left: x, top: y, width: w, height: h };
+                offX = clientX - x;
+                offY = clientY - y;
+            };
+            // the grabbing hand for the whole move, also where the pointer leaves the panel (stuck to
+            // an edge it only follows along it)
+            document.documentElement.classList.add('gchat-moving');
             startDrag((clientX, clientY) => {
-                setGeo('x', Math.max(0,             Math.min(clientX - offX, window.innerWidth  - r.width)));
-                setGeo('y', Math.max(getTopBound(), Math.min(clientY - offY, window.innerHeight - r.height)));
+                const lb = leftBound(), rb = rightBound(), tb = getTopBound(), bb = bottomBound();
+                if (stuck) {
+                    const away = stuck === 'top' ? clientY - pullY : stuck === 'bottom' ? pullY - clientY
+                        : stuck === 'left' ? clientX - pullX : pullX - clientX;
+                    if (away > PULL) {
+                        // let go: from where it is now, following the pointer (a tab turns back into the bar)
+                        const cur = panel.getBoundingClientRect();
+                        const wasTab = isMinimized && !flat(stuck);
+                        setGeo('x', cur.left);
+                        setGeo('y', cur.top);
+                        morph(wasTab);
+                        setSide('');
+                        setGeo('give', null);
+                        stuck = '';
+                        r = { left: cur.left, top: cur.top, width: wasTab ? barWidth() : cur.width, height: wasTab ? HEADER_H : cur.height };
+                        offX = clamp(offX, 10, r.width - 20);
+                        offY = clamp(offY, 10, r.height - 10);
+                    } else if (flat(stuck)) {
+                        // pressed on into a side: stuck to that side now, in the corner (the bar becomes the tab)
+                        const rawX = clientX - offX;
+                        if (rawX < lb - PRESS || rawX > rb - r.width + PRESS) {
+                            stickSide(rawX < lb ? 'left' : 'right', stuck === 'top' ? tb : bb, clientX, clientY, lb, rb, tb, bb);
+                            return;
+                        }
+                        // slides left and right; the top one gives by y, the bottom one by --gc-give (CSS)
+                        setGeo('x', clamp(rawX, lb, rb - r.width));
+                        if (stuck === 'top') setGeo('y', tb + giveOf(away));
+                        else {
+                            setGeo('y', bb - r.height);
+                            setGeo('give', giveOf(away));
+                        }
+                        return;
+                    } else {
+                        const rawY = clientY - offY;
+                        if (rawY >= tb - PRESS && rawY <= bb - r.height + PRESS) {
+                            setGeo('give', giveOf(away));
+                            setGeo('y', clamp(rawY, tb, bb - r.height));
+                            return;
+                        }
+                        // pressed on into the top / bottom: stuck there now, in the corner (the tab becomes the bar)
+                        const w = isMinimized ? barWidth() : r.width;
+                        stickFlat(rawY < tb ? 'top' : 'bottom', stuck === 'right' ? Math.max(lb, rb - w) : lb, clientX, clientY, tb, bb);
+                        return;
+                    }
+                }
+                let x = clamp(clientX - offX, lb, rb - r.width);
+                let y = clamp(clientY - offY, tb, bb - r.height);
+                const edge = y - tb < SNAP ? 'top' : bb - r.height - y < SNAP ? 'bottom'
+                    : x - lb < SNAP ? 'left' : rb - r.width - x < SNAP ? 'right' : '';
+                if (flat(edge)) {
+                    stickFlat(edge, x, clientX, clientY, tb, bb);
+                    return;
+                }
+                if (edge) {
+                    // close enough: onto that side right away, stuck to it
+                    stickSide(edge, y, clientX, clientY, lb, rb, tb, bb);
+                    return;
+                }
+                setGeo('x', x);
+                setGeo('y', y);
             }, () => {
-                localStorage.setItem('f0ck_chat_float_x', geo.x);
-                localStorage.setItem('f0ck_chat_float_y', geo.y);
-                if (isMinimized) {
+                document.documentElement.classList.remove('gchat-moving');
+                if (stuck) {
+                    // let go while pulling: it springs back onto its edge
+                    if (geo.give || (stuck === 'top' && geo.y !== Math.round(getTopBound()))) morph();
+                    setGeo('give', null);
+                    if (stuck === 'top') setGeo('y', getTopBound());
+                } else if (isMinimized) {
                     const distToTop    = Math.abs(geo.y - getTopBound());
                     const distToBottom = Math.abs(window.innerHeight - (geo.y + HEADER_H));
                     localStorage.setItem('f0ck_chat_anchor_top', distToTop < distToBottom ? '1' : '0');
                 }
+                localStorage.setItem('f0ck_chat_float_x', geo.x);
+                localStorage.setItem('f0ck_chat_float_y', geo.y);
+                updateEdgeUi();
+                updateMinBtn();
             });
-        }, { skip: (e) => isPhone() || !isFloating || !!e.target.closest('button') });
+        }, { skip: (e) => isPhone() || !isFloating || isPinned || !!e.target.closest('button') });
 
         // Minimize toggle — in float mode anchor to bottom edge in both directions
         function toggleMinimized() {
             const willExpand = isMinimized; // about to expand
-            if (isFloating) {
+            if (isFloating && side) {
+                // stuck to an edge: it stays against it (it opens away from it; on the sides the top
+                // stays), easing into its new shape; clampGeo keeps it on the screen
+                morph(sideways());
+                setMinimized(!isMinimized);
+                requestAnimationFrame(() => { clampGeo(); updateEdgeUi(); updateMinBtn(); });
+            } else if (isFloating) {
                 const r = panel.getBoundingClientRect();
                 const topBound = getTopBound();
                 const bottomBound = window.innerHeight;
 
                 if (!willExpand) {
                     // About to minimize: decide anchor based on proximity
-                    const distToTop = Math.abs(r.top - topBound);
-                    const distToBottom = Math.abs(bottomBound - (r.top + r.height));
-                    const anchorTop = distToTop < distToBottom;
+                    const anchorTop = floatAnchorTop();
                     localStorage.setItem('f0ck_chat_anchor_top', anchorTop ? '1' : '0');
 
                     const curTop = r.top;
@@ -1317,6 +1642,7 @@
                             : Math.min(bottomBound - HEADER_H, Math.max(topBound, curBottom - HEADER_H)); // keep the bottom
                         setGeo('y', newTop);
                         localStorage.setItem('f0ck_chat_float_y', geo.y);
+                        updateMinBtn();
                     });
                 } else {
                     // Expanding: use saved anchor or default to bottom if not set
@@ -1331,6 +1657,7 @@
                             : Math.max(topBound, curTop - (fullH - HEADER_H));      // grow upwards
                         setGeo('y', newTop);
                         localStorage.setItem('f0ck_chat_float_y', geo.y);
+                        updateMinBtn();
                     });
                 }
             } else {
@@ -1480,11 +1807,29 @@
         updateBadge();
 
         updateDock = () => {
+            const root = document.documentElement.style;
             const el = isPhone() ? null : (isClosed ? launcher : (isFloating ? null : panel));
             const top = el ? el.getBoundingClientRect().top : window.innerHeight;
             const h = Math.max(0, Math.round(window.innerHeight - top));
-            if (h) document.documentElement.style.setProperty('--gc-dock-h', h + 'px');
-            else document.documentElement.style.removeProperty('--gc-dock-h');
+            if (h) root.setProperty('--gc-dock-h', h + 'px');
+            else root.removeProperty('--gc-dock-h');
+            // Detached against the right bound (stuck to that side, or just put there): the free
+            // stretch of that edge beside it, the bigger one (above or below it), as --gc-edge-top /
+            // --gc-edge-bottom (f0ckm: the sidebar's drag handle stays in it, its pill in the middle)
+            let edgeTop = null, edgeBottom = null;
+            if (isFloating && !isClosed && !isPhone()) {
+                const r = panel.getBoundingClientRect();
+                if (rightBound() - r.right <= 1) {
+                    const nav = document.querySelector('nav.navbar');
+                    const navBottom = nav ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+                    if (r.top - navBottom >= window.innerHeight - r.bottom) edgeBottom = Math.round(window.innerHeight - r.top);
+                    else edgeTop = Math.round(r.bottom);
+                }
+            }
+            if (edgeTop != null) root.setProperty('--gc-edge-top', edgeTop + 'px');
+            else root.removeProperty('--gc-edge-top');
+            if (edgeBottom != null) root.setProperty('--gc-edge-bottom', edgeBottom + 'px');
+            else root.removeProperty('--gc-edge-bottom');
         };
         const dockRO = new ResizeObserver(() => updateDock());
         dockRO.observe(panel);

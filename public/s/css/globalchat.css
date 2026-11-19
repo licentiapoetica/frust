@@ -146,8 +146,135 @@
   border-bottom: 0;
 }
 
+/* detached: the header is a handle to grab it by (pinned, it stays put: the arrow); while it moves
+   (html.gchat-moving, globalchat.js) the grabbing hand stays wherever the pointer goes */
 #gchat-panel.gchat-floating #gchat-header {
-  cursor: move;
+  cursor: grab;
+}
+
+/* Snapping (globalchat.js morph(): onto an edge, off it, a side tab forming or opening): position
+   and size ease there together, so a stuck chat's edge stays put while it changes shape; a new shape
+   (.gchat-reshape) fades its header in. interpolate-size lets the auto heights (the bar, the tab)
+   animate where it is supported. */
+#gchat-panel.gchat-floating.gchat-morph {
+  interpolate-size: allow-keywords;
+  transition-property: left, top, width, height, max-height;
+  transition-duration: .18s;
+  transition-timing-function: cubic-bezier(.22, 1, .36, 1);
+}
+
+#gchat-panel.gchat-reshape #gchat-header > * {
+  animation: gchat-reshape-in .2s ease-out;
+}
+
+@keyframes gchat-reshape-in {
+  from { opacity: 0; }
+  40% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #gchat-panel.gchat-floating.gchat-morph {
+    transition: none;
+  }
+
+  #gchat-panel.gchat-reshape #gchat-header > * {
+    animation: none;
+  }
+}
+
+/* Stuck to a side, the CSS holds it there (the edge of the room below, --gc-float-left / -right;
+   on the right minus its width, so that edge stays put while the width changes); --gc-give: how
+   far it gives while pulled away (globalchat.js) */
+#gchat-panel.gchat-floating.gchat-side-left {
+  left: calc(var(--gc-float-left, 0px) + var(--gc-give, 0px));
+}
+
+#gchat-panel.gchat-floating.gchat-side-right {
+  --gc-cur-w: var(--gc-w, var(--gc-default-w));
+  left: calc(100% - var(--gc-float-right, 0px) - var(--gc-cur-w) - var(--gc-give, 0px));
+}
+
+#gchat-panel.gchat-floating.gchat-side-right.gchat-minimized {
+  --gc-cur-w: 42px;
+}
+
+/* stuck to the bottom: held there the same way by its bottom edge (minimized it is the bar) */
+#gchat-panel.gchat-floating.gchat-side-bottom {
+  --gc-cur-h: var(--gc-h, var(--gc-default-h));
+  top: calc(100% - var(--gc-float-bottom, 0px) - var(--gc-cur-h) - var(--gc-give, 0px));
+}
+
+#gchat-panel.gchat-floating.gchat-side-bottom.gchat-minimized {
+  --gc-cur-h: 42px;
+}
+
+#gchat-panel.gchat-floating.gchat-pinned #gchat-header {
+  cursor: default;
+}
+
+html.gchat-moving,
+html.gchat-moving * {
+  cursor: grabbing !important;
+}
+
+/* The room the detached chat may use (globalchat.js measures it): the window minus what a skin keeps
+   free with --gc-float-left / --gc-float-right / --gc-float-bottom (f0ckm: the right sidebar while
+   it is open) */
+#gchat-float-area {
+  position: fixed;
+  top: 0;
+  bottom: var(--gc-float-bottom, 0px);
+  left: var(--gc-float-left, 0px);
+  right: var(--gc-float-right, 0px);
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Stuck to a side (detached against the left edge or the right bound): it only slides up and down
+   along the edge; minimized it is a vertical tab there, the title's icon on top,
+   the buttons under it, and it opens away from the edge (globalchat.js keeps it against it) */
+@media (min-width: 601px) {
+  /* its length: dragged at its top / bottom edge (--gc-tab, globalchat.js), else just its content */
+  #gchat-panel.gchat-side.gchat-minimized {
+    width: 42px;
+    max-width: 42px;
+    height: var(--gc-tab, auto);
+    max-height: calc(100dvh - var(--gc-top-gap));
+  }
+
+  /* the icon on top, the buttons at the bottom */
+  #gchat-panel.gchat-side.gchat-minimized #gchat-header {
+    flex: 1;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 10px 0 4px;
+    border-bottom: 0;
+  }
+
+  /* never squeezed (its length is measured while it is still forming, globalchat.js) */
+  #gchat-panel.gchat-side.gchat-minimized :is(#gchat-title, .gchat-header-btns) {
+    flex-shrink: 0;
+  }
+
+  #gchat-panel.gchat-side.gchat-minimized #gchat-title {
+    writing-mode: vertical-rl;
+    min-height: 0;
+    max-height: 40vh;
+  }
+
+  /* the tab shows the title's icon (and the unread badge), not its text */
+  #gchat-panel.gchat-side.gchat-minimized :is(.gchat-title-text, .gchat-chip) {
+    display: none;
+  }
+
+  #gchat-panel.gchat-side.gchat-minimized .gchat-header-btns {
+    flex-direction: column;
+  }
 }
 
 #gchat-title {
@@ -1096,8 +1223,12 @@ span.gchat-post-card--loading {
 .gchat-rz-ne { top: 0; right: 0; cursor: nesw-resize; }
 .gchat-rz-sw { bottom: 0; left: 0; cursor: nesw-resize; }
 
+/* minimized: the bar keeps its left and right edges (its width), the side tab its top and bottom
+   ones (its length, the side block above) */
 #gchat-panel:not(.gchat-floating) :is(.gchat-rz-s, .gchat-rz-e, .gchat-rz-ne, .gchat-rz-se, .gchat-rz-sw),
-#gchat-panel.gchat-minimized .gchat-rz {
+#gchat-panel.gchat-minimized :is(.gchat-rz-ne, .gchat-rz-nw, .gchat-rz-se, .gchat-rz-sw),
+#gchat-panel.gchat-minimized:not(.gchat-side) :is(.gchat-rz-n, .gchat-rz-s),
+#gchat-panel.gchat-minimized.gchat-side :is(.gchat-rz-e, .gchat-rz-w) {
   display: none;
 }
 
@@ -1351,7 +1482,8 @@ body.scroller-active #gchat-reopen-bubble {
   html.gchat-closed #gchat-reopen-bubble {
     display: flex;
     right: calc(var(--gc-right) + env(safe-area-inset-right, 0px));
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    /* --gc-m-bottom: a skin lifts it off the bottom, clear of what sits there (f0ckm: the comment form's buttons) */
+    bottom: calc(var(--gc-m-bottom, 16px) + env(safe-area-inset-bottom, 0px));
     opacity: 1;
   }
 
