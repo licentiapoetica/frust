@@ -215,15 +215,28 @@ if [ "${ANUBIS:-}" = 1 ] && ! anubis_on; then
     env_add "COMPOSE_FILE=docker-compose.yml:docker-compose.anubis.yml"
     # Signs Anubis' pass cookies; a fixed key keeps them valid when the container restarts
     grep -q '^ANUBIS_KEY=.' .env || env_add "ANUBIS_KEY=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
-    # After the check Anubis only redirects back to these domains (default: VIRTUAL_HOST)
-    if ! grep -q '^ANUBIS_DOMAINS=.' .env && ! grep -q '^VIRTUAL_HOST=.' .env; then
-        if [ -n "${DOMAIN:-}" ]; then env_add "ANUBIS_DOMAINS=$DOMAIN"
-        else warn "set ANUBIS_DOMAINS=<your domain> in .env, or visitors get 'redirect domain not allowed' after the check"; fi
-    fi
 elif [ "${ANUBIS:-}" = 0 ] && anubis_on; then
     say "Turning off the Anubis bot protection"
     env_sed '/^COMPOSE_FILE=/d'
     docker rm -f f0ckm-anubis >/dev/null 2>&1 || true
+fi
+# main.url.domain from config.yaml (empty when unreadable or still the example)
+config_domain() {
+    [ -r config.yaml ] || return 0
+    awk '/^main:/ { m = 1; next } /^[^ #]/ { m = 0 } m && /^  url:/ { u = 1; next } m && u && /^  [^ ]/ { u = 0 }
+         m && u && /^    domain:/ { sub(/^    domain:[ \t]*/, ""); gsub(/["'"'"' \t\r]/, ""); print; exit }' config.yaml \
+        | grep -v '^\(example\.com\|localhost\)$' || true
+}
+# After the check Anubis only sends visitors back to ANUBIS_DOMAINS, else VIRTUAL_HOST; with neither,
+# every visitor gets "redirect domain not allowed". Older .env files (own proxy) may lack both.
+if anubis_on && ! grep -q '^ANUBIS_DOMAINS=.' .env && ! grep -q '^VIRTUAL_HOST=.' .env; then
+    dom=${DOMAIN:-$(config_domain)}
+    if [ -n "$dom" ]; then
+        say "Anubis: sending visitors back to $dom after the check (ANUBIS_DOMAINS in .env)"
+        env_add "ANUBIS_DOMAINS=$dom"
+    else
+        warn "set ANUBIS_DOMAINS=<your domain> in .env, or visitors get 'redirect domain not allowed' after the Anubis check"
+    fi
 fi
 APP_UID=$(sed -n 's/^UID=//p' .env | tail -n 1)
 APP_GID=$(sed -n 's/^GID=//p' .env | tail -n 1); APP_GID=${APP_GID:-$APP_UID}
