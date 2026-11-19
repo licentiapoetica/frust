@@ -144,6 +144,11 @@ footer p {
   margin: 0.25rem 0;
 }
 
+/* The mascot credit: the page shows the gate keeper instead of that mascot. The other credits stay. */
+footer p:has(a[href*="celphase"]) {
+  display: none;
+}
+
 footer a {
   color: var(--anubis-muted);
   text-decoration-color: var(--anubis-line);
