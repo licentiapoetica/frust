@@ -215,6 +215,11 @@ if [ "${ANUBIS:-}" = 1 ] && ! anubis_on; then
     env_add "COMPOSE_FILE=docker-compose.yml:docker-compose.anubis.yml"
     # Signs Anubis' pass cookies; a fixed key keeps them valid when the container restarts
     grep -q '^ANUBIS_KEY=.' .env || env_add "ANUBIS_KEY=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
+    # After the check Anubis only redirects back to these domains (default: VIRTUAL_HOST)
+    if ! grep -q '^ANUBIS_DOMAINS=.' .env && ! grep -q '^VIRTUAL_HOST=.' .env; then
+        if [ -n "${DOMAIN:-}" ]; then env_add "ANUBIS_DOMAINS=$DOMAIN"
+        else warn "set ANUBIS_DOMAINS=<your domain> in .env, or visitors get 'redirect domain not allowed' after the check"; fi
+    fi
 elif [ "${ANUBIS:-}" = 0 ] && anubis_on; then
     say "Turning off the Anubis bot protection"
     env_sed '/^COMPOSE_FILE=/d'

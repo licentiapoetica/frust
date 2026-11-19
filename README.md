@@ -190,7 +190,11 @@ hand in `.env`:
 ```bash
 COMPOSE_FILE=docker-compose.yml:docker-compose.anubis.yml
 ANUBIS_KEY=...   # openssl rand -hex 32; signs the pass cookies, so they survive restarts
+ANUBIS_DOMAINS=f0ck.example,www.f0ck.example   # where Anubis may send visitors back; default VIRTUAL_HOST
 ```
+
+Every domain the site is reached under has to be in `ANUBIS_DOMAINS` (or `VIRTUAL_HOST`), or
+visitors get "redirect domain not allowed" after passing the check.
 
 then `docker compose up -d`. With the bundled nginx-proxy the domain moves to the Anubis container by
 itself. With your own proxy, forward the domain to `127.0.0.1:8923` instead of `:1337`; it has to set

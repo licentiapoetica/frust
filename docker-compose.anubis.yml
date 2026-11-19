@@ -20,8 +20,9 @@ services:
       - POLICY_FNAME=/data/cfg/botPolicy.yaml
       # Signs the pass cookies; a fixed key keeps them valid across restarts
       - ED25519_PRIVATE_KEY_HEX=${ANUBIS_KEY:-}
-      # After the check Anubis only redirects back to this site
-      - REDIRECT_DOMAINS=${VIRTUAL_HOST:-localhost}
+      # After the check Anubis only redirects back to these domains (comma-separated); any other one
+      # gets "redirect domain not allowed". Own proxy without VIRTUAL_HOST: set ANUBIS_DOMAINS in .env.
+      - REDIRECT_DOMAINS=${ANUBIS_DOMAINS:-${VIRTUAL_HOST:-localhost}}
       - COOKIE_EXPIRATION_TIME=${ANUBIS_COOKIE_TIME:-168h}
       # nginx-proxy: route the domain here
       - VIRTUAL_HOST=${VIRTUAL_HOST:-}
