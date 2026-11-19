@@ -1064,6 +1064,19 @@ span.gchat-post-card--loading {
 #gchat-input::placeholder {
   color: var(--gc-muted);
   opacity: 1;
+  /* one line, cut with … in a narrow chat (it wrapped and made the field scroll) */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* one line: no scroll bar; more (.gchat-input-multi, globalchat.js): it scrolls past 4 lines */
+#gchat-input {
+  overflow-y: hidden;
+}
+
+#gchat-input-area.gchat-input-multi #gchat-input {
+  overflow-y: auto;
 }
 
 #gchat-send-btn {

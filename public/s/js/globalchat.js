@@ -1149,19 +1149,40 @@
         // opening the picker in a small chat grows it instead of pushing the input out; resizing
         // stops there. Again whenever one of the bars changes (picker, topic, a wrapped line).
         function minPanelH() {
+            // each bar with its margins (f0ckgle's topic and input have some)
             const bars = ['gchat-header', 'gchat-topic', 'gchat-online', 'gchat-emoji-box', 'gchat-input-area']
-                .reduce((a, id) => a + (document.getElementById(id)?.offsetHeight || 0), 0);
-            return Math.ceil(bars + MIN_MSGS + (panel.offsetHeight - panel.clientHeight));
+                .reduce((a, id) => {
+                    const el = document.getElementById(id);
+                    if (!el || !el.offsetHeight) return a;
+                    const cs = getComputedStyle(el);
+                    return a + el.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+                }, 0);
+            const mcs = getComputedStyle(document.getElementById('gchat-messages'));
+            return Math.ceil(bars + MIN_MSGS + (parseFloat(mcs.marginTop) || 0) + (parseFloat(mcs.marginBottom) || 0)
+                + (panel.offsetHeight - panel.clientHeight));
         }
         function fitPanel() {
             if (isPhone() || isMinimized) { panel.style.removeProperty('--gc-min-h'); return; }
             const need = minPanelH();
             if (parseFloat(panel.style.getPropertyValue('--gc-min-h')) === need) return;
             panel.style.setProperty('--gc-min-h', need + 'px');
-            // a detached chat that grew stays on the screen
-            if (isFloating) requestAnimationFrame(() => clampGeo());
+            // a detached chat that grew stays on the screen: only moved up if its bottom left it (not
+            // clampGeo: that goes back to the saved size, which while resizing is the old one)
+            if (isFloating) requestAnimationFrame(() => {
+                if (panel.classList.contains('gchat-dragging')) return;
+                const r = panel.getBoundingClientRect();
+                if (r.bottom > window.innerHeight) setGeo('y', Math.max(getTopBound(), window.innerHeight - r.height));
+            });
         }
         const fitRO = new ResizeObserver(() => fitPanel());
+        // The message list keeps showing the newest messages while its box changes size (resizing,
+        // the emoji picker, the topic), if it was scrolled to the bottom
+        const msgList = document.getElementById('gchat-messages');
+        let msgsAtBottom = true;
+        msgList.addEventListener('scroll', () => {
+            msgsAtBottom = msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight < 30;
+        }, { passive: true });
+        new ResizeObserver(() => { if (msgsAtBottom) msgList.scrollTop = msgList.scrollHeight; }).observe(msgList);
         ['gchat-header', 'gchat-topic', 'gchat-online', 'gchat-emoji-box', 'gchat-input-area']
             .forEach(id => { const el = document.getElementById(id); if (el) fitRO.observe(el); });
 
@@ -1173,7 +1194,8 @@
                 // Minimized: the bar's width (left / right edge), or the side tab's length (top /
                 // bottom edge, its own --gc-tab, at least as long as its icon and buttons)
                 const tab = isMinimized && sideways();
-                const minH = tab ? tabContentHeight() : Math.max(MIN_H, minPanelH());
+                // again on every move: narrowing can make the bars taller (a line wraps)
+                const minH = () => (tab ? tabContentHeight() : Math.max(MIN_H, minPanelH()));
                 startDrag((x, y) => {
                     let { left, top, width, height } = r;
                     if (dir.includes('e')) width = Math.min(Math.max(r.width + (x - startX), MIN_W), (isFloating ? rightBound() : window.innerWidth) - r.left);
@@ -1182,10 +1204,10 @@
                         width = Math.min(Math.max(r.width + (startX - x), MIN_W), maxW);
                         left = r.right - width;
                     }
-                    if (dir.includes('s')) height = Math.min(Math.max(r.height + (y - startY), minH), window.innerHeight - r.top);
+                    if (dir.includes('s')) height = Math.min(Math.max(r.height + (y - startY), minH()), window.innerHeight - r.top);
                     if (dir.includes('n')) {
                         const maxH = isFloating ? r.bottom - topBound : window.innerHeight * 0.95;
-                        height = Math.min(Math.max(r.height + (startY - y), minH), maxH);
+                        height = Math.min(Math.max(r.height + (startY - y), minH()), maxH);
                         top = r.bottom - height;
                     }
                     if (tab) setGeo('tab', height);
