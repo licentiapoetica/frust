@@ -51,6 +51,8 @@ services:
   f0ckm-nginx:
     volumes:
       - ./config/anubis/nginx-proxy-look.conf:/etc/nginx/vhost.d/default:ro
+      # nginx-proxy's proxy headers plus Accept-Encoding "" (for the rewrite in nginx-proxy-look.conf)
+      - ./config/anubis/nginx-proxy.conf:/etc/nginx/proxy.conf:ro
       - ./public/s/css:/f0ckm-anubis/css:ro
       - ./config/anubis/img:/f0ckm-anubis/img:ro
 

@@ -254,7 +254,7 @@ NGX_NAMES=        # the server names of that site
 NGX_LOOK=         # copy of the check page's look nginx can read, when it can't read this checkout
 LOOK_COPY=        # 1: use that copy (nginx was found unable to serve the files from the checkout)
 nginx_plan() {
-    local port=1337 dump f i css img u info names
+    local port=1337 dump f i css img u info names subf
     [ "${PROXY:-}" = own ] && [ -n "$SITE_DOMAIN" ] && [ -n "$NGINX" ] && [ "${NGINX_EDIT:-}" != 0 ] || return 0
     [ "$(id -u)" = 0 ] || command -v sudo >/dev/null 2>&1 || return 0
     anubis_on && port=8923
@@ -273,13 +273,15 @@ nginx_plan() {
         NGX_LOOK=/var/lib/f0ckm-anubis/$SITE_DOMAIN
         css=$NGX_LOOK/anubis.css; img=$NGX_LOOK
     fi
+    # The sub module rewrites the check page's file URLs (scripts/own-nginx.awk); without it nginx -t would fail
+    subf=; as_root "$NGINX" -V 2>&1 | grep -q -- --with-http_sub_module && subf=1
     i=0
     while IFS= read -r f; do
         # As root: the folder may be closed to this user
         as_root test -f "$f" || continue
         i=$((i + 1))
         as_root cat "$f" > "$NGX_DIR/$i.old" || continue
-        awk -v dom="$SITE_DOMAIN" -v port="$port" -v css="$css" -v img="$img" -v info="$info" \
+        awk -v dom="$SITE_DOMAIN" -v port="$port" -v css="$css" -v img="$img" -v info="$info" -v subf="$subf" \
             -f scripts/own-nginx.awk "$NGX_DIR/$i.old" > "$NGX_DIR/$i.new" || continue
         cmp -s "$NGX_DIR/$i.old" "$NGX_DIR/$i.new" || NGX_FILES+=("$i:$f")
     done < <(printf '%s\n' "$dump" | sed -n 's/^# configuration file \(.*\):$/\1/p' | sort -u)

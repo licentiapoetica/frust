@@ -7,7 +7,10 @@
 # In every server {} whose server_name has `dom`, proxy_pass to 127.0.0.1/localhost/[::1] on :1337 or
 # :8923 is set to `port`. With 8923 (Anubis) it also adds
 #   - the check page's look (locations between the "f0ckm anubis" marker comments; removed again with 1337),
-#   - proxy_set_header X-Real-IP where it's missing (Anubis needs it), next to the location's other headers.
+#   - proxy_set_header X-Real-IP where it's missing (Anubis needs it), next to the location's other headers,
+#   - with -v subf=1 (nginx has the sub module): new URLs for those files in the check page, so browsers
+#     that cached Anubis' own (it lets them keep them a year) fetch ours; that needs Accept-Encoding ""
+#     next to the location's headers, so Anubis sends the page uncompressed. As nginx-proxy-look.conf.
 # Lines appended to `info`: "names <server names>" per matching block, "backend" per matching block that
 # proxies to f0ckm/Anubis directly (none: it goes through an upstream {} or another port), "noxrealip"
 # when X-Real-IP is missing and couldn't be added safely.
@@ -57,20 +60,31 @@ function flush(   i, j, k, m, w, c, s, inc, hit, names, hasb, hasx, hasxri, skip
             print ind "location = /.within.website/x/cmd/anubis/static/img/pensive.webp { alias " img "/checking.webp; }"
             print ind "location = /.within.website/x/cmd/anubis/static/img/happy.webp   { alias " img "/passed.webp; }"
             print ind "location = /.within.website/x/cmd/anubis/static/img/reject.webp  { alias " img "/denied.webp; }"
+            if (subf) {
+                print ind "sub_filter_once off;"
+                print ind "sub_filter 'cachebuster=' 'cachebuster=f0ckm1-';"
+                print ind "sub_filter '<script id=\"anubis_version\" type=\"application/json\">\"' '<script id=\"anubis_version\" type=\"application/json\">\"f0ckm1-';"
+            }
             print ind "# <<< f0ckm anubis"
         }
         if (backend(line)) sub(/:(1337|8923)/, ":" port, line)
         print line
-        if (port == 8923 && backend(b[i]) && !hasxri) {
-            # A location with its own proxy_set_header lines doesn't inherit the server's, so the header
+        if (port == 8923 && backend(b[i])) {
+            # A location with its own proxy_set_header lines doesn't inherit the server's, so headers
             # can go right there; without any, adding one would drop the inherited ones. An include
-            # (Debian's proxy_params) may already set it.
+            # (Debian's proxy_params) brings its own, and may already set X-Real-IP.
             own = 0; inc = 0; ctx = ds[i]
             for (m = i - 1; m >= 1 && ds[m] >= ctx; m--) if (ds[m] == ctx) { c = code(b[m]); if (c ~ /proxy_set_header/) own = 1; if (c ~ /^[ \t]*include[ \t]/) inc = 1 }
             for (m = i + 1; m <= n && ds[m] >= ctx; m++) if (ds[m] == ctx) { c = code(b[m]); if (c ~ /proxy_set_header/) own = 1; if (c ~ /^[ \t]*include[ \t]/) inc = 1 }
-            if (inc) continue
-            if (own) print indent(b[i]) "proxy_set_header X-Real-IP $remote_addr;"
-            else if (info != "") print "noxrealip" >> info
+            if (!hasxri && !inc) {
+                if (own) print indent(b[i]) "proxy_set_header X-Real-IP $remote_addr;"
+                else if (info != "") print "noxrealip" >> info
+            }
+            if (subf && (own || inc)) {
+                print indent(b[i]) "# >>> f0ckm anubis: the check page uncompressed, for the sub_filter above"
+                print indent(b[i]) "proxy_set_header Accept-Encoding \"\";"
+                print indent(b[i]) "# <<< f0ckm anubis"
+            }
         }
     }
 }
