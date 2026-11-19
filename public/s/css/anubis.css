@@ -1,0 +1,155 @@
+/* The Anubis check page (bot protection in front of f0ckm, README "Bot protection"): black, white
+   text, gold from the gate keeper. The proxy serves this file in place of Anubis' own stylesheet
+   (/.within.website/x/xess/xess.min.css), so it styles the bare page: main, h1, p, img, a, details,
+   code, pre, footer, and the progress bar. The page's own <style> comes after this file, so the
+   rules that change what it sets need !important. */
+
+:root {
+  --anubis-bg: #000;
+  --anubis-text: #fff;
+  --anubis-muted: #8c8c8c;
+  --anubis-gold: #c9a24a;
+  --anubis-panel: #0e0e0e;
+  --anubis-line: #2a2a2a;
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--anubis-bg);
+  color: var(--anubis-text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+body {
+  margin: 0;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+main {
+  width: 100%;
+  max-width: 38rem;
+  padding: 1rem 0;
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+}
+
+p {
+  margin: 0.6rem 0;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: var(--anubis-text);
+  text-decoration: underline;
+  text-decoration-color: var(--anubis-gold);
+  text-underline-offset: 0.2em;
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--anubis-gold);
+}
+
+a:focus-visible {
+  outline: 2px solid var(--anubis-gold);
+  outline-offset: 2px;
+}
+
+#status {
+  color: var(--anubis-text);
+  font-weight: 500;
+}
+
+/* Proof-of-work progress: square, white frame, gold bar */
+#progress {
+  outline: 2px solid var(--anubis-text) !important;
+  border-radius: 0 !important;
+  background: var(--anubis-panel);
+}
+
+.bar-inner {
+  background-color: var(--anubis-gold) !important;
+}
+
+details {
+  margin: 1.5rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--anubis-line);
+  background: var(--anubis-panel);
+  text-align: left;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--anubis-text);
+}
+
+details p {
+  color: #cfcfcf;
+  font-size: 0.92rem;
+}
+
+code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--anubis-panel);
+  border: 1px solid var(--anubis-line);
+  padding: 0.05em 0.35em;
+}
+
+/* error codes on the "Oh noes!" pages */
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0.75rem auto;
+  padding: 0.75rem;
+  background: var(--anubis-panel);
+  border: 1px solid var(--anubis-line);
+  text-align: left;
+}
+
+pre code {
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+noscript p {
+  color: var(--anubis-gold);
+}
+
+footer {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--anubis-line);
+  color: var(--anubis-muted);
+  font-size: 0.8rem;
+}
+
+footer p {
+  margin: 0.25rem 0;
+}
+
+footer a {
+  color: var(--anubis-muted);
+  text-decoration-color: var(--anubis-line);
+}
+
+footer a:hover,
+footer a:focus-visible {
+  color: var(--anubis-text);
+}

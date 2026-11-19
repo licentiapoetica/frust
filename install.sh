@@ -419,7 +419,7 @@ elif [ -n "$DOMAIN" ]; then
     if [ "$port" = 8923 ]; then
         keeper=(-e "s|/path/to/f0ckm|$PWD|g" -e 's|^    # location = /\.within\.website|    location = /.within.website|')
     else
-        keeper=(-e '/With Anubis: the gate keeper/,/^$/d')
+        keeper=(-e '/With Anubis: its check page/,/^$/d')
     fi
     sed -e '1,/^$/d' -e "s/f0ck\.example/$DOMAIN/g" -e '/# f0ckm; with Anubis/d' "${keeper[@]}" \
         -e "s|proxy_pass http://127.0.0.1:1337;|proxy_pass http://127.0.0.1:$port;|" config/nginx/own-proxy.example.conf

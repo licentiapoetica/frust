@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """The gate keeper for the Anubis check page: one drawing, three states.
 
-    scripts/anubis-keeper.py config/anubis/img   writes checking/passed/denied .svg + .webp
+    scripts/anubis-keeper.py config/anubis/img [--eyes STYLE]
+        writes checking/passed/denied .svg + .webp; STYLE is one of EYE_STYLES (default: narrow)
 
 The .webp files are what nginx serves in place of Anubis' mascot (README "Bot protection").
 """
@@ -21,6 +22,49 @@ SIL = "#06070b"      # the figure's silhouette
 SIL2 = "#0c0e16"     # headdress cloth
 
 
+# Eye styles. Each draws the left eye (centre about 228,196); the right one is its mirror image.
+EYE_STYLES = ("narrow", "slit", "blank", "orb", "horus", "white")
+NARROW = "M 211 199.5 Q 228 189.5 245 193.5 Q 230 202.5 211 199.5 Z"
+
+
+def mix(color, other, t):
+    """color blended towards other by t (0..1), both #rrggbb"""
+    c = [int(color[i:i + 2], 16) for i in (1, 3, 5)]
+    d = [int(other[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x + (y - x) * t):02x}" for x, y in zip(c, d))
+
+
+def eye(style, color):
+    almond = "M 212 200 Q 226 186 244 193 Q 230 205 212 200 Z"
+    kohl = f'<path d="M 212 200 L 196 208" stroke="{GOLD}" stroke-width="2.2" stroke-opacity="0.8"/>'
+    if style == "slit":      # glowing almond, cat-slit pupil
+        return [f'<path d="{almond}" fill="{color}" filter="url(#glow)"/>', kohl,
+                '<ellipse cx="229" cy="196" rx="1.6" ry="5" fill="#140800"/>']
+    if style == "blank":     # glowing, no pupil: nothing behind them
+        return [f'<path d="{almond}" fill="{color}" filter="url(#glow2)"/>', kohl]
+    if style == "narrow":    # half-closed, weighing you up, under a heavy brow; lit from within,
+        # the glow is blurred first and then cut to the eye's outline, so none of it spills out
+        return [f'<path d="{NARROW}" fill="{mix(color, "#000000", 0.18)}"/>',
+                f'<ellipse cx="229" cy="196" rx="10" ry="3.4" fill="{mix(color, "#ffffff", 0.28)}" '
+                f'filter="url(#inner)" clip-path="url(#eyeclip)"/>',
+                kohl, '<ellipse cx="229" cy="196.5" rx="1.2" ry="2.6" fill="#140800"/>',
+                f'<path d="M 208 191 Q 228 181 248 189" stroke="{SIL}" stroke-width="5" fill="none"/>']
+    if style == "orb":       # two points of light in the dark
+        return [f'<circle cx="229" cy="196" r="9" fill="{color}" opacity="0.35" filter="url(#glow2)"/>',
+                f'<circle cx="229" cy="196" r="4.2" fill="{color}" filter="url(#glow)"/>',
+                '<circle cx="229" cy="196" r="1.8" fill="#fffbe8"/>']
+    if style == "horus":     # painted like the Eye of Horus: brow, long line, the marks below
+        g = f'stroke="{GOLD}" stroke-width="2.4" fill="none" stroke-opacity="0.9"'
+        return [f'<path d="{almond}" fill="{color}" filter="url(#glow)"/>',
+                '<circle cx="229" cy="196" r="3.4" fill="#140800"/>',
+                f'<path d="M 212 200 L 188 206" {g}/>', f'<path d="M 209 186 Q 228 178 248 186" {g}/>',
+                f'<path d="M 226 203 L 223 222" {g}/>', f'<path d="M 219 203 Q 214 216 204 218 Q 198 218 200 212" {g}/>']
+    if style == "white":     # white-hot core inside a coloured blaze
+        return [f'<path d="{almond}" fill="{color}" filter="url(#glow2)" transform="translate(228 196) scale(1.25) translate(-228 -196)"/>',
+                f'<path d="{almond}" fill="#fff8e6" filter="url(#glow)"/>', kohl]
+    raise SystemExit(f"unknown eye style {style!r}; one of: {', '.join(EYE_STYLES)}")
+
+
 def mirror(points):
     return [(512 - x, y) for x, y in points]
 
@@ -34,7 +78,7 @@ def arc(r, cy=340):
     return f"M {256 - r} {cy} A {r} {r} 0 0 0 {256 + r} {cy}"
 
 
-def svg(state):
+def svg(state, eyes="narrow"):
     s = STATES[state]
     o = []
     a = o.append
@@ -53,6 +97,11 @@ def svg(state):
     a('<filter id="glow" x="-100%" y="-100%" width="300%" height="300%">'
       '<feGaussianBlur stdDeviation="5" result="b"/>'
       '<feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>')
+    a('<filter id="inner" x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="2.2"/></filter>')
+    a(f'<clipPath id="eyeclip"><path d="{NARROW}"/></clipPath>')
+    a('<filter id="glow2" x="-150%" y="-150%" width="400%" height="400%">'
+      '<feGaussianBlur stdDeviation="8" result="b"/>'
+      '<feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>')
     a('<filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>')
     # the doorway's opening: everything of the figure stays inside it
     door = [(114, 100), (398, 100), (392, 512), (120, 512)]
@@ -120,15 +169,10 @@ def svg(state):
     # cheekbones
     a(f'<path d="M 182 212 L 214 226 M 330 212 L 298 226" stroke="{s["rim"]}" stroke-opacity="0.3" stroke-width="1.5"/>')
 
-    # ── the eyes: almond, slanted, with the long painted line
-    eye = "M 212 200 Q 226 186 244 193 Q 230 205 212 200 Z"
-    eye_r = "M 300 200 Q 286 186 268 193 Q 282 205 300 200 Z"
-    a(f'<g filter="url(#glow)" fill="{s["eye"]}">')
-    a(f'<path d="{eye}"/><path d="{eye_r}"/>')
-    a('</g>')
-    a(f'<path d="M 212 200 L 196 208 M 300 200 L 316 208" stroke="{GOLD}" stroke-width="2.2" stroke-opacity="0.8"/>')
-    a('<ellipse cx="229" cy="196" rx="1.6" ry="5" fill="#140800"/>')
-    a('<ellipse cx="283" cy="196" rx="1.6" ry="5" fill="#140800"/>')
+    # ── the eyes
+    left = "".join(eye(eyes, s["eye"]))
+    a(left)
+    a(f'<g transform="matrix(-1 0 0 1 512 0)">{left}</g>')
 
     # ── the was-sceptre at his side
     a(f'<path d="M 356 512 L 356 156" stroke="{GOLD_DK}" stroke-width="7"/>')
@@ -179,12 +223,17 @@ def svg(state):
 
 
 if __name__ == "__main__":
+    import argparse
     import subprocess
-    out = sys.argv[1]
+    ap = argparse.ArgumentParser()
+    ap.add_argument("out")
+    ap.add_argument("--eyes", default="narrow", choices=EYE_STYLES)
+    args = ap.parse_args()
+    out = args.out
     for state in STATES:
         path = f"{out}/{state}"
         with open(f"{path}.svg", "w") as f:
-            f.write(svg(state))
+            f.write(svg(state, args.eyes))
         # 512 px for sharp screens (the page shows it at up to 256 px); needs rsvg-convert + ImageMagick
         subprocess.run(["rsvg-convert", "-w", "512", "-h", "512", f"{path}.svg", "-o", f"{path}.png"], check=True)
         subprocess.run(["magick", f"{path}.png", "-quality", "88", f"{path}.webp"], check=True)

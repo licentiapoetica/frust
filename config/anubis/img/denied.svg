@@ -5,6 +5,9 @@
 <radialGradient id="aura" cx="256" cy="185" r="150" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b3121b" stop-opacity="0.42"/><stop offset="0.55" stop-color="#b3121b" stop-opacity="0.147"/><stop offset="1" stop-color="#b3121b" stop-opacity="0"/></radialGradient>
 <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b241a"/><stop offset="1" stop-color="#120f0a"/></linearGradient>
 <filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="inner" x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="2.2"/></filter>
+<clipPath id="eyeclip"><path d="M 211 199.5 Q 228 189.5 245 193.5 Q 230 202.5 211 199.5 Z"/></clipPath>
+<filter id="glow2" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
 <clipPath id="door"><polygon points="114,100 398,100 392,512 120,512"/></clipPath>
 <clipPath id="body"><path d="M 122 512 C 132 432 170 392 210 378 L 302 378 C 342 392 380 432 390 512 Z"/></clipPath>
@@ -82,12 +85,8 @@
 <ellipse cx="256" cy="314" rx="13" ry="7" fill="#000"/>
 <ellipse cx="252" cy="311" rx="3.5" ry="1.6" fill="#a8342a" opacity="0.5"/>
 <path d="M 182 212 L 214 226 M 330 212 L 298 226" stroke="#a8342a" stroke-opacity="0.3" stroke-width="1.5"/>
-<g filter="url(#glow)" fill="#ff2b1f">
-<path d="M 212 200 Q 226 186 244 193 Q 230 205 212 200 Z"/><path d="M 300 200 Q 286 186 268 193 Q 282 205 300 200 Z"/>
-</g>
-<path d="M 212 200 L 196 208 M 300 200 L 316 208" stroke="#c9a24a" stroke-width="2.2" stroke-opacity="0.8"/>
-<ellipse cx="229" cy="196" rx="1.6" ry="5" fill="#140800"/>
-<ellipse cx="283" cy="196" rx="1.6" ry="5" fill="#140800"/>
+<path d="M 211 199.5 Q 228 189.5 245 193.5 Q 230 202.5 211 199.5 Z" fill="#d12319"/><ellipse cx="229" cy="196" rx="10" ry="3.4" fill="#ff665e" filter="url(#inner)" clip-path="url(#eyeclip)"/><path d="M 212 200 L 196 208" stroke="#c9a24a" stroke-width="2.2" stroke-opacity="0.8"/><ellipse cx="229" cy="196.5" rx="1.2" ry="2.6" fill="#140800"/><path d="M 208 191 Q 228 181 248 189" stroke="#06070b" stroke-width="5" fill="none"/>
+<g transform="matrix(-1 0 0 1 512 0)"><path d="M 211 199.5 Q 228 189.5 245 193.5 Q 230 202.5 211 199.5 Z" fill="#d12319"/><ellipse cx="229" cy="196" rx="10" ry="3.4" fill="#ff665e" filter="url(#inner)" clip-path="url(#eyeclip)"/><path d="M 212 200 L 196 208" stroke="#c9a24a" stroke-width="2.2" stroke-opacity="0.8"/><ellipse cx="229" cy="196.5" rx="1.2" ry="2.6" fill="#140800"/><path d="M 208 191 Q 228 181 248 189" stroke="#06070b" stroke-width="5" fill="none"/></g>
 <path d="M 356 512 L 356 156" stroke="#7a5b22" stroke-width="7"/>
 <path d="M 354.5 512 L 354.5 160" stroke="#c9a24a" stroke-width="2" stroke-opacity="0.8"/>
 <path d="M 353 158 L 372 142 L 382 150 L 376 154 L 370 150 L 357 163 Z" fill="#c9a24a" stroke="#7a5b22" stroke-width="1"/>
