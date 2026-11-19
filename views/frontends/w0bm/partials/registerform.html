@@ -40,6 +40,7 @@
         <div class="reg_username">
             <input class="form-control" placeholder="{{ ("E-Mail (needed to apply)" if registration_apply_email else "E-Mail (optional)") }}" name="email" type="email" autocomplete="email">
         </div>
+        {% if application_mail %}<p class="help-block">We'll email you there when your application is approved or declined.</p>{% endif %}
     </div>
     {% elif not registration_open %}
     <div class="form-group">

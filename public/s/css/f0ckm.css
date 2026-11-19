@@ -36380,6 +36380,28 @@ form:not(:has(input[name="has_invite"][value="no"]:checked)) .reg-if-apply {
   display: none !important;
 }
 
+/* The note under the application email: where the decision mail goes */
+#register-modal #modal-register-view .lm-hint {
+  margin: -4px 0 0;
+  text-align: left;
+  font-size: 0.78em;
+  line-height: 1.45;
+  color: var(--lm-muted);
+}
+
+#register-modal #modal-register-view .lm-hint i {
+  margin-right: 6px;
+  color: var(--lm-accent);
+}
+
+.login-form .register-hint {
+  width: 300px;
+  max-width: 100%;
+  margin: 0 auto 10px;
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
 /* Register modal: the two answers as a pair of buttons */
 #register-modal #modal-register-view .lm-invite-choice {
   display: flex;

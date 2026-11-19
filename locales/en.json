@@ -112,6 +112,7 @@
     "application_placeholder": "Tell us why you want an account (at least 20 characters)",
     "email_apply_optional": "email (optional, for the decision)",
     "email_apply_required": "email (needed to apply)",
+    "email_apply_hint": "We'll email you there when your application is approved or declined.",
     "apply_or_register": "Apply / Register",
     "tos_private": "I am at least 18 years old and agree to obey the rules",
     "tos_public": "I have read and accept the",

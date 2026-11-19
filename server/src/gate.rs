@@ -70,6 +70,7 @@ pub fn build_gate_page(st: &AppState, req: &Req) -> String {
         // The register form also takes an application (routes/register.rs)
         "registration_apply": st.settings.registration_applications(&cfg),
         "registration_apply_email": st.settings.applications_require_email(),
+        "application_mail": cfg.str("smtp.host").is_some_and(|h| !h.is_empty()),
         "csp_nonce": req.csp_nonce,
     });
     st.tpl.render("gate/cloudflare", &ctx)

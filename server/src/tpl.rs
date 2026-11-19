@@ -832,6 +832,8 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("registration_open", json!(st.settings.registration_open(cfg)));
     put("registration_apply", json!(st.settings.registration_applications(cfg)));
     put("registration_apply_email", json!(s.applications_require_email));
+    // The applicant gets a mail when the application is decided (routes/admin/applications.rs)
+    put("application_mail", json!(cfg.str("smtp.host").is_some_and(|h| !h.is_empty())));
     put("hw_fingerprint_enabled", json!(crate::settings::hw_fingerprint_enabled(cfg)));
     put("privacy_ip_mode", json!(privacy_ip_mode));
     put("registration_web_toggle_enabled", json!(cfg.enabled("websrv.open_registration_web_toggle")));

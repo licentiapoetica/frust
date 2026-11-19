@@ -38,6 +38,7 @@
         <input type="text" name="token" class="reg-if-token" placeholder="{{ t("auth.invite_token") }}" autocomplete="off" value="{{ (token if token is defined else "") }}" />
         <textarea name="application" class="register-application reg-if-apply" maxlength="1000" rows="4" placeholder="{{ t("auth.application_placeholder") }}"></textarea>
         <input type="email" name="email" class="reg-if-apply" placeholder="{{ t("auth.email_apply_required" if registration_apply_email else "auth.email_apply_optional") }}" autocomplete="off" />
+        {% if application_mail %}<p class="register-hint reg-if-apply">{{ t("auth.email_apply_hint") }}</p>{% endif %}
         {% elif not registration_open %}
         <input type="text" name="token" placeholder="{{ t("auth.invite_token") }}" autocomplete="off" value="{{ (token if token is defined else "") }}" required />
         {% elif registration_require_mail_andor_token %}

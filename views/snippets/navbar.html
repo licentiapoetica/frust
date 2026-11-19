@@ -602,6 +602,7 @@
           <i class="fa-solid fa-envelope lm-field-icon"></i>
           <input class="lm-input" type="email" name="email" placeholder="{{ t("auth.email_apply_required" if registration_apply_email else "auth.email_apply_optional") }}" aria-label="{{ t("auth.email_apply_required" if registration_apply_email else "auth.email_apply_optional") }}" autocomplete="email" />
         </label>
+        {% if application_mail %}<p class="lm-hint reg-if-apply"><i class="fa-solid fa-circle-info"></i>{{ t("auth.email_apply_hint") }}</p>{% endif %}
         {% elif not registration_open %}
         <label class="lm-field">
           <i class="fa-solid fa-ticket lm-field-icon"></i>

@@ -30,6 +30,7 @@
     <label class="fg-field reg-if-token"><input type="text" name="token" placeholder=" " autocomplete="off" value="{{ invite_token }}"><span>Invite token</span></label>
     <label class="fg-field reg-if-apply"><textarea name="application" maxlength="1000" rows="4" placeholder=" "></textarea><span>Tell us why you want an account (min. 20 characters)</span></label>
     <label class="fg-field reg-if-apply"><input type="email" name="email" placeholder=" " autocomplete="email"><span>{{ ("Email (needed to apply)" if registration_apply_email else "Email (optional)") }}</span></label>
+    {% if application_mail %}<p class="fg-hint reg-if-apply">We'll email you there when your application is approved or declined.</p>{% endif %}
     {% elif not registration_open %}
     <label class="fg-field"><input type="text" name="token" placeholder=" " autocomplete="off" value="{{ invite_token }}" required><span>Invite token</span></label>
     {% elif registration_require_mail_andor_token %}

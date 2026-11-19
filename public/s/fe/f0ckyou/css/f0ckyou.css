@@ -4502,6 +4502,12 @@ form:not(:has(input[name="has_invite"][value="no"]:checked)) .reg-if-apply {
   display: none !important;
 }
 
+.fy-hint {
+  margin: 0;
+  font-size: .75rem;
+  color: var(--fy-muted);
+}
+
 .fy-invite-choice {
   display: flex;
   flex-direction: column;

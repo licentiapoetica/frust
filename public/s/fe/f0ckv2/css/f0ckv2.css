@@ -1028,6 +1028,12 @@ form:not(:has(input[name="has_invite"][value="yes"]:checked)) .reg-if-token,
 form:not(:has(input[name="has_invite"][value="no"]:checked)) .reg-if-apply {
   display: none !important;
 }
+
+.login-form .v2-hint {
+  margin: 0 0 6px;
+  font-size: 11px;
+  opacity: 0.7;
+}
 .v2-invite-choice {
   display: flex;
   flex-direction: column;

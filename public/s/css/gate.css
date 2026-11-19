@@ -861,6 +861,12 @@ html:where(.gate-cloudflare),
   display: none !important;
 }
 
+#gate-modal .gate-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
 #gate-modal .gate-invite-choice {
   display: flex;
   flex-direction: column;

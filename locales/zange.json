@@ -109,6 +109,7 @@
     "application_placeholder": "Schreib uns, warum du ein Konto möchtest (mindestens 20 Zeichen)",
     "email_apply_optional": "E-Post (optional, für die Entscheidung)",
     "email_apply_required": "E-Post (für die Bewerbung nötig)",
+    "email_apply_hint": "Wir schicken dir dorthin eine E-Post, sobald deine Bewerbung angenommen oder abgelehnt wurde.",
     "apply_or_register": "Bewerben / Registrieren",
     "tos_private": "Ich bin mindestens 18 Jahre alt und stimme der Befolgung des Regelwerks zu",
     "tos_public": "Ich habe die Nutzungsbedingungen gelesen und akzeptiere diese",
