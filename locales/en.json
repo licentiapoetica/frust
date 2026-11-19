@@ -110,7 +110,7 @@
     "have_invite_yes": "Yes",
     "have_invite_no": "No, I want to apply",
     "application_placeholder": "Tell us why you want an account (at least 20 characters)",
-    "email_apply_optional": "email (optional, for the decision)",
+    "email_apply_optional": "email (optional)",
     "email_apply_required": "email (needed to apply)",
     "email_apply_hint": "We'll email you there when your application is approved.",
     "apply_or_register": "Apply / Register",
