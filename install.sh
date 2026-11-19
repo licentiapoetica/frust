@@ -252,26 +252,31 @@ NGX_DIR=
 NGX_STATE=        # ok: the site for the domain goes to the right port (after nginx_apply)
 NGX_NAMES=        # the server names of that site
 NGX_LOOK=         # copy of the check page's look nginx can read, when it can't read this checkout
+LOOK_COPY=        # 1: use that copy (nginx was found unable to serve the files from the checkout)
 nginx_plan() {
     local port=1337 dump f i css img u info names
     [ "${PROXY:-}" = own ] && [ -n "$SITE_DOMAIN" ] && [ -n "$NGINX" ] && [ "${NGINX_EDIT:-}" != 0 ] || return 0
     [ "$(id -u)" = 0 ] || command -v sudo >/dev/null 2>&1 || return 0
     anubis_on && port=8923
     dump=$(as_root "$NGINX" -T 2>/dev/null) || { warn "nginx -T failed, so your nginx is left alone; point it at 127.0.0.1:$port by hand"; return 0; }
-    NGX_DIR=$(mktemp -d); info=$NGX_DIR/info; : > "$info"
+    [ -z "$NGX_DIR" ] || rm -rf "$NGX_DIR"
+    NGX_DIR=$(mktemp -d); info=$NGX_DIR/info; : > "$info"; NGX_FILES=()
     # Anubis' check page in f0ckm's look, read by the nginx workers straight from this checkout
     css=$PWD/public/s/css/anubis.css; img=$PWD/config/anubis/img
     u=$(ps -o user= -C nginx 2>/dev/null | grep -vx root | head -n 1 || true)
     [ -n "$u" ] || u=$(printf '%s\n' "$dump" | awk '$1 == "user" { sub(/;.*/, "", $2); print $2; exit }')
-    if [ "$port" = 8923 ] && [ -n "$u" ] && id "$u" >/dev/null 2>&1 \
-            && ! as_root su -s /bin/sh -c 'test -r "$0" && test -r "$1/checking.webp"' "$u" "$css" "$img" 2>/dev/null; then
-        # Not readable for the workers (a home folder): they get a copy, refreshed on every run
+    # Once the copy is in use it stays in use (the check below found nginx can't read the checkout)
+    printf '%s\n' "$dump" | grep -qF "/var/lib/f0ckm-anubis/$SITE_DOMAIN/" && LOOK_COPY=1
+    if [ "$port" = 8923 ] && { [ -n "$LOOK_COPY" ] || { [ -n "$u" ] && id "$u" >/dev/null 2>&1 \
+            && ! as_root su -s /bin/sh -c 'test -r "$0" && test -r "$1/checking.webp"' "$u" "$css" "$img" 2>/dev/null; }; }; then
+        # Not readable for the workers (a home folder, SELinux): they get a copy, refreshed on every run
         NGX_LOOK=/var/lib/f0ckm-anubis/$SITE_DOMAIN
         css=$NGX_LOOK/anubis.css; img=$NGX_LOOK
     fi
     i=0
     while IFS= read -r f; do
-        [ -f "$f" ] || continue
+        # As root: the folder may be closed to this user
+        as_root test -f "$f" || continue
         i=$((i + 1))
         as_root cat "$f" > "$NGX_DIR/$i.old" || continue
         awk -v dom="$SITE_DOMAIN" -v port="$port" -v css="$css" -v img="$img" -v info="$info" \
@@ -322,11 +327,7 @@ nginx_apply() {
             sleep 2
         done
     fi
-    if [ -n "$NGX_LOOK" ]; then
-        as_root install -d -m 755 "$NGX_LOOK"
-        as_root install -m 644 public/s/css/anubis.css config/anubis/img/checking.webp config/anubis/img/passed.webp \
-            config/anubis/img/denied.webp "$NGX_LOOK/"
-    fi
+    look_copy
     for f in "${NGX_FILES[@]}"; do as_root tee "${f#*:}" < "$NGX_DIR/${f%%:*}.new" >/dev/null; done
     if out=$(as_root "$NGINX" -t 2>&1); then
         if command -v systemctl >/dev/null 2>&1 && as_root systemctl is-active --quiet nginx; then
@@ -342,12 +343,28 @@ nginx_apply() {
         NGX_STATE=
     fi
 }
-nginx_plan
-# A copy of the look is refreshed on every run, also when nginx needs no change
-if [ -n "$NGX_LOOK" ] && [ ${#NGX_FILES[@]} = 0 ] && [ "$NGX_STATE" = ok ] && [ -d "$NGX_LOOK" ]; then
+# The copy of the look nginx reads when it can't read this checkout, labelled for nginx under SELinux
+look_copy() {
+    [ -n "$NGX_LOOK" ] || return 0
+    as_root install -d -m 755 "$NGX_LOOK"
     as_root install -m 644 public/s/css/anubis.css config/anubis/img/checking.webp config/anubis/img/passed.webp \
         config/anubis/img/denied.webp "$NGX_LOOK/"
-fi
+    if command -v selinuxenabled >/dev/null 2>&1 && selinuxenabled; then
+        as_root chcon -R -t httpd_sys_content_t "$(dirname "$NGX_LOOK")" 2>/dev/null || true
+    fi
+}
+# Whether nginx answers the check page's style with f0ckm's (0), with something else: Anubis' own, an
+# error page (1), or can't be asked (2). Asked on this server first, then through DNS.
+look_served() {
+    local url="https://$SITE_DOMAIN/.within.website/x/xess/xess.min.css?install-check" body
+    command -v curl >/dev/null 2>&1 || return 2
+    body=$(curl -sk --max-time 10 --resolve "$SITE_DOMAIN:443:127.0.0.1" "$url" 2>/dev/null) \
+        || body=$(curl -s --max-time 10 "$url" 2>/dev/null) || return 2
+    [ "$body" = "$(cat public/s/css/anubis.css)" ] || return 1
+}
+nginx_plan
+# A copy of the look is refreshed on every run, also when nginx needs no change
+[ ${#NGX_FILES[@]} -gt 0 ] || [ "$NGX_STATE" != ok ] || look_copy
 
 # After the check Anubis only sends visitors back to ANUBIS_DOMAINS, else VIRTUAL_HOST; with neither,
 # every visitor gets "redirect domain not allowed". Older .env files (own proxy) may lack both, and an
@@ -513,6 +530,22 @@ done
 sleep 2; crashed || true
 
 nginx_apply
+# The check page's look has to actually come out of nginx. Without read access to this checkout (a home
+# folder, SELinux) nginx answers 403 and the page keeps Anubis' own look: then it gets a copy to read.
+if anubis_on && [ "$NGX_STATE" = ok ]; then
+    rc=0; look_served || rc=$?
+    if [ "$rc" = 1 ] && [ -z "$LOOK_COPY" ]; then
+        say "nginx doesn't serve the check page's look from this checkout; giving it a copy in /var/lib/f0ckm-anubis"
+        LOOK_COPY=1
+        nginx_plan
+        nginx_apply
+        rc=0; look_served || rc=$?
+    fi
+    case $rc in
+        0) say "Anubis' check page has f0ckm's look" ;;
+        1) warn "nginx doesn't answer /.within.website/x/xess/xess.min.css with public/s/css/anubis.css, so Anubis' check page keeps its own look (README: Bot protection)" ;;
+    esac
+fi
 if [ -n "$ANUBIS_REMOVE" ]; then
     [ "$NGX_STATE" = ok ] || [ "${PROXY:-}" != own ] || [ -z "$SITE_DOMAIN" ] \
         || warn "Anubis is gone now: point your proxy back at 127.0.0.1:1337"

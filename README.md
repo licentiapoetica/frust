@@ -228,8 +228,8 @@ open tab's requests fail until it is reloaded. Logs: `docker compose logs -f anu
 gate instead of Anubis' mascot ([config/anubis/img](config/anubis/img): gold eyes while checking, an
 ankh when passed, red eyes when turned away). Anubis builds its files into its binary, so the proxy
 in front answers their URLs with these; for your own nginx, inside the site's `server {}` (install.sh
-adds these itself, between `# >>> f0ckm anubis` markers; when nginx can't read the checkout it copies
-the files to `/var/lib/f0ckm-anubis/<domain>/`):
+adds these itself, between `# >>> f0ckm anubis` markers, and checks that nginx really serves them;
+when it can't read the checkout (a home folder, SELinux) it gets a copy in `/var/lib/f0ckm-anubis/<domain>/`):
 
 ```nginx
 location = /.within.website/x/xess/xess.min.css { alias /path/to/f0ckm/public/s/css/anubis.css; }
