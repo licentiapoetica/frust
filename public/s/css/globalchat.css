@@ -643,7 +643,6 @@ html.gchat-moving * {
   cursor: pointer;
 }
 
-.gchat-tag-sample .spoiler,
 .gchat-bubble .spoiler:not(.revealed) {
   background: var(--gc-fg);
   color: transparent;
@@ -653,7 +652,6 @@ html.gchat-moving * {
   visibility: hidden;
 }
 
-.gchat-tag-sample .blur-text,
 .gchat-bubble .blur-text:not(.revealed) {
   filter: blur(4px);
 }
@@ -1472,42 +1470,12 @@ span.gchat-post-card--loading {
   to { opacity: 0; transform: translateX(-50%) translateY(10px); }
 }
 
-/* ── [tag suggestions: the text effects, each with a live sample ── */
-.gchat-tag-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-  font-size: .85em;
-  cursor: pointer;
-}
-
-.gchat-tag-item:hover,
-.gchat-tag-item.active {
-  background: var(--gc-hover);
-}
-
-.gchat-tag-name {
-  flex-shrink: 0;
-  min-width: 6.5em;
-  color: var(--gc-accent);
-  font-family: monospace;
-}
-
-/* the effect itself: not clickable here ([badapple] would start) */
-.gchat-tag-sample {
-  flex-shrink: 0;
-  pointer-events: none;
-}
-
-.gchat-tag-desc {
-  min-width: 0;
-  margin-left: auto;
-  overflow: hidden;
-  color: var(--gc-muted);
-  font-size: .9em;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+/* ── "[" suggestions (f0ckTagSuggest, f0ck-core.js; items styled in comment-fx.css): in the chat's
+   colours, in the chat's list box (.gchat-ac) ── */
+#gchat-panel {
+  --f0ck-ac-hover: var(--gc-hover);
+  --f0ck-ac-accent: var(--gc-accent);
+  --f0ck-ac-muted: var(--gc-muted);
 }
 
 /* ── @user suggestions (above the input) ── */

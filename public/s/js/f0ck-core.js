@@ -717,6 +717,137 @@ window.f0ckCommentFx = (html) => {
   return s;
 };
 
+// ── "[" suggestions: the text effects ──────────────────────────────────────────────────────
+// Typing "[" (or "[gl") in a comment field or the site chat lists the effects it can use, each with
+// a live sample and a description: [spoiler] [blur] and F0CK_COMMENT_FX above. Picking one (arrows,
+// Enter / Tab, a click) puts [tag][/tag] in with the cursor between; Escape closes. Comment fields
+// get it by themselves (watched below); a frontend whose comments render fewer tags lists them in
+// window.f0ckFrontend.fxTags (f0ckv2: no [spoiler] / [blur]).
+//   f0ckTagSuggest.attach({ textarea, list, tags }) → { hide, isOpen }
+//     list: an element to show the suggestions in (the chat's); else one opens right above the field
+//     (.f0ck-tag-ac, comment-fx.css; its parent gets .f0ck-tag-host as the positioning box)
+// After an insert the field gets an input event, so its own counter / auto-grow follow.
+window.f0ckTagSuggest = (() => {
+  const DESC = {
+    spoiler: ['chat_fx_spoiler', 'hidden until clicked'],
+    blur: ['chat_fx_blur', 'blurred until clicked'],
+    glitch: ['chat_fx_glitch', 'glitches'],
+    rb: ['chat_fx_rb', 'rainbow'],
+    reich: ['chat_fx_reich', 'blackletter'],
+    krebs: ['chat_fx_krebs', 'flickering colours'],
+    badapple: ['chat_fx_badapple', 'plays Bad Apple!! when clicked'],
+  };
+  const tr = (key, fallback) => window.f0ckI18n?.[key] || fallback;
+  const escH = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const allTags = () => ['spoiler', 'blur', ...Object.keys(window.F0CK_COMMENT_FX || {}).filter((n) => n !== 'spoiler' && n !== 'blur')];
+  // the effect's own markup (constant attributes) around a word
+  const sample = (tag) => {
+    const word = escH(tag === 'badapple' ? 'Bad Apple!!' : tr('chat_fx_sample', 'Text'));
+    if (tag === 'spoiler') return `<span class="spoiler">${word}</span>`;
+    if (tag === 'blur') return `<span class="blur-text">${word}</span>`;
+    const attrs = (window.F0CK_COMMENT_FX || {})[tag];
+    return attrs ? `<span ${attrs}>${word}</span>` : word;
+  };
+
+  const attach = ({ textarea, list, tags }) => {
+    if (!textarea) return null;
+    if (textarea._f0ckTagSuggest) return textarea._f0ckTagSuggest;
+    let ac = list;
+    const own = !list;
+    if (own) {
+      ac = document.createElement('div');
+      ac.className = 'f0ck-tag-ac';
+      ac.setAttribute('role', 'listbox');
+      ac.hidden = true;
+      textarea.parentElement?.classList.add('f0ck-tag-host');
+      textarea.after(ac);
+    }
+    let matches = [];
+    let idx = -1;
+    const bracket = () => {
+      const pos = textarea.selectionStart;
+      if (pos == null || pos !== textarea.selectionEnd) return null;
+      const m = textarea.value.slice(0, pos).match(/\[([a-z]*)$/i);
+      return m ? { query: m[1].toLowerCase(), at: pos - m[0].length } : null;
+    };
+    const hide = () => { ac.hidden = true; ac.innerHTML = ''; matches = []; idx = -1; };
+    const setActive = (i) => {
+      const items = ac.querySelectorAll('.f0ck-tag-item');
+      items.forEach((el) => el.classList.remove('is-active'));
+      if (items[i]) { items[i].classList.add('is-active'); items[i].scrollIntoView({ block: 'nearest' }); }
+      idx = i;
+    };
+    const insert = (tag) => {
+      const hit = bracket();
+      if (!hit) return;
+      const open = `[${tag}]`;
+      textarea.setRangeText(open + `[/${tag}]`, hit.at, textarea.selectionStart, 'start');
+      textarea.setSelectionRange(hit.at + open.length, hit.at + open.length);
+      textarea.focus();
+      hide();
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const render = () => {
+      const hit = bracket();
+      if (!hit) return hide();
+      const usable = (tags || window.f0ckFrontend?.fxTags || allTags());
+      matches = usable.filter((n) => n.startsWith(hit.query));
+      if (!matches.length) return hide();
+      ac.innerHTML = matches.map((tag) => {
+        const [key, fallback] = DESC[tag] || [];
+        return `<div class="f0ck-tag-item" role="option" data-tag="${escH(tag)}">`
+          + `<code class="f0ck-tag-name">[${escH(tag)}]</code>`
+          + `<span class="f0ck-tag-sample">${sample(tag)}</span>`
+          + (key ? `<span class="f0ck-tag-desc">${escH(tr(key, fallback))}</span>` : '')
+          + '</div>';
+      }).join('');
+      // right above the field, opening upward, whatever the form's layout (a flex column puts an
+      // absolute box at its top): the field's top edge seen from the host box's bottom, as
+      // --f0ck-tag-bottom (comment-fx.css)
+      if (own) ac.style.setProperty('--f0ck-tag-bottom', `${ac.parentElement.clientHeight - textarea.offsetTop}px`);
+      ac.hidden = false;
+      setActive(0);
+    };
+    ac.addEventListener('mousedown', (e) => {
+      const item = e.target.closest('.f0ck-tag-item');
+      if (!item) return;
+      e.preventDefault();
+      insert(item.dataset.tag);
+    });
+    textarea.addEventListener('input', render);
+    textarea.addEventListener('click', () => { if (bracket()) render(); else hide(); });
+    textarea.addEventListener('blur', () => setTimeout(hide, 150));
+    textarea.addEventListener('keydown', (e) => {
+      if (ac.hidden) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActive((idx + 1) % matches.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActive((idx <= 0 ? matches.length : idx) - 1);
+      } else if ((e.key === 'Enter' || e.key === 'Tab') && !e.ctrlKey && !e.metaKey && matches.length) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        insert(matches[idx >= 0 ? idx : 0]);
+      } else if (e.key === 'Escape') {
+        hide();
+      }
+    });
+    const ctl = { hide, isOpen: () => !ac.hidden };
+    textarea._f0ckTagSuggest = ctl;
+    return ctl;
+  };
+
+  // every comment field, on its first focus (also the reply / edit fields made later)
+  const COMMENT_FIELDS = 'form[action^="/api/comments"] textarea[name="content"], .comment-input textarea:not([readonly]), textarea.edit-textarea';
+  document.addEventListener('focusin', (e) => {
+    const ta = e.target;
+    if (ta instanceof HTMLTextAreaElement && !ta._f0ckTagSuggest && ta.matches(COMMENT_FIELDS)) attach({ textarea: ta });
+  });
+
+  return { attach, tags: allTags };
+})();
+
 // ── Links to this site ──────────────────────────────────────────────────────────────────────
 // Comment/message renderers show a full URL to this site as its path: https://f0ck.me/123-slug
 // becomes /123-slug (link and text). "This site" is the host being browsed or the configured

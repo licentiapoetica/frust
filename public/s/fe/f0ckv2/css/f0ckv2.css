@@ -2723,3 +2723,23 @@ html[theme^="f0ck95"].gchat-skin-f0ckv2 .gchat-users-list {
   background: var(--gc-field-bg);
   border: 2px inset #dfdfdf;
 }
+
+/* "[" suggestions above the comment field (comment-fx.css, f0ckTagSuggest): the theme's dropdown */
+:root {
+  --f0ck-ac-bg: var(--dropdown-bg, #232323);
+  --f0ck-ac-fg: var(--white, #fff);
+  --f0ck-ac-line: var(--img-border-color, #363636);
+  --f0ck-ac-hover: var(--dropdown-item-hover, #0d0d0d);
+  --f0ck-ac-accent: var(--accent, #9f0);
+  --f0ck-ac-muted: color-mix(in srgb, var(--white, #fff) 55%, transparent);
+}
+
+html[theme="paper"],
+html[theme^="f0ck95"] {
+  --f0ck-ac-fg: var(--black, #000);
+  --f0ck-ac-muted: color-mix(in srgb, var(--black, #000) 55%, transparent);
+}
+
+html[theme^="f0ck95"] {
+  --f0ck-ac-accent: #000080;
+}

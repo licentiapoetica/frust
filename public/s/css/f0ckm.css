@@ -37426,3 +37426,13 @@ html:not(.no-js) .uh-nojs-only {
 .settings .button.settings-hidden {
   display: none;
 }
+
+/* "[" suggestions above the comment fields (comment-fx.css, f0ckTagSuggest): f0ckm's dropdown colours */
+:root {
+  --f0ck-ac-bg: var(--dropdown-bg, #232323);
+  --f0ck-ac-fg: var(--white, #fff);
+  --f0ck-ac-line: var(--nav-border-color, rgba(255, 255, 255, .05));
+  --f0ck-ac-hover: var(--nav-link-hover-bg, #333);
+  --f0ck-ac-accent: var(--accent, #9f0);
+  --f0ck-ac-muted: color-mix(in srgb, var(--white, #fff) 55%, transparent);
+}

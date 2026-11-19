@@ -5535,3 +5535,13 @@ html.gchat-skin-f0ckyou .gchat-reopen-label {
     --gc-bottom: 8px;
   }
 }
+
+/* "[" suggestions above the comment fields (comment-fx.css, f0ckTagSuggest): like the emoji list */
+:root {
+  --f0ck-ac-bg: var(--fy-menu);
+  --f0ck-ac-fg: var(--fy-text);
+  --f0ck-ac-line: var(--fy-line);
+  --f0ck-ac-hover: var(--fy-soft);
+  --f0ck-ac-accent: var(--fy-blue);
+  --f0ck-ac-muted: var(--fy-muted);
+}

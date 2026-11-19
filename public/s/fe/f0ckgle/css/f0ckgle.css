@@ -3944,3 +3944,13 @@ html.gchat-skin-f0ckgle .gchat-reopen-label {
     --gc-bottom: calc(8px + var(--gc-avoid-h, 0px));
   }
 }
+
+/* "[" suggestions above the comment fields (comment-fx.css, f0ckTagSuggest), light and dark */
+:root {
+  --f0ck-ac-bg: var(--fg-bg);
+  --f0ck-ac-fg: var(--fg-text);
+  --f0ck-ac-line: var(--fg-border);
+  --f0ck-ac-hover: var(--fg-hover);
+  --f0ck-ac-accent: var(--fg-blue);
+  --f0ck-ac-muted: var(--fg-dim);
+}

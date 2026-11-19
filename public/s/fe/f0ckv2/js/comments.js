@@ -240,6 +240,8 @@
   // live event (f0ck-frontend.js): a comment was posted, edited or deleted somewhere; reload if it's
   // this item's (not while a reply is being typed)
   const fe = window.f0ckFrontend = window.f0ckFrontend || {};
+  // "[" suggestions (f0ckTagSuggest, f0ck-core.js): only what f0ckv2's comments render, no [spoiler] / [blur]
+  fe.fxTags = Object.keys(window.F0CK_COMMENT_FX || {});
   window.v2Page?.onLeave(() => {
     if(window.danmakuInstance) { window.danmakuInstance.destroy(); window.danmakuInstance = null; }
     if(fe.comments === onComments) delete fe.comments;

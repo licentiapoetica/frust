@@ -4040,3 +4040,13 @@ html.gchat-skin-w0bm #gchat-reopen-bubble {
     border-color: #1fb2b0;
     opacity: .9;
 }
+
+/* "[" suggestions above the comment field (comment-fx.css, f0ckTagSuggest): w0bm's dark panel */
+:root {
+    --f0ck-ac-bg: #222;
+    --f0ck-ac-fg: #ccc;
+    --f0ck-ac-line: #282828;
+    --f0ck-ac-hover: rgba(255, 255, 255, .06);
+    --f0ck-ac-accent: #1fb2b0;
+    --f0ck-ac-muted: #888;
+}

@@ -101,3 +101,82 @@ html.f0ck-bad-apple .cfx-badapple:focus-visible {
   max-width: 4em;
   vertical-align: middle;
 }
+
+/* ── "[" suggestions: the text effects, each with a live sample (f0ckTagSuggest, f0ck-core.js) ──
+   Above a comment field, opening upward (its parent: .f0ck-tag-host), or in a list the caller gives
+   (the chat's).
+   Colours: --f0ck-ac-* (set by each frontend from its palette; these defaults are a dark look). */
+.f0ck-tag-host {
+  position: relative;
+}
+
+.f0ck-tag-ac {
+  position: absolute;
+  bottom: var(--f0ck-tag-bottom, 100%);
+  right: 0;
+  left: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  margin-bottom: 2px;
+  overflow-y: auto;
+  background: var(--f0ck-ac-bg, #1b1b1b);
+  color: var(--f0ck-ac-fg, #eee);
+  border: 1px solid var(--f0ck-ac-line, rgba(255, 255, 255, .15));
+  text-align: left;
+  scrollbar-width: thin;
+}
+
+.f0ck-tag-ac[hidden] {
+  display: none;
+}
+
+.f0ck-tag-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  font-size: .9em;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.f0ck-tag-item:hover,
+.f0ck-tag-item.is-active {
+  background: var(--f0ck-ac-hover, rgba(255, 255, 255, .08));
+}
+
+.f0ck-tag-name {
+  flex-shrink: 0;
+  min-width: 6.5em;
+  padding: 0;
+  background: none;
+  color: var(--f0ck-ac-accent, #9f0);
+  font-family: monospace;
+}
+
+/* the effect itself: not clickable here ([badapple] would start) */
+.f0ck-tag-sample {
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.f0ck-tag-sample .spoiler {
+  background: currentColor;
+  color: transparent;
+}
+
+.f0ck-tag-sample .blur-text {
+  filter: blur(3px);
+}
+
+.f0ck-tag-desc {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--f0ck-ac-muted, rgba(255, 255, 255, .55));
+  font-size: .9em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
