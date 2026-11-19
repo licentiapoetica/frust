@@ -53,6 +53,8 @@ services:
       - ./config/anubis/nginx-proxy-look.conf:/etc/nginx/vhost.d/default:ro
       # nginx-proxy's proxy headers plus Accept-Encoding "" (for the rewrite in nginx-proxy-look.conf)
       - ./config/anubis/nginx-proxy.conf:/etc/nginx/proxy.conf:ro
+      # Behind Cloudflare: the visitor's IP instead of Cloudflare's changing ones (Anubis ties its pass to it)
+      - ./config/nginx/cloudflare-realip.conf:/etc/nginx/conf.d/cloudflare-realip.conf:ro
       - ./public/s/css:/f0ckm-anubis/css:ro
       - ./config/anubis/img:/f0ckm-anubis/img:ro
 
