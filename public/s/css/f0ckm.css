@@ -299,10 +299,6 @@ html[theme="amoled"] .profile_head_user_stats > * {
     box-shadow: 1px 1px 1px #6a6a6a70;
 }
 
-html[theme="amoled"] #settings-quicknav a:hover, #settings-quicknav a.active {
-  color: var(--black) !important;
-}
-
 html[theme="amoled"] .metadata {
   border: none;
 }
@@ -24741,6 +24737,28 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 :where(.adm) .adm-btn:focus-visible {
   outline: 2px solid var(--adm-accent);
   outline-offset: 2px;
+}
+
+/* Link buttons keep their colours: themes colour every link (html[theme="f0ck95d"] a { color: var(--white) },
+   0,1,2), which beat the zero-specificity rules above and left white text on the white primary button */
+.adm a.adm-btn {
+  color: var(--adm-text);
+}
+
+.adm a.adm-btn-ghost {
+  color: var(--adm-muted);
+}
+
+.adm a.adm-btn-ghost:hover {
+  color: var(--adm-text);
+}
+
+.adm a.adm-btn-primary {
+  color: #000;
+}
+
+.adm a.adm-btn-primary:hover {
+  color: var(--adm-accent);
 }
 
 :where(.adm) .adm-status {
