@@ -909,7 +909,20 @@
     "left_hand": "Linkshandige modus",
     "left_hand_desc": "Je weet wel waarom.",
     "replying_to": "Antwoord aan {user}",
-    "reply": "Antwoorden"
+    "reply": "Antwoorden",
+    "start_conversation": "Begin het gesprek.",
+    "post_comment": "Plaatsen",
+    "quote": "Citeren",
+    "view_replies": "Bekijk nog {n} antwoorden",
+    "hide_replies": "Antwoorden verbergen",
+    "author": "Uploader",
+    "pinned": "Vastgezet",
+    "poll": "Peiling",
+    "tag_posts": "{n} posts",
+    "tag_new": "Nieuwe tag",
+    "no_tags": "Nog geen tags. Wees de eerste.",
+    "comment_failed": "Je reactie kon niet geplaatst worden.",
+    "tag_failed": "De tag kon niet toegevoegd worden."
   },
   "invites": {
     "section_title": "Uitnodigingen",

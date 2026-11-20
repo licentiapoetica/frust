@@ -912,7 +912,20 @@
     "left_hand": "Left hand mode",
     "left_hand_desc": "You know why.",
     "replying_to": "Replying to {user}",
-    "reply": "Reply"
+    "reply": "Reply",
+    "start_conversation": "Start the conversation.",
+    "post_comment": "Post",
+    "quote": "Quote",
+    "view_replies": "View {n} more replies",
+    "hide_replies": "Hide replies",
+    "author": "Uploader",
+    "pinned": "Pinned",
+    "poll": "Poll",
+    "tag_posts": "{n} posts",
+    "tag_new": "New tag",
+    "no_tags": "No tags yet. Be the first.",
+    "comment_failed": "Couldn't post your comment.",
+    "tag_failed": "Couldn't add the tag."
   },
   "invites": {
     "section_title": "Invites",

@@ -85,7 +85,18 @@
       "write_comment": {{ t("scroller.write_comment")|string|tojson }},
       "login_required": {{ t("scroller.login_required")|string|tojson }},
       "login_to_comment": {{ t("scroller.login_to_comment")|string|tojson }},
-      "clear_filter": {{ (t("scroller.clear_filter") or "Clear filter")|string|tojson }}
+      "clear_filter": {{ (t("scroller.clear_filter") or "Clear filter")|string|tojson }},
+      "quote": {{ t("scroller.quote")|string|tojson }},
+      "view_replies": {{ t("scroller.view_replies")|string|tojson }},
+      "hide_replies": {{ t("scroller.hide_replies")|string|tojson }},
+      "author": {{ t("scroller.author")|string|tojson }},
+      "pinned": {{ t("scroller.pinned")|string|tojson }},
+      "poll": {{ t("scroller.poll")|string|tojson }},
+      "tag_posts": {{ t("scroller.tag_posts")|string|tojson }},
+      "tag_new": {{ t("scroller.tag_new")|string|tojson }},
+      "no_tags": {{ t("scroller.no_tags")|string|tojson }},
+      "comment_failed": {{ t("scroller.comment_failed")|string|tojson }},
+      "tag_failed": {{ t("scroller.tag_failed")|string|tojson }}
     },
     "session": {% if (session is defined and session) %}{
       "username": {{ (session.user or "")|string|tojson }},
@@ -399,32 +410,39 @@
     </div>
   </div>
 
-  <!-- COMMENTS PANEL -->
-  <div id="comments-backdrop" class="scroller-backdrop"></div>
-  <div id="comments-panel" class="scroller-panel" role="dialog" aria-label="Comments">
+  <!-- COMMENTS SHEET — Reels-style bottom sheet (side drawer on wide screens) -->
+  <div id="comments-backdrop" class="scroller-backdrop ig-backdrop"></div>
+  <div id="comments-panel" class="scroller-panel ig-sheet" role="dialog" aria-label="{{ t("scroller.comments") }}">
     <div class="panel-handle"><div class="panel-handle-bar"></div></div>
-    <div class="panel-header">
-      <span class="panel-title">{{ t("scroller.comments") }} <span id="comments-count"></span></span>
-      <a id="comments-open-link" href="#" target="_blank">
-        <i class="fa-solid fa-up-right-from-square"></i>{{ t("scroller.open") }}
-      </a>
+    <div class="ig-sheet-header">
+      <a id="comments-open-link" class="ig-sheet-icon-btn" href="#" target="_blank" title="{{ t("scroller.open_post") }}"><i class="fa-solid fa-up-right-from-square"></i></a>
+      <span class="ig-sheet-title">{{ t("scroller.comments") }} <span id="comments-count"></span></span>
+      <button id="comments-close-btn" class="ig-sheet-icon-btn" type="button" title="{{ t("scroller.close") }}"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div id="comments-list">
-      <div id="comments-loading"><div class="loader-spinner"></div>{{ t("scroller.loading") }}</div>
-      <div id="comments-empty"><i class="fa-regular fa-comment"></i>{{ t("scroller.no_comments") }}</div>
+      <div id="comments-loading" class="ig-sheet-state"><div class="loader-spinner"></div>{{ t("scroller.loading") }}</div>
+      <div id="comments-empty" class="ig-sheet-state" hidden>
+        <span class="ig-empty-title">{{ t("scroller.no_comments") }}</span>
+        <span class="ig-empty-sub">{{ t("scroller.start_conversation") }}</span>
+      </div>
     </div>
     {% if (session is defined and session) %}
     <div id="comments-input-area">
       <div id="mention-dropdown"></div>
       <div id="reply-indicator">
-        <i class="fa-solid fa-reply reply-indicator-icon"></i>
         <span class="reply-indicator-text"></span>
-        <button id="reply-cancel-btn" type="button"><i class="fa-solid fa-xmark"></i></button>
+        <button id="reply-cancel-btn" type="button" title="{{ t("scroller.close") }}"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="ig-quick-reactions" id="comment-quick-reactions">
+        {% for e in ["❤️", "🙌", "🔥", "👏", "😢", "😍", "😮", "😂"] %}<button type="button" data-emoji="{{ e }}">{{ e }}</button>{% endfor %}
       </div>
       <div class="comment-input-row">
-        <button id="comment-emoji-trigger" class="emoji-trigger" title="Emoji" type="button">☺</button>
-        <textarea id="comment-input" rows="1" placeholder="{{ t("scroller.write_comment") }}"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
-        <button id="comment-send-btn" disabled><i class="fa-solid fa-paper-plane"></i></button>
+        <img class="ig-self-avatar" src="{{ ("/a/" ~ session.avatar_file if session.avatar_file else (("/t/" ~ session.avatar) ~ ".webp" if session.avatar else "/a/default.png")) }}" alt="" data-on="error:img-fallback" data-fallback="/a/default.png">
+        <div class="ig-input-shell">
+          <textarea id="comment-input" rows="1" placeholder="{{ t("scroller.write_comment") }}"{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+          <button id="comment-emoji-trigger" class="emoji-trigger" title="Emoji" type="button"><i class="fa-regular fa-face-smile"></i></button>
+        </div>
+        <button id="comment-send-btn" type="button" disabled>{{ t("scroller.post_comment") }}</button>
       </div>
     </div>
     {% else %}
@@ -432,16 +450,24 @@
     {% endif %}
   </div>
 
-  <!-- TAG BAR — slide-up input, opened by the Tag action button -->
+  <!-- TAG SHEET — opened by the Tag action button: current tags, #search with suggestions -->
   {% if (session is defined and session) %}
-  <div id="tag-bar">
+  <div id="tag-backdrop" class="scroller-backdrop ig-backdrop"></div>
+  <div id="tag-bar" class="ig-sheet ig-tag-sheet" role="dialog" aria-label="{{ t("scroller.add_tag") }}">
+    <div class="panel-handle"><div class="panel-handle-bar"></div></div>
+    <div class="ig-sheet-header">
+      <span class="ig-sheet-icon-btn ig-sheet-spacer"></span>
+      <span class="ig-sheet-title">{{ t("scroller.tags") }} <span id="tag-bar-count"></span></span>
+      <button id="tag-bar-close-btn" class="ig-sheet-icon-btn" type="button" title="{{ t("scroller.close") }}"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="tag-bar-current" class="ig-tag-chips"></div>
+    <div id="scroll-tag-suggestions" class="ig-tag-results"></div>
     <div id="tag-bar-inner">
-      <div class="scroller-tag-input-wrap">
-        <input id="scroll-tag-input" type="text" placeholder="{{ t("scroller.add_tag_placeholder") }}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="70">
-        <div id="scroll-tag-suggestions"></div>
+      <div class="scroller-tag-input-wrap ig-input-shell">
+        <span class="ig-hash">#</span>
+        <input id="scroll-tag-input" type="text" placeholder="{{ t("scroller.add_tag_placeholder") }}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="70" enterkeyhint="done">
       </div>
-      <button id="scroll-tag-send-btn" title="{{ t("scroller.add_tag") }}"><i class="fa-solid fa-plus"></i></button>
-      <button id="tag-bar-close-btn" title="{{ t("scroller.close") }}"><i class="fa-solid fa-xmark"></i></button>
+      <button id="scroll-tag-send-btn" type="button" disabled>{{ t("scroller.add") }}</button>
     </div>
   </div>
   {% endif %}

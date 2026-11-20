@@ -420,10 +420,19 @@
     const active = document.activeElement;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) active.blur();
   }
-  function addSwipeClose(panel, backdrop) {
+  // Swipe down closes a sheet, but not while the finger scrolls a list that isn't at its top
+  function addSwipeClose(panel, backdrop, onClose) {
     let startY = 0;
-    panel.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
-    panel.addEventListener('touchend', e => { if (e.changedTouches[0].clientY - startY > 60) closePanel(panel, backdrop); }, { passive: true });
+    let armed = false;
+    panel.addEventListener('touchstart', e => {
+      startY = e.touches[0].clientY;
+      const scroller = e.target.closest('#comments-list, .filter-scroll-area, .ig-tag-results, textarea');
+      armed = !scroller || scroller.scrollTop <= 0;
+    }, { passive: true });
+    panel.addEventListener('touchend', e => {
+      if (!armed || e.changedTouches[0].clientY - startY <= 60) return;
+      if (onClose) onClose(); else closePanel(panel, backdrop);
+    }, { passive: true });
   }
   addSwipeClose(filterPanel, filterBackdrop);
   addSwipeClose(commentsPanel, commentsBackdrop);
@@ -749,8 +758,11 @@
     if (contextLink) {
       e.preventDefault();
       const id = contextLink.dataset.id;
-      const target = commentsList.querySelector(`.comment-item[data-comment-id="${id}"]`);
+      const target = commentsList.querySelector(`.comment-item[data-comment-id="${CSS.escape(String(id))}"]`);
       if (target) {
+        // A reply in a collapsed thread: open the thread first
+        const box = target.closest('.comment-replies');
+        if (box && box.hidden) setThreadOpen(box.closest('.comment-thread'), true);
         // Clear any previous persistent highlight
         commentsList.querySelectorAll('.comment-linked').forEach(el => el.classList.remove('comment-linked'));
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1156,8 +1168,8 @@
     const favBtn = slide.querySelector('.js-fav-btn');
     // Optimistic: immediately flip the button state before the server responds
     const wasFaved = favBtn ? favBtn.classList.contains('faved') : false;
+    const nowFaved = !wasFaved;
     if (favBtn) {
-      const nowFaved = !wasFaved;
       favBtn.classList.toggle('faved', nowFaved);
       const icon = favBtn.querySelector('i');
       if (icon) icon.className = (nowFaved ? 'fa-solid' : 'fa-regular') + ' fa-heart';
@@ -1183,7 +1195,7 @@
           const icon = favBtn.querySelector('i');
           if (icon) icon.className = (wasFaved ? 'fa-solid' : 'fa-regular') + ' fa-heart';
           const countEl = favBtn.querySelector('.scroll-btn-count');
-          if (countEl) countEl.textContent = Math.max(0, (parseInt(countEl.textContent || '0', 10)) + (wasFaved ? 0 : -1));
+          if (countEl) countEl.textContent = Math.max(0, (parseInt(countEl.textContent || '0', 10)) + (wasFaved ? 1 : -1));
         }
         const errMsg = (data && (data.msg || data.error)) || 'Anonymous favoriting is disabled.';
         if (typeof window.flashMessage === 'function') {
@@ -1212,7 +1224,7 @@
         const icon = favBtn.querySelector('i');
         if (icon) icon.className = (wasFaved ? 'fa-solid' : 'fa-regular') + ' fa-heart';
         const countEl = favBtn.querySelector('.scroll-btn-count');
-        if (countEl) countEl.textContent = Math.max(0, (parseInt(countEl.textContent || '0', 10)) + (wasFaved ? 0 : -1));
+        if (countEl) countEl.textContent = Math.max(0, (parseInt(countEl.textContent || '0', 10)) + (wasFaved ? 1 : -1));
       }
     }
   }
@@ -2136,52 +2148,69 @@
   mutObs.observe(feed, { childList: true });
 
   // ── Comments ──────────────────────────────────────────────────────────────
-  // ── Reply state ──────────────────────────────────────────────────────────
+  // Reels-style sheet: threads newest first (pinned on top), replies one level deep under
+  // their thread, collapsed behind "View N more replies". New comments (own and live) go
+  // into place without reloading the list.
   let replyToCommentId = null;
   let replyToUsername = null;
+  let commentsById = new Map();      // id → comment of the open sheet
+  let commentsUploader = null;       // uploader of the open item (for the badge)
+  const postedCommentIds = new Set(); // own comments, so their live echo isn't counted twice
+  const replyIndicator = document.getElementById('reply-indicator');
+  const commentsCloseBtn = document.getElementById('comments-close-btn');
 
-  function setReplyTo(commentId, username) {
-    replyToCommentId = commentId;
-    replyToUsername = username;
-    const _i = window.f0ckI18n || {};
-    const indicator = document.getElementById('reply-indicator');
-    if (indicator) {
-      indicator.querySelector('.reply-indicator-text').textContent =
-        (_i.replying_to || 'Replying to {user}').replace('{user}', '@' + username);
-      indicator.style.display = 'flex';
-    }
-    if (commentInput) {
-      const quote = `>>${commentId} `;
-      const start = commentInput.selectionStart;
-      const end = commentInput.selectionEnd;
-      const val = commentInput.value;
-      commentInput.value = val.substring(0, start) + quote + val.substring(end);
-      commentInput.focus();
-      commentInput.selectionStart = commentInput.selectionEnd = start + quote.length;
-      commentInput.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+  function tr(key, fallback) {
+    const v = (window.f0ckI18n || {})[key];
+    return v || fallback;
+  }
+  // A username colour from the database, only when it is a plain colour value
+  function safeColor(v) {
+    return (typeof v === 'string' && /^[#a-zA-Z0-9(),.%\s-]{1,40}$/.test(v)) ? v.trim() : '';
+  }
+  function slideForItem(id) {
+    if (id == null) return null;
+    const s = CSS.escape(String(id));
+    return feed.querySelector(`.scroll-slide[data-local-id="${s}"], .scroll-slide[data-id="${s}"]`);
+  }
+  function setSlideCommentCount(itemId, n) {
+    const btn = slideForItem(itemId)?.querySelector('.js-comments-btn .scroll-btn-count');
+    if (btn) btn.textContent = n;
+  }
+  function setCommentCount(n) {
+    commentsCount.textContent = n ? String(n) : '';
+    if (commentsItemId) setSlideCommentCount(commentsItemId, n);
   }
 
-  function quoteComment(id, username) {
-    if (!commentInput) return;
-    const commentEl = commentsList.querySelector(`.comment-item[data-comment-id="${id}"]`);
-    if (!commentEl) return;
-    const contentEl = commentEl.querySelector('.comment-content');
-    if (!contentEl) return;
-
-    let raw = (contentEl.dataset.raw || '').replace(/<br\s*\/?>/gi, '\n').trim();
-    if (raw.includes('&gt;') || raw.includes('&lt;') || raw.includes('&amp;')) {
-      const txt = document.createElement('textarea');
-      txt.innerHTML = raw;
-      raw = txt.value;
+  function setReplyTo(commentId, username, displayName) {
+    replyToCommentId = commentId;
+    replyToUsername = username;
+    if (replyIndicator) {
+      replyIndicator.querySelector('.reply-indicator-text').textContent =
+        tr('replying_to', 'Replying to {user}').replace('{user}', '@' + (displayName || username));
+      replyIndicator.classList.add('show');
     }
-    const lines = raw.split('\n');
-    const quote = `>>${id}\n${lines.map(line => `>${line}`).join('\n')}\n`;
+    if (!commentInput) return;
+    // Like Reels: the reply starts with @name (anonymous authors have no name to mention)
+    if (username && username !== 'anonymous') {
+      const mention = '@' + username + ' ';
+      const rest = commentInput.value.replace(/^@[a-zA-Z0-9_.\-]+\s/, '');
+      commentInput.value = mention + rest;
+    }
+    commentInput.focus();
+    commentInput.selectionStart = commentInput.selectionEnd = commentInput.value.length;
+    commentInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
 
+  function quoteComment(id) {
+    if (!commentInput) return;
+    const commentEl = commentsList.querySelector(`.comment-item[data-comment-id="${CSS.escape(String(id))}"]`);
+    const contentEl = commentEl?.querySelector('.comment-content');
+    if (!contentEl) return;
+    const raw = decodeHtmlEntities((contentEl.dataset.raw || '').replace(/<br\s*\/?>/gi, '\n').trim());
+    const quote = `>>${id}\n${raw.split('\n').map(line => `>${line}`).join('\n')}\n`;
     const start = commentInput.selectionStart;
     const end = commentInput.selectionEnd;
     const val = commentInput.value;
-
     commentInput.value = val.substring(0, start) + quote + val.substring(end);
     commentInput.focus();
     commentInput.selectionStart = commentInput.selectionEnd = start + quote.length;
@@ -2191,104 +2220,326 @@
   function clearReply() {
     replyToCommentId = null;
     replyToUsername = null;
-    const indicator = document.getElementById('reply-indicator');
-    if (indicator) indicator.style.display = 'none';
+    if (replyIndicator) replyIndicator.classList.remove('show');
   }
 
   const replyCancelBtn = document.getElementById('reply-cancel-btn');
-  if (replyCancelBtn) replyCancelBtn.addEventListener('click', clearReply);
+  if (replyCancelBtn) replyCancelBtn.addEventListener('click', () => {
+    // Drop the @name the reply put in front, keep whatever was written after it
+    if (commentInput && replyToUsername) {
+      const prefix = '@' + replyToUsername + ' ';
+      if (commentInput.value.startsWith(prefix)) {
+        commentInput.value = commentInput.value.slice(prefix.length);
+        commentInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+    clearReply();
+  });
+
+  function renderCommentFiles(files, content) {
+    if (!Array.isArray(files) || !files.length) return '';
+    const items = files.map(f => {
+      if (!f || !f.dest || !f.mime) return '';
+      const url = `/c/${esc(f.dest)}`;
+      if (content && content.includes(`/c/${f.dest}`)) return '';
+      if (f.mime.startsWith('image/')) return `<a class="comment-file" href="${url}" target="_blank"><img src="${url}" alt="${esc(f.original_filename || '')}" loading="lazy"></a>`;
+      if (f.mime.startsWith('video/')) return `<video class="comment-file" src="${url}" controls playsinline preload="metadata"></video>`;
+      if (f.mime.startsWith('audio/')) return `<audio class="comment-file" src="${url}" controls preload="metadata"></audio>`;
+      return '';
+    }).join('');
+    return items ? `<div class="comment-files">${items}</div>` : '';
+  }
 
   function renderCommentEl(c, canReply) {
-    const el = document.createElement('div'); el.className = 'comment-item';
+    const el = document.createElement('div');
+    el.className = 'comment-item' + (c.is_pinned ? ' is-pinned' : '');
     el.dataset.commentId = c.id || '';
     const isAnonGuest = window.f0ckSession?.is_anonymized ?? (window.f0ckSession?.guest_anonymize && !window.f0ckSession?.logged_in);
-    const av = isAnonGuest ? '/a/default.png' : (c.avatar_file ? `/a/${c.avatar_file}` : (c.avatar ? `/t/${c.avatar}.webp` : '/a/default.png'));
-    const nc = (!isAnonGuest && c.username_color) ? `color:${esc(c.username_color)}` : '';
-    const _i = window.f0ckI18n || {};
+    const anon = isAnonGuest || !!c.is_anon || c.username === 'anonymous';
+    const av = isAnonGuest ? '/a/default.png'
+      : (c._avatarUrl || (c.avatar_file ? `/a/${c.avatar_file}` : (c.avatar ? `/t/${c.avatar}.webp` : '/a/default.png')));
+    const color = isAnonGuest ? '' : safeColor(c.username_color);
     const uname = isAnonGuest ? 'anonymous' : (c.display_name || c.username || 'anon');
+    const profile = (!anon && c.username) ? `/user/${encodeURIComponent(c.username)}` : '';
+    const isUploader = !anon && commentsUploader && c.username === commentsUploader;
+    const time = c.created_at ? timeAgo(c.created_at) : tr('ta_just_now', tr('just_now', 'just now'));
+    const fullTime = c.created_at ? new Date(c.created_at).toLocaleString() : '';
+    const avatarImg = `<img class="comment-avatar" src="${esc(av)}" alt="" loading="lazy" data-on="error:img-fallback" data-fallback="/a/default.png">`;
+    const nameAttrs = `class="comment-username${color ? ' has-color' : ''}"${color ? ` style="--user-color: ${esc(color)}"` : ''}`;
+    const poll = c.poll
+      ? `<a class="comment-poll-chip" href="/${esc(String(commentsItemId || ''))}#c${esc(String(c.id))}" target="_blank"><i class="fa-solid fa-square-poll-horizontal"></i><span>${esc(c.poll.question || tr('poll', 'Poll'))}</span><i class="fa-solid fa-chevron-right"></i></a>`
+      : '';
     el.innerHTML = `
-      <img class="comment-avatar" src="${esc(av)}" alt="" loading="lazy" data-on="error:img-fallback" data-fallback="/a/default.png">
+      ${profile ? `<a class="comment-avatar-link" href="${profile}" target="_blank">${avatarImg}</a>` : `<span class="comment-avatar-link">${avatarImg}</span>`}
       <div class="comment-body">
-        <div class="comment-username" style="${nc}">${esc(uname)}</div>
-        <div class="comment-content" data-raw="${esc(c.content || '')}">${renderCommentContent(c.content || '')}</div>
-        <div class="comment-meta">
-          <span class="comment-time">${c.created_at ? timeAgo(c.created_at) : (_i.ta_just_now || _i.just_now || 'just now')}</span>
-          ${(!isAnonGuest && canReply) ? `
-            <button class="comment-reply-btn" data-id="${c.id}" data-user="${esc(c.username || uname)}">${_i.reply || 'Reply'}</button>
-            <button class="comment-quote-btn" data-id="${c.id}" data-user="${esc(c.username || uname)}">${_i.quote || 'Quote'}</button>
-          ` : ''}
+        <div class="comment-head">
+          ${profile ? `<a ${nameAttrs} href="${profile}" target="_blank">${esc(uname)}</a>` : `<span ${nameAttrs}>${esc(uname)}</span>`}
+          ${isUploader ? `<span class="comment-badge">${esc(tr('author', 'Uploader'))}</span>` : ''}
+          <span class="comment-time" title="${esc(fullTime)}">${esc(time)}</span>
+          ${c.is_pinned ? `<span class="comment-pin" title="${esc(tr('pinned', 'Pinned'))}"><i class="fa-solid fa-thumbtack"></i></span>` : ''}
         </div>
+        ${c.content ? `<div class="comment-content" data-raw="${esc(c.content)}">${renderCommentContent(c.content)}</div>` : ''}
+        ${renderCommentFiles(c.files, c.content || '')}
+        ${poll}
+        ${(!isAnonGuest && canReply && c.id) ? `
+        <div class="comment-meta">
+          <button type="button" class="comment-reply-btn" data-id="${esc(String(c.id))}" data-user="${esc(anon ? '' : (c.username || ''))}" data-name="${esc(uname)}">${esc(tr('reply', 'Reply'))}</button>
+          <button type="button" class="comment-quote-btn" data-id="${esc(String(c.id))}">${esc(tr('quote', 'Quote'))}</button>
+        </div>` : ''}
       </div>`;
-    // Wire buttons
-    const replyBtn = el.querySelector('.comment-reply-btn');
-    if (replyBtn) {
-      replyBtn.addEventListener('click', () => {
-        setReplyTo(replyBtn.dataset.id, replyBtn.dataset.user);
-      });
-    }
-    const quoteBtn = el.querySelector('.comment-quote-btn');
-    if (quoteBtn) {
-      quoteBtn.addEventListener('click', () => {
-        quoteComment(quoteBtn.dataset.id, quoteBtn.dataset.user);
-      });
-    }
     return el;
   }
 
+  // ── Threads ──
+  function setThreadOpen(thread, open) {
+    const box = thread.querySelector(':scope > .comment-replies');
+    const btn = thread.querySelector(':scope > .comment-replies-toggle');
+    if (!box || !btn) return;
+    box.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.querySelector('.label').textContent = open
+      ? tr('hide_replies', 'Hide replies')
+      : tr('view_replies', 'View {n} more replies').replace('{n}', box.children.length);
+  }
+  function addReply(thread, el, open) {
+    let box = thread.querySelector(':scope > .comment-replies');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'comment-replies';
+      box.hidden = true;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'comment-replies-toggle';
+      btn.innerHTML = '<span class="ig-line"></span><span class="label"></span>';
+      thread.append(box, btn);
+    }
+    box.appendChild(el);
+    setThreadOpen(thread, open === undefined ? !box.hidden : open);
+  }
+  function renderThread(root, replies, canReply) {
+    const thread = document.createElement('div');
+    thread.className = 'comment-thread' + (root.is_pinned ? ' is-pinned' : '');
+    thread.dataset.threadId = root.id || '';
+    thread.appendChild(renderCommentEl(root, canReply));
+    (replies || []).forEach(r => addReply(thread, renderCommentEl(r, canReply), false));
+    return thread;
+  }
+  // The top comment of a comment's thread (replies to replies stay in the same thread)
+  function threadRootId(c) {
+    let cur = c;
+    for (let i = 0; i < 50 && cur && cur.parent_id && commentsById.has(String(cur.parent_id)); i++) {
+      cur = commentsById.get(String(cur.parent_id));
+    }
+    return cur ? String(cur.id) : null;
+  }
+
+  // Puts one comment into the open sheet (own, or live from someone else). false if already there.
+  function insertComment(c, own) {
+    if (!c) return false;
+    if (c.id != null) {
+      if (commentsById.has(String(c.id))) return false;
+      commentsById.set(String(c.id), c);
+    }
+    commentsEmpty.hidden = true;
+    commentsList.querySelector('.ig-sheet-error')?.remove();
+    const canReply = !!window.scrollerLoggedIn;
+    let el;
+    const rootId = c.parent_id ? threadRootId(c) : null;
+    const thread = rootId && rootId !== String(c.id)
+      ? commentsList.querySelector(`.comment-thread[data-thread-id="${CSS.escape(rootId)}"]`)
+      : null;
+    if (thread) {
+      el = renderCommentEl(c, canReply);
+      addReply(thread, el, own ? true : undefined);
+    } else {
+      const t = renderThread(c, null, canReply);
+      el = t.firstElementChild;
+      const firstUnpinned = [...commentsList.querySelectorAll(':scope > .comment-thread')].find(x => !x.classList.contains('is-pinned'));
+      commentsList.insertBefore(t, firstUnpinned || null);
+    }
+    el.classList.add('is-new');
+    if (own) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return true;
+  }
+
+  // Replies, quotes and thread toggles: one delegated listener for the whole list
+  commentsList.addEventListener('click', e => {
+    const replyBtn = e.target.closest('.comment-reply-btn');
+    if (replyBtn) { setReplyTo(replyBtn.dataset.id, replyBtn.dataset.user, replyBtn.dataset.name); return; }
+    const quoteBtn = e.target.closest('.comment-quote-btn');
+    if (quoteBtn) { quoteComment(quoteBtn.dataset.id); return; }
+    const toggle = e.target.closest('.comment-replies-toggle');
+    if (toggle) {
+      const thread = toggle.closest('.comment-thread');
+      const box = thread?.querySelector(':scope > .comment-replies');
+      if (thread && box) setThreadOpen(thread, box.hidden);
+    }
+  });
+
   async function openComments(itemId) {
-    commentsItemId = itemId;
+    commentsItemId = String(itemId);
+    const reqId = commentsItemId;
     clearReply();
+    commentsUploader = slideForItem(itemId)?.dataset.uploader || null;
     commentsOpenLink.href = `/${itemId}`;
-    commentsLoading.style.display = 'block'; commentsEmpty.style.display = 'none'; commentsCount.textContent = '';
-    commentsList.querySelectorAll('.comment-item').forEach(el => el.remove());
+    commentsLoading.hidden = false;
+    commentsEmpty.hidden = true;
+    commentsCount.textContent = '';
+    commentsList.querySelectorAll('.comment-thread, .ig-sheet-error').forEach(el => el.remove());
+    commentsById = new Map();
     openPanel(commentsPanel, commentsBackdrop);
     // Desktop only: focus input immediately (skip on touch to avoid surprise keyboard)
     if (commentInput && !window.matchMedia('(pointer: coarse)').matches) {
       setTimeout(() => commentInput.focus(), 120);
     }
     try {
-      const resp = await fetch(`/api/comments/${itemId}?sort=new`);
+      const resp = await fetch(`/api/comments/${itemId}?sort=new`, { headers: { Accept: 'application/json' } });
       const data = await resp.json();
-      commentsLoading.style.display = 'none';
-      const visible = data.comments ? data.comments.filter(c => !c.is_deleted) : [];
-      commentsCount.textContent = `(${visible.length})`;
-      // Sync the slide action button with the real count from the server
-      const slide = feed.querySelector(`.scroll-slide[data-id="${itemId}"]`);
-      if (slide) {
-        const btn = slide.querySelector('.js-comments-btn .scroll-btn-count');
-        if (btn) btn.textContent = visible.length;
-      }
-      if (!visible.length) { commentsEmpty.style.display = 'block'; return; }
+      if (commentsItemId !== reqId) return; // another item's sheet was opened meanwhile
+      commentsLoading.hidden = true;
+      if (!resp.ok || data.success === false) throw new Error(data.message || 'failed');
+      const visible = (data.comments || []).filter(c => !c.is_deleted);
+      visible.forEach(c => commentsById.set(String(c.id), c));
+      setCommentCount(visible.length);
+      if (!visible.length) { commentsEmpty.hidden = false; return; }
       const canReply = !!window.scrollerLoggedIn;
-      visible.forEach(c => commentsList.appendChild(renderCommentEl(c, canReply)));
+      // Group into threads: the API lists newest first, replies read oldest first
+      const roots = [];
+      const replies = new Map();
+      visible.forEach(c => {
+        const rootId = threadRootId(c);
+        if (rootId === String(c.id)) { roots.push(c); return; }
+        if (!replies.has(rootId)) replies.set(rootId, []);
+        replies.get(rootId).push(c);
+      });
+      replies.forEach(list => list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
+      const frag = document.createDocumentFragment();
+      roots.forEach(r => frag.appendChild(renderThread(r, replies.get(String(r.id)), canReply)));
+      commentsList.appendChild(frag);
     } catch {
-      commentsLoading.style.display = 'none'; commentsEmpty.style.display = 'block';
-      commentsEmpty.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><br>${(window.f0ckI18n && window.f0ckI18n.failed_load_comments) || 'Failed to load'}`;
+      if (commentsItemId !== reqId) return;
+      commentsLoading.hidden = true;
+      const err = document.createElement('div');
+      err.className = 'ig-sheet-state ig-sheet-error';
+      err.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><span>${esc(tr('failed_load_comments', 'Failed to load'))}</span>`;
+      commentsList.appendChild(err);
     }
   }
 
-  // ── Tag bar ───────────────────────────────────────────────────────────────
-  const tagBar      = document.getElementById('tag-bar');
-  const tagBarClose = document.getElementById('tag-bar-close-btn');
+  // A comment someone posted (live socket): into the open sheet, else just the slide's count
+  async function onLiveComment(d) {
+    if (!d || d.id == null || d.item_id == null) return;
+    const id = String(d.id);
+    const sheetOpen = commentsPanel.classList.contains('open') && String(d.item_id) === String(commentsItemId);
+    if (!sheetOpen) {
+      if (postedCommentIds.has(id)) return;
+      const btn = slideForItem(d.item_id)?.querySelector('.js-comments-btn .scroll-btn-count');
+      if (btn) btn.textContent = (parseInt(btn.textContent, 10) || 0) + 1;
+      return;
+    }
+    if (commentsById.has(id)) return;
+    let c = null;
+    try {
+      const r = await fetch(`/api/comment/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } });
+      const j = await r.json();
+      if (j.success) c = j.comment;
+    } catch {}
+    if (!c) c = { ...d, content: d.body };
+    if (String(d.item_id) !== String(commentsItemId) || !commentsPanel.classList.contains('open')) return;
+    if (insertComment(c, false)) setCommentCount(commentsById.size);
+  }
 
-  function openTagBar(itemId) {
+  if (commentsCloseBtn) commentsCloseBtn.addEventListener('click', () => closePanel(commentsPanel, commentsBackdrop));
+
+  // ── Tag sheet ─────────────────────────────────────────────────────────────
+  const tagBar         = document.getElementById('tag-bar');
+  const tagBackdrop    = document.getElementById('tag-backdrop');
+  const tagBarClose    = document.getElementById('tag-bar-close-btn');
+  const tagBarCurrent  = document.getElementById('tag-bar-current');
+  const tagBarCount    = document.getElementById('tag-bar-count');
+  const RATING_TAGS    = ['sfw', 'nsfw', 'nsfl'];
+  let tagBarTags       = []; // tag names of the item in the sheet
+
+  function cleanTagList(tags) {
+    return (tags || [])
+      .filter(t => t && t.tag && t.id > 2 && !RATING_TAGS.includes(String(t.tag).toLowerCase()))
+      .map(t => String(t.tag));
+  }
+
+  function renderTagChips(highlight) {
+    if (!tagBarCurrent) return;
+    if (tagBarCount) tagBarCount.textContent = tagBarTags.length ? String(tagBarTags.length) : '';
+    tagBarCurrent.innerHTML = '';
+    if (!tagBarTags.length) {
+      tagBarCurrent.innerHTML = `<span class="ig-tag-none">${esc(tr('no_tags', 'No tags yet. Be the first.'))}</span>`;
+      return;
+    }
+    tagBarTags.forEach(t => {
+      const chip = document.createElement('span');
+      chip.className = 'ig-tag-chip' + (highlight && t.toLowerCase() === highlight.toLowerCase() ? ' is-new' : '');
+      chip.dataset.tag = t;
+      chip.innerHTML = `<button type="button" class="ig-tag-chip-name" title="${esc(t)}">#${esc(t)}</button>`
+        + (window.scrollerIsMod ? `<button type="button" class="ig-tag-chip-del" title="Remove tag '${esc(t)}'"><i class="fa-solid fa-xmark"></i></button>` : '');
+      tagBarCurrent.appendChild(chip);
+    });
+  }
+
+  if (tagBarCurrent) tagBarCurrent.addEventListener('click', async e => {
+    const chip = e.target.closest('.ig-tag-chip');
+    if (!chip) return;
+    const tag = chip.dataset.tag;
+    if (e.target.closest('.ig-tag-chip-name')) { closeTagBar(); filterByTag(tag); return; }
+    if (!e.target.closest('.ig-tag-chip-del') || !tagBarItemId) return;
+    const itemId = tagBarItemId;
+    chip.classList.add('is-busy');
+    try {
+      const csrfToken = window.f0ckSession?.csrf_token || window.scrollerCsrf || '';
+      const resp = await fetch(`/api/v2/tags/${itemId}/${encodeURIComponent(tag)}`, {
+        method: 'DELETE',
+        headers: { Accept: 'application/json', ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}) }
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!data.success) throw new Error(data.msg || '');
+      tagBarTags = tagBarTags.filter(t => t !== tag);
+      renderTagChips();
+      slideForItem(itemId)?.querySelectorAll('.scroll-tag-pill').forEach(p => { if (p.dataset.tag === tag) p.remove(); });
+    } catch (err) {
+      chip.classList.remove('is-busy');
+      showShareToast(err.message || tr('tag_failed', 'Couldn’t change the tags.'), true);
+    }
+  });
+
+  async function openTagBar(itemId) {
     closeAllPanels();
-    tagBarItemId = itemId;
     if (!tagBar) return;
+    tagBarItemId = String(itemId);
     tagBar.classList.add('open');
-    // Focus the input after transition
+    tagBackdrop?.classList.add('open');
+    // The tags shown on the slide right away, then the full list from the server
+    const slide = slideForItem(itemId);
+    tagBarTags = slide ? [...slide.querySelectorAll('.scroll-tag-pill')].map(p => p.dataset.tag).filter(Boolean) : [];
+    renderTagChips();
     const inp = document.getElementById('scroll-tag-input');
     if (inp) setTimeout(() => inp.focus(), 240);
+    try {
+      const r = await fetch(`/api/v2/tags/${itemId}`, { headers: { Accept: 'application/json' } });
+      const d = await r.json();
+      if (tagBarItemId !== String(itemId)) return;
+      if (d.success && Array.isArray(d.tags)) { tagBarTags = cleanTagList(d.tags); renderTagChips(); }
+    } catch {}
   }
   function closeTagBar() {
     if (!tagBar) return;
     tagBar.classList.remove('open');
+    tagBackdrop?.classList.remove('open');
     closeSugg();
     tagBarItemId = null;
     const inp = document.getElementById('scroll-tag-input');
-    if (inp) { inp.value = ''; inp.blur(); }
+    if (inp) { inp.value = ''; inp.blur(); inp.dispatchEvent(new Event('input')); }
   }
   if (tagBarClose) tagBarClose.addEventListener('click', closeTagBar);
+  if (tagBackdrop) tagBackdrop.addEventListener('click', closeTagBar);
+  if (tagBar) addSwipeClose(tagBar, null, closeTagBar);
 
   // ── Share panel ────────────────────────────────────────────────────────────
   const sharePanel    = document.getElementById('share-panel');
@@ -2446,17 +2697,16 @@
     if (!toast) {
       toast = document.createElement('div');
       toast.id = 'share-toast';
-      toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);'
-        + 'background:rgba(20,20,28,.95);color:#fff;padding:10px 18px;border-radius:22px;'
-        + 'font-size:.82rem;font-weight:600;z-index:2000;pointer-events:none;'
-        + 'box-shadow:0 4px 20px rgba(0,0,0,.5);opacity:0;transition:opacity .18s,transform .18s;';
+      toast.setAttribute('role', 'status');
       document.body.appendChild(toast);
     }
     toast.textContent = msg;
-    toast.style.background = isError ? 'rgba(200,40,40,.95)' : 'rgba(20,20,28,.95)';
-    toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) translateY(0)';
+    toast.classList.toggle('is-error', !!isError);
+    // Over an open sheet the toast moves to the top, clear of the input
+    toast.classList.toggle('at-top', !!document.querySelector('.ig-sheet.open'));
+    toast.classList.add('show');
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(-50%) translateY(20px)'; }, 2400);
+    toast._t = setTimeout(() => toast.classList.remove('show'), 2400);
   }
 
   async function fetchShareUsers(q) {
@@ -2535,24 +2785,30 @@
         const after = line.substring(line.indexOf('&gt;') + 4);
         const withEmoji = after.replace(/:([a-z0-9_]+):/g, (m, name) => {
           const url = customEmojis[name];
-          return url ? `<img src="${esc(url)}" alt=":${esc(name)}:" title=":${esc(name)}:" style="height:1.6em;vertical-align:middle;display:inline-block;margin:0 1px">` : m;
+          return url ? `<img class="comment-emoji" src="${esc(url)}" alt=":${esc(name)}:" title=":${esc(name)}:">` : m;
         });
         return `<span class="scroller-greentext">&gt;${withEmoji}</span>`;
       }
       // Blank lines → small spacer
-      if (!trimmed) return '<span style="display:block;height:.3em"></span>';
+      if (!trimmed) return '<span class="comment-spacer"></span>';
       // 1. Replace image URLs from allowed hosts FIRST (before emoji, so we never
       //    accidentally re-match the .png inside an already-inserted <img> src)
       let out = line.replace(imageRe, (_, url) => {
         const fullUrl = url.startsWith('http') || url.startsWith('//') || url.startsWith('/') ? url : '//' + url;
-        return `<img src="${fullUrl}" alt="" style="max-width:100%;max-height:320px;border-radius:6px;display:block;margin:4px 0" loading="lazy">`;
+        return `<img class="comment-inline-img" src="${fullUrl}" alt="" loading="lazy">`;
       });
       // 2. Replace custom emoji shortcodes with images (runs on raw text so it
       //    won't see the <img> tags inserted above)
       out = out.replace(/:([a-z0-9_]+):/g, (m, name) => {
         const url = customEmojis[name];
-        return url ? `<img src="${esc(url)}" alt=":${esc(name)}:" title=":${esc(name)}:" style="height:1.8em;vertical-align:middle;display:inline-block;margin:0 2px">` : m;
+        return url ? `<img class="comment-emoji" src="${esc(url)}" alt=":${esc(name)}:" title=":${esc(name)}:">` : m;
       });
+
+      // 2b. Mentions: the server's [@name](/user/name) links and plain @name
+      out = out.replace(/\[@([a-zA-Z0-9_.\-]+)\]\(\/user\/[^)\s]*\)/g,
+        (m, name) => `<a class="comment-mention" href="/user/${encodeURIComponent(name)}" target="_blank">@${name}</a>`);
+      out = out.replace(/(^|[\s(])@([a-zA-Z0-9_][a-zA-Z0-9_.\-]*)/g,
+        (m, pre, name) => `${pre}<a class="comment-mention" href="/user/${encodeURIComponent(name)}" target="_blank">@${name}</a>`);
 
       // 3. Replace >>ID patterns with context links
       out = out.replace(/(?<!\w)&gt;&gt;(\d+)/g, (match, id) => {
@@ -2563,7 +2819,7 @@
     });
     let html = lines.map((line, i) => {
       if (i === lines.length - 1) return line;
-      if (line.includes('scroller-greentext') || line.includes('display:block')) return line;
+      if (line.includes('scroller-greentext') || line.includes('comment-spacer')) return line;
       return line + '<br>';
     }).join('');
     // [spoiler]…[/spoiler] — iterative to handle nesting
@@ -2582,45 +2838,39 @@
 
   function buildEmojiPickerEl() {
     const picker = document.createElement('div');
-    picker.className = 'emoji-picker'; // reuse comments.css class if present
-    picker.style.cssText = [
-      'position:fixed','z-index:9999','bottom:80px','left:12px','right:12px',
-      'max-height:220px','overflow-y:auto',
-      'background:rgba(10,10,14,.97)','border:1px solid rgba(255,255,255,.12)',
-      'border-radius:14px','padding:10px','display:flex','flex-wrap:wrap','gap:6px',
-      'box-shadow:0 8px 40px rgba(0,0,0,.7)'
-    ].join(';');
+    picker.className = 'scroller-emoji-picker';
     Object.keys(customEmojis).forEach(name => {
-      const img = document.createElement('img');
-      img.src = customEmojis[name]; img.title = ':' + name + ':';
-      img.alt = name; img.loading = 'lazy';
-      img.style.cssText = 'width:40px;height:40px;object-fit:contain;cursor:pointer;border-radius:6px;transition:transform .1s';
-      img.addEventListener('mouseenter', () => { img.style.transform = 'scale(1.2)'; });
-      img.addEventListener('mouseleave', () => { img.style.transform = 'scale(1)'; });
-      img.addEventListener('click', e => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.title = ':' + name + ':';
+      btn.innerHTML = `<img src="${esc(customEmojis[name])}" alt="${esc(name)}" loading="lazy">`;
+      btn.addEventListener('click', e => {
         e.preventDefault(); e.stopPropagation();
-        if (!commentInput) return;
-        const val = commentInput.value;
-        const code = ':' + name + ':';
-        // Use tracked position; fall back to end
-        const pos = (emojiInsertPos !== null && emojiInsertPos <= val.length)
-          ? emojiInsertPos : val.length;
-        commentInput.value = val.slice(0, pos) + code + val.slice(pos);
-        emojiInsertPos = pos + code.length; // advance for next insert
-        // Update send button state — no focus(), picker stays open
-        if (commentSendBtn) commentSendBtn.disabled = !commentInput.value.trim();
+        insertAtCaret(':' + name + ':');
       });
-      picker.appendChild(img);
+      picker.appendChild(btn);
     });
     if (!Object.keys(customEmojis).length) {
-      picker.innerHTML = `<div style="color:rgba(255,255,255,.4);font-size:.8rem;padding:8px">${(window.f0ckI18n && window.f0ckI18n.no_custom_emojis) || 'No custom emojis'}</div>`;
+      picker.innerHTML = `<div class="scroller-emoji-picker-empty">${esc(tr('no_custom_emojis', 'No custom emojis'))}</div>`;
     }
     return picker;
+  }
+
+  // Puts text at the remembered caret position (the picker and the quick reactions keep the
+  // keyboard closed on phones, so the textarea may not have focus)
+  function insertAtCaret(text) {
+    if (!commentInput) return;
+    const val = commentInput.value;
+    const pos = (emojiInsertPos !== null && emojiInsertPos <= val.length) ? emojiInsertPos : val.length;
+    commentInput.value = val.slice(0, pos) + text + val.slice(pos);
+    commentInput.dispatchEvent(new Event('input', { bubbles: true }));
+    emojiInsertPos = pos + text.length; // the input handler moved it to the end
   }
 
   function hideEmojiPicker() {
     if (emojiPickerEl?.parentNode) emojiPickerEl.parentNode.removeChild(emojiPickerEl);
     emojiPickerEl = null;
+    document.getElementById('comment-emoji-trigger')?.classList.remove('active');
     if (emojiPickerCloseHandler) { document.removeEventListener('click', emojiPickerCloseHandler); emojiPickerCloseHandler = null; }
   }
 
@@ -2632,10 +2882,10 @@
       e.preventDefault(); e.stopPropagation();
       if (emojiPickerEl) { hideEmojiPicker(); return; }
       emojiPickerEl = buildEmojiPickerEl();
-      document.body.appendChild(emojiPickerEl);
-      emojiPickerEl.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+      (document.getElementById('comments-input-area') || document.body).appendChild(emojiPickerEl);
+      emojiTriggerBtn.classList.add('active');
       emojiPickerCloseHandler = ev => {
-        if (!emojiPickerEl?.contains(ev.target) && ev.target !== emojiTriggerBtn) hideEmojiPicker();
+        if (!emojiPickerEl?.contains(ev.target) && !emojiTriggerBtn.contains(ev.target)) hideEmojiPicker();
       };
       setTimeout(() => document.addEventListener('click', emojiPickerCloseHandler), 0);
     });
@@ -2671,7 +2921,7 @@
     users.forEach((u, i) => {
       const item = document.createElement('div'); item.className = 'mention-item'; item.dataset.idx = i;
       const av = u.avatar_file ? `/a/${u.avatar_file}` : (u.avatar ? `/t/${u.avatar}.webp` : '/a/default.png');
-      item.innerHTML = `<img class="mention-avatar" src="${esc(av)}" data-on="error:img-fallback" data-fallback="/a/default.png">${esc(u.display_name || u.user)}`;
+      item.innerHTML = `<img class="mention-avatar" src="${esc(av)}" data-on="error:img-fallback" data-fallback="/a/default.png"><span class="mention-names"><span class="mention-name">${esc(u.display_name || u.user)}</span><span class="mention-login">@${esc(u.user)}</span></span>`;
       item.addEventListener('mousedown', e => { e.preventDefault(); insertMention(u.user); });
       mentionDropdown.appendChild(item);
     });
@@ -2699,7 +2949,7 @@
     mentionDropdown.innerHTML = '';
     matches.forEach(([code, char], i) => {
       const item = document.createElement('div'); item.className = 'mention-item'; item.dataset.idx = i;
-      item.innerHTML = `<span style="font-size:1.2rem;line-height:1">${char}</span><span style="font-size:.8rem;color:rgba(255,255,255,.65)">:${code}:</span>`;
+      item.innerHTML = `<span class="mention-emoji-char">${char}</span><span class="mention-emoji-code">:${esc(code)}:</span>`;
       item.addEventListener('mousedown', e => { e.preventDefault(); insertEmoji(char, code); });
       mentionDropdown.appendChild(item);
     });
@@ -2713,7 +2963,7 @@
     mentionDropdown.innerHTML = '';
     matches.forEach(([, name, url], i) => {
       const item = document.createElement('div'); item.className = 'mention-item'; item.dataset.idx = i;
-      item.innerHTML = `<img src="${esc(url)}" style="width:24px;height:24px;object-fit:contain;border-radius:4px" alt="${esc(name)}"><span style="font-size:.8rem;color:rgba(255,255,255,.65)">:${esc(name)}:</span>`;
+      item.innerHTML = `<img class="mention-emoji-img" src="${esc(url)}" alt="${esc(name)}"><span class="mention-emoji-code">:${esc(name)}:</span>`;
       item.addEventListener('mousedown', e => { e.preventDefault(); insertCustomEmoji(name); });
       mentionDropdown.appendChild(item);
     });
@@ -2765,9 +3015,7 @@
     commentInput.addEventListener('input', () => {
       // Sync position after typing
       emojiInsertPos = commentInput.selectionStart;
-      // Resize
-      commentInput.style.height = 'auto';
-      commentInput.style.height = Math.min(commentInput.scrollHeight, 100) + 'px';
+      fitCommentInput();
       if (commentSendBtn) commentSendBtn.disabled = !commentInput.value.trim();
 
       const cursor = commentInput.selectionStart;
@@ -2836,71 +3084,92 @@
     commentInput.addEventListener('blur', () => { setTimeout(closeAcDropdown, 200); });
   }
 
+  // Grows the textarea with its text, up to 5 lines (rows, no inline styles)
+  function fitCommentInput() {
+    if (!commentInput) return;
+    commentInput.rows = 1;
+    while (commentInput.rows < 5 && commentInput.scrollHeight > commentInput.clientHeight + 1) commentInput.rows++;
+  }
+
+  // Quick reactions above the input: tap to add the emoji
+  document.getElementById('comment-quick-reactions')?.addEventListener('click', e => {
+    const b = e.target.closest('button[data-emoji]');
+    if (!b) return;
+    insertAtCaret(b.dataset.emoji);
+    b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+  });
+
   // ── Post comment ──────────────────────────────────────────────────────────
   if (commentSendBtn) {
     commentSendBtn.addEventListener('click', async () => {
       const content = commentInput ? commentInput.value.trim() : '';
       if (!content || !commentsItemId || commentsPosting) return;
-      commentsPosting = true; commentSendBtn.disabled = true;
+      const itemId = commentsItemId;
+      const parentId = replyToCommentId;
+      commentsPosting = true;
+      commentSendBtn.disabled = true;
+      commentSendBtn.classList.add('is-busy');
       try {
         // Captcha first when the site requires one for comments (cap.comments); cancelling throws
         if (window.f0ckCaptchaGate) await window.f0ckCaptchaGate('comment');
         const csrfToken = window.f0ckSession?.csrf_token || window.scrollerCsrf || '';
-        let postBody = `item_id=${commentsItemId}&content=${encodeURIComponent(content)}`;
-        if (replyToCommentId) postBody += `&parent_id=${replyToCommentId}`;
+        let postBody = `item_id=${encodeURIComponent(itemId)}&content=${encodeURIComponent(content)}`;
+        if (parentId) postBody += `&parent_id=${encodeURIComponent(parentId)}`;
         if (csrfToken) postBody += `&csrf_token=${encodeURIComponent(csrfToken)}`;
         const resp = await fetch('/api/comments', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'application/json',
             ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
           },
           body: postBody
         });
-        const data = await resp.json();
-        if (data.success) {
-          if (commentInput) { commentInput.value = ''; commentInput.style.height = 'auto'; }
-          commentSendBtn.disabled = true; commentsEmpty.style.display = 'none';
-          const displayName = window.scrollerDisplayName || window.scrollerUsername || 'you';
-          const el = renderCommentEl({
-            id: data.comment?.id,
-            avatar_file: null,
-            avatar: null,
-            username: window.scrollerUsername,
-            display_name: displayName,
-            content: data.comment?.content ?? content,
-            created_at: null
-          }, !!window.scrollerLoggedIn);
-          // Set avatar from global
-          const avImg = el.querySelector('.comment-avatar');
-          if (avImg) avImg.src = window.scrollerUserAvatar || '/a/default.png';
-          commentsList.appendChild(el);
-          commentsList.scrollTop = commentsList.scrollHeight;
-          clearReply();
-          // Update panel header count
-          const cur = parseInt(commentsCount.textContent.replace(/\D/g, '') || '0');
-          commentsCount.textContent = `(${cur + 1})`;
-          // Update the slide action button count
-          const slide = feed.querySelector(`.scroll-slide[data-id="${commentsItemId}"]`);
-          if (slide) {
-            const btn = slide.querySelector('.js-comments-btn .scroll-btn-count');
-            if (btn) btn.textContent = cur + 1;
-          }
+        const data = await resp.json().catch(() => ({}));
+        if (!data.success) {
+          showShareToast(data.message || data.msg || tr('comment_failed', 'Couldn’t post your comment.'), true);
+          return;
         }
+        if (commentInput) { commentInput.value = ''; fitCommentInput(); emojiInsertPos = 0; }
+        hideEmojiPicker();
+        clearReply();
+        const sent = data.comment || {};
+        if (sent.id != null) postedCommentIds.add(String(sent.id));
+        if (String(itemId) !== String(commentsItemId)) return; // sheet moved on to another item
+        const own = {
+          ...sent,
+          id: sent.id,
+          parent_id: sent.parent_id ?? parentId,
+          username: window.scrollerUsername,
+          display_name: window.scrollerDisplayName || window.scrollerUsername || 'you',
+          username_color: sent.username_color,
+          _avatarUrl: window.scrollerUserAvatar || '/a/default.png',
+          content: sent.content ?? content,
+          files: sent.files || [],
+          created_at: null,
+          is_pinned: false,
+        };
+        if (insertComment(own, true)) setCommentCount(commentsById.size || (parseInt(commentsCount.textContent, 10) || 0) + 1);
       } catch {
-        // Failed or captcha cancelled: let the user send again
+        // Captcha cancelled or network error: the text stays, send again
+      } finally {
+        commentsPosting = false;
+        commentSendBtn.classList.remove('is-busy');
         commentSendBtn.disabled = !(commentInput && commentInput.value.trim());
-      } finally { commentsPosting = false; }
+      }
     });
   }
 
   // ── Tag input ──────────────────────────────────────────────────────────────
+  // Results read like hashtag search: "#tag / 1,234 posts", tap one to add it. When nothing
+  // matches exactly, the typed text is offered as a new tag on top.
   const addTagInput   = document.getElementById('scroll-tag-input');
   const addTagSendBtn = document.getElementById('scroll-tag-send-btn');
   const addTagSuggBox = document.getElementById('scroll-tag-suggestions');
   let tagAddSuggIdx   = -1;
   let tagAddSuggItems = [];
   let tagAddSuggTimer = null;
+  let tagAddSuggSeq   = 0;
   let tagPosting      = false;
 
   function closeSugg() {
@@ -2908,61 +3177,64 @@
     tagAddSuggItems = []; tagAddSuggIdx = -1;
   }
 
-  function renderTagSugg(rows) {
-    if (!addTagSuggBox || !rows.length) { closeSugg(); return; }
-    addTagSuggBox.innerHTML = '';
-    tagAddSuggItems = rows;
-    tagAddSuggIdx = -1;
-    rows.forEach((r, i) => {
-      const el = document.createElement('div');
-      el.className = 'scroll-tag-sugg-item'; el.dataset.idx = i;
-      el.innerHTML = `<i class="fa-solid fa-tag" style="font-size:.65rem;color:rgba(255,255,255,.3)"></i>${esc(r.tag)}<span class="scroll-tag-sugg-count">${r.uses ?? ''}</span>`;
-      
-      el.addEventListener('mouseup', (ev) => {
-        const sel = window.getSelection?.()?.toString().trim();
-        if (!sel || sel === r.tag) return;
-        el.addEventListener('click', (e) => e.stopImmediatePropagation(), { once: true, capture: true });
-        ev.stopPropagation();
-        window._showSelTagPopover?.(sel, el, (confirmed) => {
-          window.getSelection?.()?.removeAllRanges();
-          addTagInput.value = confirmed;
-          closeSugg();
-          submitTag();
-        });
-      });
+  function formatCount(n) {
+    try { return Number(n).toLocaleString(tr('lang', undefined) || undefined); } catch { return String(n); }
+  }
 
-      el.addEventListener('click', e => { 
-        const sel = window.getSelection?.()?.toString().trim();
-        if (sel && sel !== r.tag) {
-           e.preventDefault();
-           e.stopPropagation();
-           return;
-        }
-        addTagInput.value = r.tag; 
-        closeSugg(); 
-        submitTag();
-      });
-      addTagSuggBox.appendChild(el);
-    });
+  function renderTagSugg(rows, q) {
+    if (!addTagSuggBox) return;
+    const have = new Set(tagBarTags.map(t => t.toLowerCase()));
+    const typed = (q || '').trim();
+    const items = (Array.isArray(rows) ? rows : []).map(r => ({ tag: String(r.tag), uses: r.uses }));
+    if (typed && !items.some(r => r.tag.toLowerCase() === typed.toLowerCase())) items.unshift({ tag: typed, isNew: true });
+    if (!items.length) { closeSugg(); return; }
+    tagAddSuggItems = items;
+    tagAddSuggIdx = -1;
+    addTagSuggBox.innerHTML = items.map((r, i) => {
+      const added = have.has(r.tag.toLowerCase());
+      const sub = r.isNew ? tr('tag_new', 'New tag') : tr('tag_posts', '{n} posts').replace('{n}', formatCount(r.uses ?? 0));
+      return `<button type="button" class="ig-tag-result${added ? ' is-added' : ''}${r.isNew ? ' is-new-tag' : ''}" data-idx="${i}">
+          <span class="ig-tag-result-icon">${r.isNew ? '<i class="fa-solid fa-plus"></i>' : '#'}</span>
+          <span class="ig-tag-result-text"><span class="ig-tag-result-name">${esc(r.tag)}</span><span class="ig-tag-result-sub">${esc(sub)}</span></span>
+          ${added ? '<i class="fa-solid fa-circle-check ig-tag-result-check"></i>' : ''}
+        </button>`;
+    }).join('');
     addTagSuggBox.classList.add('show');
   }
 
-  async function fetchTagSugg(q) {
+  function setTagSuggFocus(idx) {
+    tagAddSuggIdx = idx;
+    addTagSuggBox?.querySelectorAll('.ig-tag-result').forEach((el, i) => {
+      el.classList.toggle('selected', i === idx);
+      if (i === idx) el.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  // (own name: the filter panel further down has its own fetchTagSugg)
+  async function fetchTagBarSugg(q) {
+    const seq = ++tagAddSuggSeq;
     try {
       const r = await fetch(`/api/v2/scroller/tags?q=${encodeURIComponent(q)}`);
-      renderTagSugg(await r.json());
+      const rows = await r.json();
+      if (seq !== tagAddSuggSeq || !tagBar?.classList.contains('open')) return; // a newer query won
+      if (addTagInput && addTagInput.value.trim() !== q) return;
+      renderTagSugg(rows, q);
     } catch {}
   }
 
-  async function submitTag() {
+  async function submitTag(tagOverride) {
     if (!addTagInput || tagPosting) return;
-    // Always tag the currently active slide, regardless of which slide opened the bar
-    const targetId = currentSlide?.dataset?.localId || currentSlide?.dataset?.id || tagBarItemId;
-    if (!targetId || !/^\d+$/.test(targetId)) { showShareToast('Add to site first to tag'); return; }
-    const tag = addTagInput.value.trim();
+    const targetId = tagBarItemId || currentSlide?.dataset?.localId || currentSlide?.dataset?.id;
+    if (!targetId || !/^\d+$/.test(targetId)) { showShareToast(tr('add_to_site_first', 'Add to site first to tag'), true); return; }
+    const tag = (tagOverride ?? addTagInput.value).trim().replace(/^#+/, '').trim();
     if (!tag) return;
+    if (tagBarTags.some(t => t.toLowerCase() === tag.toLowerCase())) {
+      addTagInput.value = ''; addTagInput.dispatchEvent(new Event('input'));
+      renderTagChips(tag);
+      return;
+    }
     tagPosting = true;
-    if (addTagSendBtn) addTagSendBtn.disabled = true;
+    if (addTagSendBtn) { addTagSendBtn.disabled = true; addTagSendBtn.classList.add('is-busy'); }
     closeSugg();
     try {
       const csrfToken = window.f0ckSession?.csrf_token || window.scrollerCsrf || '';
@@ -2970,58 +3242,65 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
           ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
         },
         body: `tagname=${encodeURIComponent(tag)}${csrfToken ? `&csrf_token=${encodeURIComponent(csrfToken)}` : ''}`
       });
-      const data = await resp.json();
-      if (data.success) {
-        addTagInput.value = '';
-        addTagInput.focus(); // stay focused for next tag
-        // Apply full fresh tag list from response
-        const targetSlide = currentSlide || feed.querySelector(`.scroll-slide[data-id="${targetId}"]`);
-        if (targetSlide) applyFreshTags(targetSlide, (data.tags || []).filter(t => t.id > 2).map(t => t.tag).join(', '));
-        // ✓ flash on send button
-        if (addTagSendBtn) {
-          addTagSendBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
-          setTimeout(() => { addTagSendBtn.innerHTML = '<i class="fa-solid fa-plus"></i>'; }, 900);
-        }
-      } else {
-        addTagInput.placeholder = data.msg || 'Error adding tag';
-        addTagInput.value = '';
-        addTagInput.focus();
-        setTimeout(() => { addTagInput.placeholder = 'Add a tag to this item…'; }, 2500);
+      const data = await resp.json().catch(() => ({}));
+      if (!data.success) {
+        showShareToast(data.msg || data.message || tr('tag_failed', 'Couldn’t add the tag.'), true);
+        if (Array.isArray(data.tags) && String(targetId) === tagBarItemId) { tagBarTags = cleanTagList(data.tags); renderTagChips(); }
+        return;
       }
-    } catch (err) {
-      addTagInput.placeholder = 'Network error — try again';
-      setTimeout(() => { addTagInput.placeholder = 'Add a tag to this item…'; }, 2500);
-    } finally { tagPosting = false; if (addTagSendBtn) addTagSendBtn.disabled = false; }
+      addTagInput.value = '';
+      const fresh = cleanTagList(data.tags);
+      const targetSlide = slideForItem(targetId);
+      if (targetSlide) applyFreshTags(targetSlide, fresh.join(', '));
+      if (String(targetId) === tagBarItemId) { tagBarTags = fresh; renderTagChips(tag); }
+      addTagInput.focus(); // stay ready for the next tag
+    } catch {
+      showShareToast(tr('tag_failed', 'Couldn’t add the tag.'), true);
+    } finally {
+      tagPosting = false;
+      if (addTagSendBtn) {
+        addTagSendBtn.classList.remove('is-busy');
+        addTagSendBtn.disabled = !addTagInput.value.trim();
+      }
+    }
+  }
+
+  if (addTagSuggBox) {
+    // mousedown: pick before the input's blur can close the list
+    addTagSuggBox.addEventListener('mousedown', e => { if (e.target.closest('.ig-tag-result')) e.preventDefault(); });
+    addTagSuggBox.addEventListener('click', e => {
+      const row = e.target.closest('.ig-tag-result');
+      const item = row && tagAddSuggItems[+row.dataset.idx];
+      if (item) submitTag(item.tag);
+    });
   }
 
   if (addTagInput) {
     addTagInput.addEventListener('input', () => {
-      const q = addTagInput.value.trim();
+      const q = addTagInput.value.trim().replace(/^#+/, '');
+      if (addTagSendBtn) addTagSendBtn.disabled = !q || tagPosting;
       clearTimeout(tagAddSuggTimer);
-      if (q.length >= 2) tagAddSuggTimer = setTimeout(() => fetchTagSugg(q), 220);
-      else closeSugg();
+      if (q.length >= 2) tagAddSuggTimer = setTimeout(() => fetchTagBarSugg(q), 200);
+      else { tagAddSuggSeq++; closeSugg(); }
     });
     addTagInput.addEventListener('keydown', e => {
       if (addTagSuggBox?.classList.contains('show') && tagAddSuggItems.length) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault(); tagAddSuggIdx = Math.min(tagAddSuggIdx + 1, tagAddSuggItems.length - 1);
-          addTagSuggBox.querySelectorAll('.scroll-tag-sugg-item').forEach((el, i) => el.classList.toggle('selected', i === tagAddSuggIdx));
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault(); tagAddSuggIdx = Math.max(tagAddSuggIdx - 1, 0);
-          addTagSuggBox.querySelectorAll('.scroll-tag-sugg-item').forEach((el, i) => el.classList.toggle('selected', i === tagAddSuggIdx));
-        } else if ((e.key === 'Enter' || e.key === 'Tab') && tagAddSuggIdx >= 0) {
-          e.preventDefault(); addTagInput.value = tagAddSuggItems[tagAddSuggIdx].tag; closeSugg(); return;
-        } else if (e.key === 'Escape') { closeSugg(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); setTagSuggFocus(Math.min(tagAddSuggIdx + 1, tagAddSuggItems.length - 1)); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); setTagSuggFocus(Math.max(tagAddSuggIdx - 1, 0)); return; }
+        if ((e.key === 'Enter' || e.key === 'Tab') && tagAddSuggIdx >= 0) {
+          e.preventDefault(); submitTag(tagAddSuggItems[tagAddSuggIdx].tag); return;
+        }
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSugg(); return; }
       }
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitTag(); }
     });
-    addTagInput.addEventListener('blur', () => setTimeout(closeSugg, 200));
   }
-  if (addTagSendBtn) addTagSendBtn.addEventListener('click', submitTag);
+  if (addTagSendBtn) addTagSendBtn.addEventListener('click', () => submitTag());
 
   // ── Filter panel ──────────────────────────────────────────────────────────
   const modeLabels = { 0: 'SFW', 1: 'NSFW', 2: 'Unrated', 3: 'All', 4: 'NSFL' };

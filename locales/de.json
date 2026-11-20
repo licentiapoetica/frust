@@ -913,7 +913,20 @@
     "left_hand": "Linkshändermodus",
     "left_hand_desc": "Du weißt bescheid.",
     "replying_to": "Antwort an {user}",
-    "reply": "Antworten"
+    "reply": "Antworten",
+    "start_conversation": "Starte die Unterhaltung.",
+    "post_comment": "Posten",
+    "quote": "Zitieren",
+    "view_replies": "{n} weitere Antworten ansehen",
+    "hide_replies": "Antworten ausblenden",
+    "author": "Uploader",
+    "pinned": "Angepinnt",
+    "poll": "Umfrage",
+    "tag_posts": "{n} Beiträge",
+    "tag_new": "Neuer Tag",
+    "no_tags": "Noch keine Tags. Sei der Erste.",
+    "comment_failed": "Dein Kommentar konnte nicht gepostet werden.",
+    "tag_failed": "Der Tag konnte nicht hinzugefügt werden."
   },
   "invites": {
     "section_title": "Einladungen",
