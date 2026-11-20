@@ -50,6 +50,17 @@ fn parse_referer(referer: &str) -> RefOpts {
 }
 
 async fn random(st: AppState, req: Req) -> Res {
+    // clicked in a search (a result or the results): a random result of it, in the search
+    let search = req.header("referer").and_then(|r| url::Url::parse(r).ok()).and_then(|u| super::search::context_of(&u));
+    if let Some((q, strict, current)) = search {
+        let picks = super::search::random_refs(&st, &req, &q, strict, 2).await?.unwrap_or_default();
+        let current = current.unwrap_or_default();
+        let js = |v: &serde_json::Value| crate::tpl::js_to_string(&crate::tpl::to_jvalue(v));
+        let pick = picks.iter().find(|(id, r)| js(r) != current && id.to_string() != current).or(picks.first());
+        if let Some((_, r)) = pick {
+            return Ok(redirect(&super::search::item_url(r, &q, strict)));
+        }
+    }
     let o = req.header("referer").filter(|r| !r.is_empty()).map(parse_referer).unwrap_or_default();
 
     let ratings = req.cookie("ratings").filter(|r| !r.is_empty()).map(|r| {

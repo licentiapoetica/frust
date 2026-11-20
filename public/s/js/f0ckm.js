@@ -118,6 +118,18 @@ window.cancelAnimFrame = (function () {
   // Preloads all candidate item IDs for the current context (tag/list/user).
   // Items are shuffled once; a cursor walks through sequentially → zero duplicates
   // until every item has been seen, then re-shuffles automatically.
+  // The search a page is in: a result (/search/<f0ck>?q=…) or the results (/search?q=…,
+  // /search/p/<n>?q=…, the old ?tag=…&mode=strict). Random then picks among its results.
+  function searchContextOf(href) {
+    const u = new URL(href, window.location.origin);
+    if (!/^\/search(?:\/p\/\d+|\/(?:\d+|[a-zA-Z0-9_-]{11}))?\/?$/.test(u.pathname)) return null;
+    const q = u.searchParams.get('q') || u.searchParams.get('tag') || '';
+    if (!q.trim()) return null;
+    return { q, strict: u.searchParams.get('match') === 'all' || u.searchParams.get('mode') === 'strict' };
+  }
+  const searchRandomPoolUrl = (ctx) =>
+    `/api/v2/random-pool?search=${encodeURIComponent(ctx.q)}${ctx.strict ? '&match=all' : ''}`;
+
   window._randomPool = null;
   window._randomPoolContext = null;
   window._randomPoolCursor = 0;
@@ -161,37 +173,45 @@ window.cancelAnimFrame = (function () {
     const params = new URLSearchParams();
     const loc = window.location.href;
 
-    const tagMatch = loc.match(/\/tag\/([^/]+)/);
-    if (tagMatch) params.append('tag', decodeURIComponent(tagMatch[1]));
-
-    const hallMatch = loc.match(/(?<!\/user\/[^/]+)\/list\/([^/]+)/);
-    if (hallMatch) params.append('hall', decodeURIComponent(hallMatch[1]));
-
-    const userHallMatch = loc.match(/\/user\/([^/]+)\/list\/([^/]+)/);
-    if (userHallMatch) {
-      params.append('userHall', decodeURIComponent(userHallMatch[2]));
-      params.append('userHallOwner', decodeURIComponent(userHallMatch[1]));
+    // in a search: its results (the search sets its own types and ratings)
+    const searchCtx = searchContextOf(loc);
+    if (searchCtx) {
+      params.append('search', searchCtx.q);
+      if (searchCtx.strict) params.append('match', 'all');
     } else {
-      const userMatch = loc.match(/\/user\/([^/]+)/);
-      if (userMatch) {
-        params.append('user', decodeURIComponent(userMatch[1]));
-        if (loc.match(/\/favs(\/|$|\?)/)) params.append('fav', 'true');
+
+      const tagMatch = loc.match(/\/tag\/([^/]+)/);
+      if (tagMatch) params.append('tag', decodeURIComponent(tagMatch[1]));
+
+      const hallMatch = loc.match(/(?<!\/user\/[^/]+)\/list\/([^/]+)/);
+      if (hallMatch) params.append('hall', decodeURIComponent(hallMatch[1]));
+
+      const userHallMatch = loc.match(/\/user\/([^/]+)\/list\/([^/]+)/);
+      if (userHallMatch) {
+        params.append('userHall', decodeURIComponent(userHallMatch[2]));
+        params.append('userHallOwner', decodeURIComponent(userHallMatch[1]));
+      } else {
+        const userMatch = loc.match(/\/user\/([^/]+)/);
+        if (userMatch) {
+          params.append('user', decodeURIComponent(userMatch[1]));
+          if (loc.match(/\/favs(\/|$|\?)/)) params.append('fav', 'true');
+        }
       }
-    }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const qMime = urlParams.get('mime');
-    const cookieMimeMatch = document.cookie.match(/(?:^|;\s*)mime=([^;]*)/);
-    const cookieMime = cookieMimeMatch ? decodeURIComponent(cookieMimeMatch[1]).trim() : null;
-    if (qMime) params.append('mime', qMime);
-    else if (cookieMime) params.append('mime', cookieMime);
-    else {
-      const mimeMatch = loc.match(/\/((?:video|audio|image|,)+)(\/|$|\?)/);
-      if (mimeMatch) params.append('mime', mimeMatch[1]);
-    }
+      const urlParams = new URLSearchParams(window.location.search);
+      const qMime = urlParams.get('mime');
+      const cookieMimeMatch = document.cookie.match(/(?:^|;\s*)mime=([^;]*)/);
+      const cookieMime = cookieMimeMatch ? decodeURIComponent(cookieMimeMatch[1]).trim() : null;
+      if (qMime) params.append('mime', qMime);
+      else if (cookieMime) params.append('mime', cookieMime);
+      else {
+        const mimeMatch = loc.match(/\/((?:video|audio|image|,)+)(\/|$|\?)/);
+        if (mimeMatch) params.append('mime', mimeMatch[1]);
+      }
 
-    const isStrict = window.f0ckSession?.strict_mode || window.location.search.includes('strict=1') || (localStorage.getItem('search_strict') === 'true');
-    if (isStrict) params.append('strict', '1');
+      const isStrict = window.f0ckSession?.strict_mode || window.location.search.includes('strict=1') || (localStorage.getItem('search_strict') === 'true');
+      if (isStrict) params.append('strict', '1');
+    }
 
     const contextKey = params.toString() + '|mode=' + (window.activeMode ?? 0);
     const now = Date.now();
@@ -12818,6 +12838,8 @@ window.cancelAnimFrame = (function () {
   // Item URL for a random pick, in the feed the visitor is in (user hall, user favs, tag, hall or global)
   const randomTargetUrl = (key) => {
     const loc = window.location.href;
+    const searchCtx = searchContextOf(loc);
+    if (searchCtx) return searchItemUrl(key, searchCtx.q, searchCtx.strict);
     const userHallM = loc.match(/\/user\/([^/]+)\/list\/([^/]+)/);
     if (userHallM) {
       return `/user/${encodeURIComponent(decodeURIComponent(userHallM[1]))}/list/${encodeURIComponent(decodeURIComponent(userHallM[2]))}/${key}`;
@@ -13854,8 +13876,11 @@ window.cancelAnimFrame = (function () {
           }
         }
 
-        // Try pool-based random (instant pick from cached IDs)
-        const pool = window._randomPool;
+        // Try pool-based random (instant pick from cached IDs). In a search only its own pool: the
+        // one of the page before (a tag, the front page) may not have been replaced yet.
+        const searchCtx = searchContextOf(window.location.href);
+        const searchPoolKey = searchCtx ? new URLSearchParams({ search: searchCtx.q, ...(searchCtx.strict ? { match: 'all' } : {}) }).toString() + '|' : null;
+        const pool = (!searchCtx || (window._randomPoolContext || '').startsWith(searchPoolKey)) ? window._randomPool : null;
         const currentSlug = window.getCurrentItemSlug ? window.getCurrentItemSlug() : null;
         const currentId = window.getCurrentItemId ? String(window.getCurrentItemId()) : null;
 
@@ -13900,6 +13925,30 @@ window.cancelAnimFrame = (function () {
               thumb: numericId ? `/t/${numericId}.webp` : null
             });
           }
+          return;
+        }
+
+        // Fallback in a search: the pool isn't there yet (or has one item): ask for it and pick
+        if (searchCtx) {
+          const restore = () => {
+            if (nav) nav.classList.remove("pbwork");
+            outEls.forEach(el => { el.classList.remove('fade-out-zoom'); el.classList.add('fade-in-zoom'); });
+            if (canvas) { canvas.classList.remove('fader-out', 'fast-fade'); canvas.classList.add('fader-in'); }
+          };
+          fetch(searchRandomPoolUrl(searchCtx), { credentials: 'include' })
+            .then(r => r.json())
+            .then(data => {
+              const items = (data && Array.isArray(data.items)) ? data.items : [];
+              const others = items.filter(k => k !== currentSlug && k !== currentId);
+              const pick = others.length ? others[Math.floor(Math.random() * others.length)] : null;
+              if (!pick) {
+                restore();
+                if (window.flashMessage) window.flashMessage(items.length ? 'This is the only result' : 'No items found for this search');
+                return;
+              }
+              loadItemAjax(searchItemUrl(pick, searchCtx.q, searchCtx.strict), true, { transition: 'fade-zoom' });
+            })
+            .catch(() => restore());
           return;
         }
 

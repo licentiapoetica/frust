@@ -292,6 +292,46 @@ pub async fn nav(st: &AppState, req: &Req, input: &str, strict: bool, item_id: i
     })))
 }
 
+/// Up to `limit` of a search's f0cks in random order, as (id, the slug when slugs are on and it has
+/// one, else the id): random in a search (f0ckm.js' random pool, /random from a search's pages).
+/// None when the search is empty or `related:` names no f0ck.
+pub async fn random_refs(st: &AppState, req: &Req, input: &str, strict: bool, limit: i64) -> anyhow::Result<Option<Vec<(i64, Value)>>> {
+    if input.trim().is_empty() {
+        return Ok(None);
+    }
+    let Ok(p) = Prepared::new(st, req, input, strict).await? else { return Ok(None) };
+    if p.q.is_empty() {
+        return Ok(None);
+    }
+    let mut sel = Sql::new("SELECT items.id, items.slug FROM items ");
+    sel.append(&search_cond(&p.q, &p.viewer(), &p.vis, p.related_id)).push(" ORDER BY random() LIMIT ").bind(limit);
+    let rows: Vec<Row> = sel.fetch_all(&st.db).await?;
+    Ok(Some(rows.into_iter().filter_map(|r| Some((r.i64("id")?, p.item_ref(&r)))).collect()))
+}
+
+/// The search a page of one is in: a result (/search/<f0ck>?q=…: the search and the f0ck) or the
+/// results (/search?q=…, /search/p/<n>?q=…, the old ?tag=…&mode=strict). For /random, which only
+/// sees the page it was clicked on (Referer).
+pub fn context_of(url: &url::Url) -> Option<(String, bool, Option<String>)> {
+    let path = url.path().trim_end_matches('/');
+    let rest = path.strip_prefix("/search")?;
+    let item = match rest.strip_prefix('/') {
+        None if rest.is_empty() => None,
+        Some(seg) if seg.starts_with("p/") && seg[2..].bytes().all(|b| b.is_ascii_digit()) && seg.len() > 2 => None,
+        Some(seg) if !seg.is_empty() && !seg.contains('/') => Some(seg.to_string()),
+        _ => return None,
+    };
+    let get = |k: &str| url.query_pairs().find(|(n, _)| n == k).map(|(_, v)| v.into_owned());
+    let q = get("q").or_else(|| get("tag")).filter(|q| !q.trim().is_empty())?;
+    let strict = get("match").as_deref() == Some("all") || get("mode").as_deref() == Some("strict");
+    Some((q, strict, item))
+}
+
+/// A f0ck's page in a search: /search/<f0ck>?q=<search>[&match=all]
+pub fn item_url(item_ref: &Value, input: &str, strict: bool) -> String {
+    format!("/search/{}{}", js(item_ref), item_query(input, strict))
+}
+
 /// What a visitor may find at all. Private f0cks only for their owner, unavailable ones only for
 /// admins (f0cklib::visibility_filter). Guests and anonymous accounts get the same limits as in
 /// their feeds:
@@ -555,6 +595,21 @@ mod tests {
         let member = crate::session::Session { user: "bob".into(), id: 1, ..Default::default() };
         let m = visitor_filter(&cfg, Some(&member)).inline();
         assert!(!m.contains("tag_id") && !m.contains("items.mime"), "{m}");
+    }
+
+    /// The search of the page /random was clicked on: a result or the results, old addresses too.
+    #[test]
+    fn context_of_search_pages() {
+        let c = |u: &str| context_of(&url::Url::parse(&format!("http://x{u}")).unwrap());
+        assert_eq!(c("/search/eFqWVn9cYGi?q=type%3Avideo%20cat&match=all"), Some(("type:video cat".into(), true, Some("eFqWVn9cYGi".into()))));
+        assert_eq!(c("/search/7?q=cat"), Some(("cat".into(), false, Some("7".into()))));
+        assert_eq!(c("/search?q=cat"), Some(("cat".into(), false, None)));
+        assert_eq!(c("/search/p/3?q=cat"), Some(("cat".into(), false, None)));
+        assert_eq!(c("/search/?tag=cat&mode=strict&page=2"), Some(("cat".into(), true, None)));
+        assert_eq!(c("/search?q="), None);
+        assert_eq!(c("/search"), None);
+        assert_eq!(c("/searching?q=cat"), None);
+        assert_eq!(c("/tag/cat/7"), None);
     }
 
     #[test]

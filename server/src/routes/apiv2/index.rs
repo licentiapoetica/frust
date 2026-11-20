@@ -216,6 +216,17 @@ async fn random(st: AppState, req: Req) -> Res {
 // ── GET /api/v2/random-pool ─────────────────────────────────────────────────
 
 async fn random_pool(st: AppState, req: Req) -> Res {
+    // in a search (`search=`, `match=all`): its results (routes/search.rs random_refs)
+    if let Some(q) = req.query("search").filter(|q| !q.trim().is_empty()) {
+        let strict = req.query("match") == Some("all");
+        const MAX: i64 = 10_000;
+        let refs = crate::routes::search::random_refs(&st, &req, q, strict, MAX).await?.unwrap_or_default();
+        let js = |v: &Value| crate::tpl::js_to_string(&crate::tpl::to_jvalue(v));
+        let id_map: serde_json::Map<String, Value> = refs.iter().filter(|(id, r)| js(r) != id.to_string()).map(|(id, r)| (js(r), json!(id))).collect();
+        let items: Vec<String> = refs.iter().map(|(_, r)| js(r)).collect();
+        let total = items.len();
+        return j(json!({ "items": items, "id_map": id_map, "total": total, "sampled": total as i64 >= MAX }), 200);
+    }
     let o = feed_opts(&req, effective_mime(&req, None));
     let t = std::time::Instant::now();
     let mut pool = f0cklib::get_random_pool(&st, &o).await?;
