@@ -251,7 +251,7 @@ async fn login_finish(st: AppState, mut req: Req) -> Res {
         if let Some(msg) = application_state(&st, &req, pending, &body, &cred_id).await? {
             return fail(msg, 403);
         }
-        return fail("No registered account found for this passkey.", 401);
+        return fail("This passkey isn't set up for any account here (anymore). Sign in with your password, then add it again under Settings → Passkeys.", 401);
     };
     let user_id = row.i64("user_id").unwrap_or(0);
 

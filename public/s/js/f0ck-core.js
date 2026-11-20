@@ -252,7 +252,7 @@ window.ModAction = ModAction;
 // ── Passkey login (registered users) ─────────────────────────────────────────────────────
 // The WebAuthn round trip of /api/v2/settings/passkeys/{login,confirm}/{begin,finish}: resolves when
 // the server accepted the passkey, rejects with an Error whose message can be shown.
-const f0ckPasskeyAssert = async (base, headers) => {
+const f0ckPasskeyAssert = async (base, headers, notAllowedMsg) => {
   if (!window.PublicKeyCredential || !navigator.credentials) throw new Error('Passkeys are not supported in this browser.');
   const b64urlToArr = (s) => Uint8Array.from(atob(s.split('-').join('+').split('_').join('/')), (c) => c.charCodeAt(0));
   const arrToB64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).split('+').join('-').split('/').join('_').replace(/=+$/, '');
@@ -271,10 +271,9 @@ const f0ckPasskeyAssert = async (base, headers) => {
       timeout: opts.timeout || 60000,
     } });
   } catch (e) {
-    if (e && e.name === 'NotAllowedError') {
-      // Also what a security key answers when it holds no passkey for this site
-      throw new Error('No passkey was used: cancelled, blocked, or your security key / password manager has no passkey for this site. Unlock your password manager, or sign in with your password and add the passkey again under Settings → Passkeys.');
-    }
+    // Browsers answer NotAllowedError both for a closed prompt and for a security key / password
+    // manager without a passkey for this site (on purpose: sites can't probe for passkeys)
+    if (e && e.name === 'NotAllowedError') throw new Error(notAllowedMsg);
     throw e;
   }
   const finishRes = await fetch(base + '/finish', {
@@ -295,13 +294,15 @@ const f0ckPasskeyAssert = async (base, headers) => {
 
 // Login: the session is set when this resolves (reload the page then). Each frontend has its own
 // button for it.
-window.f0ckPasskeyLogin = () => f0ckPasskeyAssert('/api/v2/settings/passkeys/login');
+const PASSKEY_NOT_SET_UP = 'No passkey for this site was found on your security key or password manager. Is it set up here yet? Sign in with your password, then add it under Settings → Passkeys. (Closed the prompt, or your password manager is locked? Just try again.)';
+window.f0ckPasskeyLogin = () => f0ckPasskeyAssert('/api/v2/settings/passkeys/login', null, PASSKEY_NOT_SET_UP);
 
 // Confirm the signed-in owner with one of the account's passkeys (account changes of passkey-only
 // accounts, which have no password to give).
 window.f0ckPasskeyConfirm = () => {
   const csrf = (window.f0ckSession && window.f0ckSession.csrf_token) || document.querySelector('meta[name="csrf-token"]')?.content || '';
-  return f0ckPasskeyAssert('/api/v2/settings/passkeys/confirm', { 'X-CSRF-Token': csrf });
+  return f0ckPasskeyAssert('/api/v2/settings/passkeys/confirm', { 'X-CSRF-Token': csrf },
+    'No passkey of your account was used: the prompt was closed, or this security key / password manager holds none of them. Try again with one listed under Settings → Passkeys.');
 };
 
 // `doFetch()` returns a fetch promise. When the server answers `{ reauth: "passkey" }`, confirm with

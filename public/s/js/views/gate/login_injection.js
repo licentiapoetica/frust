@@ -183,8 +183,9 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.reload();
       } catch(err) {
         if (err && err.name === 'NotAllowedError') {
-          // Also what a security key answers when it holds no passkey for this site
-          gateSetError('gate-login-error', 'No passkey was used: cancelled, or your security key / password manager has no passkey for this site. Sign in with your password and add it again under Settings → Passkeys.');
+          // Also what a security key answers when it holds no passkey for this site (browsers don't
+          // tell the two apart); same text as f0ckPasskeyLogin in f0ck-core.js
+          gateSetError('gate-login-error', 'No passkey for this site was found on your security key or password manager. Is it set up here yet? Sign in with your password, then add it under Settings → Passkeys. (Closed the prompt, or your password manager is locked? Just try again.)');
         } else {
           gateSetError('gate-login-error', err.message || 'Passkey sign-in failed.');
         }
