@@ -2192,8 +2192,16 @@ window.cancelAnimFrame = (function () {
             const main = document.getElementById('main');
             const newMain = doc.querySelector('#main');
             if (main && newMain) {
+              // Copies made before the swap (an inserted script loses its nonce), run after it
+              const nonce = F0ckActions.responseNonce(pageRes);
+              const scripts = Array.from(newMain.querySelectorAll('script'), (s) => F0ckActions.cloneScript(s, nonce));
               main.className = newMain.className;
               main.innerHTML = newMain.innerHTML;
+              Array.from(main.querySelectorAll('script')).forEach((old, i) => {
+                if (scripts[i]) old.replaceWith(scripts[i]);
+                else old.remove();
+              });
+              Array.from(newMain.attributes).forEach((a) => { if (a.name.startsWith('data-')) main.setAttribute(a.name, a.value); });
               window._onaraReturnUrl = threadUrl;
               if (doc.title) window._onaraReturnTitle = doc.title;
               updateOnaraActiveItem(itemid, url, true, slug, extraMeta);
@@ -11630,10 +11638,6 @@ window.cancelAnimFrame = (function () {
     if (window.resetGlobalScrollState) window.resetGlobalScrollState();
     if (window.hideAllModals) window.hideAllModals();
     const targetPath = new URL(url, window.location.origin).pathname;
-    if (targetPath.startsWith('/4/')) {
-      window.location.href = url;
-      return;
-    }
     const willNavigateToItem = typeof isItemPath === 'function' ? isItemPath(url) : false;
     if (!isOnaraActive() || !willNavigateToItem) {
       if (window.closeOnaraModal) window.closeOnaraModal({ skipHistory: true });
@@ -11730,9 +11734,12 @@ window.cancelAnimFrame = (function () {
     const isItem = typeof isItemPath === 'function' ? isItemPath(pathname) : (!pathname.startsWith('/4/') && /^\/\d+(?:[?#]|$)/.test(pathname));
     const isMessages = !!pathname.match(/^\/messages(\/|$)/);
     const isAbyss    = !!pathname.match(/^\/abyss(\/|$|\?|#)/) || pathname === '/abyss';
+    // 4chan catalogue and thread overview: server-rendered pages loaded whole, like the static ones
+    // (the posts themselves, /4/<board>/<thread>/<post>, are items)
+    const isChan = pathname.startsWith('/4/') && !(typeof isItemPath === 'function' && isItemPath(pathname));
     // a search's results (grid or list): the page itself, not a feed of /ajax/items
     const isSearchPage = isSearchPagePath(pathname);
-    const isGrid = !isProfile && !isUserHall && !isUserHalls && !isHall && !isHalls && !isTags && !isComments && !isNotifs && !isItem && !isAdmin && !isMod && !isSettings && !isStatic && !isUpload && !isMessages && !isAbyss && !isSearchPage;
+    const isGrid = !isProfile && !isUserHall && !isUserHalls && !isHall && !isHalls && !isTags && !isComments && !isNotifs && !isItem && !isAdmin && !isMod && !isSettings && !isStatic && !isUpload && !isMessages && !isAbyss && !isSearchPage && !isChan;
 
     if (isItem) {
        isNavigating = false;
@@ -11849,7 +11856,7 @@ window.cancelAnimFrame = (function () {
     const isOnNotifPage = main && main.querySelector('.notif-history-container');
     const isOnUploadPage = main && main.querySelector('.upload-container');
 
-    const isListView = isGrid || isUserHall || isUserHalls || isHall || isHalls || isNotifs || isProfile || isTags || isComments || isUserF0cks || isUserFavs || isAdmin || isMod || isSettings || isStatic || isUpload;
+    const isListView = isGrid || isUserHall || isUserHalls || isHall || isHalls || isNotifs || isProfile || isTags || isComments || isUserF0cks || isUserFavs || isAdmin || isMod || isSettings || isStatic || isUpload || isChan;
     const isOnStructuralPage = main && (main.querySelector('.pagewrapper') || main.closest('.pagewrapper'));
     const isOnAdminPage = main && (main.querySelector('.container h1')?.innerText.match(/APPROVAL QUEUE/) || main.querySelector('.admin-container') || main.querySelector('.mod-container'));
     const isOnStaticPage = main && (main.querySelector('.static-page') || main.querySelector('.about-container'));
@@ -11994,7 +12001,7 @@ window.cancelAnimFrame = (function () {
         ajaxUrl += (ajaxUrl.includes('?') ? '&' : '?') + 'strict=1';
       }
 
-      const needsFullHtmlFetch = isProfile || isUserHall || isUserHalls || isTags || isHall || isHalls || isComments || isNotifs || isAdmin || isMod || isSettings || isStatic || isMessages || isAbyss || isSearchPage;
+      const needsFullHtmlFetch = isProfile || isUserHall || isUserHalls || isTags || isHall || isHalls || isComments || isNotifs || isAdmin || isMod || isSettings || isStatic || isMessages || isAbyss || isSearchPage || isChan;
 
       const fetchHeaders = { 'Credentials': 'include' };
       if (!needsFullHtmlFetch) {
@@ -12100,6 +12107,9 @@ window.cancelAnimFrame = (function () {
           main.innerHTML = '';
           main.className = incomingMain.className || '';
           currentPreserved.forEach(c => main.classList.add(c));
+          // The page's own marker (4chan pages: which board/thread is shown, for back/forward)
+          main.removeAttribute('data-chan-path');
+          if (incomingMain.dataset && incomingMain.dataset.chanPath) main.dataset.chanPath = incomingMain.dataset.chanPath;
 
           const loadedLinks = [];
           const head = document.head;
@@ -14197,7 +14207,7 @@ window.cancelAnimFrame = (function () {
           pathname.match(/^\/(about|rules|terms|privacy|upload|subscriptions|stats|docs|settings|admin|mod|ranking|messages|meme|memes)/) ||
           pathname.startsWith('/abyss')
         )) ||
-        (pathname.startsWith('/4/') && isItemPath(pathname))
+        pathname.startsWith('/4/')
       )) {
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -15101,6 +15111,13 @@ window.cancelAnimFrame = (function () {
     if (wasOnAbyss) {
       document.querySelectorAll('video, audio').forEach(el => { try { el.pause(); el.removeAttribute('src'); el.load(); } catch {} });
       document.querySelectorAll('f0ck-flash').forEach(el => { try { el.remove(); } catch {} });
+    }
+
+    // Back/forward between quoted posts (#p123) of the open 4chan thread: same page, thread.js
+    // scrolls on hashchange
+    const chanThread = document.querySelector('#main.chan-thread-page');
+    if (chanThread && chanThread.dataset.chanPath === p.replace(/\/+$/, '') && !document.body.classList.contains('onara-modal-open')) {
+      return;
     }
 
     // Item detection logic MUST match loadPageAjax/loadItemAjax analysis

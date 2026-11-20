@@ -1,6 +1,10 @@
 {% include "snippets/header.html" %}
 <div class="pagewrapper">
-  <div id="main" class="chan-page chan-thread-page">
+  {#- Filters are links, rehost and favourite plain forms (no JavaScript needed); thread.js does them
+      all in place. `back` brings a no-JS form back to the post. -#}
+  {%- set show_qs = ("?show=" ~ show if (show is defined and show != "all") else "") %}
+  {%- set cur_show = (show if show is defined else "all") %}
+  <div id="main" class="chan-page chan-thread-page" data-chan-path="/4/{{ board }}/{{ tid }}">
     
     <!-- Top Header Navigation -->
     <div class="chan-header-bar chan-thread-header">
@@ -44,10 +48,10 @@
 
         <!-- Filter Toggle: All vs Media Only vs Rehosted -->
         <div class="chan-filter-toggle">
-          <button type="button" class="chan-toggle-btn active" id="filter-all-btn">All Posts ({{ posts|length }})</button>
-          <button type="button" class="chan-toggle-btn" id="filter-media-btn">Media Only ({{ media_count }})</button>
+          <a href="/4/{{ board }}/{{ tid }}" class="chan-toggle-btn{% if cur_show == "all" %} active{% endif %}" id="filter-all-btn" data-show="all">All Posts ({{ posts|length }})</a>
+          <a href="/4/{{ board }}/{{ tid }}?show=media" class="chan-toggle-btn{% if cur_show == "media" %} active{% endif %}" id="filter-media-btn" data-show="media">Media Only ({{ media_count }})</a>
           {% if (rehosts_count > 0) %}
-          <button type="button" class="chan-toggle-btn" id="filter-rehosted-btn"><i class="fa-solid fa-check"></i> Rehosted ({{ rehosts_count }})</button>
+          <a href="/4/{{ board }}/{{ tid }}?show=rehosted" class="chan-toggle-btn{% if cur_show == "rehosted" %} active{% endif %}" id="filter-rehosted-btn" data-show="rehosted"><i class="fa-solid fa-check"></i> Rehosted ({{ rehosts_count }})</a>
           {% endif %}
         </div>
       </div>
@@ -56,7 +60,7 @@
     <!-- Posts Stream -->
     <div class="chan-posts-stream" id="chan-posts-stream">
       {% for key, p in posts|entries %}
-      <article class="chan-post-card {{ ("is-op" if p.no == tid else "is-reply") }} {{ ("has-media" if p.has_media else "no-media") }} {{ ("is-rehosted" if p.local_id else "") }} {{ ("onara-active active-thread-post" if p.is_onara_active else "") }}" id="p{{ p.no }}" data-no="{{ p.no }}" data-has-media="{{ (1 if p.has_media else 0) }}" data-is-rehosted="{{ (1 if p.local_id else 0) }}">
+      <article class="chan-post-card {{ ("is-op" if p.no == tid else "is-reply") }} {{ ("has-media" if p.has_media else "no-media") }} {{ ("is-rehosted" if p.local_id else "") }} {{ ("onara-active active-thread-post" if p.is_onara_active else "") }}{% if (cur_show == "media" and not p.has_media) or (cur_show == "rehosted" and not p.local_id) %} is-hidden{% endif %}" id="p{{ p.no }}" data-no="{{ p.no }}" data-has-media="{{ (1 if p.has_media else 0) }}" data-is-rehosted="{{ (1 if p.local_id else 0) }}">
         
         <!-- Post Header -->
         <div class="chan-post-header">
@@ -75,7 +79,7 @@
           <span class="chan-reply-sub">{{ p.sub }}</span>
           {% endif %}
           {% if (p.replies and (p.replies|length > 0)) %}
-          <div class="chan-post-backlinks" title="{{ p.replies|length }} {{ ("reply" if p.replies|length == 1 else "replies") }}">
+          <div class="chan-post-backlinks">
             <span class="chan-backlinks-icon"><i class="fa-solid fa-reply"></i></span>
             <span class="chan-backlinks-items">
               {% for key, rNo in p.replies|entries %}
@@ -107,24 +111,47 @@
           </div>
 
           <!-- Rehost & Favorite actions -->
-          <div class="chan-rehost-container" id="rehost-box-{{ p.no }}">
+          {%- set post_back = "/4/" ~ board ~ "/" ~ tid ~ show_qs ~ "#p" ~ p.no %}
+          <div class="chan-rehost-container" id="rehost-box-{{ p.no }}" data-post="{{ p.no }}">
             {% if p.local_id %}
             <span class="chan-rehosted-wrap">
               <a href="/{{ (p.local_path or p.local_id) }}" class="chan-rehost-btn rehosted" target="_blank">
                 <i class="fa-solid fa-check"></i> Rehosted /{{ (p.local_path or p.local_id) }}
               </a>
-              <button type="button" class="chan-rehost-edit-btn" data-item-id="{{ p.local_id }}" title="Edit rating">
+              <a href="/{{ (p.local_path or p.local_id) }}" class="chan-rehost-edit-btn" data-item-id="{{ p.local_id }}" title="Edit rating" aria-label="Edit rating">
                 <i class="fa-solid fa-pen"></i>
-              </button>
+              </a>
             </span>
+            <form method="post" action="/api/v2/togglefav" class="chan-fav-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ post_back }}">
+              <input type="hidden" name="postid" value="{{ p.local_id }}">
+              <input type="hidden" name="action" value="{{ ("delete" if p.user_has_favorited else "add") }}">
+              <button type="submit" class="chan-card-fav-btn {{ ("favorited" if p.user_has_favorited else "") }}" title="{{ ("Remove from favorites" if p.user_has_favorited else "Favorite") }}" aria-label="{{ ("Remove from favorites" if p.user_has_favorited else "Favorite") }}">
+                <i class="fa-{{ ("solid" if p.user_has_favorited else "regular") }} fa-heart"></i>
+              </button>
+            </form>
             {% else %}
-            <button type="button" class="chan-rehost-btn" data-url="{{ p.external_media_url }}" data-board="{{ board }}" data-tid="{{ tid }}" data-post="{{ p.no }}" data-filename="{{ (p.filename or "") }}" data-width="{{ (p.w or "") }}" data-height="{{ (p.h or "") }}">
-              <i class="fa-solid fa-cloud-arrow-up"></i> Rehost
-            </button>
+            <form method="post" action="/api/v2/scroller/rehost" class="chan-rehost-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ post_back }}">
+              <input type="hidden" name="url" value="{{ p.external_media_url }}">
+              <input type="hidden" name="original_filename" value="{{ (p.filename or "") }}">
+              <input type="hidden" name="width" value="{{ (p.w or "") }}"><input type="hidden" name="height" value="{{ (p.h or "") }}">
+              <button type="submit" class="chan-rehost-btn">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Rehost
+              </button>
+            </form>
+            {#- Favourite before it is on the site: rehost it and add it in one go -#}
+            <form method="post" action="/api/v2/scroller/rehost" class="chan-fav-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ post_back }}">
+              <input type="hidden" name="url" value="{{ p.external_media_url }}">
+              <input type="hidden" name="original_filename" value="{{ (p.filename or "") }}">
+              <input type="hidden" name="width" value="{{ (p.w or "") }}"><input type="hidden" name="height" value="{{ (p.h or "") }}">
+              <input type="hidden" name="fav" value="add">
+              <button type="submit" class="chan-card-fav-btn" title="Favorite" aria-label="Favorite">
+                <i class="fa-regular fa-heart"></i>
+              </button>
+            </form>
             {% endif %}
-            <button type="button" class="chan-card-fav-btn {{ ("favorited" if p.user_has_favorited else "") }}" data-post="{{ p.no }}" data-local-id="{{ (p.local_id or "") }}" data-url="{{ p.external_media_url }}" data-board="{{ board }}" data-tid="{{ tid }}" data-filename="{{ (p.filename or "") }}" data-width="{{ (p.w or "") }}" data-height="{{ (p.h or "") }}" title="{{ ("Remove from favorites" if p.user_has_favorited else "Favorite") }}">
-              <i class="fa-{{ ("solid" if p.user_has_favorited else "regular") }} fa-heart"></i>
-            </button>
           </div>
         </div>
         {% endif %}
@@ -134,7 +161,9 @@
           {% if p.has_media %}
           <div class="chan-media-wrapper">
             <div class="chan-thumb-box">
-              <a href="/4/{{ board }}/{{ tid }}/{{ p.no }}" class="chan-thumb-link {{ ("onara-active" if p.is_onara_active else "") }}" title="Open in player view">
+              {#- With JavaScript a click expands the media in the post (thread.js), without it opens the player view -#}
+              {%- set inline_kind = ("video" if p.is_video else ("image" if (p.ext|lower) in [".jpg", ".jpeg", ".png", ".gif", ".webp"] else "")) %}
+              <a href="/4/{{ board }}/{{ tid }}/{{ p.no }}" class="chan-thumb-link {{ ("onara-active" if p.is_onara_active else "") }}" title="{{ ("Play here" if inline_kind == "video" else ("Expand" if inline_kind else "Open in player view")) }}"{% if inline_kind and p.dest %} data-inline="{{ p.dest }}" data-kind="{{ inline_kind }}"{% endif %}>
                 {% if p.thumb %}
                 <img src="{{ p.thumb }}" alt="Media #{{ p.no }}" class="chan-thumb-img" loading="lazy" />
                 {% else %}
@@ -164,9 +193,8 @@
       {% endfor %}
     </div>
 
+    <script src="/s/js/views/chan/thread.js?v={{ mtime("/public/s/js/views/chan/thread.js") }}"></script>
   </div>
 </div>
-
-<script src="/s/js/views/chan/thread.js?v={{ mtime("/public/s/js/views/chan/thread.js") }}"></script>
 
 {% include "snippets/footer.html" %}

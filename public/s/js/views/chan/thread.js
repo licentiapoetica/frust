@@ -1,400 +1,420 @@
+// 4chan thread overview (views/chan/thread.html). Without JavaScript the filters are links (?show=)
+// and rehost / favourite are plain forms (nojs.rs brings them back to the post). Here everything
+// happens in place: filters switch at once, the forms post with fetch and the post's box changes to
+// its new state.
+//
+// The page is loaded in place (f0ckm.js), so this file runs again for every thread: the listeners
+// live on the document and are bound once; only the jump to the active post runs per page.
 (() => {
-  // Toggle filter: All vs Media Only
-  const filterAllBtn = document.getElementById('filter-all-btn');
-  const filterMediaBtn = document.getElementById('filter-media-btn');
-  const filterRehostedBtn = document.getElementById('filter-rehosted-btn');
-  const posts = document.querySelectorAll('.chan-post-card');
+  'use strict';
 
-  if (filterAllBtn && filterMediaBtn) {
-    filterAllBtn.addEventListener('click', () => {
-      filterAllBtn.classList.add('active');
-      filterMediaBtn.classList.remove('active');
-      if (filterRehostedBtn) filterRehostedBtn.classList.remove('active');
-      posts.forEach(p => p.style.display = 'block');
+  const page = () => document.querySelector('#main.chan-thread-page');
+
+  const flash = (msg, type) => {
+    if (typeof window.showFlash === 'function') window.showFlash(msg, type || 'success');
+    else if (typeof window.flashMessage === 'function') window.flashMessage(msg, 3000, type);
+  };
+
+  const csrf = (form) => (window.f0ckSession && window.f0ckSession.csrf_token)
+    || (form && form.querySelector('input[name="csrf_token"]') ? form.querySelector('input[name="csrf_token"]').value : '');
+
+  const icon = (cls) => {
+    const i = document.createElement('i');
+    i.className = cls;
+    return i;
+  };
+
+  // A form posted with fetch; the reply as JSON (`back` is only for the no-JS redirect)
+  async function post(form) {
+    const body = new URLSearchParams(new FormData(form));
+    body.delete('back');
+    const res = await fetch(form.getAttribute('action'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+        'X-CSRF-Token': csrf(form)
+      },
+      body: body.toString(),
+      credentials: 'same-origin'
     });
+    const data = await res.json().catch(() => null);
+    if (!data) throw new Error('Server returned ' + res.status);
+    if (!data.success) throw new Error(data.msg || data.message || 'Something went wrong');
+    return data;
+  }
 
-    filterMediaBtn.addEventListener('click', () => {
-      filterMediaBtn.classList.add('active');
-      filterAllBtn.classList.remove('active');
-      if (filterRehostedBtn) filterRehostedBtn.classList.remove('active');
-      posts.forEach(p => {
-        p.style.display = p.dataset.hasMedia === '1' ? 'block' : 'none';
-      });
+  // ── Filters: all posts / media only / rehosted ───────────────────────────
+  function setFilter(show) {
+    const main = page();
+    if (!main) return;
+    main.querySelectorAll('.chan-toggle-btn[data-show]').forEach((b) => b.classList.toggle('active', b.dataset.show === show));
+    main.querySelectorAll('.chan-post-card').forEach((card) => {
+      const hide = (show === 'media' && card.dataset.hasMedia !== '1') || (show === 'rehosted' && card.dataset.isRehosted !== '1');
+      card.classList.toggle('is-hidden', hide);
     });
+    const qs = show === 'all' ? '' : '?show=' + show;
+    history.replaceState(history.state, '', location.pathname + qs + location.hash);
+  }
 
-    if (filterRehostedBtn) {
-      filterRehostedBtn.addEventListener('click', () => {
-        filterRehostedBtn.classList.add('active');
-        filterAllBtn.classList.remove('active');
-        filterMediaBtn.classList.remove('active');
-        posts.forEach(p => {
-          p.style.display = p.dataset.isRehosted === '1' ? 'block' : 'none';
-        });
-      });
+  // ── A post's rehost box after it went onto the site ──────────────────────
+  function showRehosted(box, itemId, itemPath, faved) {
+    const old = box.querySelector('form');
+    const token = old ? (old.querySelector('input[name="csrf_token"]') || {}).value || '' : '';
+    const back = old ? (old.querySelector('input[name="back"]') || {}).value || '' : '';
+    const path = String(itemPath || itemId);
+
+    const wrap = document.createElement('span');
+    wrap.className = 'chan-rehosted-wrap';
+    const link = document.createElement('a');
+    link.href = '/' + path;
+    link.className = 'chan-rehost-btn rehosted';
+    link.target = '_blank';
+    link.append(icon('fa-solid fa-check'), ' Rehosted /' + path);
+    const edit = document.createElement('a');
+    edit.href = '/' + path;
+    edit.className = 'chan-rehost-edit-btn';
+    edit.dataset.itemId = itemId;
+    edit.title = 'Edit rating';
+    edit.setAttribute('aria-label', 'Edit rating');
+    edit.append(icon('fa-solid fa-pen'));
+    wrap.append(link, edit);
+
+    const form = document.createElement('form');
+    form.method = 'post';
+    form.action = '/api/v2/togglefav';
+    form.className = 'chan-fav-form';
+    [['csrf_token', token], ['back', back], ['postid', itemId], ['action', faved ? 'delete' : 'add']].forEach(([name, value]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.append(input);
+    });
+    const btn = document.createElement('button');
+    btn.type = 'submit';
+    btn.className = 'chan-card-fav-btn';
+    form.append(btn);
+    setFavButton(btn, faved);
+
+    box.replaceChildren(wrap, form);
+
+    const card = box.closest('.chan-post-card');
+    if (card) {
+      card.classList.add('is-rehosted');
+      card.dataset.isRehosted = '1';
+      const thumb = card.querySelector('.chan-thumb-link');
+      if (thumb && !thumb.querySelector('.chan-thumb-rehost-badge')) {
+        const badge = document.createElement('span');
+        badge.className = 'chan-thumb-rehost-badge';
+        badge.title = 'Rehosted on f0ckm as /' + path;
+        badge.append(icon('fa-solid fa-check'), ' /' + path);
+        thumb.append(badge);
+      }
+    }
+    return edit;
+  }
+
+  function setFavButton(btn, faved) {
+    btn.classList.toggle('favorited', faved);
+    btn.replaceChildren(icon('fa-' + (faved ? 'solid' : 'regular') + ' fa-heart'));
+    const label = faved ? 'Remove from favorites' : 'Favorite';
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+  }
+
+  async function rehost(form) {
+    const btn = form.querySelector('button');
+    if (!btn || btn.classList.contains('loading')) return;
+    const before = Array.from(btn.childNodes, (n) => n.cloneNode(true));
+    btn.classList.add('loading');
+    btn.replaceChildren(icon('fa-solid fa-circle-notch fa-spin'), ' Rehosting…');
+    try {
+      const data = await post(form);
+      const box = form.closest('.chan-rehost-container');
+      const faved = !!(box && box.querySelector('.chan-card-fav-btn.favorited'));
+      const edit = showRehosted(box, data.item_id, data.item_path, faved);
+      flash(data.repost ? 'Already on the site: linked to the existing post' : 'Rehosted');
+      if (typeof window.openChanRehostModal === 'function') {
+        window.openChanRehostModal({ itemId: Number(data.item_id), anchorEl: edit });
+      }
+    } catch (err) {
+      btn.classList.remove('loading');
+      btn.replaceChildren(...before);
+      flash(err.message || 'Rehosting failed', 'error');
     }
   }
 
-  // Inline Rehosting
-  document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.chan-rehost-btn:not(.rehosted)');
-    if (!btn) return;
-
-    e.preventDefault();
-    const url = btn.dataset.url;
-    const board = btn.dataset.board;
-    const tid = btn.dataset.tid;
-    const postNo = btn.dataset.post;
-    const filename = btn.dataset.filename;
-    if (!url) return;
-
+  async function favourite(form) {
+    const btn = form.querySelector('.chan-card-fav-btn');
+    if (!btn || btn.classList.contains('loading')) return;
+    const wasFaved = btn.classList.contains('favorited');
+    const rehostFirst = !!form.querySelector('input[name="fav"]');
+    // Shown at once; undone if the server says no
+    setFavButton(btn, !wasFaved);
     btn.classList.add('loading');
-    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Rehosting…';
-
-    try {
-      const csrfToken = window.f0ckSession?.csrf_token || '';
-      const resp = await fetch('/api/v2/scroller/rehost', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
-        },
-        body: new URLSearchParams({
-          url,
-          original_filename: filename || '',
-          width: btn.dataset.width || '',
-          height: btn.dataset.height || ''
-        })
-      });
-
-      const data = await resp.json();
-      if (data.success && data.item_id) {
-        btn.classList.remove('loading');
-        btn.classList.add('rehosted');
-        btn.outerHTML = '<span class="chan-rehosted-wrap">' +
-          '<a href="/' + (data.item_path || data.item_id) + '" class="chan-rehost-btn rehosted" target="_blank">' +
-          '<i class="fa-solid fa-check"></i> Rehosted /' + (data.item_path || data.item_id) + '</a>' +
-          '<button type="button" class="chan-rehost-edit-btn" data-item-id="' + data.item_id + '" title="Edit rating">' +
-          '<i class="fa-solid fa-pen"></i></button></span>';
-
-        const postCard = document.getElementById('p' + postNo) || btn.closest('.chan-post-card');
-        if (postCard) {
-          const timeEl = postCard.querySelector('.chan-post-time, .timeago');
-          if (timeEl) {
-            const nowIso = new Date().toISOString();
-            timeEl.dataset.iso = nowIso;
-            const fullDate = typeof window.f0ckFormatDateFull === 'function' ? window.f0ckFormatDateFull(nowIso) : new Date().toLocaleString();
-            timeEl.setAttribute('tooltip', fullDate);
-            timeEl.setAttribute('title', fullDate);
-            timeEl.textContent = (window.f0ckTimeAgo ? window.f0ckTimeAgo(nowIso) : (window.f0ckI18n?.timeago_just_now || 'just now'));
-          }
-        }
-
-        if (typeof window.showToast === 'function') {
-          window.showToast(data.repost ? 'Already on site — linked to existing post' : 'Rehosted successfully!');
-        }
-        if (typeof window.openChanRehostModal === 'function') {
-          const postCardEl = document.getElementById('p' + postNo) || postCard;
-          const anchor = (postCardEl ? (postCardEl.querySelector('.chan-rehost-edit-btn') || postCardEl.querySelector('.chan-rehosted-wrap')) : null) || document.getElementById('rehost-box-' + postNo);
-          window.openChanRehostModal({ itemId: data.item_id, anchorEl: anchor });
-        }
-      } else {
-        btn.classList.remove('loading');
-        btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Retry';
-        alert(data.msg || data.message || 'Rehosting failed');
-      }
-    } catch (err) {
-      console.error('[CHAN] Rehost error:', err);
-      btn.classList.remove('loading');
-      btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Error';
-    }
-  });
-
-  document.addEventListener('click', (e) => {
-    const editBtn = e.target.closest('.chan-rehost-edit-btn');
-    if (editBtn) {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      const itemId = editBtn.dataset.itemId;
-      if (itemId && typeof window.openChanRehostModal === 'function') {
-        window.openChanRehostModal({ itemId: Number(itemId), anchorEl: editBtn });
-      }
-    }
-  });
-
-  // Favorite from Thread Card (Auto-rehost if needed, then toggle favorite)
-  document.addEventListener('click', async (e) => {
-    const favBtn = e.target.closest('.chan-card-fav-btn');
-    if (!favBtn || favBtn.classList.contains('loading')) return;
-
-    e.preventDefault();
-
-    if (window.f0ckSession?.is_anon && window.f0ckSession?.anon_permissions && window.f0ckSession.anon_permissions.favorite === false) {
-      if (typeof window.flashMessage === 'function') window.flashMessage('Anonymous favoriting is disabled.', 3000, 'error');
-      return;
-    }
-    if (!window.f0ckSession || !window.f0ckSession.user) {
-      if (typeof window.flashMessage === 'function') window.flashMessage('Login to favorite posts', 3000, 'warning');
-      return;
-    }
-
-    const postNo = favBtn.dataset.post;
-    let localId = favBtn.dataset.localId;
-    const mediaUrl = favBtn.dataset.url;
-
-    const wasFaved = favBtn.classList.contains('favorited');
-    const isNowFav = !wasFaved;
-
-    // 1. Instantly apply client UI
-    favBtn.classList.toggle('favorited', isNowFav);
-    favBtn.innerHTML = '<i class="fa-' + (isNowFav ? 'solid' : 'regular') + ' fa-heart"></i>';
-    favBtn.title = isNowFav ? 'Remove from favorites' : 'Favorite';
-    if (typeof window.flashMessage === 'function') {
-      window.flashMessage(isNowFav ? 'ADDED TO FAVORITES' : 'REMOVED FROM FAVORITES');
-    }
     if (navigator.vibrate) navigator.vibrate(50);
-
-    // 2. Perform server sync in background
-    (async () => {
-      try {
-        // If not yet rehosted, auto-rehost first
-        if (!localId && mediaUrl) {
-          const csrfToken = window.f0ckSession?.csrf_token || '';
-          const rehostResp = await fetch('/api/v2/scroller/rehost', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
-            },
-            body: new URLSearchParams({
-              url: mediaUrl,
-              original_filename: favBtn.dataset.filename || '',
-              width: favBtn.dataset.width || '',
-              height: favBtn.dataset.height || ''
-            })
-          });
-          const rehostData = await rehostResp.json();
-          if (rehostData.success && rehostData.item_id) {
-            localId = rehostData.item_id;
-            const localPath = rehostData.item_path || localId;
-            favBtn.dataset.localId = localId;
-
-            // Update rehost box
-            const rehostBox = document.getElementById('rehost-box-' + postNo);
-            if (rehostBox) {
-              const rehostBtn = rehostBox.querySelector('.chan-rehost-btn');
-              if (rehostBtn) {
-                rehostBtn.outerHTML = '<span class="chan-rehosted-wrap">' +
-                  '<a href="/' + localPath + '" class="chan-rehost-btn rehosted" target="_blank">' +
-                  '<i class="fa-solid fa-check"></i> Rehosted /' + localPath + '</a>' +
-                  '<button type="button" class="chan-rehost-edit-btn" data-item-id="' + localId + '" title="Edit rating">' +
-                  '<i class="fa-solid fa-pen"></i></button></span>';
-              }
-            }
-            // Add thumb badge if missing
-            const postCard = document.getElementById('p' + postNo) || favBtn.closest('.chan-post-card');
-            if (postCard) {
-              const thumbLink = postCard.querySelector('.chan-thumb-link');
-              if (thumbLink && !thumbLink.querySelector('.chan-thumb-rehost-badge')) {
-                const badge = document.createElement('span');
-                badge.className = 'chan-thumb-rehost-badge';
-                badge.title = 'Rehosted on f0ckm as /' + localPath;
-                badge.innerHTML = '<i class="fa-solid fa-check"></i> /' + localPath;
-                thumbLink.appendChild(badge);
-              }
-              const timeEl = postCard.querySelector('.chan-post-time, .timeago');
-              if (timeEl) {
-                const nowIso = new Date().toISOString();
-                timeEl.dataset.iso = nowIso;
-                const fullDate = typeof window.f0ckFormatDateFull === 'function' ? window.f0ckFormatDateFull(nowIso) : new Date().toLocaleString();
-                timeEl.setAttribute('tooltip', fullDate);
-                timeEl.setAttribute('title', fullDate);
-                timeEl.textContent = (window.f0ckTimeAgo ? window.f0ckTimeAgo(nowIso) : (window.f0ckI18n?.timeago_just_now || 'just now'));
-              }
-            }
-          } else {
-            throw new Error(rehostData.msg || 'Rehost failed');
-          }
-        }
-
-        // Now sync favorite to server
-        const csrfToken = window.f0ckSession?.csrf_token || '';
-        const favResp = await fetch('/api/v2/togglefav', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
-          },
-          body: JSON.stringify({
-            postid: Number(localId),
-            chan_url: mediaUrl,
-            action: isNowFav ? 'add' : 'delete',
-            favorited: isNowFav
-          })
-        });
-        const favData = await favResp.json();
-
-        if (favData.success) {
-          const finalIsFav = (favData.favorited !== undefined) ? !!favData.favorited : isNowFav;
-          favBtn.classList.toggle('favorited', finalIsFav);
-          favBtn.innerHTML = '<i class="fa-' + (finalIsFav ? 'solid' : 'regular') + ' fa-heart"></i>';
-          favBtn.title = finalIsFav ? 'Remove from favorites' : 'Favorite';
-        } else {
-          // Rollback on server rejection
-          favBtn.classList.toggle('favorited', wasFaved);
-          favBtn.innerHTML = '<i class="fa-' + (wasFaved ? 'solid' : 'regular') + ' fa-heart"></i>';
-          favBtn.title = wasFaved ? 'Remove from favorites' : 'Favorite';
-          if (typeof window.flashMessage === 'function') {
-            window.flashMessage(favData.msg || 'Failed to update favorite', 3000, 'error');
-          }
-        }
-      } catch (err) {
-        console.error('[CHAN-CARD-FAV] Error:', err);
-        // Rollback on network/rehost error
-        favBtn.classList.toggle('favorited', wasFaved);
-        favBtn.innerHTML = '<i class="fa-' + (wasFaved ? 'solid' : 'regular') + ' fa-heart"></i>';
-        favBtn.title = wasFaved ? 'Remove from favorites' : 'Favorite';
-        if (typeof window.flashMessage === 'function') {
-          window.flashMessage('Failed to update favorite', 3000, 'error');
-        }
+    try {
+      const data = await post(form);
+      if (rehostFirst) {
+        // Rehosted and added in one request (the rehost endpoint with fav=add)
+        showRehosted(form.closest('.chan-rehost-container'), data.item_id, data.item_path, data.favorited !== false);
+      } else {
+        const faved = data.favorited !== undefined ? !!data.favorited : !wasFaved;
+        setFavButton(btn, faved);
+        const action = form.querySelector('input[name="action"]');
+        if (action) action.value = faved ? 'delete' : 'add';
       }
-    })();
-  });
+      flash(data.msg || (wasFaved ? 'Removed from favorites' : 'Added to favorites'));
+    } catch (err) {
+      setFavButton(btn, wasFaved);
+      flash(err.message || 'Could not update the favorite', 'error');
+    } finally {
+      btn.classList.remove('loading');
+    }
+  }
 
-  // Flash highlight a post card
+  // ── Media in the post: a thumbnail click plays the video / shows the image right there ──
+  function expandMedia(thumb) {
+    const box = thumb.closest('.chan-thumb-box');
+    const content = thumb.closest('.chan-post-content');
+    if (!box || box.querySelector('.chan-inline-media')) return;
+    const src = thumb.dataset.inline;
+    const wrap = document.createElement('div');
+    wrap.className = 'chan-inline-media';
+    let media;
+    if (thumb.dataset.kind === 'video') {
+      media = document.createElement('video');
+      media.src = src;
+      media.controls = true;
+      media.autoplay = true;
+      media.loop = true;
+      media.playsInline = true;
+      media.preload = 'auto';
+    } else {
+      media = document.createElement('img');
+      media.src = src;
+      media.alt = thumb.querySelector('img') ? thumb.querySelector('img').alt : '';
+      media.className = 'chan-inline-collapse';
+      media.title = 'Click to collapse';
+    }
+    const bar = document.createElement('div');
+    bar.className = 'chan-inline-bar';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'chan-inline-btn chan-inline-collapse';
+    close.append(icon('fa-solid fa-compress'), ' Collapse');
+    const player = document.createElement('a');
+    player.href = thumb.getAttribute('href');
+    player.className = 'chan-inline-btn';
+    player.append(icon('fa-solid fa-play'), ' Player view');
+    bar.append(close, player);
+    wrap.append(media, bar);
+    thumb.classList.add('is-collapsed');
+    box.classList.add('is-expanded');
+    if (content) content.classList.add('has-inline-media');
+    box.append(wrap);
+  }
+
+  function collapseMedia(box) {
+    const wrap = box.querySelector('.chan-inline-media');
+    if (!wrap) return;
+    const video = wrap.querySelector('video');
+    if (video) {
+      // Stop it and its download
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    }
+    wrap.remove();
+    box.classList.remove('is-expanded');
+    const thumb = box.querySelector('.chan-thumb-link');
+    if (thumb) thumb.classList.remove('is-collapsed');
+    const content = box.closest('.chan-post-content');
+    if (content) content.classList.remove('has-inline-media');
+    const card = box.closest('.chan-post-card');
+    // Keep the post in view when a tall video shrinks back to a thumbnail
+    if (card && card.getBoundingClientRect().top < 0) scrollToPost(card, false);
+  }
+
+  // ── Quotes: jump with a flash, preview on hover ──────────────────────────
   const highlightPost = (el) => {
     if (!el) return;
     el.classList.remove('chan-flash-highlight');
     void el.offsetWidth;
     el.classList.add('chan-flash-highlight');
-    setTimeout(() => {
-      el.classList.remove('chan-flash-highlight');
-    }, 2000);
+    setTimeout(() => el.classList.remove('chan-flash-highlight'), 2000);
   };
 
-  // Quote click navigation (smooth jump + flash highlight)
-  document.addEventListener('click', (e) => {
-    const ref = e.target.closest('.chan-ref, .quotelink');
-    if (!ref) return;
-
-    const targetPostNo = ref.dataset.post || ref.getAttribute('href')?.replace(/^#p?/, '');
-    if (!targetPostNo) return;
-    const targetCard = document.getElementById('p' + targetPostNo);
-    if (!targetCard) return;
-
-    e.preventDefault();
-    if (previewEl) previewEl.style.display = 'none';
-
-    // If card is hidden due to active filter ("Media" or "Rehosted"), reset to "All"
-    if (targetCard.style.display === 'none') {
-      const filterAllBtn = document.getElementById('filter-all-btn');
-      if (filterAllBtn) filterAllBtn.click();
-    }
-
-    history.pushState(null, '', '#p' + targetPostNo);
+  const scrollToPost = (el, smooth) => {
     try {
-      targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant', block: 'center' });
     } catch (_) {
-      targetCard.scrollIntoView();
-    }
-    highlightPost(targetCard);
-  });
-
-  // Handle browser back/forward buttons navigating hash
-  window.addEventListener('hashchange', () => {
-    if (window.location.hash && window.location.hash.startsWith('#p')) {
-      const el = document.querySelector(window.location.hash);
-      if (el) {
-        if (el.style.display === 'none') {
-          const filterAllBtn = document.getElementById('filter-all-btn');
-          if (filterAllBtn) filterAllBtn.click();
-        }
-        try {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } catch (_) {
-          el.scrollIntoView();
-        }
-        highlightPost(el);
-      }
-    }
-  });
-
-  // Quote hover preview
-  let previewEl = null;
-  document.addEventListener('mouseover', (e) => {
-    const ref = e.target.closest('.chan-ref, .quotelink');
-    if (!ref) return;
-
-    const targetPostNo = ref.dataset.post || ref.getAttribute('href')?.replace(/^#p?/, '');
-    if (!targetPostNo) return;
-    const targetCard = document.getElementById('p' + targetPostNo);
-    if (!targetCard) return;
-
-    if (!previewEl) {
-      previewEl = document.createElement('div');
-      previewEl.className = 'chan-quote-preview-popup';
-      document.body.appendChild(previewEl);
-    }
-
-    previewEl.innerHTML = targetCard.innerHTML;
-    previewEl.style.display = 'block';
-
-    const rect = ref.getBoundingClientRect();
-    const popHeight = previewEl.offsetHeight || 150;
-    const popWidth = previewEl.offsetWidth || 380;
-
-    let top = rect.bottom + 8;
-    if (top + popHeight > window.innerHeight - 10) {
-      top = rect.top - popHeight - 8;
-    }
-    if (top < 10) top = 10;
-
-    let left = rect.left;
-    if (left + popWidth > window.innerWidth - 10) {
-      left = window.innerWidth - popWidth - 10;
-    }
-    if (left < 10) left = 10;
-
-    previewEl.style.top = top + 'px';
-    previewEl.style.left = left + 'px';
-  });
-
-  document.addEventListener('mouseout', (e) => {
-    const ref = e.target.closest('.chan-ref, .quotelink');
-    if (ref && previewEl) {
-      previewEl.style.display = 'none';
-    }
-  });
-
-  // Jump to active post in thread if onara active or hash present
-  const jumpToInitialActive = () => {
-    let target = document.querySelector('.chan-post-card.active-thread-post, .chan-post-card.onara-active');
-    if (!target && window.location.hash) {
-      target = document.querySelector(window.location.hash);
-    }
-    if (target) {
-      try {
-        target.scrollIntoView({ block: 'center', behavior: 'instant' });
-      } catch (_) {
-        target.scrollIntoView();
-      }
-      if (window.location.hash) {
-        highlightPost(target);
-      }
+      el.scrollIntoView();
     }
   };
-  // Clear active card highlight whenever onara modal closes
-  const clearOnaraActiveCards = () => {
-    if (!document.body.classList.contains('onara-modal-open')) {
-      document.querySelectorAll('.chan-post-card.active-thread-post, .chan-post-card.onara-active, .chan-thumb-link.onara-active').forEach(el => {
+
+  const quotedCard = (ref) => {
+    const no = ref.dataset.post || (ref.getAttribute('href') || '').replace(/^#p?/, '');
+    return no ? document.getElementById('p' + no) : null;
+  };
+
+  // The preview stays while the mouse is on the link or on the preview itself: leaving one starts
+  // a short timer, arriving on the other stops it (the gap between them is crossed in time).
+  let preview = null;
+  let hideTimer = null;
+  const hidePreview = () => {
+    clearTimeout(hideTimer);
+    if (preview) preview.classList.remove('is-shown');
+  };
+  const hideSoon = () => {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hidePreview, 250);
+  };
+  const keepPreview = () => clearTimeout(hideTimer);
+
+  function showPreview(ref, card) {
+    if (!preview) {
+      preview = document.createElement('div');
+      preview.className = 'chan-quote-preview-popup';
+      preview.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(preview);
+    }
+    preview.innerHTML = card.innerHTML;
+    // A post shown expanded appears as its thumbnail (no second player in the preview)
+    preview.querySelectorAll('.chan-inline-media').forEach((el) => el.remove());
+    preview.querySelectorAll('.is-collapsed, .is-expanded, .has-inline-media').forEach((el) => el.classList.remove('is-collapsed', 'is-expanded', 'has-inline-media'));
+    preview.classList.add('is-shown');
+    const rect = ref.getBoundingClientRect();
+    const h = preview.offsetHeight || 150;
+    const w = preview.offsetWidth || 380;
+    let top = rect.bottom + 8;
+    if (top + h > window.innerHeight - 10) top = rect.top - h - 8;
+    if (top < 10) top = 10;
+    let left = rect.left;
+    if (left + w > window.innerWidth - 10) left = window.innerWidth - w - 10;
+    if (left < 10) left = 10;
+    preview.style.setProperty('--chan-pop-x', left + 'px');
+    preview.style.setProperty('--chan-pop-y', top + 'px');
+  }
+
+  function jumpTo(card, smooth) {
+    if (card.classList.contains('is-hidden')) setFilter('all');
+    scrollToPost(card, smooth);
+    highlightPost(card);
+  }
+
+  // ── Bound once per document ──────────────────────────────────────────────
+  if (!window.__f0ckChanThreadBound) {
+    window.__f0ckChanThreadBound = true;
+
+    document.addEventListener('submit', (e) => {
+      const form = e.target.closest('#main.chan-thread-page form.chan-rehost-form, #main.chan-thread-page form.chan-fav-form');
+      if (!form) return;
+      e.preventDefault();
+      if (form.classList.contains('chan-fav-form')) favourite(form);
+      else rehost(form);
+    });
+
+    // Capture phase: these are links, which f0ckm.js' link handler would otherwise load as pages
+    document.addEventListener('click', (e) => {
+      if (!page() || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      const handled = () => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
+
+      const filter = e.target.closest('#main.chan-thread-page .chan-toggle-btn[data-show]');
+      if (filter) {
+        handled();
+        setFilter(filter.dataset.show);
+        return;
+      }
+
+      const thumb = e.target.closest('#main.chan-thread-page .chan-thumb-link[data-inline][data-kind]');
+      if (thumb) {
+        handled();
+        expandMedia(thumb);
+        return;
+      }
+
+      const collapse = e.target.closest('#main.chan-thread-page .chan-inline-collapse');
+      if (collapse) {
+        handled();
+        collapseMedia(collapse.closest('.chan-thumb-box'));
+        return;
+      }
+
+      const edit = e.target.closest('#main.chan-thread-page .chan-rehost-edit-btn[data-item-id]');
+      if (edit && typeof window.openChanRehostModal === 'function') {
+        handled();
+        window.openChanRehostModal({ itemId: Number(edit.dataset.itemId), anchorEl: edit });
+        return;
+      }
+
+      const ref = e.target.closest('#main.chan-thread-page .chan-ref, #main.chan-thread-page .quotelink, .chan-quote-preview-popup .chan-ref, .chan-quote-preview-popup .quotelink');
+      if (ref) {
+        const card = quotedCard(ref);
+        if (!card) return;
+        handled();
+        hidePreview();
+        history.pushState(history.state, '', location.pathname + location.search + '#p' + card.dataset.no);
+        jumpTo(card, true);
+      }
+    }, true);
+
+    document.addEventListener('mouseover', (e) => {
+      if (preview && preview.contains(e.target)) {
+        keepPreview();
+        return;
+      }
+      const ref = e.target.closest('#main.chan-thread-page .chan-ref, #main.chan-thread-page .quotelink');
+      if (!ref) return;
+      const card = quotedCard(ref);
+      if (!card) return;
+      keepPreview();
+      showPreview(ref, card);
+    });
+
+    document.addEventListener('mouseout', (e) => {
+      const to = e.relatedTarget;
+      if (preview && preview.contains(e.target)) {
+        if (!to || !preview.contains(to)) hideSoon();
+        return;
+      }
+      const ref = e.target.closest('#main.chan-thread-page .chan-ref, #main.chan-thread-page .quotelink');
+      if (ref && (!to || !ref.contains(to))) hideSoon();
+    });
+
+    // Back/forward between quoted posts
+    window.addEventListener('hashchange', () => {
+      if (!page() || !/^#p\d+$/.test(location.hash)) return;
+      const card = document.getElementById(location.hash.slice(1));
+      if (card) jumpTo(card, true);
+    });
+
+    // Leaving the page (in-place navigation) drops a visible preview
+    window.addEventListener('pjax:start', hidePreview);
+
+    // The player view's active post loses its mark when the player closes
+    new MutationObserver(() => {
+      if (document.body.classList.contains('onara-modal-open')) return;
+      document.querySelectorAll('.chan-post-card.active-thread-post, .chan-post-card.onara-active, .chan-thumb-link.onara-active').forEach((el) => {
         el.classList.remove('active-thread-post', 'onara-active');
       });
-    }
-  };
-  const bodyObserver = new MutationObserver(() => {
-    clearOnaraActiveCards();
-  });
-  bodyObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
 
-  jumpToInitialActive();
-  setTimeout(jumpToInitialActive, 100);
+  // ── Per page: start at the active post (player view) or the one in the address ──
+  const jumpToInitialActive = () => {
+    let target = document.querySelector('.chan-post-card.active-thread-post, .chan-post-card.onara-active');
+    if (!target && /^#p\d+$/.test(location.hash)) target = document.getElementById(location.hash.slice(1));
+    if (!target) return;
+    scrollToPost(target, false);
+    if (location.hash) highlightPost(target);
+  };
+  if (page()) {
+    jumpToInitialActive();
+    setTimeout(jumpToInitialActive, 100);
+  }
 })();

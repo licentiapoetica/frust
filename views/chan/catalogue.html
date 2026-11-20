@@ -1,6 +1,7 @@
 {% include "snippets/header.html" %}
 <div class="pagewrapper">
-  <div id="main" class="chan-page chan-catalogue-page">
+  {#- Every control is a plain link or GET form; catalogue.js filters, sorts and navigates in place -#}
+  <div id="main" class="chan-page chan-catalogue-page" data-chan-path="/4/{{ board }}/catalogue">
     <div class="chan-header-bar">
       <div class="chan-brand-title">
         <span class="chan-clover-icon"><i class="fa-solid fa-clover"></i></span>
@@ -15,38 +16,37 @@
           /{{ b.id }}/
         </a>
         {% endfor %}
-        <form class="chan-board-custom-form" data-on="submit:prevent,chanGoToBoard">
-          <input type="text" id="custom-board-input" placeholder="board…" maxlength="12" class="chan-custom-board-input" />
+        <form class="chan-board-custom-form" method="get" action="/4/catalogue">
+          <input type="text" id="custom-board-input" name="board" placeholder="board…" maxlength="12" pattern="[A-Za-z0-9/]+" required aria-label="Board" autocomplete="off" class="chan-custom-board-input" />
           <button type="submit" class="chan-custom-board-btn" title="Go to board"><i class="fa-solid fa-arrow-right"></i></button>
         </form>
       </div>
 
       <!-- Controls: Filter & Sort -->
-      <div class="chan-controls-bar">
+      <form class="chan-controls-bar" id="chan-catalog-controls" method="get" action="/4/{{ board }}/catalogue" role="search">
         <div class="chan-search-wrap">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="chan-catalog-search" class="chan-search-input" placeholder="Filter threads by subject, text, or post #…" autocomplete="off" />
-          <button type="button" id="chan-search-clear" title="Clear search"><i class="fa-solid fa-xmark"></i></button>
+          <input type="text" id="chan-catalog-search" name="q" value="{{ q }}" class="chan-search-input" placeholder="Filter threads by subject, text, or post #…" aria-label="Filter threads" autocomplete="off" />
+          <a href="/4/{{ board }}/catalogue{% if sort != "bump" %}?sort={{ sort }}{% endif %}" id="chan-search-clear" class="{{ ("is-shown" if q else "") }}" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-xmark"></i></a>
         </div>
 
         <div class="chan-sort-wrap">
           <label for="chan-sort-select"><i class="fa-solid fa-arrow-down-wide-short"></i> Sort:</label>
-          <select id="chan-sort-select" class="chan-select">
-            <option value="bump">Bump Order</option>
-            <option value="replies">Most Replies</option>
-            <option value="images">Most Images</option>
-            <option value="date-new">Newest First</option>
-            <option value="date-old">Oldest First</option>
+          <select id="chan-sort-select" name="sort" class="chan-select">
+            {% for v, label in [["bump", "Bump Order"], ["replies", "Most Replies"], ["images", "Most Images"], ["date-new", "Newest First"], ["date-old", "Oldest First"]] %}
+            <option value="{{ v }}"{% if sort == v %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
           </select>
+          <button type="submit" class="chan-custom-board-btn chan-nojs-only" title="Apply"><i class="fa-solid fa-arrow-right"></i></button>
         </div>
-      </div>
+      </form>
     </div>
 
     <script src="/s/js/views/chan/catalogue.actions.js?v={{ mtime("/public/s/js/views/chan/catalogue.actions.js") }}"></script>
     <!-- Catalogue Thread Grid -->
     <div class="chan-catalogue-grid" id="chan-catalogue-grid">
       {% for key, t in threads|entries %}
-      <div class="chan-thread-card" data-no="{{ t.no }}" data-replies="{{ t.replies }}" data-images="{{ t.images }}" data-time="{{ t.time }}" data-sticky="{{ (1 if t.sticky else 0) }}">
+      <div class="chan-thread-card{% if t.hidden %} is-hidden{% endif %}" data-no="{{ t.no }}" data-bump="{{ t.bump }}" data-replies="{{ t.replies }}" data-images="{{ t.images }}" data-time="{{ t.time }}" data-sticky="{{ (1 if t.sticky else 0) }}">
         <a href="/4/{{ board }}/{{ t.no }}" class="chan-thread-thumb-link">
           {% if t.thumb %}
           <img src="{{ t.thumb }}" alt="Thread #{{ t.no }}" loading="lazy" class="chan-thread-thumb" data-on="error:chanThumbDim" />
@@ -87,13 +87,13 @@
       {% endfor %}
     </div>
 
-    <div id="chan-no-results" class="chan-empty-state">
+    <div id="chan-no-results" class="chan-empty-state{% if not shown %} is-shown{% endif %}">
       <i class="fa-solid fa-search"></i>
       <p>No threads match your search filter.</p>
     </div>
+
+    <script src="/s/js/views/chan/catalogue.js?v={{ mtime("/public/s/js/views/chan/catalogue.js") }}"></script>
   </div>
 </div>
-
-<script src="/s/js/views/chan/catalogue.js?v={{ mtime("/public/s/js/views/chan/catalogue.js") }}"></script>
 
 {% include "snippets/footer.html" %}

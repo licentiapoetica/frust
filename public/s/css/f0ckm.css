@@ -34837,8 +34837,8 @@ body:has(#main > .container.adm.up) #bg {
   flex-direction: column;
   gap: 15px;
   margin-bottom: 25px;
-  background: var(--bg-card, rgba(25, 25, 25, 0.85));
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  background: var(--metadata-bg);
+  border: 1px solid var(--border-color, color-mix(in srgb, var(--white) 8%, transparent));
   padding: 18px 20px;
   backdrop-filter: blur(8px);
 }
@@ -34852,7 +34852,7 @@ body:has(#main > .container.adm.up) #bg {
 
 :where(.chan-catalogue-page) .chan-clover-icon {
   font-size: 1.8rem;
-  color: #4ade80;
+  color: var(--accent);
   display: inline-flex;
   align-items: center;
 }
@@ -34861,7 +34861,7 @@ body:has(#main > .container.adm.up) #bg {
   font-size: 1.6rem;
   font-weight: 800;
   margin: 0;
-  color: var(--text-main, #fff);
+  color: var(--text-main, var(--white));
   letter-spacing: -0.5px;
 }
 
@@ -34876,9 +34876,9 @@ body:has(#main > .container.adm.up) #bg {
   font-size: 0.8rem;
   font-weight: 600;
   padding: 3px 10px;
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
+  background: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
 }
 
 /* Board nav */
@@ -34893,23 +34893,23 @@ body:has(#main > .container.adm.up) #bg {
   padding: 4px 12px;
   font-size: 0.85rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-muted, #aaa);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--white) 6%, transparent);
+  color: var(--text-muted, var(--text-muted, #888));
+  border: 1px solid color-mix(in srgb, var(--white) 8%, transparent);
   text-decoration: none;
   transition: all 0.2s;
 }
 
 :where(.chan-catalogue-page) .chan-board-pill:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--white) 12%, transparent);
+  color: var(--white);
+  border-color: color-mix(in srgb, var(--white) 20%, transparent);
 }
 
 :where(.chan-catalogue-page) .chan-board-pill.active {
-  background: #4ade80;
-  color: #111;
-  border-color: #4ade80;
+  background: var(--accent);
+  color: var(--black);
+  border-color: var(--accent);
   font-weight: 700;
 }
 
@@ -34923,21 +34923,21 @@ body:has(#main > .container.adm.up) #bg {
 :where(.chan-catalogue-page) .chan-custom-board-input {
   width: 75px;
   padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: color-mix(in srgb, var(--white) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 12%, transparent);
+  color: var(--white);
   font-size: 0.85rem;
   outline: none;
 }
 
 :where(.chan-catalogue-page) .chan-custom-board-input:focus {
-  border-color: #4ade80;
+  border-color: var(--accent);
 }
 
 :where(.chan-catalogue-page) .chan-custom-board-btn {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
+  background: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   padding: 4px 8px;
   cursor: pointer;
   font-size: 0.8rem;
@@ -34945,8 +34945,8 @@ body:has(#main > .container.adm.up) #bg {
 }
 
 :where(.chan-catalogue-page) .chan-custom-board-btn:hover {
-  background: #4ade80;
-  color: #111;
+  background: var(--accent);
+  color: var(--black);
 }
 
 /* Controls */
@@ -34956,7 +34956,7 @@ body:has(#main > .container.adm.up) #bg {
   gap: 15px;
   flex-wrap: wrap;
   justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid color-mix(in srgb, var(--white) 6%, transparent);
   padding-top: 12px;
 }
 
@@ -34971,24 +34971,24 @@ body:has(#main > .container.adm.up) #bg {
 :where(.chan-catalogue-page) .chan-search-wrap i.fa-magnifying-glass {
   position: absolute;
   left: 12px;
-  color: #777;
+  color: var(--text-muted, #888);
   pointer-events: none;
 }
 
 :where(.chan-catalogue-page) .chan-search-input {
   width: 100%;
   padding: 8px 34px 8px 34px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: color-mix(in srgb, var(--white) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 10%, transparent);
+  color: var(--white);
   font-size: 0.9rem;
   outline: none;
   transition: all 0.2s;
 }
 
 :where(.chan-catalogue-page) .chan-search-input:focus {
-  border-color: #4ade80;
-  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--white) 7%, transparent);
 }
 
 :where(.chan-catalogue-page) #chan-search-clear {
@@ -34996,7 +34996,7 @@ body:has(#main > .container.adm.up) #bg {
   right: 10px;
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted, #888);
   cursor: pointer;
   padding: 4px;
 }
@@ -35005,23 +35005,23 @@ body:has(#main > .container.adm.up) #bg {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #aaa;
+  color: var(--text-muted, #888);
   font-size: 0.85rem;
 }
 
 :where(.chan-catalogue-page) .chan-select {
   padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: color-mix(in srgb, var(--white) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 12%, transparent);
+  color: var(--white);
   font-size: 0.85rem;
   outline: none;
   cursor: pointer;
 }
 
 :where(.chan-catalogue-page) .chan-select option {
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--dropdown-bg);
+  color: var(--white);
 }
 
 /* Grid */
@@ -35032,8 +35032,8 @@ body:has(#main > .container.adm.up) #bg {
 }
 
 :where(.chan-catalogue-page) .chan-thread-card {
-  background: var(--bg-card, rgba(25, 25, 25, 0.85));
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  background: var(--metadata-bg);
+  border: 1px solid var(--border-color, color-mix(in srgb, var(--white) 8%, transparent));
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -35042,7 +35042,7 @@ body:has(#main > .container.adm.up) #bg {
 
 :where(.chan-catalogue-page) .chan-thread-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(74, 222, 128, 0.4);
+  border-color: rgba(var(--accent-rgb), 0.4);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
@@ -35050,7 +35050,7 @@ body:has(#main > .container.adm.up) #bg {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 10;
-  background: #0d0d0d;
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35071,7 +35071,7 @@ body:has(#main > .container.adm.up) #bg {
 
 :where(.chan-catalogue-page) .chan-thread-thumb-empty {
   font-size: 2rem;
-  color: #333;
+  color: var(--gray);
 }
 
 :where(.chan-catalogue-page) .chan-card-badges {
@@ -35099,8 +35099,8 @@ body:has(#main > .container.adm.up) #bg {
 }
 
 :where(.chan-catalogue-page) .chan-badge-sticky {
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.3);
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.3);
 }
 
 :where(.chan-catalogue-page) .chan-badge-closed {
@@ -35122,7 +35122,7 @@ body:has(#main > .container.adm.up) #bg {
 
 :where(.chan-catalogue-page) .chan-thread-title {
   text-decoration: none;
-  color: #fff;
+  color: var(--white);
   font-size: 0.88rem;
   line-height: 1.35;
   display: -webkit-box;
@@ -35132,19 +35132,19 @@ body:has(#main > .container.adm.up) #bg {
 }
 
 :where(.chan-catalogue-page) .chan-subject {
-  color: #4ade80;
+  color: var(--accent);
   font-weight: 700;
 }
 
 :where(.chan-catalogue-page) .chan-no-sub {
-  color: #888;
+  color: var(--text-muted, #888);
   font-size: 0.8rem;
 }
 
 :where(.chan-catalogue-page) .chan-teaser {
   margin: 0;
   font-size: 0.78rem;
-  color: #888;
+  color: var(--text-muted, #888);
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -35156,7 +35156,7 @@ body:has(#main > .container.adm.up) #bg {
 :where(.chan-catalogue-page) .chan-empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #777;
+  color: var(--text-muted, #888);
   font-size: 1.1rem;
 }
 
@@ -35167,19 +35167,62 @@ body:has(#main > .container.adm.up) #bg {
   display: block;
 }
 
-/* ---- chan/catalogue.html: inline styles ---- */
-/* Toggled by the page script (style.display = 'block' / 'none') */
+/* ---- chan/catalogue.html: filter state (server-rendered, catalogue.js toggles the classes) ---- */
 .chan-catalogue-page #chan-search-clear {
   display: none;
+  text-decoration: none;
+}
+
+.chan-catalogue-page #chan-search-clear.is-shown {
+  display: block;
 }
 
 .chan-catalogue-page #chan-no-results {
   display: none;
 }
 
+.chan-catalogue-page #chan-no-results.is-shown {
+  display: block;
+}
+
+.chan-catalogue-page .chan-thread-card.is-hidden {
+  display: none;
+}
+
+.chan-catalogue-page .chan-thread-thumb.is-broken {
+  opacity: 0.2;
+}
+
+/* Badges drawn over thumbnails keep their own colours in every theme (the light themes colour every
+   span black, which would vanish on the dark badge). Two classes beat html[theme='light'] span. */
+.chan-catalogue-page .chan-card-badge,
+.chan-catalogue-page .chan-card-badge span,
+.chan-thread-page .chan-video-indicator {
+  color: #eee;
+}
+
+.chan-catalogue-page .chan-card-badge.chan-badge-sticky {
+  color: var(--accent);
+}
+
+.chan-catalogue-page .chan-card-badge.chan-badge-closed {
+  color: #ff6b6b;
+}
+
+/* On the accent: its contrast colour */
+.chan-catalogue-page .chan-card-badge.chan-badge-rehosted,
+.chan-thread-page .chan-thumb-rehost-badge {
+  color: var(--black);
+}
+
+/* The apply buttons of the plain GET forms: only without JavaScript (with it, they apply as you type) */
+html:not(.no-js) .chan-page .chan-nojs-only {
+  display: none;
+}
+
 .chan-catalogue-page .chan-card-badge.chan-badge-rehosted {
-  background: rgba(16, 185, 129, 0.9);
-  color: #fff;
+  background: rgba(var(--accent-rgb), 0.9);
+  color: var(--black);
   font-weight: 700;
 }
 
@@ -35195,8 +35238,8 @@ body:has(#main > .container.adm.up) #bg {
   flex-direction: column;
   gap: 16px;
   margin-bottom: 25px;
-  background: var(--bg-card, rgba(25, 25, 25, 0.85));
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  background: var(--metadata-bg);
+  border: 1px solid var(--border-color, color-mix(in srgb, var(--white) 8%, transparent));
   border-radius: 0;
   padding: 16px 20px;
   backdrop-filter: blur(8px);
@@ -35216,9 +35259,9 @@ body:has(#main > .container.adm.up) #bg {
   gap: 8px;
   padding: 6px 14px;
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-main, #fff);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--white) 6%, transparent);
+  color: var(--text-main, var(--white));
+  border: 1px solid color-mix(in srgb, var(--white) 10%, transparent);
   text-decoration: none;
   font-weight: 600;
   font-size: 0.88rem;
@@ -35226,8 +35269,8 @@ body:has(#main > .container.adm.up) #bg {
 }
 
 :where(body:has(.chan-thread-page)) .chan-back-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--white) 12%, transparent);
+  border-color: color-mix(in srgb, var(--white) 20%, transparent);
 }
 
 :where(body:has(.chan-thread-page)) .chan-thread-actions {
@@ -35245,27 +35288,27 @@ body:has(#main > .container.adm.up) #bg {
   border-radius: 0;
   font-size: 0.85rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-muted, #aaa);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--white) 6%, transparent);
+  color: var(--text-muted, var(--text-muted, #888));
+  border: 1px solid color-mix(in srgb, var(--white) 8%, transparent);
   text-decoration: none;
   transition: all 0.2s;
 }
 
 :where(body:has(.chan-thread-page)) .chan-action-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: color-mix(in srgb, var(--white) 12%, transparent);
+  color: var(--white);
 }
 
 :where(body:has(.chan-thread-page)) .chan-action-btn.primary {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.3);
 }
 
 :where(body:has(.chan-thread-page)) .chan-action-btn.primary:hover {
-  background: #4ade80;
-  color: #111;
+  background: var(--accent);
+  color: var(--black);
 }
 
 :where(body:has(.chan-thread-page)) .chan-thread-title-row {
@@ -35274,7 +35317,7 @@ body:has(#main > .container.adm.up) #bg {
   gap: 14px;
   flex-wrap: wrap;
   justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid color-mix(in srgb, var(--white) 6%, transparent);
   padding-top: 14px;
 }
 
@@ -35282,7 +35325,7 @@ body:has(#main > .container.adm.up) #bg {
   font-size: 1.35rem;
   font-weight: 800;
   margin: 0 0 4px;
-  color: #fff;
+  color: var(--white);
 }
 
 :where(body:has(.chan-thread-page)) .chan-thread-meta {
@@ -35290,7 +35333,7 @@ body:has(#main > .container.adm.up) #bg {
   align-items: center;
   gap: 12px;
   font-size: 0.82rem;
-  color: #888;
+  color: var(--text-muted, #888);
 }
 
 :where(body:has(.chan-thread-page)) .chan-meta-item {
@@ -35302,8 +35345,8 @@ body:has(#main > .container.adm.up) #bg {
 /* Filter toggle */
 :where(body:has(.chan-thread-page)) .chan-filter-toggle {
   display: inline-flex;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--white) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 8%, transparent);
   border-radius: 0;
   padding: 3px;
   gap: 3px;
@@ -35316,14 +35359,113 @@ body:has(#main > .container.adm.up) #bg {
   border-radius: 0;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #aaa;
+  color: var(--text-muted, #888);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 :where(body:has(.chan-thread-page)) .chan-toggle-btn.active {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background: color-mix(in srgb, var(--white) 15%, transparent);
+  color: var(--white);
+}
+
+.chan-quote-preview-popup {
+  display: none;
+}
+
+.chan-quote-preview-popup.is-shown {
+  display: block;
+}
+
+/* Filters are links (?show=), thread.js switches them in place */
+:where(body:has(.chan-thread-page)) a.chan-toggle-btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.chan-thread-page .chan-post-card.is-hidden {
+  display: none;
+}
+
+/* Media expanded in the post (thread.js): the thumbnail makes room for the full video / image,
+   the text goes below when it doesn't fit beside it */
+.chan-thread-page .chan-post-content.has-inline-media {
+  flex-wrap: wrap;
+}
+
+.chan-thread-page .chan-post-content.has-inline-media .chan-media-wrapper {
+  width: auto;
+  max-width: 100%;
+}
+
+.chan-thread-page .chan-thumb-box.is-expanded {
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: auto;
+  overflow: visible;
+  background: none;
+  border: 0;
+}
+
+.chan-thread-page .chan-thumb-link.is-collapsed {
+  display: none;
+}
+
+.chan-thread-page .chan-inline-media video,
+.chan-thread-page .chan-inline-media img {
+  display: block;
+  max-width: 100%;
+  max-height: 80vh;
+  background: #000;
+}
+
+.chan-thread-page .chan-inline-media img {
+  cursor: zoom-out;
+}
+
+.chan-thread-page .chan-inline-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chan-thread-page .chan-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--white);
+  text-decoration: none;
+  background: color-mix(in srgb, var(--white) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 12%, transparent);
+  cursor: pointer;
+}
+
+.chan-thread-page .chan-inline-btn:hover {
+  color: var(--white);
+  background: color-mix(in srgb, var(--white) 12%, transparent);
+}
+
+/* Rehost / favourite are forms; their buttons stay laid out as before */
+.chan-thread-page .chan-rehost-container > form {
+  display: contents;
+}
+
+/* Edit rating: a link to the item without JavaScript, the rating dialog with it */
+:where(body:has(.chan-thread-page)) .chan-rehosted-wrap a.chan-rehost-edit-btn {
+  height: 28px;
+  width: 28px;
+  min-width: 28px;
+  font-size: 0.8rem;
+  background: color-mix(in srgb, var(--white) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 15%, transparent);
+  color: var(--white);
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
 /* Posts stream */
@@ -35334,8 +35476,8 @@ body:has(#main > .container.adm.up) #bg {
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-card {
-  background: var(--bg-card, rgba(25, 25, 25, 0.85));
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  background: var(--metadata-bg);
+  border: 1px solid var(--border-color, color-mix(in srgb, var(--white) 8%, transparent));
   border-radius: 0;
   padding: 14px 18px;
   transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
@@ -35343,63 +35485,42 @@ body:has(#main > .container.adm.up) #bg {
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-card.is-rehosted {
-  border-color: rgba(74, 222, 128, 0.3);
-  background: rgba(74, 222, 128, 0.03);
+  border-color: rgba(var(--accent-rgb), 0.3);
+  background: rgba(var(--accent-rgb), 0.03);
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-card.is-op {
-  border-left: 4px solid #4ade80;
-  background: rgba(30, 30, 30, 0.95);
+  border-left: 4px solid var(--accent);
+  background: var(--metadata-bg);
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-card.is-reply {
-  background: rgba(24, 24, 28, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--metadata-bg);
+  border: 1px solid color-mix(in srgb, var(--white) 6%, transparent);
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-card.is-reply:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: color-mix(in srgb, var(--white) 12%, transparent);
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-card.is-reply.has-media {
-  background: rgba(26, 26, 31, 0.88);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--metadata-bg);
+  border-color: color-mix(in srgb, var(--white) 8%, transparent);
 }
 
-:where(body:has(.chan-thread-page)) .chan-post-card:target {
-  border-color: #4ade80 !important;
-  background: rgba(74, 222, 128, 0.08) !important;
-  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.5), 0 0 20px rgba(74, 222, 128, 0.25) !important;
-  position: relative;
-  z-index: 5;
-}
-
+/* A post jumped to (quote link, #p123): a short tint that fades out, no ring or glow */
 @keyframes chanHighlightPulse {
-  0% {
-    border-color: #4ade80 !important;
-    background: rgba(74, 222, 128, 0.18) !important;
-    box-shadow: 0 0 0 3px #4ade80, 0 0 30px rgba(74, 222, 128, 0.6) !important;
-  }
-  50% {
-    border-color: #4ade80 !important;
-    background: rgba(74, 222, 128, 0.10) !important;
-    box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.7), 0 0 20px rgba(74, 222, 128, 0.4) !important;
-  }
-  100% {
-    border-color: rgba(74, 222, 128, 0.4) !important;
-    background: rgba(74, 222, 128, 0.04) !important;
-    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.3) !important;
+  from {
+    background-color: rgba(var(--accent-rgb), 0.16);
   }
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-card.chan-flash-highlight {
-  animation: chanHighlightPulse 1.8s ease-out forwards !important;
-  position: relative;
-  z-index: 6;
+  animation: chanHighlightPulse 1.8s ease-out;
 }
 
 body:where(:has(.chan-thread-page)).onara-modal-open:not(.onara-modal-closing) .chan-thumb-link.onara-active .chan-thumb-img {
-  box-shadow: 0 0 0 2px #4ade80, 0 0 15px rgba(74, 222, 128, 0.6) !important;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 15px rgba(var(--accent-rgb), 0.6) !important;
 }
 
 body:where(:has(.chan-thread-page)).onara-modal-open:not(.onara-modal-closing) .chan-post-card:not(.onara-active):not(.active-thread-post) {
@@ -35410,19 +35531,17 @@ body:where(:has(.chan-thread-page)).onara-modal-open:not(.onara-modal-closing) .
 body:where(:has(.chan-thread-page)).onara-modal-open:not(.onara-modal-closing) .chan-post-card.onara-active,
 body:where(:has(.chan-thread-page)).onara-modal-open:not(.onara-modal-closing) .chan-post-card.active-thread-post {
   opacity: 1 !important;
-  border-color: #4ade80 !important;
-  box-shadow: 0 0 0 3px #4ade80, 0 0 25px rgba(74, 222, 128, 0.5) !important;
+  border-color: var(--accent) !important;
   position: relative !important;
   z-index: 52 !important;
-  transition: box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease !important;
+  transition: border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease !important;
 }
 
 body:where(:has(.chan-thread-page)).onara-modal-closing .chan-post-card.onara-active,
 body:where(:has(.chan-thread-page)).onara-modal-closing .chan-post-card.active-thread-post {
   opacity: 1 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: none !important;
-  transition: box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease !important;
+  border-color: color-mix(in srgb, var(--white) 8%, transparent) !important;
+  transition: border-color 0.25s ease !important;
 }
 
 body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-active .chan-thumb-img {
@@ -35436,9 +35555,9 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   gap: 4px;
   padding: 2px 7px;
   border-radius: 0;
-  background: rgba(74, 222, 128, 0.2);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.4);
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
   font-size: 0.75rem;
   font-weight: 700;
   text-decoration: none;
@@ -35446,16 +35565,16 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-rehosted-pill:hover {
-  background: #4ade80;
-  color: #111;
+  background: var(--accent);
+  color: var(--black);
 }
 
 :where(body:has(.chan-thread-page)) .chan-thumb-rehost-badge {
   position: absolute;
   top: 6px;
   left: 6px;
-  background: rgba(16, 185, 129, 0.92);
-  color: #fff;
+  background: rgba(var(--accent-rgb), 0.92);
+  color: var(--black);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -35475,37 +35594,37 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   flex-wrap: wrap;
   font-size: 0.82rem;
   margin-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid color-mix(in srgb, var(--white) 4%, transparent);
   padding-bottom: 6px;
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-name {
   font-weight: 700;
-  color: #10b981;
+  color: var(--accent);
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-trip {
-  color: #888;
+  color: var(--text-muted, #888);
   font-weight: 600;
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-time {
-  color: #777;
+  color: var(--text-muted, #888);
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-no {
-  color: #aaa;
+  color: var(--text-muted, #888);
   text-decoration: none;
   font-family: monospace;
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-no:hover {
-  color: #4ade80;
+  color: var(--accent);
   text-decoration: underline;
 }
 
 :where(body:has(.chan-thread-page)) .chan-reply-sub {
-  color: #fbbf24;
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -35513,7 +35632,7 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   margin-left: auto;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #888;
+  color: var(--text-muted, #888);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -35564,10 +35683,10 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 10;
-  background: #0d0d0d;
+  background: var(--bg);
   border-radius: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--white) 8%, transparent);
 }
 
 :where(body:has(.chan-thread-page)) .chan-thumb-link {
@@ -35579,7 +35698,7 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   position: relative;
   overflow: hidden;
   text-decoration: none;
-  background: #0d0d0d;
+  background: var(--bg);
 }
 
 :where(body:has(.chan-thread-page)) .chan-thumb-img {
@@ -35600,9 +35719,9 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #444;
+  color: var(--text-muted, #888);
   font-size: 1.5rem;
-  background: #111;
+  background: var(--bg);
 }
 
 /* Video Indicator Overlay */
@@ -35668,7 +35787,7 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #999;
+  color: var(--text-muted, #888);
   text-decoration: none;
   font-size: 0.73rem;
   overflow: hidden;
@@ -35679,7 +35798,7 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
 }
 
 :where(body:has(.chan-thread-page)) .chan-file-download:hover {
-  color: #4ade80;
+  color: var(--accent);
   text-decoration: underline;
 }
 
@@ -35699,7 +35818,7 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #666;
+  color: var(--text-muted, #888);
   font-size: 0.7rem;
   font-family: monospace;
 }
@@ -35713,9 +35832,9 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   border-radius: 0;
   font-size: 0.78rem;
   font-weight: 600;
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
+  background: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   cursor: pointer;
   text-decoration: none;
   transition: all 0.2s;
@@ -35726,13 +35845,13 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
 }
 
 :where(body:has(.chan-thread-page)) .chan-rehost-btn:hover {
-  background: #4ade80;
-  color: #111;
+  background: var(--accent);
+  color: var(--black);
 }
 
 :where(body:has(.chan-thread-page)) .chan-rehost-btn.rehosted {
-  background: rgba(74, 222, 128, 0.2);
-  color: #4ade80;
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
   cursor: default;
 }
 
@@ -35772,8 +35891,8 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   padding: 0;
   border-radius: 0;
   font-size: 0.85rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: color-mix(in srgb, var(--white) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 15%, transparent);
   color: #888;
   cursor: pointer;
   transition: all 0.2s;
@@ -35799,7 +35918,7 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
 
 /* Comments & Greentext */
 :where(body:has(.chan-thread-page)) .chan-post-comment {
-  color: #ddd;
+  color: var(--white);
   font-size: 0.88rem;
   line-height: 1.5;
   word-break: break-word;
@@ -35817,8 +35936,8 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   align-items: center;
   flex-wrap: wrap;
   gap: 4px 6px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--white) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 7%, transparent);
   border-radius: 0;
   padding: 2px 7px;
   font-size: 0.78rem;
@@ -35826,7 +35945,7 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
 }
 
 :where(body:has(.chan-thread-page)) .chan-backlinks-icon {
-  color: #71717a;
+  color: var(--text-muted, #888);
   font-size: 0.72rem;
   display: inline-flex;
   align-items: center;
@@ -35845,29 +35964,29 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
 }
 
 :where(body:has(.chan-thread-page)) .chan-backlink {
-  color: #f87171 !important;
+  color: var(--accent) !important;
   text-decoration: none !important;
   font-family: monospace;
   font-size: 0.78rem;
   cursor: pointer;
   padding: 1px 5px;
   border-radius: 0;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   transition: all 0.15s ease;
   line-height: 1.3;
 }
 
 :where(body:has(.chan-thread-page)) .chan-backlink:hover {
-  color: #fff !important;
-  background: rgba(239, 68, 68, 0.35) !important;
-  border-color: rgba(239, 68, 68, 0.6) !important;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.35);
+  color: var(--white) !important;
+  background: rgba(var(--accent-rgb), 0.35) !important;
+  border-color: rgba(var(--accent-rgb), 0.6) !important;
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.35);
 }
 
 :where(body:has(.chan-thread-page)) .chan-ref,
 :where(body:has(.chan-thread-page)) .chan-post-comment .quotelink {
-  color: #f87171;
+  color: var(--accent);
   text-decoration: underline;
   font-family: monospace;
   cursor: pointer;
@@ -35876,13 +35995,13 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
 
 :where(body:has(.chan-thread-page)) .chan-ref:hover,
 :where(body:has(.chan-thread-page)) .chan-post-comment .quotelink:hover {
-  color: #ff4d4d;
+  color: var(--accent);
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-comment s,
 :where(body:has(.chan-thread-page)) .chan-post-comment .spoiler {
-  background: #333;
-  color: #333;
+  background: var(--gray);
+  color: var(--gray);
   padding: 0 3px;
   border-radius: 0;
   text-decoration: none;
@@ -35892,24 +36011,25 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
 
 :where(body:has(.chan-thread-page)) .chan-post-comment s:hover,
 :where(body:has(.chan-thread-page)) .chan-post-comment .spoiler:hover {
-  color: #fff;
+  color: var(--white);
 }
 
-/* Quote preview popup */
+/* Quote preview popup (thread.js places it with --chan-pop-x / --chan-pop-y) */
 :where(body:has(.chan-thread-page)) .chan-quote-preview-popup {
+  display: none;
+  top: var(--chan-pop-y, 0);
+  left: var(--chan-pop-x, 0);
   position: fixed;
   z-index: 99999;
   width: max-content;
   max-width: 520px;
   max-height: 80vh;
   overflow-y: auto;
-  background: rgba(22, 22, 24, 0.98);
-  border: 1px solid #4ade80;
+  background: var(--metadata-bg);
+  border: 1px solid var(--accent);
   border-radius: 0;
   padding: 12px 16px;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(74, 222, 128, 0.2);
-  pointer-events: none;
-  color: #eee;
+  color: var(--white);
   font-size: 0.85rem;
   backdrop-filter: blur(12px);
 }
@@ -35952,19 +36072,19 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
 
 /* ---- chan/thread.html: inline styles ---- */
 .chan-thread-page .chan-meta-item.chan-meta-rehosted {
-  color: #4ade80;
+  color: var(--accent);
 }
 
 .chan-thread-page #filter-rehosted-btn {
-  color: #4ade80;
+  color: var(--accent);
 }
 
 /* Also used for the buttons the page script builds after a rehost */
 .chan-thread-page .chan-rehosted-wrap .chan-rehost-edit-btn {
   padding: 4px 7px;
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.2);
+  background: color-mix(in srgb, var(--white) 10%, transparent);
+  color: var(--white);
+  border: 1px solid color-mix(in srgb, var(--white) 20%, transparent);
   cursor: pointer;
   font-size: 0.75rem;
 }
@@ -37642,7 +37762,7 @@ html.no-js .album-thumbnails-strip,
 html.no-js .mobile-scroll-to-top,
 html.no-js .info-title-save-btn,
 html.no-js button.chan-rehost-action-btn,
-html.no-js .chan-rehost-edit-btn,
+html.no-js button.chan-rehost-edit-btn,
 html.no-js #help-button,
 html.no-js .sidebar-tabs,
 html.no-js .sidebar-tab-content {
