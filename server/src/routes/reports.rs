@@ -14,7 +14,11 @@ pub fn register(r: &mut Router) {
     r.post_g(r"^\/api\/v2\/mod\/reports\/(?<id>\d+)\/resolve\/?$", crate::http::Guard::Perm(crate::perms::P::ModReports), resolve);
 }
 
-const VALID_CATEGORIES: [&str; 6] = ["wrong_rating", "spam", "duplicate", "copyright", "illegal", "other"];
+/// Reasons offered when reporting a post (or a user).
+const ITEM_CATEGORIES: [&str; 6] = ["wrong_rating", "spam", "duplicate", "copyright", "illegal", "other"];
+/// Reasons offered when reporting a comment: its own dialog with its own list.
+const COMMENT_CATEGORIES: [&str; 10] =
+    ["harassment", "hate_speech", "threats", "private_info", "spam", "off_topic", "impersonation", "misinformation", "illegal", "other"];
 
 fn j(v: Value, code: u16) -> Res {
     Ok(json_resp(&v, code))
@@ -50,6 +54,12 @@ async fn submit(st: AppState, mut req: Req) -> Res {
     }
     let body = req.post().await?.clone();
     let reason = js_str(body.get("reason")).unwrap_or_default();
+    let (Ok(item_id), Ok(comment_id), Ok(user_id)) = (opt_id(body.get("item_id")), opt_id(body.get("comment_id")), opt_id(body.get("reported_user_id"))) else {
+        return j(json!({ "success": false, "msg": "Invalid id." }), 400);
+    };
+    if item_id.is_none() && comment_id.is_none() && user_id.is_none() {
+        return j(json!({ "success": false, "msg": "Must specify an item, comment, or user to report." }), 400);
+    }
 
     // Urlencoded repeated `categories[]` keys arrive joined with ","; JSON may send an array.
     let raw = body.get("categories[]").filter(|v| crate::config::truthy(v)).or_else(|| body.get("categories")).cloned().unwrap_or(Value::Null);
@@ -58,16 +68,11 @@ async fn submit(st: AppState, mut req: Req) -> Res {
         Value::String(s) if !s.is_empty() => s.split(',').map(|c| c.trim().to_string()).collect(),
         _ => vec![],
     };
-    let categories: Vec<String> = cats.into_iter().filter(|c| VALID_CATEGORIES.contains(&c.as_str())).collect();
+    let valid: &[&str] = if comment_id.is_some() { &COMMENT_CATEGORIES } else { &ITEM_CATEGORIES };
+    let categories: Vec<String> = cats.into_iter().filter(|c| valid.contains(&c.as_str())).collect();
 
     if reason.trim().is_empty() && categories.is_empty() {
         return j(json!({ "success": false, "msg": "Please select at least one reason or provide a description." }), 400);
-    }
-    let (Ok(item_id), Ok(comment_id), Ok(user_id)) = (opt_id(body.get("item_id")), opt_id(body.get("comment_id")), opt_id(body.get("reported_user_id"))) else {
-        return j(json!({ "success": false, "msg": "Invalid id." }), 400);
-    };
-    if item_id.is_none() && comment_id.is_none() && user_id.is_none() {
-        return j(json!({ "success": false, "msg": "Must specify an item, comment, or user to report." }), 400);
     }
 
     let cfg = st.cfg();

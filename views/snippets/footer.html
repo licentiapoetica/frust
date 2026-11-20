@@ -35,74 +35,58 @@
 </div>
 {% endif %}
 {% if (not private_society or session) %}
-<div id="report-modal" class="modal-overlay footer-hidden">
-  {#- Without JavaScript: opens through :target (#report-modal, the report link on item pages) and
-      posts as a plain form to /api/v2/report, which redirects back (server/src/nojs.rs). With
-      JavaScript f0ckm.js fills and sends it; its buttons are type="button" so the form never submits. #}
+{#- Two report dialogs with their own reasons: #report-modal for posts, #report-comment-modal for
+    comments (server/src/routes/reports.rs keeps the same two lists). `p` prefixes the ids.
+    Without JavaScript: #report-modal opens through :target (the report link on item pages) and
+    posts as a plain form to /api/v2/report, which redirects back (server/src/nojs.rs). With
+    JavaScript f0ckm.js fills and sends them; their buttons are type="button" so the form never submits.
+    Texts: locales report.reasons_item.<reason> / report.reasons_comment.<reason> (label, desc). #}
+{% for rm in [
+  {"p": "report", "set": "reasons_item", "title": t("report.title"), "intro": t("report.intro"),
+   "cats": ["wrong_rating", "spam", "duplicate", "copyright", "illegal", "other"]},
+  {"p": "report-comment", "set": "reasons_comment", "title": t("report.title_comment"), "intro": t("report.intro_comment"),
+   "cats": ["harassment", "hate_speech", "threats", "private_info", "spam", "off_topic", "impersonation", "misinformation", "illegal", "other"]}
+] %}
+<div id="{{ rm.p }}-modal" class="modal-overlay footer-hidden report-modal" data-report-kind="{{ "comment" if rm.p == "report-comment" else "item" }}">
   <a href="#_" class="lm-nojs-backdrop" tabindex="-1" aria-hidden="true"></a>
   <div class="modal-content report-modal-content">
   <form method="post" action="/api/v2/report" class="report-form">
     <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
     <input type="hidden" name="back" value="{% if url is defined %}{{ url.pathname }}{{ url.search }}{% else %}/{% endif %}">
-    {% if (item is defined and item and item.id) %}<input type="hidden" name="item_id" value="{{ item.id }}" class="report-nojs-field">{% endif %}
+    {% if rm.p == "report" and (item is defined and item and item.id) %}<input type="hidden" name="item_id" value="{{ item.id }}" class="report-nojs-field">{% endif %}
     <div class="rm-header">
-      <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="report-cancel">&times;</button>
+      <button type="button" class="modal-x" aria-label="Close" title="Close" data-on="click:click-by-id" data-arg="{{ rm.p }}-cancel">&times;</button>
       <a href="#_" class="modal-x nojs-close-link" aria-label="Close" title="Close">&times;</a>
-      <h3>{{ t("report.title") }}</h3>
-      <p>Select one or more reasons and optionally add details below.</p>
+      <h3>{{ rm.title }}</h3>
+      <p>{{ rm.intro }}</p>
     </div>
     <div class="rm-body">
-    <input type="hidden" id="report-item-id">
-    <input type="hidden" id="report-comment-id">
-    <input type="hidden" id="report-user-id">
-    <div id="report-categories">
-      <label class="report-category-option">
-        <input type="checkbox" name="categories" value="wrong_rating" class="report-cat-check">
+    <div id="{{ rm.p }}-categories" class="rm-categories">
+      {% for c in rm.cats %}
+      <label class="report-category-option{% if c == "illegal" %} rm-danger{% endif %}">
+        <input type="checkbox" name="categories" value="{{ c }}" class="report-cat-check">
         <span class="rm-check"><i class="fa-solid fa-check"></i></span>
-        <span class="rm-text"><strong>Wrong Rating</strong><span>Content is marked SFW but should be NSFW, or vice versa.</span></span>
+        <span class="rm-text"><strong>{{ t("report." ~ rm.set ~ "." ~ c ~ ".label") }}</strong><span>{{ t("report." ~ rm.set ~ "." ~ c ~ ".desc") }}</span></span>
       </label>
-      <label class="report-category-option">
-        <input type="checkbox" name="categories" value="spam" class="report-cat-check">
-        <span class="rm-check"><i class="fa-solid fa-check"></i></span>
-        <span class="rm-text"><strong>Spam</strong><span>Repeated, unwanted, or promotional content.</span></span>
-      </label>
-      <label class="report-category-option">
-        <input type="checkbox" name="categories" value="duplicate" class="report-cat-check">
-        <span class="rm-check"><i class="fa-solid fa-check"></i></span>
-        <span class="rm-text"><strong>Duplicate</strong><span>This content has already been posted before.</span></span>
-      </label>
-      <label class="report-category-option">
-        <input type="checkbox" name="categories" value="copyright" class="report-cat-check">
-        <span class="rm-check"><i class="fa-solid fa-check"></i></span>
-        <span class="rm-text"><strong>Copyright</strong><span>Content infringes on intellectual property rights.</span></span>
-      </label>
-      <label class="report-category-option rm-danger">
-        <input type="checkbox" name="categories" value="illegal" class="report-cat-check">
-        <span class="rm-check"><i class="fa-solid fa-check"></i></span>
-        <span class="rm-text"><strong>Illegal Content</strong><span>Content that may violate laws or platform rules.</span></span>
-      </label>
-      <label class="report-category-option">
-        <input type="checkbox" name="categories" value="other" class="report-cat-check">
-        <span class="rm-check"><i class="fa-solid fa-check"></i></span>
-        <span class="rm-text"><strong>Other</strong><span>Something else not listed above.</span></span>
-      </label>
+      {% endfor %}
     </div>
-    <textarea id="report-reason" name="reason" class="mod-reason" placeholder="{{ t("report.placeholder") }}"></textarea>
+    <textarea id="{{ rm.p }}-reason" name="reason" class="mod-reason rm-reason" placeholder="{{ t("report.placeholder") }}"></textarea>
     {% if captcha_enabled %}
-    <cap-widget id="modal-report-captcha" class="cap-dark footer-report-captcha" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
+    <cap-widget id="modal-{{ rm.p }}-captcha" class="cap-dark footer-report-captcha" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
     {% include "snippets/cap-image.html" %}
     {% endif %}
-    <div id="report-error" class="error-msg"></div>
+    <div id="{{ rm.p }}-error" class="error-msg rm-error"></div>
     </div>
     <div class="modal-actions">
-      <button type="button" id="report-cancel" class="btn-secondary">{{ t("common.cancel") }}</button>
-      <button type="button" id="report-submit" class="">{{ t("report.submit") }}</button>
+      <button type="button" id="{{ rm.p }}-cancel" class="btn-secondary rm-cancel">{{ t("common.cancel") }}</button>
+      <button type="button" id="{{ rm.p }}-submit" class="rm-submit">{{ t("report.submit") }}</button>
       <a href="#_" class="btn-secondary nojs-close-link">{{ t("common.cancel") }}</a>
       <button type="submit" class="report-nojs-submit">{{ t("report.submit") }}</button>
     </div>
   </form>
   </div>
 </div>
+{% endfor %}
 
 
 <div id="warning-modal" class="modal-overlay footer-hidden footer-warning-modal">

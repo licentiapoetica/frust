@@ -538,8 +538,31 @@
   },
   "report": {
     "title": "Rapport Indienen",
+    "title_comment": "Reactie Rapporteren",
     "placeholder": "Geef details voor dit rapport (vereist)...",
-    "submit": "Indienen"
+    "submit": "Indienen",
+    "intro": "Kies een of meer redenen en voeg hieronder eventueel details toe.",
+    "intro_comment": "Wat is er mis met deze reactie? Kies een of meer redenen en voeg hieronder eventueel details toe.",
+    "reasons_item": {
+      "wrong_rating": { "label": "Verkeerde classificatie", "desc": "De inhoud is als SFW gemarkeerd maar zou NSFW moeten zijn, of andersom." },
+      "spam": { "label": "Spam", "desc": "Herhaalde, ongewenste of reclame-inhoud." },
+      "duplicate": { "label": "Duplicaat", "desc": "Deze inhoud is al eerder geplaatst." },
+      "copyright": { "label": "Auteursrecht", "desc": "De inhoud maakt inbreuk op intellectueel eigendom." },
+      "illegal": { "label": "Illegale inhoud", "desc": "Inhoud die mogelijk wetten of de regels van de site schendt." },
+      "other": { "label": "Overig", "desc": "Iets anders dat hierboven niet staat." }
+    },
+    "reasons_comment": {
+      "harassment": { "label": "Intimidatie", "desc": "Beledigingen of aanvallen gericht op een persoon." },
+      "hate_speech": { "label": "Haatzaaien", "desc": "Aanvallen op een groep: afkomst, religie, geslacht, seksualiteit en dergelijke." },
+      "threats": { "label": "Bedreigingen", "desc": "Bedreigingen of oproepen tot geweld." },
+      "private_info": { "label": "Privégegevens", "desc": "Plaatst iemands persoonlijke gegevens (doxxing)." },
+      "spam": { "label": "Spam", "desc": "Reclame, flooding of herhaalde tekst." },
+      "off_topic": { "label": "Off-topic", "desc": "Leidt de discussie af of is gewoon trollen." },
+      "impersonation": { "label": "Imitatie", "desc": "Doet zich voor als iemand anders." },
+      "misinformation": { "label": "Desinformatie", "desc": "Bewust onjuiste beweringen." },
+      "illegal": { "label": "Illegale inhoud", "desc": "Inhoud die mogelijk wetten of de regels van de site schendt." },
+      "other": { "label": "Overig", "desc": "Iets anders dat hierboven niet staat." }
+    }
   },
   "account_warning": {
     "title": "Accountwaarschuwing",

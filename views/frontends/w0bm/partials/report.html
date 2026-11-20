@@ -1,5 +1,5 @@
 {#- POST /api/v2/report, with the content of f0ckm's report dialog (snippets/footer.html #report-modal)
-    in w0bm's modal. Also reports comments: w0bm.js swaps item_id for comment_id and the title while
+    in w0bm's modal. Also reports comments: w0bm.js swaps item_id for comment_id, the reasons and the title while
     it is open for one (so comments get the captcha too). A plain form without JavaScript. -#}
 <form id="webmreport" method="POST" action="/api/v2/report" class="w0bm-ajaxform" data-success="Report sent. Thanks!">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -12,25 +12,26 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <a href="#_" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></a>
-                    <h4 class="modal-title" id="reportModalTitle">{{ t("report.title") }}</h4>
+                    <h4 class="modal-title" id="reportModalTitle" data-title-item="{{ t("report.title") }}" data-title-comment="{{ t("report.title_comment") }}">{{ t("report.title") }}</h4>
                 </div>
                 <div class="modal-body w0bm-report-body">
-                    <p class="w0bm-report-intro">Select one or more reasons and optionally add details below.</p>
-                    <div class="w0bm-report-cats">
-                        {% for c in [
-                            ["wrong_rating", "Wrong Rating", "Content is marked SFW but should be NSFW, or vice versa."],
-                            ["spam", "Spam", "Repeated, unwanted, or promotional content."],
-                            ["duplicate", "Duplicate", "This content has already been posted before."],
-                            ["copyright", "Copyright", "Content infringes on intellectual property rights."],
-                            ["illegal", "Illegal Content", "Content that may violate laws or platform rules."],
-                            ["other", "Other", "Something else not listed above."]
-                        ] %}
-                        <label class="w0bm-report-cat{% if c[0] == "illegal" %} w0bm-report-danger{% endif %}">
-                            <input type="checkbox" name="categories[]" value="{{ c[0] }}">
-                            <span class="w0bm-report-cat-text"><strong>{{ c[1] }}</strong><span>{{ c[2] }}</span></span>
+                    <p class="w0bm-report-intro" data-intro-item="{{ t("report.intro") }}" data-intro-comment="{{ t("report.intro_comment") }}">{{ t("report.intro") }}</p>
+                    {#- Posts and comments have their own reasons (server/src/routes/reports.rs; texts in the
+                        locales, report.reasons_item / report.reasons_comment); the comment list is hidden and
+                        disabled until w0bm.js opens the modal for a comment -#}
+                    {% for set in [
+                        ["item", "reasons_item", ["wrong_rating", "spam", "duplicate", "copyright", "illegal", "other"]],
+                        ["comment", "reasons_comment", ["harassment", "hate_speech", "threats", "private_info", "spam", "off_topic", "impersonation", "misinformation", "illegal", "other"]]
+                    ] %}
+                    <div class="w0bm-report-cats" data-report-kind="{{ set[0] }}"{% if set[0] == "comment" %} hidden{% endif %}>
+                        {% for c in set[2] %}
+                        <label class="w0bm-report-cat{% if c == "illegal" %} w0bm-report-danger{% endif %}">
+                            <input type="checkbox" name="categories[]" value="{{ c }}"{% if set[0] == "comment" %} disabled{% endif %}>
+                            <span class="w0bm-report-cat-text"><strong>{{ t("report." ~ set[1] ~ "." ~ c ~ ".label") }}</strong><span>{{ t("report." ~ set[1] ~ "." ~ c ~ ".desc") }}</span></span>
                         </label>
                         {% endfor %}
                     </div>
+                    {% endfor %}
                     <textarea class="form-control" id="reportText" name="reason" rows="3" placeholder="{{ (t("report.placeholder") or "Details (optional)") }}"></textarea>
                     {% if captcha_enabled %}
                     <cap-widget class="cap-dark w0bm-cap w0bm-js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>

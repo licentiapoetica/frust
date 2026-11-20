@@ -3266,6 +3266,10 @@ div#parent.emojis-box {
     gap: 4px;
     margin-bottom: 10px;
 }
+/* the reasons of the other kind (post / comment) */
+.w0bm-report-cats[hidden] {
+    display: none;
+}
 .w0bm-report-cat {
     display: flex;
     align-items: flex-start;

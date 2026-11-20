@@ -24,6 +24,16 @@
         <div id="reports-pagination" class="rp-pagination"></div>
     </div>
 
+{#- The reasons' names for the badges (locales report.reasons_item / report.reasons_comment) #}
+<script type="application/json" id="rp-reason-labels">{{ {
+  "wrong_rating": t("report.reasons_item.wrong_rating.label"), "duplicate": t("report.reasons_item.duplicate.label"),
+  "copyright": t("report.reasons_item.copyright.label"), "spam": t("report.reasons_item.spam.label"),
+  "illegal": t("report.reasons_item.illegal.label"), "other": t("report.reasons_item.other.label"),
+  "harassment": t("report.reasons_comment.harassment.label"), "hate_speech": t("report.reasons_comment.hate_speech.label"),
+  "threats": t("report.reasons_comment.threats.label"), "private_info": t("report.reasons_comment.private_info.label"),
+  "off_topic": t("report.reasons_comment.off_topic.label"), "impersonation": t("report.reasons_comment.impersonation.label"),
+  "misinformation": t("report.reasons_comment.misinformation.label")
+}|tojson }}</script>
 <script src="/s/js/mod-reports.js?v=1789785562"></script>
 </div>
 </div>

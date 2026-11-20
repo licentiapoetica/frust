@@ -5,8 +5,26 @@ var CATEGORY_META = {
     duplicate:    { label: 'Duplicate',    bg: '#17a2b8', color: '#fff' },
     copyright:    { label: 'Copyright',    bg: '#fd7e14', color: '#fff' },
     illegal:      { label: 'Illegal',      bg: '#dc3545', color: '#fff' },
-    other:        { label: 'Other',        bg: '#495057', color: '#fff' }
+    other:        { label: 'Other',        bg: '#495057', color: '#fff' },
+    // comment reports (footer.html #report-comment-modal)
+    harassment:     { label: 'Harassment',     bg: '#e83e8c', color: '#fff' },
+    hate_speech:    { label: 'Hate Speech',    bg: '#b02a37', color: '#fff' },
+    threats:        { label: 'Threats',        bg: '#dc3545', color: '#fff' },
+    private_info:   { label: 'Private Info',   bg: '#6f42c1', color: '#fff' },
+    off_topic:      { label: 'Off-topic',      bg: '#20c997', color: '#000' },
+    impersonation:  { label: 'Impersonation',  bg: '#0d6efd', color: '#fff' },
+    misinformation: { label: 'Misinformation', bg: '#ffc107', color: '#000' }
 };
+
+// Translated names from the page (mod_reports.html #rp-reason-labels); the English ones above are the fallback
+(function () {
+    var el = document.getElementById('rp-reason-labels');
+    if (!el) return;
+    try {
+        var labels = JSON.parse(el.textContent);
+        Object.keys(labels).forEach(function (k) { if (CATEGORY_META[k] && labels[k]) CATEGORY_META[k].label = labels[k]; });
+    } catch (e) {}
+})();
 
 function catBadge(c) {
     var m = CATEGORY_META[c] || { label: c, bg: '#444', color: '#fff' };

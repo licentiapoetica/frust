@@ -177,12 +177,12 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="back" value="{{ here }}">
     <div class="fg-checks">
-      <label><input type="checkbox" name="categories[]" value="wrong_rating"> Wrong rating</label>
-      <label><input type="checkbox" name="categories[]" value="spam"> Spam</label>
-      <label><input type="checkbox" name="categories[]" value="duplicate"> Duplicate</label>
-      <label><input type="checkbox" name="categories[]" value="copyright"> Copyright</label>
-      <label><input type="checkbox" name="categories[]" value="illegal"> Illegal</label>
-      <label><input type="checkbox" name="categories[]" value="other"> Other</label>
+      <label><input type="checkbox" name="categories[]" value="wrong_rating"> {{ t("report.reasons_item.wrong_rating.label") }}</label>
+      <label><input type="checkbox" name="categories[]" value="spam"> {{ t("report.reasons_item.spam.label") }}</label>
+      <label><input type="checkbox" name="categories[]" value="duplicate"> {{ t("report.reasons_item.duplicate.label") }}</label>
+      <label><input type="checkbox" name="categories[]" value="copyright"> {{ t("report.reasons_item.copyright.label") }}</label>
+      <label><input type="checkbox" name="categories[]" value="illegal"> {{ t("report.reasons_item.illegal.label") }}</label>
+      <label><input type="checkbox" name="categories[]" value="other"> {{ t("report.reasons_item.other.label") }}</label>
     </div>
     <textarea name="reason" rows="3" maxlength="1000" placeholder="Describe the problem"></textarea>
     {% if captcha_enabled %}<cap-widget class="js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% include "frontends/f0ckgle/snippets/cap-image.html" %}{% endif %}

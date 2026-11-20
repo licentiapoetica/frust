@@ -525,8 +525,31 @@
   },
   "report": {
     "title": "Meldung einreichen",
+    "title_comment": "Kommentar melden",
     "placeholder": "Bitte geben Sie Details für diese Meldung an (erforderlich)...",
-    "submit": "Absenden"
+    "submit": "Absenden",
+    "intro": "Wählen Sie einen oder mehrere Gründe und fügen Sie unten optional Details hinzu.",
+    "intro_comment": "Was stimmt mit diesem Kommentar nicht? Wählen Sie einen oder mehrere Gründe und fügen Sie unten optional Details hinzu.",
+    "reasons_item": {
+      "wrong_rating": { "label": "Falsche Einstufung", "desc": "Der Inhalt ist als SFW markiert, sollte aber NSFW sein, oder umgekehrt." },
+      "spam": { "label": "Spam", "desc": "Wiederholte, unerwünschte oder werbliche Inhalte." },
+      "duplicate": { "label": "Duplikat", "desc": "Dieser Inhalt wurde schon einmal gepostet." },
+      "copyright": { "label": "Urheberrecht", "desc": "Der Inhalt verletzt Urheber- oder Schutzrechte." },
+      "illegal": { "label": "Illegaler Inhalt", "desc": "Inhalt, der gegen Gesetze oder die Regeln der Seite verstoßen könnte." },
+      "other": { "label": "Sonstiges", "desc": "Etwas anderes, das oben nicht aufgeführt ist." }
+    },
+    "reasons_comment": {
+      "harassment": { "label": "Belästigung", "desc": "Beleidigungen oder Angriffe gegen eine Person." },
+      "hate_speech": { "label": "Hassrede", "desc": "Angriffe auf eine Gruppe: Herkunft, Religion, Geschlecht, Sexualität und Ähnliches." },
+      "threats": { "label": "Drohungen", "desc": "Drohungen oder Aufrufe zu Gewalt." },
+      "private_info": { "label": "Private Daten", "desc": "Veröffentlicht persönliche Daten von jemandem (Doxxing)." },
+      "spam": { "label": "Spam", "desc": "Werbung, Flooding oder wiederholter Text." },
+      "off_topic": { "label": "Off-Topic", "desc": "Lenkt vom Thema ab oder ist reines Trollen." },
+      "impersonation": { "label": "Identitätsanmaßung", "desc": "Gibt sich als jemand anderes aus." },
+      "misinformation": { "label": "Falschinformation", "desc": "Absichtlich falsche Behauptungen." },
+      "illegal": { "label": "Illegaler Inhalt", "desc": "Inhalt, der gegen Gesetze oder die Regeln der Seite verstoßen könnte." },
+      "other": { "label": "Sonstiges", "desc": "Etwas anderes, das oben nicht aufgeführt ist." }
+    }
   },
   "account_warning": {
     "title": "Kontowarnung",

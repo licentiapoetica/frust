@@ -168,12 +168,12 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="back" value="{{ here }}">
       <div class="v2-report-cats">
-        <label><input type="checkbox" name="categories[]" value="wrong_rating"> wrong rating</label>
-        <label><input type="checkbox" name="categories[]" value="spam"> spam</label>
-        <label><input type="checkbox" name="categories[]" value="duplicate"> duplicate</label>
-        <label><input type="checkbox" name="categories[]" value="copyright"> copyright</label>
-        <label><input type="checkbox" name="categories[]" value="illegal"> illegal</label>
-        <label><input type="checkbox" name="categories[]" value="other"> other</label>
+        <label><input type="checkbox" name="categories[]" value="wrong_rating"> {{ t("report.reasons_item.wrong_rating.label")|lower }}</label>
+        <label><input type="checkbox" name="categories[]" value="spam"> {{ t("report.reasons_item.spam.label")|lower }}</label>
+        <label><input type="checkbox" name="categories[]" value="duplicate"> {{ t("report.reasons_item.duplicate.label")|lower }}</label>
+        <label><input type="checkbox" name="categories[]" value="copyright"> {{ t("report.reasons_item.copyright.label")|lower }}</label>
+        <label><input type="checkbox" name="categories[]" value="illegal"> {{ t("report.reasons_item.illegal.label")|lower }}</label>
+        <label><input type="checkbox" name="categories[]" value="other"> {{ t("report.reasons_item.other.label")|lower }}</label>
       </div>
       <textarea name="reason" class="v2-input" rows="3" maxlength="1000" placeholder="what's wrong?"></textarea>
       {% if captcha_enabled %}<cap-widget class="cap-dark js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% include "frontends/f0ckv2/snippets/cap-image.html" %}{% endif %}

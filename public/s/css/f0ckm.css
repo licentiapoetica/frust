@@ -15252,7 +15252,7 @@ textarea.mod-reason:focus {
   display: block;
 }
 
-#report-error {
+:is(#report-error, #report-comment-error) {
   color: #ff6b6b;
   font-size: 0.88em;
   margin: 10px 0 5px 0;
@@ -15266,8 +15266,16 @@ textarea.mod-reason:focus {
   animation: fadeIn 0.2s ease-in-out;
 }
 
-#report-error:empty {
+:is(#report-error, #report-comment-error):empty {
   display: none !important;
+}
+
+:is(#report-error, #report-comment-error) > i {
+  margin-right: 6px;
+}
+
+.report-modal .rm-spinner {
+  margin-right: 5px;
 }
 
 .field-error {
@@ -22322,7 +22330,7 @@ body.onara-modal-open .swal2-container,
 body.onara-modal-open .modal-backdrop,
 body.onara-modal-open .modal,
 body.onara-modal-open #image-modal,
-body.onara-modal-open #report-modal,
+body.onara-modal-open :is(#report-modal, #report-comment-modal),
 body.onara-modal-open #info-modal,
 body.onara-modal-open #visibility-modal,
 body.onara-modal-open #halls-modal,
@@ -31599,20 +31607,21 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
 /* Report modal */
 /* Flex, not block: the widget's inner box is inline-block, so a block host adds a text line's
    descender space under it (a gap inside the error border). */
-#report-modal .footer-report-captcha {
+:is(#report-modal, #report-comment-modal) .footer-report-captcha {
   display: flex;
   width: fit-content;
   margin: 10px auto;
 }
 
 /* Report modal — same style rules as the login/info modals: square, flat, accent primary button */
-#report-modal .report-modal-content {
+:is(#report-modal, #report-comment-modal) .report-modal-content {
   --rm-accent: var(--accent, #0096ff);
   --rm-text: var(--text-color, #fff);
   --rm-muted: var(--text-muted, #8a8f98);
   --rm-surface: rgba(255, 255, 255, 0.04);
   --rm-border: rgba(255, 255, 255, 0.1);
-  width: min(460px, 92vw);
+  width: min(640px, 92vw);
+  max-width: none; /* .modal-content caps at 400px */
   max-height: min(90vh, 90dvh);
   display: flex;
   flex-direction: column;
@@ -31622,22 +31631,22 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   border-radius: 0 !important;
   border: 1px solid var(--accent) !important;
   background: var(--bg) !important;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: none !important;
   color: var(--rm-text);
 }
 
-#report-modal .report-modal-content * {
+:is(#report-modal, #report-comment-modal) .report-modal-content * {
   border-radius: 0 !important;
 }
 
-#report-modal .rm-header {
+:is(#report-modal, #report-comment-modal) .rm-header {
   position: relative;
   flex-shrink: 0;
   padding: 20px 64px 14px 24px;
   border-bottom: 1px solid var(--rm-border);
 }
 
-#report-modal .rm-body {
+:is(#report-modal, #report-comment-modal) .rm-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -31647,38 +31656,38 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   -ms-overflow-style: none;
 }
 
-#report-modal .rm-body::-webkit-scrollbar {
+:is(#report-modal, #report-comment-modal) .rm-body::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
 }
 
-#report-modal .rm-body > :last-child {
+:is(#report-modal, #report-comment-modal) .rm-body > :last-child {
   margin-bottom: 0;
 }
 
-#report-modal .rm-header h3 {
+:is(#report-modal, #report-comment-modal) .rm-header h3 {
   margin: 0;
   font-size: 1.25em;
   font-weight: 700;
   color: var(--rm-text);
 }
 
-#report-modal .rm-header p {
+:is(#report-modal, #report-comment-modal) .rm-header p {
   margin: 6px 0 0;
   font-size: 0.85em;
   line-height: 1.5;
   color: var(--rm-muted);
 }
 
-#report-modal #report-categories {
+:is(#report-modal, #report-comment-modal) :is(#report-categories, #report-comment-categories) {
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 14px;
 }
 
-#report-modal .report-category-option {
+:is(#report-modal, #report-comment-modal) .report-category-option {
   display: flex;
   align-items: flex-start;
   gap: 11px;
@@ -31690,16 +31699,16 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   transition: border-color 0.15s, background 0.15s;
 }
 
-#report-modal .report-category-option:hover {
+:is(#report-modal, #report-comment-modal) .report-category-option:hover {
   border-color: rgba(255, 255, 255, 0.22);
 }
 
-#report-modal .report-category-option:has(.report-cat-check:checked) {
+:is(#report-modal, #report-comment-modal) .report-category-option:has(.report-cat-check:checked) {
   border-color: var(--rm-accent);
   background: color-mix(in srgb, var(--rm-accent) 8%, transparent);
 }
 
-#report-modal .report-cat-check {
+:is(#report-modal, #report-comment-modal) .report-cat-check {
   position: absolute;
   opacity: 0;
   width: 0;
@@ -31707,7 +31716,7 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   margin: 0;
 }
 
-#report-modal .rm-check {
+:is(#report-modal, #report-comment-modal) .rm-check {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
@@ -31722,18 +31731,18 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-#report-modal .report-cat-check:checked + .rm-check {
+:is(#report-modal, #report-comment-modal) .report-cat-check:checked + .rm-check {
   background: var(--rm-accent);
   border-color: var(--rm-accent);
   color: #000;
 }
 
-#report-modal .report-cat-check:focus-visible + .rm-check {
+:is(#report-modal, #report-comment-modal) .report-cat-check:focus-visible + .rm-check {
   outline: 2px solid var(--rm-accent);
   outline-offset: 2px;
 }
 
-#report-modal .rm-text {
+:is(#report-modal, #report-comment-modal) .rm-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -31741,30 +31750,30 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   line-height: 1.4;
 }
 
-#report-modal .rm-text strong {
+:is(#report-modal, #report-comment-modal) .rm-text strong {
   color: var(--rm-text);
   font-weight: 700;
 }
 
-#report-modal .rm-text span {
+:is(#report-modal, #report-comment-modal) .rm-text span {
   color: var(--rm-muted);
 }
 
-#report-modal .rm-danger .rm-text strong {
+:is(#report-modal, #report-comment-modal) .rm-danger .rm-text strong {
   color: var(--danger, #ff5c5c);
 }
 
-#report-modal .rm-danger:has(.report-cat-check:checked) {
+:is(#report-modal, #report-comment-modal) .rm-danger:has(.report-cat-check:checked) {
   border-color: var(--danger, #ff5c5c);
   background: rgba(255, 92, 92, 0.08);
 }
 
-#report-modal .rm-danger .report-cat-check:checked + .rm-check {
+:is(#report-modal, #report-comment-modal) .rm-danger .report-cat-check:checked + .rm-check {
   background: var(--danger, #ff5c5c);
   border-color: var(--danger, #ff5c5c);
 }
 
-#report-modal textarea.mod-reason {
+:is(#report-modal, #report-comment-modal) textarea.mod-reason {
   width: 100%;
   min-height: 90px;
   box-sizing: border-box;
@@ -31781,15 +31790,15 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   transition: border-color 0.15s;
 }
 
-#report-modal textarea.mod-reason:focus {
+:is(#report-modal, #report-comment-modal) textarea.mod-reason:focus {
   border-color: var(--rm-accent);
 }
 
-#report-modal textarea.mod-reason::placeholder {
+:is(#report-modal, #report-comment-modal) textarea.mod-reason::placeholder {
   color: var(--rm-muted);
 }
 
-#report-modal .modal-actions {
+:is(#report-modal, #report-comment-modal) .modal-actions {
   flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
@@ -31801,11 +31810,11 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
 }
 
 @media (max-width: 600px) {
-  #report-modal {
+  :is(#report-modal, #report-comment-modal) {
     padding: 0 !important;
     align-items: stretch !important;
   }
-  #report-modal .report-modal-content {
+  :is(#report-modal, #report-comment-modal) .report-modal-content {
     width: 100vw;
     max-width: none;
     height: 100vh;
@@ -31814,15 +31823,15 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
     border: 0 !important;
     box-shadow: none !important;
   }
-  #report-modal .modal-actions {
+  :is(#report-modal, #report-comment-modal) .modal-actions {
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   }
-  #report-modal .modal-actions :is(button, a) {
+  :is(#report-modal, #report-comment-modal) .modal-actions :is(button, a) {
     flex: 1;
   }
 }
 
-#report-modal .modal-actions :is(button, a) {
+:is(#report-modal, #report-comment-modal) .modal-actions :is(button, a) {
   height: 40px;
   margin: 0;
   padding: 0 18px;
@@ -31836,20 +31845,20 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   transition: background 0.18s, color 0.18s, border-color 0.18s;
 }
 
-#report-modal :is(#report-cancel, a.nojs-close-link) {
+:is(#report-modal, #report-comment-modal) :is(:is(#report-cancel, #report-comment-cancel), a.nojs-close-link) {
   background: transparent;
   border: 1px solid var(--rm-border);
   color: var(--rm-muted);
   font-weight: 600;
 }
 
-#report-modal :is(#report-cancel, a.nojs-close-link):hover {
+:is(#report-modal, #report-comment-modal) :is(:is(#report-cancel, #report-comment-cancel), a.nojs-close-link):hover {
   color: var(--rm-text);
   border-color: rgba(255, 255, 255, 0.25);
   background: var(--rm-surface);
 }
 
-#report-modal :is(#report-submit, .report-nojs-submit) {
+:is(#report-modal, #report-comment-modal) :is(:is(#report-submit, #report-comment-submit), .report-nojs-submit) {
   background: var(--rm-accent);
   border: 1px solid var(--rm-accent);
   color: #000;
@@ -31858,17 +31867,17 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
   letter-spacing: 0.08em;
 }
 
-#report-modal :is(#report-submit, .report-nojs-submit):hover:not(:disabled) {
+:is(#report-modal, #report-comment-modal) :is(:is(#report-submit, #report-comment-submit), .report-nojs-submit):hover:not(:disabled) {
   background: transparent;
   color: var(--rm-accent);
 }
 
-#report-modal :is(#report-submit, .report-nojs-submit):disabled {
+:is(#report-modal, #report-comment-modal) :is(:is(#report-submit, #report-comment-submit), .report-nojs-submit):disabled {
   opacity: 0.6;
   cursor: progress;
 }
 
-#report-modal button:focus-visible {
+:is(#report-modal, #report-comment-modal) button:focus-visible {
   outline: 2px solid var(--rm-accent);
   outline-offset: 2px;
 }
@@ -38037,11 +38046,11 @@ html[theme='paper'] .gapRight .fav-nojs-btn.fa-solid {
   max-width: 340px;
 }
 
-:is(.comment-form-nojs, #report-modal) .lm-field-icon {
+:is(.comment-form-nojs, :is(#report-modal, #report-comment-modal)) .lm-field-icon {
   display: none;
 }
 
-:is(.comment-form-nojs, #report-modal) .lm-input {
+:is(.comment-form-nojs, :is(#report-modal, #report-comment-modal)) .lm-input {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px;
@@ -38073,16 +38082,16 @@ html[theme='paper'] .gapRight .fav-nojs-btn.fa-solid {
 /* Info and report modals: the item's info / report links point at them, :target opens them
    (!important beats .info-modal-hidden / .footer-hidden), links to #_ close them */
 html.no-js #info-modal:target,
-html.no-js #report-modal:target {
+html.no-js :is(#report-modal, #report-comment-modal):target {
   display: flex !important;
 }
 
-html.no-js:has(#info-modal:target, #report-modal:target) body {
+html.no-js:has(#info-modal:target, :is(#report-modal, #report-comment-modal):target) body {
   overflow: hidden;
 }
 
 /* Above the backdrop link */
-html.no-js :is(#info-modal, #report-modal) > .modal-content {
+html.no-js :is(#info-modal, :is(#report-modal, #report-comment-modal)) > .modal-content {
   position: relative;
 }
 
@@ -38091,11 +38100,11 @@ html.no-js :is(#info-modal, #report-modal) > .modal-content {
   display: contents;
 }
 
-#report-modal .lm-imgcap {
+:is(#report-modal, #report-comment-modal) .lm-imgcap {
   margin-top: 10px;
 }
 
-#report-modal .modal-actions a {
+:is(#report-modal, #report-comment-modal) .modal-actions a {
   text-decoration: none;
 }
 
@@ -38106,10 +38115,10 @@ html.no-js .report-item-btn,
 html.no-js #info-modal-close-icon,
 html.no-js #info-modal-close,
 html.no-js #info-modal :is(.infobox-action-btn:not(#info-set-expiry-btn), #info-section-tools),
-html.no-js #report-modal button.modal-x,
-html.no-js #report-cancel,
-html.no-js #report-submit,
-html.no-js #report-modal cap-widget {
+html.no-js :is(#report-modal, #report-comment-modal) button.modal-x,
+html.no-js :is(#report-cancel, #report-comment-cancel),
+html.no-js :is(#report-submit, #report-comment-submit),
+html.no-js :is(#report-modal, #report-comment-modal) cap-widget {
   display: none !important;
 }
 

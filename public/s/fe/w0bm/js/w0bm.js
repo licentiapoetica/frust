@@ -960,13 +960,27 @@
     if (!form || !modal) return;
     const item = form.querySelector('input[name="item_id"]');
     const comment = form.querySelector('input[name="comment_id"]');
+    const title = form.querySelector('#reportModalTitle');
+    // Posts and comments have their own reasons: the other kind's are hidden and disabled, so never sent
+    const kind = (k) => {
+      form.querySelectorAll('.w0bm-report-cats').forEach((set) => {
+        const on = set.dataset.reportKind === k;
+        set.hidden = !on;
+        set.querySelectorAll('input').forEach((cb) => { cb.disabled = !on; cb.checked = false; });
+      });
+      if (title) title.textContent = title.dataset[k === 'comment' ? 'titleComment' : 'titleItem'] || title.textContent;
+      const intro = form.querySelector('.w0bm-report-intro');
+      if (intro) intro.textContent = intro.dataset[k === 'comment' ? 'introComment' : 'introItem'] || intro.textContent;
+    };
     item.disabled = true;
     comment.disabled = false;
     comment.value = id;
+    kind('comment');
     modal.addEventListener('w0bm:close', () => {
       item.disabled = false;
       comment.disabled = true;
       comment.value = '';
+      kind('item');
     }, { once: true });
     openModal(modal);
   }

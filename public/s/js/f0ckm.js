@@ -1710,7 +1710,7 @@ window.cancelAnimFrame = (function () {
   window.hideAllModals = () => {
     const modalIds = [
       'login-modal', 'register-modal', 'forgot-modal', 'reset-modal',
-      'report-modal', 'halls-modal', 'metadata-modal', 'warning-modal',
+      'report-modal', 'report-comment-modal', 'halls-modal', 'metadata-modal', 'warning-modal',
       'shortcuts-modal', 'upload-drag-modal', 'excluded-tags-overlay',
       'content-warning-modal', 'gchat-img-modal', 'image-modal', 'info-modal', 'visibility-modal'
     ];
@@ -2457,8 +2457,7 @@ window.cancelAnimFrame = (function () {
     if (infoModal) infoModal.style.display = 'none';
     const visModal = document.getElementById('visibility-modal');
     if (visModal) visModal.style.display = 'none';
-    const reportModal = document.getElementById('report-modal');
-    if (reportModal) reportModal.style.display = 'none';
+    document.querySelectorAll('.report-modal').forEach((m) => { m.style.display = 'none'; });
     if (window.closeHallsDialog) window.closeHallsDialog();
     if (typeof window.closeImageModal === 'function') window.closeImageModal();
     document.body.classList.remove('modal-open');
@@ -3058,8 +3057,8 @@ window.cancelAnimFrame = (function () {
         document.body.classList.remove('modal-open');
         return;
       }
-      const reportModal = document.getElementById('report-modal');
-      if (reportModal && getComputedStyle(reportModal).display !== 'none') {
+      const reportModal = Array.from(document.querySelectorAll('.report-modal')).find((m) => getComputedStyle(m).display !== 'none');
+      if (reportModal) {
         reportModal.style.display = 'none';
         document.body.classList.remove('modal-open');
         return;
@@ -21758,28 +21757,31 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Report System Logic
+// Two dialogs (snippets/footer.html): #report-modal for posts (and users), #report-comment-modal
+// for comments, each with its own reasons. What is being reported sits in the dialog's dataset.
 document.addEventListener('DOMContentLoaded', () => {
-    const reportModal = document.getElementById('report-modal');
-    if (!reportModal) return;
-    
-    const reportItemInput = document.getElementById('report-item-id');
-    const reportCommentInput = document.getElementById('report-comment-id');
-    const reportUserInput = document.getElementById('report-user-id');
-    const reportReason = document.getElementById('report-reason');
-    const reportError = document.getElementById('report-error');
-    // Cap captcha, only rendered for guests (footer.html)
-    const reportCaptcha = () => document.getElementById('modal-report-captcha');
-    const resetReportCaptcha = () => { const el = reportCaptcha(); if (el) window.f0ckCapReset?.(el.parentNode); };
+    const itemModal = document.getElementById('report-modal');
+    const commentModal = document.getElementById('report-comment-modal');
+    if (!itemModal && !commentModal) return;
 
-    const showReportError = (msg, targetEl) => {
-        if (!reportError) return;
-        reportError.innerHTML = '';
+    const parts = (modal) => ({
+        reason: modal.querySelector('.rm-reason'),
+        error: modal.querySelector('.rm-error'),
+        submit: modal.querySelector('.rm-submit'),
+        // Cap captcha, only rendered when reports need one (footer.html)
+        captcha: modal.querySelector('cap-widget')
+    });
+    const resetCaptcha = (modal) => { const el = parts(modal).captcha; if (el) window.f0ckCapReset?.(el.parentNode); };
+
+    const showError = (modal, msg, targetEl) => {
+        const { error } = parts(modal);
+        if (!error) return;
+        error.innerHTML = '';
         const icon = document.createElement('i');
         icon.className = 'fa fa-circle-exclamation';
-        icon.style.marginRight = '6px';
-        reportError.appendChild(icon);
-        reportError.appendChild(document.createTextNode(' ' + msg));
-        reportError.style.display = 'block';
+        error.appendChild(icon);
+        error.appendChild(document.createTextNode(' ' + msg));
+        error.classList.add('rm-error-shown');
 
         if (targetEl) {
             targetEl.classList.remove('field-error');
@@ -21791,131 +21793,128 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const clearReportError = () => {
-        if (reportError) {
-            reportError.innerHTML = '';
-            reportError.style.display = 'none';
+    const clearError = (modal) => {
+        const { error, reason, captcha } = parts(modal);
+        if (error) {
+            error.innerHTML = '';
+            error.classList.remove('rm-error-shown');
         }
-        if (reportReason) reportReason.classList.remove('field-error');
-        const rcEl = reportCaptcha();
-        if (rcEl) rcEl.classList.remove('field-error');
+        if (reason) reason.classList.remove('field-error');
+        if (captcha) captcha.classList.remove('field-error');
     };
 
-    if (reportReason) {
-        reportReason.addEventListener('input', () => {
-            if (reportReason.value.trim()) {
-                reportReason.classList.remove('field-error');
-                const rcEl = reportCaptcha();
-                if (!rcEl || !rcEl.classList.contains('field-error')) {
-                    clearReportError();
-                }
+    const resetCategories = (modal) => {
+        modal.querySelectorAll('.report-cat-check').forEach(cb => { cb.checked = false; });
+    };
+
+    // target: { item_id } | { comment_id } | { reported_user_id }
+    const openReport = (modal, target) => {
+        if (!modal) return;
+        const { reason } = parts(modal);
+        modal.dataset.reportTarget = JSON.stringify(target);
+        if (reason) reason.value = '';
+        resetCategories(modal);
+        clearError(modal);
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+    };
+
+    const closeReport = (modal) => {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        resetCategories(modal);
+        clearError(modal);
+    };
+
+    [itemModal, commentModal].filter(Boolean).forEach((modal) => {
+        const { reason } = parts(modal);
+        if (!reason) return;
+        reason.addEventListener('input', () => {
+            if (reason.value.trim()) {
+                reason.classList.remove('field-error');
+                const rcEl = parts(modal).captcha;
+                if (!rcEl || !rcEl.classList.contains('field-error')) clearError(modal);
             }
         });
-        reportReason.addEventListener('keydown', (e) => {
+        reason.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
-                const submitBtn = document.getElementById('report-submit');
+                const submitBtn = parts(modal).submit;
                 if (submitBtn && !submitBtn.disabled) submitBtn.click();
             }
         });
-    }
+    });
 
     // A solved captcha clears its error
     document.addEventListener('solve', (e) => {
-        const rcEl = reportCaptcha();
-        if (!rcEl || e.target !== rcEl) return;
-        rcEl.classList.remove('field-error');
-        if (!reportReason || !reportReason.classList.contains('field-error')) clearReportError();
+        const modal = e.target.closest && e.target.closest('.report-modal');
+        if (!modal || e.target !== parts(modal).captcha) return;
+        e.target.classList.remove('field-error');
+        const { reason } = parts(modal);
+        if (!reason || !reason.classList.contains('field-error')) clearError(modal);
     });
 
-    // Helper to reset all category checkboxes
-    const resetReportCategories = () => {
-        document.querySelectorAll('.report-cat-check').forEach(cb => { cb.checked = false; });
-    };
-
-    // Open item report
     document.addEventListener('click', (e) => {
         const itemBtn = e.target.closest('.report-item-btn');
         if (itemBtn) {
             e.preventDefault();
-            reportItemInput.value = itemBtn.dataset.itemId;
-            reportCommentInput.value = '';
-            reportUserInput.value = '';
-            reportReason.value = '';
-            resetReportCategories();
-            clearReportError();
-            reportModal.style.display = 'flex';
-            document.body.classList.add('modal-open');
+            openReport(itemModal, { item_id: itemBtn.dataset.itemId });
         }
 
         const commentBtn = e.target.closest('.report-comment-btn');
         if (commentBtn) {
             e.preventDefault();
-            reportItemInput.value = '';
-            reportCommentInput.value = commentBtn.dataset.id;
-            reportUserInput.value = '';
-            reportReason.value = '';
-            resetReportCategories();
-            clearReportError();
-            reportModal.style.display = 'flex';
-            document.body.classList.add('modal-open');
+            openReport(commentModal, { comment_id: commentBtn.dataset.id });
         }
 
         const userBtn = e.target.closest('.report-user-btn'); // for future
         if (userBtn) {
             e.preventDefault();
-            reportItemInput.value = '';
-            reportCommentInput.value = '';
-            reportUserInput.value = userBtn.dataset.userId;
-            reportReason.value = '';
-            resetReportCategories();
-            clearReportError();
-            reportModal.style.display = 'flex';
-            document.body.classList.add('modal-open');
+            openReport(itemModal, { reported_user_id: userBtn.dataset.userId });
         }
 
-        // Close logic
-        if (e.target.matches('#report-cancel') || e.target.id === 'report-modal') {
-            reportModal.style.display = 'none';
-            document.body.classList.remove('modal-open');
-            resetReportCategories();
-            clearReportError();
-            resetReportCaptcha();
+        // Close logic: the cancel button or a click on the backdrop
+        const cancelBtn = e.target.closest('.report-modal .rm-cancel');
+        const closing = cancelBtn ? cancelBtn.closest('.report-modal') : (e.target.classList.contains('report-modal') ? e.target : null);
+        if (closing) {
+            closeReport(closing);
+            resetCaptcha(closing);
         }
 
         // Submit logic
-        if (e.target.matches('#report-submit')) {
-            clearReportError();
+        const submitBtn = e.target.closest('.report-modal .rm-submit');
+        if (submitBtn) {
+            const modal = submitBtn.closest('.report-modal');
+            const { reason: reportReason, captcha: rcEl } = parts(modal);
+            clearError(modal);
             const reason = reportReason.value.trim();
-            const checkedCategories = Array.from(document.querySelectorAll('.report-cat-check:checked')).map(cb => cb.value);
+            const checkedCategories = Array.from(modal.querySelectorAll('.report-cat-check:checked')).map(cb => cb.value);
 
             if (!reason && checkedCategories.length === 0) {
-                showReportError((window.f0ckI18n && window.f0ckI18n.reason_required) || 'Please select at least one reason or provide a description.', reportReason);
+                showError(modal, (window.f0ckI18n && window.f0ckI18n.reason_required) || 'Please select at least one reason or provide a description.', reportReason);
                 return;
             }
 
-            const rcEl = reportCaptcha();
             let rcToken = '';
             if (rcEl) {
                 rcToken = window.f0ckCapToken?.(rcEl.parentNode) || '';
                 if (!rcToken) {
-                    showReportError((window.f0ckI18n && window.f0ckI18n.captcha_required) || 'Please complete the CAPTCHA.', rcEl);
+                    showError(modal, (window.f0ckI18n && window.f0ckI18n.captcha_required) || 'Please complete the CAPTCHA.', rcEl);
                     return;
                 }
             }
 
+            let target = {};
+            try { target = JSON.parse(modal.dataset.reportTarget || '{}'); } catch (err) {}
             const payload = new URLSearchParams();
-            if (reportItemInput.value) payload.append('item_id', reportItemInput.value);
-            if (reportCommentInput.value) payload.append('comment_id', reportCommentInput.value);
-            if (reportUserInput.value) payload.append('reported_user_id', reportUserInput.value);
+            Object.keys(target).forEach((k) => { if (target[k]) payload.append(k, target[k]); });
             if (reason) payload.append('reason', reason);
             if (checkedCategories.length) payload.append('categories', checkedCategories.join(','));
             if (rcToken) payload.append('cap-token', rcToken);
 
-            const submitBtn = e.target;
             const originalBtnText = submitBtn.innerHTML;
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin" style="margin-right: 5px;"></i>' + ((window.f0ckI18n && window.f0ckI18n.processing) || 'Processing...');
+            submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin rm-spinner"></i>' + ((window.f0ckI18n && window.f0ckI18n.processing) || 'Processing...');
 
             fetch('/api/v2/report', {
                 method: 'POST',
@@ -21928,28 +21927,24 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    reportModal.style.display = 'none';
-                    document.body.classList.remove('modal-open');
-                    clearReportError();
-                    if (window.showFlash) window.showFlash((window.f0ckI18n && window.f0ckI18n.report_success) || 'Report submitted successfully.', 'success');
-                    // Reset fields for future reports
+                    closeReport(modal);
                     reportReason.value = '';
-                    resetReportCategories();
+                    if (window.showFlash) window.showFlash((window.f0ckI18n && window.f0ckI18n.report_success) || 'Report submitted successfully.', 'success');
                 } else {
                     const errMsg = data.msg || (window.f0ckI18n && window.f0ckI18n.report_error) || 'An error occurred.';
-                    showReportError(errMsg);
+                    showError(modal, errMsg);
                     if (window.showFlash) window.showFlash(errMsg, 'error');
                 }
             })
             .catch(err => {
                 const errMsg = (window.f0ckI18n && window.f0ckI18n.network_error) || 'Network error.';
-                showReportError(errMsg);
+                showError(modal, errMsg);
                 if (window.showFlash) window.showFlash(errMsg, 'error');
             })
             .finally(() => {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnText;
-                resetReportCaptcha(); // tokens are single-use
+                resetCaptcha(modal); // tokens are single-use
             });
         }
     });
