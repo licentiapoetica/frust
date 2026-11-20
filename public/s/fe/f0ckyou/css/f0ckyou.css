@@ -3129,6 +3129,24 @@ body.fy-page-watch {
   display: none;
 }
 
+/* in a search (/search/<f0ck>): the search, back to its results, and where the f0ck is in them */
+.fy-upnext-search {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: 0 0 .5rem;
+}
+
+.fy-upnext-search a {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
 /* Up next in a tag: two tabs, the tag's list and the recommendations (radio buttons, no
    JavaScript needed) */
 .fy-upnext-radio {
@@ -5095,7 +5113,8 @@ html.user-fs-150 {
     margin: 1.5rem 0 0;
   }
 
-  .fy-upnext > .fy-upnext-nav {
+  .fy-upnext > .fy-upnext-nav,
+  .fy-upnext > .fy-upnext-search {
     display: none;
   }
 

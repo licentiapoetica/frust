@@ -1475,7 +1475,7 @@
       switch (e.keyCode) {
         case 39: case 68: case 76: goNext(); break; // → d l
         case 37: case 65: case 72: goPrev(); break; // ← a h
-        case 82: $('#w0bm-context')?.click(); break; // r
+        case 82: { const ctx = $('#w0bm-context'); if (ctx) ctx.click(); else navigate('/random'); } break; // r (in a search: no context link)
         case 70: if (e.repeat) break; if (!(fForFullscreen() && toggleItemFullscreen())) $('#fav')?.click(); break; // f
         case 80: cycleRating(); break; // p
         case 73: if (openTagInput()) e.preventDefault(); break; // i (no "i" typed into the field)

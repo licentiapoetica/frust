@@ -28567,6 +28567,12 @@ pre.text-raw {
   margin: 0 4px;
 }
 
+/* in a search (/search/<f0ck>?q=…): where the f0ck is in the results, after the address */
+._204863 .location .location-pos {
+  opacity: 0.6;
+  margin-left: 8px;
+}
+
 ._204863 .location .location-link.is-rehosted {
   color: #4ade80;
   font-weight: 700;
@@ -32718,6 +32724,47 @@ body[type='login'] .register-back a.login-trigger-btn {
 }
 .srch-strict small {
   color: var(--sr-muted);
+}
+/* the result count and the grid / list switch */
+.srch-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+.srch-meta-row .srch-meta {
+  margin-bottom: 0;
+}
+.srch-view {
+  display: inline-flex;
+  border: 1px solid var(--sr-border);
+}
+.srch-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  color: var(--sr-muted);
+  font-size: 0.85em;
+  text-decoration: none;
+}
+.srch-view-btn + .srch-view-btn {
+  border-left: 1px solid var(--sr-border);
+}
+.srch-view-btn:hover,
+.srch-view-btn:focus-visible {
+  background: var(--sr-surface-2);
+  color: var(--sr-text);
+}
+.srch-view-btn.active {
+  background: var(--sr-accent);
+  color: var(--bg, #000);
+}
+/* the grid view: the search bar over a feed's grid (index-partial.html's layout) */
+.srch.srch-is-grid {
+  padding-bottom: 16px;
 }
 .srch-meta {
   margin-bottom: 10px;

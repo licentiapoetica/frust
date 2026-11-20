@@ -21,7 +21,10 @@
 {%- set fg_my_halls = (my_hall_choices if (my_hall_choices is defined and my_hall_choices is sequence) else none) -%}
 {%- set fg_site_halls = (hall_choices if (hall_choices is defined and hall_choices is sequence) else none) -%}
 {%- set fg_in_halls = ((fg_my_halls|selectattr("has_item")|list|length) if fg_my_halls is not none else 0) -%}
-{%- set fg_q = ((tmp.tag|lower) if (tmp and tmp.tag) else (("user:" ~ (tmp.user|lower)) if (tmp and tmp.user) else "")) -%}
+{#- in a search (/search/<f0ck>?q=…, routes/search.rs nav): that search in the box, prev/next walk its results -#}
+{%- set fg_insearch = (search_ctx is defined and search_ctx) -%}
+{%- set fg_q = (search_ctx.q if fg_insearch else ((tmp.tag|lower) if (tmp and tmp.tag) else (("user:" ~ (tmp.user|lower)) if (tmp and tmp.user) else ""))) -%}
+{%- set fg_strict = (fg_insearch and search_ctx.strict) -%}
 {%- set fg_tab_base = (link.main if (link and link.main) else "/") -%}
 {%- set fg_tab = "" -%}
 {% include "frontends/f0ckgle/snippets/head.html" %}
@@ -30,7 +33,7 @@
   <div class="fg-item-col">
     <div class="fg-result-site">
       <span class="fg-fav fg-fav-letter">{{ ((uploader_name or domain)[:1])|upper }}</span>
-      <span class="fg-result-who">{% if (uploader and not is_anonymized) %}<a class="fg-result-name" href="/user/{{ uploader|lower|encode_uri_component }}">{{ uploader_name }}</a>{% else %}<span class="fg-result-name">{{ (uploader_name or domain) }}</span>{% endif %}<cite>https://{{ domain }}{% if (tmp and tmp.tag) %} &rsaquo; tag &rsaquo; {{ tmp.tag|lower }}{% endif %} &rsaquo; {{ item_ref }}</cite></span>
+      <span class="fg-result-who">{% if (uploader and not is_anonymized) %}<a class="fg-result-name" href="/user/{{ uploader|lower|encode_uri_component }}">{{ uploader_name }}</a>{% else %}<span class="fg-result-name">{{ (uploader_name or domain) }}</span>{% endif %}<cite>https://{{ domain }}{% if fg_insearch %} &rsaquo; search &rsaquo; {{ search_ctx.q }}{% elif (tmp and tmp.tag) %} &rsaquo; tag &rsaquo; {{ tmp.tag|lower }}{% endif %} &rsaquo; {{ item_ref }}</cite></span>
     </div>
     <h1 class="fg-item-title" data-fg-live="title">{% if (enable_oc and item.is_oc) %}<span class="fg-label">OC</span> {% endif %}{{ fg_item_title }}</h1>
 
@@ -75,6 +78,7 @@
     <div class="fg-chips" data-fg-live="actions">
       {% if pagination.prev %}<a class="fg-chip" id="fg-prev" href="{{ link.main }}{{ pagination.prev }}{{ link.suffix }}" title="previous (&larr;)">&lsaquo; Previous</a>{% endif %}
       {% if pagination.next %}<a class="fg-chip" id="fg-next" href="{{ link.main }}{{ pagination.next }}{{ link.suffix }}" title="next (&rarr;)">Next &rsaquo;</a>{% endif %}
+      {% if fg_insearch %}<a class="fg-chip" href="{{ search_ctx.results }}" title="back to the results">Result {{ search_ctx.position }} of {{ search_ctx.total }}</a>{% endif %}
       <a class="fg-chip" href="/random" title="random (r)">I'm feeling f0cky</a>
       {% if session %}
       <form method="post" action="/api/v2/togglefav" class="fg-inline fg-ajax" data-fg-refresh="actions kp">

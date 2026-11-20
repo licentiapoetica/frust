@@ -23,6 +23,8 @@ pub fn register(r: &mut Router) {
         r"^(?!\/(s|b|t|ca|a|4|login|register|settings|about|terms|rules|api|logout|auth|admin|comments|notifications|feed)\/)\/?(?:\/tag\/(?<tag>.+?))?(?:\/list\/(?<hall>.+?))?(?:\/user\/(?<user>.+?)\/(?<mode>f0cks|uploads|favs))?(?:\/(?<mime>(?:video|audio|image)(?:,(?:video|audio|image))*))?(?:\/p\/(?<page>\d+))?(?:\/(?<itemid>[a-zA-Z0-9_-]{11}|\d+))?\/?(?:\?.*)?$",
         generic,
     );
+    // a f0ck in a search: walks through the results (routes/search.rs nav)
+    r.get(r"^\/search\/(?<itemid>[a-zA-Z0-9_-]{11}|\d+)\/?$", generic);
     r.get(r"^\/(about)$", about);
     r.get(r"^\/(terms)$", terms);
     r.get(r"^\/privacy\/?$", privacy);
@@ -346,6 +348,8 @@ async fn generic(st: AppState, req: Req) -> Res {
     let cfg = st.cfg();
     let p = |k: &str| req.param(k).filter(|v| !v.is_empty()).map(str::to_string);
     let is_item = p("itemid").is_some();
+    // /search/<f0ck>?q=<search>: the f0ck with the results around it instead of a feed
+    let search = search_context(&req);
 
     if cfg.is_false("websrv.halls_enabled") && p("hall").is_some() {
         return Ok(error_page(&st, &req, 404, json!({ "message": "Not found", "tmp": null })));
@@ -384,7 +388,8 @@ async fn generic(st: AppState, req: Req) -> Res {
         }
     }
 
-    let bypass = ["force", "allow", "bypass", "see_anyways"].iter().any(|k| req.query(k) == Some("1"));
+    // a search already limits what a visitor finds (its own `rating:`, not the feed mode)
+    let bypass = ["force", "allow", "bypass", "see_anyways"].iter().any(|k| req.query(k) == Some("1")) || search.is_some();
     let ratings = if req.mode == 2 || req.mode == 3 { None } else { ratings_cookie(&req) };
     let strict = truthy_q(&req, "strict") || sref.and_then(|s| s.strict_mode).unwrap_or(false);
     let random = req.cookie("random_mode") == Some("1");
@@ -542,6 +547,9 @@ async fn generic(st: AppState, req: Req) -> Res {
         }
         data["commentsJSON"] = Value::Null;
         data["comments"] = json!([]);
+        if let Some((q, strict)) = &search {
+            apply_search_nav(&st, &req, &mut data, q, *strict).await?;
+        }
     } else if data.get("total").map(Value::is_null).unwrap_or(true) {
         data["total"] = json!(0);
     }
@@ -582,12 +590,30 @@ async fn generic(st: AppState, req: Req) -> Res {
         return Ok(no_store(html(crate::tpl::render(&st, Some(&tpl_req), "index-partial", data))));
     }
 
-    let onara = s::is_onara_enabled_for(&cfg, &req.cookies, sref, false);
+    let onara = s::is_onara_enabled_for(&cfg, &req.cookies, sref, false) && search.is_none();
     if is_item && onara && crate::tpl::frontend_has_onara(&st, Some(&req)) {
         return Ok(no_store(onara_page(&st, &req, &tpl_req, &opts, data).await?));
     }
     let view = if is_item { "item" } else { "index" };
     Ok(no_store(html(crate::tpl::render(&st, Some(&tpl_req), view, data))))
+}
+
+/// The search of a f0ck's page in one (`?q=<search>`, `&match=all` for a strict one: routes/search.rs
+/// item_query): on /search/<f0ck>, and for the item loads of f0ckm.js (`search=`, `match=all`).
+pub(crate) fn search_context(req: &Req) -> Option<(String, bool)> {
+    let q = if req.path.starts_with("/search/") { req.query("q") } else { req.query("search") };
+    q.filter(|q| !q.trim().is_empty()).map(|q| (q.to_string(), req.query("match") == Some("all")))
+}
+
+/// An item page in a search: prev/next through its results (routes/search.rs nav). Stays a plain
+/// item page when the search doesn't find the f0ck.
+pub(crate) async fn apply_search_nav(st: &AppState, req: &Req, data: &mut Value, q: &str, strict: bool) -> anyhow::Result<()> {
+    let Some(id) = data["item"]["id"].as_i64() else { return Ok(()) };
+    let page_id = data["pagination"]["page"].clone();
+    if let Some(Value::Object(nav)) = super::search::nav(st, req, q, strict, id, &page_id).await? {
+        data.as_object_mut().map(|m| m.extend(nav));
+    }
+    Ok(())
 }
 
 /// The template renderer reads the session from the request; use the one with this request's

@@ -2171,7 +2171,7 @@ window.cancelAnimFrame = (function () {
 
     let targetPage = (typeof knownPage === 'number' && knownPage >= 1) ? knownPage : null;
 
-    if (!targetPage) {
+    if (!targetPage && feedBasePath !== '/search') {
       try {
         const pageParams = new URLSearchParams();
         pageParams.set('id', itemid);
@@ -2317,6 +2317,22 @@ window.cancelAnimFrame = (function () {
   };
   window.syncOnaraBackgroundGrid = syncOnaraBackgroundGrid;
 
+  // A f0ck in a search (/search/<f0ck>?q=<search>[&match=all]): its prev/next walk the results
+  const isSearchItemPath = (path) => /^\/search\/(?:\d+|[a-zA-Z0-9_-]{11})\/?$/.test(path);
+  const searchItemUrl = (itemKey, search, strict) =>
+    `/search/${itemKey}?q=${encodeURIComponent(search)}${strict ? '&match=all' : ''}`;
+  // A search's results page (/search?q=…, /search/p/<n>?q=…; the old ?tag= / &mode=strict too)
+  const isSearchPagePath = (path) => /^\/search(?:\/p\/\d+)?\/?$/.test(path);
+  const searchOf = (urlLike) => {
+    const u = new URL(urlLike, window.location.origin);
+    return {
+      q: u.searchParams.get('q') || u.searchParams.get('tag') || '',
+      strict: u.searchParams.get('match') === 'all' || u.searchParams.get('mode') === 'strict',
+    };
+  };
+  const searchPageUrl = (search, strict, page) =>
+    `${page > 1 ? `/search/p/${page}` : '/search'}?q=${encodeURIComponent(search)}${strict ? '&match=all' : ''}`;
+
   const isItemPath = (pathOrUrl) => {
     try {
       const p = new URL(pathOrUrl, window.location.origin).pathname;
@@ -2328,7 +2344,8 @@ window.cancelAnimFrame = (function () {
         /^\/\d+(?:[?#]|$)/.test(p) || 
         /^\/[a-zA-Z0-9_-]{11}(?:[?#]|$)/.test(p) ||
         (parts.length >= 3 && (parts[0] === 'tag' || parts[0] === 'user' || parts[0] === 'h') && (/^\d+$/.test(parts[parts.length - 1]) || /^[a-zA-Z0-9_-]{11}$/.test(parts[parts.length - 1]))) ||
-        (parts.length >= 2 && parts[0] === 'favs' && (/^\d+$/.test(parts[parts.length - 1]) || /^[a-zA-Z0-9_-]{11}$/.test(parts[parts.length - 1])))
+        (parts.length >= 2 && parts[0] === 'favs' && (/^\d+$/.test(parts[parts.length - 1]) || /^[a-zA-Z0-9_-]{11}$/.test(parts[parts.length - 1]))) ||
+        isSearchItemPath(p)
       );
     } catch {
       return false;
@@ -11679,7 +11696,9 @@ window.cancelAnimFrame = (function () {
     const isItem = typeof isItemPath === 'function' ? isItemPath(pathname) : (!pathname.startsWith('/4/') && /^\/\d+(?:[?#]|$)/.test(pathname));
     const isMessages = !!pathname.match(/^\/messages(\/|$)/);
     const isAbyss    = !!pathname.match(/^\/abyss(\/|$|\?|#)/) || pathname === '/abyss';
-    const isGrid = !isProfile && !isUserHall && !isUserHalls && !isHall && !isHalls && !isTags && !isComments && !isNotifs && !isItem && !isAdmin && !isMod && !isSettings && !isStatic && !isUpload && !isMessages && !isAbyss;
+    // a search's results (grid or list): the page itself, not a feed of /ajax/items
+    const isSearchPage = isSearchPagePath(pathname);
+    const isGrid = !isProfile && !isUserHall && !isUserHalls && !isHall && !isHalls && !isTags && !isComments && !isNotifs && !isItem && !isAdmin && !isMod && !isSettings && !isStatic && !isUpload && !isMessages && !isAbyss && !isSearchPage;
 
     if (isItem) {
        isNavigating = false;
@@ -11941,7 +11960,7 @@ window.cancelAnimFrame = (function () {
         ajaxUrl += (ajaxUrl.includes('?') ? '&' : '?') + 'strict=1';
       }
 
-      const needsFullHtmlFetch = isProfile || isUserHall || isUserHalls || isTags || isHall || isHalls || isComments || isNotifs || isAdmin || isMod || isSettings || isStatic || isMessages || isAbyss;
+      const needsFullHtmlFetch = isProfile || isUserHall || isUserHalls || isTags || isHall || isHalls || isComments || isNotifs || isAdmin || isMod || isSettings || isStatic || isMessages || isAbyss || isSearchPage;
 
       const fetchHeaders = { 'Credentials': 'include' };
       if (!needsFullHtmlFetch) {
@@ -12644,7 +12663,15 @@ window.cancelAnimFrame = (function () {
 
     // Extract context from Target URL first
     let tag = null, user = null, isFavs = false, mime = null, hall = null, userHall = null, userHallOwner = null, tagger = null;
-    const tagMatch = url.match(/\/tag\/([^/?]+)/);
+    // A search (/search/<f0ck>?q=…): no other context, never inherited
+    let search = null, searchStrict = false;
+    const searchUrlObj = new URL(url, window.location.origin);
+    if (isSearchItemPath(searchUrlObj.pathname) && searchUrlObj.searchParams.get('q')) {
+      search = searchUrlObj.searchParams.get('q');
+      searchStrict = searchUrlObj.searchParams.get('match') === 'all';
+      inheritContext = false;
+    }
+    const tagMatch = search ? null : url.match(/\/tag\/([^/?]+)/);
     if (tagMatch) tag = decodeURIComponent(tagMatch[1]);
 
     // Tagger filter from query string
@@ -12653,13 +12680,13 @@ window.cancelAnimFrame = (function () {
     if (taggerParam) tagger = decodeURIComponent(taggerParam);
 
     // User hall: /user/:owner/list/:slug/:id
-    const userHallMatch = url.match(/\/user\/([^/]+)\/list\/([^/]+)/);
+    const userHallMatch = search ? null : url.match(/\/user\/([^/]+)\/list\/([^/]+)/);
     if (userHallMatch) {
       userHallOwner = decodeURIComponent(userHallMatch[1]);
       userHall = decodeURIComponent(userHallMatch[2]);
     }
 
-    const userMatch = url.match(/\/user\/([^/]+)/);
+    const userMatch = search ? null : url.match(/\/user\/([^/]+)/);
     if (userMatch && !userHall) {
       user = decodeURIComponent(userMatch[1]);
       if (url.match(/\/user\/[^/]+\/favs(\/|$|\?)/)) isFavs = true;
@@ -12733,6 +12760,10 @@ window.cancelAnimFrame = (function () {
       params.append('mode', window.activeMode);
       const targetHash = new URL(url, window.location.origin).hash.replace(/^#/, '').trim();
       if (targetHash && !targetHash.startsWith('c')) params.append('subf0ck', targetHash);
+      if (search) {
+        params.append('search', search);
+        if (searchStrict) params.append('match', 'all');
+      }
       if (tag) params.append('tag', tag);
       if (hall) params.append('hall', hall);
       if (userHall && userHallOwner) {
@@ -12754,14 +12785,14 @@ window.cancelAnimFrame = (function () {
 
       const isStrict = window.f0ckSession?.strict_mode || (localStorage.getItem('search_strict') === 'true');
 
-      if (isStrict || url.includes('strict=1') || window.location.search.includes('strict=1')) {
+      if (!search && (isStrict || url.includes('strict=1') || window.location.search.includes('strict=1'))) {
         params.append('strict', '1');
       }
       
       // Note: mime is no longer appended to params, server reads from cookie automatically
       // _t cache-buster removed — stable URL enables both HTTP and in-memory caching.
 
-      const isRandom = document.cookie.includes('random_mode=1') || url.includes('random=1') || window.location.search.includes('random=1');
+      const isRandom = !search && (document.cookie.includes('random_mode=1') || url.includes('random=1') || window.location.search.includes('random=1'));
       if (isRandom) {
         params.append('random', '1');
       }
@@ -12781,7 +12812,7 @@ window.cancelAnimFrame = (function () {
         ajaxUrl += (ajaxUrl.includes('?') ? '&' : '?') + params.toString();
       }
     }
-    return { itemid, isChanUrl, ajaxUrl, tag, user, isFavs, mime, hall, userHall, userHallOwner, tagger };
+    return { itemid, isChanUrl, ajaxUrl, tag, user, isFavs, mime, hall, userHall, userHallOwner, tagger, search, searchStrict };
   };
 
   // Item URL for a random pick, in the feed the visitor is in (user hall, user favs, tag, hall or global)
@@ -13064,7 +13095,7 @@ window.cancelAnimFrame = (function () {
       });
     }
 
-    const { tag, user, isFavs, mime, hall, userHall, userHallOwner, tagger, ajaxUrl } = itemReq;
+    const { tag, user, isFavs, mime, hall, userHall, userHallOwner, tagger, ajaxUrl, search, searchStrict } = itemReq;
 
     try {
 
@@ -13228,7 +13259,8 @@ window.cancelAnimFrame = (function () {
         if (isChanUrl) {
           const u = new URL(url, window.location.origin);
           _pushUrl = u.pathname + u.search + u.hash;
-        } else if (userHall && userHallOwner)  _pushUrl = `/user/${encodeURIComponent(userHallOwner)}/list/${encodeURIComponent(userHall)}/${itemKey}`;
+        } else if (search) _pushUrl = searchItemUrl(itemKey, search, searchStrict);
+        else if (userHall && userHallOwner)  _pushUrl = `/user/${encodeURIComponent(userHallOwner)}/list/${encodeURIComponent(userHall)}/${itemKey}`;
         else if (user)  { _pushUrl = `/user/${encodeURIComponent(user)}/${itemKey}`; if (isFavs) _pushUrl = `/user/${encodeURIComponent(user)}/favs/${itemKey}`; }
         else if (isFavs) _pushUrl = `/favs/${itemKey}`;
         else if (tag)   _pushUrl = `/tag/${encodeURIComponent(tag).replace(/%2C/g,',').replace(/%20/g,' ')}/${itemKey}`;
@@ -13548,6 +13580,8 @@ window.cancelAnimFrame = (function () {
       if (isChanUrl) {
         const u = new URL(url, window.location.origin);
         pushUrl = u.pathname + u.search + u.hash;
+      } else if (search) {
+        pushUrl = searchItemUrl(itemKey, search, searchStrict);
       } else if (userHall && userHallOwner) {
         pushUrl = `/user/${encodeURIComponent(userHallOwner)}/list/${encodeURIComponent(userHall)}/${itemKey}`;
       } else if (user) {
@@ -14095,6 +14129,8 @@ window.cancelAnimFrame = (function () {
           pathname.match(/\/p\/\d+/) ||
           pathname.match(/^\/\d+(?:[?#]|$)/) ||
           pathname.match(/^\/[a-zA-Z0-9_-]{11}(?:[?#]|$)/) ||
+          isSearchItemPath(pathname) ||
+          isSearchPagePath(pathname) ||
           pathname.match(/^\/(about|rules|terms|privacy|upload|subscriptions|stats|docs|settings|admin|mod|ranking|messages|meme|memes)/) ||
           pathname.startsWith('/abyss')
         )) ||
@@ -15368,12 +15404,18 @@ window.cancelAnimFrame = (function () {
       if (isTags) ctx.tags = true;
       const isSubs = window.location.pathname.startsWith('/subscriptions');
       if (isSubs) ctx.subs = true;
+      // a search's grid: more pages from /ajax/search
+      if (isSearchPagePath(window.location.pathname)) {
+        const s = searchOf(window.location.href);
+        if (s.q) { ctx.search = s.q; ctx.searchStrict = s.strict; }
+      }
       return ctx;
     };
 
     // Build URL path for history
     const buildUrl = (page) => {
       const ctx = getContext();
+      if (ctx.search) return searchPageUrl(ctx.search, ctx.searchStrict, page);
       if (ctx.notif) return page > 1 ? `/notifications?page=${page}` : '/notifications';
       if (ctx.tags) return page > 1 ? `/tags?page=${page}` : '/tags';
       if (ctx.subs) return page > 1 ? `/subscriptions?page=${page}` : '/subscriptions';
@@ -15576,7 +15618,12 @@ window.cancelAnimFrame = (function () {
         if (notifTab) params.append('tab', notifTab);
       }
 
-      const fetchUrl = ctx.notif ? `/ajax/notifications?${params.toString()}` :
+      if (ctx.search) {
+        params.set('q', ctx.search);
+        if (ctx.searchStrict) params.set('match', 'all');
+      }
+      const fetchUrl = ctx.search ? `/ajax/search?${params.toString()}` :
+        ctx.notif ? `/ajax/notifications?${params.toString()}` :
         ctx.tags ? `/api/tags?ajax=true&${params.toString()}` :
           ctx.userTags ? `/api/user/${encodeURIComponent(ctx.user)}/tags?ajax=true&${params.toString()}` :
             ctx.subs ? `/ajax/subscriptions?${params.toString()}` :
@@ -15677,7 +15724,12 @@ window.cancelAnimFrame = (function () {
         if (notifTab) params.append('tab', notifTab);
       }
 
-      const fetchUrl = ctx.notif ? `/ajax/notifications?${params.toString()}` :
+      if (ctx.search) {
+        params.set('q', ctx.search);
+        if (ctx.searchStrict) params.set('match', 'all');
+      }
+      const fetchUrl = ctx.search ? `/ajax/search?${params.toString()}` :
+        ctx.notif ? `/ajax/notifications?${params.toString()}` :
         ctx.tags ? `/api/tags?ajax=true&${params.toString()}` :
           ctx.userTags ? `/api/user/${encodeURIComponent(ctx.user)}/tags?ajax=true&${params.toString()}` :
             ctx.subs ? `/ajax/subscriptions?${params.toString()}` :

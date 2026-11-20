@@ -1,11 +1,18 @@
-{#- Search (f0ckm /search) as w0bm's index.blade.php table -#}
+{#- Search (f0ckm /search): the results as w0bm's thumbnail grid (main.blade.php, the default; it
+    loads on endlessly like the front page: w0bm.js, body.w0bm-index-page) or as its index.blade.php
+    table (`search_view` "list": routes/search.rs, ?view= / the search_view cookie). Each result links
+    to the f0ck in this search (line.href), whose prev/next walk the results. -#}
 {% extends "frontends/w0bm/layout.html" %}
+{% block bodyclass %}{% if (search_view != "list" and result is defined and result is sequence and result|length) %}w0bm-index-page w0bm-search-grid{% endif %}{% endblock %}
 {% block mainclass %}w0bm-main-profile{% endblock %}
 {% block innerclass %}fucklaravel{% endblock %}
 {% block title %}Search - {{ domain }}{% endblock %}
 {% block content %}
 <div class="page-header">
-    <h3 id="index">Search{% if (result is defined and result is not none and result is not false) %} <small>{{ count }} results</small>{% endif %}</h3>
+    {%- set searched = (result is defined and result is not none and result is not false) -%}
+    {%- set grid = (searched and search_view != "list" and result|length) -%}
+    {% if grid %}<div class="page">{% include "frontends/w0bm/partials/pagination.html" %}</div>{% endif %}
+    <h3 id="index">Search{% if searched %} <small>{{ count }} results</small>{% endif %}{% if (searched and search_view_urls) %} <small class="w0bm-search-view">{% if grid %}grid{% else %}<a href="{{ search_view_urls.grid }}">grid</a>{% endif %} | {% if grid %}<a href="{{ search_view_urls.list }}">list</a>{% else %}list{% endif %}</small>{% endif %}</h3>
     <form method="get" action="/search" class="w0bm-searchform">
         <button type="submit" class="suchbutton"><i class="fa fa-search w0bm-white"></i></button>
         <input class="suchleiste" placeholder="cat -dog user:name sort:views …" name="tag" type="text" value="{{ (searchstring or "") }}">
@@ -13,7 +20,13 @@
     </form>
     {% set su_cls = "w0bm-search" %}{% include "snippets/search-understood.html" %}
 </div>
-{% if (result is defined and result is not none and result is not false) %}
+{% if grid %}
+{% with items = result %}{% include "frontends/w0bm/partials/thumbgrid.html" %}{% endwith %}
+{#- Phones: the page numbers under the grid; with JavaScript the grid loads on endlessly instead -#}
+<div class="page w0bm-page-bottom w0bm-phone-pager w0bm-nojs-only">
+    {% include "frontends/w0bm/partials/pagination.html" %}
+</div>
+{% elif searched %}
 <table class="table table-hover table-condensed">
     <thead>
     <tr>
@@ -28,7 +41,7 @@
     {% for line in result %}
     {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) %}
     <tr data-thumb="/t/{{ line.id }}.webp">
-        <td><span class="w0bm-rowthumb"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></span><a href="{% if line.tag %}/tag/{{ line.tag|encode_uri_component }}/{{ ref }}{% else %}/{{ ref }}{% endif %}">{{ ref }}</a></td>
+        <td><span class="w0bm-rowthumb"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></span><a href="{{ line.href }}">{{ ref }}</a></td>
         <td>{% if line.tag %}<a href="/tag/{{ line.tag|encode_uri_component }}">{{ line.tag }}</a>{% else %}{{ (line.title or "") }}{% endif %}</td>
         <td class="hidden-xs">{{ line.mime }}</td>
         <td><a href="/user/{{ (line.username or "")|lower }}">{{ line.username }}</a></td>

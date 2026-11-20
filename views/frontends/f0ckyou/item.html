@@ -20,7 +20,10 @@
 {%- set fy_likes = (item.favorites or [])|length -%}
 {%- set fy_page = "watch" -%}
 {%- set fy_nav = "none" -%}
-{%- set fy_q = ((tmp.tag|lower) if (tmp and tmp.tag) else "") -%}
+{#- in a search (/search/<f0ck>?q=…, routes/search.rs nav): that search in the box, prev/next walk its results -#}
+{%- set fy_insearch = (search_ctx is defined and search_ctx) -%}
+{%- set fy_q = (search_ctx.q if fy_insearch else ((tmp.tag|lower) if (tmp and tmp.tag) else "")) -%}
+{%- set fy_strict = (fy_insearch and search_ctx.strict) -%}
 {%- set fy_lm = (link.main if (link and link.main) else "/") -%}
 {%- set fy_ls = ((link.suffix or "") if link else "") -%}
 {% include "frontends/f0ckyou/snippets/head.html" %}
@@ -30,6 +33,7 @@
 <canvas id="bg" class="fy-bg" data-tuner="{{ (audio_tuner_json or "null") }}" aria-hidden="true"></canvas>
 {#- Previous / Random / Next: at the top of "Up next", and in one column above the comments -#}
 {%- macro upnext_nav(cls, ids) -%}
+{% if fy_insearch %}<p class="fy-upnext-search{% if cls %} {{ cls }}{% endif %}"><a href="{{ search_ctx.results }}" title="back to the results">{{ fy.ico("search") }}<span>{{ search_ctx.q }}</span></a> <span class="fy-dim">{{ search_ctx.position }} of {{ search_ctx.total }}</span></p>{% endif %}
 <div class="fy-upnext-nav{% if cls %} {{ cls }}{% endif %}">
       {% if pagination.prev %}<a class="fy-btn"{% if ids %} id="fy-prev"{% endif %} href="{{ fy_lm }}{{ pagination.prev }}{{ fy_ls }}" title="previous (&larr;)">{{ fy.ico("prev") }}<span>Previous</span></a>{% endif %}
       <a class="fy-btn" href="/random" title="random (r)">{{ fy.ico("shuffle") }}<span>Random</span></a>

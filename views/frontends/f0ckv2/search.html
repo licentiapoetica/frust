@@ -1,8 +1,13 @@
 {% include "frontends/f0ckv2/snippets/header.html" %}
-{#- f0ckgle: the search box under f0ckv2's coloured title, results as rows in the metadata look
-    (thumbnail, item, tag, type, uploader, match score), page links under them. -#}
+{#- f0ckgle: the search box under f0ckv2's coloured title, then the results as f0ckv2's thumbnail
+    grid (the default: it loads on endlessly like the front page, f0ck.js <infinite>) or as rows in
+    the metadata look (thumbnail, item, tag, type, uploader, match score) with page links under them
+    (`search_view` "list": routes/search.rs, ?view= / the search_view cookie). Each result links to
+    the f0ck in this search (line.href), whose prev/next walk the results. -#}
 {%- set searched = (result is defined and result is not none and result is not false) -%}
+{%- set grid = (searched and search_view != "list" and result|length) -%}
 <div id="main">
+  {% if grid %}<div class="index-container v2-search-grid">{% endif %}
   <div class="v2-search">
     <div class="search-title">
         <span class="g-blue">f</span>
@@ -21,13 +26,15 @@
     </form>
     {% if searched %}
     <div class="v2-search-results">
-      <div class="f0cks-header"><span>{{ count }} f0ck{{ ("" if count == 1 else "s") }} given</span>{% if pagination %}<span>page {{ pagination.page }} of {{ pagination.end }}</span>{% endif %}</div>
+      <div class="f0cks-header"><span>{{ count }} f0ck{{ ("" if count == 1 else "s") }} given</span>{% if pagination %}<span>page {{ pagination.page }} of {{ pagination.end }}</span>{% endif %}{% if search_view_urls %}<span class="v2-search-view">{% if grid %}grid{% else %}<a href="{{ search_view_urls.grid }}">grid</a>{% endif %} | {% if grid %}<a href="{{ search_view_urls.list }}">list</a>{% else %}list{% endif %}</span>{% endif %}</div>
       {% set su_cls = "v2-search" %}{% include "snippets/search-understood.html" %}
-      {% if result|length %}
+      {% if grid %}
+      {% elif result|length %}
       <ul class="v2-search-list">
         {% for line in result %}
         {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) -%}
-        {%- set href = ("/tag/" ~ (line.tag|encode_uri_component) ~ "/" ~ ref) if line.tag else ("/" ~ ref) -%}
+        {#- the f0ck in this search: its page walks through the results -#}
+        {%- set href = line.href -%}
         <li class="v2-search-row">
           <a class="v2-search-thumb" href="{{ href }}"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></a>
           <a class="badge badge-dark v2-search-ref" href="{{ href }}">{{ ref }}</a>
@@ -45,5 +52,12 @@
     </div>
     {% endif %}
   </div>
+  {% if grid %}
+    {% with posts = result, posts_link = "" %}{% include "frontends/f0ckv2/snippets/posts.html" %}{% endwith %}
+    <div id="footbar">
+      &#9660;
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% include "frontends/f0ckv2/snippets/footer.html" %}

@@ -1420,12 +1420,12 @@ mod tests {
 
         // web results
         let search = render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({ "tag": "cat" })), "searchstring": "cat", "count": 2, "search_mode": "strict",
-            "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat", "score": 0.93 }], "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" },
+            "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat", "score": 0.93, "href": "/search/7?q=cat&match=all" }], "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" },
             "search_explain": ["tagged \u{201c}cat\u{201d}", "sorted by views"], "search_notes": ["unknown sort \u{201c}x\u{201d}"] }));
         dump("search", &search);
         assert!(search.contains("<p class=\"search-understood fg-search-understood\">Showing f0cks tagged \u{201c}cat\u{201d} · sorted by views</p>"));
         assert!(search.contains("<p class=\"search-notes fg-search-notes\">Left out: unknown sort"));
-        assert!(search.contains("<h3 class=\"fg-result-title\"><a href=\"/tag/cat/7\">cat - f0ck #7</a></h3>"));
+        assert!(search.contains("<h3 class=\"fg-result-title\"><a href=\"/search/7?q=cat&amp;match=all\">cat - f0ck #7</a></h3>"));
         assert!(search.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
         assert!(search.contains("Match: 93%"));
         assert!(render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({})), "searchstring": [] })).contains("fg-home-logo"));
@@ -1435,6 +1435,17 @@ mod tests {
         let it = serde_json::json!({ "id": 7, "username": "al", "mime": "video/mp4", "dest": "/b/7.mp4", "size": "1 MB", "tags": tags, "timestamp": { "timeago": "1 day ago", "timefull": "x" },
             "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" } });
         let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content": "hi <b>", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x", "replies": [] });
+        // in a search (/search/<f0ck>?q=…, routes/search.rs nav): prev/next walk its results, the box
+        // keeps the search (and its strict mode), a chip leads back to the results
+        let searched = render(&fe("item"), serde_json::json!({ "url": url("/search/7", serde_json::json!({ "q": "cat sort:views", "match": "all" })), "tmp": {}, "session": session,
+            "item": it.clone(), "pagination": { "prev": 8, "next": 6 }, "link": { "main": "/search/", "path": "", "suffix": "?q=cat%20sort%3Aviews&match=all" },
+            "search_ctx": { "q": "cat sort:views", "strict": true, "position": 23, "total": 40, "page": 2, "results": "/search/?tag=cat%20sort%3Aviews&mode=strict&page=2" } }));
+        dump("item-search", &searched);
+        assert!(searched.contains("<a class=\"fg-chip\" id=\"fg-prev\" href=\"/search/8?q=cat%20sort%3Aviews&amp;match=all\""));
+        assert!(searched.contains("<a class=\"fg-chip\" id=\"fg-next\" href=\"/search/6?q=cat%20sort%3Aviews&amp;match=all\""));
+        assert!(searched.contains("<a class=\"fg-chip\" href=\"/search/?tag=cat%20sort%3Aviews&amp;mode=strict&amp;page=2\" title=\"back to the results\">Result 23 of 40</a>"));
+        assert!(searched.contains("value=\"cat sort:views\"") && searched.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
+        assert!(searched.contains("&rsaquo; search &rsaquo; cat sort:views"));
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it,
             "pagination": { "prev": 8, "next": 6 }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_manage_item": true, "can_extract_meta": true,
             "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice" }));
@@ -1806,13 +1817,13 @@ mod tests {
 
         // search results
         let search = render(&fe("search"), serde_json::json!({ "url": url("/search", serde_json::json!({ "tag": "cat" })), "searchstring": "cat", "count": 2, "search_mode": "strict",
-            "result": [{ "id": 7, "username": "al", "display_name": "Al B", "avatar_file": "a.webp", "mime": "video/mp4", "dest": "s.mp4", "duration": 62.5, "views": 3, "tag": "cat", "score": 0.93 }],
+            "result": [{ "id": 7, "username": "al", "display_name": "Al B", "avatar_file": "a.webp", "mime": "video/mp4", "dest": "s.mp4", "duration": 62.5, "views": 3, "tag": "cat", "score": 0.93, "href": "/search/7?q=cat&match=all" }],
             "pagination": pag, "link": { "main": "/search/?tag=cat", "path": "&page=" }, "search_explain": ["tagged \u{201c}cat\u{201d}"] }));
         dump("search", &search);
         assert!(search.contains("<p class=\"search-understood fy-search-understood\">Showing f0cks tagged \u{201c}cat\u{201d}</p>"));
         assert!(search.contains("data-preview=\"/b/s.mp4\"") && search.contains("<span class=\"fy-tbadge fy-time\">1:02</span>"));
         assert!(search.contains("<img class=\"fy-ava\" src=\"/a/a.webp\" alt=\"\" loading=\"lazy\"><span>Al B</span>") && search.contains("3 views"));
-        assert!(search.contains("<h3 class=\"fy-row-title\"><a href=\"/tag/cat/7\">cat #7</a></h3>"));
+        assert!(search.contains("<h3 class=\"fy-row-title\"><a href=\"/search/7?q=cat&amp;match=all\">cat #7</a></h3>"));
         assert!(search.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
         assert!(search.contains("93% match"));
         assert!(search.contains("<ol class=\"fy-list fy-results\" data-fy-feed>"));
@@ -1826,6 +1837,15 @@ mod tests {
             "stamp": 1_794_700_000, "views": 1, "personalized": true, "rating_class": "nsfw", "has_coverart": false, "duration": 3725, "dest": "r.webm" });
         let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content": "hi <b>", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
             "replies": [{ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content_html": "yo", "attachments_html": "", "timeago": "now", "iso": "x" }] });
+        // in a search: prev/next walk its results, the search above them leads back to the results
+        let searched = render(&fe("item"), serde_json::json!({ "url": url("/search/7", serde_json::json!({ "q": "cat" })), "tmp": {}, "session": session, "item": it.clone(),
+            "pagination": { "prev": 6, "next": 8 }, "link": { "main": "/search/", "path": "", "suffix": "?q=cat" }, "recommendations": [rec.clone()],
+            "search_ctx": { "q": "cat", "strict": false, "position": 3, "total": 9, "page": 1, "results": "/search/?tag=cat" } }));
+        dump("item-search", &searched);
+        assert!(searched.contains("id=\"fy-prev\" href=\"/search/6?q=cat\"") && searched.contains("id=\"fy-next\" href=\"/search/8?q=cat\""));
+        assert!(searched.contains("<p class=\"fy-upnext-search\"><a href=\"/search/?tag=cat\" title=\"back to the results\">"));
+        assert!(searched.contains("<span class=\"fy-dim\">3 of 9</span>") && searched.contains("<p class=\"fy-upnext-search fy-upnext-nav-narrow\">"));
+        assert!(!searched.contains("<input type=\"hidden\" name=\"mode\" value=\"strict\">"));
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it.clone(),
             "pagination": { "prev": 6, "next": 8, "cheat": [4, 5, 6, 7, 8, 9] }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_manage_item": true,
             "can_extract_meta": true, "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice",
@@ -2252,6 +2272,71 @@ mod tests {
             assert!(html.contains(&format!("<p class=\"search-notes {cls}-notes\">Left out: unknown type")), "{view}");
             let plain = render(false, false);
             assert!(!plain.contains("search-understood") && !plain.contains("search-notes"), "{view}");
+        }
+    }
+
+    /// f0ckm's location bar in a search reads like the address (/search/<f0ck>?q=…), each part a
+    /// link (the results, the f0ck), then where the f0ck is in the results.
+    #[test]
+    fn search_location_reads_like_the_address() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let ctx = serde_json::json!({ "enable_item_slugs": true, "session": { "user": "bob", "id": 1 }, "tmp": {},
+            "item": { "id": 7, "slug": "eFqWVn9cYGi", "mime": "video/webm", "dest": "/b/x.webm", "tags": [], "favorites": [] },
+            "pagination": { "prev": "a", "next": "b" }, "link": { "main": "/search/", "path": "", "suffix": "?q=type%3Avideo%20duration%3A%3C15s" },
+            "search_ctx": { "q": "type:video duration:<15s", "strict": false, "position": 2, "total": 38751, "page": 1, "results": "/search?q=type%3Avideo%20duration%3A%3C15s" } });
+        for view in ["item-partial-modern.html", "item-partial-legacy.html"] {
+            let html = env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{view}: {e:#}"));
+            let results = "/search?q=type%3Avideo%20duration%3A%3C15s";
+            let want = format!(
+                "<a href=\"{results}\" class=\"location-link\" title=\"Back to the search results\">/search</a>\
+                 <a href=\"/search/eFqWVn9cYGi?q=type%3Avideo%20duration%3A%3C15s\" class=\"location-link\" title=\"Post #7\">/eFqWVn9cYGi</a>\
+                 <a href=\"{results}\" class=\"location-link\" title=\"Back to the search results\">?q=type:video duration:&lt;15s</a>\
+                 <span class=\"location-pos\" title=\"Result 2 of 38751\">2 of 38,751</span>"
+            );
+            assert!(html.contains(&want), "{view}: {}", html.split("class=\"location\"").nth(1).unwrap_or("").chars().take(700).collect::<String>());
+        }
+    }
+
+    /// f0ckm, w0bm and f0ckv2 show a search's results as their feed grid unless the visitor picked
+    /// the list (`search_view`); both views link every result into the search (`href`: prev/next
+    /// walk the results) and offer the switch to the other view. The grids are the ones their
+    /// endless scrolling knows (f0ckm: .index-container > .posts + #footbar, w0bm:
+    /// body.w0bm-index-page .items, f0ckv2: .index-container > div.posts + #footbar).
+    #[test]
+    fn search_results_as_grid_or_list() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let ctx = |view: Option<&str>| serde_json::json!({ "url": { "pathname": "/search", "search": "?q=cat", "qs": { "q": "cat" } }, "domain": "f0ck.test",
+            "session": { "user": "bob", "id": 1 }, "searchstring": "cat", "count": 21,
+            "result": [{ "id": 7, "username": "al", "mime": "image/png", "tag": "cat", "tag_id": 2, "rating_class": "nsfw", "href": "/search/7?q=cat" }],
+            "pagination": { "start": 1, "end": 2, "page": 1, "next": 2, "cheat": [1, 2] }, "link": { "main": "/search/", "path": "p/", "suffix": "?q=cat" },
+            "search_view": view, "search_view_urls": { "grid": "/search?q=cat&view=grid", "list": "/search?q=cat&view=list" } });
+        for (view, grid_marks, list_mark) in [
+            ("search.html", &["<div class=\"index-container\">", "<div class=\"posts\" data-current-page=\"1\" data-has-more=\"true\">", "<div id=\"footbar\">"][..], "<ul class=\"srch-list\">"),
+            ("frontends/w0bm/search.html", &["class=\"w0bm-index-page w0bm-search-grid", "<div class=\"items\">", "w0bm-mode-nsfw"][..], "<table class=\"table table-hover table-condensed\">"),
+            ("frontends/f0ckv2/search.html", &["<div class=\"index-container v2-search-grid\">", "<div class=\"posts\">", "data-mode=\"nsfw\"", "<div id=\"footbar\">"][..], "<ul class=\"v2-search-list\">"),
+        ] {
+            let render = |v: Option<&str>| env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx(v))).unwrap_or_else(|e| panic!("{view}: {e:#}"));
+            for grid in [render(None), render(Some("grid"))] {
+                for m in grid_marks {
+                    assert!(grid.contains(m), "{view}: {m}");
+                }
+                assert!(grid.contains("href=\"/search/7?q=cat\"") && !grid.contains(list_mark), "{view}");
+                assert!(grid.contains("href=\"/search?q=cat&amp;view=list\""), "{view}");
+                assert!(grid.contains("/search/p/2?q=cat"), "{view}: page links");
+            }
+            let list = render(Some("list"));
+            assert!(list.contains(list_mark) && list.contains("href=\"/search/7?q=cat\"") && !list.contains(grid_marks[1]), "{view}");
+            assert!(list.contains("href=\"/search?q=cat&amp;view=grid\""), "{view}");
+            if view == "search.html" {
+                // f0ckm: both buttons, the current view marked
+                assert!(render(None).contains("<a href=\"/search?q=cat&amp;view=grid\" class=\"srch-view-btn active\""));
+                assert!(list.contains("<a href=\"/search?q=cat&amp;view=list\" class=\"srch-view-btn active\""));
+            } else {
+                // w0bm, f0ckv2: the current view as text, the other one a link
+                assert!(!render(None).contains("view=grid") && !list.contains("view=list"), "{view}");
+            }
         }
     }
 

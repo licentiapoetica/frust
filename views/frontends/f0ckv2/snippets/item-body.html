@@ -109,6 +109,7 @@
   <div class="metadata">
     <span class="badge badge-dark">
       <a href="/{{ item_ref }}" class="id-link">{{ item_ref }}</a>
+      {% if (search_ctx is defined and search_ctx) %}in <a href="{{ search_ctx.results }}" title="back to the results">{{ search_ctx.q }}</a> ({{ search_ctx.position }}/{{ search_ctx.total }}){% endif %}
       {% if uploader %}(<a id="a_username" href="/user/{{ uploader|lower|encode_uri_component }}/uploads{% if tmp and tmp.mime %}/{{ tmp.mime }}{% endif %}">{{ (item.author_display_name or uploader) if not is_anonymized else uploader }}</a>){% endif %}
     </span>
     {% if user and (user.network or user.channel) %}<span class="badge badge-dark">{{ user.network }} / {{ user.channel }}</span>{% endif %}

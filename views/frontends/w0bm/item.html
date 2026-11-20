@@ -46,7 +46,10 @@
             {% endif %}
             {#- the middle link (and "r"): a random item of the current context. /random keeps the tag,
                 user or hall of the page it is clicked on (Referer); the label names that context -#}
-            {% if (tmp and tmp.tag) %}
+            {#- in a search (/search/<f0ck>?q=…): the search, back to its results ("r" stays random) -#}
+            {% if (search_ctx is defined and search_ctx) %}
+            <a class="w0bm-search-context" href="{{ search_ctx.results }}" title="back to the results ({{ search_ctx.position }} of {{ search_ctx.total }})">{{ search_ctx.q }}</a>
+            {% elif (tmp and tmp.tag) %}
             <a id="w0bm-context" href="/random" title="random in {{ tmp.tag }}">{{ tmp.tag }}</a>
             {% elif (tmp and tmp.user) %}
             <a id="w0bm-context" href="/random" title="random from {{ tmp.user }}">{{ tmp.user }}</a>

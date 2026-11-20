@@ -290,7 +290,8 @@ body.w0bm-item-page .w0bm-itemnav {
 body.w0bm-item-page .w0bm-itemnav > a {
     flex: none;
 }
-body.w0bm-item-page .w0bm-itemnav > #w0bm-context {
+body.w0bm-item-page .w0bm-itemnav > #w0bm-context,
+body.w0bm-item-page .w0bm-itemnav > .w0bm-search-context {
     flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;

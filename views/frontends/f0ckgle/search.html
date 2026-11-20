@@ -25,7 +25,8 @@
   <ol class="fg-results">
     {% for line in result %}
     {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) -%}
-    {%- set href = ("/tag/" ~ (line.tag|encode_uri_component) ~ "/" ~ ref) if line.tag else ("/" ~ ref) -%}
+    {#- the f0ck in this search: its page walks through the results -#}
+    {%- set href = line.href -%}
     {%- set who = ("anonymous" if is_anonymized else (line.username or domain)) -%}
     <li class="fg-result">
       <div class="fg-result-text">

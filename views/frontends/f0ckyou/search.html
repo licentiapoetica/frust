@@ -34,7 +34,8 @@
   <ol class="fy-list fy-results" data-fy-feed>
     {% for line in result %}
     {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) -%}
-    {%- set href = ("/tag/" ~ (line.tag|encode_uri_component) ~ "/" ~ ref) if line.tag else ("/" ~ ref) -%}
+    {#- the f0ck in this search: its page walks through the results -#}
+    {%- set href = line.href -%}
     {%- set who = ("anonymous" if is_anonymized else (line.username or "")) -%}
     {%- set who_name = ("anonymous" if is_anonymized else (line.display_name or line.username or "")) -%}
     {%- set lmime = (line.mime or "") -%}

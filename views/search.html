@@ -1,10 +1,16 @@
 {% include "snippets/header.html" %}
 <div class="pagewrapper">
 <div id="main">
-  {#- Search: a search bar, then the results as a list (thumbnail, item, tag, type, uploader, match
-      score) with page links. Styles: f0ckm.css "search.html" (.srch-*). -#}
+  {#- Search: a search bar, then the results as a grid like a feed's (the default: thumbnails, endless
+      scrolling, Onara) or as a list (thumbnail, item, tag, type, uploader, match score) with page
+      links. `search_view` is the visitor's pick (routes/search.rs, `?view=` / the search_view
+      cookie); the links in .srch-view switch it (f0ckm.js swaps the page in place).
+      Each result links to the f0ck in this search (line.href), whose prev/next walk the results.
+      Styles: f0ckm.css "search.html" (.srch-*). -#}
   {%- set searched = (result is defined and result is not none and result is not false) -%}
-  <div class="srch">
+  {%- set sv = ("list" if search_view == "list" else "grid") -%}
+  {%- set grid = (searched and sv == "grid" and result|length) -%}
+  {%- macro head() -%}
     <header class="srch-head">
       <h1 class="srch-title">{{ t("search.title") }}</h1>
       <p class="srch-sub">Tags separated by commas &middot; <code>title:</code> text in titles &middot; <code>src:</code> text in the source</p>
@@ -23,13 +29,49 @@
     </form>
 
     {% if searched %}
-    <div class="srch-meta">{{ (((t("search.results_found")).replace("{count}", count|string, 1)).replace("{page}", pagination.page|string, 1)).replace("{total}", pagination.end|string, 1) }}</div>
+    <div class="srch-meta-row">
+      <div class="srch-meta">{{ (((t("search.results_found")).replace("{count}", count|string, 1)).replace("{page}", pagination.page|string, 1)).replace("{total}", pagination.end|string, 1) }}</div>
+      {% if search_view_urls %}
+      <nav class="srch-view" aria-label="Show the results as">
+        <a href="{{ search_view_urls.grid }}" class="srch-view-btn{% if sv == "grid" %} active{% endif %}" title="Grid"{% if sv == "grid" %} aria-current="true"{% endif %}><i class="fa-solid fa-table-cells" aria-hidden="true"></i><span>Grid</span></a>
+        <a href="{{ search_view_urls.list }}" class="srch-view-btn{% if sv == "list" %} active{% endif %}" title="List"{% if sv == "list" %} aria-current="true"{% endif %}><i class="fa-solid fa-list" aria-hidden="true"></i><span>List</span></a>
+      </nav>
+      {% endif %}
+    </div>
     {% set su_cls = "srch" %}{% include "snippets/search-understood.html" %}
+    {% endif %}
+  {%- endmacro -%}
+  {% if grid %}
+  {#- the grid: a feed's layout (index-partial.html), so f0ckm.js scrolls on endlessly through
+      /ajax/search and Onara opens over it -#}
+  <div class="index-layout-wrapper srch-grid-page">
+    <div class="index-container">
+      <div class="srch srch-is-grid">
+{{ head() }}
+      </div>
+      <div class="posts" data-current-page="{{ pagination.page }}" data-has-more="{{ ("true" if pagination.next else "false") }}">
+        {% with items = result %}{% include "snippets/items-grid.html" %}{% endwith %}
+      </div>
+      <div id="footbar">
+          &#9660;
+      </div>
+    </div>
+    <div class="pagination-container-fluid">
+      <div class="pagination-wrapper bottom-pagination fixed-pagination">
+        {% include "snippets/pagination.html" %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="srch">
+{{ head() }}
+    {% if searched %}
     {% if result|length %}
     <ul class="srch-list">
       {% for line in result %}
       {%- set ref = (line.slug if (enable_item_slugs and line.slug) else line.id) -%}
-      {%- set href = ("/tag/" ~ (line.tag|encode_uri_component) ~ "/" ~ ref) if line.tag else ("/" ~ ref) -%}
+      {#- the f0ck in this search: its page walks through the results -#}
+      {%- set href = line.href -%}
       <li class="srch-row">
         <a class="srch-thumb" href="{{ href }}"><img src="/t/{{ line.id }}.webp" alt="" loading="lazy"></a>
         <div class="srch-info">
@@ -53,6 +95,7 @@
     {% endif %}
     {% endif %}
   </div>
+  {% endif %}
 </div>
 </div>
 {% include "snippets/footer.html" %}

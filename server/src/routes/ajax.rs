@@ -378,20 +378,25 @@ async fn item(st: AppState, req: Req) -> Res {
     let user_hall_owner = q_nonempty(&req, "userHallOwner");
     let fav = q(&req, "fav") == Some("true");
     let qmime = q_nonempty(&req, "mime");
-    let ctx = context_url(
-        &itemid,
-        &Context {
-            tag: tag.as_deref(),
-            hall: hall.as_deref(),
-            user: user.as_deref(),
-            user_hall: user_hall.as_deref(),
-            user_hall_owner: user_hall_owner.as_deref(),
-            fav,
-            mime: qmime.as_deref(),
-        },
-    );
+    // in a search (`search=`, f0ckm.js on /search/<f0ck>): prev/next through its results
+    let search = super::index::search_context(&req);
+    let ctx = match &search {
+        Some((sq, strict)) => format!("/search/{itemid}?q={}{}", enc(sq), if *strict { "&match=all" } else { "" }),
+        None => context_url(
+            &itemid,
+            &Context {
+                tag: tag.as_deref(),
+                hall: hall.as_deref(),
+                user: user.as_deref(),
+                user_hall: user_hall.as_deref(),
+                user_hall_owner: user_hall_owner.as_deref(),
+                fav,
+                mime: qmime.as_deref(),
+            },
+        ),
+    };
     let guest = is_guest(&req);
-    let random = q(&req, "random") == Some("1") || req.cookie("random_mode") == Some("1");
+    let random = (q(&req, "random") == Some("1") || req.cookie("random_mode") == Some("1")) && search.is_none();
     let mode = req_mode(&req);
     let ratings: Option<Vec<String>> = if guest {
         Some(vec!["sfw".into()])
@@ -401,7 +406,8 @@ async fn item(st: AppState, req: Req) -> Res {
         ratings_cookie(&req)
     };
     let truthy_flag = |k: &str| matches!(q(&req, k), Some("1" | "true"));
-    let bypass = truthy_flag("force") || truthy_flag("allow") || truthy_flag("bypass") || q(&req, "see_anyways") == Some("1");
+    // a search already limits what a visitor finds (its own `rating:`, not the feed mode)
+    let bypass = truthy_flag("force") || truthy_flag("allow") || truthy_flag("bypass") || q(&req, "see_anyways") == Some("1") || search.is_some();
     let explicit_strict = truthy_flag("strict");
     let strict = explicit_strict || session.and_then(|s| s.strict_mode).unwrap_or(false);
     let mime = qmime.clone().or_else(|| req.cookie("mime").filter(|m| !m.is_empty()).map(str::to_string));
@@ -444,11 +450,15 @@ async fn item(st: AppState, req: Req) -> Res {
         return Ok(error_json(&st, &req, &data, &itemid, label_mode, true));
     }
     prepare_item(&st, &req, &mut data, &itemid, &ctx).await;
+    if let Some((sq, strict)) = &search {
+        super::index::apply_search_nav(&st, &req, &mut data, sq, *strict).await?;
+    }
     let item_html = crate::tpl::render(&st, Some(&req), "ajax-item", data.clone());
     let pagination = crate::tpl::render(&st, Some(&req), "snippets/pagination", data.clone());
 
-    let mut page = Value::Null;
-    if s::is_onara_enabled_for(&cfg, &req.cookies, session, q(&req, "onara") == Some("1")) || q(&req, "get_page") == Some("1") {
+    // Onara over a search's grid: the results page the f0ck is on (routes/search.rs nav)
+    let mut page = if search.is_some() { data["search_ctx"]["page"].clone() } else { Value::Null };
+    if search.is_none() && (s::is_onara_enabled_for(&cfg, &req.cookies, session, q(&req, "onara") == Some("1")) || q(&req, "get_page") == Some("1")) {
         let o = FeedOpts {
             target_item_id: Some(if crate::config::truthy(&data["item"]["id"]) { crate::tpl::js_to_string(&crate::tpl::to_jvalue(&data["item"]["id"])) } else { itemid.clone() }),
             target_item_pinned: Some(crate::config::truthy(&data["item"]["is_pinned"])),
