@@ -6,6 +6,7 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS banner_position character varying(50) DEFAULT 'center'"#,
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS banner_size character varying(50) DEFAULT 'cover'"#,
     r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS banner_repeat character varying(50) DEFAULT 'repeat'"#,
+    r#"ALTER TABLE user_options ADD COLUMN IF NOT EXISTS banner_crop character varying(64) DEFAULT NULL"#,
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS expires_at bigint DEFAULT NULL"#,
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS width integer DEFAULT NULL"#,
     r#"ALTER TABLE items ADD COLUMN IF NOT EXISTS height integer DEFAULT NULL"#,

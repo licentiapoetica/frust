@@ -407,281 +407,391 @@
     };
 
     // ── Crop Modal ──────────────────────────────────────────────────────────
-    const showBannerCropModal = (file, existingConfig = null) => new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.className = 'banner-crop-overlay';
+    // The stage is the crop window (10:3, like every place a banner is shown); the image moves under
+    // it. The view is kept in image pixels (centre + zoom), so it does not depend on the stage's size.
+    // `opts.initial` is a stored crop ({x, y, w, h} as fractions of the image) to reopen;
+    // `opts.keepOrig` says the file is the original already on the server (nothing to re-upload).
+    // Resolves to the upload payload, or null when cancelled or nothing changed.
+    const BANNER_RATIO = 10 / 3;
+    const BANNER_OUT_MIN = 1200;
+    const BANNER_OUT_MAX = 1920;
 
+    const showBannerCropModal = (file, opts = {}) => new Promise((resolve) => {
+        const tr = (key, dflt) => window.f0ckI18n?.[key] || dflt;
+        const el = (tag, cls, text) => {
+            const n = document.createElement(tag);
+            if (cls) n.className = cls;
+            if (text != null) n.textContent = text;
+            return n;
+        };
+        const btn = (cls, label, title) => {
+            const b = el('button', cls, label);
+            b.type = 'button';
+            if (title) { b.title = title; b.setAttribute('aria-label', title); }
+            return b;
+        };
+        const icon = (name) => { const i = el('i', 'fa-solid ' + name); i.setAttribute('aria-hidden', 'true'); return i; };
 
-        const title = document.createElement('h3');
-        title.className = 'banner-crop-title';
-        title.textContent = 'Position Banner';
+        const overlay = el('div', 'banner-crop-overlay');
+        const dialog = el('div', 'banner-crop-dialog');
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+        dialog.setAttribute('aria-labelledby', 'banner-crop-title');
 
-        const hint = document.createElement('div');
-        hint.className = 'banner-crop-hint';
-        hint.textContent = 'Drag to position. Use the slider below to zoom.';
+        const head = el('div', 'banner-crop-head');
+        const title = el('h3', 'banner-crop-title');
+        title.id = 'banner-crop-title';
+        title.append(icon('fa-panorama'), tr('settings_banner_position', 'Position banner'));
+        const closeBtn = btn('banner-crop-close', null, tr('close', 'Close'));
+        closeBtn.append(icon('fa-xmark'));
+        head.append(title, closeBtn);
 
-        const canvasWrapper = document.createElement('div');
-        canvasWrapper.className = 'banner-crop-canvas-wrapper';
+        const stage = el('div', 'banner-crop-stage is-fixed');
+        stage.tabIndex = 0;
+        stage.setAttribute('role', 'application');
+        stage.setAttribute('aria-label', 'Banner crop area. Arrow keys move the image, plus and minus zoom.');
+        const canvas = el('canvas', 'banner-crop-canvas');
+        const grid = el('div', 'banner-crop-grid');
+        const message = el('div', 'banner-crop-message');
+        message.append(icon('fa-spinner fa-spin'), ' Loading…');
+        stage.append(canvas, grid, message);
 
-        const canvas = document.createElement('canvas');
-        canvas.className = 'banner-crop-canvas';
-        canvas.width = 400;
-        canvas.height = 120;
-        canvasWrapper.appendChild(canvas);
+        const info = el('div', 'banner-crop-info');
+        const hint = el('span', 'banner-crop-hint', 'Drag to move · scroll or pinch to zoom · double-click to reset');
+        const quality = el('span', 'banner-crop-quality');
+        info.append(hint, quality);
 
-        const controls = document.createElement('div');
-        controls.className = 'banner-crop-controls';
+        const zoomRow = el('div', 'banner-crop-zoom');
+        const zoomOut = btn('banner-crop-step', null, 'Zoom out');
+        zoomOut.append(icon('fa-minus'));
+        const slider = el('input', 'banner-crop-slider');
+        slider.type = 'range';
+        slider.min = '0';
+        slider.max = '1000';
+        slider.step = '1';
+        slider.value = '0';
+        slider.setAttribute('aria-label', 'Zoom');
+        const zoomIn = btn('banner-crop-step', null, 'Zoom in');
+        zoomIn.append(icon('fa-plus'));
+        const zoomValue = el('output', 'banner-crop-value', '100%');
+        const resetBtn = btn('banner-crop-reset', 'Reset');
+        zoomRow.append(zoomOut, slider, zoomIn, zoomValue, resetBtn);
 
-        const zoomLabel = document.createElement('label');
-        zoomLabel.className = 'banner-crop-zoom-label';
-        zoomLabel.textContent = 'Zoom:';
+        const foot = el('div', 'banner-crop-foot');
+        const cancelBtn = btn('banner-crop-btn', tr('cancel', 'Cancel'));
+        const confirmBtn = btn('banner-crop-btn is-primary', 'Save banner');
+        foot.append(cancelBtn, confirmBtn);
 
-        const zoomSlider = document.createElement('input');
-        zoomSlider.type = 'range';
-        zoomSlider.className = 'banner-crop-zoom-slider';
-        zoomSlider.min = '0';
-        zoomSlider.max = '100';
-        zoomSlider.step = '0.01';
-        zoomSlider.value = '0';
-        zoomLabel.appendChild(zoomSlider);
+        dialog.append(head, stage, info, zoomRow, foot);
+        overlay.appendChild(dialog);
 
-        const actions = document.createElement('div');
-        actions.className = 'banner-crop-actions';
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'button button-danger';
-        cancelBtn.textContent = 'Cancel';
-
-        const confirmBtn = document.createElement('button');
-        confirmBtn.className = 'button';
-        confirmBtn.textContent = 'Confirm Crop';
-
-        actions.appendChild(cancelBtn);
-        actions.appendChild(confirmBtn);
-        
-        controls.appendChild(zoomLabel);
-        controls.appendChild(actions);
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'banner-crop-wrapper';
-
-        wrapper.appendChild(title);
-        wrapper.appendChild(hint);
-        wrapper.appendChild(canvasWrapper);
-        wrapper.appendChild(controls);
-        
-        overlay.appendChild(wrapper);
-        document.body.appendChild(overlay);
+        const controls = [zoomOut, slider, zoomIn, resetBtn, confirmBtn];
+        controls.forEach((c) => { c.disabled = true; });
 
         const ctx = canvas.getContext('2d');
         const img = new Image();
         const objectUrl = URL.createObjectURL(file);
+        const prevFocus = document.activeElement;
 
-        let zoom = 1;
-        let minZoom = 1;
-        let maxZoom = 4;
-        let panX = 0;
-        let panY = 0;
-        let isDragging = false;
-        let startX = 0;
-        let startY = 0;
+        let ready = false, done = false;
+        let iw = 0, ih = 0;      // image size
+        let bw = 0, bh = 0;      // crop size at zoom 1 (the biggest 10:3 box inside the image)
+        let zMax = 1;
+        let z = 1, cx = 0, cy = 0; // zoom and the crop's centre, in image pixels
+        let startView = null;
+        let raf = 0;
 
-        const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
-
-        const draw = () => {
-            ctx.clearRect(0, 0, 400, 120);
-            ctx.drawImage(img, panX, panY, img.naturalWidth * zoom, img.naturalHeight * zoom);
-            
-            // Update hint with live coords/zoom
-            hint.textContent = `Drag to position | Zoom: ${Math.round((zoom/minZoom)*100)}% | Pan: ${Math.round(panX)}, ${Math.round(panY)}`;
+        const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+        const cropRect = () => {
+            const sw = bw / z, sh = bh / z;
+            return { sx: cx - sw / 2, sy: cy - sh / 2, sw, sh };
+        };
+        const clampView = () => {
+            z = clamp(z, 1, zMax);
+            const sw = bw / z, sh = bh / z;
+            cx = clamp(cx, sw / 2, iw - sw / 2);
+            cy = clamp(cy, sh / 2, ih - sh / 2);
+        };
+        const cropString = () => {
+            const { sx, sy, sw, sh } = cropRect();
+            const f = (v) => clamp(v, 0, 1).toFixed(6);
+            return [f(sx / iw), f(sy / ih), f(sw / iw), f(sh / ih)].join(',');
         };
 
-        const getBounds = (z) => {
-            return {
-                minX: 400 - img.naturalWidth * z,
-                minY: 120 - img.naturalHeight * z
-            };
+        const render = () => {
+            raf = 0;
+            if (!ready) return;
+            const { sx, sy, sw, sh } = cropRect();
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+            zoomValue.textContent = Math.round(z * 100) + '%';
+            slider.value = zMax > 1 ? String(Math.round((Math.log(z) / Math.log(zMax)) * 1000)) : '0';
+            zoomOut.disabled = z <= 1.0001;
+            zoomIn.disabled = z >= zMax - 0.0001;
+            const moved = startView && (Math.abs(z - startView.z) > 0.0005 || Math.abs(cx - startView.cx) > 0.5 || Math.abs(cy - startView.cy) > 0.5);
+            resetBtn.disabled = !moved;
+            const low = sw < BANNER_OUT_MIN * 0.75;
+            quality.classList.toggle('banner-crop-warn', low);
+            quality.textContent = low
+                ? `Low resolution (${Math.round(sw)} px wide), it will look soft`
+                : `${Math.round(sw)} × ${Math.round(sh)} px`;
+        };
+        const schedule = () => { if (!raf) raf = requestAnimationFrame(render); };
+
+        // Canvas pixels follow the stage's size on screen (sharp on HiDPI, right after a resize)
+        const fitCanvas = () => {
+            const w = stage.clientWidth;
+            if (!w) return;
+            const dpr = Math.min(window.devicePixelRatio || 1, 3);
+            const cw = Math.round(w * dpr), ch = Math.round(cw / BANNER_RATIO);
+            if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+            render();
+        };
+        const resizeObs = typeof ResizeObserver === 'function' ? new ResizeObserver(fitCanvas) : null;
+        if (resizeObs) resizeObs.observe(stage);
+        window.addEventListener('resize', fitCanvas);
+
+        // Zoom keeping the image point under (fx, fy) (0..1 across the stage) where it is
+        const zoomTo = (nz, fx = 0.5, fy = 0.5) => {
+            if (!ready) return;
+            nz = clamp(nz, 1, zMax);
+            const px = cx + (fx - 0.5) * (bw / z), py = cy + (fy - 0.5) * (bh / z);
+            z = nz;
+            cx = px - (fx - 0.5) * (bw / z);
+            cy = py - (fy - 0.5) * (bh / z);
+            clampView();
+            schedule();
+        };
+        const panBy = (dxCss, dyCss) => {
+            if (!ready) return;
+            const k = (bw / z) / (stage.clientWidth || 1); // image pixels per CSS pixel
+            cx -= dxCss * k;
+            cy -= dyCss * k;
+            clampView();
+            schedule();
+        };
+        let zoomFlag = 0;
+        const flashGrid = () => {
+            stage.classList.add('is-zooming');
+            clearTimeout(zoomFlag);
+            zoomFlag = setTimeout(() => stage.classList.remove('is-zooming'), 350);
         };
 
-        img.onload = () => {
-            if (!img.naturalWidth || !img.naturalHeight) {
-                hint.textContent = 'Error: Image has 0 dimensions';
+        slider.addEventListener('input', () => {
+            zoomTo(Math.pow(zMax, parseFloat(slider.value) / 1000));
+            flashGrid();
+        });
+        zoomOut.addEventListener('click', () => { zoomTo(z / 1.25); flashGrid(); });
+        zoomIn.addEventListener('click', () => { zoomTo(z * 1.25); flashGrid(); });
+        resetBtn.addEventListener('click', () => {
+            if (!startView) return;
+            ({ z, cx, cy } = startView);
+            clampView();
+            schedule();
+        });
+
+        // Mouse, touch and pen through pointer events: one pointer drags, two pinch
+        const pointers = new Map();
+        let pinchDist = 0;
+        const stagePoint = (x, y) => {
+            const r = stage.getBoundingClientRect();
+            return { fx: clamp((x - r.left) / r.width, 0, 1), fy: clamp((y - r.top) / r.height, 0, 1) };
+        };
+        const pinchState = () => {
+            const [a, b] = [...pointers.values()];
+            return { dist: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+        };
+        stage.addEventListener('pointerdown', (e) => {
+            if (!ready || (e.pointerType === 'mouse' && e.button !== 0)) return;
+            e.preventDefault();
+            stage.focus({ preventScroll: true });
+            try { stage.setPointerCapture(e.pointerId); } catch (_) { /* pointer already gone */ }
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointers.size === 2) pinchDist = pinchState().dist;
+            stage.classList.add('is-dragging');
+        });
+        stage.addEventListener('pointermove', (e) => {
+            const p = pointers.get(e.pointerId);
+            if (!p) return;
+            e.preventDefault();
+            if (pointers.size === 1) {
+                panBy(e.clientX - p.x, e.clientY - p.y);
+                p.x = e.clientX; p.y = e.clientY;
                 return;
             }
-
-            // Determine minimum zoom so the image fully covers 400x140 canvas without black edges
-            minZoom = Math.max(400 / img.naturalWidth, 140 / img.naturalHeight);
-            maxZoom = minZoom * 4;
-
-            if (existingConfig && existingConfig.bgSize && existingConfig.bgSize !== 'cover') {
-                const match = existingConfig.bgSize.match(/([\d.]+)%/);
-                if (match) {
-                    const pct = parseFloat(match[1]);
-                    const iw = (pct / 100) * 400;
-                    zoom = Math.max(minZoom, Math.min(maxZoom, iw / img.naturalWidth));
-                } else {
-                    zoom = minZoom;
-                }
-            } else {
-                zoom = minZoom;
+            const before = pinchState();
+            p.x = e.clientX; p.y = e.clientY;
+            if (pointers.size !== 2) return;
+            const after = pinchState();
+            panBy(after.mx - before.mx, after.my - before.my);
+            if (pinchDist > 0 && after.dist > 0) {
+                const at = stagePoint(after.mx, after.my);
+                zoomTo(z * (after.dist / pinchDist), at.fx, at.fy);
             }
-
-            const iw = img.naturalWidth * zoom;
-            const ih = img.naturalHeight * zoom;
-            const maxPanX = 400 - iw;
-            const maxPanY = 140 - ih;
-
-            if (existingConfig && existingConfig.bgPos && existingConfig.bgPos !== 'center') {
-                const parts = existingConfig.bgPos.split(' ');
-                const posXPercent = parseFloat(parts[0]) || 50;
-                const posYPercent = parseFloat(parts[1] !== undefined ? parts[1] : parts[0]) || 50;
-                panX = (posXPercent / 100) * maxPanX;
-                panY = (posYPercent / 100) * maxPanY;
-                
-                // Clamp bounds immediately in case image size changed
-                const bounds = getBounds(zoom);
-                panX = clamp(panX, bounds.minX, 0);
-                panY = clamp(panY, bounds.minY, 0);
-            } else {
-                // Center image initially
-                panX = maxPanX / 2;
-                panY = maxPanY / 2;
-            }
-
-            // Update zoom slider visually
-            const sliderPct = ((zoom - minZoom) / (maxZoom - minZoom)) * 100;
-            zoomSlider.value = sliderPct || 0;
-
-            draw();
+            pinchDist = after.dist;
+        });
+        const endPointer = (e) => {
+            if (!pointers.delete(e.pointerId)) return;
+            if (pointers.size === 2) pinchDist = pinchState().dist;
+            if (!pointers.size) stage.classList.remove('is-dragging');
         };
+        stage.addEventListener('pointerup', endPointer);
+        stage.addEventListener('pointercancel', endPointer);
+        stage.addEventListener('lostpointercapture', endPointer);
+        stage.addEventListener('dragstart', (e) => e.preventDefault());
 
-        const handleZoomChange = (pct) => {
-            const oldZoom = zoom;
-            const t = pct / 100;
-            const newZoom = minZoom + (maxZoom - minZoom) * t;
+        stage.addEventListener('wheel', (e) => {
+            if (!ready) return;
+            e.preventDefault();
+            const unit = e.deltaMode === 1 ? 16 : (e.deltaMode === 2 ? stage.clientHeight : 1);
+            // ctrl+wheel is what a trackpad pinch sends: small deltas, so a stronger factor
+            const delta = clamp(e.deltaY * unit, -240, 240) * (e.ctrlKey ? 0.01 : 0.0022);
+            const at = stagePoint(e.clientX, e.clientY);
+            zoomTo(z * Math.exp(-delta), at.fx, at.fy);
+            flashGrid();
+        }, { passive: false });
 
-            const imgCenterX = (200 - panX) / oldZoom;
-            const imgCenterY = (70 - panY) / oldZoom;
-
-            zoom = newZoom;
-            const bounds = getBounds(zoom);
-            panX = Math.max(bounds.minX, Math.min(0, 200 - imgCenterX * zoom));
-            panY = Math.max(bounds.minY, Math.min(0, 70 - imgCenterY * zoom));
-
-            draw();
-        };
-
-        zoomSlider.addEventListener('input', (e) => {
-            handleZoomChange(parseFloat(e.target.value));
+        stage.addEventListener('dblclick', (e) => {
+            if (!ready) return;
+            if (z > 1.001) { zoomTo(1); } else { const at = stagePoint(e.clientX, e.clientY); zoomTo(Math.min(2, zMax), at.fx, at.fy); }
+            flashGrid();
         });
 
-        let dragging = false;
-        let dragOffX = 0;
-        let dragOffY = 0;
-
-        const getPos = (e) => {
-            const r = canvas.getBoundingClientRect();
-            const sx = canvas.width / r.width, sy = canvas.height / r.height;
-            const src = e.touches ? e.touches[0] : e;
-            return { x: (src.clientX - r.left) * sx, y: (src.clientY - r.top) * sy };
-        };
-
-        const onDown = (e) => {
-            e.preventDefault();
-            dragging = true;
-            const { x, y } = getPos(e);
-            dragOffX = x - panX;
-            dragOffY = y - panY;
-            canvas.style.cursor = 'grabbing';
-        };
-
-        const onMove = (e) => {
-            if (!dragging) return;
-            e.preventDefault();
-            const { x, y } = getPos(e);
-            
-            const dx = x - dragOffX;
-            const dy = y - dragOffY;
-            
-            const bounds = getBounds(zoom);
-            panX = Math.max(bounds.minX, Math.min(0, dx));
-            panY = Math.max(bounds.minY, Math.min(0, dy));
-            
-            draw();
-        };
-
-        const onUp = () => {
-            if (dragging) {
-                dragging = false;
-                canvas.style.cursor = 'move';
-            }
-        };
-
-        // Strict fallback to original robust event binding
-        canvas.addEventListener('mousedown', onDown);
-        window.addEventListener('mousemove', onMove, { passive: false });
-        window.addEventListener('mouseup', onUp);
-
-        canvas.addEventListener('touchstart', onDown, { passive: false });
-        window.addEventListener('touchmove', onMove, { passive: false });
-        window.addEventListener('touchend', onUp);
-
-        // Prevent native HTML5 drag and drop behavior from hijacking our drag
-        canvas.addEventListener('dragstart', (e) => e.preventDefault());
-
-        const cleanup = () => {
+        const finish = (result) => {
+            if (done) return;
+            done = true;
+            if (raf) cancelAnimationFrame(raf);
+            clearTimeout(zoomFlag);
+            if (resizeObs) resizeObs.disconnect();
+            window.removeEventListener('resize', fitCanvas);
+            document.removeEventListener('keydown', onKey, true);
             URL.revokeObjectURL(objectUrl);
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onUp);
-            window.removeEventListener('touchmove', onMove);
-            window.removeEventListener('touchend', onUp);
             overlay.remove();
+            document.documentElement.classList.remove('banner-crop-open');
+            if (prevFocus && typeof prevFocus.focus === 'function' && document.contains(prevFocus)) prevFocus.focus({ preventScroll: true });
+            resolve(result);
         };
 
+        const confirm = () => {
+            if (!ready || confirmBtn.disabled) return;
+            // Repositioning without moving anything: nothing to upload
+            if (opts.keepOrig && opts.initial && startView
+                && Math.abs(z - startView.z) < 0.0005 && Math.abs(cx - startView.cx) < 0.5 && Math.abs(cy - startView.cy) < 0.5) {
+                finish(null);
+                return;
+            }
+            confirmBtn.disabled = true;
+            const { sx, sy, sw, sh } = cropRect();
+            const outW = Math.round(clamp(sw, BANNER_OUT_MIN, BANNER_OUT_MAX));
+            const outH = Math.round(outW / BANNER_RATIO);
+            const out = document.createElement('canvas');
+            out.width = outW;
+            out.height = outH;
+            const octx = out.getContext('2d');
+            octx.imageSmoothingEnabled = true;
+            octx.imageSmoothingQuality = 'high';
+            octx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
 
-        confirmBtn.addEventListener('click', () => {
-            // Target output dimensions (3x the preview for high-res)
-            const outW = 1200;
-            const outH = 360;
-            const outCanvas = document.createElement('canvas');
-            outCanvas.width = outW;
-            outCanvas.height = outH;
-            const outCtx = outCanvas.getContext('2d');
-            
-            // The preview canvas is 400x140, so the scale factor is outW / 400 = 3
-            const scale = outW / 400;
-            
-            outCtx.drawImage(img, panX * scale, panY * scale, img.naturalWidth * zoom * scale, img.naturalHeight * zoom * scale);
-            
-            outCanvas.toBlob((blob) => {
+            const crop = cropString();
+            const base = (file.name || 'banner').replace(/\.[^/.]+$/, '') || 'banner';
+            const deliver = (blob) => {
                 if (!blob) {
-                    cleanup();
-                    resolve(null);
+                    message.textContent = 'Could not create the banner image.';
+                    message.className = 'banner-crop-message is-error';
+                    message.hidden = false;
                     return;
                 }
-                const croppedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", { type: 'image/webp' });
-                cleanup();
-                resolve({ file: croppedFile, file_orig: file, banner_position: 'center top', banner_size: 'cover' });
-            }, 'image/webp', 0.9);
-        });
+                const ext = blob.type === 'image/webp' ? 'webp' : (blob.type === 'image/jpeg' ? 'jpg' : 'png');
+                finish({
+                    file: new File([blob], `${base}.${ext}`, { type: blob.type }),
+                    file_orig: opts.keepOrig ? null : file,
+                    keep_orig: !!opts.keepOrig,
+                    banner_crop: crop,
+                    banner_position: 'center top',
+                    banner_size: 'cover'
+                });
+            };
+            out.toBlob((blob) => {
+                // Browsers that cannot encode WebP hand back a PNG: send a JPEG instead of a huge file
+                if (blob && blob.type !== 'image/webp') out.toBlob((jpg) => deliver(jpg || blob), 'image/jpeg', 0.92);
+                else deliver(blob);
+            }, 'image/webp', 0.92);
+        };
 
-        cancelBtn.addEventListener('click', () => {
-            cleanup();
-            resolve(null);
-        });
-
-        overlay.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                cleanup();
-                resolve(null);
+        function onKey(e) {
+            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(null); return; }
+            if (e.key === 'Tab') {
+                // Keep focus inside the dialog
+                const items = [closeBtn, stage, ...controls, cancelBtn].filter((n) => !n.disabled && n.offsetParent !== null);
+                const order = [closeBtn, stage, zoomOut, slider, zoomIn, resetBtn, cancelBtn, confirmBtn].filter((n) => items.includes(n));
+                const i = order.indexOf(document.activeElement);
+                e.preventDefault();
+                order[(i + (e.shiftKey ? -1 : 1) + order.length) % order.length].focus();
+                return;
             }
-        });
+            const onButton = document.activeElement && document.activeElement.tagName === 'BUTTON';
+            if (e.key === 'Enter' && !onButton) { e.preventDefault(); confirm(); return; }
+            if (!ready || e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomTo(z * 1.1); flashGrid(); return; }
+            if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomTo(z / 1.1); flashGrid(); return; }
+            if (e.key === '0') { e.preventDefault(); zoomTo(1); flashGrid(); return; }
+            // Arrows move the image, except on the slider where they belong to it
+            if (document.activeElement === slider) return;
+            const step = (e.shiftKey ? 0.1 : 0.02) * (stage.clientWidth || 1);
+            const dir = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
+            if (dir) { e.preventDefault(); panBy(dir[0], dir[1]); flashGrid(); }
+        }
+        document.addEventListener('keydown', onKey, true);
 
-        // Trigger image load AFTER attaching onload listener
+        confirmBtn.addEventListener('click', confirm);
+        cancelBtn.addEventListener('click', () => finish(null));
+        closeBtn.addEventListener('click', () => finish(null));
+
+        img.onload = () => {
+            if (done) return;
+            iw = img.naturalWidth;
+            ih = img.naturalHeight;
+            if (!iw || !ih) { img.onerror(); return; }
+            bw = Math.min(iw, ih * BANNER_RATIO);
+            bh = bw / BANNER_RATIO;
+            // Zoom in until the crop would be about 300 source pixels wide, 8x at most
+            zMax = clamp(bw / 300, 1, 8);
+
+            const c = opts.initial;
+            if (c && c.w > 0) {
+                z = bw / (c.w * iw);
+                cx = (c.x + c.w / 2) * iw;
+                cy = (c.y + c.h / 2) * ih;
+            } else {
+                z = 1;
+                cx = iw / 2;
+                cy = ih / 2;
+            }
+            clampView();
+            startView = { z, cx, cy };
+
+            ready = true;
+            message.hidden = true;
+            stage.classList.remove('is-fixed');
+            slider.disabled = zMax <= 1.0001;
+            confirmBtn.disabled = false;
+            fitCanvas();
+            stage.focus({ preventScroll: true });
+        };
+        img.onerror = () => {
+            if (done) return;
+            message.textContent = 'This image could not be loaded.';
+            message.className = 'banner-crop-message is-error';
+        };
+
+        document.documentElement.classList.add('banner-crop-open');
+        document.body.appendChild(overlay);
+        cancelBtn.focus({ preventScroll: true });
         img.src = objectUrl;
     });
-
-
 
     // ── Upload raw file to server ───────────────────────────────────────────────
     const uploadBannerPayload = (payload) => {
@@ -731,6 +841,8 @@
         if (payload.file_orig) formData.append('file_orig', payload.file_orig);
         formData.append('banner_position', payload.banner_position);
         formData.append('banner_size', payload.banner_size);
+        if (payload.banner_crop) formData.append('banner_crop', payload.banner_crop);
+        if (payload.keep_orig) formData.append('keep_orig', '1');
 
         const xhr = new XMLHttpRequest();
 
@@ -899,42 +1011,41 @@
     if (!window._f0ckBannerEditBound) {
         window._f0ckBannerEditBound = true;
         document.addEventListener('click', async (e) => {
-        if (e.target.id === 'banner-edit-btn') {
-            const preview = document.getElementById('banner-preview') || document.getElementById('live-profile-preview-box');
-            if (!preview) return;
-            
-            let bgImg = preview.style.backgroundImage || preview.style.getPropertyValue('--author-banner');
-            let bgPos = preview.style.backgroundPosition || preview.style.getPropertyValue('--author-banner-position');
-            let bgSize = preview.style.backgroundSize || preview.style.getPropertyValue('--author-banner-size');
-
-            const urlMatch = bgImg.match(/url\(['"]?(.*?)['"]?\)/);
-            if (!urlMatch) return;
-            const url = urlMatch[1].split('?')[0]; // Strip cache buster if present
-            const origUrl = url.replace('.webp', '_orig.webp');
-            
+            // closest(): the click may land on the button's icon
+            const editBtn = e.target.closest ? e.target.closest('#banner-edit-btn') : null;
+            if (!editBtn || editBtn.disabled) return;
+            const label = editBtn.innerHTML;
             try {
-                e.target.disabled = true;
-                e.target.textContent = 'Loading...';
-                
-                let res = await fetch(origUrl);
-                if (!res.ok) { res = await fetch(url); }
+                editBtn.disabled = true;
+                editBtn.textContent = 'Loading...';
+
+                // The server knows the uncropped original and the crop last made from it
+                const state = await (await fetch('/api/v2/settings/uploadBanner', { headers: { 'Accept': 'application/json' } })).json();
+                if (!state || !state.success || !state.banner_file) throw new Error('no banner');
+                const hasOrig = !!state.orig_file;
+                const res = await fetch('/a/' + (state.orig_file || state.banner_file));
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const blob = await res.blob();
-                const file = new File([blob], 'banner.webp', { type: blob.type });
-                
-                showBannerStatus('', '');
-                const payload = await showBannerCropModal(file, { bgPos, bgSize });
-                if (payload) {
-                    uploadBannerPayload(payload);
+                const file = new File([blob], 'banner.webp', { type: blob.type || 'image/webp' });
+
+                let initial = null;
+                if (hasOrig && state.crop) {
+                    const [x, y, w, h] = String(state.crop).split(',').map(Number);
+                    if ([x, y, w, h].every(Number.isFinite) && w > 0 && h > 0) initial = { x, y, w, h };
                 }
+
+                showBannerStatus('', '');
+                // Without a stored original the current (cropped) banner becomes the new original
+                const payload = await showBannerCropModal(file, { initial, keepOrig: hasOrig });
+                if (payload) uploadBannerPayload(payload);
             } catch (err) {
                 console.error('[EDIT BANNER] Error:', err);
                 showBannerStatus('Failed to load current banner for editing', 'error');
             } finally {
-                e.target.disabled = false;
-                e.target.textContent = 'Edit Position';
+                editBtn.disabled = false;
+                editBtn.innerHTML = label;
             }
-        }
-    });
+        });
     }
 
     // ── Remove banner handler ────────────────────────────────────────────────

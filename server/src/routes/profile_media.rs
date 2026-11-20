@@ -48,6 +48,7 @@ pub fn register(r: &mut Router) {
     r.post(r"^\/admin\/fy_brand$", fy_brand_save);
     r.pre(Method::POST, r"^\/admin\/favicon\/upload$", None, favicon_upload);
     r.pre(Method::POST, r"^\/admin\/favicon\/delete$", None, favicon_delete);
+    r.pre(Method::GET, r"^\/api\/v2\/settings\/uploadBanner$", None, banner_state);
     r.pre(Method::POST, r"^\/api\/v2\/settings\/uploadBanner$", None, banner_upload);
     r.pre(Method::DELETE, r"^\/api\/v2\/settings\/uploadBanner$", None, banner_delete);
 }
@@ -286,6 +287,34 @@ fn orig_name(banner: &str) -> String {
     banner.replacen(".webp", "_orig.webp", 1)
 }
 
+/// The crop the banner editor made, as `x,y,w,h` fractions (0..1) of the uncropped original, so
+/// "Reposition" opens on the same framing. `None` for anything that is not four such numbers.
+fn crop_value(v: Option<&str>) -> Option<String> {
+    let n: Vec<f64> = v?.split(',').map(|p| p.trim().parse::<f64>()).collect::<Result<_, _>>().ok()?;
+    let [x, y, w, h] = n[..] else { return None };
+    let ok = n.iter().all(|f| f.is_finite() && (0.0..=1.0).contains(f)) && w > 0.0 && h > 0.0 && x + w <= 1.0001 && y + h <= 1.0001;
+    ok.then(|| format!("{x:.6},{y:.6},{w:.6},{h:.6}"))
+}
+
+/// What the banner editor needs to reopen the current banner: the uncropped original (when it is
+/// still on disk) and the crop last made from it.
+async fn banner_state(st: AppState, req: Req) -> Res {
+    let Some(s) = req.session.clone().filter(|s| !s.is_anon) else { return fail(401, "Unauthorized") };
+    let row = match sql!("select banner_file, banner_crop from user_options where user_id = ", s.id as i32).fetch_optional(&st.db).await {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!("[BANNER HANDLER] Could not fetch banner state: {e}");
+            return fail(500, "Failed to load banner");
+        }
+    };
+    let file = row.as_ref().and_then(|r| r.str("banner_file")).filter(|f| !f.is_empty() && crate::media::is_plain_name(f)).map(str::to_string);
+    let Some(file) = file else { return send(json!({ "success": true, "banner_file": null, "orig_file": null, "crop": null }), 200) };
+    let orig = orig_name(&file);
+    let has_orig = tokio::fs::try_exists(st.cfg().paths.a.join(&orig)).await.unwrap_or(false);
+    let crop = row.as_ref().and_then(|r| r.str("banner_crop")).filter(|_| has_orig).and_then(|c| crop_value(Some(c)));
+    send(json!({ "success": true, "banner_file": file, "orig_file": has_orig.then_some(orig), "crop": crop }), 200)
+}
+
 async fn banner_upload(st: AppState, mut req: Req) -> Res {
     if banner_disabled(&st) {
         return send(json!({ "success": false, "msg": "Banner feature is currently disabled" }), 403);
@@ -321,7 +350,7 @@ async fn banner_upload(st: AppState, mut req: Req) -> Res {
     let final_name = format!("banner_{uuid}.webp");
     let final_path = a_dir.join(&final_name);
     let input = format!("{coder}:{}[0]", file.path.to_string_lossy());
-    if let Err(e) = magick(&[&input, "-resize", "3840x3840>", "-quality", "85", &final_path.to_string_lossy()]).await {
+    if let Err(e) = magick(&[&input, "-auto-orient", "-resize", "3840x3840>", "-quality", "85", &final_path.to_string_lossy()]).await {
         tracing::error!("[BANNER HANDLER] Magick error: {e}");
         let _ = tokio::fs::remove_file(&final_path).await;
         return fail(500, "Failed to process image");
@@ -335,7 +364,8 @@ async fn banner_upload(st: AppState, mut req: Req) -> Res {
             Ok(c) => {
                 let p = a_dir.join(format!("banner_{uuid}_orig.webp"));
                 let input = format!("{c}:{}[0]", orig.path.to_string_lossy());
-                match magick(&[&input, "-resize", "3840x3840>", "-quality", "85", &p.to_string_lossy()]).await {
+                // -auto-orient: browsers show the upload rotated per EXIF, and the crop is made on that
+                match magick(&[&input, "-auto-orient", "-resize", "3840x3840>", "-quality", "90", &p.to_string_lossy()]).await {
                     Ok(()) => {
                         crate::media::make_public(&p).await;
                         orig_path = Some(p);
@@ -352,6 +382,9 @@ async fn banner_upload(st: AppState, mut req: Req) -> Res {
     let position = css_value(form.text("banner_position"), "center");
     let size = css_value(form.text("banner_size"), "cover");
     let repeat = css_value(form.text("banner_repeat"), "repeat");
+    let mut crop = crop_value(form.text("banner_crop"));
+    // Repositioning sends only the new crop: the original already stored stays, under the new name.
+    let keep_orig = orig_path.is_none() && form.text("keep_orig") == Some("1");
     drop(form);
 
     let current = match sql!("select banner_file from user_options where user_id = ", s.id as i32).fetch_optional(&st.db).await {
@@ -361,14 +394,23 @@ async fn banner_upload(st: AppState, mut req: Req) -> Res {
             None
         }
     };
-    if let Some(old) = current.filter(|c| !c.is_empty()) {
-        remove_in(&a_dir, &old).await;
-        remove_in(&a_dir, &orig_name(&old)).await;
+    let old = current.filter(|c| !c.is_empty() && crate::media::is_plain_name(c));
+    if keep_orig {
+        if let Some(old) = &old {
+            let p = a_dir.join(format!("banner_{uuid}_orig.webp"));
+            if tokio::fs::rename(a_dir.join(orig_name(old)), &p).await.is_ok() {
+                orig_path = Some(p);
+            }
+        }
+    }
+    // A crop only means something next to the original it was made on
+    if orig_path.is_none() {
+        crop = None;
     }
 
     let r = sql!(
         "update user_options set banner_file = ", final_name.clone(), ", banner_position = ", position.clone(), ", banner_size = ", size.clone(),
-        ", banner_repeat = ", repeat.clone(), " where user_id = ", s.id as i32
+        ", banner_repeat = ", repeat.clone(), ", banner_crop = ", crop.clone(), " where user_id = ", s.id as i32
     )
     .execute(&st.db)
     .await;
@@ -376,9 +418,21 @@ async fn banner_upload(st: AppState, mut req: Req) -> Res {
         tracing::error!("[BANNER HANDLER] DB update failed: {e}");
         let _ = tokio::fs::remove_file(&final_path).await;
         if let Some(p) = orig_path {
-            let _ = tokio::fs::remove_file(p).await;
+            match old.as_ref().filter(|_| keep_orig) {
+                // still the current banner's original: give it its name back
+                Some(old) => {
+                    let _ = tokio::fs::rename(&p, a_dir.join(orig_name(old))).await;
+                }
+                None => {
+                    let _ = tokio::fs::remove_file(p).await;
+                }
+            }
         }
         return fail(500, "Banner upload failed");
+    }
+    if let Some(old) = old {
+        remove_in(&a_dir, &old).await;
+        remove_in(&a_dir, &orig_name(&old)).await;
     }
     refresh_session(&st, &req);
     notify(
@@ -408,7 +462,7 @@ async fn banner_delete(st: AppState, req: Req) -> Res {
             remove_in(&a, &old).await;
             remove_in(&a, &orig_name(&old)).await;
         }
-        sql!("update user_options set banner_file = null where user_id = ", s.id as i32).execute(&st.db).await?;
+        sql!("update user_options set banner_file = null, banner_crop = null where user_id = ", s.id as i32).execute(&st.db).await?;
         refresh_session(&st, &req);
         notify(&st, "profile_update", json!({ "user_id": s.id, "user": s.user, "banner_file": null })).await;
         Ok(())

@@ -21149,96 +21149,378 @@ a.lazy-thumb.filtered-upload-ghost:hover::after {
   font-weight: 400;
 }
 
-/* ── Banner Crop Modal ─────────────────────────────────────────────────────── */
+/* ── Banner Crop Modal (settings.js: showBannerCropModal) ──────────────────── */
+
+html.banner-crop-open {
+  overflow: hidden;
+}
 
 .banner-crop-overlay {
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background: rgba(0, 0, 0, 0.92);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 20px;
+  padding: 16px;
   box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   font-family: inherit;
-  user-select: none;
-  -webkit-user-select: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: banner-crop-fade 0.14s ease-out;
 }
 
-.banner-crop-wrapper {
-  width: auto;
-  max-width: 1200px;
-  background: var(--bg);
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid var(--nav-border-color);
+@keyframes banner-crop-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.banner-crop-dialog {
+  width: 100%;
+  max-width: 920px;
+  margin: auto;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  background: var(--bg);
+  color: var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 2px solid var(--accent);
+}
+
+.banner-crop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 14px 20px;
 }
 
 .banner-crop-title {
   margin: 0;
-  color: #fff;
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--white);
 }
 
-.banner-crop-hint {
-  color: #aaa;
-  font-size: 0.85em;
-  text-align: center;
-  margin-bottom: 4px;
+.banner-crop-title i {
+  margin-right: 10px;
+  color: var(--accent);
 }
 
-.banner-crop-canvas-wrapper {
-  width: 100%;
-  max-width: 400px;
-  aspect-ratio: 400 / 120;
+.banner-crop-close {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--white);
+  opacity: 0.6;
+  font-size: 1em;
+  cursor: pointer;
+}
+
+.banner-crop-close:hover,
+.banner-crop-close:focus-visible {
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* The crop window: exactly what gets saved (10:3, like the banner everywhere it is shown) */
+.banner-crop-stage {
   position: relative;
+  margin: 0 20px;
+  aspect-ratio: 10 / 3;
   overflow: hidden;
-  border: 1px solid var(--nav-border-color);
-  border-radius: 4px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-  background: #111;
-  margin: 0 auto;
+  background: #000;
+  outline: 1px solid rgba(255, 255, 255, 0.14);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.banner-crop-stage:focus-visible {
+  outline: 1px solid var(--accent);
+}
+
+.banner-crop-stage.is-dragging {
+  cursor: grabbing;
+}
+
+.banner-crop-stage.is-fixed {
+  cursor: default;
 }
 
 .banner-crop-canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: block;
-  cursor: move;
-  touch-action: none;
-  pointer-events: auto !important;
 }
 
-.banner-crop-controls {
+/* Rule-of-thirds guides, only while moving */
+.banner-crop-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  background-image:
+    linear-gradient(to right, transparent calc(33.333% - 0.5px), rgba(255, 255, 255, 0.35) calc(33.333% - 0.5px), rgba(255, 255, 255, 0.35) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), rgba(255, 255, 255, 0.35) calc(66.666% - 0.5px), rgba(255, 255, 255, 0.35) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(33.333% - 0.5px), rgba(255, 255, 255, 0.35) calc(33.333% - 0.5px), rgba(255, 255, 255, 0.35) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), rgba(255, 255, 255, 0.35) calc(66.666% - 0.5px), rgba(255, 255, 255, 0.35) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px));
+}
+
+.banner-crop-stage.is-dragging .banner-crop-grid,
+.banner-crop-stage.is-zooming .banner-crop-grid {
+  opacity: 1;
+}
+
+.banner-crop-message {
+  position: absolute;
+  inset: 0;
   display: flex;
-  gap: 10px;
   align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+}
+
+.banner-crop-message[hidden] {
+  display: none;
+}
+
+.banner-crop-message.is-error {
+  color: #ff6b6b;
+}
+
+.banner-crop-info {
+  display: flex;
   justify-content: space-between;
+  gap: 6px 16px;
   flex-wrap: wrap;
-  margin-top: 15px;
+  margin: 10px 20px 0;
+  min-height: 1.4em;
+  font-size: 0.75em;
+  opacity: 0.6;
 }
 
-.banner-crop-zoom-label {
+.banner-crop-warn {
+  color: #ffb347;
+}
+
+.banner-crop-zoom {
   display: flex;
-  gap: 10px;
   align-items: center;
-  flex: 1;
-  min-width: 200px;
-  color: #fff;
-}
-
-.banner-crop-zoom-slider {
-  flex: 1;
-}
-
-.banner-crop-actions {
-  display: flex;
   gap: 10px;
+  margin: 14px 20px 0;
+}
+
+.banner-crop-step,
+.banner-crop-reset {
+  flex: none;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 10px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--white);
+  font-family: inherit;
+  font-size: 0.75em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+
+.banner-crop-step:hover:not(:disabled),
+.banner-crop-reset:hover:not(:disabled),
+.banner-crop-step:focus-visible,
+.banner-crop-reset:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.banner-crop-zoom button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.banner-crop-value {
+  flex: none;
+  width: 4.2em;
+  text-align: right;
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.banner-crop-slider {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.banner-crop-slider::-webkit-slider-runnable-track {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.banner-crop-slider::-moz-range-track {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.banner-crop-slider::-moz-range-progress {
+  height: 2px;
+  background: var(--accent);
+}
+
+.banner-crop-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 18px;
+  margin-top: -8px;
+  background: var(--accent);
+  border: none;
+  border-radius: 0;
+}
+
+.banner-crop-slider::-moz-range-thumb {
+  width: 10px;
+  height: 18px;
+  background: var(--accent);
+  border: none;
+  border-radius: 0;
+}
+
+.banner-crop-slider:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.banner-crop-slider:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.banner-crop-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.banner-crop-btn {
+  height: 36px;
+  padding: 0 20px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--white);
+  font-family: inherit;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.12s ease, filter 0.12s ease;
+}
+
+.banner-crop-btn:hover:not(:disabled),
+.banner-crop-btn:focus-visible {
+  border-color: var(--white);
+}
+
+.banner-crop-btn.is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--black);
+}
+
+.banner-crop-btn.is-primary:hover:not(:disabled),
+.banner-crop-btn.is-primary:focus-visible {
+  border-color: var(--accent);
+  filter: brightness(1.12);
+}
+
+.banner-crop-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+html[theme="light"] .banner-crop-dialog,
+html[theme="light"] .banner-crop-step,
+html[theme="light"] .banner-crop-reset,
+html[theme="light"] .banner-crop-btn:not(.is-primary) {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+html[theme="light"] .banner-crop-dialog {
+  border-top-color: var(--accent);
+}
+
+html[theme="light"] .banner-crop-slider::-webkit-slider-runnable-track {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+html[theme="light"] .banner-crop-slider::-moz-range-track {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 560px) {
+  .banner-crop-overlay {
+    padding: 8px;
+  }
+
+  .banner-crop-stage {
+    margin: 0 10px;
+  }
+
+  .banner-crop-info,
+  .banner-crop-zoom {
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+
+  .banner-crop-reset,
+  .banner-crop-hint {
+    display: none;
+  }
+
+  .banner-crop-foot {
+    padding: 12px 10px;
+  }
+
+  .banner-crop-btn {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner-crop-overlay {
+    animation: none;
+  }
 }
 
 /* Avatar inline edit button */

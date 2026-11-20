@@ -1549,7 +1549,8 @@ CREATE TABLE public.user_options (
     default_upload_visibility smallint DEFAULT 0,
     banner_repeat character varying(50) DEFAULT 'repeat'::character varying,
     font_weight smallint,
-    font_sizes jsonb
+    font_sizes jsonb,
+    banner_crop character varying(64) DEFAULT NULL::character varying
 );
 
 
