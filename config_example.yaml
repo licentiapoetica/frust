@@ -243,7 +243,7 @@ websrv:
     - image
     - video
     - audio
-  show_content_warning: true
+  show_content_warning: false
   # Comment layout for guests and users who haven't picked one: 0 = tree (threaded replies), 1 = linear (flat, oldest first).
   # Users can change it in their settings unless an admin locked it for their account.
   default_comment_display_mode: 1
