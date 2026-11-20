@@ -158,7 +158,7 @@
 
         {% if manage %}
         <section class="adm-section audit-manage" id="audit-manage">
-            <h2 class="adm-section-title"><i class="fa-solid fa-box-archive"></i> Manage the log</h2>
+            <h2 class="adm-section-title"><i class="fa-solid fa-box-archive"></i> Manage the log (admins only)</h2>
             <p class="audit-manage-info" id="audit-manage-info">{{ manage.total|locale_number }} {{ ("entry" if manage.total == 1 else "entries") }} in total{% if manage.oldest %}, the oldest from {{ manage.oldest }}{% endif %}. Entries are {% if manage.retention_days %}deleted after {{ manage.retention_days }} days{% else %}kept forever{% endif %}.</p>
             <form method="post" action="/mod/audit/retention" class="audit-manage-form" data-audit-admin>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
