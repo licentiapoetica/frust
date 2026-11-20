@@ -989,7 +989,9 @@ class Danmaku {
      * Renders inline content (spoiler/blur/emoji) into a parent node.
      */
     _renderInline(text, parent, emojiCache) {
-        const combined = /\[spoiler\]([\s\S]*?)\[\/spoiler\]|\[blur\]([\s\S]*?)\[\/blur\]|:([a-z0-9_+\-]+):|\x04([^\x05]+)\x05/gi;
+        // [rb] [reich] [krebs] [glitch] [badapple]: the shared comment effects (f0ck-core.js'
+        // F0CK_COMMENT_FX, styles in comment-fx.css); [badapple] brings its apple and starts Bad Apple!!
+        const combined = /\[spoiler\]([\s\S]*?)\[\/spoiler\]|\[blur\]([\s\S]*?)\[\/blur\]|:([a-z0-9_+\-]+):|\x04([^\x05]+)\x05|\[(rb|reich|krebs|glitch|badapple)\]([\s\S]*?)\[\/\5\]/gi;
         let lastIndex = 0;
         let match;
 
@@ -1038,6 +1040,17 @@ class Danmaku {
                 } else {
                     parent.appendChild(document.createTextNode(match[0]));
                 }
+            } else if (match[5]) {
+                const tag = match[5].toLowerCase();
+                const span = document.createElement('span');
+                span.className = 'cfx-' + tag;
+                if (tag === 'glitch') span.dataset.glitch = '0.5';
+                if (tag === 'badapple') {
+                    span.setAttribute('role', 'button');
+                    span.tabIndex = 0;
+                }
+                this._renderInline(match[6], span, emojiCache);
+                parent.appendChild(span);
             } else if (match[4]) {
                 const mediaUrl = match[4];
                 const cleanUrl = mediaUrl.replace(/#gif$/, '');
@@ -1121,6 +1134,8 @@ class Danmaku {
             .replace(/```[\s\S]*?```/g, '[code]')
             .replace(/`[^`]+`/g, match => match.slice(1, -1))
             .replace(/!\[[^\]]*\]\([^)]+\)/g, '[img]')
+            // `[label](#bad-apple)` keeps its apple (rendered like [badapple]label[/badapple])
+            .replace(/\[([^\]\n]*)\]\(#bad-apple\)/g, '[badapple]$1[/badapple]')
             .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
             .replace(/^#{1,6}\s+/gm, '')
             .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1')

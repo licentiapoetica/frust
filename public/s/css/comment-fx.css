@@ -83,6 +83,11 @@ html.f0ck-bad-apple .cfx-badapple {
   text-underline-offset: 0.2em;
 }
 
+/* in a danmaku pill (the overlay ignores the mouse) */
+html.f0ck-bad-apple .danmaku-pill .cfx-badapple {
+  pointer-events: auto;
+}
+
 html.f0ck-bad-apple .cfx-badapple:hover,
 html.f0ck-bad-apple .cfx-badapple:focus-visible {
   text-decoration-style: solid;
