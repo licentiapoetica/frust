@@ -64,6 +64,10 @@
           <i class="fa-solid fa-users"></i>
           <span class="adm-tool-text"><strong>User Manager</strong><span>Accounts, roles and groups</span></span>
         </a>
+        <a href="/admin/permissions" class="adm-tool">
+          <i class="fa-solid fa-key"></i>
+          <span class="adm-tool-text"><strong>Permissions</strong><span>What users, groups and mods may do</span></span>
+        </a>
         <a href="/admin/bans" class="adm-tool">
           <i class="fa-solid fa-ban"></i>
           <span class="adm-tool-text"><strong>Bans &amp; Fingerprints</strong><span>IP, hardware and passkey bans</span></span>
@@ -152,12 +156,17 @@
     </section>
 
     <!-- Settings -->
-    <section class="adm-section">
+    <section class="adm-section" id="settings">
       <div class="adm-section-head">
         <h2 class="adm-section-title"><i class="fa-solid fa-sliders"></i> Settings</h2>
-        <span id="settings-status" class="adm-status" data-csrf="{{ csrf_token }}"></span>
+        <span id="settings-status" class="adm-status" role="status" data-csrf="{{ csrf_token }}"></span>
       </div>
 
+      {#- One plain form (posts back here without JavaScript); admin.js saves every change in place.
+          Switches send a hidden "off" before the checkbox's "on": the last value counts -#}
+      <form id="admin-settings-form" method="post" action="/admin/settings" data-on="submit:prevent,saveAdminSettings">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="back" value="/admin#settings">
       <h3 class="adm-group-title">Uploads</h3>
       <div class="adm-panel">
         <div class="adm-row">
@@ -166,7 +175,7 @@
             <p>If enabled, mods must approve every upload.</p>
           </div>
           <label class="adm-switch">
-            <input type="checkbox" id="manual_approval_toggle" {{ ("checked" if manual_approval else "") }} data-on="change:saveAdminSettings">
+            <input type="hidden" name="manual_approval" value="off"><input type="checkbox" id="manual_approval_toggle" name="manual_approval" value="on" {{ ("checked" if manual_approval else "") }} data-on="change:saveAdminSettings">
             <span class="adm-slider"></span>
           </label>
         </div>
@@ -175,14 +184,28 @@
             <label for="min_tags_input">Minimum tags</label>
             <p>Minimum number of tags required per upload.</p>
           </div>
-          <input type="number" id="min_tags_input" class="adm-number" value="{{ min_tags }}" min="0" max="20" data-on="change:saveAdminSettings">
+          <input type="number" id="min_tags_input" name="min_tags" class="adm-number" value="{{ min_tags }}" min="0" max="20" data-on="change:saveAdminSettings">
         </div>
         <div class="adm-row">
           <div class="adm-row-text">
             <label for="trusted_uploads_input">Trusted upload threshold</label>
             <p>Users with fewer approved uploads than this still need manual approval, even if the toggle above is off. 0 disables it.</p>
           </div>
-          <input type="number" id="trusted_uploads_input" class="adm-number" value="{{ trusted_uploads }}" min="0" max="999" data-on="change:saveAdminSettings">
+          <input type="number" id="trusted_uploads_input" name="trusted_uploads" class="adm-number" value="{{ trusted_uploads }}" min="0" max="999" data-on="change:saveAdminSettings">
+        </div>
+        <div class="adm-row">
+          <div class="adm-row-text">
+            <label for="max_file_size_input">Max upload size (MB)</label>
+            <p>Largest file a user may upload, in MB (1&nbsp;MB = 1024&nbsp;KB). Empty: the config value ({{ upload_size.config_max_mib }}&nbsp;MB). Now: <strong id="upload_limit_now">{{ upload_size.limit }}</strong>.</p>
+          </div>
+          <input type="number" id="max_file_size_input" name="max_file_size_mib" class="adm-number adm-number-wide" value="{{ upload_size.max_mib }}" min="0.01" step="0.01" placeholder="{{ upload_size.config_max_mib }}" data-on="change:saveAdminSettings">
+        </div>
+        <div class="adm-row">
+          <div class="adm-row-text">
+            <label for="upload_multiplier_input">Big upload multiplier</label>
+            <p>Users with the <a href="/admin/permissions#perm-upload_large">Big uploads</a> permission (admins always, moderators by default) may upload this many times the size above. Empty: the config value (&times;{{ upload_size.config_multiplier }}). Now: <strong id="upload_limit_large_now">{{ upload_size.limit_large }}</strong>.</p>
+          </div>
+          <input type="number" id="upload_multiplier_input" name="upload_multiplier" class="adm-number adm-number-wide" value="{{ upload_size.multiplier }}" min="1" max="1000" step="0.1" placeholder="{{ upload_size.config_multiplier }}" data-on="change:saveAdminSettings">
         </div>
       </div>
 
@@ -195,7 +218,7 @@
             <p>Allow registration without invite tokens. Requires email activation.</p>
           </div>
           <label class="adm-switch">
-            <input type="checkbox" id="registration_open_toggle" {{ ("checked" if registration_open else "") }} data-on="change:saveAdminSettings">
+            <input type="hidden" name="registration_open" value="off"><input type="checkbox" id="registration_open_toggle" name="registration_open" value="on" {{ ("checked" if registration_open else "") }} data-on="change:saveAdminSettings">
             <span class="adm-slider"></span>
           </label>
         </div>
@@ -206,7 +229,7 @@
             <p>While registration is closed, visitors without an invite token can apply with a message. Review them under <a href="/admin/applications">Applications</a>.</p>
           </div>
           <label class="adm-switch">
-            <input type="checkbox" id="registration_applications_toggle" {{ ("checked" if registration_applications else "") }} data-on="change:saveAdminSettings">
+            <input type="hidden" name="registration_applications" value="off"><input type="checkbox" id="registration_applications_toggle" name="registration_applications" value="on" {{ ("checked" if registration_applications else "") }} data-on="change:saveAdminSettings">
             <span class="adm-slider"></span>
           </label>
         </div>
@@ -216,11 +239,15 @@
             <p>Applicants have to give an email address. The decision is mailed to it when SMTP is set up.</p>
           </div>
           <label class="adm-switch">
-            <input type="checkbox" id="applications_require_email_toggle" {{ ("checked" if applications_require_email else "") }} data-on="change:saveAdminSettings">
+            <input type="hidden" name="applications_require_email" value="off"><input type="checkbox" id="applications_require_email_toggle" name="applications_require_email" value="on" {{ ("checked" if applications_require_email else "") }} data-on="change:saveAdminSettings">
             <span class="adm-slider"></span>
           </label>
         </div>
       </div>
+      <div class="adm-form-actions adm-nojs-only">
+        <button type="submit" class="adm-btn adm-btn-primary">Save settings</button>
+      </div>
+      </form>
 
       <h3 class="adm-group-title">Branding</h3>
       {#- Plain forms (they post back here without JavaScript); admin.js saves them in place -#}

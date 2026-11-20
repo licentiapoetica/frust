@@ -190,6 +190,11 @@
                 row.remove();
                 return;
             }
+            // Inner sections the admin had open (permission overrides) stay open
+            row.querySelectorAll('details[data-keep-open][open]').forEach(function (d) {
+                var same = d.id && fresh.querySelector('#' + CSS.escape(d.id));
+                if (same) same.open = true;
+            });
             row.replaceWith(fresh);
         } catch (e) {
             // the action itself went through; the row just keeps its old look
@@ -200,6 +205,10 @@
         var form = e.target.closest('form.adm-user-form');
         if (!form) return;
         e.preventDefault();
+        if (form.classList.contains('adm-user-perms-form')) {
+            savePerms(form, !!(e.submitter && e.submitter.name === 'clear'));
+            return;
+        }
         if (form.classList.contains('is-busy')) return;
         var row = form.closest('.adm-user');
         var body = new URLSearchParams(new FormData(form, e.submitter));
@@ -227,6 +236,74 @@
         } finally {
             form.classList.remove('is-busy');
         }
+    });
+
+    // ── Permission overrides: a click saves at once ──────────────────────
+    // The marks (✓/✗ = may do it now) and counts are updated from the reply. One request per form
+    // at a time; clicks during it are sent right after with the form's state then.
+
+    var permState = new WeakMap();
+
+    async function savePerms(form, clear) {
+        var ps = permState.get(form);
+        if (!ps) permState.set(form, ps = { busy: false, again: false, clear: false });
+        if (ps.busy) {
+            ps.again = true;
+            ps.clear = ps.clear || clear;
+            return;
+        }
+        ps.busy = true;
+        var body = new URLSearchParams(new FormData(form));
+        body.delete('back');
+        body.delete('csrf_token');
+        if (clear) body.set('clear', '1');
+        try {
+            var res = await fetch(form.getAttribute('action'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json', 'X-CSRF-Token': csrf() },
+                body: body
+            });
+            var data = await res.json().catch(function () { return {}; });
+            if (!res.ok || data.success === false) throw new Error(data.msg || data.message || ('HTTP ' + res.status));
+            if (clear) {
+                form.querySelectorAll('input[type="radio"][value="inherit"]').forEach(function (r) { r.checked = true; });
+            }
+            var eff = data.effective || {};
+            form.querySelectorAll('[data-perm-now]').forEach(function (el) {
+                var yes = !!eff[el.dataset.permNow];
+                el.textContent = yes ? '\u2713' : '\u2717';
+                el.classList.toggle('is-yes', yes);
+                el.setAttribute('aria-label', yes ? 'allowed now' : 'not allowed now');
+            });
+            var n = data.count || 0;
+            var row = form.closest('.adm-user');
+            var count = row && row.querySelector('[data-perm-count]');
+            if (count) {
+                count.textContent = n + ' override' + (n === 1 ? '' : 's');
+                count.classList.toggle('is-on', n > 0);
+            }
+            var chip = row && row.querySelector('[data-perm-chip]');
+            if (chip) {
+                chip.querySelector('span').textContent = n;
+                chip.classList.toggle('adm-users-hidden', n === 0);
+            }
+            flash(data.msg || 'Saved.', 'success');
+        } catch (err) {
+            flash(err.message || 'Something went wrong.', 'error');
+        } finally {
+            ps.busy = false;
+            if (ps.again) {
+                var c = ps.clear;
+                ps.again = ps.clear = false;
+                savePerms(form, c);
+            }
+        }
+    }
+
+    list.addEventListener('change', function (e) {
+        if (e.target.type !== 'radio') return;
+        var form = e.target.closest('form.adm-user-perms-form');
+        if (form) savePerms(form, false);
     });
 
     // ── Move uploads: username suggestions ───────────────────────────────

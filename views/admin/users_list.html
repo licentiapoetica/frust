@@ -6,7 +6,7 @@
 {% set is_system = u.login == "deleted_user" %}
 {% set is_self = (u.id and session and u.id == session.id) %}
 {% set role_name = ("admin" if u.admin else ("mod" if u.is_moderator else "user")) %}
-{% set has_4chan = (u.groups is defined and u.groups is sequence and "4chan" in u.groups) %}
+{% set user_groups = (u.groups if (u.groups is defined and u.groups is sequence) else []) %}
 {% set row_back = back ~ ("&" if "?" in back else "?") ~ "open=" ~ (rid|urlencode) ~ "#user-row-" ~ rid %}
 <details class="adm-user{% if not u.id %} is-legacy{% elif is_system %} is-system{% elif u.banned %} is-banned{% elif not u.activated %} is-pending{% endif %}" id="user-row-{{ rid }}" data-row="{{ rid }}" data-login="{{ u.login }}"{% if not u.id %} data-legacy="1"{% endif %}{% if openRow == rid %} open{% endif %}>
     <summary class="adm-user-row">
@@ -22,7 +22,8 @@
                 {% if u.display_name %}<span class="adm-user-login">@{{ u.user }}</span>{% endif %}
                 {% if is_self %}<span class="adm-user-chip is-you">you</span>{% endif %}
                 {% if u.admin %}<span class="adm-user-chip is-admin">Admin</span>{% elif u.is_moderator %}<span class="adm-user-chip is-mod">Mod</span>{% endif %}
-                {% if has_4chan %}<span class="adm-user-chip is-group">4chan</span>{% endif %}
+                {% for g in user_groups %}<span class="adm-user-chip is-group">{{ g }}</span>{% endfor %}
+                {% if u.id %}<span class="adm-user-chip{% if not (u.permissions is defined and u.permissions) %} adm-users-hidden{% endif %}" title="Own permission overrides" data-perm-chip><i class="fa fa-key"></i> <span>{{ (u.permissions|length if (u.permissions is defined and u.permissions) else 0) }}</span></span>{% endif %}
                 {% if u.force_comment_display_mode %}<span class="adm-user-chip" title="Comment layout locked"><i class="fa fa-lock"></i> {{ ("Linear" if u.comment_display_mode == 1 else "Tree") }}</span>{% endif %}
             </span>
             <span class="adm-user-meta">
@@ -136,15 +137,29 @@
                     <option value="mod"{% if role_name == "mod" %} selected{% endif %}>Moderator</option>
                     <option value="admin"{% if role_name == "admin" %} selected{% endif %}>Admin</option>
                 </select>
-                <button type="submit" class="adm-btn">Save</button>
+                <button type="submit" class="adm-btn">Save role</button>
             </form>
             {% endif %}
+            {#- Groups: every known group (admin panel → Permissions), plus new ones typed in (comma separated) -#}
             <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/set-groups">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
                 <input type="hidden" name="user_id" value="{{ u.id }}">
-                <label class="adm-check adm-user-line-label" title="4chan catalogue, thread viewer and rehosting"><input type="checkbox" name="groups" value="4chan"{% if has_4chan %} checked{% endif %}> 4chan group</label>
-                <button type="submit" class="adm-btn">Save</button>
+                <span class="adm-user-line-label">Groups <a href="/admin/permissions#perm-groups" title="Group permissions"><i class="fa fa-circle-info"></i></a></span>
+                {%- set known_groups = (perm_groups if (perm_groups is defined and perm_groups is sequence) else []) %}
+                {% for g in known_groups %}
+                <label class="adm-check"><input type="checkbox" name="groups" value="{{ g }}"{% if g in user_groups %} checked{% endif %}> {{ g }}</label>
+                {% endfor %}
+                {% for g in user_groups %}{% if g not in known_groups %}
+                <label class="adm-check"><input type="checkbox" name="groups" value="{{ g }}" checked> {{ g }}</label>
+                {% endif %}{% endfor %}
+                <input type="text" name="groups" class="adm-text" placeholder="New group…" aria-label="New groups, comma separated" maxlength="200">
+                <button type="submit" class="adm-btn">Save groups</button>
             </form>
+            {% if u.admin %}
+            <p class="adm-user-hint">Admins have every permission.</p>
+            {% elif perm_catalog is defined %}
+            <p class="adm-user-hint">Single actions: <a href="#user-perms-{{ rid }}">permission overrides</a> below.</p>
+            {% endif %}
             <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/lock-layout">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
                 <input type="hidden" name="user_id" value="{{ u.id }}">
@@ -212,6 +227,49 @@
                 <button type="submit" class="adm-btn adm-btn-danger"><i class="fa fa-trash"></i> Delete account</button>
             </form>
         </section>
+        {% endif %}
+        {#- Own permission overrides: every action with Inherit / Allow / Deny (radio switches; users.js
+            saves a click at once, the button is for no JavaScript). ✓/✗ is what the account may do now. -#}
+        {% if u.id and not is_system and not u.admin and perm_catalog is defined %}
+        {%- set ov = (u.permissions if (u.permissions is defined and u.permissions) else {}) -%}
+        {%- set eff = (u.perms_effective if (u.perms_effective is defined and u.perms_effective) else {}) -%}
+        <details class="adm-user-group adm-user-perms" id="user-perms-{{ rid }}" data-keep-open>
+            <summary class="adm-user-perms-head">
+                <h3>Permission overrides</h3>
+                <span class="adm-user-chip{% if ov %} is-on{% endif %}" data-perm-count>{{ ov|length }} override{{ ("s" if ov|length != 1 else "") }}</span>
+                <span class="adm-user-hint">Inherit = from their groups and role. ✓/✗ = what they can do now.</span>
+                <i class="fa fa-chevron-down adm-user-perms-toggle" aria-hidden="true"></i>
+            </summary>
+            <form class="adm-user-form adm-user-perms-form" method="post" action="/api/v2/admin/users/set-permissions">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <div class="adm-user-perms-grid">
+                    {% for sec in perm_catalog %}
+                    {% if u.is_moderator or sec.name != "Moderation" %}
+                    <fieldset class="adm-user-perm-sec">
+                        <legend>{{ sec.name }}</legend>
+                        {% for p in sec.perms %}
+                        {% set o = (ov[p.key] if p.key in ov else none) %}
+                        <div class="adm-user-perm" title="{{ p.desc }}">
+                            <span class="adm-user-perm-now{% if eff[p.key] %} is-yes{% endif %}" data-perm-now="{{ p.key }}" aria-label="{{ ("allowed now" if eff[p.key] else "not allowed now") }}">{{ ("✓" if eff[p.key] else "✗") }}</span>
+                            <span class="adm-user-perm-name">{{ p.label }}</span>
+                            <span class="adm-user-perm-seg" role="radiogroup" aria-label="{{ p.label }}">
+                                <label class="is-inherit"><input type="radio" name="perm_{{ p.key }}" value="inherit"{% if o is none %} checked{% endif %}><span>Inherit</span></label>
+                                <label class="is-allow"><input type="radio" name="perm_{{ p.key }}" value="allow"{% if o == true %} checked{% endif %}><span>Allow</span></label>
+                                <label class="is-deny"><input type="radio" name="perm_{{ p.key }}" value="deny"{% if o == false %} checked{% endif %}><span>Deny</span></label>
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </fieldset>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="adm-user-perms-actions">
+                    <button type="submit" name="clear" value="1" class="adm-btn adm-btn-ghost"><i class="fa fa-rotate-left"></i> Reset all to inherit</button>
+                    <button type="submit" class="adm-btn adm-btn-primary adm-nojs-only">Save overrides</button>
+                </div>
+            </form>
+        </details>
         {% endif %}
     </div>
 </details>

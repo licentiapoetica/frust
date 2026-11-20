@@ -1,0 +1,126 @@
+{% include (shell_header or "snippets/header.html") %}
+<div class="pagewrapper">
+<div id="main" class="admin-container">
+    {% include "snippets/admin-back.html" %}
+    {#- Plain forms (they post back here without JavaScript); permissions.js saves them in place -#}
+    <div class="container adm adm-perms" id="perm-page" data-csrf="{{ csrf_token }}">
+        <h2>Permissions</h2>
+        <p class="adm-page-intro">What users may do, action by action. Admins always have every permission. For everyone else the first match wins: their own overrides (<a href="/admin/users">User Manager</a>), then their groups (a group that says no beats one that says yes), then the default of their role below. Moderation powers only ever apply to moderators.</p>
+        <span id="perm-status" class="adm-status adm-status-row" role="status"></span>
+
+        <section class="adm-section" id="perm-roles">
+            <h2 class="adm-section-title"><i class="fa-solid fa-user-shield"></i> Role defaults</h2>
+            <p class="adm-perm-hint">"Default" is the built-in value in brackets{% if not anon_access %}. Anonymous accounts are off (<code>enable_anonymous_access</code>), so their column has no effect{% endif %}.</p>
+            <form method="post" action="/admin/permissions/roles" class="adm-perm-form" data-perm-autosave>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="back" value="/admin/permissions#perm-roles">
+                <div class="adm-perm-table-wrap">
+                    <table class="adm-perm-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Permission</th>
+                                {% for r in roles %}<th scope="col">{{ r.label }}</th>{% endfor %}
+                            </tr>
+                        </thead>
+                        {% for sec in catalog %}
+                        <tbody>
+                            <tr class="adm-perm-section"><th colspan="{{ roles|length + 1 }}" scope="colgroup">{{ sec.name }}</th></tr>
+                            {% for p in sec.perms %}
+                            <tr id="perm-{{ p.key }}">
+                                <th scope="row"><span class="adm-perm-label">{{ p.label }}</span><span class="adm-perm-desc">{{ p.desc }}</span></th>
+                                {% for r in roles %}
+                                {% set rv = role_values[r.key] %}
+                                <td data-label="{{ r.label }}">
+                                    {% if p.key in rv %}
+                                    {% set v = rv[p.key] %}
+                                    <select name="{{ r.key }}.{{ p.key }}" class="adm-text adm-select adm-perm-select{% if v.set is not none %} is-set{% endif %}" aria-label="{{ p.label }}: {{ r.label }}">
+                                        <option value="default"{% if v.set is none %} selected{% endif %}>Default ({{ ("yes" if v.builtin else "no") }})</option>
+                                        <option value="allow"{% if v.set == true %} selected{% endif %}>Yes</option>
+                                        <option value="deny"{% if v.set == false %} selected{% endif %}>No</option>
+                                    </select>
+                                    {% else %}
+                                    <span class="adm-muted" title="Moderators only">—</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% endfor %}
+                    </table>
+                </div>
+                <div class="adm-form-actions adm-nojs-only">
+                    <button type="submit" class="adm-btn adm-btn-primary">Save role defaults</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="adm-section" id="perm-groups" data-perm-live>
+            <h2 class="adm-section-title"><i class="fa-solid fa-users"></i> Groups</h2>
+            <p class="adm-perm-hint">Give users groups in the <a href="/admin/users">User Manager</a>. A group only changes the permissions set to Allow or Deny here; the rest come from the role defaults.</p>
+            {% for g in groups %}
+            <details class="adm-perm-group" id="perm-group-{{ loop.index }}"{% if open_group is defined and open_group == g.name %} open{% endif %}>
+                <summary class="adm-perm-group-head">
+                    <span class="adm-perm-group-name">{{ g.name }}</span>
+                    <span class="adm-perm-chip">{{ g.members }} member{{ ("s" if g.members != 1 else "") }}</span>
+                    <span class="adm-perm-chip{% if g.perms|length %} is-on{% endif %}">{{ g.perms|length }} rule{{ ("s" if g.perms|length != 1 else "") }}</span>
+                    {% if not g.configured %}<span class="adm-perm-chip">no permissions yet</span>{% endif %}
+                </summary>
+                <form method="post" action="/admin/permissions/group" class="adm-perm-form" data-perm-autosave>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="back" value="/admin/permissions#perm-group-{{ loop.index }}">
+                    <input type="hidden" name="name" value="{{ g.name }}">
+                    <div class="adm-perm-table-wrap">
+                        <table class="adm-perm-table adm-perm-table-group">
+                            {% for sec in catalog %}
+                            <tbody>
+                                <tr class="adm-perm-section"><th colspan="2" scope="colgroup">{{ sec.name }}</th></tr>
+                                {% for p in sec.perms %}
+                                {% set gv = (g.perms[p.key] if p.key in g.perms else none) %}
+                                <tr>
+                                    <th scope="row"><span class="adm-perm-label">{{ p.label }}</span></th>
+                                    <td>
+                                        <select name="perm_{{ p.key }}" class="adm-text adm-select adm-perm-select{% if gv is not none %} is-set{% endif %}" aria-label="{{ p.label }}: {{ g.name }}">
+                                            <option value="inherit"{% if gv is none %} selected{% endif %}>—</option>
+                                            <option value="allow"{% if gv == true %} selected{% endif %}>Allow</option>
+                                            <option value="deny"{% if gv == false %} selected{% endif %}>Deny</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            {% endfor %}
+                        </table>
+                    </div>
+                    <div class="adm-form-actions adm-nojs-only">
+                        <button type="submit" class="adm-btn adm-btn-primary">Save {{ g.name }}</button>
+                    </div>
+                </form>
+                {% if g.configured %}
+                <form method="post" action="/admin/permissions/group/delete" class="adm-perm-form adm-perm-group-delete" data-perm-reload>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="back" value="/admin/permissions#perm-groups">
+                    <input type="hidden" name="name" value="{{ g.name }}">
+                    <span class="adm-muted">Members keep the group name; it just stops changing their permissions.</span>
+                    <button type="submit" class="adm-btn adm-btn-danger"><i class="fa fa-trash"></i> Remove its permissions</button>
+                </form>
+                {% endif %}
+            </details>
+            {% else %}
+            <p class="adm-muted">No groups yet.</p>
+            {% endfor %}
+
+            <form method="post" action="/admin/permissions/group" class="adm-perm-form adm-perm-new" data-perm-reload>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="back" value="/admin/permissions#perm-groups">
+                <label for="perm-new-group">New group</label>
+                <input type="text" id="perm-new-group" name="name" class="adm-text" required maxlength="64" pattern="[^,]+" placeholder="e.g. trusted" autocomplete="off">
+                <button type="submit" class="adm-btn adm-btn-primary"><i class="fa fa-plus"></i> Create</button>
+            </form>
+        </section>
+    </div>
+
+    <script src="/s/js/views/admin/permissions.js?v={{ mtime("/public/s/js/views/admin/permissions.js") }}"></script>
+</div>
+</div>
+{% include (shell_footer or "snippets/footer.html") %}

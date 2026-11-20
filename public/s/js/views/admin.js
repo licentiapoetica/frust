@@ -20,25 +20,30 @@ F0ckActions.define({
   regenerateTagImages: () => regenerateTagImages(),
 });
 
-async function saveAdminSettings() {
+function setSettingsStatus(text, state) {
   const status = document.getElementById('settings-status');
-  const approvalToggle = document.getElementById('manual_approval_toggle');
-  const registrationToggle = document.getElementById('registration_open_toggle');
-  const applicationsToggle = document.getElementById('registration_applications_toggle');
-  const applicationsEmailToggle = document.getElementById('applications_require_email_toggle');
-  const minTagsInput = document.getElementById('min_tags_input');
-  const trustedUploadsInput = document.getElementById('trusted_uploads_input');
+  if (!status) return;
+  status.textContent = text;
+  status.classList.toggle('is-busy', state === 'busy');
+  status.classList.toggle('is-ok', state === 'ok');
+  status.classList.toggle('is-err', state === 'err');
+}
 
-  status.textContent = 'Saving...';
-  status.style.color = 'var(--accent)';
-
+// The settings form (a plain form without JavaScript): every change is saved in place
+async function saveAdminSettings() {
+  const form = document.getElementById('admin-settings-form');
+  if (!form) return;
+  setSettingsStatus('Saving...', 'busy');
   try {
     const csrfToken = (window.f0ckSession && window.f0ckSession.csrf_token) || document.getElementById('settings-status').dataset.csrf;
     if (!csrfToken || csrfToken.startsWith('{')) {
-      status.textContent = 'CSRF token missing. Please refresh the page.';
-      status.style.color = '#d9534f';
+      setSettingsStatus('CSRF token missing. Please refresh the page.', 'err');
       return;
     }
+    // FormData keeps the hidden "off" before a checked switch's "on"; the server reads the last one
+    const body = new URLSearchParams(new FormData(form));
+    body.delete('back');
+    body.set('csrf_token', csrfToken);
     const res = await fetch('/admin/settings', {
       method: 'POST',
       headers: {
@@ -46,36 +51,24 @@ async function saveAdminSettings() {
         'Content-Type': 'application/x-www-form-urlencoded',
         'X-CSRF-Token': csrfToken
       },
-      body: new URLSearchParams({
-        manual_approval: approvalToggle ? (approvalToggle.checked ? 'on' : 'off') : 'off',
-        ...(registrationToggle ? { registration_open: registrationToggle.checked ? 'on' : 'off' } : {}),
-        ...(applicationsToggle ? { registration_applications: applicationsToggle.checked ? 'on' : 'off' } : {}),
-        ...(applicationsEmailToggle ? { applications_require_email: applicationsEmailToggle.checked ? 'on' : 'off' } : {}),
-        min_tags: minTagsInput ? minTagsInput.value : '0',
-        trusted_uploads: trustedUploadsInput ? trustedUploadsInput.value : '0',
-        csrf_token: csrfToken
-      }).toString()
+      body: body.toString()
     });
-
-    if (!res.ok) {
-      if (res.status === 403) {
-        throw new Error('CSRF validation failed or session expired. Please reload the page.');
-      }
-      throw new Error('Server returned ' + res.status);
+    if (res.status === 403) throw new Error('CSRF validation failed or session expired. Please reload the page.');
+    const data = await res.json().catch(() => null);
+    if (!data) throw new Error('Server returned ' + res.status);
+    if (!data.success) throw new Error(data.msg || 'Save failed');
+    const size = data.upload_size;
+    if (size) {
+      const now = document.getElementById('upload_limit_now');
+      const large = document.getElementById('upload_limit_large_now');
+      if (now) now.textContent = size.limit;
+      if (large) large.textContent = size.limit_large;
     }
-
-    const data = await res.json();
-    if (data.success) {
-      status.textContent = 'Saved!';
-      status.style.color = '#28a745';
-      setTimeout(() => { status.textContent = ''; }, 2000);
-    } else {
-      throw new Error(data.msg || 'Save failed');
-    }
+    setSettingsStatus('Saved!', 'ok');
+    setTimeout(() => setSettingsStatus('', ''), 2000);
   } catch (err) {
     console.error('Settings save error:', err);
-    status.textContent = 'Error: ' + err.message;
-    status.style.color = '#d9534f';
+    setSettingsStatus('Error: ' + err.message, 'err');
   }
 }
 

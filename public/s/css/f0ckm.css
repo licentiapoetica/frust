@@ -24879,6 +24879,354 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   border-color: var(--adm-accent);
 }
 
+/* Upload size and multiplier (decimals) */
+:where(.adm) .adm-number-wide {
+  width: 110px;
+}
+
+/* ---- admin/permissions.html: role defaults and group permissions (crate::perms) ---- */
+:where(.adm) .adm-perm-hint {
+  margin: 0 0 12px;
+  font-size: 0.85em;
+  color: var(--adm-muted);
+}
+
+:where(.adm) .adm-perm-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-surface);
+}
+
+:where(.adm) .adm-perm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88em;
+}
+
+:where(.adm) .adm-perm-table th,
+:where(.adm) .adm-perm-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--adm-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+:where(.adm) .adm-perm-table thead th {
+  position: sticky;
+  top: 0;
+  font-size: 0.75em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--adm-muted);
+  background: var(--adm-surface);
+  white-space: nowrap;
+}
+
+:where(.adm) .adm-perm-table .adm-perm-section th {
+  padding-top: 14px;
+  font-size: 0.72em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--adm-accent);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+:where(.adm) .adm-perm-table tbody th[scope="row"] {
+  font-weight: normal;
+  min-width: 220px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+:where(.adm) .adm-perm-label {
+  display: block;
+  font-weight: 600;
+  color: var(--adm-text);
+}
+
+:where(.adm) .adm-perm-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.85em;
+  color: var(--adm-muted);
+}
+
+:where(.adm) .adm-perm-table tr:target {
+  background: rgba(var(--accent-rgb, 0, 150, 255), 0.12);
+}
+
+:where(.adm) .adm-perm-select {
+  width: 100%;
+  min-width: 120px;
+  max-width: 180px;
+  height: 32px;
+}
+
+/* A value set here (not the built-in default / not inherited) */
+:where(.adm) .adm-perm-select.is-set {
+  border-color: var(--adm-accent);
+  color: var(--adm-accent);
+}
+
+:where(.adm) .adm-perm-group {
+  margin: 0 0 8px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-surface);
+}
+
+:where(.adm) .adm-perm-group[open] {
+  border-color: var(--adm-accent);
+}
+
+:where(.adm) .adm-perm-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+:where(.adm) .adm-perm-group-name {
+  font-weight: 700;
+  color: var(--adm-text);
+}
+
+:where(.adm) .adm-perm-chip {
+  padding: 0 6px;
+  font-size: 0.7em;
+  font-weight: 800;
+  line-height: 1.7;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--adm-border);
+  color: var(--adm-muted);
+}
+
+:where(.adm) .adm-perm-chip.is-on {
+  border-color: var(--adm-accent);
+  color: var(--adm-accent);
+}
+
+:where(.adm) .adm-perm-group > form {
+  padding: 0 12px 12px;
+}
+
+:where(.adm) .adm-perm-group .adm-perm-table-wrap {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+:where(.adm) .adm-perm-group-delete,
+:where(.adm) .adm-perm-new {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+:where(.adm) .adm-perm-group-delete .adm-muted {
+  flex: 1 1 220px;
+  font-size: 0.85em;
+}
+
+:where(.adm) .adm-perm-new {
+  margin-top: 14px;
+}
+
+:where(.adm) .adm-perm-new .adm-text {
+  flex: 1 1 200px;
+  width: auto;
+}
+
+:where(.adm) .adm-perm-form > .adm-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+/* User Manager: a user's own permission overrides, a full-width section of the open row */
+:where(.adm-users) .adm-user-perms {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--adm-border);
+  padding-top: 12px;
+}
+
+:where(.adm-users) .adm-user-perms-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+:where(.adm-users) .adm-user-perms-head::-webkit-details-marker {
+  display: none;
+}
+
+:where(.adm-users) .adm-user-perms-head h3 {
+  margin: 0;
+  color: var(--adm-text);
+}
+
+:where(.adm-users) .adm-user-perms-head .adm-user-hint {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+:where(.adm-users) .adm-user-perms-head:hover h3,
+:where(.adm-users) .adm-user-perms[open] .adm-user-perms-toggle {
+  color: var(--adm-accent);
+}
+
+:where(.adm-users) .adm-user-chip.is-on {
+  border-color: var(--adm-accent);
+  color: var(--adm-accent);
+}
+
+:where(.adm-users) .adm-user-perms-toggle {
+  margin-left: auto;
+  font-size: 0.8em;
+  color: var(--adm-muted);
+  transition: transform 0.15s;
+}
+
+:where(.adm-users) .adm-user-perms[open] .adm-user-perms-toggle {
+  transform: rotate(180deg);
+}
+
+:where(.adm-users) .adm-user-perms-form {
+  margin-top: 12px;
+}
+
+:where(.adm-users) .adm-user-perms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+  gap: 14px 24px;
+  align-items: start;
+}
+
+:where(.adm-users) .adm-user-perm-sec {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+:where(.adm-users) .adm-user-perm-sec > legend {
+  padding: 0 0 4px;
+  font-size: 0.68em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-user-perm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  border-top: 1px solid var(--adm-border);
+  font-size: 0.82em;
+}
+
+:where(.adm-users) .adm-user-perm-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:where(.adm-users) .adm-user-perm-now {
+  flex: 0 0 auto;
+  width: 1.1em;
+  text-align: center;
+  font-weight: 800;
+  color: #ff8787;
+}
+
+:where(.adm-users) .adm-user-perm-now.is-yes {
+  color: #69db7c;
+}
+
+/* Inherit / Allow / Deny: radio buttons drawn as one segmented switch */
+:where(.adm-users) .adm-user-perm-seg {
+  flex: 0 0 auto;
+  display: inline-flex;
+  border: 1px solid var(--adm-border);
+}
+
+:where(.adm-users) .adm-user-perm-seg label {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+:where(.adm-users) .adm-user-perm-seg label + label {
+  border-left: 1px solid var(--adm-border);
+}
+
+:where(.adm-users) .adm-user-perm-seg input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+:where(.adm-users) .adm-user-perm-seg span {
+  display: block;
+  padding: 2px 7px;
+  font-size: 0.82em;
+  line-height: 1.6;
+  color: var(--adm-muted);
+}
+
+:where(.adm-users) .adm-user-perm-seg label:hover span {
+  color: var(--adm-text);
+  background: var(--adm-surface);
+}
+
+:where(.adm-users) .adm-user-perm-seg input:focus-visible + span {
+  outline: 1px solid var(--adm-accent);
+  outline-offset: -1px;
+}
+
+:where(.adm-users) .adm-user-perm-seg .is-inherit input:checked + span {
+  color: var(--adm-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:where(.adm-users) .adm-user-perm-seg .is-allow input:checked + span {
+  color: #0b0b0b;
+  background: #69db7c;
+}
+
+:where(.adm-users) .adm-user-perm-seg .is-deny input:checked + span {
+  color: #0b0b0b;
+  background: #ff8787;
+}
+
+:where(.adm-users) .adm-user-perms-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* No-JS save button under the admin settings form */
+:where(.adm) #admin-settings-form > .adm-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
 :where(.adm) .adm-switch {
   position: relative;
   display: inline-block;
