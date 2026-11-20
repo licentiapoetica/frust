@@ -857,6 +857,7 @@ fn sync_user_options(st: &AppState, row: &Row, session: &Session, theme: &str) {
 const CSRF_EXEMPT: &[&str] = &[
     "/login",
     "/register",
+    "/register/passkey",
     "/api/v2/anon/session",
     "/api/v2/anon/logout",
     "/api/v2/anon/passkey/register/begin",

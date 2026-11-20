@@ -17,14 +17,21 @@
   </head>
   <body type="login">
     {% include "frontends/f0ckv2/snippets/flash.html" %}
-    <form class="login-form" method="post" action="/register">
+    <form class="login-form" method="post" action="/register" data-passkey-signup="auto">
       <p><a href="/"><img class="v2-login-logo" src="{{ (custom_brand_image if (custom_brand_image and custom_brand_image is string) else "/s/fe/f0ckv2/img/f0ck_small.png") }}" alt="{{ domain }}" /></a></p>
       {% if error is string and error %}<div class="v2-flash-error">{{ error }}</div>{% endif %}
       {% if success is string and success %}<div class="v2-flash-success">{{ success }}</div>{% endif %}
+      {#- the answer of a registration with a passkey (passkey-signup.js) -#}
+      <div data-passkey-signup-msg data-ok-class="v2-flash-success" data-error-class="v2-flash-error" role="status" hidden></div>
       {% if not (success is string and success) %}
+      {#- the fields, gone after a registration sent by passkey-signup.js (pk-signup-done) -#}
+      <div class="reg-fields">
       <input type="text" name="username" placeholder="username" autocomplete="username" required />
       <input type="password" name="password" placeholder="password (min. 20)" autocomplete="new-password" required minlength="20" />
       <input type="password" name="password_confirm" placeholder="confirm password" autocomplete="new-password" required minlength="20" />
+      {#- a passkey besides the password: passkey-signup.js shows and ticks it where the browser can make passkeys (without javascript the form registers with the password alone) -#}
+      <p class="v2-tos reg-passkey-opt"><input type="checkbox" id="add-passkey" name="add_passkey" value="1" /> <label for="add-passkey">also create a passkey</label></p>
+      <p class="v2-hint reg-if-passkey">your device or password manager saves a passkey for this site after the checks. you sign in with it or with your password.</p>
       {#- the token of an invite link (early.js: /?register=1&token=…, /register: /?invite=…) -#}
       {%- set invite_token = (token if (token is defined and token) else (((url.qs.token or url.qs.invite) or "") if (url is defined and url and url.qs) else "")) %}
       {% if registration_apply %}
@@ -51,6 +58,7 @@
       {% include "frontends/f0ckv2/snippets/cap-image.html" %}
       {% endif %}
       <button type="submit">{{ ("Apply / Register" if registration_apply else "Register") }}</button>
+      </div>
       {% endif %}
       <p class="v2-login-links">
         <a href="/?login=1">login</a>
@@ -59,5 +67,6 @@
     </form>
     {#- the rules and terms have to be read before the checkbox gets ticked -#}
     {% include "snippets/tos-consent.html" %}
+    <script src="/s/js/passkey-signup.js?v={{ mtime("/public/s/js/passkey-signup.js") }}"></script>
   </body>
 </html>

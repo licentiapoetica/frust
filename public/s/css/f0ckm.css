@@ -26215,6 +26215,12 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   color: #ff6b6b;
 }
 
+/* Applied with a passkey besides the password (routes/register.rs) */
+#main .adm-app-passkey {
+  color: var(--adm-muted);
+  font-size: 0.75em;
+}
+
 #main .adm-app-meta {
   color: var(--adm-muted);
   font-size: 0.82em;
@@ -37340,9 +37346,42 @@ html.no-js #login-modal #login-tabs,
 html.no-js :is(#login-modal, #register-modal) .lm-reveal,
 html.no-js #login-modal #modal-forgot-btn,
 html.no-js #login-modal .lm-anon,
-html.no-js :is(#login-modal, #register-modal) cap-widget,
-html.no-js #register-modal .lm-form-done {
+html.no-js :is(#login-modal, #register-modal) cap-widget {
   display: none !important;
+}
+
+/* Register modal after a successful registration: the message and a close button instead of the
+   form, so it can't be mistaken for the form again (f0ckm.js; without JavaScript ?register_done=…) */
+#register-modal .lm-form-done,
+#register-modal .lm-done[hidden] {
+  display: none !important;
+}
+
+#register-modal .lm-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0 4px;
+  text-align: center;
+}
+
+#register-modal .lm-done-icon {
+  font-size: 2.6em;
+  color: var(--lm-accent);
+}
+
+#register-modal .lm-done-msg {
+  margin: 0;
+  color: var(--lm-text);
+  line-height: 1.5;
+}
+
+#register-modal .lm-done .lm-btn {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  text-decoration: none;
 }
 
 /* Register modal: the application message (registration by application), styled like the inputs */
@@ -37383,6 +37422,25 @@ html.no-js #register-modal .lm-form-done {
    application (message + email), never both; no JavaScript needed. The server ignores the other one. */
 form:not(:has(input[name="has_invite"][value="yes"]:checked)) .reg-if-token,
 form:not(:has(input[name="has_invite"][value="no"]:checked)) .reg-if-apply {
+  display: none !important;
+}
+
+/* A passkey besides the password at registration (public/s/js/passkey-signup.js): the checkbox only
+   shows once the script found passkey support (no JavaScript: password only); the note goes with it. */
+form:not(.pk-signup-ready) :is(.reg-passkey-opt, .reg-if-passkey),
+form:not(:has(input[name="add_passkey"]:checked)) .reg-if-passkey,
+[data-passkey-signup-msg][hidden] {
+  display: none !important;
+}
+
+/* The fields of a register form wrap in div.reg-fields without changing the layout (the submit
+   button carries the class itself); after a registration sent by passkey-signup.js only the
+   message stays (pk-signup-done). */
+div.reg-fields {
+  display: contents;
+}
+
+form.pk-signup-done .reg-fields {
   display: none !important;
 }
 

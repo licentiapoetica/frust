@@ -109,6 +109,8 @@
     "have_invite": "Heb je een uitnodigingscode?",
     "have_invite_yes": "Ja",
     "have_invite_no": "Nee, ik vraag er een aan",
+    "add_passkey": "Maak ook een passkey aan",
+    "passkey_signup_hint": "Na de controles bewaart je apparaat of wachtwoordmanager een passkey voor deze site. Je logt ermee in of met je wachtwoord.",
     "application_placeholder": "Vertel ons waarom je een account wilt (minstens 20 tekens)",
     "email_apply_optional": "e-mail (optioneel)",
     "email_apply_required": "e-mail (nodig om aan te vragen)",

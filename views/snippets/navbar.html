@@ -555,7 +555,13 @@
         <div class="lm-subtitle">{{ domain }}</div>
       </div>
 
-      {% if register_done_msg %}<div class="flash-success">{{ register_done_msg }}</div>{% endif %}
+      {#- After a successful registration only the message and a way out are left (the form gets
+          lm-form-done; without JavaScript the page comes back with ?register_done=…) -#}
+      <div class="lm-done" id="register-done"{% if not register_done_msg %} hidden{% endif %} role="status">
+        <i class="fa-solid fa-circle-check lm-done-icon"></i>
+        <p class="lm-done-msg" id="register-done-msg">{{ (register_done_msg or "") }}</p>
+        <a href="#_" class="lm-btn lm-btn-primary" id="register-done-close">{{ t("common.close") }}</a>
+      </div>
       <form class="login-form lm-form{% if register_done_msg %} lm-form-done{% endif %}" id="modal-register-form" method="post" action="/register" novalidate>
         <div id="register-status"></div>
         <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}" />
@@ -580,6 +586,15 @@
             <i class="fa-solid fa-eye"></i>
           </button>
         </label>
+        {#- A passkey besides the password: passkey-signup.js shows and ticks it where the browser can make passkeys (without JavaScript the form registers with the password alone) -#}
+        <div class="lm-row reg-passkey-opt">
+          <label class="lm-check lm-check-multiline" for="add-passkey-modal">
+            <input type="checkbox" id="add-passkey-modal" name="add_passkey" value="1" />
+            <span class="lm-check-box"><i class="fa-solid fa-check"></i></span>
+            <span>{{ t("auth.add_passkey") }}</span>
+          </label>
+        </div>
+        <p class="lm-hint reg-if-passkey"><i class="fa-solid fa-circle-info"></i>{{ t("auth.passkey_signup_hint") }}</p>
         {% if registration_apply %}
         {#- Registration by application (routes/register.rs): an invite token, or a message for the admins.
             The answer shows one of them (CSS :has(), no JavaScript needed); the server ignores the other -#}
@@ -640,6 +655,7 @@
 </div>
 {#- the rules and terms have to be read before the register form's checkbox gets ticked -#}
 {% include "snippets/tos-consent.html" %}
+<script src="/s/js/passkey-signup.js?v={{ mtime("/public/s/js/passkey-signup.js") }}"></script>
 
 {% include "snippets/upload-modal.html" %}
 

@@ -109,6 +109,8 @@
     "have_invite": "Do you have an invite token?",
     "have_invite_yes": "Yes",
     "have_invite_no": "No, I want to apply",
+    "add_passkey": "Also create a passkey",
+    "passkey_signup_hint": "Your device or password manager saves a passkey for this site after the checks. You sign in with it or with your password.",
     "application_placeholder": "Tell us why you want an account (at least 20 characters)",
     "email_apply_optional": "email (optional)",
     "email_apply_required": "email (needed to apply)",

@@ -7,16 +7,23 @@
 <script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
 {% endif %}
 <main class="fg-card-page">
-  <form class="fg-signin-card" method="post" action="/register">
+  <form class="fg-signin-card" method="post" action="/register" data-passkey-signup="auto">
     <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
     <a href="/" class="fg-signin-logo">{% include "frontends/f0ckgle/snippets/logo.html" %}</a>
     <h1>Create a f0ckgle Account</h1>
     <p class="fg-signin-sub">for {{ domain }}</p>
     {% if (error is defined and error is string and error) %}<p class="fg-form-error">{{ error }}</p>{% endif %}
+    {#- the answer of a registration with a passkey (passkey-signup.js) -#}
+    <p data-passkey-signup-msg data-ok-class="fg-form-ok" data-error-class="fg-form-error" role="status" hidden></p>
     {% if (success is defined and success is string and success) %}<p class="fg-form-ok">{{ success }}</p>{% else %}
+    {#- the fields, gone after a registration sent by passkey-signup.js (pk-signup-done) -#}
+    <div class="reg-fields">
     <label class="fg-field"><input type="text" name="username" placeholder=" " autocomplete="username" required><span>Username</span></label>
     <label class="fg-field"><input type="password" name="password" placeholder=" " autocomplete="new-password" required minlength="20"><span>Password (min. 20 characters)</span></label>
     <label class="fg-field"><input type="password" name="password_confirm" placeholder=" " autocomplete="new-password" required minlength="20"><span>Confirm</span></label>
+    {#- A passkey besides the password: passkey-signup.js shows and ticks it where the browser can make passkeys (without JavaScript the form registers with the password alone) -#}
+    <label class="fg-check reg-passkey-opt"><input type="checkbox" name="add_passkey" value="1"> Also create a passkey</label>
+    <p class="fg-hint reg-if-passkey">Your device or password manager saves a passkey for this site after the checks. You sign in with it or with your password.</p>
     {#- the token of an invite link (early.js: /?register=1&token=…, /register: /?invite=…) -#}
     {%- set invite_token = (token if (token is defined and token) else (((url.qs.token or url.qs.invite) or "") if (url is defined and url and url.qs) else "")) %}
     {% if registration_apply %}
@@ -42,15 +49,17 @@
     <cap-widget class="js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
     {% include "frontends/f0ckgle/snippets/cap-image.html" %}
     {% endif %}
+    </div>
     {% endif %}
     <div class="fg-signin-btns">
       <a href="/?login=1" class="fg-btn-text">Sign in instead</a>
-      {% if not (success is defined and success is string and success) %}<button type="submit" class="fg-btn-blue">{{ ("Apply" if registration_apply else "Next") }}</button>{% endif %}
+      {% if not (success is defined and success is string and success) %}<button type="submit" class="fg-btn-blue reg-fields">{{ ("Apply" if registration_apply else "Next") }}</button>{% endif %}
     </div>
   </form>
   <div class="fg-signin-foot"><span>English (f0ckland)</span>{% set fg_scheme_class = "fg-signin-scheme" %}{% include "frontends/f0ckgle/snippets/scheme-switch.html" %}<span><a href="/about">Help</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></span></div>
 </main>
 {#- the rules and terms have to be read before the checkbox gets ticked -#}
 {% include "snippets/tos-consent.html" %}
+<script src="/s/js/passkey-signup.js?v={{ mtime("/public/s/js/passkey-signup.js") }}"></script>
 </body>
 </html>

@@ -9,6 +9,11 @@ F0ckActions.define({ openLoginGate: function(el, e, view) { openLoginGate(view);
 function gateShowView(view) {
   document.getElementById('gate-login-view').style.display    = view === 'login'    ? 'block' : 'none';
   document.getElementById('gate-register-view').style.display = view === 'register' ? 'block' : 'none';
+  // the register form again after a successful registration
+  if (view === 'register' && document.getElementById('gate-register-form').classList.contains('gate-done')) {
+    document.getElementById('gate-register-form').classList.remove('gate-done');
+    gateSetError('gate-register-ok', '');
+  }
 }
 function gateSetError(id, msg) {
   var el = document.getElementById(id);
@@ -81,14 +86,15 @@ document.addEventListener('DOMContentLoaded', function() {
       gateSetBtn('gate-register-btn', false);
       return;
     }
-    var body = new URLSearchParams(fd).toString();
-    fetch('/register', {
+    var form = this;
+    // Also a passkey (passkey-signup.js ticks the box where the browser can make one)
+    var viaPasskey = !!(window.f0ckPasskeySignup && form.querySelector('input[name="add_passkey"]:checked'));
+    var sent = viaPasskey ? window.f0ckPasskeySignup(form) : fetch('/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-      body: body
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
+      body: new URLSearchParams(fd).toString()
+    }).then(function(r) { return r.json(); });
+    sent.then(function(d) {
       gateSetBtn('gate-register-btn', false);
       if (d.success === false) {
         gateSetError('gate-register-error', d.msg || 'Registration failed.');
@@ -97,8 +103,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('gate-register-ok').textContent = d.msg || 'Account created! You can now sign in.';
         document.getElementById('gate-register-ok').style.display = 'block';
         document.getElementById('gate-register-form').reset();
-        // An application: no account to sign in to yet, the message stays
-        if (!d.applied) setTimeout(function() { gateShowView('login'); }, 2000);
+        // Only the message (and the way back to sign in) stays: the fields go (gate.css .gate-done)
+        document.getElementById('gate-register-form').classList.add('gate-done');
+        // Signed in with the new passkey: past the gate
+        if (d.logged_in) setTimeout(function() { window.location.reload(); }, 1200);
       }
     })
     .catch(function() {

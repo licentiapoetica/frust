@@ -1,7 +1,18 @@
 (() => {
   const loginModal = document.getElementById('login-modal');
   const registerModal = document.getElementById('register-modal');
-  const close = (m) => { if (m) m.style.display = 'none'; };
+  // After a successful registration the register modal shows only the message and a close button
+  // (snippets/navbar.html #register-done); closing it brings the form back
+  const regDone = document.getElementById('register-done');
+  const resetRegisterDone = () => {
+    if (regDone) regDone.hidden = true;
+    document.getElementById('modal-register-form')?.classList.remove('lm-form-done');
+  };
+  const close = (m) => {
+    if (!m) return;
+    m.style.display = 'none';
+    if (m === registerModal) resetRegisterDone();
+  };
   const open = (m) => { if (m) m.style.display = 'flex'; };
 
   // View switching for login/forgot/reset within the login modal
@@ -161,6 +172,7 @@
   if (registerModal) {
     const regClose = document.getElementById('register-modal-close');
     if (regClose) regClose.addEventListener('click', () => close(registerModal));
+    document.getElementById('register-done-close')?.addEventListener('click', (e) => { e.preventDefault(); close(registerModal); });
     registerModal.addEventListener('click', (e) => { if (e.target === registerModal) close(registerModal); });
   }
 
@@ -188,6 +200,8 @@
       const status = document.getElementById('register-status');
       const formData = new FormData(regForm);
       const btn = regForm.querySelector('button[type="submit"]');
+      // Also a passkey (passkey-signup.js ticks the box where the browser can make one)
+      const viaPasskey = !!(window.f0ckPasskeySignup && regForm.querySelector('input[name="add_passkey"]:checked'));
       const password = formData.get('password');
       const password_confirm = formData.get('password_confirm');
 
@@ -209,18 +223,24 @@
 
       btn.disabled = true; btn.textContent = 'Creating...';
       try {
-        const resp = await fetch('/register', {
+        const json = viaPasskey ? await window.f0ckPasskeySignup(regForm) : await (await fetch('/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
           body: new URLSearchParams(new FormData(regForm)),
           credentials: 'include'
-        });
-        const json = await resp.json();
-        if (status) { status.textContent = json.msg || ''; status.className = json.success ? 'flash-success' : 'flash-error'; }
-        if (json.success && json.upgraded) setTimeout(() => { location.reload(); }, 1500);
-        else if (json.success && json.applied) regForm.reset(); // an application: no account to log in to yet
-        else if (json.success) setTimeout(() => { close(registerModal); open(loginModal); }, 2000);
-        else window.f0ckCapReset?.(regForm); // captcha tokens are single-use
+        })).json();
+        if (json.success && regDone) {
+          // The form makes way for the message and a close button
+          document.getElementById('register-done-msg').textContent = json.msg || '';
+          regForm.classList.add('lm-form-done');
+          regDone.hidden = false;
+        } else if (status) {
+          status.textContent = json.msg || '';
+          status.className = json.success ? 'flash-success' : 'flash-error';
+        }
+        if (json.success) regForm.reset();
+        if (json.success && (json.upgraded || json.logged_in)) setTimeout(() => { location.reload(); }, 1500);
+        else if (!json.success) window.f0ckCapReset?.(regForm); // captcha tokens are single-use
       } catch (err) {
         if (status) { status.textContent = 'Network error.'; status.className = 'flash-error'; }
       } finally { btn.disabled = false; btn.textContent = 'Create Account'; }

@@ -3575,6 +3575,7 @@ CREATE TABLE IF NOT EXISTS public.account_applications (
     login VARCHAR(255) NOT NULL,
     username VARCHAR(255) NOT NULL,
     password TEXT NOT NULL DEFAULT '',
+    passkey JSONB,
     email TEXT,
     message TEXT NOT NULL DEFAULT '',
     ip_hash VARCHAR(128),

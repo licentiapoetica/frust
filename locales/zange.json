@@ -106,6 +106,8 @@
     "have_invite": "Hast du ein Einladungskots?",
     "have_invite_yes": "Ja",
     "have_invite_no": "Nein, ich bewerbe mich",
+    "add_passkey": "Zusätzlich einen Passkey machen",
+    "passkey_signup_hint": "Nach den Prüfungen speichert dein Gerät oder Passwortmanager einen Passkey für diese Seite. Du meldest dich damit oder mit deinem Passwort an.",
     "application_placeholder": "Schreib uns, warum du ein Konto möchtest (mindestens 20 Zeichen)",
     "email_apply_optional": "E-Post (optional)",
     "email_apply_required": "E-Post (für die Bewerbung nötig)",

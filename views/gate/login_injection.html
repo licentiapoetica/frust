@@ -43,6 +43,9 @@
         <input type="text" name="username" placeholder="Username" autocomplete="off" required class="gate-input" />
         <input type="password" name="password" placeholder="Password (min. 20 characters)" autocomplete="off" required minlength="20" class="gate-input" />
         <input type="password" name="password_confirm" placeholder="Confirm password" autocomplete="off" required minlength="20" class="gate-input" />
+        {#- A passkey besides the password: passkey-signup.js shows and ticks it where the browser can make passkeys (without JavaScript the form registers with the password alone) -#}
+        <label class="gate-kmsi reg-passkey-opt"><input type="checkbox" name="add_passkey" value="1"> Also create a passkey</label>
+        <p class="gate-hint reg-if-passkey">Your device or password manager saves a passkey for this site after the checks. You sign in with it or with your password.</p>
         {% if registration_apply %}
         {#- An invite token or an application: the answer shows one of them (CSS :has()) -#}
         <div class="gate-invite-choice" role="radiogroup" aria-label="Do you have an invite token?">
@@ -68,5 +71,6 @@
   </div>
 </div>
 
+<script src="/s/js/passkey-signup.js?v={{ mtime("/public/s/js/passkey-signup.js") }}"></script>
 <script src="/s/js/views/gate/login_injection.js?v={{ mtime("/public/s/js/views/gate/login_injection.js") }}"></script>
 {% if captcha %}<script src="/s/cap/cap-config.js?v={{ mtime("/public/s/cap/cap-config.js") }}"></script><script src="/s/cap/cap.min.js?v=0.1.58" defer></script>{% endif %}

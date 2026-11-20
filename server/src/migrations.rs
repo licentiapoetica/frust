@@ -206,6 +206,9 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"CREATE UNIQUE INDEX IF NOT EXISTS idx_account_applications_pending_login ON account_applications(login) WHERE (status = 'pending')"#,
     r#"CREATE INDEX IF NOT EXISTS idx_account_applications_login ON account_applications(login)"#,
     r#"CREATE INDEX IF NOT EXISTS idx_account_applications_status ON account_applications(status, created_at)"#,
+    // migrations/add_application_passkey.sql: an application made with a passkey besides the
+    // password keeps the passkey (webauthn::NewPasskey) until an admin approves it
+    r#"ALTER TABLE account_applications ADD COLUMN IF NOT EXISTS passkey JSONB"#,
     // migrations/fix_null_visibility.sql, then make the column NOT NULL (only touches the table once)
     r#"DO $$ BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns

@@ -246,7 +246,13 @@ async fn login_finish(st: AppState, mut req: Req) -> Res {
     )
     .fetch_optional(&st.db)
     .await?;
-    let Some(row) = row else { return fail("No registered account found for this passkey.", 401) };
+    let Some(row) = row else {
+        // Applied with this passkey (routes/register.rs): no account yet, the passkey shows the state
+        if let Some(msg) = application_state(&st, &req, pending, &body, &cred_id).await? {
+            return fail(msg, 403);
+        }
+        return fail("No registered account found for this passkey.", 401);
+    };
     let user_id = row.i64("user_id").unwrap_or(0);
 
     let ban_active = row.bool("banned")
@@ -280,4 +286,23 @@ async fn login_finish(st: AppState, mut req: Req) -> Res {
     crate::security::log_user_ip(&st, user_id, &req.real_ip()).await;
     req.set_cookie(crate::auth::session_cookie(&cfg, &s.session, true));
     j(json!({ "success": true, "user": row.val("user"), "login": row.val("login"), "force_password_change": row.bool("force_password_change") }), 200)
+}
+
+/// The state of an open (or declined) account application made with this passkey, once the passkey
+/// verified; the password login answers the same for applications with a password.
+async fn application_state(st: &AppState, req: &Req, pending: wa::Pending, body: &Value, cred_id: &str) -> anyhow::Result<Option<&'static str>> {
+    let app = sql!(
+        "SELECT status, passkey FROM account_applications WHERE passkey->>'cred_id' = ", cred_id,
+        " AND status IN ('pending', 'denied') ORDER BY id DESC LIMIT 1"
+    )
+    .fetch_optional(&st.db)
+    .await?;
+    let Some(app) = app else { return Ok(None) };
+    let Ok(p) = serde_json::from_value::<wa::NewPasskey>(app.val("passkey").clone()) else { return Ok(None) };
+    let handle = p.user_handle.to_string();
+    if let Err(e) = wa::finish_authentication(&st.cfg(), req, pending, body, wa::Stored { passkey: &p.passkey, user_handle: Some(&handle) }) {
+        tracing::warn!("[PASSKEYS] application passkey verification failed: {e}");
+        return Ok(None);
+    }
+    Ok(Some(if app.str("status") == Some("pending") { crate::routes::register::APPLICATION_PENDING } else { crate::routes::register::APPLICATION_DENIED }))
 }

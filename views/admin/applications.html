@@ -15,6 +15,7 @@
                     <div class="adm-app-head">
                         {% if a.user_id %}<a class="adm-app-name" href="/user/{{ a.username|lower }}">{{ a.username }}</a>{% else %}<strong class="adm-app-name">{{ a.username }}</strong>{% endif %}
                         <span class="adm-app-status adm-app-status-{{ a.status }}">{{ ("declined" if a.status == "denied" else a.status) }}</span>
+                        {% if a.with_passkey %}<span class="adm-app-passkey" title="Comes with a passkey besides the password"><i class="fa-solid fa-fingerprint"></i> passkey</span>{% endif %}
                         <span class="adm-app-meta">{{ a.created_at|locale_string(lang) }}{% if a.email %} · {{ a.email }}{% endif %}</span>
                     </div>
                     <p class="adm-app-message">{{ a.message }}</p>

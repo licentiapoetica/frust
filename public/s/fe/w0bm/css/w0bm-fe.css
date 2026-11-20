@@ -1482,6 +1482,25 @@ form:not(:has(input[name="has_invite"][value="yes"]:checked)) .reg-if-token,
 form:not(:has(input[name="has_invite"][value="no"]:checked)) .reg-if-apply {
     display: none !important;
 }
+
+/* A passkey besides the password at registration (public/s/js/passkey-signup.js): the checkbox only
+   shows once the script found passkey support (no JavaScript: password only); the note goes with it. */
+form:not(.pk-signup-ready) :is(.reg-passkey-opt, .reg-if-passkey),
+form:not(:has(input[name="add_passkey"]:checked)) .reg-if-passkey,
+[data-passkey-signup-msg][hidden] {
+  display: none !important;
+}
+
+/* The fields of a register form wrap in div.reg-fields without changing the layout (the submit
+   button carries the class itself); after a registration sent by passkey-signup.js only the
+   message stays (pk-signup-done). */
+div.reg-fields {
+  display: contents;
+}
+
+form.pk-signup-done .reg-fields {
+  display: none !important;
+}
 .w0bm-invite-choice > span {
     display: block;
     margin-bottom: 4px;

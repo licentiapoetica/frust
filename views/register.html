@@ -13,7 +13,7 @@
   {% endif %}
 </head>
 <body type="login">
-    <form class="login-form" method="post" action="/register" novalidate>
+    <form class="login-form" method="post" action="/register" novalidate data-passkey-signup="auto">
         {% if (not success and error is undefined) %}
         <h2 class="register-title">{{ t("auth.register_title") }}</h2>
         {% endif %}
@@ -23,11 +23,18 @@
         {% if success %}
         <div class="flash-success">{{ success }}</div>
         {% endif %}
+        {#- the answer of a registration with a passkey (passkey-signup.js) #}
+        <div data-passkey-signup-msg data-ok-class="flash-success" data-error-class="flash-error" role="status" hidden></div>
         
         {% if (not success and error is undefined) %}
+        {#- the fields, gone after a registration sent by passkey-signup.js (pk-signup-done) -#}
+        <div class="reg-fields">
         <input type="text" name="username" placeholder="{{ t("auth.username_placeholder") }}" autocomplete="off" required />
         <input type="password" name="password" placeholder="{{ t("auth.password_placeholder") }}" autocomplete="off" required minlength="20" title="{{ t("auth.password_min_hint") }}" />
         <input type="password" name="password_confirm" placeholder="{{ t("auth.confirm_password") }}" autocomplete="off" required minlength="20" /><br>
+        {#- A passkey besides the password: passkey-signup.js shows and ticks it where the browser can make passkeys (without JavaScript the form registers with the password alone) #}
+        <p class="register-tos reg-passkey-opt"><input type="checkbox" id="add-passkey-page" name="add_passkey" value="1" /> <label for="add-passkey-page">{{ t("auth.add_passkey") }}</label></p>
+        <p class="register-hint reg-if-passkey">{{ t("auth.passkey_signup_hint") }}</p>
         {% if registration_apply %}
         {#- An invite token or an application: the answer shows one of them (CSS :has()) -#}
         <div class="register-invite-choice" role="radiogroup" aria-label="{{ t("auth.have_invite") }}">
@@ -53,6 +60,7 @@
         <cap-widget class="cap-dark" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
         {% endif %}
         <input type="submit" value="{{ t("auth.apply_or_register" if registration_apply else "auth.register_title") }}" />
+        </div>
         {% endif %}
 
         <div class="register-back">
@@ -60,5 +68,6 @@
         </div>
     </form>
     {% include "snippets/tos-consent.html" %}
+    <script src="/s/js/passkey-signup.js?v={{ mtime("/public/s/js/passkey-signup.js") }}"></script>
 </body>
 </html>

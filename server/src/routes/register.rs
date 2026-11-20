@@ -27,6 +27,7 @@ pub fn register(r: &mut Router) {
     r.get(r"^\/register(\/)?$", register_page);
     r.get(r"^\/activate\/(?<token>.+)$", activate);
     r.post(r"^\/register(\/)?$", register_post);
+    r.post(r"^\/register\/passkey$", register_passkey);
 }
 
 /// `res.writeHead(code, { Location })` (no other headers).
@@ -277,8 +278,8 @@ const APPLICATION_KEEP_DAYS: i32 = 30;
 const APPLICATION_PENDING_DAYS: i32 = 90;
 
 const APPLICATION_SENT: &str = "Application submitted! Log in with your username and password to see its status.";
-const APPLICATION_PENDING: &str = "Your application is still under review.";
-const APPLICATION_DENIED: &str = "Your application was declined.";
+pub(crate) const APPLICATION_PENDING: &str = "Your application is still under review.";
+pub(crate) const APPLICATION_DENIED: &str = "Your application was declined.";
 
 /// Deletes unused invite tokens older than [`INVITE_TOKEN_TTL_SECS`] (a minute after boot, then
 /// hourly). Approved invite requests whose token expires become `revoked`, as when an admin
@@ -700,6 +701,50 @@ pub(crate) async fn insert_user(st: &AppState, conn: &mut sqlx::PgConnection, u:
     Ok(id)
 }
 
+// ── A passkey with the password ─────────────────────────────────────────────
+// New accounts always get a password (the way back in when a passkey is lost, and the only way
+// without JavaScript). The register forms also make a passkey for them, ticked by default where the
+// browser can (public/s/js/passkey-signup.js). `/register` with `add_passkey=1` (JSON clients only)
+// checks the form as always (captcha, name, password, invite token or application) and answers
+// with passkey creation options instead of creating anything; the checked form, password hash
+// included, waits in the ceremony (`webauthn::Pending::extra`, 5 minutes, single use).
+// `/register/passkey` gets the new passkey and creates the account with the password and the
+// passkey in one transaction, then signs it in. An application keeps the passkey until an admin
+// approves it (`account_applications.passkey`). An anonymous identity claiming a name keeps the
+// passkeys it has and gets no new one.
+
+/// Ceremony kind of a registration with a passkey.
+const SIGNUP_KIND: &str = "signup";
+const PASSKEY_EXPIRED: &str = "The passkey request expired. Please register again.";
+const APPLICATION_SENT_PASSKEY: &str = "Application submitted! Log in with your password or your passkey to see its status.";
+const REGISTERED_ACTIVATE: &str = "Registration successful! Please check your email to activate your account.";
+
+/// A register form that passed every check. With a passkey it waits in the ceremony until the
+/// browser made the passkey.
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Signup {
+    username: String,
+    /// Password hash
+    hash: String,
+    email: Option<String>,
+    token: Option<String>,
+    application: String,
+    applying: bool,
+    activated: bool,
+    activation_token: Option<String>,
+    /// An anonymous passkey identity claiming a name: its shadow user, upgraded in place
+    upgrade_id: Option<i64>,
+}
+
+enum Signed {
+    Applied,
+    /// Created, waits for the email link
+    Activate,
+    Registered(i64),
+    /// An anonymous identity got its name
+    Upgraded,
+}
+
 async fn register_post(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
     let ip = req.real_ip();
@@ -710,6 +755,9 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
     let email = req.post_str("email").await.filter(|e| !e.is_empty());
     let password = req.post_str("password").await.filter(|p| !p.is_empty());
     let password_confirm = req.post_str("password_confirm").await;
+    // Also make a passkey after the checks (WebAuthn runs in the page's script, so JSON clients only;
+    // a plain form post registers with the password alone)
+    let add_passkey = ajax && req.post_str("add_passkey").await.as_deref() == Some("1");
     let mut token = req.post_str("token").await.map(|t| t.trim().to_string()).filter(|t| !t.is_empty());
     let mut application = req.post_str("application").await.map(|m| m.trim().to_string()).unwrap_or_default();
     // The application forms ask "Do you have an invite token?" first: `yes` or `no`
@@ -858,44 +906,173 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
         }
         render_error!("Username taken");
     }
-
-    let hash = crate::util::hash_password(password).await;
-
-    if applying {
-        let ip_hash = (!ip.is_empty()).then(|| crate::security::hash_ip(&cfg, &ip));
+    if applying && !ip.is_empty() {
         // One open application per address, and a pause after a declined one
-        if let Some(h) = &ip_hash {
-            let last = sql!(
-                "select status from account_applications where ip_hash = ", h.clone(),
-                " and (status = 'pending' or (status = 'denied' and reviewed_at > now() - make_interval(days => ", APPLICATION_COOLDOWN_DAYS,
-                "))) order by (status = 'pending') desc limit 1"
-            )
-            .fetch_optional(&st.db)
-            .await?;
-            match last.as_ref().and_then(|r| r.str("status")) {
-                Some("pending") => render_error!("You already have a pending application."),
-                Some(_) => render_error!("Your last application was declined. You can apply again later."),
-                None => {}
+        let last = sql!(
+            "select status from account_applications where ip_hash = ", crate::security::hash_ip(&cfg, &ip),
+            " and (status = 'pending' or (status = 'denied' and reviewed_at > now() - make_interval(days => ", APPLICATION_COOLDOWN_DAYS,
+            "))) order by (status = 'pending') desc limit 1"
+        )
+        .fetch_optional(&st.db)
+        .await?;
+        match last.as_ref().and_then(|r| r.str("status")) {
+            Some("pending") => render_error!("You already have a pending application."),
+            Some(_) => render_error!("Your last application was declined. You can apply again later."),
+            None => {}
+        }
+    }
+
+    // An anonymous passkey identity registering upgrades its shadow user in place (favs, comments,
+    // uploads and passkeys stay); dropping the anon_identities row makes it a regular account.
+    let upgrade_id = req.session().filter(|s| s.is_anon).map(|s| s.id);
+    let hash = crate::util::hash_password(password).await;
+    let signup = Signup { username: username.clone(), hash, email, token, application, applying, activated, activation_token, upgrade_id };
+
+    // An anonymous identity already signs in with a passkey: it keeps that one
+    let has_passkey = match upgrade_id {
+        Some(uid) => crate::webauthn::count(&st, uid).await? > 0,
+        None => false,
+    };
+    if add_passkey && !has_passkey {
+        // Everything checked: the browser makes the passkey now, /register/passkey finishes
+        let handle = match upgrade_id {
+            Some(uid) => crate::webauthn::user_handle_for(&st, uid).await?,
+            None => uuid::Uuid::new_v4(),
+        };
+        let start = crate::webauthn::StartRegistration {
+            kind: SIGNUP_KIND,
+            user_id: upgrade_id,
+            user_handle: handle,
+            user_name: &username,
+            display_name: &username,
+            exclude: Vec::new(),
+        };
+        let extra = serde_json::to_value(&signup).map_err(anyhow::Error::from)?;
+        match crate::webauthn::start_registration_with(&cfg, &req, start, Some(extra)) {
+            Ok(options) => return Ok(json_raw(&json!({ "success": true, "passkey_options": options }), 200)),
+            Err(e) => {
+                tracing::warn!("[REGISTER] Passkey start failed: {e:#}");
+                let msg = e.to_string();
+                render_error!(&msg);
             }
         }
+    }
+
+    let signed = match complete_signup(&st, &req, &signup, None).await {
+        Ok(s) => s,
+        Err(msg) => render_error!(msg),
+    };
+    crate::security::record_attempt(&st, &ip, Some(&username), "register", true).await;
+    let (msg, extra) = match signed {
+        Signed::Applied => (APPLICATION_SENT, json!({ "applied": true })),
+        Signed::Activate => (REGISTERED_ACTIVATE, json!({})),
+        Signed::Upgraded => ("Username claimed, you can still use your passkey.", json!({ "upgraded": true })),
+        Signed::Registered(_) => ("Registration successful! You can now login.", json!({ "upgraded": false })),
+    };
+    if ajax {
+        let mut body = json!({ "success": true, "msg": msg });
+        if let (Value::Object(b), Value::Object(e)) = (&mut body, extra) {
+            b.extend(e);
+        }
+        return Ok(json_raw(&body, 200));
+    }
+    match signed {
+        Signed::Applied | Signed::Activate => Ok(page("success", msg)),
+        Signed::Registered(_) => match return_to.as_deref() {
+            Some(path) => Ok(back_to_modal(path, "login_done", "registered", "login-modal")),
+            None => Ok(location(302, "/?login=success")),
+        },
+        Signed::Upgraded => Ok(location(302, "/settings")),
+    }
+}
+
+/// Registration with a passkey, second step: the browser made the passkey `/register` asked for.
+/// Verify it and create the account (or the application) with it; a new account is signed in.
+async fn register_passkey(st: AppState, mut req: Req) -> Res {
+    use crate::webauthn as wa;
+    let cfg = st.cfg();
+    let ip = req.real_ip();
+    let body = req.post_value().await;
+    if ["challenge", "clientDataJSON", "attestationObject", "credentialId"].iter().any(|k| body.get(k).and_then(Value::as_str).is_none_or(str::is_empty)) {
+        return Ok(json_msg(false, "Missing required WebAuthn fields", 400));
+    }
+    let Ok(pending) = wa::take_for(&body) else { return Ok(json_msg(false, PASSKEY_EXPIRED, 200)) };
+    let signup = if pending.kind == SIGNUP_KIND { pending.extra.clone().and_then(|v| serde_json::from_value::<Signup>(v).ok()) } else { None };
+    let Some(signup) = signup else { return Ok(json_msg(false, PASSKEY_EXPIRED, 400)) };
+    // An anonymous identity claiming a name finishes in the session that started it
+    if signup.upgrade_id.is_some() && signup.upgrade_id != req.session().filter(|s| s.is_anon).map(|s| s.id) {
+        return Ok(json_msg(false, "Your session changed meanwhile. Please register again.", 200));
+    }
+    let reg = match wa::finish_registration(&cfg, &req, pending, &body) {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::warn!("[REGISTER] Passkey verification failed: {e}");
+            return Ok(json_msg(false, &format!("Passkey registration failed: {e}"), 200));
+        }
+    };
+    if wa::known(&st, &reg.cred_id).await? {
+        return Ok(json_msg(false, "This passkey is already registered.", 200));
+    }
+    let cred_id = reg.cred_id.clone();
+    let signed = match complete_signup(&st, &req, &signup, Some(reg)).await {
+        Ok(s) => s,
+        Err(msg) => {
+            crate::security::record_attempt(&st, &ip, Some(&signup.username), "register", false).await;
+            return Ok(json_msg(false, msg, 200));
+        }
+    };
+    crate::security::record_attempt(&st, &ip, Some(&signup.username), "register", true).await;
+    let body = match signed {
+        Signed::Applied => json!({ "success": true, "msg": APPLICATION_SENT_PASSKEY, "applied": true }),
+        Signed::Activate => json!({ "success": true, "msg": REGISTERED_ACTIVATE }),
+        Signed::Upgraded => json!({ "success": true, "msg": "Username claimed, you can still use your passkey.", "upgraded": true }),
+        Signed::Registered(user_id) => {
+            // The passkey was just used: sign the new account in, like a passkey login
+            let s = crate::auth::insert_session(
+                &st,
+                &req,
+                SessionSpec { user_id, kmsi: true, last_action: "/register", passkey_credential_id: Some(&cred_id), csrf_bytes: 32 },
+            )
+            .await?;
+            crate::security::log_user_ip(&st, user_id, &ip).await;
+            req.set_cookie(crate::auth::session_cookie(&cfg, &s.session, true));
+            json!({ "success": true, "msg": "Account created, you are signed in.", "logged_in": true })
+        }
+    };
+    Ok(json_raw(&body, 200))
+}
+
+/// Create the account, or the application, of a checked register form, with the passkey made for it
+/// (if any). `Err` is the message for the visitor.
+async fn complete_signup(st: &AppState, req: &Req, s: &Signup, passkey: Option<crate::webauthn::NewPasskey>) -> Result<Signed, &'static str> {
+    const FAILED: &str = "An unexpected error occurred. Please try again later.";
+    let cfg = st.cfg();
+    if s.applying {
+        let ip = req.real_ip();
+        let ip_hash = (!ip.is_empty()).then(|| crate::security::hash_ip(&cfg, &ip));
+        // The passkey, too, shows the state at login (passkeys::login_finish)
+        let passkey = match &passkey {
+            Some(p) => Some(serde_json::to_string(p).map_err(|_| FAILED)?),
+            None => None,
+        };
         let inserted = sql!(
-            "insert into account_applications (login, username, password, email, message, ip_hash) values (", username.to_lowercase(), ", ",
-            username.clone(), ", ", hash, ", ", email.clone(), ", ", application.clone(), ", ", ip_hash, ")"
+            "insert into account_applications (login, username, password, passkey, email, message, ip_hash) values (", s.username.to_lowercase(), ", ",
+            s.username.clone(), ", ", s.hash.clone(), ", ", passkey, "::jsonb, ", s.email.clone(), ", ", s.application.clone(), ", ", ip_hash, ")"
         )
         .execute(&st.db)
         .await;
         if let Err(e) = inserted {
             // The unique index on pending logins: someone applied with this name a moment ago
             if pg_code(&e).as_deref() == Some("23505") {
-                render_error!("Username taken");
+                return Err("Username taken");
             }
             tracing::error!("[APPLICATIONS] Insert failed: {e:#}");
-            render_error!("An unexpected error occurred. Please try again later.");
+            return Err(FAILED);
         }
         // Admins review them under /admin/applications
         let admins: Vec<i32> = sql!(r#"SELECT id FROM "user" WHERE admin = true"#).fetch_scalar_list(&st.db).await.unwrap_or_default();
         if !admins.is_empty() {
-            let data = json!({ "username": username, "reason": application.chars().take(100).collect::<String>() });
+            let data = json!({ "username": s.username, "reason": s.application.chars().take(100).collect::<String>() });
             let sent = sql!(
                 "INSERT INTO notifications (user_id, type, reference_id, data) SELECT a, 'account_application', 0, ", data,
                 "::jsonb FROM unnest(", admins, "::int[]) AS a"
@@ -906,24 +1083,21 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
                 tracing::error!("[APPLICATIONS] Notifying admins failed: {e:#}");
             }
         }
-        tracing::info!("[APPLICATIONS] New application from {username}");
-        crate::security::record_attempt(&st, &ip, Some(&username), "register", true).await;
-        return Ok(if ajax { json_raw(&json!({ "success": true, "msg": APPLICATION_SENT, "applied": true }), 200) } else { page("success", APPLICATION_SENT) });
+        tracing::info!("[APPLICATIONS] New application from {}", s.username);
+        return Ok(Signed::Applied);
     }
-    // An anonymous passkey identity registering upgrades its shadow user in place (favs, comments,
-    // uploads and passkeys stay); dropping the anon_identities row makes it a regular account.
-    let upgrade_id = req.session().filter(|s| s.is_anon).map(|s| s.id);
 
-    let created: anyhow::Result<(i64, Created)> = async {
+    let hash = s.hash.clone();
+    let created: anyhow::Result<Result<i64, &'static str>> = async {
         let mut tx = st.db.begin().await?;
-        let user_id = if let Some(uid) = upgrade_id {
+        let user_id = if let Some(uid) = s.upgrade_id {
             let old = sql!(r#"select login from "user" where id = "#, uid as i32, " for update").fetch_optional(&mut *tx).await?;
             if let Some(old_login) = old.as_ref().and_then(|o| o.str("login")).filter(|l| !l.is_empty()) {
-                sql!("update items set username = ", username.clone(), " where lower(username) = lower(", old_login.to_string(), ")").execute(&mut *tx).await?;
+                sql!("update items set username = ", s.username.clone(), " where lower(username) = lower(", old_login.to_string(), ")").execute(&mut *tx).await?;
             }
             sql!(
-                r#"update "user" set "login" = "#, username.to_lowercase(), r#", "password" = "#, hash.clone(), r#", "user" = "#, username.clone(),
-                r#", "email" = "#, email.clone(), r#", "activated" = "#, activated, r#", "activation_token" = "#, activation_token.clone(),
+                r#"update "user" set "login" = "#, s.username.to_lowercase(), r#", "password" = "#, hash.clone(), r#", "user" = "#, s.username.clone(),
+                r#", "email" = "#, s.email.clone(), r#", "activated" = "#, s.activated, r#", "activation_token" = "#, s.activation_token.clone(),
                 " where id = ", uid as i32
             )
             .execute(&mut *tx)
@@ -934,11 +1108,17 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
             sql!("delete from anon_identities where user_id = ", uid as i32).execute(&mut *tx).await?;
             uid
         } else {
-            let new = NewUser { username: &username, hash: &hash, email: email.as_deref(), activated, activation_token: activation_token.as_deref() };
-            insert_user(&st, &mut tx, new).await? as i64
+            let new = NewUser { username: &s.username, hash: &hash, email: s.email.as_deref(), activated: s.activated, activation_token: s.activation_token.as_deref() };
+            insert_user(st, &mut tx, new).await? as i64
         };
+        if let Some(p) = &passkey {
+            if !crate::webauthn::store(&mut *tx, user_id, p, "Passkey").await? {
+                tx.rollback().await?;
+                return Ok(Err("This passkey is already registered."));
+            }
+        }
         // The invite token is consumed in the same transaction, so a token can't be used twice
-        if let Some(t) = &token {
+        if let Some(t) = &s.token {
             let used = sql!(
                 "update invite_tokens set is_used = true, used_by = ", user_id as i32, ", used_at = now() where token = ", t.clone(),
                 " and is_used = false"
@@ -947,64 +1127,55 @@ async fn register_post(st: AppState, mut req: Req) -> Res {
             .await?;
             if used == 0 {
                 tx.rollback().await?;
-                return Ok((user_id, Created::TokenGone));
+                return Ok(Err("Invalid or used invite token"));
             }
         }
         tx.commit().await?;
-        Ok((user_id, Created::Ok))
+        Ok(Ok(user_id))
     }
     .await;
 
     let user_id = match created {
-        Ok((_, Created::TokenGone)) => render_error!("Invalid or used invite token"),
-        Ok((id, Created::Ok)) => id,
+        Ok(Ok(id)) => id,
+        Ok(Err(msg)) => return Err(msg),
         Err(e) => {
             tracing::error!("[REGISTER] DB Error during user creation: {e:#}");
             if pg_code(&e).as_deref() == Some("23505") {
-                render_error!("Username taken");
+                return Err("Username taken");
             }
-            render_error!("An unexpected error occurred. Please try again later.");
+            return Err(FAILED);
         }
     };
-    if upgrade_id.is_some() {
+    if s.upgrade_id.is_some() {
         if let Some(c) = req.cookie("session") {
             st.invalidate_session_cache(&crate::util::sha256(c));
         }
     }
 
-    if !activated {
-        let link = format!("{}/activate/{}", cfg.url_full(), activation_token.as_deref().unwrap_or(""));
+    if !s.activated {
+        let link = format!("{}/activate/{}", cfg.url_full(), s.activation_token.as_deref().unwrap_or(""));
         let body = format!(
-            "Hello {username},\n\nThank you for registering. Please activate your account by clicking the link below:\n\n{link}\n\nIf you did not request this, please ignore this email."
+            "Hello {},\n\nThank you for registering. Please activate your account by clicking the link below:\n\n{link}\n\nIf you did not request this, please ignore this email.",
+            s.username
         );
         if cfg.truthy("smtp.host") {
-            let to = email.as_deref().unwrap_or("");
+            let to = s.email.as_deref().unwrap_or("");
             if let Err(e) = crate::smtp::send_mail(&cfg, crate::smtp::Mail { to, subject: "Activate your account", body: &body }).await {
                 tracing::error!("[SMTP] Send failed: {e}");
             }
         } else {
             tracing::info!("[SMTP] No configuration found. Activation link: {link}");
         }
-        if let Some(uid) = upgrade_id {
+        if let Some(uid) = s.upgrade_id {
             // Unactivated accounts may not stay logged in until the email link is used
-            crate::auth::destroy_user_sessions(&st, uid).await?;
+            if let Err(e) = crate::auth::destroy_user_sessions(st, uid).await {
+                tracing::error!("[REGISTER] Ending the sessions of #{uid} failed: {e:#}");
+            }
             req.set_cookie(crate::auth::clear_session_cookie(&cfg));
         }
-        let msg = "Registration successful! Please check your email to activate your account.";
-        return Ok(if ajax { json_msg(true, msg, 200) } else { page("success", msg) });
+        return Ok(Signed::Activate);
     }
-    let _ = user_id;
-
-    crate::security::record_attempt(&st, &ip, Some(&username), "register", true).await;
-
-    let msg = if upgrade_id.is_some() { "Username claimed, you can still use your passkey." } else { "Registration successful! You can now login." };
-    if ajax {
-        return Ok(json_raw(&json!({ "success": true, "msg": msg, "upgraded": upgrade_id.is_some() }), 200));
-    }
-    if let (Some(path), None) = (return_to.as_deref(), upgrade_id) {
-        return Ok(back_to_modal(path, "login_done", "registered", "login-modal"));
-    }
-    Ok(location(302, if upgrade_id.is_some() { "/settings" } else { "/?login=success" }))
+    Ok(if s.upgrade_id.is_some() { Signed::Upgraded } else { Signed::Registered(user_id) })
 }
 
 #[cfg(test)]

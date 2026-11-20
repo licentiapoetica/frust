@@ -24,10 +24,10 @@ fn fail(msg: &str) -> Res {
 }
 
 async fn page(st: AppState, req: Req) -> Res {
-    // Never the password hash
+    // Never the password hash or the passkey
     let list = sql!(
         r#"SELECT a.id, a.username, a.email, a.message, a.status, a.created_at, a.reviewed_at, a.user_id,
-                  u_reviewer.user AS reviewed_by_name
+                  (a.passkey IS NOT NULL) AS with_passkey, u_reviewer.user AS reviewed_by_name
            FROM account_applications a
            LEFT JOIN "user" u_reviewer ON u_reviewer.id = a.reviewed_by
            ORDER BY (a.status = 'pending') DESC, a.created_at DESC
@@ -60,7 +60,8 @@ async fn mail_approved(st: &AppState, app: &Row) {
     }
     let name = app.string("username");
     let subject = "Your account application was approved";
-    let body = format!("Hello {name},\n\nyour application was approved. You can now log in with your username and password:\n\n{}/login\n", cfg.url_full());
+    let with = if app.val("passkey").is_null() { "your username and password" } else { "your username and password or your passkey" };
+    let body = format!("Hello {name},\n\nyour application was approved. You can now log in with {with}:\n\n{}/login\n", cfg.url_full());
     if let Err(e) = crate::smtp::send_mail(&cfg, crate::smtp::Mail { to, subject, body: &body }).await {
         tracing::error!("[SMTP] Send failed: {e}");
     }
@@ -91,12 +92,22 @@ async fn approve(st: AppState, mut req: Req) -> Res {
         if q.push(" LIMIT 1").fetch_optional(&mut *tx).await?.is_some() {
             return Ok(Approved::NameTaken);
         }
+        // Applied with a passkey besides the password: the account gets it too
+        let passkey = match app.val("passkey") {
+            Value::Null => None,
+            v => Some(serde_json::from_value::<crate::webauthn::NewPasskey>(v.clone())?),
+        };
         let hash = app.string("password");
         let new = NewUser { username: &username, hash: &hash, email: email.as_deref(), activated: true, activation_token: None };
         let user_id = insert_user(&st, &mut tx, new).await?;
-        // The account has the password hash now
+        if let Some(p) = &passkey {
+            if !crate::webauthn::store(&mut *tx, user_id as i64, p, "Passkey").await? {
+                anyhow::bail!("its passkey is registered to another account");
+            }
+        }
+        // The account has the password hash (or the passkey) now
         sql!(
-            "UPDATE account_applications SET status = 'approved', password = '', user_id = ", user_id, ", reviewed_by = ", reviewer,
+            "UPDATE account_applications SET status = 'approved', password = '', passkey = NULL, user_id = ", user_id, ", reviewed_by = ", reviewer,
             ", reviewed_at = NOW() WHERE id = ", id
         )
         .execute(&mut *tx)

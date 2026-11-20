@@ -2580,6 +2580,63 @@ mod tests {
         assert!(!form(false).contains("upload-form-drop-sound"));
     }
 
+    /// A passkey besides the password at registration (routes/register.rs,
+    /// public/s/js/passkey-signup.js): every register form keeps its password fields and has the
+    /// "Also create a passkey" box, unticked in the markup (the script ticks it; without JavaScript
+    /// the form registers with the password), and loads the script.
+    #[test]
+    fn register_forms_offer_passkeys() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let ctx = serde_json::json!({ "csrf_token": "tok", "domain": "f0ck.test", "registration_open": true, "captcha_enabled": false,
+            "url": { "pathname": "/", "search": "", "qs": {} } });
+        // the pages whose own script sends the form call f0ckPasskeySignup; the others are sent by passkey-signup.js
+        let forms = [("snippets/navbar.html", false), ("gate/login_injection.html", false), ("register.html", true), ("frontends/f0ckv2/register.html", true),
+            ("frontends/f0ckgle/register.html", true), ("frontends/f0ckyou/register.html", true), ("frontends/w0bm/partials/registerform.html", true)];
+        for (view, auto) in forms {
+            let page = env.get_template(view).unwrap().render(to_jvalue(&ctx)).unwrap();
+            // the register form (the navbar has the login form too)
+            let at = page.find("action=\"/register\"").or_else(|| page.find("id=\"gate-register-form\"")).unwrap_or_else(|| panic!("{view}: no register form"));
+            let html = &page[at..];
+            for f in ["password", "password_confirm"] {
+                let field = html.split(&format!("name=\"{f}\"")).nth(1).unwrap_or_else(|| panic!("{view}: no {f}"));
+                assert!(field.split('>').next().unwrap().contains("required"), "{view}: {f} not required");
+            }
+            assert!(!html.contains("reg-if-password"), "{view}: the password is not optional");
+            let tag = html.split("name=\"add_passkey\"").nth(1).unwrap_or_else(|| panic!("{view}: no passkey box"));
+            assert!(!tag.split('>').next().unwrap().contains("checked"), "{view}: ticked without JavaScript");
+            assert!(html.contains("reg-passkey-opt") && html.contains("reg-if-passkey"), "{view}");
+            assert!(page.contains("src=\"/s/js/passkey-signup.js?v="), "{view}: script missing");
+            assert_eq!(page.contains("data-passkey-signup=\"auto\""), auto, "{view}");
+            if auto {
+                // after a success only the message stays: the fields sit in .reg-fields, the message outside
+                let msg = page.find("data-passkey-signup-msg").unwrap_or_else(|| panic!("{view}: nowhere to show the answer"));
+                let fields = page.find("class=\"reg-fields\"").unwrap_or_else(|| panic!("{view}: fields not wrapped"));
+                assert!(msg < fields && fields < at + html.find("name=\"password\"").unwrap(), "{view}: message inside the fields or password outside");
+            }
+        }
+        // The register modal: after a success the message and a close button instead of the form
+        let modal = |ctx: &serde_json::Value| env.get_template("snippets/navbar.html").unwrap().render(to_jvalue(ctx)).unwrap();
+        let html = modal(&ctx);
+        assert!(html.contains("<div class=\"lm-done\" id=\"register-done\" hidden"));
+        assert!(html.contains("id=\"register-done-close\""));
+        assert!(!html.contains("lm-form-done"));
+        let mut done = ctx.clone();
+        done["register_done_msg"] = serde_json::json!("Registration successful! You can now login.");
+        let html = modal(&done);
+        assert!(html.contains("<div class=\"lm-done\" id=\"register-done\" role=\"status\">"));
+        assert!(html.contains("lm-form lm-form-done"));
+        for css in ["public/s/css/f0ckm.css", "public/s/css/gate.css", "public/s/fe/f0ckgle/css/f0ckgle.css", "public/s/fe/f0ckyou/css/f0ckyou.css",
+            "public/s/fe/f0ckv2/css/f0ckv2.css", "public/s/fe/w0bm/css/w0bm-fe.css"] {
+            let text = std::fs::read_to_string(root.join(css)).unwrap();
+            assert!(text.contains("form:not(.pk-signup-ready) :is(.reg-passkey-opt, .reg-if-passkey)"), "{css}");
+            assert!(text.contains("form:not(:has(input[name=\"add_passkey\"]:checked)) .reg-if-passkey"), "{css}");
+            if !css.ends_with("gate.css") {
+                assert!(text.contains("form.pk-signup-done .reg-fields"), "{css}");
+            }
+        }
+    }
+
     /// Registration by application (routes/register.rs): every register form gets the message
     /// field and an optional token, and the admin page lists them as plain forms.
     #[test]

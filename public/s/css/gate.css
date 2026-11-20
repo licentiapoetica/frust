@@ -861,6 +861,20 @@ html:where(.gate-cloudflare),
   display: none !important;
 }
 
+/* A passkey besides the password at registration (public/s/js/passkey-signup.js): the checkbox only
+   shows once the script found passkey support (no JavaScript: password only); the note goes with it. */
+form:not(.pk-signup-ready) :is(.reg-passkey-opt, .reg-if-passkey),
+form:not(:has(input[name="add_passkey"]:checked)) .reg-if-passkey,
+[data-passkey-signup-msg][hidden] {
+  display: none !important;
+}
+
+/* After a successful registration only the title, the message and the way back to sign in stay
+   (login_injection.js adds gate-done) */
+#gate-modal #gate-register-form.gate-done > :not(.gate-form-title, #gate-register-ok, .gate-form-footer) {
+  display: none !important;
+}
+
 #gate-modal .gate-hint {
   margin: 0;
   font-size: 12px;

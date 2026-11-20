@@ -1664,10 +1664,28 @@ window.cancelAnimFrame = (function () {
     if (visitorMenu) visitorMenu.classList.remove('show');
   };
 
+  // Register modal after a successful registration: only the message and a close button
+  // (snippets/navbar.html #register-done); closing it brings the form back
+  const showRegisterDone = (msg) => {
+    const done = document.getElementById('register-done');
+    const form = document.getElementById('modal-register-form');
+    if (!done || !form) return false;
+    document.getElementById('register-done-msg').textContent = msg;
+    form.classList.add('lm-form-done');
+    done.hidden = false;
+    return true;
+  };
+  const resetRegisterDone = () => {
+    const done = document.getElementById('register-done');
+    if (done) done.hidden = true;
+    document.getElementById('modal-register-form')?.classList.remove('lm-form-done');
+  };
+
   const closeModal = (modal) => {
     if (modal) {
       modal.style.display = 'none';
       document.body.classList.remove('modal-open');
+      if (modal === registerModal) resetRegisterDone();
     }
   };
 
@@ -2879,6 +2897,10 @@ window.cancelAnimFrame = (function () {
     });
 
     if (registerClose) registerClose.addEventListener('click', () => closeModal(registerModal));
+    document.getElementById('register-done-close')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeModal(registerModal);
+    });
 
     registerModal.addEventListener('click', (e) => {
       if (e.target === registerModal) closeModal(registerModal);
@@ -2895,6 +2917,8 @@ window.cancelAnimFrame = (function () {
         const btn = registerForm.querySelector('button[type="submit"]');
         const btnLabel = btn.textContent;
 
+        // Also a passkey (passkey-signup.js ticks the box where the browser can make one)
+        const viaPasskey = !!(window.f0ckPasskeySignup && registerForm.querySelector('input[name="add_passkey"]:checked'));
         const password = formData.get('password');
         const password_confirm = formData.get('password_confirm');
 
@@ -2922,7 +2946,7 @@ window.cancelAnimFrame = (function () {
         }
 
         try {
-          const res = await fetch('/register', {
+          const json = viaPasskey ? await window.f0ckPasskeySignup(registerForm) : await (await fetch('/register', {
             method: 'POST',
             headers: {
               'X-Requested-With': 'XMLHttpRequest',
@@ -2930,26 +2954,17 @@ window.cancelAnimFrame = (function () {
               'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: params
-          });
-
-          const json = await res.json();
+          })).json();
           if (json.success) {
-            if (status) {
-              status.textContent = json.msg || 'Registration successful! You can now login.';
+            const msg = json.msg || 'Registration successful! You can now login.';
+            // The form makes way for the message and a close button
+            if (!showRegisterDone(msg) && status) {
+              status.textContent = msg;
               status.className = 'flash-success';
             }
             registerForm.reset();
-            // An application (no account yet): the message stays, nothing to log in to
-            if (json.applied) return;
-            setTimeout(() => {
-              const loginToRegister = document.getElementById('login-to-register');
-              if (loginToRegister) {
-                // If we are in register modal, we might want to close it and open login?
-                // But registration modal is separate in HTML. 
-                closeModal(registerModal);
-                openModal(loginModal, 'login');
-              }
-            }, 3000);
+            // Signed in with the new passkey, or an anonymous identity got its name: the session changed
+            if (json.logged_in || json.upgraded) setTimeout(() => window.location.reload(), 1200);
           } else {
             if (status) {
               status.textContent = json.msg || 'Registration failed.';

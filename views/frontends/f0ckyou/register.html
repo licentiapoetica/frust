@@ -7,7 +7,7 @@
 <script src="/s/cap/cap.min.js?v=0.1.58" defer></script>
 {% endif %}
 <main class="fy-card-page">
-  <form class="fy-signin-card" method="post" action="/register">
+  <form class="fy-signin-card" method="post" action="/register" data-passkey-signup="auto">
     <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
     <div class="fy-signin-side">
       <a href="/" class="fy-signin-logo">{% include "frontends/f0ckyou/snippets/logo.html" %}</a>
@@ -16,10 +16,17 @@
     </div>
     <div class="fy-signin-fields">
       {% if (error is defined and error is string and error) %}<p class="fy-form-error">{{ error }}</p>{% endif %}
+      {#- the answer of a registration with a passkey (passkey-signup.js) -#}
+      <p data-passkey-signup-msg data-ok-class="fy-form-ok" data-error-class="fy-form-error" role="status" hidden></p>
       {% if (success is defined and success is string and success) %}<p class="fy-form-ok">{{ success }}</p>{% else %}
+      {#- the fields, gone after a registration sent by passkey-signup.js (pk-signup-done) -#}
+      <div class="reg-fields">
       <label class="fy-field"><span>Username</span><input type="text" name="username" autocomplete="username" required></label>
       <label class="fy-field"><span>Password (min. 20 characters)</span><input type="password" name="password" autocomplete="new-password" required minlength="20"></label>
       <label class="fy-field"><span>Confirm</span><input type="password" name="password_confirm" autocomplete="new-password" required minlength="20"></label>
+      {#- A passkey besides the password: passkey-signup.js shows and ticks it where the browser can make passkeys (without JavaScript the form registers with the password alone) -#}
+      <label class="fy-check reg-passkey-opt"><input type="checkbox" name="add_passkey" value="1"> Also create a passkey</label>
+      <p class="fy-hint reg-if-passkey">Your device or password manager saves a passkey for this site after the checks. You sign in with it or with your password.</p>
       {#- the token of an invite link (early.js: /?register=1&token=…, /register: /?invite=…) -#}
       {%- set invite_token = (token if (token is defined and token) else (((url.qs.token or url.qs.invite) or "") if (url is defined and url and url.qs) else "")) %}
       {% if registration_apply %}
@@ -45,10 +52,11 @@
       <cap-widget class="js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>
       {% include "frontends/f0ckyou/snippets/cap-image.html" %}
       {% endif %}
+      </div>
       {% endif %}
       <div class="fy-signin-btns">
         <a href="/?login=1" class="fy-btn-text">Sign in instead</a>
-        {% if not (success is defined and success is string and success) %}<button type="submit" class="fy-btn-blue">{{ ("Apply" if registration_apply else "Next") }}</button>{% endif %}
+        {% if not (success is defined and success is string and success) %}<button type="submit" class="fy-btn-blue reg-fields">{{ ("Apply" if registration_apply else "Next") }}</button>{% endif %}
       </div>
     </div>
   </form>
@@ -56,5 +64,6 @@
 </main>
 {#- the rules and terms have to be read before the checkbox gets ticked -#}
 {% include "snippets/tos-consent.html" %}
+<script src="/s/js/passkey-signup.js?v={{ mtime("/public/s/js/passkey-signup.js") }}"></script>
 </body>
 </html>

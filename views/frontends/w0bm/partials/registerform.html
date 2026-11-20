@@ -1,7 +1,11 @@
-<form class="form-horizontal" method="post" action="/register">
+<form class="form-horizontal" method="post" action="/register" data-passkey-signup="auto">
     <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
     {#- Without JavaScript the answer comes back to this page with the modal open (routes/register.rs) #}
     {% if (url and not (url.pathname == "/register")) %}<input type="hidden" name="return_to" value="{{ url.pathname }}{{ url.search }}">{% endif %}
+    {#- the answer of a registration with a passkey (passkey-signup.js) -#}
+    <div data-passkey-signup-msg data-ok-class="alert alert-success w0bm-form-msg" data-error-class="alert alert-danger w0bm-form-msg" role="status" hidden></div>
+    {#- the fields, gone after a registration sent by passkey-signup.js (pk-signup-done) -#}
+    <div class="reg-fields">
     <div class="form-group">
         <div class="reg_username">
             <input class="form-control" placeholder="Username" name="username" type="text" autocomplete="username" required>
@@ -17,6 +21,11 @@
             <input class="form-control" placeholder="Password Confirmation" name="password_confirm" type="password" autocomplete="new-password" minlength="20" required>
         </div>
     </div>
+    {#- A passkey besides the password: passkey-signup.js shows and ticks it where the browser can make passkeys (without JavaScript the form registers with the password alone) -#}
+    <div class="form-group reg-passkey-opt">
+        <label class="checkbox-inline"><input type="checkbox" name="add_passkey" value="1"> Also create a passkey</label>
+    </div>
+    <p class="help-block reg-if-passkey">Your device or password manager saves a passkey for this site after the checks. You sign in with it or with your password.</p>
     {% if registration_apply %}
     {#- Registration by application: an invite token, or a message for the admins. The answer shows
         one of them (CSS :has(), no JavaScript needed); the server ignores the other -#}
@@ -72,4 +81,6 @@
             <button type="submit" class="btn btn-primary">{{ ("Apply / Register" if registration_apply else "Register") }}</button>
         </div>
     </div>
+    </div>
 </form>
+<script src="/s/js/passkey-signup.js?v={{ mtime("/public/s/js/passkey-signup.js") }}"></script>

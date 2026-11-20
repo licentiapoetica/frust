@@ -30,10 +30,12 @@ const MAX_PENDING: usize = 50_000;
 
 /// A started registration or authentication, waiting for the browser's answer.
 pub struct Pending {
-    /// `anon-register`, `anon-auth`, `anon-add`, `user-register`, `user-login`
+    /// `anon-register`, `anon-auth`, `anon-add`, `user-register`, `user-login`, `signup`
     pub kind: String,
     pub user_id: Option<i64>,
     pub user_handle: Option<Uuid>,
+    /// Data the ceremony carries to its finish (`signup`: the checked registration form)
+    pub extra: Option<Value>,
     rp_id: String,
     state: backend::State,
 }
@@ -189,11 +191,17 @@ pub struct StartRegistration<'a> {
 
 /// Begin a registration; returns the `publicKey` creation options for the browser.
 pub fn start_registration(cfg: &Config, req: &Req, s: StartRegistration) -> anyhow::Result<Value> {
+    start_registration_with(cfg, req, s, None)
+}
+
+/// [`start_registration`] whose [`Pending`] carries `extra` to the finish (a registration with a
+/// passkey keeps the checked form there until the passkey exists).
+pub fn start_registration_with(cfg: &Config, req: &Req, s: StartRegistration, extra: Option<Value>) -> anyhow::Result<Value> {
     start_allowed(req)?;
     let rp = rp_for(cfg, req);
     let (options, state) = backend::start_registration(&rp, s.user_handle, s.user_name, s.display_name, &s.exclude)?;
     let challenge = options["challenge"].as_str().ok_or_else(|| anyhow::anyhow!("options without challenge"))?.to_string();
-    remember(challenge, Pending { kind: s.kind.into(), user_id: s.user_id, user_handle: Some(s.user_handle), rp_id: rp.id, state })?;
+    remember(challenge, Pending { kind: s.kind.into(), user_id: s.user_id, user_handle: Some(s.user_handle), extra, rp_id: rp.id, state })?;
     Ok(options)
 }
 
@@ -203,11 +211,12 @@ pub fn start_authentication(cfg: &Config, req: &Req, kind: &str) -> anyhow::Resu
     let rp = rp_for(cfg, req);
     let (options, state) = backend::start_authentication(&rp)?;
     let challenge = options["challenge"].as_str().ok_or_else(|| anyhow::anyhow!("options without challenge"))?.to_string();
-    remember(challenge, Pending { kind: kind.into(), user_id: None, user_handle: None, rp_id: rp.id, state })?;
+    remember(challenge, Pending { kind: kind.into(), user_id: None, user_handle: None, extra: None, rp_id: rp.id, state })?;
     Ok(options)
 }
 
-/// A verified new credential.
+/// A verified new credential. Serializable: an application keeps it until an admin approves it.
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct NewPasskey {
     pub cred_id: String,
     pub user_handle: Uuid,
@@ -690,6 +699,20 @@ mod tests {
         login(&mut a, &updated.unwrap(), &handle, ORIGIN, UP_UV, |_| {}).expect("second login");
     }
 
+    /// An application made with a passkey keeps the `NewPasskey` as JSON until it is approved
+    /// (routes/register.rs, admin/applications.rs); after the round trip it still signs in.
+    #[test]
+    fn new_passkey_survives_json() {
+        let mut a = Authenticator::new();
+        let handle = Uuid::new_v4();
+        let p = super::NewPasskey { cred_id: a.id(), user_handle: handle, passkey: register(&a, handle), aaguid: Some("ab".into()) };
+        let stored: super::NewPasskey = serde_json::from_str(&serde_json::to_string(&p).unwrap()).unwrap();
+        assert_eq!((stored.cred_id.as_str(), stored.user_handle), (a.id().as_str(), handle));
+        // the login looks applications up by this key (passkeys::application_state)
+        assert_eq!(serde_json::to_value(&p).unwrap()["cred_id"], a.id());
+        login(&mut a, &stored.passkey, &stored.user_handle, ORIGIN, UP_UV, |_| {}).expect("login with the stored passkey");
+    }
+
     #[test]
     fn rejects_bad_assertions() {
         let mut a = Authenticator::new();
@@ -755,14 +778,14 @@ mod tests {
     fn ceremony_state_is_single_use_and_expires() {
         let (opts, state) = backend::start_authentication(&rp()).unwrap();
         let ch = opts["challenge"].as_str().unwrap().to_string();
-        super::remember(ch.clone(), super::Pending { kind: "x".into(), user_id: None, user_handle: None, rp_id: RP.into(), state }).unwrap();
+        super::remember(ch.clone(), super::Pending { kind: "x".into(), user_id: None, user_handle: None, extra: None, rp_id: RP.into(), state }).unwrap();
         assert!(super::take(&ch).is_ok());
         assert!(super::take(&ch).is_err(), "second use");
 
         let (_, state) = backend::start_authentication(&rp()).unwrap();
         super::PENDING.insert(
             "old".into(),
-            (std::time::Instant::now() - std::time::Duration::from_secs(1), super::Pending { kind: "x".into(), user_id: None, user_handle: None, rp_id: RP.into(), state }),
+            (std::time::Instant::now() - std::time::Duration::from_secs(1), super::Pending { kind: "x".into(), user_id: None, user_handle: None, extra: None, rp_id: RP.into(), state }),
         );
         assert!(super::take("old").is_err(), "expired");
     }
@@ -773,7 +796,7 @@ mod tests {
         let start = |kind: &str| {
             let (opts, state) = backend::start_authentication(&rp()).unwrap();
             let c = opts["challenge"].as_str().unwrap().to_string();
-            super::remember(c.clone(), super::Pending { kind: kind.into(), user_id: None, user_handle: None, rp_id: RP.into(), state }).unwrap();
+            super::remember(c.clone(), super::Pending { kind: kind.into(), user_id: None, user_handle: None, extra: None, rp_id: RP.into(), state }).unwrap();
             c
         };
         let cdj = |c: &str| B64.encode(json!({ "type": "webauthn.get", "challenge": c, "origin": ORIGIN }).to_string());
