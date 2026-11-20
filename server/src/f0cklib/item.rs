@@ -99,9 +99,24 @@ pub async fn find_all_repost_phash(st: &AppState, phash: &str, exclude_id: Optio
 /// Most items an item page's context list holds; a bigger context falls back to the queries.
 const CONTEXT_MAX: i64 = 200_000;
 
+/// A random entry of a context list other than `except` (None when there is no other).
+pub(super) fn pick_random(list: &[(i64, Value)], except: i64) -> Option<&(i64, Value)> {
+    use rand::RngExt;
+    let skip = list.binary_search_by_key(&except, |e| e.0).ok();
+    let n = list.len() - usize::from(skip.is_some());
+    if n == 0 {
+        return None;
+    }
+    let i = rand::rng().random_range(0..n);
+    list.get(match skip {
+        Some(s) if i >= s => i + 1,
+        _ => i,
+    })
+}
+
 /// A context's items (id, slug) in id order, from `st.caches.item_context` or `q` (then cached).
 /// None without a query, or when the context is too big to hold.
-async fn context_list(st: &AppState, q: Option<Sql>) -> anyhow::Result<Option<std::sync::Arc<Vec<(i64, Value)>>>> {
+pub(super) async fn context_list(st: &AppState, q: Option<Sql>) -> anyhow::Result<Option<std::sync::Arc<Vec<(i64, Value)>>>> {
     let Some(q) = q else { return Ok(None) };
     let key = format!("{q:?}");
     if let Some(list) = st.caches.item_context.get(&key) {
@@ -403,8 +418,20 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     const NEAR: i64 = 7;
     let id32 = itemid as i32;
     // The whole context in id order (not for the logged-in tags driver: its own queries)
-    let context_query = (!o.random && !use_tags_driver).then(|| neighbour(Sql::empty(), Sql::new("order by items.id asc"), CONTEXT_MAX));
-    let (next_item, prev_item, start_item, end_item, cheat_ids) = if o.random {
+    let context_query = (!use_tags_driver).then(|| neighbour(Sql::empty(), Sql::new("order by items.id asc"), CONTEXT_MAX));
+    let context = context_list(st, context_query).await?;
+    let row = |e: &(i64, Value)| -> Row {
+        let mut m = Row::new();
+        m.insert("id".into(), json!(e.0));
+        m.insert("slug".into(), e.1.clone());
+        m
+    };
+    let (next_item, prev_item, start_item, end_item, cheat_ids) = if let (true, Some(list)) = (o.random, &context) {
+        // prev/next are a random pick from the cached context (ORDER BY random() sorted all of
+        // it on every click); first/last stay its real ends
+        let next: Vec<Row> = pick_random(list, itemid).map(row).into_iter().collect();
+        (next.clone(), next, list.first().map(row).into_iter().collect(), list.last().map(row).into_iter().collect(), vec![])
+    } else if o.random {
         // prev/next are a random pick; first/last stay the real ends of the context (tag, user, ...)
         let qs = [
             neighbour(sql!("and items.id != ", id32), Sql::new("order by random()"), 1),
@@ -413,16 +440,10 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
         ];
         let (next, start, end) = tokio::try_join!(qs[0].fetch_all(&st.db), qs[1].fetch_all(&st.db), qs[2].fetch_all(&st.db))?;
         (next.clone(), next, start, end, vec![])
-    } else if let Some(list) = context_list(st, context_query).await? {
+    } else if let Some(list) = &context {
         // The context's whole list, shared by every visitor of it for a minute: no queries here.
         // (Seven index walks per item page, for every guest view and both of its prefetches,
         // kept w0bm's Postgres at 100 % CPU.)
-        let row = |e: &(i64, Value)| -> Row {
-            let mut m = Row::new();
-            m.insert("id".into(), json!(e.0));
-            m.insert("slug".into(), e.1.clone());
-            m
-        };
         let pos = list.partition_point(|e| e.0 < itemid);
         let below = &list[..pos];
         let above = &list[list[pos..].iter().take_while(|e| e.0 <= itemid).count() + pos..];
@@ -1045,4 +1066,22 @@ async fn build_album(c: &AlbumCtx<'_>, actitem: &mut Row, requested_sub: &mut Op
         });
     }
     Ok(AlbumOutcome::Done { album, effective_tags })
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::Value;
+
+    #[test]
+    fn pick_random_skips_the_current_item() {
+        let list: Vec<(i64, Value)> = [3, 5, 9].into_iter().map(|i| (i, Value::Null)).collect();
+        for _ in 0..200 {
+            let id = super::pick_random(&list, 5).unwrap().0;
+            assert!(id == 3 || id == 9);
+            let any = super::pick_random(&list, 0).unwrap().0;
+            assert!(list.iter().any(|e| e.0 == any));
+        }
+        assert!(super::pick_random(&list[1..2], 5).is_none());
+        assert!(super::pick_random(&[], 5).is_none());
+    }
 }

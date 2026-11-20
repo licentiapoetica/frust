@@ -10,9 +10,20 @@ struct Prepared {
     query: Sql,
 }
 
-/// Build the candidate query. `pool`: select `id, slug` ordered by id (getRandomPool) instead of
-/// one random `id` (getRandom).
-async fn prepare(st: &AppState, cfg: &Config, o: &FeedOpts<'_>, pool: bool) -> anyhow::Result<Prepared> {
+/// What [`prepare`]'s query returns.
+#[derive(Clone, Copy, PartialEq)]
+enum Pick {
+    /// One random item (`ORDER BY random() LIMIT 1`)
+    One,
+    /// The pool for client-side random (getRandomPool): ordered by id, the global one a sample
+    Pool,
+    /// Every candidate, ordered by id (cached and picked from in memory)
+    All,
+}
+
+/// Build the candidate query.
+async fn prepare(st: &AppState, cfg: &Config, o: &FeedOpts<'_>, pick: Pick) -> anyhow::Result<Prepared> {
+    let pool = pick != Pick::One;
     let session = o.session;
     let user = o.user.as_deref().filter(|u| !u.is_empty()).map(crate::http::decode_uri);
     let user_like = user.as_deref().map(escape_like);
@@ -108,7 +119,11 @@ async fn prepare(st: &AppState, cfg: &Config, o: &FeedOpts<'_>, pool: bool) -> a
         }
         // The capped global pool is a random sample: ordered by id it only ever held the oldest 10000
         // items, and random never reached anything newer. (The client shuffles it anyway.)
-        q.push(if pool { " ORDER BY random() LIMIT 10000" } else { " ORDER BY random() LIMIT 1" });
+        q.push(match pick {
+            Pick::Pool => " ORDER BY random() LIMIT 10000",
+            Pick::All => " ORDER BY items.id",
+            Pick::One => " ORDER BY random() LIMIT 1",
+        });
     }
     Ok(Prepared { user, tag, hall, query: q })
 }
@@ -124,8 +139,14 @@ pub async fn get_random(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value
             }
         }
     }
-    let p = prepare(st, &cfg, o, false).await?;
-    let Some(row) = p.query.fetch_optional(&st.db).await? else {
+    // From the context's cached list when it fits (ORDER BY random() sorted every candidate on
+    // every click), else one random row from Postgres
+    let p = prepare(st, &cfg, o, Pick::All).await?;
+    let picked = match super::item::context_list(st, Some(p.query.clone())).await? {
+        Some(list) => super::item::pick_random(&list, 0).map(|(id, slug)| (json!(id), slug.clone())),
+        None => prepare(st, &cfg, o, Pick::One).await?.query.fetch_optional(&st.db).await?.map(|r| (r.val("id").clone(), r.val("slug").clone())),
+    };
+    let Some((id, slug)) = picked else {
         return Ok(json!({ "success": false, "message": "no uploads found :(" }));
     };
     let link = gen_link(&LinkEnv {
@@ -137,7 +158,7 @@ pub async fn get_random(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value
         strict: false,
         tagger: None,
     });
-    Ok(json!({ "success": true, "link": link, "itemid": row.val("id"), "slug": row.val("slug") }))
+    Ok(json!({ "success": true, "link": link, "itemid": id, "slug": slug }))
 }
 
 /// `getRandomPool({...})` → `{ items, id_map, total, sampled }` (ids/slugs for client-side random).
@@ -151,7 +172,7 @@ pub async fn get_random_pool(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<
             }
         }
     }
-    let p = prepare(st, &cfg, o, true).await?;
+    let p = prepare(st, &cfg, o, Pick::Pool).await?;
     let rows = p.query.fetch_all(&st.db).await?;
     let mut items = Vec::with_capacity(rows.len());
     let mut id_map = serde_json::Map::new();
