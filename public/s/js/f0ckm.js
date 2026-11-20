@@ -20169,9 +20169,9 @@ class NotificationSystem {
       });
     }
 
-    // Tell server in background (fire-and-forget with keepalive)
+    // Tell server in background (fire-and-forget with keepalive); guests have no notifications
     const serverId = strId || strSlug;
-    if (serverId) {
+    if (serverId && window.f0ckSession?.logged_in) {
       fetch(`/api/notifications/item/${encodeURIComponent(serverId)}/read`, {
         method: 'POST',
         keepalive: true
