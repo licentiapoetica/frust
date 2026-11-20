@@ -3903,6 +3903,7 @@
 
     // Fetch unread count from the API
     const pollNotifCount = async () => {
+      if (!window.f0ckSession?.logged_in) return; // guests have no notifications
       try {
         const res = await fetch('/api/notifications');
         const data = await res.json();
@@ -4053,6 +4054,7 @@
       }
 
       async function fetchScrollerNotifs() {
+        if (!window.f0ckSession?.logged_in) return; // guests have no notifications
         try {
           const res = await fetch('/api/notifications');
           const data = await res.json();

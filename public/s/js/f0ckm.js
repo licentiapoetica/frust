@@ -19492,6 +19492,8 @@ class NotificationSystem {
 
   async poll() {
     if (document.hidden) return; // Do not poll if tab is backgrounded
+    // Guests have no notifications (401); checked per call, an anonymous login can come later
+    if (!window.f0ckSession?.logged_in) return;
     try {
       const res = await fetch('/api/notifications');
       const data = await res.json();
