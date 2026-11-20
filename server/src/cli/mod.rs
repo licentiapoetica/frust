@@ -44,6 +44,9 @@ Remote source (config.yaml `remote:`, a f0ck-rs site seen through your account t
                                             streamed when viewed, or kept with remote.store_media;
                                             --thumbs: with store_media, fetch thumbnails now;
                                             --full: refresh every mirrored item, not only new ones)
+  remote-sync --watch [--every <seconds>]   Sync, then keep watching for new remote items and mirror
+                                            them as they come (every remote.watch seconds, else 30;
+                                            Ctrl-C stops)
   remote-sync --purge [--yes]               Start over: delete every mirrored item, its files and the
                                             accounts made for remote users
   remote-sync --prune [--yes]               Delete mirrored items of kinds no longer in remote.types
@@ -133,7 +136,7 @@ async fn dispatch(base: &Path, cmd: &str, args: &[String]) -> Result<i32> {
         "find-duplicates" => maintenance::find_duplicates(&st).await,
         "autotag" => maintenance::autotag(&st, &Args::parse(args, &["--dry-run"], &[])?).await,
         "clean" => maintenance::clean(&st, &Args::parse(args, &["--dry-run", "--yes", "-y"], &[])?).await,
-        "remote-sync" => remote_sync(&st, &Args::parse(args, &["--full", "--thumbs", "--purge", "--prune", "--yes", "-y"], &["--limit"])?).await,
+        "remote-sync" => remote_sync(&st, &Args::parse(args, &["--full", "--thumbs", "--purge", "--prune", "--yes", "-y", "--watch"], &["--limit", "--every"])?).await,
         _ => unreachable!(),
     }
 }
@@ -220,7 +223,30 @@ async fn remote_sync(st: &crate::state::AppState, a: &Args) -> Result<i32> {
     let opts = crate::remote::SyncOpts { full: a.flag(&["--full"]), limit, thumbs: a.flag(&["--thumbs"]), announce: false, verbose: true };
     let r = crate::remote::sync(st, &rc, &opts).await?;
     println!("Done: {} new, {} updated, {} failed (remote total {}).", r.added, r.updated, r.failed, r.remote_total);
+    if a.flag(&["--watch"]) {
+        return remote_watch(st, &rc, a).await;
+    }
     Ok(if r.failed > 0 { 1 } else { 0 })
+}
+
+/// `f0ckm remote-sync --watch`: check the remote for new items until stopped. New items are
+/// announced live, so a running server shows them like uploads.
+async fn remote_watch(st: &crate::state::AppState, rc: &crate::remote::RemoteCfg, a: &Args) -> Result<i32> {
+    let every = match a.value(&["--every"]) {
+        Some(v) => v.parse::<u64>().map_err(|_| anyhow::anyhow!("--every needs a number of seconds"))?,
+        None => Some(rc.watch).filter(|w| *w > 0).unwrap_or(30),
+    }
+    .max(crate::remote::WATCH_MIN_SECS);
+    println!("Watching for new items every {every}s (Ctrl-C stops).");
+    let mut watcher = crate::remote::Watcher::default();
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(every)).await;
+        match watcher.check(st, rc, true).await {
+            Ok(0) => {}
+            Ok(n) => println!("[REMOTE] {n} new"),
+            Err(e) => eprintln!("[REMOTE] check failed: {e:#}"),
+        }
+    }
 }
 
 /// Line numbers (1-based) that contain a tab, e.g. "12, 117".

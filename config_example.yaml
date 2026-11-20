@@ -399,6 +399,8 @@ remote:
   mode: 3               # what the remote shows: 0 sfw, 1 nsfw, 2 untagged, 3 all
   keep_ids: true        # same item ids as the remote where they are free here
   interval: 0           # minutes between syncs while the server runs (0: only `f0ckm remote-sync`)
+  watch: 0              # seconds between checks for new remote posts while the server runs; new ones
+                        # are mirrored and shown live right away (0: off, else at least 10)
   types: []             # only these kinds, e.g. [video] or [video, audio] (video, image, audio); empty: all.
                         # Dropped a kind later? `f0ckm remote-sync --prune` deletes its mirrored items
   redact_src: false     # true: don't keep the items' source URLs (also blanks ones synced before);

@@ -3,7 +3,8 @@
 //!
 //! * `f0ckm remote-sync` (and `remote.interval` while the server runs) logs in to the remote with
 //!   `remote.username` / `remote.password` and copies items, tags, ratings, uploaders and favs
-//!   into the database. Uploaders, taggers and fav users become local accounts that can't log in
+//!   into the database. `remote.watch` (or `remote-sync --watch`) asks the remote every few
+//!   seconds for items newer than the newest one seen and mirrors those right away ([`Watcher`]). Uploaders, taggers and fav users become local accounts that can't log in
 //!   (password `!`); a remote login that exists here too maps to that local account.
 //! * Media files, thumbnails and cover art are not copied up front. By default every request for
 //!   one (static_files.rs) is streamed through from the remote, Range requests included, and
@@ -47,6 +48,10 @@ const SEQ_PAST_MAX: &str = "SELECT setval('public.items_id_seq', GREATEST((SELEC
 const REDACTED: &str = "redacted";
 /// New items announced live per sync (more is a backfill, not news).
 const ANNOUNCE_MAX: usize = 30;
+/// Feed page size of a watch check (`newer=`: oldest first).
+const WATCH_EPS: usize = 100;
+/// Fewest seconds between two watch checks.
+pub const WATCH_MIN_SECS: u64 = 10;
 
 /// `remote:` in config.yaml.
 #[derive(Debug, Clone)]
@@ -63,6 +68,9 @@ pub struct RemoteCfg {
     pub keep_ids: bool,
     /// Minutes between syncs while the server runs (0: only `f0ckm remote-sync`).
     pub interval: u64,
+    /// Seconds between checks for new remote items while the server runs (0: off; else at least
+    /// [`WATCH_MIN_SECS`]).
+    pub watch: u64,
     /// Largest media file fetched, in bytes.
     pub max_bytes: u64,
     /// Keep fetched media in b/, t/, ca/ (false: stream it through, nothing is written).
@@ -102,6 +110,10 @@ pub fn settings(cfg: &Config) -> Option<RemoteCfg> {
         mode: cfg.int("remote.mode").filter(|m| (0..=3).contains(m)).unwrap_or(3),
         keep_ids: cfg.enabled("remote.keep_ids"),
         interval: cfg.int("remote.interval").unwrap_or(0).max(0) as u64,
+        watch: match cfg.int("remote.watch").unwrap_or(0).max(0) as u64 {
+            0 => 0,
+            s => s.max(WATCH_MIN_SECS),
+        },
         store_media: cfg.truthy("remote.store_media"),
         types: media_types(cfg.get("remote.types")),
         redact_src: src_policy(cfg) == SrcPolicy::Drop,
@@ -817,25 +829,125 @@ async fn delete_accounts(st: &AppState, ids: &[i32]) -> Result<()> {
     Ok(())
 }
 
-/// The periodic sync while the server runs (`remote.interval` minutes; re-read every minute so
-/// a config reload starts or stops it).
+// ── Watch ───────────────────────────────────────────────────────────────────
+
+/// Watches the remote for new items: each [`Watcher::check`] asks the remote's feed for items
+/// newer than the newest one seen (`newer=`, oldest first) and mirrors them, announced live like
+/// uploads. One small request when nothing is new. An item that fails to mirror is skipped (the
+/// next sync picks it up).
+#[derive(Default)]
+pub struct Watcher {
+    /// The remote this mark belongs to.
+    source: String,
+    /// The newest remote id seen; None: read again from `remote_items`.
+    seen: Option<i64>,
+}
+
+impl Watcher {
+    /// Start again from what is mirrored (after a sync, or when the remote changed).
+    pub fn reset(&mut self) {
+        self.seen = None;
+    }
+
+    /// One check: the number of items mirrored.
+    pub async fn check(&mut self, st: &AppState, rc: &RemoteCfg, verbose: bool) -> Result<usize> {
+        if self.source != rc.base {
+            *self = Watcher { source: rc.base.clone(), seen: None };
+        }
+        let mut seen = match self.seen {
+            Some(s) => s,
+            None => {
+                let max = sql!("SELECT MAX(remote_id)::bigint FROM remote_items WHERE source = ", rc.base.clone()).fetch_scalar::<i64, _>(&st.db).await?;
+                match max {
+                    Some(m) => m,
+                    // Nothing mirrored yet (that's `remote-sync`'s job): only what comes from now on
+                    None => {
+                        let page = call(rc, &format!("/api/v3/feed?mode={}&eps=10", rc.mode), None).await?;
+                        page["items"].as_array().and_then(|a| a.iter().filter_map(|i| i["id"].as_i64()).max()).unwrap_or(0)
+                    }
+                }
+            }
+        };
+        self.seen = Some(seen);
+
+        let mut users = Users::new(rc);
+        let mut added = 0;
+        loop {
+            let page = call(rc, &format!("/api/v3/feed?mode={}&eps={WATCH_EPS}&newer={}", rc.mode, seen + 1), None).await?;
+            let rows = page["items"].as_array().cloned().unwrap_or_default();
+            let ids: Vec<i64> = rows
+                .iter()
+                .filter(|r| rc.types.is_empty() || r["mime"].as_str().is_some_and(|m| rc.types.iter().any(|t| m.split('/').next() == Some(t.as_str()))))
+                .filter_map(|r| r["id"].as_i64())
+                .filter(|i| *i > seen)
+                .collect();
+            for chunk in ids.chunks(BULK_MAX) {
+                let bulk = call(rc, "/api/v3/items/bulk", Some(&json!({ "ids": chunk, "include_tags": true, "include_favorites": true, "mode": rc.mode }))).await?;
+                for entry in bulk["items"].as_array().cloned().unwrap_or_default() {
+                    let rid = entry["item"]["id"].as_i64().unwrap_or(0);
+                    match mirror_item(st, rc, &entry, &mut users).await {
+                        Ok((item_id, true)) => {
+                            added += 1;
+                            if verbose {
+                                println!("  + #{rid} -> item {item_id} ({})", entry["item"]["mime"].as_str().unwrap_or("?"));
+                            }
+                            if added <= ANNOUNCE_MAX {
+                                announce(st, item_id).await;
+                            }
+                        }
+                        Ok((_, false)) => {}
+                        Err(e) => eprintln!("[REMOTE] #{rid}: {e:#}"),
+                    }
+                }
+            }
+            let Some(max) = rows.iter().filter_map(|r| r["id"].as_i64()).max().filter(|m| *m > seen) else { break };
+            seen = max;
+            self.seen = Some(seen);
+            if rows.len() < WATCH_EPS {
+                break;
+            }
+        }
+        if added > 0 {
+            st.caches.feed_count.clear();
+        }
+        Ok(added)
+    }
+}
+
+/// The remote work while the server runs: the periodic sync (`remote.interval` minutes) and the
+/// watch for new items (`remote.watch` seconds), one after the other in one task. Settings are
+/// re-read every round, so a config reload starts or stops either.
 pub fn spawn_sync(st: &AppState) {
     let st = st.clone();
     tokio::spawn(async move {
         tokio::time::sleep(Duration::from_secs(60)).await;
-        let mut last: Option<Instant> = None;
+        let mut last_sync: Option<Instant> = None;
+        let mut last_watch: Option<Instant> = None;
+        let mut watcher = Watcher::default();
         loop {
-            if let Some(rc) = settings(&st.cfg()).filter(|rc| rc.interval > 0) {
-                if last.is_none_or(|l| l.elapsed() >= Duration::from_secs(rc.interval * 60)) {
-                    last = Some(Instant::now());
+            let mut tick = 60;
+            if let Some(rc) = settings(&st.cfg()) {
+                if rc.interval > 0 && last_sync.is_none_or(|l| l.elapsed() >= Duration::from_secs(rc.interval * 60)) {
+                    last_sync = Some(Instant::now());
                     match sync(&st, &rc, &SyncOpts { announce: true, ..Default::default() }).await {
                         Ok(r) if r.added + r.failed > 0 => tracing::info!("[REMOTE] {}: {} new, {} updated, {} failed", rc.base, r.added, r.updated, r.failed),
                         Ok(_) => {}
                         Err(e) => tracing::warn!("[REMOTE] sync with {} failed: {e:#}", rc.base),
                     }
+                    watcher.reset();
+                } else if rc.watch > 0 && last_watch.is_none_or(|l| l.elapsed() >= Duration::from_secs(rc.watch)) {
+                    last_watch = Some(Instant::now());
+                    match watcher.check(&st, &rc, false).await {
+                        Ok(0) => {}
+                        Ok(n) => tracing::info!("[REMOTE] {}: {n} new", rc.base),
+                        Err(e) => tracing::warn!("[REMOTE] watching {} failed: {e:#}", rc.base),
+                    }
+                }
+                if rc.watch > 0 {
+                    tick = rc.watch.min(60);
                 }
             }
-            tokio::time::sleep(Duration::from_secs(60)).await;
+            tokio::time::sleep(Duration::from_secs(tick)).await;
         }
     });
 }
