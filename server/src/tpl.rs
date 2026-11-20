@@ -2498,6 +2498,17 @@ mod tests {
             let fresh = render(Value::Null);
             assert!(fresh.contains("href=\"/4/wsg/6250450/6250458\" class=\"timestamp-link\""), "{view}");
             assert!(!fresh.contains("href=\"/6250458\""), "{view}");
+            if view == "item-partial-legacy.html" {
+                // no thread badge (the location line has it); rehost in the action row, like the alternative author box
+                assert!(!fresh.contains("item-legacy-chan-badge") && !fresh.contains("item-chan-thread-link"));
+                let actions = |h: &str| h[h.find("item-legacy-actions").unwrap()..].to_string();
+                assert!(actions(&fresh).contains("class=\"chan-rehost-action-btn item-chan-rehost-btn\" id=\"chan-item-rehost-btn\""));
+                assert!(actions(&rehosted).contains("item-chan-rehosted-link") && actions(&rehosted).contains("item-chan-edit-btn"));
+                if let Ok(dir) = std::env::var("F0CKM_DUMP_CHAN_ITEM") {
+                    std::fs::write(PathBuf::from(&dir).join("chan-item-fresh.html"), &fresh).unwrap();
+                    std::fs::write(PathBuf::from(&dir).join("chan-item-rehosted.html"), &rehosted).unwrap();
+                }
+            }
             if view == "item-partial-modern.html" {
                 assert!(rehosted.contains("class=\"id-link\" data-item-id=\"6250458\">6BHrY1UUphB</a>"));
                 assert!(fresh.contains("href=\"/4/wsg/6250450/6250458\" class=\"id-link\" data-item-id=\"6250458\">6250458</a>"));

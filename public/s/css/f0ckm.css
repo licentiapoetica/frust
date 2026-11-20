@@ -10180,8 +10180,8 @@ html.hide-infobox-active .blahlol > .blahlol-meta + .gapRight {
    border it gets when comments are hidden) is left as a stray line. Drop it when nothing visible is
    left in it and no comment box follows (comments hidden with "c", or comments disabled); with
    comments showing, its top border is the comment box's top edge, so it stays. */
-html.hide-infobox-active body.layout-legacy.comments-hidden:not(.comments-sliding) .blahlol:not(:has(> #favs:not([hidden]), > .item-legacy-chan-badge, > #hall-badge-container > *)),
-html.hide-infobox-active body.layout-legacy:not(:has(#comments-container)) .blahlol:not(:has(> #favs:not([hidden]), > .item-legacy-chan-badge, > #hall-badge-container > *)) {
+html.hide-infobox-active body.layout-legacy.comments-hidden:not(.comments-sliding) .blahlol:not(:has(> #favs:not([hidden]), > #hall-badge-container > *)),
+html.hide-infobox-active body.layout-legacy:not(:has(#comments-container)) .blahlol:not(:has(> #favs:not([hidden]), > #hall-badge-container > *)) {
   display: none !important;
 }
 
@@ -29966,17 +29966,6 @@ pre.text-raw {
   margin-right: 0;
 }
 
-.badge.badge-dark.item-chan-badge {
-  background: rgba(74, 222, 128, 0.15);
-  border: 1px solid rgba(74, 222, 128, 0.3);
-}
-
-.badge.item-chan-badge > a.item-chan-thread-link {
-  color: #4ade80;
-  text-decoration: none;
-  font-weight: 600;
-}
-
 /* /4/ rehost controls in the action row */
 .gapRight > .chan-rehosted-wrap {
   display: inline-flex;
@@ -29993,9 +29982,9 @@ pre.text-raw {
   box-sizing: border-box;
   padding: 0 12px;
   font-size: 0.8rem;
-  background: rgba(74, 222, 128, 0.2);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.4);
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
   text-decoration: none;
   font-weight: 600;
   white-space: nowrap;
@@ -30007,9 +29996,9 @@ pre.text-raw {
   align-items: center;
   padding: 3px 7px;
   font-size: 0.8rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--white) 10%, transparent);
+  color: var(--white);
+  border: 1px solid color-mix(in srgb, var(--white) 20%, transparent);
   cursor: pointer;
 }
 
@@ -30027,12 +30016,13 @@ pre.text-raw {
   white-space: nowrap;
   flex-shrink: 0;
   font-size: 0.8rem;
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
+  background: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   cursor: pointer;
   font-weight: 600;
 }
+
 
 /* Icons inside the rehost controls follow the button's text: the user infobox styles every
    <i> in its action box as a big accent-coloured icon with a right margin */
@@ -30063,46 +30053,6 @@ pre.text-raw {
 
 .blahlol-meta-row.item-legacy-meta-row-hidden {
   display: none;
-}
-
-.badge.badge-dark.item-chan-badge.item-legacy-chan-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.chan-post-badge > a.chan-rehost-action-btn.rehosted.item-legacy-chan-rehosted-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 3px 10px;
-  font-size: 0.75rem;
-  background: rgba(74, 222, 128, 0.2);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.4);
-  text-decoration: none;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-#chan-item-rehost-btn.item-legacy-chan-rehost-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 3px 8px;
-  min-width: 0;
-  box-sizing: border-box;
-  white-space: nowrap;
-  flex-shrink: 0;
-  font-size: 0.75rem;
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  cursor: pointer;
-  font-weight: 600;
 }
 
 /* Action row when the alternative user infobox is off */

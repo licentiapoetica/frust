@@ -197,14 +197,6 @@
                     <div class="blahlol-meta-right"><span class="badge badge-dark"><a href="/{{ item_href }}" class="timestamp-link"><time class="timeago" tooltip="{{ item.timestamp.timefull }}">{{ item.timestamp.timeago }}</time></a></span>{% if item.expires_at and not item.burn_claimed %} <span class="badge badge-warning item-expiring-badge" tooltip="Self-destructs {{ ((item.expires_at|int) * 1000)|locale_string }} {{ ((item.expires_at|int) * 1000)|tz_label }}" data-local-time="{{ item.expires_at }}" data-local-time-attr="tooltip" data-local-time-prefix="Self-destructs " flow="up"><i class="fa-solid fa-clock"></i><span class="item-expiring-time" data-countdown="{{ item.expires_at }}">{{ item.expires_countdown }}</span></span>{% endif %}{% if item.burn_after_read %} <span class="badge badge-warning item-expiring-badge item-burn-badge" tooltip="Burn after read: {{ ("opened by its first viewer: it's being deleted" if item.burn_claimed else "only the first person to open it sees it, then it's deleted") }}" flow="up" aria-label="Burn after read"><i class="fa-solid fa-fire"></i></span>{% endif %}</div>
                     {% endif %}
                 </div>
-                {% if (not user_alternative_infobox and item.is_chan) %} <span class="badge badge-dark chan-post-badge item-chan-badge item-legacy-chan-badge">
-                    <a href="/4/{{ item.external_board }}/{{ item.external_tid }}" class="item-chan-thread-link" title="View thread overview"><i class="fa-solid fa-clover"></i> /{{ item.external_board }}/{{ item.external_tid }}</a>
-                    {% if item.local_id %}
-                    <a href="/{{ (item.local_path or item.local_id) }}" class="chan-rehost-action-btn rehosted item-legacy-chan-rehosted-link" title="Already rehosted on f0ckm (/{{ (item.local_path or item.local_id) }})"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>
-                    {% else %}
-                    <button type="button" class="chan-rehost-action-btn item-legacy-chan-rehost-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" title="Rehost to f0ckm" aria-label="Rehost to f0ckm"><i class="fa-solid fa-cloud-arrow-up"></i></button>
-                    {% endif %}
-                </span>{% endif %}
 
                 <span id="hall-badge-container">{% if (halls_enabled and item.primaryHall) %}<span class="badge hall-badge-wrap">
                     <a href="/list/{{ item.primaryHall.slug }}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> {{ item.primaryHall.name }}</a>{% if (item.otherHalls and item.otherHalls|length) %}<span class="hall-overflow-pill">+{{ item.otherHalls|length }}<span class="hall-overflow-tooltip">{% for key, oh in item.otherHalls|entries %}<a href="/list/{{ oh.slug }}">{{ oh.name }}</a>{% endfor %}</span></span>{% endif %}
@@ -214,6 +206,17 @@
                 {# Action buttons when the alternative user infobox is off (the infobox renders its own set) #}
                 {% if not user_alternative_infobox %}
                 <div class="gapRight blahlol-actions item-legacy-actions">
+                    {#- 4chan post: the rehost control first, the same as in the alternative author box -#}
+                    {% if item.is_chan %}
+                    {% if item.local_id %}
+                    <span class="chan-rehosted-wrap">
+                        <a href="/{{ (item.local_path or item.local_id) }}" class="chan-rehost-action-btn rehosted item-chan-rehosted-link" title="Already rehosted on f0ckm (/{{ (item.local_path or item.local_id) }})"><i class="fa-solid fa-check"></i> /{{ (item.local_path or item.local_id) }}</a>
+                        <button type="button" class="chan-rehost-edit-btn item-chan-edit-btn" data-item-id="{{ item.local_id }}" title="Edit rating"><i class="fa-solid fa-pen"></i></button>
+                    </span>
+                    {% else %}
+                    <button type="button" class="chan-rehost-action-btn item-chan-rehost-btn" id="chan-item-rehost-btn" data-url="{{ item.external_media_url }}" data-board="{{ item.external_board }}" data-tid="{{ item.external_tid }}" data-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" title="Rehost to f0ckm" aria-label="Rehost to f0ckm"><i class="fa-solid fa-cloud-arrow-up"></i></button>
+                    {% endif %}
+                    {% endif %}
                     {% if session %}
                     {% if user_has_favorited %}
                     <i class="iconset fa-solid fa-heart" id="a_favo" data-item-id="{{ (item.local_id or item.id) }}" {% if item.is_chan %} data-is-chan="true" data-local-id="{{ (item.local_id or "") }}" data-chan-url="{{ item.external_media_url }}" data-chan-board="{{ item.external_board }}" data-chan-tid="{{ item.external_tid }}" data-chan-post="{{ item.external_id }}" data-filename="{{ (item.original_filename or "") }}" data-width="{{ (item.width or "") }}" data-height="{{ (item.height or "") }}" {% endif %} title="Favorite"></i>
