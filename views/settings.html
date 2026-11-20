@@ -12,10 +12,14 @@
 <div class="pagewrapper">
   <div id="main">
     <div class="settings"{% if guest %} data-guest="true"{% endif %}>
-      <!-- Title bar on the full page (after a reload): same as the page modal's header, which brings its own -->
-      <div id="settings-page-header">
-        <h3 class="sph-title">{{ t("settings.title") }}</h3>
-        <button type="button" class="sph-close" title="Close" aria-label="Close">&times;</button>
+      <!-- Title bar on the full page (after a reload): the page modal's header (same classes and CSS),
+           hidden in the modal, which brings its own. Close goes back to the page the modal was opened
+           over (settings.quicknav.js), without JavaScript home. -->
+      <div id="settings-page-header" class="pgm-header">
+        <h3 class="pgm-title">{{ t("settings.title") }}</h3>
+        <div class="pgm-actions">
+          <a href="/" class="pgm-close" title="Close" aria-label="Close"><i class="fa-solid fa-xmark"></i></a>
+        </div>
       </div>
       <!-- Quick navigation -->
       <nav id="settings-quicknav" aria-label="Settings sections">

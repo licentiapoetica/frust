@@ -30192,7 +30192,8 @@ body.onara-modal-open #page-modal {
 }
 
 #page-modal .pgm-header,
-#pgm-page-header {
+#pgm-page-header,
+#settings-page-header {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -30205,7 +30206,8 @@ body.onara-modal-open #page-modal {
 
 /* Height matched to the sidebar tab row (page-modal.js measures it); the close button scales with it */
 #page-modal.pgm-header-synced .pgm-header,
-#pgm-page-header.pgm-header-synced {
+#pgm-page-header.pgm-header-synced,
+#settings-page-header.pgm-header-synced {
   box-sizing: border-box;
   height: var(--pgm-header-h);
   padding-top: 0;
@@ -30214,13 +30216,13 @@ body.onara-modal-open #page-modal {
   padding-right: 8px;
 }
 
-:is(#page-modal, #pgm-page-header).pgm-header-synced .pgm-close {
+:is(#page-modal, #pgm-page-header, #settings-page-header).pgm-header-synced .pgm-close {
   width: calc(var(--pgm-header-h) - 16px);
   height: calc(var(--pgm-header-h) - 16px);
   font-size: 1.3em;
 }
 
-:is(#page-modal, #pgm-page-header) .pgm-title {
+:is(#page-modal, #pgm-page-header, #settings-page-header) .pgm-title {
   margin: 0;
   min-width: 0;
   overflow: hidden;
@@ -30232,14 +30234,14 @@ body.onara-modal-open #page-modal {
   letter-spacing: 0.08em;
 }
 
-:is(#page-modal, #pgm-page-header) .pgm-actions {
+:is(#page-modal, #pgm-page-header, #settings-page-header) .pgm-actions {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
 }
 
-:is(#page-modal, #pgm-page-header) .pgm-close {
+:is(#page-modal, #pgm-page-header, #settings-page-header) .pgm-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -30258,18 +30260,18 @@ body.onara-modal-open #page-modal {
   transition: color 0.15s, border-color 0.15s;
 }
 
-:is(#page-modal, #pgm-page-header) .pgm-close {
+:is(#page-modal, #pgm-page-header, #settings-page-header) .pgm-close {
   font-size: 1.6em;
   border-color: rgba(255, 255, 255, 0.25);
 }
 
-:is(#page-modal, #pgm-page-header) .pgm-close:hover {
+:is(#page-modal, #pgm-page-header, #settings-page-header) .pgm-close:hover {
   color: var(--accent);
   border-color: var(--accent);
 }
 
 /* Font Awesome X (a text "×" sat off-centre in the site font); same size as the upload modal's */
-:is(#page-modal, #pgm-page-header) .pgm-close i {
+:is(#page-modal, #pgm-page-header, #settings-page-header) .pgm-close i {
   display: block;
   font-size: 1rem;
   line-height: 1;
@@ -36025,8 +36027,10 @@ body.chan-denied {
   --st-surface: rgba(255, 255, 255, 0.04);
   --st-border: rgba(255, 255, 255, 0.1);
   --st-gap: 12px; /* space between quicknav and the section it scrolled to */
-  /* --settings-qn-bottom is measured by JS: bottom edge of the fixed quicknav */
-  padding-top: calc(var(--settings-qn-bottom, 100px) - var(--navbar-h, 50px) + 16px);
+  /* Full page: room for the fixed title bar and quicknav (heights measured by settings.quicknav.js;
+     the fallbacks are their one-line heights, for no-JS). The first heading's margin then gives the
+     same gap under the quicknav as in the page modal, where its 16px bottom margin collapses into it. */
+  padding-top: calc(var(--settings-hdr-h, 57px) + var(--settings-qn-h, 52px));
   /* the page ends after the last section (no extra space to scroll it up under the quicknav) */
   padding-bottom: 40px;
   text-align: left;
@@ -36048,10 +36052,14 @@ body:has(#main > .settings) #bg {
   border-radius: 0 !important;
 }
 
-/* Quicknav: flat bar, segmented square chips, active = solid accent */
+/* Quicknav: flat bar, segmented square chips, active = solid accent. Full page: fixed right under the
+   title bar, across the content area (--settings-right: the sidebar beside it). Chips start where the
+   title does (20px), in the page modal too. */
 #settings-quicknav {
+  top: calc(var(--navbar-h, 50px) + var(--settings-hdr-h, 57px));
+  right: var(--settings-right, var(--sidebar-w, 0px));
   gap: 4px;
-  padding: 8px 16px;
+  padding: 8px 20px;
   box-sizing: border-box;
   transition: right 0.3s ease-in-out;
   background: var(--bg, #111);
@@ -36065,71 +36073,39 @@ body:has(#main > .settings) #bg {
   display: block;
 }
 
-/* Full page: title bar fixed under the navbar like the page modal's header (page-modal.html);
-   JS puts the quicknav right below it and matches its height to the sidebar tab row */
+/* Full page: the page modal's title bar (.pgm-header, styled with it in the page-modal block), fixed
+   under the navbar over the content area like the modal; settings.quicknav.js matches its height to
+   the sidebar tab row as page-modal.js does for the modal */
 #settings-page-header {
   position: fixed;
   top: var(--navbar-h, 50px);
   left: 0;
-  right: 0;
+  right: var(--settings-right, var(--sidebar-w, 0px));
   z-index: 201;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   box-sizing: border-box;
-  padding: 12px 20px;
   background: var(--bg, #111);
-  border-bottom: 1px solid var(--accent);
+  color: var(--text-color, #fff);
   transition: right 0.3s ease-in-out;
 }
 
-#settings-page-header.sph-synced {
-  padding-top: 0;
-  padding-bottom: 0;
-}
+/* Without JavaScript --navbar-h is only an estimate: pin the bars to the navbar's real bottom edge,
+   like the sidebars (no-JS block) */
+@supports (anchor-name: --site-navbar) {
+  html.no-js #settings-page-header {
+    top: anchor(--site-navbar bottom);
+  }
 
-#settings-page-header .sph-title {
-  margin: 0;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 1em;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-color, #fff) !important;
-}
-
-#settings-page-header .sph-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  margin: 0;
-  padding: 0;
-  background: none;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: var(--text-color, #fff);
-  font-size: 1.6em;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-#settings-page-header .sph-close:hover {
-  color: var(--accent);
-  border-color: var(--accent);
+  html.no-js #settings-quicknav {
+    top: calc(anchor(--site-navbar bottom) + var(--settings-hdr-h, 57px));
+  }
 }
 
 .settings.in-page-modal > #settings-page-header {
   display: none;
 }
 
-/* In the page modal: the quicknav sticks to the top of the modal body (no fixed offset needed) */
+/* In the page modal: the quicknav sticks to the top of the modal body (no fixed offset needed), across
+   the whole modal width like the bar on the full page (the negative margin undoes .settings' padding) */
 /* overflow: the global .settings { overflow-x: hidden } would make .settings its own scroll
    container, so the sticky quicknav would stick inside a box that never scrolls. clip cuts off
    the same overflow without creating one, so it sticks to the modal body. */
@@ -36146,28 +36122,31 @@ body:has(#main > .settings) #bg {
   left: auto;
   right: auto;
   z-index: 5;
-  margin: 0 0 16px;
+  margin: 0 -20px 16px;
   background: var(--bg, #111);
 }
 
-/* Height matched to the sidebar tab row (JS): one line, sideways scroll without a visible scrollbar */
-#settings-quicknav.qn-synced {
-  flex-wrap: nowrap;
-  align-items: center;
-  padding-top: 0;
-  padding-bottom: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
+@media (max-width: 600px) {
+  .settings.in-page-modal > #settings-quicknav {
+    margin: 0 -4px 16px;
+  }
 }
 
-#settings-quicknav.qn-synced::-webkit-scrollbar {
-  display: none;
+/* Full page: .settings fills the content area exactly like the page modal's content does, whatever
+   padding .pagewrapper has in this layout (layout-modern/-legacy, breakpoints): none, and the room for
+   the right sidebar (measured by settings.quicknav.js, the same width as the title bar's right edge)
+   as its margin. Not in the other frontends' shell, which lays .pagewrapper out itself (f0ck-shell.css). */
+html body > .pagewrapper:has(> #main > .settings) {
+  padding-top: 0 !important;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
 }
 
-#settings-quicknav.qn-synced a {
-  flex-shrink: 0;
+body > .pagewrapper > #main > .settings {
+  /* max-width: 100% would hold it at #main's width */
+  max-width: none;
+  margin-right: var(--settings-right, var(--sidebar-w, 0px));
+  transition: margin-right 0.3s ease-in-out;
 }
 
 #settings-quicknav a {

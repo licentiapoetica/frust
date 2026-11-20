@@ -120,7 +120,8 @@
   const place = () => {
     const vw = window.innerWidth;
     const nav = visibleRect('body > nav.navbar, nav.navbar');
-    const top = nav ? Math.max(0, Math.round(nav.bottom)) : 0;
+    // Unrounded, like the full pages' bars (top: var(--navbar-h)): the same pixel in both
+    const top = nav ? Math.max(0, nav.bottom) : 0;
     // Right sidebar: open unless body.sidebar-right-hidden; its layout width ignores the slide transform
     const rsEl = document.querySelector('.global-sidebar-right, .item-sidebar-right, .index-sidebar-right');
     const rsOpen = !!rsEl && !document.body.classList.contains('sidebar-right-hidden')

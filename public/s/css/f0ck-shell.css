@@ -196,7 +196,7 @@ html.f0ck-shell .f0ck-shell-page {
   box-shadow: 0 0 0 2px var(--fe-accent, #9f0);
 }
 
-.f0ck-shell-page #settings-page-header .sph-close {
+.f0ck-shell-page #settings-page-header .pgm-close {
   display: none;
 }
 

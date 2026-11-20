@@ -13,7 +13,10 @@
         // goes back to the page the modal was opened over (page-modal.js remembers it), else home.
         var header = sc ? null : root.querySelector('#settings-page-header');
         if (header) {
-          header.querySelector('.sph-close').addEventListener('click', function() {
+          header.querySelector('.pgm-close').addEventListener('click', function(e) {
+            // A link (home) so it works without JavaScript; keep the site's AJAX link handler out
+            e.preventDefault();
+            e.stopPropagation();
             var back = null;
             try { back = sessionStorage.getItem('f0ck_pgm_base'); sessionStorage.removeItem('f0ck_pgm_base'); } catch (e) {}
             if (!back || back.charAt(0) !== '/' || back.charAt(1) === '/' || /^\/settings\/?(?:[?#]|$)/.test(back)) back = '/';
@@ -47,26 +50,30 @@
           return open ? Math.min(Math.round(rs.offsetWidth), Math.round(vw / 2)) : 0;
         }
 
+        // Full page: the title bar and the quicknav are fixed and laid out like the page modal's header
+        // and sticky quicknav (f0ckm.css). JS only hands CSS the measurements, as custom properties.
         function measure() {
           if (!nav.isConnected) return;
-          // In the page modal the modal already sits beside the sidebar and its header matches the tabs
-          var right = sc ? 0 : contentRight();
-          nav.style.right = sc ? '' : right + 'px';
-          // Sidebar beside the content: exactly the height of its tab row, one continuous bar under the
-          // navbar. On the full page that bar is the title bar (as in the page modal), the quicknav below it.
-          var rs = right > 0 ? sidebarEl() : null;
-          var tabs = rs ? rs.querySelector('.sidebar-tabs') : null;
-          var tabsH = tabs ? tabs.getBoundingClientRect().height : 0;
-          var bar = header || nav;
-          if (header) header.style.right = right + 'px';
-          if (tabsH > 0) {
-            bar.style.height = tabsH + 'px';
-            bar.classList.add(header ? 'sph-synced' : 'qn-synced');
-          } else {
-            bar.style.height = '';
-            bar.classList.remove('sph-synced', 'qn-synced');
+          if (header) {
+            // In the page modal the modal already sits beside the sidebar and its header matches the tabs
+            var right = contentRight();
+            root.style.setProperty('--settings-right', right + 'px');
+            // Sidebar beside the content: the title bar takes exactly the height of its tab row, one
+            // continuous bar under the navbar (same as page-modal.js does for the modal's header)
+            var rs = right > 0 ? sidebarEl() : null;
+            var tabs = rs ? rs.querySelector('.sidebar-tabs') : null;
+            var tabsH = tabs ? tabs.getBoundingClientRect().height : 0;
+            if (tabsH > 0) {
+              header.style.setProperty('--pgm-header-h', tabsH + 'px');
+              header.classList.add('pgm-header-synced');
+            } else {
+              header.style.removeProperty('--pgm-header-h');
+              header.classList.remove('pgm-header-synced');
+            }
+            // Unrounded: the quicknav sits flush under the title bar, the content flush under the quicknav
+            root.style.setProperty('--settings-hdr-h', header.getBoundingClientRect().height + 'px');
+            root.style.setProperty('--settings-qn-h', nav.getBoundingClientRect().height + 'px');
           }
-          if (header) nav.style.top = Math.round(header.getBoundingClientRect().bottom) + 'px';
           var bottom = Math.ceil(nav.getBoundingClientRect().bottom);
           root.style.setProperty('--settings-qn-bottom', bottom + 'px');
         }
@@ -162,6 +169,7 @@
           });
           ro.observe(nav);
           ro.observe(root);
+          if (header) ro.observe(header);
         }
         // Sidebar open/close: the body class flips when the slide ends; the event announces the new width up front
         var bodyMo = new MutationObserver(function() {
