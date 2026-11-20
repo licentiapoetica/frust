@@ -1,5 +1,5 @@
-//! Moderator panel: dashboard, approval queue, soft-deleted items, audit log, MOTD, pins and halls
-//! (port of src/inc/routes/mod.mjs).
+//! Moderator panel: dashboard, approval queue, soft-deleted items, MOTD, pins and halls
+//! (port of src/inc/routes/mod.mjs; the audit log page is routes/mod_audit.rs).
 //!
 //! Differences to the old code:
 //! * Handlers that ended with `res.reply({ success, ... })` sent an empty `text/html` 200 (flummpress
@@ -31,7 +31,6 @@ pub fn register(r: &mut Router) {
     r.get_g(r"^\/mod\/trash\/?$", Perm(P::ModDeleteItems), trash_page);
     r.post_g(r"^\/mod\/approve\/?", Perm(P::ModApprove), approve);
     r.post_g(r"^\/mod\/deny\/?", ModAuth, deny);
-    r.get_g(r"^\/mod\/audit\/?", Perm(P::ModAudit), audit);
     r.post_g(r"^\/mod\/deny-multi\/?", ModAuth, deny_multi);
     r.get_g(r"^\/mod\/pending\/(?<type>[btca])\/(?<file>.+)", Perm(P::ModApprove), pending_file);
     r.get_g(r"^\/mod\/deleted\/(?<type>[bt])\/(?<file>.+)", Perm(P::ModDeleteItems), deleted_file);
@@ -665,136 +664,6 @@ async fn deny_multi(st: AppState, mut req: Req) -> Res {
         count += 1;
     }
     Ok(crate::http::json_resp(&json!({ "success": true, "count": count }), 200))
-}
-
-// ── Audit log ───────────────────────────────────────────────────────────────
-
-fn process_log_entry(mut l: Row) -> Value {
-    let det = match l.remove("details").unwrap_or(Value::Null) {
-        Value::String(s) => serde_json::from_str::<Value>(&s).unwrap_or_else(|_| json!({})),
-        v => v,
-    };
-    let has_details = crate::config::truthy(&det);
-    let action = l.string("action");
-
-    let fmt = l
-        .str("created_at")
-        .and_then(|c| chrono::DateTime::parse_from_rfc3339(c).ok())
-        .map(|d| crate::tpl::locale_string_str(&d.with_timezone(&chrono::Local), None))
-        .unwrap_or_else(|| "Invalid Date".into());
-    l.insert("created_at_fmt".into(), json!(fmt));
-    l.insert("created_at".into(), json!(fmt));
-
-    // `entry.x = details ? details.x : null` — undefined keys are dropped from JSON
-    let pick = |l: &mut Row, k: &str| {
-        if !has_details {
-            l.insert(k.into(), Value::Null);
-        } else if let Some(v) = det.get(k) {
-            l.insert(k.into(), v.clone());
-        } else {
-            l.remove(k);
-        }
-    };
-    for k in ["reason", "old_content", "new_content", "item_id"] {
-        pick(&mut l, k);
-    }
-
-    if action == "toggle_tag" && has_details {
-        if det.get("action").and_then(Value::as_str) == Some("added") {
-            set_or_remove(&mut l, "new_content", det.get("tag"));
-        } else if det.get("from").map(crate::config::truthy).unwrap_or(false) {
-            set_or_remove(&mut l, "old_content", det.get("from"));
-            set_or_remove(&mut l, "new_content", det.get("tag"));
-        }
-    }
-
-    if has_details {
-        if let Some(name) = det.get("uploader_name").filter(|v| crate::config::truthy(v)) {
-            let uid = det.get("uploader_id").filter(|v| crate::config::truthy(v)).map(|v| js_str(Some(v)).unwrap_or_default()).unwrap_or_else(|| "?".into());
-            l.insert("uploader_info".into(), json!(format!("Uploader: {} (ID: {uid})", js_str(Some(name)).unwrap_or_default())));
-        }
-    }
-
-    let mut other = Map::new();
-    if let Value::Object(m) = &det {
-        for (k, v) in m {
-            let standard = ["reason", "old_content", "new_content", "item_id", "uploader_name", "uploader_id"].contains(&k.as_str());
-            let toggle = action == "toggle_tag" && ["tag", "from", "action"].contains(&k.as_str());
-            if !standard && !toggle {
-                other.insert(k.clone(), v.clone());
-            }
-        }
-    }
-    l.insert("details_json".into(), if other.is_empty() { Value::Null } else { json!(crate::util::json_string(&Value::Object(other))) });
-    Value::Object(l)
-}
-
-fn set_or_remove(l: &mut Row, k: &str, v: Option<&Value>) {
-    match v {
-        Some(v) => {
-            l.insert(k.into(), v.clone());
-        }
-        None => {
-            l.remove(k);
-        }
-    }
-}
-
-async fn audit(st: AppState, req: Req) -> Res {
-    let page = req.query("page").map(|p| js_number(p).unwrap_or(f64::NAN)).unwrap_or(1.0);
-    let page = if page.is_finite() && page >= 1.0 { (page.floor() as i64).min(1_000_000) } else { 1 };
-    let limit = 50i64;
-    let offset = (page - 1) * limit;
-    let filter_action = req.query("action").map(str::trim).unwrap_or("").to_string();
-    let filter_user = req.query("user").map(str::trim).unwrap_or("").to_string();
-
-    let mut filter = crate::db::Sql::empty();
-    if !filter_action.is_empty() {
-        filter.push(" AND al.action = ").bind(filter_action.clone());
-    }
-    if !filter_user.is_empty() {
-        filter.push(" AND u.user ILIKE ").bind(format!("%{filter_user}%"));
-    }
-    let logs = sql!(
-        r#"SELECT al.*, u.user as username FROM audit_log al LEFT JOIN "user" u ON al.user_id = u.id WHERE true"#,
-        @filter,
-        " ORDER BY al.created_at DESC LIMIT ",
-        limit,
-        " OFFSET ",
-        offset
-    )
-    .fetch_all(&st.db)
-    .await?;
-    let total: i64 = sql!(r#"SELECT count(*) as c FROM audit_log al LEFT JOIN "user" u ON al.user_id = u.id WHERE true"#, @filter)
-        .fetch_scalar(&st.db)
-        .await?
-        .unwrap_or(0);
-    let pages = (total + limit - 1) / limit;
-    let processed: Vec<Value> = logs.into_iter().map(process_log_entry).collect();
-
-    if req.is_xhr() {
-        return jr(
-            200,
-            json!({
-                "success": true,
-                "logs": processed,
-                "page": page,
-                "pages": pages,
-                "hasMore": page < pages,
-                "filterAction": filter_action,
-                "filterUser": filter_user,
-            }),
-        );
-    }
-    let data = json!({
-        "logs": processed,
-        "page": page,
-        "pages": pages,
-        "filterAction": filter_action,
-        "filterUser": filter_user,
-        "tmp": null,
-    });
-    Ok(html(crate::tpl::render(&st, Some(&req), "mod/audit", data)))
 }
 
 // ── Pending / deleted media ─────────────────────────────────────────────────

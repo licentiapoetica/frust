@@ -134,6 +134,7 @@ DROP INDEX IF EXISTS public.idx_comment_poll_options_poll;
 DROP INDEX IF EXISTS public.idx_comment_files_comment_id;
 DROP INDEX IF EXISTS public.idx_comment_files_checksum;
 DROP INDEX IF EXISTS public.idx_audit_log_user_id;
+DROP INDEX IF EXISTS public.idx_audit_log_target;
 DROP INDEX IF EXISTS public.idx_audit_log_created_at;
 DROP INDEX IF EXISTS public.idx_audit_log_action;
 DROP INDEX IF EXISTS public.custom_emojis_pack_id_idx;
@@ -2496,6 +2497,13 @@ CREATE INDEX idx_audit_log_action ON public.audit_log USING btree (action);
 --
 
 CREATE INDEX idx_audit_log_created_at ON public.audit_log USING btree (created_at);
+
+
+--
+-- Name: idx_audit_log_target; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_audit_log_target ON public.audit_log USING btree (target_type, target_id);
 
 
 --

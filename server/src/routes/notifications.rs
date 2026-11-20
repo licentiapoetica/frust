@@ -480,6 +480,16 @@ fn str_set(data: &Value, one: &str, many: &str) -> Vec<String> {
     out
 }
 
+/// Send an event to every connected client whose session has the permission (e.g. new audit log
+/// entries for the audit log page).
+pub fn send_with_perm(st: &AppState, p: crate::perms::P, ev: &Value) {
+    for c in HUB.snapshot() {
+        if c.session.as_ref().is_some_and(|s| crate::perms::can(st, Some(s), p)) {
+            c.send(ev);
+        }
+    }
+}
+
 /// Push a `banned` event to every client matching the ban (user, fingerprints, IP), then close them.
 pub fn broadcast_ban(data: &Value) {
     let mut user_ids: Vec<i64> = vec![];

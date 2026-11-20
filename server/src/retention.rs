@@ -8,6 +8,9 @@
 //!   `retention_sessions_days`        sessions unused for this long are deleted
 //!   `retention_fingerprint_days`     hardware fingerprint is cleared from anonymous identities inactive this long
 //!
+//! Audit log entries are deleted after the admin's audit retention (`audit_retention_days`, set on
+//! the audit log page, a site setting; 0 = kept forever).
+//!
 //! Each run also removes comment uploads never attached to a comment within a day
 //! (`comment_upload::purge_unattached`).
 //!
@@ -114,6 +117,12 @@ pub async fn run_retention(st: &AppState) {
         step!("anon.hw_fingerprint", sql!("update anon_identities set hw_fingerprint = null where hw_fingerprint is not null and last_seen < ", @c));
     }
 
+    match crate::audit::prune_older_than(st, st.settings.audit_retention_days()).await {
+        Ok(n) if n > 0 => counts.push(("audit_log", n)),
+        Ok(_) => {}
+        Err(e) => tracing::error!("[RETENTION] audit_log failed: {e}"),
+    }
+
     // Who saw an item lately (a member's id, a guest's daily hash): only needed for the view window
     let views_window = crate::routes::apiv2::index::views::WINDOW_MINUTES;
     step!("item_view_marks", sql!("delete from item_view_marks where seen_at < now() - make_interval(mins => ", views_window, ")"));
@@ -137,11 +146,12 @@ pub fn start(st: &AppState) {
     let fmt = |d: i64| if d > 0 { format!("{d}d") } else { "forever".to_string() };
     let fp = if crate::settings::hw_fingerprint_enabled(&cfg) { fmt(r.fingerprint) } else { "disabled (purged)".to_string() };
     tracing::info!(
-        "[BOOT] Data retention: IPs {}, activity log {}, login attempts {}, sessions {}, device fingerprints {fp}",
+        "[BOOT] Data retention: IPs {}, activity log {}, login attempts {}, sessions {}, device fingerprints {fp}, audit log {}",
         fmt(r.ip),
         fmt(r.activity_log),
         fmt(r.login_attempts),
-        fmt(r.sessions)
+        fmt(r.sessions),
+        fmt(st.settings.audit_retention_days())
     );
     let s = st.clone();
     tokio::spawn(async move {

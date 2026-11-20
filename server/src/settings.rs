@@ -71,6 +71,8 @@ pub struct SiteSettings {
     pub about_text: String,
     pub rules_text: String,
     pub terms_text: String,
+    /// Audit log entries older than this many days are deleted (admin panel → audit log), 0 = kept forever
+    pub audit_retention_days: i64,
 }
 
 pub struct Settings {
@@ -124,6 +126,7 @@ impl Settings {
                 about_text: String::new(),
                 rules_text: String::new(),
                 terms_text: String::new(),
+                audit_retention_days: 0,
             }),
         }
     }
@@ -206,6 +209,9 @@ impl Settings {
     pub fn motd(&self) -> String {
         self.inner.read().motd.clone()
     }
+    pub fn audit_retention_days(&self) -> i64 {
+        self.inner.read().audit_retention_days
+    }
     pub fn maintenance_on(&self) -> bool {
         self.inner.read().maintenance.enabled
     }
@@ -251,6 +257,9 @@ impl Settings {
         self.inner.read().applications_require_email
     }
 }
+
+/// Longest audit log retention the admin can set, in days (100 years)
+pub const AUDIT_RETENTION_MAX: i64 = 36_500;
 
 // ── Config-based settings ─────────────────────────────────────────────────────
 
@@ -572,6 +581,7 @@ pub async fn load_from_db(st: &crate::state::AppState) {
                 "registration_applications" => s.registration_applications = b,
                 "applications_require_email" => s.applications_require_email = b,
                 "trusted_uploads" => s.trusted_uploads = as_int(&Value::String(val)).unwrap_or(0).max(0),
+                "audit_retention_days" => s.audit_retention_days = val.trim().parse::<i64>().unwrap_or(0).clamp(0, AUDIT_RETENTION_MAX),
                 "max_file_size" => s.max_file_size = val.trim().parse::<i64>().unwrap_or(0).max(0),
                 "upload_multiplier" => s.upload_multiplier = val.trim().parse::<f64>().ok().filter(|m| m.is_finite() && *m >= 1.0).unwrap_or(0.0),
                 "permissions" => s.permissions = crate::perms::PermConfig::parse(&val),

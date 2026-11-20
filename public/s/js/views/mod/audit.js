@@ -1,149 +1,237 @@
+// Audit log (views/mod/audit.html). The page works without JavaScript (links, GET filter form,
+// pager, plain admin forms); here:
+// - the filter form applies as soon as a choice changes, through the site's page navigation;
+// - older entries load while scrolling (the "Older entries" link, from the next page's HTML);
+// - new entries appear at the top live (audit_entry events) while on the first page;
+// - the admin forms (retention, delete old entries) save in place.
+// The markup lives in the template only: new rows come from a fresh copy of the page.
 (function () {
-    var DATA = JSON.parse(document.getElementById('mod-audit-data').textContent);
-    var grid = document.getElementById('audit-grid');
-    var loader = document.getElementById('audit-loading');
-    var pagination = document.getElementById('audit-pagination');
+  'use strict';
 
-    var escapeHtml = function (unsafe) {
-        return (unsafe || '')
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;");
-    };
+  const page = document.getElementById('audit-page');
+  if (!page || page.dataset.auditBound) return;
+  page.dataset.auditBound = '1';
 
-    var renderDiff = function (oldText, newText) {
-        var isEmpty = function (t) { return !t || t === 'null' || t === 'undefined'; };
-        if (isEmpty(oldText) && isEmpty(newText)) return '';
+  const firstPage = (Number(page.dataset.page) || 1) === 1;
 
-        var html = '<div class="audit-diff">';
-        if (!isEmpty(oldText)) html += '<div class="diff-removed">- ' + escapeHtml(oldText) + '</div>';
-        if (!isEmpty(newText)) html += '<div class="diff-added">+ ' + escapeHtml(newText) + '</div>';
-        html += '</div>';
-        return html;
-    };
+  function csrf() {
+    return (window.f0ckSession && window.f0ckSession.csrf_token) || page.dataset.csrf || '';
+  }
 
-    var currentPage = Number(DATA.page) || 1;
-    var totalPages = Number(DATA.pages) || 1;
-    var loading = false;
-    var hasMore = currentPage < totalPages;
+  async function fetchDoc(url) {
+    const res = await fetch(url, { headers: { 'Accept': 'text/html' }, credentials: 'same-origin' });
+    if (!res.ok) throw new Error('Loading failed (' + res.status + ')');
+    return new DOMParser().parseFromString(await res.text(), 'text/html');
+  }
 
-    // Read active filters so infinite scroll preserves them
-    var activeFilterAction = DATA.filterAction || '';
-    var activeFilterUser   = DATA.filterUser   || '';
+  function navigate(url) {
+    if (typeof window.loadPageAjax === 'function') window.loadPageAjax(url);
+    else location.assign(url);
+  }
 
-    if (pagination) pagination.style.display = 'none';
-
-    window.addEventListener('scroll', function () {
-        if (loading || !hasMore) return;
-
-        var scrollPosition = window.innerHeight + window.scrollY;
-        var threshold = document.documentElement.scrollHeight - 500;
-
-        if (scrollPosition > threshold) {
-            loadMore();
-        }
-    });
-
-    async function loadMore() {
-        if (loading || !hasMore) return;
-        loading = true;
-        if (loader) loader.style.display = 'block';
-
-        try {
-            var next = currentPage + 1;
-            var url = '/mod/audit?page=' + next;
-            if (activeFilterAction) url += '&action=' + encodeURIComponent(activeFilterAction);
-            if (activeFilterUser)   url += '&user='   + encodeURIComponent(activeFilterUser);
-
-            var res = await fetch(url, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            var data = await res.json();
-
-            if (data.success && data.logs && data.logs.length) {
-                data.logs.forEach(function (log) {
-                    var card = document.createElement('div');
-                    card.className = 'audit-card';
-
-                    var reason = log.reason;
-
-                    var html = '<div class="audit-card-header">' +
-                        '<div class="audit-card-user">' +
-                        '<a href="/user/' + encodeURIComponent(log.username) + '">' + log.username + '</a>' +
-                        '</div>' +
-                        '<div class="audit-card-header-right">' +
-                        '<div class="audit-card-time">' + (log.created_at || '') + '</div>' +
-                        '<span class="audit-entry-id">#<span class="audit-entry-id-val">' + (log.id || '') + '</span></span>' +
-                        '</div>' +
-                        '</div>' +
-                        '<div class="audit-card-body">' +
-                        '<div class="audit-card-row">' +
-                        '<span class="audit-label">Action:</span>' +
-                        '<span class="badge badge-secondary badge-action">' + (log.action || '') + '</span>' +
-                        '</div>' +
-                        '<div class="audit-card-row">' +
-                        '<span class="audit-label">Target:</span>' +
-                        '<span class="audit-value">' +
-                        '<strong>' + (log.target_type || '') + '</strong> ';
-
-                    if (log.target_type === 'comment') {
-                        if (log.item_id) {
-                            html += '<a href="/' + log.item_id + '#c' + log.target_id + '">#c' + log.target_id + '</a>';
-                        } else {
-                            html += '#c' + (log.target_id || '');
-                        }
-                    } else if (log.target_type === 'item') {
-                        html += '<a href="/' + log.target_id + '">/' + log.target_id + '</a>';
-                    } else {
-                        html += (log.target_id || '');
-                    }
-                    html += '</span></div>';
-
-                    if (reason) {
-                        html += '<div class="audit-card-row">' +
-                            '<span class="audit-label">Reason:</span>' +
-                            '<span class="audit-value">' + escapeHtml(reason) + '</span>' +
-                            '</div>';
-                    }
-
-                    if (log.uploader_info) {
-                        html += '<div class="audit-card-row">' +
-                            '<span class="audit-label">Info:</span>' +
-                            '<span class="audit-value mod-audit-info">' + escapeHtml(log.uploader_info) + '</span>' +
-                            '</div>';
-                    }
-
-                    if (log.old_content || log.new_content || log.details_json) {
-                        html += '<div class="audit-card-row mod-audit-changes">' +
-                            '<span class="audit-label">Changes:</span>' +
-                            '<div class="audit-diff">' +
-                            (log.old_content ? '<div class="diff-removed">- ' + escapeHtml(log.old_content) + '</div>' : '') +
-                            (log.new_content ? '<div class="diff-added">+ ' + escapeHtml(log.new_content) + '</div>' : '') +
-                            (log.details_json ? '<div class="audit-details-json mod-audit-details">' + escapeHtml(log.details_json) + '</div>' : '') +
-                            '</div>' +
-                            '</div>';
-                    }
-
-                    html += '</div>';
-                    card.innerHTML = html;
-                    grid.appendChild(card);
-                });
-                currentPage = data.page;
-                hasMore = data.hasMore;
-                if (document.getElementById('current-page-display')) {
-                    document.getElementById('current-page-display').innerText = currentPage;
-                }
-            } else {
-                hasMore = false;
-            }
-        } catch (err) {
-            console.error('Audit infinite scroll error:', err);
-            hasMore = false;
-        } finally {
-            loading = false;
-            if (loader) loader.style.display = 'none';
-        }
+  function emojify(root) {
+    if (typeof window.f0ckEmojify === 'function') {
+      try { window.f0ckEmojify(root); } catch (e) { /* plain text then */ }
     }
+  }
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+  const filters = document.getElementById('audit-filters');
+  if (filters) {
+    const go = () => {
+      const params = new URLSearchParams();
+      new FormData(filters).forEach((v, k) => {
+        const s = String(v).trim();
+        if (s) params.set(k, s);
+      });
+      const qs = params.toString();
+      navigate('/mod/audit' + (qs ? '?' + qs : ''));
+    };
+    filters.addEventListener('submit', (e) => {
+      e.preventDefault();
+      go();
+    });
+    filters.addEventListener('change', (e) => {
+      if (e.target.matches('select, input[type="date"]')) go();
+    });
+  }
+
+  // ── Older entries ──────────────────────────────────────────────────────────
+  const list = document.getElementById('audit-list');
+  let loadingMore = false;
+  let observer = null;
+
+  function knownIds() {
+    return new Set(Array.from(list.querySelectorAll(':scope > li[data-id]'), (li) => li.dataset.id));
+  }
+
+  async function loadMore(link) {
+    if (loadingMore || !link) return;
+    loadingMore = true;
+    link.classList.add('is-loading');
+    link.textContent = 'Loading…';
+    try {
+      const doc = await fetchDoc(link.getAttribute('href'));
+      const seen = knownIds();
+      const rows = Array.from(doc.querySelectorAll('#audit-list > li[data-id]')).filter((li) => !seen.has(li.dataset.id));
+      rows.forEach((li) => {
+        const row = document.importNode(li, true);
+        list.appendChild(row);
+        emojify(row);
+      });
+      const next = doc.querySelector('[data-audit-more]');
+      const pager = doc.querySelector('.audit-pager');
+      const curPager = document.querySelector('#audit-results .audit-pager');
+      if (curPager && pager) curPager.replaceWith(document.importNode(pager, true));
+      if (next) {
+        link.setAttribute('href', next.getAttribute('href'));
+        link.textContent = 'Older entries';
+        link.classList.remove('is-loading');
+      } else {
+        if (observer) observer.disconnect();
+        link.remove();
+      }
+    } catch (err) {
+      link.textContent = 'Older entries (loading failed, click to retry)';
+      link.classList.remove('is-loading');
+    } finally {
+      loadingMore = false;
+    }
+  }
+
+  function bindMore() {
+    const link = document.querySelector('#audit-results [data-audit-more]');
+    if (observer) observer.disconnect();
+    if (!link) return;
+    if ('IntersectionObserver' in window) {
+      observer = new IntersectionObserver((seen) => {
+        if (seen.some((s) => s.isIntersecting)) loadMore(link);
+      }, { rootMargin: '600px 0px' });
+      observer.observe(link);
+    }
+  }
+
+  document.getElementById('audit-results').addEventListener('click', (e) => {
+    const link = e.target.closest('[data-audit-more]');
+    if (!link) return;
+    e.preventDefault();
+    e.stopPropagation();
+    loadMore(link);
+  });
+  bindMore();
+
+  // ── Live: new entries at the top ───────────────────────────────────────────
+  let liveTimer = null;
+  let liveBusy = false;
+
+  async function addNewEntries() {
+    if (liveBusy || !document.body.contains(page)) return;
+    liveBusy = true;
+    try {
+      const doc = await fetchDoc(location.pathname + location.search);
+      const seen = knownIds();
+      const top = Math.max(0, ...Array.from(seen, Number));
+      const fresh = Array.from(doc.querySelectorAll('#audit-list > li[data-id]'))
+        .filter((li) => !seen.has(li.dataset.id) && Number(li.dataset.id) > top);
+      if (!fresh.length) return;
+      const empty = list.querySelector(':scope > .audit-empty');
+      if (empty) empty.remove();
+      fresh.reverse().forEach((li) => {
+        const row = document.importNode(li, true);
+        row.classList.add('is-new');
+        list.prepend(row);
+        emojify(row);
+      });
+      // Counts and choices follow
+      ['.audit-summary', '.audit-toolbar .audit-range'].forEach((sel) => {
+        const a = doc.querySelector('#audit-results ' + sel);
+        const b = document.querySelector('#audit-results ' + sel);
+        if (a && b) b.replaceWith(document.importNode(a, true));
+      });
+      const info = doc.getElementById('audit-manage-info');
+      const curInfo = document.getElementById('audit-manage-info');
+      if (info && curInfo) curInfo.replaceWith(document.importNode(info, true));
+    } catch (err) {
+      /* the next event tries again */
+    } finally {
+      liveBusy = false;
+    }
+  }
+
+  // One socket handler for every visit of the page (the page's navigation runs this file again)
+  window.f0ckAuditLive = firstPage ? () => {
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(addNewEntries, 400);
+  } : null;
+  if (!window.f0ckAuditLiveBound && window.F0ckLive && typeof window.F0ckLive.onMessage === 'function') {
+    window.f0ckAuditLiveBound = true;
+    window.F0ckLive.onMessage((d) => {
+      if (d && d.type === 'audit_entry' && typeof window.f0ckAuditLive === 'function') window.f0ckAuditLive(d.data);
+    });
+  }
+
+  // ── Admin: retention, delete old entries ───────────────────────────────────
+  const status = document.getElementById('audit-status');
+  let statusTimer = null;
+
+  function setStatus(text, state) {
+    if (!status) return;
+    clearTimeout(statusTimer);
+    status.textContent = text;
+    status.classList.toggle('is-busy', state === 'busy');
+    status.classList.toggle('is-ok', state === 'ok');
+    status.classList.toggle('is-err', state === 'err');
+    if (state === 'ok') statusTimer = setTimeout(() => setStatus('', ''), 5000);
+  }
+
+  // Entries, counts and the info line from a fresh copy of the page
+  async function refresh() {
+    const doc = await fetchDoc(location.pathname + location.search);
+    const fresh = doc.getElementById('audit-results');
+    const cur = document.getElementById('audit-results');
+    if (fresh && cur) {
+      cur.replaceChildren(...Array.from(fresh.childNodes, (n) => document.importNode(n, true)));
+      emojify(cur);
+    }
+    const info = doc.getElementById('audit-manage-info');
+    const curInfo = document.getElementById('audit-manage-info');
+    if (info && curInfo) curInfo.replaceWith(document.importNode(info, true));
+    bindMore();
+  }
+
+  page.addEventListener('submit', async (e) => {
+    const form = e.target.closest('form[data-audit-admin]');
+    if (!form) return;
+    e.preventDefault();
+    if (form.classList.contains('is-busy')) return;
+    const body = new URLSearchParams(new FormData(form));
+    body.delete('back');
+    body.set('csrf_token', csrf());
+    form.classList.add('is-busy');
+    setStatus('Saving…', 'busy');
+    try {
+      const res = await fetch(form.getAttribute('action'), {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRF-Token': csrf()
+        },
+        body: body.toString(),
+        credentials: 'same-origin'
+      });
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error('Server returned ' + res.status);
+      if (!data.success) throw new Error(data.msg || 'Saving failed');
+      const confirm = form.querySelector('input[name="confirm"]');
+      if (confirm) confirm.checked = false;
+      await refresh();
+      setStatus(data.msg || 'Saved', 'ok');
+    } catch (err) {
+      setStatus(err.message || 'Saving failed', 'err');
+    } finally {
+      form.classList.remove('is-busy');
+    }
+  });
 })();
