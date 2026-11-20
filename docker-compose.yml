@@ -109,6 +109,27 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-f0ckm}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-f0ckm}
       PGDATA: /data/postgres
+    # Tuned for a web app instead of Postgres' defaults; memory sizes per machine in .env
+    # (.env.example). jit=off: compiling a query costs more CPU than short web queries save.
+    # pg_stat_statements: query statistics (CREATE EXTENSION pg_stat_statements; to read them).
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - jit=off
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-256MB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-1GB}
+      - -c
+      - work_mem=${PG_WORK_MEM:-8MB}
+      - -c
+      - maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-64MB}
+      - -c
+      - random_page_cost=${PG_RANDOM_PAGE_COST:-1.1}
+    # Parallel queries share memory through /dev/shm (Docker's default is 64 MB)
+    shm_size: 256mb
     volumes:
       - ./f0ckm-data/postgres:/data/postgres:Z
     # Loopback only, for running the server outside Docker during development.
