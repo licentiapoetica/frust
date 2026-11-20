@@ -3,57 +3,80 @@
 <div class="pagewrapper">
 <div id="main">
     {% include "snippets/admin-back.html" %}
-    <div class="container mq mq-trash">
+    {% set trash_back = "/mod/trash" ~ ("?page=" ~ page if page > 1 else "") %}
+    {% set trash_purge = "/mod/trash?" ~ ("page=" ~ page ~ "&" if page > 1 else "") ~ "purge=" %}
+    <div class="container mq mq-review mq-trash">
         <header class="mq-header">
             <div>
                 <h1 class="mq-title">Soft Deleted</h1>
-                <div class="mq-subtitle">{{ total }} removed item{% if total != 1 %}s{% endif %} still on disk. Restore makes an item public again{% if session.admin %}; purge deletes it and its files for good{% endif %}.</div>
+                <div class="mq-subtitle"><span class="mq-count">{{ total }}</span> removed, still on disk. Restore makes an item public again{% if session.admin %}; purge deletes it and its files for good{% endif %}.</div>
             </div>
-        {% if ((trash|length > 0) and session.admin) %}
-        <button type="button" id="btn-purge-trash" class="mq-btn mq-btn-danger"><i class="fa-solid fa-trash"></i> Purge all</button>
-        {% endif %}
+            {% if ((trash|length > 0) and session.admin) %}
+            <a href="{{ trash_purge }}all#mq-purge" id="btn-purge-trash" class="mq-btn mq-btn-danger"><i class="fa-solid fa-trash"></i> Purge all</a>
+            {% endif %}
         </header>
-
 
         {% if (trash|length > 0) %}
         <div class="mq-grid">
             {% for key, post in trash|entries %}
-            <div class="mq-card">
+            <article class="mq-card" data-id="{{ post.id }}" data-reason="{{ post.delete_reason }}">
                 <div class="mq-media">
-                    {% if post.mime == "video/youtube" %}
-                    <div class="embed-responsive embed-responsive-16by9">
-                        <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/{{ post.dest.replace("yt:", "", 1) }}" frameborder="0" allowfullscreen></iframe>
+                    <div class="mq-viewer">
+                        {% if post.kind == "youtube" %}
+                        <iframe src="https://www.youtube.com/embed/{{ post.dest.replace("yt:", "", 1) }}" frameborder="0" allowfullscreen loading="lazy"></iframe>
+                        {% elif post.kind == "video" %}
+                        <video controls loop muted preload="none" poster="/mod/deleted/t/{{ post.id }}.webp"><source src="/mod/deleted/b/{{ post.dest }}" type="{{ post.mime }}"></video>
+                        {% elif post.kind == "pdf" %}
+                        <iframe src="/mod/deleted/b/{{ post.dest }}#toolbar=0" loading="lazy"></iframe>
+                        {% elif post.kind == "audio" %}
+                        <div class="mq-audio"><img src="/mod/deleted/t/{{ post.id }}.webp" alt="" loading="lazy"><audio controls preload="none" src="/mod/deleted/b/{{ post.dest }}"></audio></div>
+                        {% elif post.kind == "image" %}
+                        <img src="/mod/deleted/t/{{ post.id }}.webp" data-full="/mod/deleted/b/{{ post.dest }}" alt="Preview" loading="lazy">
+                        {% else %}
+                        <img src="/mod/deleted/t/{{ post.id }}.webp" alt="Preview" loading="lazy">
+                        {% endif %}
                     </div>
-                    {% elif post.mime.startswith("video") %}
-                    <video controls loop muted preload="none" poster="/mod/deleted/t/{{ post.id }}.webp">
-                        <source src="/mod/deleted/b/{{ post.dest }}" type="{{ post.mime }}">
-                    </video>
-                    {% elif post.mime == "application/pdf" %}
-                    <div class="embed-responsive embed-responsive-16by9">
-                        <iframe class="embed-responsive-item mod-trash-pdf" src="/mod/deleted/b/{{ post.dest }}#toolbar=0" loading="lazy"></iframe>
-                    </div>
-                    {% else %}
-                    <img src="/mod/deleted/t/{{ post.id }}.webp" alt="Preview" loading="lazy">
-                    {% endif %}
+                    <button type="button" data-id="{{ post.id }}" class="mq-badge mq-badge-rating is-{{ post.rating }} btn-rating-toggle-async" title="Click to switch SFW / NSFW">{{ ("?" if post.rating == "untagged" else post.rating|upper) }}</button>
+                    <span class="mq-badge mq-badge-kind">{% if post.is_album %}<i class="fa-solid fa-images"></i> Album{% if post.album_count %} · {{ post.album_count }}{% endif %}{% else %}{{ post.kind }}{% endif %}</span>
                 </div>
+
                 <div class="mq-body">
+                    {% if post.title %}
+                    <div class="mq-item-title">{{ post.title }}</div>
+                    {% endif %}
                     <div class="mq-meta">
                         <span><strong>#{{ post.id }}</strong></span>
-                        <span>by <strong>{{ post.username }}</strong></span>
-                        <span>{{ post.mime }}</span>
+                        <span><i class="fa-solid fa-user"></i> <strong>{{ post.username }}</strong></span>
+                        {% if post.time_ago %}<span tooltip="{{ post.time_full }}"><i class="fa-regular fa-clock"></i> {{ post.time_ago }}</span>{% endif %}
                     </div>
-                    {% if post.delete_reason %}
-                    <div class="mq-reason"><strong>Reason:</strong> {{ post.delete_reason }}</div>
-                    {% endif %}
+                    <div class="mq-meta mq-meta-file">
+                        <span>{{ post.mime }}</span>
+                        {% if post.size_fmt %}<span>{{ post.size_fmt }}</span>{% endif %}
+                        {% if post.dims %}<span>{{ post.dims }}</span>{% endif %}
+                        {% if post.original_filename %}<span class="mq-filename" title="{{ post.original_filename }}">{{ post.original_filename }}</span>{% endif %}
+                    </div>
+                    <div class="mq-reason{% if not post.delete_reason %} is-empty{% endif %}">
+                        <div class="mq-reason-head">
+                            <span><i class="fa-solid fa-trash"></i> Deleted{% if post.deleted_by %} by <strong>{{ post.deleted_by }}</strong>{% endif %}</span>
+                            {% if post.deleted_ago %}<span tooltip="{{ post.deleted_full }}">{{ post.deleted_ago }}</span>{% endif %}
+                        </div>
+                        <div class="mq-reason-text">{{ post.delete_reason or "No reason recorded." }}</div>
+                    </div>
                     {% include "snippets/mod-card-tags.html" %}
                     <div class="mq-actions">
+                        {# Plain forms and links work without JavaScript; trash.js does the same in place #}
+                        <form method="post" action="/mod/trash/restore" class="mq-restore-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="back" value="{{ trash_back }}">
+                            <input type="hidden" name="id" value="{{ post.id }}">
+                            <button type="submit" class="mq-btn mq-btn-primary{% if not session.admin %} mq-btn-wide{% endif %}"><i class="fa-solid fa-rotate-left"></i> Restore</button>
+                        </form>
                         {% if session.admin %}
-                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-danger btn-deny-async">Purge</button>
+                        <a href="{{ trash_purge }}{{ post.id }}#mq-purge" data-id="{{ post.id }}" class="mq-btn mq-btn-danger btn-purge"><i class="fa-solid fa-trash"></i> Purge</a>
                         {% endif %}
-                        <button type="button" data-id="{{ post.id }}" class="mq-btn mq-btn-primary btn-approve-async{% if not session.admin %} mq-btn-wide{% endif %}">Restore</button>
                     </div>
                 </div>
-            </div>
+            </article>
             {% endfor %}
         </div>
         {% else %}
@@ -69,6 +92,36 @@
             {% if (page < pages) %}
             <a href="/mod/trash?page={{ (page + 1) }}" class="mq-btn mq-btn-ghost">Next &raquo;</a>
             {% endif %}
+        </div>
+        {% endif %}
+
+        {# Purge confirmation as a plain form: where the purge links lead without JavaScript (?purge=<id> / ?purge=all) #}
+        {% if purge and session.admin %}
+        <div id="mq-purge" class="mq-modal mq-modal-open">
+            <form method="post" action="/mod/trash/{{ "purge-all" if purge.all else "purge" }}" class="mq-modal-box" id="mq-purge-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="back" value="{{ trash_back }}">
+                {% if purge.all %}
+                <h3>Purge all</h3>
+                <p>Permanently delete ALL {{ total }} soft-deleted item{% if total != 1 %}s{% endif %}, their files and comments? This cannot be undone.</p>
+                {% else %}
+                <input type="hidden" name="id" value="{{ purge.id }}">
+                <h3>Purge item #{{ purge.id }}</h3>
+                <p>Permanently delete this item by {{ purge.username }}, its files and its comments? This cannot be undone.</p>
+                <label for="mq-purge-reason">Reason (required)</label>
+                <textarea id="mq-purge-reason" name="reason" rows="3" placeholder="Enter a reason…"{% if not purge.delete_reason %} required{% endif %}></textarea>
+                {% if purge.delete_reason %}
+                <label class="mq-check">
+                    <input type="checkbox" name="use_delete_reason" value="1">
+                    <span>Use the delete reason: <q>{{ purge.delete_reason }}</q></span>
+                </label>
+                {% endif %}
+                {% endif %}
+                <div class="mq-modal-actions">
+                    <a href="{{ trash_back }}" class="mq-btn mq-btn-ghost">Cancel</a>
+                    <button type="submit" class="mq-btn mq-btn-danger">{{ "Purge all" if purge.all else "Purge" }}</button>
+                </div>
+            </form>
         </div>
         {% endif %}
     </div>

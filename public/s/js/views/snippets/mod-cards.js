@@ -7,15 +7,18 @@ window.mq = (() => {
   const reasonInput = document.getElementById('mq-modal-reason');
   const btnConfirm = document.getElementById('mq-modal-confirm');
   const btnCancel = document.getElementById('mq-modal-cancel');
+  const btnSuggest = document.getElementById('mq-modal-suggest');
 
   const csrf = () => (window.f0ckSession && window.f0ckSession.csrf_token) || '';
   const flash = (msg, type) => { if (window.flashMessage) window.flashMessage(msg, type === 'error' ? 3000 : 2000, type); };
 
   let pendingAction = null;
   let needsReason = false;
+  let suggested = '';
 
   const close = () => { modal.style.display = 'none'; pendingAction = null; };
-  const confirm = ({ heading, body, confirmLabel = 'Confirm', withReason = false, action }) => {
+  // suggestReason: a reason offered next to the field ("Use delete reason" copies it in, still editable)
+  const confirm = ({ heading, body, confirmLabel = 'Confirm', withReason = false, suggestReason = '', action }) => {
     title.innerText = heading;
     text.innerText = body;
     pendingAction = action;
@@ -25,6 +28,9 @@ window.mq = (() => {
     reasonWrap.style.display = withReason ? 'block' : 'none';
     reasonInput.value = '';
     reasonInput.classList.remove('is-invalid');
+    suggested = withReason ? String(suggestReason || '').trim() : '';
+    btnSuggest.hidden = !suggested;
+    btnSuggest.title = suggested;
     modal.style.display = 'flex';
     if (withReason) reasonInput.focus();
   };
@@ -49,6 +55,11 @@ window.mq = (() => {
     }
   });
   btnCancel.addEventListener('click', close);
+  btnSuggest.addEventListener('click', () => {
+    reasonInput.value = suggested;
+    reasonInput.classList.remove('is-invalid');
+    reasonInput.focus();
+  });
   modal.addEventListener('click', e => { if (e.target === modal) close(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') close(); });
 
@@ -66,11 +77,16 @@ window.mq = (() => {
 
   const removeCard = (card) => {
     if (!card) return;
-    card.style.opacity = '0';
+    card.classList.add('is-removing');
+    const count = document.querySelector('.mq-count');
+    if (count) count.textContent = Math.max(0, (parseInt(count.textContent, 10) || 0) - 1);
     setTimeout(() => {
       card.remove();
       const grid = document.querySelector('.mq-grid');
-      if (grid && !grid.querySelector('.mq-card')) location.reload();
+      if (!grid || grid.querySelector('.mq-card')) return;
+      // Page is empty: load the next items (or the empty state) in place
+      if (window.loadPageAjax) window.loadPageAjax(location.pathname + location.search, true, { skipCache: true });
+      else location.reload();
     }, 300);
   };
 
@@ -95,6 +111,9 @@ window.mq = (() => {
   };
   document.querySelectorAll('.mq-grid').forEach(grid => {
     grid.addEventListener('click', async e => {
+      // Click a still image to open the full file
+      const full = e.target.closest('.mq-viewer img[data-full]');
+      if (full) { window.open(full.dataset.full, '_blank', 'noopener'); return; }
       const btn = e.target.closest('.btn-rating-toggle-async');
       if (!btn || btn.disabled) return;
       e.preventDefault();
@@ -110,6 +129,15 @@ window.mq = (() => {
         if (!data.success || !data.tags) throw new Error(data.msg || 'Unknown error');
         const tagsContainer = card?.querySelector('.mq-tags');
         if (tagsContainer) tagsContainer.replaceChildren(...data.tags.map(tag => ratingBadge(tag, btn.dataset.id)));
+        // The rating badge on the preview follows
+        const badge = card?.querySelector('.mq-badge-rating');
+        if (badge) {
+          const names = data.tags.map(tag => tag.normalized);
+          const r = names.includes('nsfl') ? 'nsfl' : names.includes('nsfw') ? 'nsfw' : names.includes('sfw') ? 'sfw' : 'untagged';
+          badge.classList.remove('is-sfw', 'is-nsfw', 'is-nsfl', 'is-untagged');
+          badge.classList.add('is-' + r);
+          badge.textContent = r === 'untagged' ? '?' : r.toUpperCase();
+        }
       } catch (err) {
         flash('Error: ' + err.message, 'error');
       } finally {

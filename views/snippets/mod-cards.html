@@ -4,7 +4,11 @@
     <h3 id="mq-modal-title">Confirm action</h3>
     <p id="mq-modal-text">Are you sure?</p>
     <div id="mq-modal-reason-wrap">
-      <label for="mq-modal-reason">Reason (required)</label>
+      <div class="mq-modal-reason-head">
+        <label for="mq-modal-reason">Reason (required)</label>
+        {# Shown by mq.confirm({ suggestReason }): copies that text (the delete reason) into the field #}
+        <button type="button" id="mq-modal-suggest" class="mq-btn mq-btn-ghost mq-modal-suggest" hidden><i class="fa-regular fa-copy"></i> Use delete reason</button>
+      </div>
       <textarea id="mq-modal-reason" rows="3" placeholder="Enter a reason…"></textarea>
     </div>
     <div class="mq-modal-actions">

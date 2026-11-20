@@ -24106,13 +24106,18 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 
 /* ---- snippets/mod-cards.html: moderation card pages (mod/approve, mod/trash) ---- */
 /* Moderation queues — square, flat, theme colours */
-.mq {
+/* The confirmation modal sits next to .mq, not inside it: it needs the colours too */
+.mq,
+.mq-modal {
   --mq-accent: var(--accent, #0096ff);
   --mq-text: var(--text-color, var(--white, #fff));
   --mq-muted: var(--text-muted, #8a8f98);
   --mq-surface: rgba(255, 255, 255, 0.04);
   --mq-border: rgba(255, 255, 255, 0.1);
   --mq-danger: #ff5c5c;
+}
+
+.mq {
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px 16px 60px;
@@ -24218,12 +24223,51 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   font-weight: 700;
 }
 
+/* Who removed the item, when and why (mod/trash) */
 .mq-reason {
   padding: 6px 8px;
   font-size: 0.8em;
   color: #ffb8b8;
   background: rgba(255, 92, 92, 0.08);
   border-left: 2px solid var(--mq-danger);
+}
+
+.mq-reason-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+  margin-bottom: 2px;
+  font-size: 0.9em;
+  color: var(--mq-muted);
+}
+
+.mq-reason-head i {
+  margin-right: 2px;
+}
+
+.mq-reason-head strong {
+  color: var(--mq-text);
+}
+
+.mq-reason-text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.mq-reason.is-empty {
+  color: var(--mq-muted);
+  background: var(--mq-surface);
+  border-left-color: var(--mq-border);
+}
+
+.mq-reason.is-empty .mq-reason-text {
+  font-style: italic;
+}
+
+/* Fades out before mq.removeCard() takes it away */
+.mq-card.is-removing {
+  opacity: 0;
 }
 
 .mq-tags {
@@ -24264,6 +24308,11 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 
 .mq-actions .mq-btn-wide {
   grid-column: span 2;
+}
+
+/* A plain form around a button (works without JavaScript): the button stays the grid cell */
+.mq-actions form {
+  display: contents;
 }
 
 .mq-btn {
@@ -24308,13 +24357,23 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   color: var(--mq-accent);
 }
 
-.mq-btn-danger {
-  border-color: rgba(255, 92, 92, 0.5);
-  color: var(--mq-danger);
+/* Destructive actions (purge, deny): a solid red button. The colours are fixed, not variables,
+   and the selectors cover links too (the purge buttons are <a> without JavaScript), so no
+   theme or link rule can leave the button white. */
+.mq-btn.mq-btn-danger,
+a.mq-btn.mq-btn-danger:link,
+a.mq-btn.mq-btn-danger:visited {
+  background: #d32f2f;
+  border-color: #d32f2f;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.mq-btn-danger:hover:not(:disabled) {
-  background: rgba(255, 92, 92, 0.15);
+.mq-btn.mq-btn-danger:hover:not(:disabled),
+a.mq-btn.mq-btn-danger:hover {
+  background: transparent;
+  color: #ff5c5c;
 }
 
 .mq-btn-ghost {
@@ -24382,7 +24441,11 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
   color: var(--text-color, #fff);
   background: var(--bg);
   border: 1px solid var(--accent);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Rendered open by the server: the purge confirmation of mod/trash without JavaScript */
+.mq-modal.mq-modal-open {
+  display: flex;
 }
 
 .mq-modal-box h3 {
@@ -24427,6 +24490,48 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 
 .mq-modal-box textarea.is-invalid {
   border-color: #ff5c5c;
+}
+
+/* Label + "Use delete reason" above the reason field */
+.mq-modal-reason-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.mq-modal-reason-head label {
+  margin: 0;
+}
+
+.mq-modal .mq-modal-suggest {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 0.72em;
+}
+
+.mq-modal .mq-modal-suggest[hidden] {
+  display: none;
+}
+
+/* Same choice as a checkbox in the plain purge form */
+.mq-modal-box label.mq-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -6px 0 14px;
+  font-size: 0.85em;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.mq-modal-box label.mq-check input {
+  flex: none;
+  margin: 3px 0 0;
 }
 
 .mq-modal-actions {
@@ -24677,6 +24782,15 @@ html.laser-cursor-on :not(#\#):not(#\#):not(#\#):not([data-laser-probe])::after 
 
 .mq-review .mq-actions .mq-btn {
   height: 38px;
+}
+
+/* Soft Deleted (mod/trash): the same cards, smaller, so more of them fit */
+.mq-trash .mq-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+}
+
+.mq-trash .mq-media {
+  aspect-ratio: 16 / 10;
 }
 
 /* ---- mod_reports.html (page <style> block; .rp-* is only used by this page and mod-reports.js) ---- */
@@ -27965,11 +28079,6 @@ html.no-js :where(.adm-users) .adm-users-modal:target,
 /* ---- admin/recover.html ---- */
 #main .adm-recover-table {
   width: 100%;
-}
-
-/* ---- mod/trash.html ---- */
-#main .mod-trash-pdf {
-  border: none;
 }
 
 

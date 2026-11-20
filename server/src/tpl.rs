@@ -1470,6 +1470,61 @@ mod tests {
         assert_eq!(render(serde_json::Value::Null).trim(), "");
     }
 
+    /// Soft Deleted (mod/trash): restore on the left, purge on the right, both usable without
+    /// JavaScript (plain form / link to the confirmation form, which offers the delete reason).
+    /// F0CKM_DUMP_MOD_TRASH=<dir> writes the pages out.
+    #[test]
+    fn mod_trash_renders() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let card = |id: i64, mime: &str, kind: &str, reason: &str| serde_json::json!({ "id": id, "username": "al", "mime": mime, "kind": kind, "dest": format!("{id}.bin"),
+            "title": "A title", "rating": "sfw", "tags": [{ "tag": "sfw", "normalized": "sfw", "badge": "badge-success" }, { "tag": "cat", "normalized": "cat", "badge": "badge-light" }],
+            "time_ago": "3 days ago", "time_full": "2026-01-01T00:00:00.000Z", "size_fmt": "1.2 MB", "dims": "1280×720", "original_filename": "cat.mp4",
+            "delete_reason": reason, "deleted_by": "mod1", "deleted_ago": "2 hours ago", "deleted_full": "2026-01-03T00:00:00.000Z" });
+        let render = |admin: bool, page: i64, purge: serde_json::Value| {
+            let ctx = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "modes": ["sfw", "nsfw", "untagged", "all", "nsfl"], "mode": 1,
+                "url": { "pathname": "/mod/trash", "search": "", "qs": {} }, "tmp": null, "anon_permissions_json": "{}", "captcha_scopes": [],
+                "session": { "user": "bob", "id": 1, "admin": admin, "csrf_token": "tok" },
+                "trash": [card(7, "video/mp4", "video", "spam <b>"), card(8, "image/png", "image", "")], "total": 2, "page": page, "pages": 3, "purge": purge });
+            env.get_template("mod/trash.html").unwrap().render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{e:#}"))
+        };
+        let dump = |name: &str, html: &str| {
+            if let Ok(dir) = std::env::var("F0CKM_DUMP_MOD_TRASH") {
+                std::fs::write(PathBuf::from(dir).join(format!("{name}.html")), html).unwrap();
+            }
+        };
+
+        let admin = render(true, 2, serde_json::Value::Null);
+        dump("admin", &admin);
+        let restore = admin.find("<form method=\"post\" action=\"/mod/trash/restore\"").expect("restore form");
+        let purge = admin.find("href=\"/mod/trash?page=2&amp;purge=7#mq-purge\"").expect("purge link");
+        assert!(restore < purge, "restore comes first, purge sits on the right");
+        assert!(admin.contains("<input type=\"hidden\" name=\"back\" value=\"/mod/trash?page=2\">"));
+        assert!(admin.contains("data-reason=\"spam &lt;b&gt;\""));
+        assert!(admin.contains("No reason recorded."));
+        assert!(admin.contains("id=\"mq-modal-suggest\""));
+        assert!(!admin.contains("id=\"mq-purge\""));
+
+        // moderators restore only
+        let moderator = render(false, 1, serde_json::json!({ "id": 7, "username": "al", "delete_reason": "spam" }));
+        assert!(moderator.contains("action=\"/mod/trash/restore\""));
+        assert!(!moderator.contains("btn-purge\"") && !moderator.contains("id=\"mq-purge\"") && !moderator.contains("btn-purge-trash"));
+
+        // the confirmation form: one item (with the delete reason on offer), then everything
+        let one = render(true, 1, serde_json::json!({ "id": 7, "username": "al", "delete_reason": "spam" }));
+        dump("purge-one", &one);
+        assert!(one.contains("<form method=\"post\" action=\"/mod/trash/purge\" class=\"mq-modal-box\""));
+        assert!(one.contains("<input type=\"hidden\" name=\"id\" value=\"7\">"));
+        assert!(one.contains("name=\"use_delete_reason\" value=\"1\""));
+        assert!(one.contains("<textarea id=\"mq-purge-reason\" name=\"reason\" rows=\"3\" placeholder=\"Enter a reason…\"></textarea>"));
+        let no_reason = render(true, 1, serde_json::json!({ "id": 8, "username": "al", "delete_reason": null }));
+        assert!(!no_reason.contains("use_delete_reason") && no_reason.contains("placeholder=\"Enter a reason…\" required>"));
+        let all = render(true, 1, serde_json::json!({ "all": true }));
+        dump("purge-all", &all);
+        assert!(all.contains("<form method=\"post\" action=\"/mod/trash/purge-all\" class=\"mq-modal-box\""));
+        assert!(!all.contains("mq-purge-reason"));
+    }
+
     /// f0ckgle (the search engine parody frontend): its own pages render for guests and members,
     /// with the forms that make them work without JavaScript (and live with it, f0ckgle.js). F0CKM_DUMP_F0CKGLE=<dir> writes them out.
     #[test]

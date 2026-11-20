@@ -155,6 +155,22 @@ fn media_kind(mime: &str) -> &'static str {
     }
 }
 
+/// What a moderation card shows besides the tags: media kind, upload time, file size, dimensions.
+fn card_details(p: &mut Row, tr: &crate::i18n::Translator, now: i64) {
+    let stamp = p.i64("stamp").filter(|s| *s != 0);
+    let size_fmt = if crate::config::truthy(p.val("size")) { crate::util::format_size(p.val("size")) } else { String::new() };
+    let dims = match (p.i64("width").filter(|w| *w != 0), p.i64("height").filter(|h| *h != 0)) {
+        (Some(w), Some(h)) => format!("{w}×{h}"),
+        _ => String::new(),
+    };
+    let kind = media_kind(&p.string("mime"));
+    p.insert("kind".into(), json!(kind));
+    p.insert("time_ago".into(), json!(stamp.map(|s| crate::util::time_ago(tr, now - s)).unwrap_or_default()));
+    p.insert("time_full".into(), json!(stamp.map(iso_from_secs).unwrap_or_default()));
+    p.insert("size_fmt".into(), json!(size_fmt));
+    p.insert("dims".into(), json!(dims));
+}
+
 /// `dest.replace(/\.[^.]+$/, '')`
 fn strip_ext(dest: &str) -> &str {
     match dest.rfind('.') {
@@ -427,20 +443,10 @@ async fn approve_queue(st: AppState, req: Req) -> Res {
                     "height": r.val("height"),
                 }));
             }
-            let stamp = p.i64("stamp").filter(|s| *s != 0);
-            let size_fmt = if crate::config::truthy(p.val("size")) { crate::util::format_size(p.val("size")) } else { String::new() };
-            let dims = match (p.i64("width").filter(|w| *w != 0), p.i64("height").filter(|h| *h != 0)) {
-                (Some(w), Some(h)) => format!("{w}×{h}"),
-                _ => String::new(),
-            };
-            p.insert("kind".into(), json!(media_kind(&mime)));
             p.insert("media_json".into(), json!(crate::util::json_string(&Value::Array(media.clone()))));
             p.insert("is_album_view".into(), json!(media.len() > 1));
             p.insert("media".into(), Value::Array(media));
-            p.insert("time_ago".into(), json!(stamp.map(|s| crate::util::time_ago(&tr, now - s)).unwrap_or_default()));
-            p.insert("time_full".into(), json!(stamp.map(iso_from_secs).unwrap_or_default()));
-            p.insert("size_fmt".into(), json!(size_fmt));
-            p.insert("dims".into(), json!(dims));
+            card_details(&mut p, &tr, now);
             Value::Object(p)
         })
         .collect();
@@ -457,6 +463,20 @@ async fn approve_queue(st: AppState, req: Req) -> Res {
     Ok(html(crate::tpl::render(&st, Some(&req), "mod/approve", data)))
 }
 
+/// The reason given when the item was soft deleted (none for bulk denies and automatic removals).
+/// The newest audit entry of an action that moves an item to Soft Deleted tells who removed it and
+/// why (same action list as in `trash_page`).
+async fn delete_reason(st: &AppState, id: i32) -> anyhow::Result<Option<String>> {
+    let reason: Option<String> = sql!(
+        "select details->>'reason' as reason from audit_log where target_type = 'item' and target_id = ",
+        id.to_string(),
+        " and action in ('delete_item', 'deny_item', 'deny_item_multi') order by created_at desc limit 1"
+    )
+    .fetch_scalar(&st.db)
+    .await?;
+    Ok(reason.map(|r| r.trim().to_string()).filter(|r| !r.is_empty()))
+}
+
 async fn trash_page(st: AppState, req: Req) -> Res {
     let page = queue_page(&req);
     let total: i64 = sql!(r#"select count(*)::int8 as n from "items" where active = false and is_deleted = true and is_purged = false"#)
@@ -464,14 +484,24 @@ async fn trash_page(st: AppState, req: Req) -> Res {
         .await?
         .unwrap_or(0);
     let trash = sql!(
-        r#"select i.id, i.mime, i.username, i.dest,
+        r#"select i.id, i.mime, i.username, i.dest, i.title, i.stamp, i.size, i.width, i.height,
+            i.original_filename, i.is_album, i.album_count,
             json_agg(json_build_object('tag', t.tag, 'normalized', t.normalized)) as tags,
-            (select details->>'reason' from audit_log where target_id = i.id::text and action = 'delete_item' order by created_at desc limit 1) as delete_reason
+            d.reason as delete_reason, d.deleted_by, d.deleted_at
         from "items" i
         left join "tags_assign" ta on ta.item_id = i.id
         left join "tags" t on t.id = ta.tag_id
+        left join lateral (
+            select a.details->>'reason' as reason, u."user" as deleted_by, extract(epoch from a.created_at)::int8 as deleted_at
+            from audit_log a
+            left join "user" u on u.id = a.user_id
+            where a.target_type = 'item' and a.target_id = i.id::text
+              and a.action in ('delete_item', 'deny_item', 'deny_item_multi')
+            order by a.created_at desc
+            limit 1
+        ) d on true
         where i.active = false and i.is_deleted = true and i.is_purged = false
-        group by i.id
+        group by i.id, d.reason, d.deleted_by, d.deleted_at
         order by i.id desc
         limit "#,
         QUEUE_PAGE_SIZE,
@@ -480,11 +510,48 @@ async fn trash_page(st: AppState, req: Req) -> Res {
     )
     .fetch_all(&st.db)
     .await?;
+
+    let tr = st.i18n.translator("en");
+    let now = crate::util::now_secs();
+    let cards: Vec<Value> = trash
+        .into_iter()
+        .map(process_queue_item)
+        .map(|mut p| {
+            card_details(&mut p, &tr, now);
+            let deleted_at = p.i64("deleted_at").filter(|s| *s != 0);
+            let reason = p.string("delete_reason").trim().to_string();
+            p.insert("delete_reason".into(), json!(reason));
+            p.insert("deleted_ago".into(), json!(deleted_at.map(|s| crate::util::time_ago(&tr, now - s)).unwrap_or_default()));
+            p.insert("deleted_full".into(), json!(deleted_at.map(iso_from_secs).unwrap_or_default()));
+            Value::Object(p)
+        })
+        .collect();
+
+    // Without JavaScript the purge buttons are links back to this page (`?purge=<id>` / `?purge=all`),
+    // which then shows the confirmation as a plain form.
+    let purge = match req.query("purge").filter(|_| is_admin(&req)) {
+        Some("all") if total > 0 => json!({ "all": true }),
+        Some(v) => match to_id(Some(&json!(v))) {
+            Some(id) => {
+                let item = sql!(r#"select id, username from "items" where id = "#, id, " and is_deleted = true and is_purged = false limit 1")
+                    .fetch_optional(&st.db)
+                    .await?;
+                match item {
+                    Some(item) => json!({ "id": id, "username": item.val("username"), "delete_reason": delete_reason(&st, id).await? }),
+                    None => Value::Null,
+                }
+            }
+            None => Value::Null,
+        },
+        None => Value::Null,
+    };
+
     let data = json!({
-        "trash": trash.into_iter().map(process_queue_item).map(Value::Object).collect::<Vec<_>>(),
+        "trash": cards,
         "total": total,
         "page": page,
         "pages": ((total + QUEUE_PAGE_SIZE - 1) / QUEUE_PAGE_SIZE).max(1),
+        "purge": purge,
         "tmp": null,
     });
     Ok(html(crate::tpl::render(&st, Some(&req), "mod/trash", data)))
@@ -843,14 +910,21 @@ async fn trash_restore(st: AppState, mut req: Req) -> Res {
 async fn trash_purge(st: AppState, mut req: Req) -> Res {
     let body = req.post().await?.clone();
     let Some(id) = to_id(body.get("id")) else { return jr(400, json!({ "success": false, "msg": "No ID provided" })) };
-    let reason = js_str(body.get("reason")).unwrap_or_default().trim().to_string();
-    if reason.is_empty() {
-        return jr(400, json!({ "success": false, "msg": "A reason is required" }));
-    }
+    let mut reason = js_str(body.get("reason")).unwrap_or_default().trim().to_string();
     let item = sql!(r#"select id, dest, mime, username from "items" where id = "#, id, " and is_deleted = true and is_purged = false limit 1")
         .fetch_optional(&st.db)
         .await?;
     let Some(item) = item else { return jr(404, json!({ "success": false, "msg": format!("Item {id} is not soft deleted") })) };
+    // `use_delete_reason`: purge for the reason the item was deleted for (a typed reason wins)
+    if reason.is_empty() && body.get("use_delete_reason").map(crate::config::truthy).unwrap_or(false) {
+        match delete_reason(&st, id).await? {
+            Some(r) => reason = r,
+            None => return jr(400, json!({ "success": false, "msg": "This item has no delete reason, enter one" })),
+        }
+    }
+    if reason.is_empty() {
+        return jr(400, json!({ "success": false, "msg": "A reason is required" }));
+    }
     purge_item(&st, &item, id as i64).await?;
     let info = uploader_info(&st, &item.string("username")).await;
     audit_log(&st, sid(&req), "purge_item", "item", &id.to_string(), Some(details(json!({ "filename": item.val("dest"), "reason": reason }), info))).await;
