@@ -196,10 +196,10 @@ A site that proxies through an `upstream {}` block is left alone with a hint. By
 ```bash
 COMPOSE_FILE=docker-compose.yml:docker-compose.anubis.yml
 ANUBIS_KEY=...   # openssl rand -hex 32; signs the pass cookies, so they survive restarts
-ANUBIS_DOMAINS=f0ck.example,www.f0ck.example   # where Anubis may send visitors back; default VIRTUAL_HOST
+ANUBIS_DOMAINS=f0ck.example,www.f0ck.example   # where Anubis may send visitors back
 ```
 
-Every domain the site is reached under has to be in `ANUBIS_DOMAINS` (or `VIRTUAL_HOST`), or
+Every domain the site is reached under has to be in `ANUBIS_DOMAINS` (the installer fills it in), or
 visitors get "redirect domain not allowed" after passing the check.
 
 then `docker compose up -d`. With the bundled nginx-proxy the domain moves to the Anubis container by

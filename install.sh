@@ -476,21 +476,17 @@ nginx_plan
 # A copy of the look is refreshed on every run, also when nginx needs no change
 [ ${#NGX_FILES[@]} -gt 0 ] || [ "$NGX_STATE" != ok ] || look_copy
 
-# After the check Anubis only sends visitors back to ANUBIS_DOMAINS, else VIRTUAL_HOST; with neither,
-# every visitor gets "redirect domain not allowed". Older .env files (own proxy) may lack both, and an
-# own nginx may serve more names (www.) than VIRTUAL_HOST.
+# After the check Anubis only sends visitors back to ANUBIS_DOMAINS; without it, every visitor gets
+# "redirect domain not allowed". An own nginx may serve more names (www.) than the site domain.
+# (docker-compose.anubis.yml can't fall back to VIRTUAL_HOST itself: docker-compose v1 breaks on it.)
 if anubis_on && ! grep -q '^ANUBIS_DOMAINS=.' .env; then
     doms=$(printf '%s\n' $NGX_NAMES | paste -sd, -)
-    if [ -n "$doms" ] && [ "$doms" != "$SITE_DOMAIN" ]; then
+    doms=${doms:-$SITE_DOMAIN}
+    if [ -n "$doms" ]; then
         say "Anubis: sending visitors back to $doms after the check (ANUBIS_DOMAINS in .env)"
         env_add "ANUBIS_DOMAINS=$doms"
-    elif ! grep -q '^VIRTUAL_HOST=.' .env; then
-        if [ -n "$SITE_DOMAIN" ]; then
-            say "Anubis: sending visitors back to $SITE_DOMAIN after the check (ANUBIS_DOMAINS in .env)"
-            env_add "ANUBIS_DOMAINS=$SITE_DOMAIN"
-        else
-            warn "set ANUBIS_DOMAINS=<your domain> in .env, or visitors get 'redirect domain not allowed' after the Anubis check"
-        fi
+    else
+        warn "set ANUBIS_DOMAINS=<your domain> in .env, or visitors get 'redirect domain not allowed' after the Anubis check"
     fi
 fi
 APP_UID=$(sed -n 's/^UID=//p' .env | tail -n 1)

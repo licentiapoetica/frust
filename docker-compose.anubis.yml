@@ -21,8 +21,9 @@ services:
       # Signs the pass cookies; a fixed key keeps them valid across restarts
       - ED25519_PRIVATE_KEY_HEX=${ANUBIS_KEY:-}
       # After the check Anubis only redirects back to these domains (comma-separated); any other one
-      # gets "redirect domain not allowed". Own proxy without VIRTUAL_HOST: set ANUBIS_DOMAINS in .env.
-      - REDIRECT_DOMAINS=${ANUBIS_DOMAINS:-${VIRTUAL_HOST:-localhost}}
+      # gets "redirect domain not allowed". install.sh writes ANUBIS_DOMAINS into .env. No nested
+      # ${A:-${B}} default here: docker-compose v1 can't parse it and leaves a "}" in the value.
+      - REDIRECT_DOMAINS=${ANUBIS_DOMAINS:-localhost}
       - COOKIE_EXPIRATION_TIME=${ANUBIS_COOKIE_TIME:-168h}
       # nginx-proxy: route the domain here
       - VIRTUAL_HOST=${VIRTUAL_HOST:-}
