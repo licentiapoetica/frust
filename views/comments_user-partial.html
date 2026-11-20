@@ -1,3 +1,4 @@
+{%- from "snippets/comment-poll.html" import poll -%}
 <div class="profile-page-wrapper">
 {% set subpage = "comments" %}
 {% include "snippets/profile-subhead.html" %}
@@ -15,7 +16,7 @@
                     <div class="comment-avatar"><a href="/{{ c.item_key }}"><img src="/t/{{ c.item_id }}.webp" alt="" loading="lazy"></a></div>
                     <div class="comment-body">
                         <div class="comment-header"><div class="comment-header-left"><span class="comment-author{% if user.user|short_letters %} name-short{% endif %}{% if user.username_color %} user-color-text{% endif %}"{% if user.username_color %} style="--user-color: {{ user.username_color }}"{% endif %}>{{ user.user }}</span></div><span class="comment-time timeago" title="{{ c.iso }}">{{ c.timeago }}</span></div>
-                        <div class="comment-content">{{ c.content_html|safe }}</div>{{ c.attachments_html|safe }}
+                        <div class="comment-content">{{ c.content_html|safe }}</div>{{ c.attachments_html|safe }}{{ poll(c.poll, "/user/" ~ (user.user|lower|urlencode) ~ "/comments" ~ ("?page=" ~ comments_page if comments_page > 1 else ""), csrf_token) }}
                     </div>
                     <a href="/{{ c.item_key }}#c{{ c.id }}" class="comment-permalink" title="Permalink">#{{ c.id }}</a>
                 </div>

@@ -19,7 +19,8 @@
     <input type="hidden" name="csrf_token" value="{{ (csrf_token or "") }}">
     <input type="hidden" name="item_id" value="{{ item.id }}">
     <input type="hidden" name="back" value="{% if url is defined %}{{ url.pathname }}{{ url.search }}{% else %}/{{ item.id }}{% endif %}#comments-container">
-    <textarea name="content" placeholder="{{ t("comments.write_comment") }}"{% if (comment_max_length != none and comment_max_length != none) %} maxlength="{{ comment_max_length }}"{% endif %} required></textarea>
+    <textarea name="content" placeholder="{{ t("comments.write_comment") }}"{% if (comment_max_length != none and comment_max_length != none) %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+    {% if enable_comment_polls %}{% include "snippets/comment-poll-builder.html" %}{% endif %}
     {% if "comment" in captcha_scopes %}{% include "snippets/cap-image.html" %}{% endif %}
     <div class="input-actions">
         <button type="submit" class="submit-comment"><span class="submit-label">{{ t("comments.post") }}</span></button>

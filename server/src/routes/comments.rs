@@ -11,6 +11,7 @@ use crate::http::{Req, Res, Router, html, html_code, json_resp, redirect, reply}
 use crate::session::Session;
 use crate::settings::{can_anon_do, enable_item_slugs, is_anon_session, is_anonymize_session};
 use crate::social::comments as sc;
+use crate::social::polls;
 use crate::social::helpers::{
     self as h, comment_globalfilter_tags, compute_base_mode, js_parse_float, js_parse_int, js_str, log_anon_activity, mode_override, notify,
     ratings_from_cookie, resolve_audit_ip, resolve_mime_sql,
@@ -37,6 +38,7 @@ pub fn register(r: &mut Router) {
     r.get(r"\/activity\/?", activity);
     r.exact(Method::POST, "/api/v2/user/subscribe-all-uploads", None, subscribe_all_uploads);
     r.post(r"\/api\/polls\/attach\/(?<commentId>\d+)", poll_attach);
+    r.get(r"\/api\/polls\/(?<pollId>\d+)\/voters", poll_voters);
     r.get(r"\/api\/polls\/(?<pollId>\d+)", poll_get);
     r.post(r"\/api\/polls\/(?<pollId>\d+)\/vote", poll_vote);
     r.post(r"\/api\/polls\/(?<pollId>\d+)\/delete", poll_delete);
@@ -62,10 +64,6 @@ fn is_admin_or_mod(s: &Session) -> bool {
 /// Values beyond int4 made the old queries fail (→ the route's error answer).
 fn param_i32(req: &Req, name: &str) -> Option<i32> {
     req.param(name).and_then(|s| s.parse::<i32>().ok())
-}
-
-fn polls_enabled(st: &AppState) -> bool {
-    st.cfg().truthy("websrv.enable_comment_polls")
 }
 
 // ── GET /api/comments/:itemid ───────────────────────────────────────────────
@@ -103,9 +101,7 @@ async fn get_item_comments(st: AppState, req: Req) -> Res {
             is_subscribed = sub.is_some();
         }
 
-        if let Some(s) = session.filter(|_| polls_enabled(&st)) {
-            fill_user_votes(&st, s.id, &mut comments).await;
-        }
+        polls::attach_polls(&st, &mut comments, polls::Viewer::of(&st, session)).await;
 
         let out: Vec<Value> = if is_anonymize_session(&cfg, session) {
             comments.into_iter().map(|c| Value::Object(sc::anonymize(c))).collect()
@@ -131,27 +127,6 @@ async fn get_item_comments(st: AppState, req: Req) -> Res {
     }
 }
 
-/// Sets `poll.user_vote_option_id` on comments with polls (errors ignored, like the old code).
-async fn fill_user_votes(st: &AppState, user_id: i64, comments: &mut [Row]) {
-    let poll_ids: Vec<i32> = comments.iter().filter_map(|c| c.get("poll").and_then(|p| p.get("id")).and_then(crate::config::as_int)).map(|i| i as i32).collect();
-    if poll_ids.is_empty() {
-        return;
-    }
-    let Ok(votes) = sql!("SELECT poll_id, option_id FROM comment_poll_votes WHERE poll_id = ANY(", poll_ids, "::int[]) AND user_id = ", user_id as i32)
-        .fetch_all(&st.db)
-        .await
-    else {
-        return;
-    };
-    let map: HashMap<i64, Value> = votes.iter().filter_map(|v| Some((v.i64("poll_id")?, v.val("option_id").clone()))).collect();
-    for c in comments.iter_mut() {
-        if let Some(Value::Object(p)) = c.get_mut("poll") {
-            let id = p.get("id").and_then(crate::config::as_int).unwrap_or(-1);
-            p.insert("user_vote_option_id".into(), map.get(&id).cloned().filter(crate::config::truthy).unwrap_or(Value::Null));
-        }
-    }
-}
-
 // ── GET /api/comment/:id ────────────────────────────────────────────────────
 
 async fn get_single_comment(st: AppState, req: Req) -> Res {
@@ -167,7 +142,12 @@ async fn get_single_comment(st: AppState, req: Req) -> Res {
         None => true,
     };
     match comment.filter(|_| visible) {
-        Some(c) => j(json!({ "success": true, "comment": c }), 200),
+        Some(c) => {
+            let mut one = [c];
+            polls::attach_polls(&st, &mut one, polls::Viewer::of(&st, req.session())).await;
+            let [c] = one;
+            j(json!({ "success": true, "comment": c }), 200)
+        }
         None => j(json!({ "success": false, "message": "Comment not found" }), 404),
     }
 }
@@ -268,30 +248,9 @@ async fn user_comments_inner(st: &AppState, req: &Req, user: &str) -> anyhow::Re
     if !processed.is_empty() {
         let ids = sc::comment_ids(&processed);
         sc::attach_files(st, &mut processed, &ids).await;
-        let mut polls: HashMap<i64, Value> = HashMap::new();
-        if polls_enabled(st) {
-            match sc::load_polls(st, &ids, true).await {
-                Ok(p) => polls = p,
-                Err(e) => tracing::error!("[USER_COMMENTS] Poll fetch error: {e}"),
-            }
-            if let (Some(s), false) = (session, polls.is_empty()) {
-                let poll_ids: Vec<i32> = polls.values().filter_map(|p| p.get("id").and_then(crate::config::as_int)).map(|i| i as i32).collect();
-                if let Ok(votes) = sql!("SELECT poll_id, option_id FROM comment_poll_votes WHERE poll_id = ANY(", poll_ids, "::int[]) AND user_id = ", s.id as i32)
-                    .fetch_all(&st.db)
-                    .await
-                {
-                    let vm: HashMap<i64, Value> = votes.iter().filter_map(|v| Some((v.i64("poll_id")?, v.val("option_id").clone()))).collect();
-                    for p in polls.values_mut() {
-                        let id = p.get("id").and_then(crate::config::as_int).unwrap_or(-1);
-                        p["user_vote_option_id"] = vm.get(&id).cloned().filter(crate::config::truthy).unwrap_or(Value::Null);
-                    }
-                }
-            }
-        }
-        for c in processed.iter_mut() {
-            let p = c.i64("id").and_then(|id| polls.remove(&id)).unwrap_or(Value::Null);
-            c.insert("poll".into(), p);
-        }
+        // the page itself also gets every voter (its no-JavaScript "+N" dialog); the JSON doesn't
+        let viewer = if is_json { polls::Viewer::of(st, session) } else { polls::Viewer::page(st, session) };
+        polls::attach_polls(st, &mut processed, viewer).await;
     }
 
     let comments_value = sc::rows_to_value(processed);
@@ -319,6 +278,7 @@ async fn user_comments_inner(st: &AppState, req: &Req, user: &str) -> anyhow::Re
                         "item_key": item_key,
                         "content_html": frame_comment_html(content, &format!("/{item_key}"), &hosts),
                         "attachments_html": frame_attachments_html(&files, content),
+                        "poll": c["poll"],
                         "timeago": created.map(|t| crate::util::time_ago(&tr, (now - t.with_timezone(&chrono::Utc)).num_seconds().max(0))).unwrap_or_default(),
                         "iso": c["created_at"],
                     })
@@ -446,9 +406,19 @@ async fn post_comment(st: AppState, mut req: Req) -> Res {
     let content = crate::wordfilter::apply_word_filter(&st, &raw_content).await;
     let video_time = js_str(body.get("video_time")).filter(|v| !v.is_empty()).as_deref().and_then(js_parse_float);
     let file_ids = parse_file_ids(&js_str(body.get("file_ids")).unwrap_or_default());
-    let has_poll = matches!(js_str(body.get("has_poll")).as_deref(), Some("1" | "true"));
+    // A poll comes with the comment (the scripts' `poll` JSON or the plain form's fields) and is
+    // checked first: a broken poll is reported instead of posting the comment without it.
+    let poll = if polls::enabled(&st) {
+        match polls::draft_from_body(&body) {
+            Ok(Some(d)) => Some(polls::filter_words(&st, d).await),
+            Ok(None) => None,
+            Err(m) => return j(json!({ "success": false, "message": m }), 400),
+        }
+    } else {
+        None
+    };
 
-    if content.trim().is_empty() && file_ids.is_empty() && !has_poll {
+    if content.trim().is_empty() && file_ids.is_empty() && poll.is_none() {
         return j(json!({ "success": false, "message": "Empty comment" }), 200);
     }
     if let Some(max) = cfg.get("main.comment_max_length").as_f64() {
@@ -457,7 +427,7 @@ async fn post_comment(st: AppState, mut req: Req) -> Res {
         }
     }
 
-    match post_comment_inner(&st, &req, &session, item_id, parent_id, content, video_time, file_ids).await {
+    match post_comment_inner(&st, &req, &session, item_id, parent_id, content, video_time, file_ids, poll).await {
         Ok(r) => Ok(r),
         Err(e) => {
             tracing::error!("{e:#}");
@@ -476,6 +446,7 @@ async fn post_comment_inner(
     content: String,
     video_time: Option<f64>,
     file_ids: Vec<i32>,
+    poll: Option<polls::Draft>,
 ) -> anyhow::Result<axum::response::Response> {
     let cfg = st.cfg();
     // NaN / out-of-range ids made the old queries throw (→ 500 "Database error").
@@ -507,8 +478,15 @@ async fn post_comment_inner(
         q.push(", ").bind(vt).push("::numeric");
     }
     q.push(") RETURNING id, created_at, video_time");
-    let new_comment = q.fetch_optional(&st.db).await?.ok_or_else(|| anyhow::anyhow!("insert returned nothing"))?;
+    // the comment and its poll together, or neither
+    let mut tx = st.db.begin().await?;
+    let new_comment = q.fetch_optional(&mut *tx).await?.ok_or_else(|| anyhow::anyhow!("insert returned nothing"))?;
     let comment_id = new_comment.i64("id").unwrap_or(0);
+    let poll_id = match &poll {
+        Some(d) => Some(polls::create(&mut *tx, comment_id as i32, d).await?),
+        None => None,
+    };
+    tx.commit().await?;
 
     if session.is_anon {
         log_anon_activity(st, req, "comment", Some(comment_id), Some(json!({ "item_id": item_id, "parent_id": parent_id }))).await;
@@ -698,6 +676,8 @@ async fn post_comment_inner(
         "files": activity_files,
         "is_anon": session.is_anon,
         "anon_short_fingerprint": short_fp,
+        // the poll is per viewer: the pages fetch it (GET /api/polls/:id)
+        "poll_id": poll_id,
     });
     notify(st, "comments", &live).await;
 
@@ -744,6 +724,14 @@ async fn post_comment_inner(
     comment.insert("banner_position".into(), banner_position);
     comment.insert("banner_size".into(), banner_size);
     comment.insert("banner_repeat".into(), banner_repeat);
+    let poll = match poll_id {
+        Some(id) => polls::load_poll(st, id as i32, polls::Viewer::of(st, Some(session))).await.unwrap_or_else(|e| {
+            tracing::error!("[POLLS] load after posting: {e:#}");
+            None
+        }),
+        None => None,
+    };
+    comment.insert("poll".into(), poll.unwrap_or(Value::Null));
     Ok(json_resp(&json!({ "success": true, "comment": comment, "is_new_subscription": !sub.is_empty() }), 200))
 }
 
@@ -1126,13 +1114,10 @@ async fn activity_inner(st: &AppState, req: &Req) -> anyhow::Result<axum::respon
             Err(e) => tracing::error!("[ACTIVITY] Failed to fetch comment files: {e}"),
         }
     }
-    let mut polls: HashMap<i64, Value> = HashMap::new();
-    if !comments.is_empty() && polls_enabled(st) {
-        match sc::load_polls(st, &ids, false).await {
-            Ok(p) => polls = p,
-            Err(e) => tracing::error!("[ACTIVITY] Failed to fetch polls: {e}"),
-        }
-    }
+    let mut polls = polls::load_polls(st, &ids, polls::Viewer::of(st, session)).await.unwrap_or_else(|e| {
+        tracing::error!("[ACTIVITY] Failed to fetch polls: {e}");
+        HashMap::new()
+    });
 
     let anonymized = is_anonymize_session(&cfg, session);
     let slugs = enable_item_slugs(&cfg);
@@ -1374,7 +1359,8 @@ pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Se
     };
     let linear = page_session.and_then(|s| s.comment_display_mode).or_else(|| crate::config::as_int(cfg.get("websrv.default_comment_display_mode"))) == Some(1);
     let sort = if legacy || linear { sc::Sort::Old } else { sc::Sort::New };
-    let rows = sc::get_comments(st, &item_id.to_string(), sort, false).await;
+    let mut rows = sc::get_comments(st, &item_id.to_string(), sort, false).await;
+    polls::attach_polls(st, &mut rows, polls::Viewer::page(st, real_session)).await;
     let anonymized = is_anonymize_session(&cfg, real_session);
     let tr = st.i18n.translator(lang);
     let now = chrono::Utc::now();
@@ -1439,6 +1425,7 @@ pub(crate) async fn static_item_comments(st: &AppState, page_session: Option<&Se
             "content": &content,
             "content_html": frame_comment_html(&content, "", &hosts),
             "attachments_html": frame_attachments_html(&files, &content),
+            "poll": c.get("poll").cloned().unwrap_or(Value::Null),
             "timeago": created.map(|t| crate::util::time_ago(&tr, (now - t.with_timezone(&chrono::Utc)).num_seconds().max(0))).unwrap_or_default(),
             "iso": c.str("created_at").unwrap_or(""),
             "backlinks": c.i64("id").and_then(|id| backlinks.get(&id)).cloned().unwrap_or_default(),
@@ -1551,249 +1538,238 @@ async fn subscribe_all_uploads(st: AppState, req: Req) -> Res {
 }
 
 // ── Polls ───────────────────────────────────────────────────────────────────
+// The poll logic lives in social/polls.rs. Every answer that changes a poll carries the poll as the
+// asker now sees it (`poll`), and a live `comments` event `{ type: "poll" | "poll_deleted" }` tells
+// the other pages to fetch it again (it is per viewer, so it isn't sent along).
 
-/// `createPollForComment(commentId, pollData)` — `Ok(None)` for invalid poll data.
-async fn create_poll_for_comment(st: &AppState, comment_id: i32, data: &Value) -> anyhow::Result<Option<Value>> {
-    if !polls_enabled(st) {
-        return Ok(None);
-    }
-    let question = match data.get("question") {
-        None | Some(Value::Null) => return Ok(None),
-        Some(Value::String(q)) => q.trim().to_string(),
-        Some(Value::Bool(false)) => return Ok(None),
-        Some(Value::Number(n)) if n.as_f64() == Some(0.0) => return Ok(None),
-        // `question.trim` is not a function → the old route's 500
-        Some(_) => anyhow::bail!("question.trim is not a function"),
-    };
-    if question.is_empty() {
-        return Ok(None);
-    }
-    let Some(Value::Array(options)) = data.get("options") else { return Ok(None) };
-    if options.len() < 2 {
-        return Ok(None);
-    }
-    let clean: Vec<String> = options.iter().map(|o| js_str(Some(o)).unwrap_or_else(|| "null".into()).trim().to_string()).filter(|o| !o.is_empty()).collect();
-    if clean.len() < 2 || clean.len() > 10 {
-        return Ok(None);
-    }
-    let anonymous = data.get("is_anonymous") != Some(&Value::Bool(false));
-    let poll = sql!("INSERT INTO comment_polls (comment_id, question, is_anonymous) VALUES (", comment_id, ", ", &question, ", ", anonymous, ") RETURNING id, is_anonymous")
-        .fetch_optional(&st.db)
-        .await?
-        .ok_or_else(|| anyhow::anyhow!("poll insert returned nothing"))?;
-    let poll_id = poll.i64("id").unwrap_or(0) as i32;
-    for (i, text) in clean.iter().enumerate() {
-        sql!("INSERT INTO comment_poll_options (poll_id, text, sort_order) VALUES (", poll_id, ", ", text, ", ", i as i16, ")").execute(&st.db).await?;
-    }
-    let opts = sql!("SELECT id, text, sort_order FROM comment_poll_options WHERE poll_id = ", poll_id, " ORDER BY sort_order ASC").fetch_all(&st.db).await?;
-    let options: Vec<Value> = opts
-        .into_iter()
-        .map(|o| json!({ "id": o.val("id"), "text": o.val("text"), "sort_order": o.val("sort_order"), "vote_count": 0, "voters": [] }))
-        .collect();
-    Ok(Some(json!({
-        "id": poll_id,
-        "question": question,
-        "is_anonymous": poll.val("is_anonymous"),
-        "options": options,
-        "total_votes": 0,
-        "user_vote_option_id": null
-    })))
+/// A poll, the comment it hangs on and that comment's item; `None` when the poll is gone, its
+/// comment deleted, or the item hidden from this visitor.
+async fn poll_context(st: &AppState, session: Option<&Session>, poll_id: i32) -> anyhow::Result<Option<Row>> {
+    let row = sql!(
+        r#"SELECT cp.id, cp.comment_id, c.item_id, c.user_id AS author_id, cp.question,
+                  (cp.expires_at IS NOT NULL AND cp.expires_at <= now()) AS is_closed
+             FROM comment_polls cp JOIN comments c ON c.id = cp.comment_id
+            WHERE cp.id = "#,
+        poll_id,
+        " AND c.is_deleted = false"
+    )
+    .fetch_optional(&st.db)
+    .await?;
+    let Some(row) = row else { return Ok(None) };
+    let item_id = row.i64("item_id").and_then(|i| i32::try_from(i).ok()).unwrap_or(0);
+    Ok(if crate::f0cklib::may_access_item(st, session, item_id).await? { Some(row) } else { None })
 }
 
+async fn notify_poll(st: &AppState, kind: &str, ctx: &Row) {
+    notify(st, "comments", &json!({ "type": kind, "poll_id": ctx.val("id"), "comment_id": ctx.val("comment_id"), "item_id": ctx.val("item_id") })).await;
+}
+
+fn poll_error(code: u16, message: &str) -> Res {
+    j(json!({ "success": false, "message": message }), code)
+}
+
+/// `POST /api/polls/attach/:commentId` — a poll for an existing comment (its author or a mod).
+/// The comment forms send the poll with the comment itself; this stays for API clients.
 async fn poll_attach(st: AppState, mut req: Req) -> Res {
     let Some(session) = req.session().cloned() else { return unauthorized() };
-    if !polls_enabled(&st) {
-        return j(json!({ "success": false, "message": "Polls disabled" }), 403);
+    if !polls::enabled(&st) {
+        return poll_error(403, "Polls are disabled");
     }
-    let Some(comment_id) = param_i32(&req, "commentId") else { return j(json!({ "success": false, "message": "Database error" }), 500) };
+    let Some(comment_id) = param_i32(&req, "commentId") else { return poll_error(404, "Comment not found") };
     let body = req.post_value().await;
-    // The old handler had no try/catch around these lookups (a DB error left the request hanging).
-    let comment = sql!("SELECT id, user_id FROM comments WHERE id = ", comment_id, " AND is_deleted = false LIMIT 1").fetch_optional(&st.db).await?;
-    let Some(comment) = comment else { return j(json!({ "success": false, "message": "Comment not found" }), 404) };
-    if comment.i64("user_id") != Some(session.id) && !is_admin_or_mod(&session) {
-        return forbidden();
-    }
-    if sql!("SELECT id FROM comment_polls WHERE comment_id = ", comment_id, " LIMIT 1").fetch_optional(&st.db).await?.is_some() {
-        return j(json!({ "success": false, "message": "Poll already exists" }), 409);
-    }
-    let data = match body.get("poll") {
-        Some(Value::String(s)) => match serde_json::from_str::<Value>(s) {
-            Ok(v) => v,
-            Err(_) => return j(json!({ "success": false, "message": "Invalid poll JSON" }), 400),
-        },
-        Some(v) => v.clone(),
-        None => Value::Null,
-    };
-    match create_poll_for_comment(&st, comment_id, &data).await {
-        Ok(Some(poll)) => j(json!({ "success": true, "poll": poll }), 200),
-        Ok(None) => j(json!({ "success": false, "message": "Invalid poll data (need question + 2-10 options)" }), 400),
-        Err(e) => {
-            tracing::error!("[POLLS] createPollForComment error: {e:#}");
-            j(json!({ "success": false, "message": "Database error" }), 500)
-        }
-    }
-}
-
-async fn poll_get(st: AppState, req: Req) -> Res {
-    if !polls_enabled(&st) {
-        return j(json!({ "success": false }), 403);
-    }
-    let Some(poll_id) = param_i32(&req, "pollId") else { return j(json!({ "success": false }), 500) };
     let r: anyhow::Result<axum::response::Response> = async {
-        let p = sql!(
-            r#"SELECT
-                    cp.id as poll_id, cp.comment_id, cp.question, cp.expires_at, COALESCE(cp.is_anonymous, true) as is_anonymous,
-                    json_agg(
-                        json_build_object(
-                            'id', cpo.id, 'text', cpo.text, 'sort_order', cpo.sort_order,
-                            'vote_count', COALESCE(vc.cnt, 0)
-                        ) ORDER BY cpo.sort_order ASC, cpo.id ASC
-                    ) AS options,
-                    COALESCE(SUM(vc.cnt), 0)::int AS total_votes
-                FROM comment_polls cp
-                JOIN comment_poll_options cpo ON cpo.poll_id = cp.id
-                LEFT JOIN (SELECT option_id, COUNT(*) AS cnt FROM comment_poll_votes GROUP BY option_id) vc ON vc.option_id = cpo.id
-                WHERE cp.id = "#,
-            poll_id,
-            " GROUP BY cp.id, cp.comment_id, cp.question, cp.expires_at, cp.is_anonymous"
-        )
-        .fetch_optional(&st.db)
-        .await?;
-        let Some(p) = p else { return Ok(json_resp(&json!({ "success": false }), 404)) };
-        let mut user_vote = Value::Null;
-        if let Some(s) = req.session() {
-            if let Some(v) = sql!("SELECT option_id FROM comment_poll_votes WHERE poll_id = ", poll_id, " AND user_id = ", s.id as i32, " LIMIT 1").fetch_optional(&st.db).await? {
-                user_vote = v.val("option_id").clone();
-            }
-        }
-        let mut options = p.val("options").clone();
-        if !p.bool("is_anonymous") {
-            let voters = sc::load_voters(&st, &[poll_id]).await?;
-            sc::add_voters(&mut options, &voters);
-        }
-        Ok(json_resp(
-            &json!({
-                "success": true,
-                "poll": {
-                    "id": p.val("poll_id"),
-                    "comment_id": p.val("comment_id"),
-                    "question": p.val("question"),
-                    "expires_at": p.val("expires_at"),
-                    "is_anonymous": p.val("is_anonymous"),
-                    "options": options,
-                    "total_votes": p.i64("total_votes").unwrap_or(0),
-                    "user_vote_option_id": user_vote
-                }
-            }),
-            200,
-        ))
-    }
-    .await;
-    match r {
-        Ok(r) => Ok(r),
-        Err(e) => {
-            tracing::error!("[POLLS] GET error: {e:#}");
-            j(json!({ "success": false }), 500)
-        }
-    }
-}
-
-async fn poll_vote(st: AppState, mut req: Req) -> Res {
-    let cfg = st.cfg();
-    let Some(session) = req.session().cloned() else { return unauthorized() };
-    if is_anon_session(Some(&session)) && !can_anon_do(&cfg, "poll_vote") {
-        return j(json!({ "success": false, "message": "Anonymous poll voting is disabled" }), 403);
-    }
-    if !polls_enabled(&st) {
-        return j(json!({ "success": false }), 403);
-    }
-    let body = req.post_value().await;
-    let option_id = js_str(body.get("option_id")).as_deref().and_then(js_parse_int).filter(|o| *o != 0);
-    let Some(option_id) = option_id else { return j(json!({ "success": false, "message": "Missing option_id" }), 400) };
-    let Some(poll_id) = param_i32(&req, "pollId") else { return j(json!({ "success": false }), 500) };
-    let me = session.id as i32;
-    let r: anyhow::Result<axum::response::Response> = async {
-        let option_id = i32::try_from(option_id)?;
-        if sql!("SELECT id FROM comment_poll_options WHERE id = ", option_id, " AND poll_id = ", poll_id, " LIMIT 1").fetch_optional(&st.db).await?.is_none() {
-            return Ok(json_resp(&json!({ "success": false, "message": "Invalid option" }), 400));
-        }
-        let Some(poll) = sql!("SELECT expires_at FROM comment_polls WHERE id = ", poll_id, " LIMIT 1").fetch_optional(&st.db).await? else {
-            return Ok(json_resp(&json!({ "success": false }), 404));
+        let Some(comment) = sql!("SELECT id, item_id, user_id FROM comments WHERE id = ", comment_id, " AND is_deleted = false").fetch_optional(&st.db).await? else {
+            return Ok(json_resp(&json!({ "success": false, "message": "Comment not found" }), 404));
         };
-        if let Some(exp) = poll.str("expires_at").and_then(|e| chrono::DateTime::parse_from_rfc3339(e).ok()) {
-            if exp < chrono::Utc::now() {
-                return Ok(json_resp(&json!({ "success": false, "message": "Poll has expired" }), 403));
-            }
-        }
-        let existing = sql!("SELECT poll_id FROM comment_poll_votes WHERE poll_id = ", poll_id, " AND user_id = ", me, " LIMIT 1").fetch_optional(&st.db).await?;
-        if existing.is_some() {
-            sql!("UPDATE comment_poll_votes SET option_id = ", option_id, ", created_at = now() WHERE poll_id = ", poll_id, " AND user_id = ", me).execute(&st.db).await?;
-        } else {
-            sql!("INSERT INTO comment_poll_votes (poll_id, option_id, user_id) VALUES (", poll_id, ", ", option_id, ", ", me, ")").execute(&st.db).await?;
-        }
-        if session.is_anon {
-            log_anon_activity(&st, &req, "poll_vote", Some(poll_id as i64), Some(json!({ "option_id": option_id }))).await;
-        }
-        let is_anon = sql!("SELECT COALESCE(is_anonymous, true) as is_anonymous FROM comment_polls WHERE id = ", poll_id, " LIMIT 1")
-            .fetch_optional(&st.db)
-            .await?
-            .map(|r| r.bool("is_anonymous"))
-            .unwrap_or(true);
-        let rows = sql!(
-            "SELECT cpo.id, cpo.text, cpo.sort_order, COALESCE(vc.cnt, 0)::int AS vote_count FROM comment_poll_options cpo LEFT JOIN (SELECT option_id, COUNT(*) AS cnt FROM comment_poll_votes WHERE poll_id = ",
-            poll_id,
-            " GROUP BY option_id) vc ON vc.option_id = cpo.id WHERE cpo.poll_id = ",
-            poll_id,
-            " ORDER BY cpo.sort_order ASC"
-        )
-        .fetch_all(&st.db)
-        .await?;
-        let total: i64 = rows.iter().filter_map(|r| r.i64("vote_count")).sum();
-        let mut options = sc::rows_to_value(rows);
-        if !is_anon {
-            let voters = sc::load_voters(&st, &[poll_id]).await?;
-            sc::add_voters(&mut options, &voters);
-        }
-        Ok(json_resp(&json!({ "success": true, "is_anonymous": is_anon, "options": options, "total_votes": total, "user_vote_option_id": option_id }), 200))
-    }
-    .await;
-    match r {
-        Ok(r) => Ok(r),
-        Err(e) => {
-            tracing::error!("[POLLS] vote error: {e:#}");
-            j(json!({ "success": false }), 500)
-        }
-    }
-}
-
-async fn poll_delete(st: AppState, req: Req) -> Res {
-    let Some(session) = req.session() else { return unauthorized() };
-    if !polls_enabled(&st) {
-        return j(json!({ "success": false }), 403);
-    }
-    let Some(poll_id) = param_i32(&req, "pollId") else { return j(json!({ "success": false }), 500) };
-    let r: anyhow::Result<axum::response::Response> = async {
-        let Some(poll) = sql!("SELECT cp.id, cp.comment_id, c.user_id FROM comment_polls cp JOIN comments c ON c.id = cp.comment_id WHERE cp.id = ", poll_id, " LIMIT 1")
-            .fetch_optional(&st.db)
-            .await?
-        else {
-            return Ok(json_resp(&json!({ "success": false }), 404));
-        };
-        if poll.i64("user_id") != Some(session.id) && !is_admin_or_mod(session) {
+        if comment.i64("user_id") != Some(session.id) && !is_admin_or_mod(&session) {
             return Ok(json_resp(&json!({ "success": false, "message": "Forbidden" }), 403));
         }
-        sql!("DELETE FROM comment_polls WHERE id = ", poll_id).execute(&st.db).await?;
-        notify(&st, "comments", &json!({ "type": "poll_deleted", "poll_id": poll_id.to_string(), "comment_id": poll.val("comment_id") })).await;
-        Ok(json_resp(&json!({ "success": true }), 200))
+        let draft = match polls::draft_from_body(&body) {
+            Ok(Some(d)) => polls::filter_words(&st, d).await,
+            Ok(None) => return Ok(json_resp(&json!({ "success": false, "message": "The poll needs a question" }), 400)),
+            Err(m) => return Ok(json_resp(&json!({ "success": false, "message": m }), 400)),
+        };
+        let poll_id = match polls::create(&st.db, comment_id, &draft).await {
+            Ok(id) => id,
+            Err(e) if crate::db::pg_code(&e).as_deref() == Some("23505") => {
+                return Ok(json_resp(&json!({ "success": false, "message": "This comment has a poll already" }), 409));
+            }
+            Err(e) => return Err(e),
+        };
+        let poll = polls::load_poll(&st, poll_id as i32, polls::Viewer::of(&st, Some(&session))).await?;
+        if let Some(ctx) = poll_context(&st, Some(&session), poll_id as i32).await? {
+            notify_poll(&st, "poll", &ctx).await;
+        }
+        Ok(json_resp(&json!({ "success": true, "poll": poll }), 200))
+    }
+    .await;
+    r.or_else(|e| {
+        tracing::error!("[POLLS] attach error: {e:#}");
+        poll_error(500, "Database error")
+    })
+}
+
+/// `GET /api/polls/:id` — the poll as this visitor sees it.
+async fn poll_get(st: AppState, req: Req) -> Res {
+    if !polls::enabled(&st) {
+        return poll_error(403, "Polls are disabled");
+    }
+    let Some(poll_id) = param_i32(&req, "pollId") else { return poll_error(404, "Poll not found") };
+    let session = req.session();
+    let r: anyhow::Result<Option<Value>> = async {
+        if poll_context(&st, session, poll_id).await?.is_none() {
+            return Ok(None);
+        }
+        polls::load_poll(&st, poll_id, polls::Viewer::of(&st, session)).await
     }
     .await;
     match r {
-        Ok(r) => Ok(r),
+        Ok(Some(poll)) => j(json!({ "success": true, "poll": poll }), 200),
+        Ok(None) => poll_error(404, "Poll not found"),
         Err(e) => {
-            tracing::error!("[POLLS] delete error: {e:#}");
-            j(json!({ "success": false }), 500)
+            tracing::error!("[POLLS] get error: {e:#}");
+            poll_error(500, "Database error")
         }
     }
+}
+
+/// `GET /api/polls/:id/voters?option=<id>` — everyone who picked that option of a public poll.
+async fn poll_voters(st: AppState, req: Req) -> Res {
+    if !polls::enabled(&st) {
+        return poll_error(403, "Polls are disabled");
+    }
+    let Some(poll_id) = param_i32(&req, "pollId") else { return poll_error(404, "Poll not found") };
+    let Some(option_id) = req.query("option").and_then(|o| o.parse::<i32>().ok()) else { return poll_error(400, "Pick an option") };
+    let session = req.session();
+    let r: anyhow::Result<Option<Value>> = async {
+        if poll_context(&st, session, poll_id).await?.is_none() {
+            return Ok(None);
+        }
+        polls::option_voters(&st, poll_id, option_id, polls::Viewer::of(&st, session)).await
+    }
+    .await;
+    match r {
+        Ok(Some(mut v)) => {
+            v["success"] = json!(true);
+            j(v, 200)
+        }
+        Ok(None) => poll_error(404, "No voters to show"),
+        Err(e) => {
+            tracing::error!("[POLLS] voters error: {e:#}");
+            poll_error(500, "Database error")
+        }
+    }
+}
+
+/// `POST /api/polls/:id/vote` — `option_id=<id>` votes (or moves the vote there), `remove=1` takes
+/// the vote back (unless `websrv.comment_polls_unvote` is off). Explicit states, so the plain no-JavaScript forms can post them too.
+async fn poll_vote(st: AppState, mut req: Req) -> Res {
+    let Some(session) = req.session().cloned() else { return poll_error(401, "Log in to vote") };
+    if !polls::enabled(&st) {
+        return poll_error(403, "Polls are disabled");
+    }
+    if !polls::Viewer::of(&st, Some(&session)).may_vote {
+        return poll_error(403, "Anonymous poll voting is disabled");
+    }
+    let Some(poll_id) = param_i32(&req, "pollId") else { return poll_error(404, "Poll not found") };
+    let body = req.post_value().await;
+    let remove = h::js_truthy(body.get("remove"));
+    let option_id = js_str(body.get("option_id")).as_deref().and_then(js_parse_int).and_then(|o| i32::try_from(o).ok()).filter(|o| *o > 0);
+    if !remove && option_id.is_none() {
+        return poll_error(400, "Pick an option");
+    }
+    if remove && !polls::unvote_allowed(&st) {
+        return poll_error(403, "Votes can't be taken back");
+    }
+    let me = session.id as i32;
+    let r: anyhow::Result<axum::response::Response> = async {
+        let Some(ctx) = poll_context(&st, Some(&session), poll_id).await? else {
+            return Ok(json_resp(&json!({ "success": false, "message": "Poll not found" }), 404));
+        };
+        if ctx.bool("is_closed") {
+            return Ok(json_resp(&json!({ "success": false, "message": "This poll is closed" }), 403));
+        }
+        if remove {
+            sql!("DELETE FROM comment_poll_votes WHERE poll_id = ", poll_id, " AND user_id = ", me).execute(&st.db).await?;
+        } else {
+            let option_id = option_id.unwrap_or(0);
+            // the option must belong to this poll; one statement, so two quick clicks can't
+            // both insert (unique (poll_id, user_id))
+            let done = sql!(
+                "INSERT INTO comment_poll_votes (poll_id, option_id, user_id) SELECT o.poll_id, o.id, ",
+                me,
+                " FROM comment_poll_options o WHERE o.id = ",
+                option_id,
+                " AND o.poll_id = ",
+                poll_id,
+                " ON CONFLICT (poll_id, user_id) DO UPDATE SET option_id = EXCLUDED.option_id, created_at = now()"
+            )
+            .execute(&st.db)
+            .await?;
+            if done == 0 {
+                return Ok(json_resp(&json!({ "success": false, "message": "Invalid option" }), 400));
+            }
+        }
+        if session.is_anon {
+            log_anon_activity(&st, &req, "poll_vote", Some(poll_id as i64), Some(json!({ "option_id": option_id, "remove": remove }))).await;
+        }
+        notify_poll(&st, "poll", &ctx).await;
+        let poll = polls::load_poll(&st, poll_id, polls::Viewer::of(&st, Some(&session))).await?;
+        Ok(json_resp(&json!({ "success": true, "poll": poll }), 200))
+    }
+    .await;
+    r.or_else(|e| {
+        tracing::error!("[POLLS] vote error: {e:#}");
+        poll_error(500, "Database error")
+    })
+}
+
+/// `POST /api/polls/:id/delete` — by the comment's author or a mod (logged when it's someone else's).
+/// A comment that was nothing but the poll is deleted with it (`comment_deleted: true`).
+async fn poll_delete(st: AppState, req: Req) -> Res {
+    let Some(session) = req.session().cloned() else { return unauthorized() };
+    if !polls::enabled(&st) {
+        return poll_error(403, "Polls are disabled");
+    }
+    let Some(poll_id) = param_i32(&req, "pollId") else { return poll_error(404, "Poll not found") };
+    let r: anyhow::Result<axum::response::Response> = async {
+        let Some(ctx) = poll_context(&st, Some(&session), poll_id).await? else {
+            return Ok(json_resp(&json!({ "success": false, "message": "Poll not found" }), 404));
+        };
+        let own = ctx.i64("author_id") == Some(session.id);
+        if !own && !is_admin_or_mod(&session) {
+            return Ok(json_resp(&json!({ "success": false, "message": "Forbidden" }), 403));
+        }
+        let comment_id = ctx.i64("comment_id").unwrap_or(0) as i32;
+        // A comment that was only the poll (no text, no files) would stay behind empty: it goes too,
+        // the way a deleted comment goes
+        let mut tx = st.db.begin().await?;
+        sql!("DELETE FROM comment_polls WHERE id = ", poll_id).execute(&mut *tx).await?;
+        let emptied = sql!(
+            "UPDATE comments SET is_deleted = true, content = '[deleted]' WHERE id = ",
+            comment_id,
+            " AND btrim(content) = '' AND NOT EXISTS (SELECT 1 FROM comment_files f WHERE f.comment_id = ",
+            comment_id,
+            ") RETURNING id"
+        )
+        .fetch_optional(&mut *tx)
+        .await?
+        .is_some();
+        tx.commit().await?;
+        if !own {
+            crate::audit::log(&st, session.id, "delete_poll", "comment", comment_id.to_string(), json!({ "item_id": ctx.val("item_id"), "question": ctx.val("question"), "comment_deleted": emptied })).await;
+        }
+        notify_poll(&st, "poll_deleted", &ctx).await;
+        if emptied {
+            notify(&st, "comments", &json!({ "type": "delete", "item_id": ctx.val("item_id"), "comment_id": comment_id.to_string() })).await;
+        }
+        Ok(json_resp(&json!({ "success": true, "poll_id": poll_id, "comment_id": comment_id, "item_id": ctx.val("item_id"), "comment_deleted": emptied }), 200))
+    }
+    .await;
+    r.or_else(|e| {
+        tracing::error!("[POLLS] delete error: {e:#}");
+        poll_error(500, "Database error")
+    })
 }
 
 #[cfg(test)]

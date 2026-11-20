@@ -90,6 +90,8 @@
         document.dispatchEvent(new CustomEvent('f0ck:global_chat_clear'));
         break;
       case 'comments':
+        // poll votes and deletions are redrawn in place by f0ckPoll (f0ck-core.js)
+        if (data && (data.type === 'poll' || data.type === 'poll_deleted')) break;
         hook('comments', data);
         break;
       case 'new_item':

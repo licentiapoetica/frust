@@ -420,7 +420,12 @@
     "poll_delete": "Peiling verwijderen",
     "poll_expired": "Peiling gesloten",
     "poll_anonymous": "Anoniem",
-    "poll_public": "Openbare stemmen"
+    "poll_public": "Openbare stemmen",
+    "poll_unvote": "Stem intrekken",
+    "poll_options_lines": "Opties, één per regel (2 tot 10)",
+    "poll_delete_confirm": "Deze peiling verwijderen?",
+    "poll_voters_all": "Alle stemmers",
+    "poll_close": "Sluiten"
   },
   "upload_btn": {
     "select_file": "Selecteer een bestand",

@@ -624,6 +624,9 @@ class CommentSystem {
             CommentSystem._animateNewComment(el, false);
         }, 100);
 
+        // A poll came with it: the live event only names it (it is per viewer), so fetch it
+        if (data.poll_id) this._insertLivePoll(comment, data.poll_id);
+
         // 7. The NOTIFY body is capped at 500 chars to stay under PostgreSQL's 8KB limit.
         //    If the body was truncated, immediately show the "show full comment" button
         //    and then fetch + patch the real full content asynchronously.
@@ -640,6 +643,21 @@ class CommentSystem {
                 }
             }
             this._patchLiveCommentContent(data.id);
+        }
+    }
+
+    async _insertLivePoll(comment, pollId) {
+        try {
+            const res = await fetch(`/api/polls/${encodeURIComponent(pollId)}`, { headers: { Accept: 'application/json' } });
+            const json = await res.json().catch(() => ({}));
+            if (!json.success || !json.poll) return;
+            comment.poll = json.poll;
+            const el = document.getElementById('c' + comment.id);
+            if (!el || el.querySelector('.comment-poll')) return;
+            const anchor = el.querySelector('.comment-body > .comment-attachments') || el.querySelector('.comment-body > .comment-content');
+            anchor?.insertAdjacentHTML('afterend', this.renderCommentPoll(json.poll));
+        } catch (e) {
+            _f0ckDebug('[CommentSystem] _insertLivePoll failed:', e);
         }
     }
 
@@ -2084,6 +2102,43 @@ class CommentSystem {
      * Browsers often block autoplay on dynamically inserted elements;
      * calling .play() explicitly after DOM insertion resolves this.
      */
+    // Limits of a poll: the same as the server's (server/src/social/polls.rs)
+    static get POLL_QUESTION_MAX() { return 200; }
+    static get POLL_OPTION_MAX() { return 100; }
+    static get POLL_OPTIONS_MIN() { return 2; }
+    static get POLL_OPTIONS_MAX() { return 10; }
+
+    static pollOptionRow() {
+        const i18n = window.f0ckI18n || {};
+        const ph = String(i18n.poll_option_placeholder || 'Option...').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        return `<div class="poll-option-row"><input class="poll-option-input" type="text" placeholder="${ph}" maxlength="${CommentSystem.POLL_OPTION_MAX}"><button class="poll-option-remove" type="button" title="Remove option" aria-label="Remove option"><i class="fa-solid fa-xmark"></i></button></div>`;
+    }
+
+    static addPollOption(builder) {
+        const list = builder.querySelector('.poll-options-list');
+        if (!list || list.querySelectorAll('.poll-option-row').length >= CommentSystem.POLL_OPTIONS_MAX) return;
+        list.insertAdjacentHTML('beforeend', CommentSystem.pollOptionRow());
+        list.lastElementChild.querySelector('.poll-option-input').focus();
+        CommentSystem.updatePollBuilder(builder);
+    }
+
+    // "Add option" only while there is room; the list knows when it is at its minimum
+    static updatePollBuilder(builder) {
+        const n = builder.querySelectorAll('.poll-option-row').length;
+        const add = builder.querySelector('.poll-add-option-btn');
+        if (add) add.disabled = n >= CommentSystem.POLL_OPTIONS_MAX;
+        builder.classList.toggle('at-min-options', n <= CommentSystem.POLL_OPTIONS_MIN);
+    }
+
+    // What is wrong with a poll about to be posted, or null
+    static pollProblem(question, options) {
+        if (!question) return 'The poll needs a question';
+        if (options.length < CommentSystem.POLL_OPTIONS_MIN) return `A poll needs ${CommentSystem.POLL_OPTIONS_MIN} to ${CommentSystem.POLL_OPTIONS_MAX} options`;
+        const seen = new Set(options.map(o => o.toLowerCase()));
+        if (seen.size !== options.length) return 'Poll options must be different';
+        return null;
+    }
+
     static autoplayConvertedGifs(container) {
         if (!container) return;
         const videos = container.querySelectorAll('video.autoplay-gif');
@@ -2269,7 +2324,7 @@ class CommentSystem {
 
         const anonDataAttrs = isAnon ? '' : `data-username="${comment.username}" data-display="${this.escapeHtml(comment.display_name || '')}"`;
 
-        return `<div class="${commentClass} ${isDeleted ? 'deleted' : ''} ${isPinned ? 'pinned' : ''}" id="c${comment.id}" ${bannerStyle}>${avatarHtml}<div class="comment-body"><div class="comment-header"><div class="comment-header-left">${pinnedBadge}${authorHtml}${contextMarker}${backlinkHtml}</div><a href="#c${comment.id}" class="comment-time timeago" tooltip="${fullDate}" data-iso="${isoDate}" data-id="${comment.id}" ${anonDataAttrs}>${timeAgo}</a></div><div class="comment-content" data-raw="${this.escapeHtml(comment.content)}">${content}</div>${this.renderCommentAttachments(comment.files, comment.content)}${this.renderCommentPoll(comment.poll, comment.id, isAnon ? null : comment.username)}<div class="comment-footer"><div class="comment-footer-right"><div class="comment-actions">${!isDeleted ? `${(currentUserId || window.f0ckAnonSSH?.pubkey) ? `<button class="reply-btn" data-id="${comment.id}" data-username="${comment.username}" data-display="${this.escapeHtml(comment.display_name || '')}" title="Reply"><i class="fa-solid fa-reply"></i></button><button class="quote-btn" data-id="${comment.id}" data-username="${comment.username}" data-display="${this.escapeHtml(comment.display_name || '')}" title="Quote with Text"><i class="fa-solid fa-quote-left"></i></button>` : ''}<button class="report-comment-btn" data-id="${comment.id}" title="Report Comment"><i class="fa-solid fa-triangle-exclamation"></i></button>` : ''}${adminButtons}${userDeleteButton}</div></div></div></div><a href="#c${comment.id}" class="comment-permalink" title="Permalink" data-id="${comment.id}" ${anonDataAttrs}>#${comment.id}</a></div>${repliesHtml}`;
+        return `<div class="${commentClass} ${isDeleted ? 'deleted' : ''} ${isPinned ? 'pinned' : ''}" id="c${comment.id}" ${bannerStyle}>${avatarHtml}<div class="comment-body"><div class="comment-header"><div class="comment-header-left">${pinnedBadge}${authorHtml}${contextMarker}${backlinkHtml}</div><a href="#c${comment.id}" class="comment-time timeago" tooltip="${fullDate}" data-iso="${isoDate}" data-id="${comment.id}" ${anonDataAttrs}>${timeAgo}</a></div><div class="comment-content" data-raw="${this.escapeHtml(comment.content)}">${content}</div>${this.renderCommentAttachments(comment.files, comment.content)}${this.renderCommentPoll(comment.poll)}<div class="comment-footer"><div class="comment-footer-right"><div class="comment-actions">${!isDeleted ? `${(currentUserId || window.f0ckAnonSSH?.pubkey) ? `<button class="reply-btn" data-id="${comment.id}" data-username="${comment.username}" data-display="${this.escapeHtml(comment.display_name || '')}" title="Reply"><i class="fa-solid fa-reply"></i></button><button class="quote-btn" data-id="${comment.id}" data-username="${comment.username}" data-display="${this.escapeHtml(comment.display_name || '')}" title="Quote with Text"><i class="fa-solid fa-quote-left"></i></button>` : ''}<button class="report-comment-btn" data-id="${comment.id}" title="Report Comment"><i class="fa-solid fa-triangle-exclamation"></i></button>` : ''}${adminButtons}${userDeleteButton}</div></div></div></div><a href="#c${comment.id}" class="comment-permalink" title="Permalink" data-id="${comment.id}" ${anonDataAttrs}>#${comment.id}</a></div>${repliesHtml}`;
     }
 
     timeAgo(date) {
@@ -2317,57 +2372,10 @@ class CommentSystem {
         return items ? `<div class="comment-attachments">${items}</div>` : '';
     }
 
-    renderCommentPoll(poll, commentId, commentUsername) {
-        if (!poll) return '';
-        const i18n = window.f0ckI18n || {};
-        const session = window.f0ckSession || {};
-        const total = poll.total_votes || 0;
-        const voted = !!poll.user_vote_option_id;
-        const expired = poll.expires_at && new Date(poll.expires_at) < new Date();
-        const isAnon = poll.is_anonymous !== false;
-
-        const canDelete = session.logged_in && (session.is_admin || session.is_moderator || session.user === commentUsername);
-
-        const optionsHtml = (poll.options || []).map(opt => {
-            const pct = total > 0 ? Math.round((opt.vote_count / total) * 100) : 0;
-            const isVoted = poll.user_vote_option_id === opt.id;
-            const clickable = session.logged_in && !expired && !voted;
-            const voterAvatars = (!isAnon && Array.isArray(opt.voters) && opt.voters.length > 0)
-                ? `<div class="poll-option-voters">${opt.voters.map(v => {
-                    const u = (v && typeof v === 'object') ? v : { username: String(v || ''), avatar: null, avatar_file: null };
-                    const name = String(u.username || '');
-                    const src = u.avatar_file ? `/a/${u.avatar_file}` : u.avatar ? `/t/${u.avatar}.webp` : '/a/default.png';
-                    return name ? `<a href="/user/${this.escapeHtml(name)}" title="${this.escapeHtml(name)}"><img class="poll-voter-avatar" src="${src}" alt="${this.escapeHtml(name)}" loading="lazy"></a>` : '';
-                }).join('')}</div>`
-                : '';
-            return `<div class="poll-option ${isVoted ? 'poll-option-voted' : ''} ${clickable ? 'poll-option-clickable' : ''}"
-                         data-option-id="${opt.id}" data-poll-id="${poll.id}" data-comment-id="${commentId}">
-                <div class="poll-option-bar" style="width:${pct}%"></div>
-                <span class="poll-option-text">${this.escapeHtml(opt.text)}</span>
-                <span class="poll-option-pct">${pct}%</span>
-                ${isVoted ? `<i class="fa-solid fa-check poll-vote-check" title="${i18n.poll_voted || 'You voted'}"></i>` : ''}
-                ${voterAvatars}
-            </div>`;
-        }).join('');
-
-        const deleteBtn = canDelete
-            ? `<button class="poll-delete-btn" data-poll-id="${poll.id}" title="${i18n.poll_delete || 'Delete poll'}"><i class="fa-solid fa-trash-can"></i></button>`
-            : '';
-
-        const anonBadge = isAnon
-            ? `<span class="poll-anon-badge" title="${i18n.poll_anonymous || 'Anonymous'}"><i class="fa-solid fa-user-secret"></i></span>`
-            : `<span class="poll-anon-badge poll-public-badge" title="${i18n.poll_public || 'Public votes'}"><i class="fa-solid fa-eye"></i></span>`;
-
-        return `<div class="comment-poll" data-poll-id="${poll.id}" data-is-anonymous="${isAnon ? '1' : '0'}">
-            <div class="poll-question">${this.escapeHtml(poll.question)}</div>
-            <div class="poll-options">${optionsHtml}</div>
-            <div class="poll-footer">
-                <span class="poll-total">${total} ${total === 1 ? (i18n.poll_vote_single || 'vote') : (i18n.poll_votes || 'votes')}</span>
-                ${anonBadge}
-                ${expired ? `<span class="poll-expired-badge">${i18n.poll_expired || 'Poll closed'}</span>` : ''}
-                ${deleteBtn}
-            </div>
-        </div>`;
+    // The poll under a comment: the shared renderer (f0ckPoll, f0ck-core.js), which also handles
+    // the votes, deletions and live updates.
+    renderCommentPoll(poll) {
+        return poll && window.f0ckPoll ? window.f0ckPoll.render(poll) : '';
     }
 
     // Same markup as renderInput() so every theme styles it identically, but inert: readonly, not focusable,
@@ -2812,7 +2820,7 @@ class CommentSystem {
                 return;
             }
 
-            // Poll button — toggle poll builder
+            // Poll button — open / close the poll builder (the poll is posted with the comment)
             if (target.closest('.comment-poll-btn')) {
                 const btn = target.closest('.comment-poll-btn');
                 const wrap = btn.closest('.comment-input');
@@ -2824,23 +2832,33 @@ class CommentSystem {
                     return;
                 }
                 const i18n = window.f0ckI18n || {};
+                const esc = (v) => this.escapeHtml(String(v ?? ''));
                 const builder = document.createElement('div');
                 builder.className = 'poll-builder';
                 builder.innerHTML = `
-                    <input class="poll-question-input" type="text" placeholder="${i18n.poll_question_placeholder || 'Poll question...'}" maxlength="200">
-                    <div class="poll-options-list">
-                        <input class="poll-option-input" type="text" placeholder="${i18n.poll_option_placeholder || 'Option...'}" maxlength="100">
-                        <input class="poll-option-input" type="text" placeholder="${i18n.poll_option_placeholder || 'Option...'}" maxlength="100">
-                    </div>
+                    <input class="poll-question-input" type="text" placeholder="${esc(i18n.poll_question_placeholder || 'Poll question...')}" maxlength="${CommentSystem.POLL_QUESTION_MAX}">
+                    <div class="poll-options-list">${CommentSystem.pollOptionRow()}${CommentSystem.pollOptionRow()}</div>
                     <div class="poll-builder-actions">
-                        <button class="poll-add-option-btn" type="button"><i class="fa-solid fa-plus"></i> ${i18n.poll_add_option || 'Add option'}</button>
+                        <button class="poll-add-option-btn" type="button"><i class="fa-solid fa-plus"></i> ${esc(i18n.poll_add_option || 'Add option')}</button>
                         <label class="poll-anon-toggle">
                             <input type="checkbox" class="poll-anon-checkbox" checked>
-                            <i class="fa-solid fa-user-secret"></i> ${i18n.poll_anonymous || 'Anonymous'}
+                            <i class="fa-solid fa-user-secret"></i> ${esc(i18n.poll_anonymous || 'Anonymous')}
                         </label>
-                        <button class="poll-remove-btn" type="button"><i class="fa-solid fa-xmark"></i> ${i18n.poll_remove || 'Remove poll'}</button>
+                        <button class="poll-remove-btn" type="button"><i class="fa-solid fa-xmark"></i> ${esc(i18n.poll_remove || 'Remove poll')}</button>
                     </div>
                 `;
+                CommentSystem.updatePollBuilder(builder);
+                // Enter in an option goes to the next one, adding it at the end of the list
+                builder.addEventListener('keydown', (ev) => {
+                    if (ev.key !== 'Enter' || ev.isComposing) return;
+                    const input = ev.target.closest('.poll-question-input, .poll-option-input');
+                    if (!input) return;
+                    ev.preventDefault();
+                    const inputs = [...builder.querySelectorAll('.poll-question-input, .poll-option-input')];
+                    const next = inputs[inputs.indexOf(input) + 1];
+                    if (next) next.focus();
+                    else CommentSystem.addPollOption(builder);
+                });
                 // Insert before input-actions
                 const actions = wrap.querySelector('.input-actions');
                 if (actions) wrap.insertBefore(builder, actions);
@@ -2850,19 +2868,20 @@ class CommentSystem {
                 return;
             }
 
-            // Poll builder — add option
+            // Poll builder — add an option
             if (target.closest('.poll-add-option-btn')) {
-                const list = target.closest('.poll-builder')?.querySelector('.poll-options-list');
-                if (!list) return;
-                if (list.querySelectorAll('.poll-option-input').length >= 10) return;
-                const i18n = window.f0ckI18n || {};
-                const inp = document.createElement('input');
-                inp.className = 'poll-option-input';
-                inp.type = 'text';
-                inp.placeholder = i18n.poll_option_placeholder || 'Option...';
-                inp.maxLength = 100;
-                list.appendChild(inp);
-                inp.focus();
+                const builder = target.closest('.poll-builder');
+                if (builder) CommentSystem.addPollOption(builder);
+                return;
+            }
+
+            // Poll builder — drop one option (never below the two a poll needs)
+            if (target.closest('.poll-option-remove')) {
+                const builder = target.closest('.poll-builder');
+                const rows = builder?.querySelectorAll('.poll-option-row') || [];
+                if (rows.length > CommentSystem.POLL_OPTIONS_MIN) target.closest('.poll-option-row').remove();
+                else target.closest('.poll-option-row')?.querySelector('.poll-option-input')?.focus();
+                if (builder) CommentSystem.updatePollBuilder(builder);
                 return;
             }
 
@@ -2876,93 +2895,6 @@ class CommentSystem {
                 return;
             }
 
-            // Poll option — vote
-            if (target.closest('.poll-option-clickable')) {
-                const opt = target.closest('.poll-option-clickable');
-                const pollId = opt.dataset.pollId;
-                const optionId = opt.dataset.optionId;
-                const commentId = opt.dataset.commentId;
-                if (!pollId || !optionId) return;
-                const pollWidget = opt.closest('.comment-poll');
-                // Disable all options immediately
-                pollWidget?.querySelectorAll('.poll-option-clickable').forEach(o => o.classList.remove('poll-option-clickable'));
-                fetch(`/api/polls/${pollId}/vote`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRF-Token': window.f0ckSession?.csrf_token
-                    },
-                    body: `option_id=${optionId}`
-                }).then(r => r.json()).then(data => {
-                    if (!data.success) {
-                        if (window.flashMessage) window.flashMessage(data.message || 'Vote failed', 2500, 'error');
-                        return;
-                    }
-                    // Patch poll widget in-place
-                    if (!pollWidget) return;
-                    const i18n = window.f0ckI18n || {};
-                    const total = data.total_votes || 0;
-                    pollWidget.querySelector('.poll-total').textContent = `${total} ${total === 1 ? (i18n.poll_vote_single || 'vote') : (i18n.poll_votes || 'votes')}`;
-                    const isAnon = pollWidget.dataset.isAnonymous !== '0';
-                    (data.options || []).forEach(updated => {
-                        const el = pollWidget.querySelector(`.poll-option[data-option-id="${updated.id}"]`);
-                        if (!el) return;
-                        const pct = total > 0 ? Math.round((updated.vote_count / total) * 100) : 0;
-                        el.querySelector('.poll-option-bar').style.width = pct + '%';
-                        el.querySelector('.poll-option-pct').textContent = pct + '%';
-                        if (updated.id === data.user_vote_option_id) {
-                            el.classList.add('poll-option-voted');
-                            if (!el.querySelector('.poll-vote-check')) {
-                                el.insertAdjacentHTML('beforeend', `<i class="fa-solid fa-check poll-vote-check" title="${i18n.poll_voted || 'You voted'}"></i>`);
-                            }
-                        }
-                        // Update voter list for public polls
-                        if (!isAnon && Array.isArray(updated.voters)) {
-                            let votersEl = el.querySelector('.poll-option-voters');
-                            if (updated.voters.length > 0) {
-                                const html = updated.voters.map(v => {
-                                    const u = typeof v === 'object' ? v : { username: v, avatar: null, avatar_file: null };
-                                    const src = u.avatar_file ? `/a/${u.avatar_file}` : u.avatar ? `/t/${u.avatar}.webp` : '/a/default.png';
-                                    return `<a href="/user/${u.username}" title="${u.username}"><img class="poll-voter-avatar" src="${src}" alt="${u.username}" loading="lazy"></a>`;
-                                }).join('');
-                                if (votersEl) votersEl.innerHTML = html;
-                                else el.insertAdjacentHTML('beforeend', `<div class="poll-option-voters">${html}</div>`);
-                            } else if (votersEl) {
-                                votersEl.remove();
-                            }
-                        }
-                    });
-                }).catch(() => {
-                    if (window.flashMessage) window.flashMessage('Network error', 2500, 'error');
-                });
-                return;
-            }
-
-            // Poll delete button
-            if (target.closest('.poll-delete-btn')) {
-                const btn = target.closest('.poll-delete-btn');
-                const pollId = btn.dataset.pollId;
-                if (!pollId) return;
-                if (!confirm('Delete this poll?')) return;
-                fetch(`/api/polls/${pollId}/delete`, {
-                    method: 'POST',
-                    headers: { 'X-CSRF-Token': window.f0ckSession?.csrf_token }
-                }).then(r => r.json()).then(data => {
-                    if (data.success) {
-                        const widget = btn.closest('.comment-poll');
-                        if (widget) {
-                            widget.style.transition = 'opacity 0.3s';
-                            widget.style.opacity = '0';
-                            setTimeout(() => widget.remove(), 300);
-                        }
-                    } else {
-                        if (window.flashMessage) window.flashMessage(data.message || 'Delete failed', 2500, 'error');
-                    }
-                }).catch(() => {
-                    if (window.flashMessage) window.flashMessage('Network error', 2500, 'error');
-                });
-                return;
-            }
 
             // Submit Comment
             if (target.closest('.submit-comment')) {
@@ -3364,7 +3296,8 @@ class CommentSystem {
             });
         }
 
-        // Collect poll data from builder (if present)
+        // The poll from the builder, if one is open. A half-filled poll stops the post with a
+        // message instead of posting the comment without it (the server checks the same).
         let pollPayload = null;
         const pollBuilder = wrap.querySelector('.poll-builder');
         if (pollBuilder) {
@@ -3373,7 +3306,13 @@ class CommentSystem {
                 .map(i => i.value.trim())
                 .filter(Boolean);
             const isAnonymous = pollBuilder.querySelector('.poll-anon-checkbox')?.checked !== false;
-            if (question && options.length >= 2) {
+            if (question || options.length) {
+                const problem = CommentSystem.pollProblem(question, options);
+                if (problem) {
+                    if (window.flashMessage) window.flashMessage(problem, 3000, 'error');
+                    (question ? pollBuilder.querySelector('.poll-option-input') : pollBuilder.querySelector('.poll-question-input'))?.focus();
+                    return;
+                }
                 pollPayload = { question, options, is_anonymous: isAnonymous };
             }
         }
@@ -3515,8 +3454,9 @@ class CommentSystem {
                     params.append('file_ids', fileIds.join(','));
                 }
 
+                // the poll is created with the comment, in the same request
                 if (pollPayload) {
-                    params.append('has_poll', '1');
+                    params.append('poll', JSON.stringify(pollPayload));
                 }
 
                 let csrfToken = window.f0ckSession?.csrf_token || document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -3578,7 +3518,8 @@ class CommentSystem {
                     }
                     // For 4xx errors, we stop and show the error to user (likely validation or auth)
                     const json = await res.json().catch(() => ({}));
-                    alert('Error: ' + (json.message || `Status ${res.status}`));
+                    if (window.flashMessage) window.flashMessage(json.message || `Error ${res.status}`, 3500, 'error');
+                    else alert('Error: ' + (json.message || `Status ${res.status}`));
                     this._finishSubmit(submitBtn, originalBtnHtml, parentId, text);
                     return;
                 }
@@ -3601,33 +3542,6 @@ class CommentSystem {
                         // Remove poll builder after posting
                         wrap.querySelector('.poll-builder')?.remove();
                         wrap.querySelector('.comment-poll-btn')?.classList.remove('active');
-                    }
-
-                    // If there was a poll, attach it now
-                    const commentId = json.comment?.id;
-                    if (pollPayload && commentId) {
-                        const pfd = new FormData();
-                        pfd.append('poll', JSON.stringify(pollPayload));
-                        fetch(`/api/polls/attach/${commentId}`, {
-                            method: 'POST',
-                            headers: { 'X-CSRF-Token': window.f0ckSession?.csrf_token },
-                            body: new URLSearchParams(pfd)
-                        }).then(r => r.json()).then(pData => {
-                            if (pData.success && pData.poll) {
-                                // Patch poll into newComment and update DOM
-                                newComment.poll = pData.poll;
-                                const commentEl = document.getElementById('c' + commentId);
-                                if (commentEl) {
-                                    const attachmentsEl = commentEl.querySelector('.comment-attachments');
-                                    const contentEl = commentEl.querySelector('.comment-content');
-                                    const insertAfter = attachmentsEl || contentEl;
-                                    if (insertAfter) {
-                                        const pollHtml = this.renderCommentPoll(pData.poll, commentId, window.f0ckSession?.user);
-                                        insertAfter.insertAdjacentHTML('afterend', pollHtml);
-                                    }
-                                }
-                            }
-                        }).catch(() => {});
                     }
 
                     // Notify the right sidebar that a new comment was posted (silent refresh)
@@ -3734,7 +3648,7 @@ class CommentSystem {
                         video_time: json.comment.video_time ?? null,
                         replies: [],
                         replyTo: null,
-                        poll: null
+                        poll: json.comment?.poll || null
                     };
 
                     if (json.comment?.id) {
@@ -3975,6 +3889,14 @@ class CommentSystem {
                 const id = location.hash.substring(2);
                 window.commentSystem.scrollToComment(id);
             }
+        });
+
+        // A poll changed (vote, live update, deletion; f0ckPoll in f0ck-core.js redrew it): keep the
+        // comment data in step, so the next re-render shows the same
+        document.addEventListener('f0ck:poll', (e) => {
+            const { comment_id: commentId, poll } = e.detail || {};
+            const cached = window.commentSystem?.lastData?.find(c => String(c.id) === String(commentId));
+            if (cached) cached.poll = poll || null;
         });
 
         window.addEventListener('f0ck:emojis_updated', () => {

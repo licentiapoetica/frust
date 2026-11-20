@@ -173,50 +173,9 @@ if (!window.UserCommentSystem) {
         return items ? `<div class="comment-attachments">${items}</div>` : '';
     }
 
-    renderCommentPoll(poll, commentId) {
-        if (!poll) return '';
-        const i18n = window.f0ckI18n || {};
-        const session = window.f0ckSession || {};
-        const total = poll.total_votes || 0;
-        const voted = !!poll.user_vote_option_id;
-        const expired = poll.expires_at && new Date(poll.expires_at) < new Date();
-        const isAnon = poll.is_anonymous !== false;
-
-        const optionsHtml = (poll.options || []).map(opt => {
-            const pct = total > 0 ? Math.round((opt.vote_count / total) * 100) : 0;
-            const isVoted = poll.user_vote_option_id === opt.id;
-            const clickable = session.logged_in && !expired && !voted;
-            const voterAvatars = (!isAnon && Array.isArray(opt.voters) && opt.voters.length > 0)
-                ? `<div class="poll-option-voters">${opt.voters.map(v => {
-                    const u = (v && typeof v === 'object') ? v : { username: String(v || ''), avatar: null, avatar_file: null };
-                    const name = String(u.username || '');
-                    const src = u.avatar_file ? `/a/${u.avatar_file}` : u.avatar ? `/t/${u.avatar}.webp` : '/a/default.png';
-                    return name ? `<a href="/user/${this.escapeHtml(name)}" title="${this.escapeHtml(name)}"><img class="poll-voter-avatar" src="${src}" alt="${this.escapeHtml(name)}" loading="lazy"></a>` : '';
-                }).join('')}</div>`
-                : '';
-            return `<div class="poll-option ${isVoted ? 'poll-option-voted' : ''} ${clickable ? 'poll-option-clickable' : ''}"
-                         data-option-id="${opt.id}" data-poll-id="${poll.id}" data-comment-id="${commentId}">
-                <div class="poll-option-bar" style="width:${pct}%"></div>
-                <span class="poll-option-text">${this.escapeHtml(opt.text)}</span>
-                <span class="poll-option-pct">${pct}%</span>
-                ${isVoted ? `<i class="fa-solid fa-check poll-vote-check" title="${i18n.poll_voted || 'You voted'}"></i>` : ''}
-                ${voterAvatars}
-            </div>`;
-        }).join('');
-
-        const anonBadge = isAnon
-            ? `<span class="poll-anon-badge" title="${i18n.poll_anonymous || 'Anonymous'}"><i class="fa-solid fa-user-secret"></i></span>`
-            : `<span class="poll-anon-badge poll-public-badge" title="${i18n.poll_public || 'Public votes'}"><i class="fa-solid fa-eye"></i></span>`;
-
-        return `<div class="comment-poll" data-poll-id="${poll.id}" data-is-anonymous="${isAnon ? '1' : '0'}">
-            <div class="poll-question">${this.escapeHtml(poll.question)}</div>
-            <div class="poll-options">${optionsHtml}</div>
-            <div class="poll-footer">
-                <span class="poll-total">${total} ${total === 1 ? (i18n.poll_vote_single || 'vote') : (i18n.poll_votes || 'votes')}</span>
-                ${anonBadge}
-                ${expired ? `<span class="poll-expired-badge">${i18n.poll_expired || 'Poll closed'}</span>` : ''}
-            </div>
-        </div>`;
+    // shared renderer and handlers: f0ckPoll in f0ck-core.js
+    renderCommentPoll(poll) {
+        return poll && window.f0ckPoll ? window.f0ckPoll.render(poll) : '';
     }
 
     renderCommentContent(content, itemId = null) {
@@ -419,7 +378,7 @@ if (!window.UserCommentSystem) {
             ? `style="--author-banner: url('/a/${c.banner_file}'); --author-banner-position: ${c.banner_position === 'center' ? 'center top' : (c.banner_position || 'center top')}; --author-banner-size: ${(c.banner_size && c.banner_size !== 'cover') ? c.banner_size : '100% auto'}; --author-banner-repeat: no-repeat;"`
             : '';
 
-        return `<div class="comment" id="c${c.id}" ${bannerStyle}><div class="comment-avatar"><a href="/${itemKey}"><img src="/t/${c.item_id}.webp" alt=""></a></div><div class="comment-body"><div class="comment-header"><div class="comment-header-left"><span class="comment-author${/[a-z]/.test(this.username || '') && /^[acegmnopqrsuvwxyz _.,-]+$/.test(this.username) ? ' name-short' : ''}" tooltip="ID: ${c.user_id}" ${this.userColor ? `style="color: ${this.userColor}"` : ''}>${this.username}</span></div><span class="comment-time timeago" title="${fullDate}">${timeAgo}</span></div><div class="comment-content" data-raw="${this.escapeHtml(c.content)}">${content}</div>${this.renderCommentAttachments(c.files, c.content)}${this.renderCommentPoll(c.poll, c.id)}<div class="comment-footer"><div class="comment-footer-right"><div class="comment-actions"><button class="report-comment-btn" data-id="${c.id}" title="Report Comment"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 512 512" fill="currentColor"><path d="M506.3 417l-213.3-364c-16.3-28-57.5-28-73.8 0l-213.2 364C-10.6 445.1 9.7 480 42.7 480h426.6C502.5 480 522.6 445.1 506.3 417zM256 384c-14.1 0-25.6-11.5-25.6-25.6 0-14.1 11.5-25.6 25.6-25.6 14.1 0 25.6 11.5 25.6 25.6C281.6 372.5 270.1 384 256 384zM281.6 264.4c0 14.1-11.5 25.6-25.6 25.6-14.1 0-25.6-11.5-25.6-25.6v-96c0-14.1 11.5-25.6 25.6-25.6 14.1 0 25.6 11.5 25.6 25.6V264.4z"/></svg></button></div></div></div></div><a href="/${itemKey}#c${c.id}" class="comment-permalink" title="Permalink">#${c.id}</a></div>`;
+        return `<div class="comment" id="c${c.id}" ${bannerStyle}><div class="comment-avatar"><a href="/${itemKey}"><img src="/t/${c.item_id}.webp" alt=""></a></div><div class="comment-body"><div class="comment-header"><div class="comment-header-left"><span class="comment-author${/[a-z]/.test(this.username || '') && /^[acegmnopqrsuvwxyz _.,-]+$/.test(this.username) ? ' name-short' : ''}" tooltip="ID: ${c.user_id}" ${this.userColor ? `style="color: ${this.userColor}"` : ''}>${this.username}</span></div><span class="comment-time timeago" title="${fullDate}">${timeAgo}</span></div><div class="comment-content" data-raw="${this.escapeHtml(c.content)}">${content}</div>${this.renderCommentAttachments(c.files, c.content)}${this.renderCommentPoll(c.poll)}<div class="comment-footer"><div class="comment-footer-right"><div class="comment-actions"><button class="report-comment-btn" data-id="${c.id}" title="Report Comment"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 512 512" fill="currentColor"><path d="M506.3 417l-213.3-364c-16.3-28-57.5-28-73.8 0l-213.2 364C-10.6 445.1 9.7 480 42.7 480h426.6C502.5 480 522.6 445.1 506.3 417zM256 384c-14.1 0-25.6-11.5-25.6-25.6 0-14.1 11.5-25.6 25.6-25.6 14.1 0 25.6 11.5 25.6 25.6C281.6 372.5 270.1 384 256 384zM281.6 264.4c0 14.1-11.5 25.6-25.6 25.6-14.1 0-25.6-11.5-25.6-25.6v-96c0-14.1 11.5-25.6 25.6-25.6 14.1 0 25.6 11.5 25.6 25.6V264.4z"/></svg></button></div></div></div></div><a href="/${itemKey}#c${c.id}" class="comment-permalink" title="Permalink">#${c.id}</a></div>`;
     }
 
     startLiveTimestamps() {

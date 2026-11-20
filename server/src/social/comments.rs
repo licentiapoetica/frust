@@ -27,7 +27,7 @@ impl Sort {
 }
 
 /// `f0cklib.getComments(itemId, sort, process)` — comments of an item (id or slug) with author
-/// info, attachments and polls. Errors are logged and yield an empty list, like the old code.
+/// info and attachments (polls depend on the viewer: [`crate::social::polls::attach_polls`]). Errors are logged and yield an empty list, like the old code.
 pub async fn get_comments(st: &AppState, item: &str, sort: Sort, process: bool) -> Vec<Row> {
     let Some(id) = resolve_numeric_item_id(st, item).await else { return vec![] };
     let started = std::time::Instant::now();
@@ -78,20 +78,6 @@ async fn fetch_comments(st: &AppState, item_id: i64, sort: Sort) -> anyhow::Resu
     if !comments.is_empty() {
         let ids = comment_ids(&comments);
         attach_files(st, &mut comments, &ids).await;
-        match load_polls(st, &ids, true).await {
-            Ok(mut polls) => {
-                for c in comments.iter_mut() {
-                    let p = c.i64("id").and_then(|id| polls.remove(&id)).unwrap_or(Value::Null);
-                    c.insert("poll".into(), p);
-                }
-            }
-            Err(e) => {
-                tracing::error!("[POLLS] getComments poll fetch error: {e:#}");
-                for c in comments.iter_mut() {
-                    c.insert("poll".into(), Value::Null);
-                }
-            }
-        }
     }
     Ok(comments)
 }
@@ -129,105 +115,6 @@ pub async fn attach_files(st: &AppState, comments: &mut [Row], ids: &[i32]) {
     for c in comments.iter_mut() {
         let files = c.i64("id").and_then(|id| map.remove(&id)).unwrap_or_default();
         c.insert("files".into(), Value::Array(files));
-    }
-}
-
-/// Polls of the given comments, keyed by comment id, in the shape the frontend expects.
-/// `with_voters` adds voter lists to options of non-anonymous polls.
-pub async fn load_polls(st: &AppState, ids: &[i32], with_voters: bool) -> anyhow::Result<HashMap<i64, Value>> {
-    let rows = sql!(
-        r#"SELECT
-              cp.id as poll_id,
-              cp.comment_id,
-              cp.question,
-              cp.expires_at,
-              COALESCE(cp.is_anonymous, true) as is_anonymous,
-              json_agg(
-                json_build_object(
-                  'id', cpo.id,
-                  'text', cpo.text,
-                  'sort_order', cpo.sort_order,
-                  'vote_count', COALESCE(vote_counts.cnt, 0)
-                ) ORDER BY cpo.sort_order ASC, cpo.id ASC
-              ) AS options,
-              COALESCE(SUM(vote_counts.cnt), 0)::int AS total_votes
-            FROM comment_polls cp
-            JOIN comment_poll_options cpo ON cpo.poll_id = cp.id
-            LEFT JOIN (
-              SELECT option_id, COUNT(*) AS cnt
-              FROM comment_poll_votes
-              GROUP BY option_id
-            ) vote_counts ON vote_counts.option_id = cpo.id
-            WHERE cp.comment_id = ANY("#,
-        ids.to_vec(),
-        "::int[]) GROUP BY cp.id, cp.comment_id, cp.question, cp.expires_at, cp.is_anonymous"
-    )
-    .fetch_all(&st.db)
-    .await?;
-
-    let mut voters: HashMap<i64, Vec<Value>> = HashMap::new();
-    if with_voters {
-        let non_anon: Vec<i32> = rows.iter().filter(|p| !p.bool("is_anonymous")).filter_map(|p| p.i64("poll_id")).map(|i| i as i32).collect();
-        if !non_anon.is_empty() {
-            voters = load_voters(st, &non_anon).await?;
-        }
-    }
-
-    let mut map = HashMap::new();
-    for p in rows {
-        let anonymous = p.bool("is_anonymous");
-        let mut options = p.val("options").clone();
-        if with_voters && !anonymous {
-            add_voters(&mut options, &voters);
-        }
-        let Some(cid) = p.i64("comment_id") else { continue };
-        map.insert(
-            cid,
-            json!({
-                "id": p.val("poll_id"),
-                "question": p.val("question"),
-                "expires_at": p.val("expires_at"),
-                "is_anonymous": p.val("is_anonymous"),
-                "options": options,
-                "total_votes": p.i64("total_votes").unwrap_or(0),
-                "user_vote_option_id": null
-            }),
-        );
-    }
-    Ok(map)
-}
-
-/// Voters per option id for the given polls.
-pub async fn load_voters(st: &AppState, poll_ids: &[i32]) -> anyhow::Result<HashMap<i64, Vec<Value>>> {
-    let rows = sql!(
-        r#"SELECT cpv.option_id, u."user" as username, uo.avatar, uo.avatar_file
-              FROM comment_poll_votes cpv
-              JOIN public."user" u ON u.id = cpv.user_id
-              LEFT JOIN public.user_options uo ON uo.user_id = cpv.user_id
-              WHERE cpv.poll_id = ANY("#,
-        poll_ids.to_vec(),
-        "::int[])"
-    )
-    .fetch_all(&st.db)
-    .await?;
-    let mut m: HashMap<i64, Vec<Value>> = HashMap::new();
-    for v in rows {
-        if let Some(o) = v.i64("option_id") {
-            m.entry(o).or_default().push(json!({ "username": v.val("username"), "avatar": v.val("avatar"), "avatar_file": v.val("avatar_file") }));
-        }
-    }
-    Ok(m)
-}
-
-/// `options.map(o => ({ ...o, voters: votersByOption.get(o.id) || [] }))`
-pub fn add_voters(options: &mut Value, voters: &HashMap<i64, Vec<Value>>) {
-    if let Value::Array(opts) = options {
-        for o in opts.iter_mut() {
-            if let Value::Object(om) = o {
-                let id = om.get("id").and_then(crate::config::as_int).unwrap_or(-1);
-                om.insert("voters".into(), Value::Array(voters.get(&id).cloned().unwrap_or_default()));
-            }
-        }
     }
 }
 

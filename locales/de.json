@@ -422,7 +422,12 @@
     "poll_delete": "Umfrage löschen",
     "poll_expired": "Umfrage geschlossen",
     "poll_anonymous": "Anonym",
-    "poll_public": "Öffentliche Stimmen"
+    "poll_public": "Öffentliche Stimmen",
+    "poll_unvote": "Stimme zurücknehmen",
+    "poll_options_lines": "Optionen, eine pro Zeile (2 bis 10)",
+    "poll_delete_confirm": "Diese Umfrage löschen?",
+    "poll_voters_all": "Alle Stimmen",
+    "poll_close": "Schließen"
   },
   "upload_btn": {
     "select_file": "Datei auswählen",

@@ -5232,14 +5232,17 @@ body.layout-legacy .comment-input {
   max-width: 350px;
 }
 
-/* ─── Poll Button ─────────────────────────────────────────────────────────── */
+/* ─── Comment polls ───────────────────────────────────────────────────────────
+   Markup: views/snippets/comment-poll.html = f0ckPoll.render() (f0ck-core.js). Each option is a
+   submit button of the vote form; the bar is a <progress> (no inline width). The markup has no
+   icons (other frontends share it), they are added here. */
 
 .comment-poll-btn {
   cursor: pointer;
   font-size: 0.8125rem;
 }
 
-/* ─── Poll Builder ────────────────────────────────────────────────────────── */
+/* ─── Poll builder (comments.js) ─── */
 
 .poll-builder {
   background: var(--bg);
@@ -5257,7 +5260,9 @@ body.layout-legacy .comment-input {
 }
 
 .poll-question-input,
-.poll-option-input {
+.poll-option-input,
+.poll-builder-nojs input[type="text"],
+.poll-builder-nojs textarea {
   width: 100%;
   background: rgba(0,0,0,0.2);
   border: 1px solid rgba(255,255,255,0.1);
@@ -5269,7 +5274,9 @@ body.layout-legacy .comment-input {
 }
 
 .poll-question-input:focus,
-.poll-option-input:focus {
+.poll-option-input:focus,
+.poll-builder-nojs input[type="text"]:focus,
+.poll-builder-nojs textarea:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -5284,10 +5291,48 @@ body.layout-legacy .comment-input {
   gap: 4px;
 }
 
+.poll-option-row {
+  display: flex;
+  gap: 4px;
+}
+
+.poll-option-remove {
+  flex: 0 0 auto;
+  width: 28px;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #888;
+  cursor: pointer;
+}
+
+.poll-option-remove:hover {
+  color: #ff4444;
+  border-color: #ff4444;
+}
+
+/* a poll needs two options: no remove buttons then */
+.poll-builder.at-min-options .poll-option-remove {
+  visibility: hidden;
+}
+
 .poll-builder-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  align-items: center;
+  align-items: stretch;
+}
+
+/* the two buttons and the anonymous toggle (a label): one box, so they line up at one height */
+.poll-add-option-btn,
+.poll-remove-btn,
+.poll-builder-actions .poll-anon-toggle {
+  box-sizing: border-box;
+  height: 28px;
+  margin: 0;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 0.8em;
+  line-height: 1;
 }
 
 .poll-add-option-btn,
@@ -5296,17 +5341,20 @@ body.layout-legacy .comment-input {
   border: 1px solid rgba(255,255,255,0.15);
   color: #aaa;
   cursor: pointer;
-  padding: 3px 10px;
-  font-size: 0.8em;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   transition: color 0.15s, border-color 0.15s;
 }
 
-.poll-add-option-btn:hover {
+.poll-add-option-btn:hover:not(:disabled) {
   color: var(--accent);
   border-color: var(--accent);
+}
+
+.poll-add-option-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .poll-remove-btn:hover {
@@ -5314,14 +5362,83 @@ body.layout-legacy .comment-input {
   border-color: #ff4444;
 }
 
-/* ─── Poll Widget (rendered in comments) ─────────────────────────────────── */
+.poll-anon-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8em;
+  color: #aaa;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.poll-anon-toggle:has(.poll-anon-checkbox:checked) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* the box stays focusable (keyboard), only out of sight */
+.poll-anon-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.poll-anon-toggle:has(.poll-anon-checkbox:focus-visible) {
+  outline: 1px solid var(--accent);
+}
+
+/* the plain comment form's poll fields (no JavaScript) */
+.poll-builder-nojs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.poll-builder-nojs > summary {
+  cursor: pointer;
+  font-size: 0.85em;
+  color: #aaa;
+}
+
+.poll-builder-nojs > summary::before {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  content: "\f080";
+  margin-right: 6px;
+}
+
+.poll-builder-nojs[open] > summary {
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.poll-builder-nojs[open] > :not(summary) {
+  margin-bottom: 6px;
+}
+
+.poll-builder-nojs .poll-anon-toggle {
+  padding: 3px 10px;
+}
+
+/* ─── Poll in a comment ─── */
 
 .comment-poll {
   margin-top: 8px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.09);
   padding: 10px;
-  border-radius: 0;
+  transition: opacity 0.2s;
+}
+
+.comment-poll.is-busy {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .poll-question {
@@ -5329,58 +5446,105 @@ body.layout-legacy .comment-input {
   font-size: 0.9em;
   margin-bottom: 8px;
   color: var(--white);
+  overflow-wrap: anywhere;
+}
+
+.poll-form {
+  margin: 0;
 }
 
 .poll-options {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
 }
 
 .poll-option {
+  margin: 0;
+}
+
+/* the option: a button (can vote) or a span (results only) over its bar */
+.poll-option-btn {
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  min-height: 30px;
+  box-sizing: border-box;
+  margin: 0;
   padding: 5px 8px;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.07);
+  color: var(--white);
+  font: inherit;
+  text-align: left;
   user-select: none;
-  min-height: 30px;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background-color 0.15s;
 }
 
-.poll-option-clickable {
+button.poll-option-btn {
   cursor: pointer;
 }
 
-.poll-option-clickable:hover {
+button.poll-option-btn:hover,
+button.poll-option-btn:focus-visible {
   border-color: rgba(255,255,255,0.18);
   background: rgba(255,255,255,0.07);
+  outline: none;
+}
+
+.poll-option-voted .poll-option-btn {
+  border-color: rgba(var(--accent-rgb, 255, 255, 255), 0.45);
+}
+
+/* your own vote: clicking it again takes the vote back */
+.poll-option-voted button.poll-option-btn:hover .poll-vote-check {
+  color: #ff4444;
 }
 
 .poll-option-bar {
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: var(--accent);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
   opacity: 0.18;
-  transition: width 0.4s ease;
   pointer-events: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.poll-option-bar::-webkit-progress-bar {
+  background: transparent;
+}
+
+.poll-option-bar::-webkit-progress-value {
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.poll-option-bar::-moz-progress-bar {
+  background: var(--accent);
 }
 
 .poll-option-voted .poll-option-bar {
-  opacity: 0.28;
+  opacity: 0.3;
 }
 
 .poll-option-text {
   position: relative;
   flex: 1;
   font-size: 0.85em;
-  color: var(--white);
+  overflow-wrap: anywhere;
 }
 
 .poll-option-pct {
@@ -5400,6 +5564,7 @@ body.layout-legacy .comment-input {
 
 .poll-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-size: 0.78em;
@@ -5410,12 +5575,47 @@ body.layout-legacy .comment-input {
   font-family: monospace;
 }
 
+.poll-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.95em;
+}
+
+.poll-badge::before {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+}
+
+.poll-anon-badge {
+  color: #555;
+}
+
+.poll-anon-badge::before {
+  content: "\f21b"; /* user-secret */
+}
+
+.poll-public-badge {
+  color: #6a9fb5;
+}
+
+.poll-public-badge::before {
+  content: "\f06e"; /* eye */
+}
+
 .poll-expired-badge {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.1);
   padding: 1px 6px;
-  font-size: 0.85em;
   color: #888;
+}
+
+.poll-expired-badge::before {
+  content: "\f023"; /* lock */
+}
+
+.poll-delete-form {
+  margin: 0 0 0 auto;
 }
 
 .poll-delete-btn {
@@ -5424,47 +5624,39 @@ body.layout-legacy .comment-input {
   color: #555;
   cursor: pointer;
   padding: 0;
-  font-size: 0.85em;
-  margin-left: auto;
+  font-size: 0.95em;
   transition: color 0.15s;
 }
 
-.poll-delete-btn:hover {
+.poll-delete-btn::before {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  content: "\f2ed"; /* trash-can */
+}
+
+.poll-delete-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.poll-delete-btn:hover,
+.poll-delete-btn:focus-visible,
+.poll-delete-btn.is-armed {
   color: #ff4444;
 }
 
-.poll-anon-badge {
-  font-size: 0.78em;
-  color: #555;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.poll-public-badge {
-  color: #6a9fb5;
-}
-
-.poll-anon-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.8em;
-  color: #aaa;
-  cursor: pointer;
-  user-select: none;
-  border: 1px solid rgba(255,255,255,0.12);
-  padding: 0px 10px;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.poll-anon-toggle:has(.poll-anon-checkbox:checked) {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-.poll-anon-checkbox {
-  display: none;
+/* armed (f0ckPoll asks before deleting): the question shows next to the icon */
+.poll-delete-btn.is-armed .poll-delete-label {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  margin-left: 5px;
 }
 
 .poll-option-voters {
@@ -5478,7 +5670,6 @@ body.layout-legacy .comment-input {
 .poll-voter-avatar {
   width: 20px;
   height: 20px;
-  border-radius: 50%;
   object-fit: cover;
   border: 1px solid rgba(255,255,255,0.1);
   transition: transform 0.12s, border-color 0.12s;
@@ -5488,6 +5679,167 @@ body.layout-legacy .comment-input {
 .poll-option-voters a:hover .poll-voter-avatar {
   transform: scale(1.2);
   border-color: var(--accent);
+}
+
+/* "+N" after an option's newest voters, and the dialog with all of them (f0ckPoll's, appended to
+   body and [hidden] while closed; without JavaScript the page's copy, opened by :target) */
+.poll-voters-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #888;
+  font-size: 0.72em;
+  font-family: monospace;
+  line-height: 1;
+  text-decoration: none;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.poll-voters-more:hover,
+.poll-voters-more:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.poll-voters-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.poll-voters-modal[hidden],
+.poll-voters-target {
+  display: none;
+}
+
+.poll-voters-target:target {
+  display: flex;
+}
+
+/* No JavaScript: the dialog sits inside the comment, where an ancestor's z-index (a stacking
+   context, e.g. #comments-container, .comment-body) would keep it under the rest of the page.
+   While it is open, those go to the top (only those: raising every ancestor lifts other boxes too). */
+:is(#comments-container, .comments-static, .comment, .comment-body, .comment-replies):has(.poll-voters-target:target) {
+  z-index: 2147483000 !important;
+}
+
+.poll-voters-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.poll-voters-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(360px, 100%);
+  max-height: min(70vh, 560px);
+  background: var(--bg);
+  color: var(--white);
+  border: 1px solid rgba(255,255,255,0.12);
+  text-align: left;
+}
+
+.poll-voters-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.poll-voters-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+.poll-voters-count {
+  color: #888;
+  font-size: 0.78em;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.poll-voters-close {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #888;
+  font: inherit;
+  font-size: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* an icon, the word stays for screen readers */
+.poll-voters-close::before {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 14px;
+  content: "\f00d"; /* xmark */
+}
+
+.poll-voters-close:hover,
+.poll-voters-close:focus-visible {
+  color: var(--accent);
+  outline: none;
+}
+
+.poll-voters-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+}
+
+.poll-voters-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px;
+  color: inherit;
+  font-size: 0.85em;
+  text-decoration: none;
+}
+
+.poll-voters-user:hover,
+.poll-voters-user:focus-visible {
+  background: rgba(255,255,255,0.06);
+  color: var(--accent);
+  outline: none;
+}
+
+.poll-voters-list .poll-voter-avatar {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
+.poll-voters-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poll-voters-modal.is-loading .poll-voters-list::before {
+  content: "…";
+  display: block;
+  padding: 6px 12px;
+  color: #888;
 }
 
 .sidebar-poll-preview {

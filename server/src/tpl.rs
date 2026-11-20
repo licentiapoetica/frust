@@ -1353,6 +1353,70 @@ mod tests {
         assert!(!empty.contains("comments-static"));
     }
 
+    /// A sample poll as social/polls.rs sends it (`can_vote` / `can_delete` / vote for the viewer).
+    pub(crate) fn sample_poll(can_vote: bool, closed: bool) -> serde_json::Value {
+        serde_json::json!({ "id": 7, "comment_id": 2, "item_id": 5, "question": "Best <cat>?", "is_anonymous": false, "expires_at": null, "is_closed": closed,
+            "options": [
+                { "id": 11, "text": "Tom", "vote_count": 1, "pct": 33, "voters": [{ "username": "Al", "avatar": null, "avatar_file": "x.webp" }] },
+                { "id": 12, "text": "Garfield", "vote_count": 2, "pct": 67, "voters": [] }
+            ],
+            "total_votes": 3, "user_vote_option_id": 12, "can_vote": can_vote && !closed, "can_unvote": can_vote && !closed, "can_delete": can_vote })
+    }
+
+    /// snippets/comment-poll.html: plain vote forms (option_id, remove=1 on the own vote), results
+    /// only when the viewer can't vote, no inline styles (the bar is a <progress>).
+    #[test]
+    fn comment_poll_snippet_renders() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let tpl = r#"{% from "snippets/comment-poll.html" import poll %}{{ poll(p, "/5#c2", "tok") }}"#;
+        let render = |p: serde_json::Value| env.render_named_str("poll-test.html", tpl, to_jvalue(&serde_json::json!({ "p": p }))).unwrap();
+
+        let html = render(sample_poll(true, false));
+        assert!(html.contains(r#"<div class="comment-poll has-voted" id="poll-7" data-poll-id="7" data-comment-id="2">"#), "{html}");
+        assert!(html.contains("Best &lt;cat&gt;?"), "{html}");
+        assert!(html.contains(r#"<form class="poll-form" method="post" action="/api/polls/7/vote"><input type="hidden" name="csrf_token" value="tok"><input type="hidden" name="back" value="/5#c2">"#), "{html}");
+        assert!(html.contains(r#"name="option_id" value="11""#), "{html}");
+        assert!(html.contains(r#"<li class="poll-option poll-option-voted"><button type="submit" class="poll-option-btn" name="remove" value="1""#), "{html}");
+        assert!(html.contains(r#"<progress class="poll-option-bar" max="100" value="67">"#), "{html}");
+        assert!(html.contains(r#"<a href="/user/al" title="Al"><img class="poll-voter-avatar" src="/a/x.webp""#), "{html}");
+        assert!(html.contains(r#"<form class="poll-delete-form" method="post" action="/api/polls/7/delete">"#), "{html}");
+        assert!(html.contains("3 votes") && html.contains("poll-public-badge"), "{html}");
+        assert!(!html.contains("style="), "{html}");
+
+        // votes can't be taken back (websrv.comment_polls_unvote: false): the own option is no button
+        let mut fixed = sample_poll(true, false);
+        fixed["can_unvote"] = false.into();
+        let fixed = render(fixed);
+        assert!(fixed.contains(r#"<li class="poll-option poll-option-voted"><span class="poll-option-btn">"#), "{fixed}");
+        assert!(fixed.contains(r#"name="option_id" value="11""#) && !fixed.contains(r#"name="remove""#), "{fixed}");
+
+        let closed = render(sample_poll(false, true));
+        if let Ok(f) = std::env::var("F0CKM_DUMP_POLL") {
+            std::fs::write(f, format!("{html}\n{closed}\n")).unwrap();
+        }
+        assert!(closed.contains(r#"class="comment-poll is-closed has-voted""#), "{closed}");
+        assert!(!closed.contains("<form") && !closed.contains("<button"), "{closed}");
+        assert!(closed.contains(r#"<div class="poll-form"><ul class="poll-options">"#) && closed.contains("poll-expired-badge"), "{closed}");
+
+        // a busy public option: the newest voters, "+N", and (server-rendered) the dialog with everyone
+        let mut busy = sample_poll(true, false);
+        let voter = |i: usize| serde_json::json!({ "username": format!("U{i}"), "display_name": if i == 0 { serde_json::json!("Zero") } else { serde_json::Value::Null }, "avatar": null, "avatar_file": null });
+        busy["options"][1]["vote_count"] = 7.into();
+        busy["options"][1]["voters"] = (0..5).map(voter).collect::<Vec<_>>().into();
+        let all = render(busy.clone());
+        assert!(all.contains(r##"<a class="poll-voters-more" href="#poll-voters-12" data-option-id="12" title="All voters">+2</a>"##), "{all}");
+        assert!(!all.contains("poll-voters-target"), "{all}");
+        busy["options"][1]["voters_all"] = (0..7).map(voter).collect::<Vec<_>>().into();
+        let page = render(busy);
+        assert!(page.contains(r#"<div class="poll-voters-modal poll-voters-target" id="poll-voters-12" role="dialog" aria-label="Garfield">"#), "{page}");
+        assert!(page.contains(r##"<a class="poll-voters-close" href="#c2">Close</a>"##) && page.contains("7 votes"), "{page}");
+        assert_eq!(page.matches(r#"class="poll-voters-user""#).count(), 7, "{page}");
+        assert!(page.contains(r#"<span class="poll-voters-name">Zero</span>"#) && page.contains(r#"<span class="poll-voters-name">U6</span>"#), "{page}");
+
+        assert_eq!(render(serde_json::Value::Null).trim(), "");
+    }
+
     /// f0ckgle (the search engine parody frontend): its own pages render for guests and members,
     /// with the forms that make them work without JavaScript (and live with it, f0ckgle.js). F0CKM_DUMP_F0CKGLE=<dir> writes them out.
     #[test]

@@ -12,3 +12,4 @@ pub mod comments;
 pub mod feed_bridge;
 pub mod halls;
 pub mod helpers;
+pub mod polls;

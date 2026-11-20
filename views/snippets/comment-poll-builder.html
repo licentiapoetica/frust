@@ -1,0 +1,10 @@
+{#- Poll fields of a plain comment form (no JavaScript, and the alternative frontends): a question,
+    the options one per line, public or anonymous votes. The comment endpoint creates the poll with
+    the comment (social/polls.rs draft_from_body). Closed until opened, so it costs no room.
+    Include inside the <form> where enable_comment_polls is on. -#}
+<details class="poll-builder-nojs">
+<summary>{{ t("comments.poll_btn_title") or "Create poll" }}</summary>
+<input type="text" name="poll_question" maxlength="200" placeholder="{{ t("comments.poll_question_placeholder") or "Poll question..." }}" aria-label="{{ t("comments.poll_question_placeholder") or "Poll question..." }}">
+<textarea name="poll_options" rows="4" placeholder="{{ t("comments.poll_options_lines") or "Options, one per line (2 to 10)" }}" aria-label="{{ t("comments.poll_options_lines") or "Options, one per line (2 to 10)" }}"></textarea>
+<label class="poll-anon-toggle"><input type="checkbox" name="poll_anonymous" value="1" checked> {{ t("comments.poll_anonymous") or "Anonymous" }}</label>
+</details>

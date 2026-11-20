@@ -234,6 +234,7 @@ websrv:
   allow_fileupload_comments: false
   allow_comment_deletion: false
   enable_comment_polls: false
+  comment_polls_unvote: true
   fileupload_comments_multifile: true
   fileupload_comments_size: 104857600
   fileupload_comments_max: 5

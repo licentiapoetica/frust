@@ -422,7 +422,12 @@
     "poll_delete": "Delete poll",
     "poll_expired": "Poll closed",
     "poll_anonymous": "Anonymous",
-    "poll_public": "Public votes"
+    "poll_public": "Public votes",
+    "poll_unvote": "Take back your vote",
+    "poll_options_lines": "Options, one per line (2 to 10)",
+    "poll_delete_confirm": "Delete this poll?",
+    "poll_voters_all": "All voters",
+    "poll_close": "Close"
   },
   "upload_btn": {
     "select_file": "Select a file",

@@ -1,0 +1,27 @@
+{#- A comment's poll (the object from server/src/social/polls.rs). Exactly the markup of
+    f0ckPoll.render() in public/s/js/f0ck-core.js, which swaps it in place with JavaScript; keep the
+    two the same. Plain forms, so voting works without JavaScript: every option is a submit button
+    (`option_id`, or `remove=1` on your own vote to take it back; with websrv.comment_polls_unvote off
+    your own option is no button: `can_unvote`), nojs.rs sends the visitor back.
+    No icons in the markup (not every frontend loads Font Awesome): f0ckm.css adds them.
+    Public polls show an option's newest voters (social/polls.rs VOTERS_SHOWN) and "+N": with
+    JavaScript f0ckPoll opens a dialog with everyone (GET /api/polls/:id/voters); without it the
+    page's own copy (`voters_all`, only on server-rendered pages) opens by :target. f0ckPoll.render()
+    has the same markup minus that copy.
+    Usage: {% from "snippets/comment-poll.html" import poll %}{{ poll(c.poll, back, csrf_token) }} -#}
+{%- macro poll(p, back, csrf) -%}
+{%-
+if p -%}{%- set votes_word = (t("comments.poll_vote_single") or "vote") if p.total_votes == 1 else (t("comments.poll_votes") or "votes") -%}<div class="comment-poll{% if p.is_closed %} is-closed{% endif %}{% if p.user_vote_option_id %} has-voted{% endif %}" id="poll-{{ p.id }}" data-poll-id="{{ p.id }}" data-comment-id="{{ p.comment_id }}"><div class="poll-question">{{ p.question }}</div>{%-
+if p.can_vote %}<form class="poll-form" method="post" action="/api/polls/{{ p.id }}/vote"><input type="hidden" name="csrf_token" value="{{ csrf or "" }}"><input type="hidden" name="back" value="{{ back }}">{%-
+else %}<div class="poll-form">{%- endif %}<ul class="poll-options">{%-
+for o in p.options %}{%- set mine = (p.user_vote_option_id == o.id) %}{%- set clickable = p.can_vote and (not mine or p.can_unvote) %}{#-
+-#}<li class="poll-option{% if mine %} poll-option-voted{% endif %}">{%-
+if clickable %}<button type="submit" class="poll-option-btn"{% if mine %} name="remove" value="1" title="{{ t("comments.poll_unvote") or "Take back your vote" }}"{% else %} name="option_id" value="{{ o.id }}"{% endif %}>{% else %}<span class="poll-option-btn">{% endif -%}<progress class="poll-option-bar" max="100" value="{{ o.pct }}">{{ o.pct }}%</progress><span class="poll-option-text">{{ o.text }}</span><span class="poll-option-pct" title="{{ o.vote_count }}">{{ o.pct }}%</span>{% if mine %}<span class="poll-vote-check" title="{{ t("comments.poll_voted") or "You voted" }}">✓</span>{% endif -%}{%-
+if clickable %}</button>{% else %}</span>{% endif %}{%-
+if o.voters %}<div class="poll-option-voters">{% for v in o.voters %}<a href="/user/{{ v.username|lower|urlencode }}" title="{{ v.username }}"><img class="poll-voter-avatar" src="{% if v.avatar_file %}/a/{{ v.avatar_file }}{% elif v.avatar %}/t/{{ v.avatar }}.webp{% else %}/a/default.png{% endif %}" alt="{{ v.username }}" loading="lazy"></a>{% endfor %}{% if o.vote_count > o.voters|length %}<a class="poll-voters-more" href="#poll-voters-{{ o.id }}" data-option-id="{{ o.id }}" title="{{ t("comments.poll_voters_all") or "All voters" }}">+{{ o.vote_count - o.voters|length }}</a>{% endif %}</div>{% endif %}{%-
+if o.voters_all %}<div class="poll-voters-modal poll-voters-target" id="poll-voters-{{ o.id }}" role="dialog" aria-label="{{ o.text }}"><a class="poll-voters-backdrop" href="#c{{ p.comment_id }}" aria-label="{{ t("comments.poll_close") or "Close" }}"></a><div class="poll-voters-box"><div class="poll-voters-head"><span class="poll-voters-title">{{ o.text }}</span><span class="poll-voters-count">{{ o.vote_count }} {{ (t("comments.poll_vote_single") or "vote") if o.vote_count == 1 else (t("comments.poll_votes") or "votes") }}</span><a class="poll-voters-close" href="#c{{ p.comment_id }}">{{ t("comments.poll_close") or "Close" }}</a></div><ul class="poll-voters-list">{% for v in o.voters_all %}<li><a class="poll-voters-user" href="/user/{{ v.username|lower|urlencode }}"><img class="poll-voter-avatar" src="{% if v.avatar_file %}/a/{{ v.avatar_file }}{% elif v.avatar %}/t/{{ v.avatar }}.webp{% else %}/a/default.png{% endif %}" alt="" loading="lazy"><span class="poll-voters-name">{{ v.display_name or v.username }}</span></a></li>{% endfor %}</ul></div></div>{% endif %}</li>{%-
+endfor %}</ul>{%-
+if p.can_vote %}</form>{% else %}</div>{% endif %}<div class="poll-footer"><span class="poll-total">{{ p.total_votes }} {{ votes_word }}</span>{%-
+if p.is_anonymous %}<span class="poll-badge poll-anon-badge">{{ t("comments.poll_anonymous") or "Anonymous" }}</span>{% else %}<span class="poll-badge poll-public-badge">{{ t("comments.poll_public") or "Public votes" }}</span>{% endif %}{%-
+if p.is_closed %}<span class="poll-badge poll-expired-badge">{{ t("comments.poll_expired") or "Poll closed" }}</span>{% endif %}{%-
+if p.can_delete %}<form class="poll-delete-form" method="post" action="/api/polls/{{ p.id }}/delete"><input type="hidden" name="csrf_token" value="{{ csrf or "" }}"><input type="hidden" name="back" value="{{ back }}"><button type="submit" class="poll-delete-btn" title="{{ t("comments.poll_delete") or "Delete poll" }}"><span class="poll-delete-label">{{ t("comments.poll_delete") or "Delete poll" }}</span></button></form>{% endif %}</div></div>{%- endif -%}{%- endmacro -%}

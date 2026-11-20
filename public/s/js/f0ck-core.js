@@ -582,6 +582,237 @@ window.F0ckLive = (() => {
   });
 })();
 
+// ── Comment polls ─────────────────────────────────────────────────────────────────────────
+// One renderer and one set of handlers for every frontend (f0ckm's comments.js and
+// user_comments.js, w0bm, f0ckv2, and the server-rendered polls of f0ckgle / f0ckyou):
+//   f0ckPoll.render(poll, back) HTML of a poll (the object from server/src/social/polls.rs);
+//                               the same markup as views/snippets/comment-poll.html, keep them equal
+//   f0ckPoll.replace(poll)      redraws every copy of that poll on the page
+//   f0ckPoll.remove(pollId)     takes it off the page
+//   f0ckPoll.refresh(pollId)    fetches it again (GET /api/polls/:id) and redraws it
+// "+N" after an option's newest voters opens a dialog with all of them (GET /api/polls/:id/voters).
+// Votes and deletions are plain forms (they work without JavaScript); here they go through fetch
+// and the poll is redrawn in place. Live events (comments channel, type poll / poll_deleted) redraw
+// the polls other people changed. Each change fires `f0ck:poll` on document (detail: { poll_id,
+// comment_id, poll }; poll null when deleted), so renderers that keep comment data can update it.
+window.f0ckPoll = (() => {
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tr = (key, fallback) => (window.f0ckI18n || {})[key] || fallback;
+  const avatar = (v) => (v.avatar_file ? `/a/${v.avatar_file}` : v.avatar ? `/t/${v.avatar}.webp` : '/a/default.png');
+  const widgets = (id) => document.querySelectorAll(`.comment-poll[data-poll-id="${CSS.escape(String(id))}"]`);
+  const announce = (pollId, commentId, poll) => {
+    document.dispatchEvent(new CustomEvent('f0ck:poll', { detail: { poll_id: Number(pollId), comment_id: Number(commentId), poll } }));
+  };
+
+  const render = (p, back) => {
+    if (!p) return '';
+    const page = String(back || (location.pathname + location.search)).split('#')[0];
+    const hidden = `<input type="hidden" name="csrf_token" value="${esc(window.getCsrfToken())}"><input type="hidden" name="back" value="${esc(`${page}#c${p.comment_id}`)}">`;
+    const total = Number(p.total_votes) || 0;
+    const options = (p.options || []).map((o) => {
+      const mine = p.user_vote_option_id != null && Number(p.user_vote_option_id) === Number(o.id);
+      const inner = `<progress class="poll-option-bar" max="100" value="${Number(o.pct) || 0}">${Number(o.pct) || 0}%</progress><span class="poll-option-text">${esc(o.text)}</span><span class="poll-option-pct" title="${Number(o.vote_count) || 0}">${Number(o.pct) || 0}%</span>${mine ? `<span class="poll-vote-check" title="${esc(tr('poll_voted', 'You voted'))}">✓</span>` : ''}`;
+      // your own option takes the vote back, unless the site doesn't allow that (can_unvote)
+      const clickable = p.can_vote && (!mine || p.can_unvote);
+      const btn = clickable
+        ? `<button type="submit" class="poll-option-btn"${mine ? ` name="remove" value="1" title="${esc(tr('poll_unvote', 'Take back your vote'))}"` : ` name="option_id" value="${Number(o.id)}"`}>${inner}</button>`
+        : `<span class="poll-option-btn">${inner}</span>`;
+      const voters = Array.isArray(o.voters) && o.voters.length
+        ? `<div class="poll-option-voters">${o.voters.map((v) => `<a href="/user/${encodeURIComponent(String(v.username || '').toLowerCase())}" title="${esc(v.username)}"><img class="poll-voter-avatar" src="${esc(avatar(v))}" alt="${esc(v.username)}" loading="lazy"></a>`).join('')}${Number(o.vote_count) > o.voters.length ? `<a class="poll-voters-more" href="#poll-voters-${Number(o.id)}" data-option-id="${Number(o.id)}" title="${esc(tr('poll_voters_all', 'All voters'))}">+${Number(o.vote_count) - o.voters.length}</a>` : ''}</div>`
+        : '';
+      return `<li class="poll-option${mine ? ' poll-option-voted' : ''}">${btn}${voters}</li>`;
+    }).join('');
+    const list = `<ul class="poll-options">${options}</ul>`;
+    const body = p.can_vote
+      ? `<form class="poll-form" method="post" action="/api/polls/${Number(p.id)}/vote">${hidden}${list}</form>`
+      : `<div class="poll-form">${list}</div>`;
+    const badge = p.is_anonymous
+      ? `<span class="poll-badge poll-anon-badge">${esc(tr('poll_anonymous', 'Anonymous'))}</span>`
+      : `<span class="poll-badge poll-public-badge">${esc(tr('poll_public', 'Public votes'))}</span>`;
+    const closed = p.is_closed ? `<span class="poll-badge poll-expired-badge">${esc(tr('poll_expired', 'Poll closed'))}</span>` : '';
+    const del = p.can_delete
+      ? `<form class="poll-delete-form" method="post" action="/api/polls/${Number(p.id)}/delete">${hidden}<button type="submit" class="poll-delete-btn" title="${esc(tr('poll_delete', 'Delete poll'))}"><span class="poll-delete-label">${esc(tr('poll_delete', 'Delete poll'))}</span></button></form>`
+      : '';
+    const word = total === 1 ? tr('poll_vote_single', 'vote') : tr('poll_votes', 'votes');
+    const cls = `comment-poll${p.is_closed ? ' is-closed' : ''}${p.user_vote_option_id ? ' has-voted' : ''}`;
+    return `<div class="${cls}" id="poll-${Number(p.id)}" data-poll-id="${Number(p.id)}" data-comment-id="${Number(p.comment_id)}"><div class="poll-question">${esc(p.question)}</div>${body}<div class="poll-footer"><span class="poll-total">${total} ${esc(word)}</span>${badge}${closed}${del}</div></div>`;
+  };
+
+  const replace = (poll) => {
+    if (!poll) return;
+    widgets(poll.id).forEach((el) => {
+      const back = el.querySelector('input[name="back"]')?.value;
+      el.outerHTML = render(poll, back);
+    });
+    announce(poll.id, poll.comment_id, poll);
+  };
+
+  const remove = (pollId, commentId) => {
+    let cid = commentId;
+    widgets(pollId).forEach((el) => {
+      cid = cid || el.dataset.commentId;
+      el.remove();
+    });
+    announce(pollId, cid, null);
+  };
+
+  // several live events for one poll (a burst of votes) end in one fetch
+  const timers = new Map();
+  const refresh = (pollId, delay = 250) => {
+    clearTimeout(timers.get(pollId));
+    return new Promise((resolve) => {
+      timers.set(pollId, setTimeout(async () => {
+        timers.delete(pollId);
+        try {
+          const res = await fetch(`/api/polls/${encodeURIComponent(pollId)}`, { headers: { Accept: 'application/json' } });
+          const data = await res.json().catch(() => ({}));
+          if (data.success && data.poll) replace(data.poll);
+          else if (res.status === 404) remove(pollId);
+          resolve(data.poll || null);
+        } catch (err) {
+          resolve(null);
+        }
+      }, delay));
+    });
+  };
+
+  // "+N" under an option: a dialog with everyone who picked it (newest first). Without JavaScript
+  // the link opens the page's own copy by :target (server-rendered pages only).
+  let dialog = null;
+  let opener = null;
+  const closeVoters = () => {
+    if (!dialog || dialog.hidden) return;
+    dialog.hidden = true;
+    opener?.focus();
+  };
+  const openVoters = async (link) => {
+    const widget = link.closest('.comment-poll');
+    if (!widget) return;
+    if (!dialog) {
+      dialog = document.createElement('div');
+      dialog.id = 'f0ck-poll-voters';
+      dialog.className = 'poll-voters-modal';
+      dialog.hidden = true;
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.innerHTML = `<div class="poll-voters-backdrop"></div><div class="poll-voters-box"><div class="poll-voters-head"><span class="poll-voters-title"></span><span class="poll-voters-count"></span><button type="button" class="poll-voters-close">${esc(tr('poll_close', 'Close'))}</button></div><ul class="poll-voters-list"></ul></div>`;
+      document.body.appendChild(dialog);
+      dialog.addEventListener('click', (e) => {
+        if (e.target.closest('.poll-voters-backdrop, .poll-voters-close')) closeVoters();
+      });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeVoters(); });
+    }
+    opener = link;
+    const list = dialog.querySelector('.poll-voters-list');
+    dialog.querySelector('.poll-voters-title').textContent = link.closest('.poll-option')?.querySelector('.poll-option-text')?.textContent || '';
+    dialog.querySelector('.poll-voters-count').textContent = '';
+    list.innerHTML = '';
+    dialog.classList.add('is-loading');
+    dialog.hidden = false;
+    dialog.querySelector('.poll-voters-close').focus();
+    try {
+      const res = await fetch(`/api/polls/${encodeURIComponent(widget.dataset.pollId)}/voters?option=${encodeURIComponent(link.dataset.optionId)}`, { headers: { Accept: 'application/json' } });
+      const data = await res.json().catch(() => ({}));
+      if (!data.success) {
+        window.flashMessage(data.message || 'Could not load the voters', 3000, 'error');
+        closeVoters();
+        return;
+      }
+      const n = Number(data.option?.vote_count) || 0;
+      dialog.querySelector('.poll-voters-title').textContent = data.option?.text || '';
+      dialog.querySelector('.poll-voters-count').textContent = `${n} ${n === 1 ? tr('poll_vote_single', 'vote') : tr('poll_votes', 'votes')}`;
+      list.innerHTML = (data.voters || []).map((v) => `<li><a class="poll-voters-user" href="/user/${encodeURIComponent(String(v.username || '').toLowerCase())}"><img class="poll-voter-avatar" src="${esc(avatar(v))}" alt="" loading="lazy"><span class="poll-voters-name">${esc(v.display_name || v.username)}</span></a></li>`).join('');
+    } catch (err) {
+      window.flashMessage('Network error', 3000, 'error');
+      closeVoters();
+    } finally {
+      dialog.classList.remove('is-loading');
+    }
+  };
+  document.addEventListener('click', (e) => {
+    const more = e.target.closest?.('.comment-poll .poll-voters-more');
+    if (more) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      openVoters(more);
+      return;
+    }
+    // a voter picked in the dialog: the dialog closes (the frontend may open the profile in place)
+    if (dialog && !dialog.hidden && e.target.closest?.('#f0ck-poll-voters .poll-voters-user')) closeVoters();
+  }, true);
+
+  document.addEventListener('submit', async (e) => {
+    const form = e.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    const isVote = form.classList.contains('poll-form');
+    const isDelete = form.classList.contains('poll-delete-form');
+    if (!isVote && !isDelete) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const widget = form.closest('.comment-poll');
+    const pollId = widget?.dataset.pollId;
+    if (!widget || !pollId || widget.classList.contains('is-busy')) return;
+    // Deleting asks first, on the button itself (no confirm(): browsers may block dialogs): the
+    // first click arms it for a few seconds and shows the question, the second deletes.
+    if (isDelete) {
+      const btn = form.querySelector('.poll-delete-btn');
+      const label = btn?.querySelector('.poll-delete-label');
+      if (btn && !btn.classList.contains('is-armed')) {
+        btn.classList.add('is-armed');
+        if (label) label.textContent = tr('poll_delete_confirm', 'Delete this poll?');
+        setTimeout(() => {
+          btn.classList.remove('is-armed');
+          if (label) label.textContent = tr('poll_delete', 'Delete poll');
+        }, 4000);
+        return;
+      }
+    }
+    // FormData leaves out the clicked button, which carries the choice (option_id / remove)
+    const body = new URLSearchParams(new FormData(form));
+    if (e.submitter && e.submitter.name) body.set(e.submitter.name, e.submitter.value);
+    widget.classList.add('is-busy');
+    try {
+      const res = await fetch(form.getAttribute('action'), {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': window.getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+        body,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!data.success) {
+        window.flashMessage(data.message || (isDelete ? 'Could not delete the poll' : 'Vote failed'), 3000, 'error');
+        // show what the poll looks like now (closed, deleted, ...)
+        refresh(pollId, 0);
+        return;
+      }
+      if (isDelete) {
+        remove(pollId, widget.dataset.commentId);
+        // the comment was only the poll and went with it: show that now, without waiting for the
+        // live `delete` event (which may also come; both handlers take it twice)
+        if (data.comment_deleted) {
+          const gone = { type: 'delete', item_id: data.item_id, comment_id: String(data.comment_id) };
+          if (typeof window.commentSystem?.handleLiveDeletion === 'function') window.commentSystem.handleLiveDeletion(gone);
+          else if (typeof window.f0ckFrontend?.comments === 'function') window.f0ckFrontend.comments(gone);
+        }
+      } else {
+        replace(data.poll);
+      }
+    } catch (err) {
+      window.flashMessage('Network error', 3000, 'error');
+    } finally {
+      widgets(pollId).forEach((el) => el.classList.remove('is-busy'));
+    }
+  }, true);
+
+  window.F0ckLive.onMessage((d) => {
+    if (d.type !== 'comments' || !d.data || !d.data.poll_id) return;
+    const id = d.data.poll_id;
+    if (d.data.type === 'poll_deleted') remove(id, d.data.comment_id);
+    else if (d.data.type === 'poll' && widgets(id).length) refresh(id);
+  });
+
+  return { render, replace, remove, refresh };
+})();
+
 // ── Maintenance mode ──────────────────────────────────────────────────────────────────────
 // Switched on in the admin panel (live event maintenance): everyone but admins reloads and gets
 // the maintenance page right away instead of on the next click.
