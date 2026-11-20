@@ -272,7 +272,8 @@ const f0ckPasskeyAssert = async (base, headers) => {
     } });
   } catch (e) {
     if (e && e.name === 'NotAllowedError') {
-      throw new Error('Passkey request was cancelled or blocked. If Bitwarden or another password manager is locked, please unlock it or check extension permissions.');
+      // Also what a security key answers when it holds no passkey for this site
+      throw new Error('No passkey was used: cancelled, blocked, or your security key / password manager has no passkey for this site. Unlock your password manager, or sign in with your password and add the passkey again under Settings → Passkeys.');
     }
     throw e;
   }

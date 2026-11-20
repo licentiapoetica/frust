@@ -183,7 +183,8 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.reload();
       } catch(err) {
         if (err && err.name === 'NotAllowedError') {
-          gateSetError('gate-login-error', 'Passkey prompt was cancelled.');
+          // Also what a security key answers when it holds no passkey for this site
+          gateSetError('gate-login-error', 'No passkey was used: cancelled, or your security key / password manager has no passkey for this site. Sign in with your password and add it again under Settings → Passkeys.');
         } else {
           gateSetError('gate-login-error', err.message || 'Passkey sign-in failed.');
         }
