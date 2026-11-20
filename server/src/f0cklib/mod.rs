@@ -415,6 +415,7 @@ pub(crate) fn count_cache_key(f: &Filters, fav: bool, session: Option<&Session>)
 /// Clear the feed count cache (`f0cklib.clearCountCache`).
 pub fn clear_count_cache(st: &AppState) {
     st.caches.feed_count.clear();
+    st.caches.item_context.clear();
 }
 
 /// `checkFavoritesAccess(rawUser, { session, user_id, is_admin })` → (is_private, is_allowed)

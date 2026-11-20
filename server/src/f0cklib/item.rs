@@ -96,6 +96,26 @@ pub async fn find_all_repost_phash(st: &AppState, phash: &str, exclude_id: Optio
 }
 
 /// `getf0ck({...})`
+/// Most items an item page's context list holds; a bigger context falls back to the queries.
+const CONTEXT_MAX: i64 = 200_000;
+
+/// A context's items (id, slug) in id order, from `st.caches.item_context` or `q` (then cached).
+/// None without a query, or when the context is too big to hold.
+async fn context_list(st: &AppState, q: Option<Sql>) -> anyhow::Result<Option<std::sync::Arc<Vec<(i64, Value)>>>> {
+    let Some(q) = q else { return Ok(None) };
+    let key = format!("{q:?}");
+    if let Some(list) = st.caches.item_context.get(&key) {
+        return Ok(Some(list));
+    }
+    let rows = q.fetch_all(&st.db).await?;
+    if rows.len() >= CONTEXT_MAX as usize {
+        return Ok(None);
+    }
+    let list = std::sync::Arc::new(rows.iter().filter_map(|r| Some((r.i64("id")?, r.val("slug").clone()))).collect::<Vec<_>>());
+    st.caches.item_context.set(&key, list.clone());
+    Ok(Some(list))
+}
+
 pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     let cfg = st.cfg();
     let session = o.session;
@@ -210,7 +230,8 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
         let mut q = Sql::new(&item_mode_query);
         q.push(" and items.active = true ");
         q.append(&visibility_filter(session));
-        q.push(" and (items.expires_at IS NULL OR items.expires_at > ").bind(crate::util::now_secs()).push(") ");
+        // to the minute, so the context's list (item_context cache) has one key per minute
+        q.push(" and (items.expires_at IS NULL OR items.expires_at > ").bind(crate::util::now_secs() / 60 * 60).push(") ");
         q.append(&tag_filter).push(" ");
         q.append(&title_filter).push(" ");
         q.append(&hall_filter).push(" ");
@@ -381,6 +402,8 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
     // Items for the strip around the current one (the nearest NEAR of the context).
     const NEAR: i64 = 7;
     let id32 = itemid as i32;
+    // The whole context in id order (not for the logged-in tags driver: its own queries)
+    let context_query = (!o.random && !use_tags_driver).then(|| neighbour(Sql::empty(), Sql::new("order by items.id asc"), CONTEXT_MAX));
     let (next_item, prev_item, start_item, end_item, cheat_ids) = if o.random {
         // prev/next are a random pick; first/last stay the real ends of the context (tag, user, ...)
         let qs = [
@@ -390,6 +413,29 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
         ];
         let (next, start, end) = tokio::try_join!(qs[0].fetch_all(&st.db), qs[1].fetch_all(&st.db), qs[2].fetch_all(&st.db))?;
         (next.clone(), next, start, end, vec![])
+    } else if let Some(list) = context_list(st, context_query).await? {
+        // The context's whole list, shared by every visitor of it for a minute: no queries here.
+        // (Seven index walks per item page, for every guest view and both of its prefetches,
+        // kept w0bm's Postgres at 100 % CPU.)
+        let row = |e: &(i64, Value)| -> Row {
+            let mut m = Row::new();
+            m.insert("id".into(), json!(e.0));
+            m.insert("slug".into(), e.1.clone());
+            m
+        };
+        let pos = list.partition_point(|e| e.0 < itemid);
+        let below = &list[..pos];
+        let above = &list[list[pos..].iter().take_while(|e| e.0 <= itemid).count() + pos..];
+        let mut near: Vec<i64> = below.iter().rev().take(NEAR as usize).chain(above.iter().take(NEAR as usize)).map(|e| e.0).collect();
+        near.sort_by_key(|id| (id - itemid).abs());
+        near.truncate(NEAR as usize);
+        (
+            above.first().map(row).into_iter().collect(),
+            below.last().map(row).into_iter().collect(),
+            list.first().map(row).into_iter().collect(),
+            list.last().map(row).into_iter().collect(),
+            near,
+        )
     } else {
         // Up to NEAR items on each side, walked in id order: the first of each side is next/prev,
         // the nearest NEAR of both are the strip. (Separate next/prev queries walked the same index

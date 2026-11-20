@@ -76,6 +76,9 @@ pub struct Caches {
     pub private_items: RwLock<PrivateItems>,
     /// Feed count cache (f0cklib): key → total (90 s)
     pub feed_count: TtlCache<i64>,
+    /// Item page: a context's items (id, slug) in id order, by the query that lists them (60 s).
+    /// Every visitor of a context gets the same list; prev/next/first/last/nearby come from it.
+    pub item_context: TtlCache<Arc<Vec<(i64, Value)>>>,
 }
 
 pub struct Inner {
@@ -144,6 +147,7 @@ impl Caches {
             halls: RwLock::new(Value::Array(vec![])),
             private_items: RwLock::new(PrivateItems::default()),
             feed_count: TtlCache::new(Duration::from_secs(90), 500),
+            item_context: TtlCache::new(Duration::from_secs(60), 300),
         }
     }
 }
