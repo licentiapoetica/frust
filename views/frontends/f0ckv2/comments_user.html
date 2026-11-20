@@ -1,6 +1,8 @@
 {% include "frontends/f0ckv2/snippets/header.html" %}
 {%- set uname = (user.user or "") -%}
 {%- set page = (parse_int(url.qs.page) if (url and url.qs and url.qs.page) else 1) -%}
+{%- set here = ((url.pathname ~ url.search) if (url and url.pathname) else ("/user/" ~ (uname|lower|encode_uri_component) ~ "/comments")) -%}
+{%- from "snippets/comment-poll.html" import poll -%}
 {%- set page = (page if page > 0 else 1) -%}
 <div id="main">
   <div class="profile_head">
@@ -30,6 +32,7 @@
           </div>
           <div class="v2-comment-body v2-pre"{% if not c.is_deleted %} data-raw="{{ c.content }}"{% endif %}>{% if c.is_deleted %}<i>[deleted]</i>{% else %}{{ c.content }}{% endif %}</div>
           {% if c.files %}<div class="v2-comment-files">{% for f in c.files %}{% if f.dest not in (c.content or "") %}<a class="badge badge-dark" href="/c/{{ f.dest }}" target="_blank">{{ (f.original_filename or f.dest) }}</a> {% endif %}{% endfor %}</div>{% endif %}
+          {{ poll(c.poll, here ~ "#c" ~ c.id, csrf_token) }}
         </div>
       </div>
       {% else %}

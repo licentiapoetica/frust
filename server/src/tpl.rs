@@ -1498,7 +1498,13 @@ mod tests {
         let tags = serde_json::json!([{ "id": 1, "tag": "sfw", "normalized": "sfw", "can_exclude": false }, { "id": 9, "tag": "Cat", "normalized": "cat", "can_exclude": true, "is_excluded": true }]);
         let it = serde_json::json!({ "id": 7, "username": "al", "mime": "video/mp4", "dest": "/b/7.mp4", "size": "1 MB", "tags": tags, "timestamp": { "timeago": "1 day ago", "timefull": "x" },
             "favorites": [{ "user": "bob", "avatar": 5 }], "src": { "short": "f0ck.test", "long": "f0ck.test" } });
-        let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content": "hi <b>", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x", "replies": [] });
+        // a comment with a poll, and a reply with a closed one (results only)
+        let mut closed_poll = sample_poll(false, true);
+        closed_poll["id"] = serde_json::json!(8);
+        let reply = serde_json::json!({ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content": "yes", "content_html": "yes", "attachments_html": "", "timeago": "now", "iso": "x",
+            "poll": closed_poll });
+        let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content": "hi <b>", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
+            "poll": sample_poll(true, false), "replies": [reply] });
         // in a search (/search/<f0ck>?q=…, routes/search.rs nav): prev/next walk its results, the box
         // keeps the search (and its strict mode), a chip leads back to the results
         let searched = render(&fe("item"), serde_json::json!({ "url": url("/search/7", serde_json::json!({ "q": "cat sort:views", "match": "all" })), "tmp": {}, "session": session,
@@ -1512,8 +1518,18 @@ mod tests {
         assert!(searched.contains("&rsaquo; search &rsaquo; cat sort:views"));
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it,
             "pagination": { "prev": 8, "next": 6 }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_manage_item": true, "can_extract_meta": true,
-            "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice" }));
+            "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice", "enable_comment_polls": true }));
         dump("item", &page);
+        // comment polls: the shared markup after the comment's text (plain vote forms back to the
+        // comment), results only on the closed one, the poll fields in the comment form, the CSS
+        assert!(page.contains(r#"<div class="fg-comment-poll"><div class="comment-poll has-voted" id="poll-7" data-poll-id="7" data-comment-id="2">"#), "{page}");
+        assert!(page.contains(r#"<form class="poll-form" method="post" action="/api/polls/7/vote"><input type="hidden" name="csrf_token" value="tok"><input type="hidden" name="back" value="/tag/cat/7#c3">"#), "{page}");
+        assert!(page.contains(r#"<form class="poll-delete-form" method="post" action="/api/polls/7/delete">"#));
+        assert!(page.contains(r#"<div class="comment-poll is-closed has-voted" id="poll-8""#) && !page.contains("/api/polls/8/vote"));
+        assert!(page.contains(r#"<details class="poll-builder-nojs">"#) && page.contains(r#"name="poll_question""#) && page.contains(r#"name="poll_options""#));
+        assert!(page.contains(r#"<textarea name="content" rows="3" placeholder="Join the discussion" maxlength"#) || page.contains(r#"<textarea name="content" rows="3" placeholder="Join the discussion">"#), "a comment may be just a poll");
+        assert!(page.contains("/s/css/comment-poll.css?v="));
+        assert!(!home.contains("/s/css/comment-poll.css"), "no comments, no poll CSS");
         assert!(page.contains("<a class=\"fg-chip\" id=\"fg-prev\" href=\"/tag/cat/8\""));
         // mods edit comments in place (as in f0ckm): Edit opens the form in the text's place (#edit-c3,
         // :target without JavaScript), the text escaped in the field, with the emoji picker
@@ -1643,7 +1659,7 @@ mod tests {
             ("ranking", serde_json::json!({ "list": [{ "user": "al", "count": 9 }], "hoster": [{ "part": "youtube.com", "c": 4 }], "favotop": [{ "item_id": 7, "favs": 2 }],
                 "stats": { "total": 10 }, "totalComments": 1, "totalFavs": 2, "totalUsers": 3, "totalAnonUsers": 0, "diskSize": "1 GB" })),
             ("comments_user", serde_json::json!({ "user": al, "comments_page": 2, "has_more": true,
-                "static_comments": [{ "id": 3, "item_id": 7, "item_key": "7", "content_html": "<b>hi</b>", "attachments_html": "", "timeago": "now", "iso": "x" }] })),
+                "static_comments": [{ "id": 3, "item_id": 7, "item_key": "7", "content_html": "<b>hi</b>", "attachments_html": "", "timeago": "now", "iso": "x", "poll": sample_poll(true, false) }] })),
             ("upload", serde_json::json!({ "session": session, "mimes_json": "{}", "uploads_remaining": null, "upload_types": [], "min_tags": 1 })),
             // f0ckgle's own page (no other frontend has it: routes/index.rs how_search_works)
             ("howsearch", serde_json::json!({})),
@@ -1655,6 +1671,9 @@ mod tests {
             dump(view, &html);
             assert!(html.contains("/s/fe/f0ckgle/css/f0ckgle.css") && html.contains("class=\"fg-top f0ck-shell-chrome\""), "{view}: not in f0ckgle's layout");
             assert!(!html.contains("/s/css/f0ckm.css"), "{view}");
+            if view == "comments_user" {
+                assert!(html.contains(r#"<input type="hidden" name="back" value="/user/al/comments?page=2#c3">"#) && html.contains("/s/css/comment-poll.css?v="), "{html}");
+            }
         }
         for page in FRONTEND_OWN_PAGES {
             assert!(root.join("views/frontends/f0ckgle").join(format!("{page}.html")).is_file(), "{page}");
@@ -1744,6 +1763,24 @@ mod tests {
         // a guest: no box
         let guest_item = render("frontends/f0ckv2/item.html", serde_json::json!({ "item": item, "url": { "pathname": "/7", "search": "", "qs": {} }, "pagination": {}, "link": { "main": "/", "suffix": "" } }));
         assert!(!guest_item.contains("id=\"halls\"") && !guest_item.contains("a_halls"));
+
+        // comment polls: the shared poll markup in the server-rendered comments (back to the open
+        // comments box), the poll fields in the comment form, the shared CSS
+        let polled = serde_json::json!({ "id": 2, "username": "Al", "name": "Al", "avatar_src": "/t/5.webp", "content_html": "vote", "attachments_html": "",
+            "timeago": "now", "iso": "x", "poll": sample_poll(true, false), "replies": [] });
+        let html = render("frontends/f0ckv2/item.html", serde_json::json!({ "item": item, "session": { "user": "bob", "id": 1, "ruffle_volume": 0.5 },
+            "url": { "pathname": "/7", "search": "", "qs": {} }, "pagination": {}, "link": { "main": "/", "suffix": "" },
+            "enable_comment_polls": true, "static_comments": [polled] }));
+        dump("item-poll", &html);
+        assert!(html.contains("<div class=\"v2-comment-body v2-comment-html\">vote<div class=\"comment-poll has-voted\" id=\"poll-7\""), "{html}");
+        assert!(html.contains("<form class=\"poll-form\" method=\"post\" action=\"/api/polls/7/vote\"><input type=\"hidden\" name=\"csrf_token\" value=\"tok\"><input type=\"hidden\" name=\"back\" value=\"/7?comments=1#c2\">"), "{html}");
+        assert!(html.contains("<details class=\"poll-builder-nojs\">") && html.contains("name=\"poll_question\"") && html.contains("name=\"poll_options\""), "{html}");
+        assert!(!html.contains("placeholder=\"say something f0cked...\" required"), "a poll may come without text");
+        assert!(html.contains("/s/css/comment-poll.css?v="));
+        let user_comments = render("frontends/f0ckv2/comments_user.html", serde_json::json!({ "url": { "pathname": "/user/al/comments", "search": "", "qs": {} },
+            "comments": [{ "id": 2, "item_id": 5, "content": "vote", "created_at": "2024-01-01T00:00:00Z", "files": [], "poll": sample_poll(false, true) }] }));
+        dump("comments-user-poll", &user_comments);
+        assert!(user_comments.contains("class=\"comment-poll is-closed has-voted\" id=\"poll-7\""), "{user_comments}");
     }
 
     #[test]
@@ -1900,7 +1937,9 @@ mod tests {
         let rec = serde_json::json!({ "id": 9, "slug": null, "title": null, "tags": ["cat", "dog"], "username": "al", "display_name": "Al", "mime": "video/mp4",
             "stamp": 1_794_700_000, "views": 1, "personalized": true, "rating_class": "nsfw", "has_coverart": false, "duration": 3725, "dest": "r.webm" });
         let comment = serde_json::json!({ "id": 3, "username": "al", "name": "al", "avatar_src": "/t/5.webp", "content": "hi <b>", "content_html": "hi", "attachments_html": "", "timeago": "now", "iso": "x",
-            "replies": [{ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content_html": "yo", "attachments_html": "", "timeago": "now", "iso": "x" }] });
+            "poll": sample_poll(true, false),
+            "replies": [{ "id": 4, "username": "bob", "name": "bob", "avatar_src": "/t/5.webp", "content_html": "yo", "attachments_html": "", "timeago": "now", "iso": "x",
+                "poll": sample_poll(false, true) }] });
         // in a search: prev/next walk its results, the search above them leads back to the results
         let searched = render(&fe("item"), serde_json::json!({ "url": url("/search/7", serde_json::json!({ "q": "cat" })), "tmp": {}, "session": session, "item": it.clone(),
             "pagination": { "prev": 6, "next": 8 }, "link": { "main": "/search/", "path": "", "suffix": "?q=cat" }, "recommendations": [rec.clone()],
@@ -1913,6 +1952,7 @@ mod tests {
         let page = render(&fe("item"), serde_json::json!({ "url": url("/tag/cat/7", serde_json::json!({})), "tmp": { "tag": "cat" }, "session": session, "item": it.clone(),
             "pagination": { "prev": 6, "next": 8, "cheat": [4, 5, 6, 7, 8, 9] }, "link": { "main": "/tag/cat/", "suffix": "" }, "is_mod_or_admin": true, "can_manage_item": true,
             "can_extract_meta": true, "can_rate_item": true, "user_has_favorited": true, "isSubscribed": false, "static_comments": [comment], "phrase": "nice",
+            "enable_comment_polls": true,
             "recommendations": [rec.clone()],
             "my_hall_choices": [{ "slug": "mine", "image_v": "5", "name": "Mine", "is_private": true, "has_item": true, "total_items": 2 }, { "slug": "other", "name": "Other", "is_private": false, "has_item": false, "total_items": 0 }],
             "hall_choices": [{ "slug": "best", "name": "Best", "has_item": false }] }));
@@ -1934,6 +1974,19 @@ mod tests {
         assert!(page.contains("<a href=\"#edit-c3\" class=\"fy-edit-link\" data-edit=\"3\">Edit</a>"));
         assert!(page.contains("fy-emoji-btn\" aria-expanded=\"false\" aria-controls=\"fy-emoji-box-e3\""));
         assert!(page.contains("fy-edit-cancel\" href=\"#c3\">Cancel</a>"));
+        // comment polls (the shared snippets/comment-poll.html, coloured by f0ckyou.css): plain vote forms
+        // back to the comment, under its text; a closed one (the reply's) only shows the results
+        assert!(page.contains("/s/css/comment-poll.css?v="));
+        assert!(page.contains(r#"<form class="poll-form" method="post" action="/api/polls/7/vote"><input type="hidden" name="csrf_token" value="tok"><input type="hidden" name="back" value="/tag/cat/7#c3">"#), "{page}");
+        assert!(page.contains(r#"name="option_id" value="11""#) && page.contains(r#"<form class="poll-delete-form" method="post" action="/api/polls/7/delete">"#));
+        assert!(page.find("<div class=\"fy-comment-body\">hi").unwrap() < page.find("action=\"/api/polls/7/vote\"").unwrap());
+        assert!(page.contains(r#"class="comment-poll is-closed has-voted""#));
+        // a poll with a new comment: its fields in the comment form, opened by the chart button (no JavaScript needed)
+        assert!(page.contains(r#"<input type="checkbox" class="fy-poll-toggle fy-sr" id="fy-poll-toggle" aria-controls="fy-poll-builder">"#));
+        assert!(page.contains(r#"<label for="fy-poll-toggle" class="fy-iconbtn fy-poll-btn" title="Add a poll">"#));
+        let form = &page[page.find("id=\"comment-form\"").unwrap()..];
+        let form = &form[..form.find("</form>").unwrap()];
+        assert!(form.contains("name=\"poll_question\"") && form.contains("name=\"poll_options\"") && form.contains("name=\"poll_anonymous\" value=\"1\" checked"));
         // a song: its square cover and the audio element (native controls without JavaScript,
         // f0ckyou.js puts v0ck on it)
         let mut song = it.clone();
@@ -2089,7 +2142,8 @@ mod tests {
             ("ranking", serde_json::json!({ "list": [{ "user": "al", "count": 9 }], "hoster": [{ "part": "youtube.com", "c": 4 }], "favotop": [{ "item_id": 7, "favs": 2 }],
                 "stats": { "total": 10 }, "totalComments": 1, "totalFavs": 2, "totalUsers": 3, "totalAnonUsers": 0, "diskSize": "1 GB" })),
             ("comments_user", serde_json::json!({ "user": al, "comments_page": 2, "has_more": true,
-                "static_comments": [{ "id": 3, "item_id": 7, "item_key": "7", "content_html": "<b>hi</b>", "attachments_html": "", "timeago": "now", "iso": "x" }] })),
+                "static_comments": [{ "id": 3, "item_id": 7, "item_key": "7", "content_html": "<b>hi</b>", "attachments_html": "", "timeago": "now", "iso": "x",
+                    "poll": sample_poll(true, false) }] })),
             ("upload", serde_json::json!({ "session": session, "mimes_json": "{}", "uploads_remaining": null, "upload_types": [], "min_tags": 1 })),
         ];
         for (view, data) in pages {
@@ -2111,6 +2165,10 @@ mod tests {
                 // (the page data's i18n strings are f0ckm's: only the visible page counts)
                 let main = &html[html.find("<main").unwrap()..html.find("</main>").unwrap()];
                 assert!(!main.contains("Hall"), "f0ckyou calls them playlists");
+            }
+            // a comment's poll on the user's comments: votes come back to this page of them
+            if view == "comments_user" {
+                assert!(html.contains(r#"<input type="hidden" name="back" value="/user/al/comments?page=2#c3">"#), "{html}");
             }
             // the popover of the bell takes its rows from this page: each with its id (read on click)
             if view == "notifications" {
@@ -2253,9 +2311,12 @@ mod tests {
         let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
         let c = |id: i64, user: &str, pinned: bool, replies: Value| serde_json::json!({ "id": id, "username": user, "name": user, "is_pinned": pinned,
             "content_html": format!("text{id}"), "attachments_html": "", "iso": "", "timeago": "", "replies": replies });
-        let comments = serde_json::json!([c(1, "bob", false, serde_json::json!([c(3, "Kibi", false, serde_json::json!([]))])), c(2, "bob", true, serde_json::json!([]))]);
-        let render = |session: Value| env.get_template("frontends/w0bm/partials/comments.html").unwrap()
-            .render(to_jvalue(&serde_json::json!({ "item": { "id": 9 }, "static_comments": comments, "session": session, "allow_comment_deletion": true }))).unwrap();
+        let mut comments = serde_json::json!([c(1, "bob", false, serde_json::json!([c(3, "Kibi", false, serde_json::json!([]))])), c(2, "bob", true, serde_json::json!([]))]);
+        comments[1]["poll"] = sample_poll(true, false);
+        let render_with = |session: Value, polls: bool| env.get_template("frontends/w0bm/partials/comments.html").unwrap()
+            .render(to_jvalue(&serde_json::json!({ "item": { "id": 9 }, "static_comments": comments, "session": session, "allow_comment_deletion": true,
+                "enable_comment_polls": polls, "csrf_token": "tok" }))).unwrap();
+        let render = |session: Value| render_with(session, false);
         let actions = |html: &str, id: i64| {
             let panel = &html[html.find(&format!("id=\"c{id}\"")).unwrap()..];
             let panel = &panel[..panel.find("</span>\n</div>").or(panel.find("</div>\n</div>")).unwrap()];
@@ -2270,6 +2331,45 @@ mod tests {
         let modr = render(serde_json::json!({ "user": "mod", "is_moderator": true }));
         assert_eq!(actions(&modr, 1), ["reply_comment", "pin_comment", "edit_comment", "report_comment", "delete_comment"]);
         assert!(modr.contains("pin_comment w0bm-cact w0bm-cact-on\" href=\"#\" title=\"Unpin\""));
+
+        // the comment's poll in its body, after the text (plain forms back to the comment), only there
+        let panel = |html: &str, id: i64| {
+            let p = &html[html.find(&format!("id=\"c{id}\"")).unwrap()..];
+            p[..p.find("<div class=\"panel-footer\">").unwrap()].to_string()
+        };
+        for html in [&guest, &user] {
+            let c2 = panel(html, 2);
+            assert!(c2.find("text2").unwrap() < c2.find("<div class=\"comment-poll has-voted\" id=\"poll-7\"").unwrap(), "{c2}");
+            assert!(c2.contains(r#"action="/api/polls/7/vote"><input type="hidden" name="csrf_token" value="tok"><input type="hidden" name="back" value="/9#c2">"#), "{c2}");
+            assert!(!panel(html, 1).contains("comment-poll") && !panel(html, 3).contains("comment-poll"));
+        }
+        // the poll fields in the comment form with polls on (the text then optional), none without
+        assert!(user.contains("id=\"cinput\" class=\"form-control\" required") && !user.contains("poll_question"));
+        let polls = render_with(serde_json::json!({ "user": "kibi" }), true);
+        if let Ok(f) = std::env::var("F0CKM_DUMP_W0BM_COMMENTS") {
+            std::fs::write(f, &polls).unwrap();
+        }
+        assert!(polls.contains("id=\"cinput\" class=\"form-control\">") || polls.contains("id=\"cinput\" class=\"form-control\" maxlength"), "{polls}");
+        let form = &polls[polls.find("<form action=\"/api/comments\"").unwrap()..];
+        let form = &form[..form.find("</form>").unwrap()];
+        for field in ["<details class=\"poll-builder-nojs w0bm-pollbuilder\">", "name=\"poll_question\"", "name=\"poll_options\"", "name=\"poll_anonymous\" value=\"1\" checked"] {
+            assert!(form.contains(field), "{field}");
+        }
+        assert!(!render_with(Value::Bool(false), true).contains("poll_question"));
+
+        // a user's comments page: the poll beside the text that w0bm.js formats, back to the comment
+        let url = serde_json::json!({ "pathname": "/user/bob/comments", "search": "?page=2", "qs": { "page": "2" } });
+        let mut row = serde_json::json!({ "id": 2, "item_id": 5, "item_slug": null, "content": "vote pls", "created_at": "2026-11-19T10:00:00Z" });
+        row["poll"] = sample_poll(true, false);
+        let page = env.get_template("frontends/w0bm/comments_user.html").unwrap()
+            .render(to_jvalue(&serde_json::json!({ "user": { "user": "bob" }, "comments": [row, { "id": 1, "item_id": 5, "content": "x", "created_at": "2026-11-19T09:00:00Z", "poll": null }],
+                "url": url, "csrf_token": "tok", "session": { "user": "kibi" } }))).unwrap();
+        if let Ok(f) = std::env::var("F0CKM_DUMP_W0BM_COMMENTS") {
+            std::fs::write(format!("{f}.user.html"), &page).unwrap();
+        }
+        assert!(page.contains(r#"<div class="panel-body w0bm-cmd" data-id="2">vote pls</div><div class="panel-body w0bm-cmd-poll"><div class="comment-poll has-voted" id="poll-7""#), "{page}");
+        assert!(page.contains(r#"<input type="hidden" name="back" value="/user/bob/comments?page=2#c2">"#), "{page}");
+        assert!(page.contains("<div class=\"panel panel-default\" id=\"c2\">") && page.matches("class=\"comment-poll").count() == 1, "{page}");
     }
 
     /// A 4chan item's id and timestamp links never point at /<4chan post number> (a different local

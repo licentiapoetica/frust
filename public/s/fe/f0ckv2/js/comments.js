@@ -59,6 +59,10 @@
     return 'just now';
   };
 
+  // a comment's poll: the shared markup (f0ckPoll, f0ck-core.js), which votes / deletes through fetch
+  // and redraws itself on live events; the plain forms come back here (?comments=1 opens the box)
+  const pollHtml = p => (p && window.f0ckPoll ? window.f0ckPoll.render(p, location.pathname + '?comments=1') : '');
+
   const avatar = c => (c.avatar_file && c.avatar_file !== 'default.png') ? `/a/${encodeURIComponent(c.avatar_file)}` : (c.avatar ? `/t/${+c.avatar}.webp` : '/s/fe/f0ckv2/img/default.png');
 
   const render = comments => {
@@ -92,7 +96,7 @@
             ${!c.is_deleted && (isMod || (own && canDelete)) ? `<a href="#" data-delete="${c.id}" title="delete">[del]</a>` : ''}
           </span>
         </div>
-        <div class="v2-comment-body">${c.is_deleted ? '<i>[deleted]</i>' : format(c.content)}${files ? `<div class="v2-comment-files">${files}</div>` : ''}${c.poll ? '<div class="badge badge-light">poll</div>' : ''}</div>
+        <div class="v2-comment-body">${c.is_deleted ? '<i>[deleted]</i>' : format(c.content)}${files ? `<div class="v2-comment-files">${files}</div>` : ''}${pollHtml(c.poll)}</div>
         ${kids ? `<div class="v2-comment-replies">${kids}</div>` : ''}
       </div>`;
     };
@@ -116,7 +120,7 @@
     let d = window.danmakuInstance;
     if(d && (d.player !== player || !document.contains(d.player))) { d.destroy(); d = window.danmakuInstance = null; }
     if(!d) d = window.danmakuInstance = new window.Danmaku(player, media);
-    const live = comments.filter(c => !c.is_deleted);
+    const live = comments.filter(c => !c.is_deleted && String(c.content || '').trim());
     const fresh = seenIds ? live.filter(c => !seenIds.has(c.id)) : [];
     seenIds = new Set(live.map(c => c.id));
     const feed = () => {
@@ -128,10 +132,14 @@
   };
   // </danmaku>
 
+  // the shared helpers (f0ck-core.js: f0ckPoll, the emojis) load at the end of the page: the first
+  // answer may come before they ran
+  const parsed = new Promise(r => (document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', r, { once: true }) : r()));
   const load = async () => {
     try {
       const res = await (await fetch(`/api/comments/${encodeURIComponent(itemId)}?sort=${sort}`, { credentials: 'same-origin' })).json();
       if(!res.success) return;
+      await parsed;
       await emojiReady();
       let comments = res.comments || [];
       comments.sort((a, b) => (b.is_pinned - a.is_pinned) || (sort === 'old' ? 1 : -1) * (new Date(a.created_at) - new Date(b.created_at)));
@@ -199,10 +207,30 @@
     form.content.addEventListener('keydown', e => {
       if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)) form.requestSubmit();
     });
+    // the poll fields (snippets/comment-poll-builder.html), when polls are on
+    const pollBox = form.querySelector('.poll-builder-nojs');
+    const pollFields = () => {
+      if(!pollBox) return {};
+      const q = form.poll_question.value.trim();
+      const opts = form.poll_options.value.trim();
+      if(!q && !opts) return {};
+      // missing poll_anonymous = public votes
+      return { poll_question: q, poll_options: opts, ...(form.poll_anonymous.checked ? { poll_anonymous: '1' } : {}) };
+    };
+    const resetPoll = () => {
+      if(!pollBox) return;
+      pollBox.querySelectorAll('input, textarea').forEach(el => {
+        if(el.type === 'checkbox') el.checked = el.defaultChecked;
+        else el.value = '';
+      });
+      pollBox.open = false;
+    };
+    const fail = msg => (window.f0ckFrontend?.flash ? window.f0ckFrontend.flash(msg, 'error') : alert(msg));
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const content = form.content.value.trim();
-      if(!content) return;
+      const poll = pollFields();
+      if(!content && !poll.poll_question && !poll.poll_options) return;
       if(window.f0ckCaptchaGate) {
         try { await window.f0ckCaptchaGate('comment'); } catch { return; }
       }
@@ -218,20 +246,23 @@
             content,
             // where in the video it was written: danmaku shows it there again
             video_time: (m => (m && m.currentTime > 0 ? m.currentTime : undefined))(playerMedia()),
+            ...poll,
             csrf_token: csrf()
           })
         })).json();
         if(!res.success) {
-          alert(res.message || res.msg || 'could not post comment');
+          // a broken poll (400) is reported and the comment is not posted: the fields stay
+          fail(res.message || res.msg || 'could not post comment');
         }
         else {
           form.content.value = '';
+          resetPoll();
           form.parent_id.value = '';
           form.querySelector('.v2-reply-to').hidden = true;
           await load();
         }
       } catch(err) {
-        alert('could not post comment');
+        fail('could not post comment');
       }
       btn.disabled = false;
     });

@@ -1,5 +1,6 @@
 {#- f0ckgle: a user's comments as results (the f0ck as breadcrumb and thumbnail, the comment as the
     snippet, effects included: static_comments, routes/comments.rs), newer / older page links. -#}
+{%- from "snippets/comment-poll.html" import poll -%}
 {%- set fg_title = "Comments by " ~ (user.display_name or user.user or "") -%}
 {%- set fg_page = "results" -%}
 {%- set fg_q = "user:" ~ ((user.user or "")|lower) ~ " comments" -%}
@@ -16,6 +17,7 @@
       <div class="fg-result-text">
         <a class="fg-result-site" href="/{{ c.item_key }}#c{{ c.id }}"><span class="fg-fav fg-fav-letter">#</span><span class="fg-result-who"><span class="fg-result-name">f0ck #{{ c.item_key }}</span><cite>https://{{ domain }} &rsaquo; {{ c.item_key }} &rsaquo; c{{ c.id }} &middot; <time title="{{ c.iso }}">{{ c.timeago }}</time></cite></span></a>
         <div class="fg-result-snippet fg-comment-body fg-comment-snippet">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+        {% if c.poll %}<div class="fg-comment-poll">{{ poll(c.poll, "/user/" ~ ((user.user or "")|lower|encode_uri_component) ~ "/comments" ~ (("?page=" ~ comments_page) if comments_page > 1 else "") ~ "#c" ~ c.id, csrf_token) }}</div>{% endif %}
       </div>
       <a class="fg-result-thumb" href="/{{ c.item_key }}#c{{ c.id }}"><img src="/t/{{ c.item_id }}.webp" alt="" loading="lazy"></a>
     </li>

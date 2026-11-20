@@ -523,6 +523,72 @@ img.v2-comment-ava {
   text-align: center;
 }
 
+/* comment polls: the shared markup and /s/css/comment-poll.css, in f0ckv2's colours */
+body {
+  --poll-accent: var(--accent);
+  --poll-border: var(--black);
+  --poll-bg: transparent;
+  --poll-option-bg: var(--badge-tag);
+  --poll-muted: color-mix(in srgb, currentColor 60%, transparent);
+  --poll-danger: var(--badge-nsfw);
+  --poll-font: var(--font);
+  --poll-dialog-bg: var(--bg);
+  --poll-dialog-fg: var(--white);
+}
+
+/* paper: black text on white, its fields (--badge-tag) are black */
+html[theme="paper"] body {
+  --poll-option-bg: transparent;
+}
+
+/* f0ck95: the accent is the silver of the boxes; its links are black, the title bars navy */
+html[theme="f0ck95"] body {
+  --poll-accent: #000080;
+}
+
+/* the page's line-height of 2 makes the options too tall; the body text is 14px */
+.v2-comment .comment-poll {
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+/* a voter's avatar link: f0ck.css makes every link inline-block with the page's line height */
+.v2-comment .comment-poll .poll-option-voters a {
+  line-height: 0;
+}
+
+.v2-comment .comment-poll .poll-delete-btn {
+  color: var(--poll-accent);
+  text-decoration: none;
+}
+
+/* the poll fields under the comment text box: the whole width, f0ckv2's fields */
+.v2-comment-form .poll-builder-nojs {
+  grid-column: 1/3;
+  margin: 0;
+  font-size: 12px;
+}
+
+.v2-comment-form .poll-builder-nojs > summary {
+  color: var(--poll-accent);
+}
+
+.v2-comment-form .poll-builder-nojs input[type="text"],
+.v2-comment-form .poll-builder-nojs textarea {
+  min-height: 0;
+  padding: 3px 5px;
+  background: var(--badge-tag);
+  color: var(--white);
+  border: 1px solid var(--black);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.v2-comment-form .poll-builder-nojs textarea {
+  resize: vertical;
+}
+
 /* ── profile ───────────────────────────────────────────────────────────────── */
 img.v2-profile-ava {
   display: grid;

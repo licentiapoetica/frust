@@ -1,6 +1,8 @@
 {#- f0ckyou: a user's comments under their channel header (the Comments tab): each with the f0ck's
     thumbnail, effects included (static_comments, routes/comments.rs), newer / older page links. -#}
 {% import "frontends/f0ckyou/snippets/macros.html" as fy %}
+{#- a comment's poll under its text (the shared markup: vote here, f0ck-core.js redraws it in place) -#}
+{%- from "snippets/comment-poll.html" import poll -%}
 {%- set fy_title = "Comments by " ~ (user.display_name or user.user or "") -%}
 {%- set fy_page = "channel" -%}
 {%- set fy_is_me = (session and user and ((session.user|lower) == ((user.user or "")|lower))) -%}
@@ -11,6 +13,7 @@
   {%- set ch_user = user -%}
   {%- set ch_tab = "comments" -%}
   {% include "frontends/f0ckyou/snippets/channel-head.html" %}
+  {%- set fy_here = "/user/" ~ ((user.user if user else "")|lower|urlencode) ~ "/comments" ~ (("?page=" ~ comments_page) if (comments_page and comments_page > 1) else "") -%}
   <ol class="fy-list" data-fy-feed>
     {% for c in (static_comments or []) %}
     <li class="fy-row" id="c{{ c.id }}">
@@ -19,6 +22,7 @@
         <h3 class="fy-row-title"><a href="/{{ c.item_key }}#c{{ c.id }}">#{{ c.item_key }}</a></h3>
         <p class="fy-dim"><time title="{{ c.iso }}">{{ c.timeago }}</time></p>
         <div class="fy-comment-body fy-row-snippet">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+        {{ poll(c.poll, fy_here ~ "#c" ~ c.id, csrf_token) }}
       </div>
     </li>
     {% else %}

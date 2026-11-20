@@ -6,6 +6,7 @@
 {%- set here_path = (url.pathname if (url and url.pathname) else ("/" ~ item.id)) -%}
 {%- set reply_to = (parse_int(url.qs.reply) if (url and url.qs and url.qs.reply) else none) -%}
 {%- set me = ((session.user or "")|lower if session else "") -%}
+{%- from "snippets/comment-poll.html" import poll -%}
 {%- macro one(c, reply) -%}
 <div class="v2-comment{% if reply %} reply{% endif %}{% if c.is_pinned %} pinned{% endif %}{% if reply_to == c.id %} v2-flash{% endif %}" id="c{{ c.id }}">
   <div class="v2-comment-head">
@@ -26,7 +27,7 @@
       {% endif %}
     </span>
   </div>
-  <div class="v2-comment-body v2-comment-html">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+  <div class="v2-comment-body v2-comment-html">{{ c.content_html|safe }}{{ c.attachments_html|safe }}{{ poll(c.poll, here_path ~ "?comments=1#c" ~ c.id, csrf_token) }}</div>
 </div>
 {%- endmacro -%}
 {#- Collapsed until the header is clicked (<details>, no JavaScript needed); open when replying
@@ -53,8 +54,11 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="back" value="{{ here_path }}?comments=1#comments">
     <div class="v2-reply-to"{% if not reply_to %} hidden{% endif %}>replying to <span>#{{ reply_to }}</span> <a href="{{ here_path }}?comments=1#comments" class="v2-reply-cancel">&#215;</a></div>
-    <textarea name="content" rows="3" placeholder="say something f0cked..." required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+    {#- a poll may come without text: then the text is optional -#}
+    <textarea name="content" rows="3" placeholder="say something f0cked..."{% if not enable_comment_polls %} required{% endif %}{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
     <button type="submit">post</button>
+    {#- a poll with the comment (shared fields, social/polls.rs draft_from_body); comments.js sends them too -#}
+    {% if enable_comment_polls %}{% include "snippets/comment-poll-builder.html" %}{% endif %}
     {% if "comment" in (captcha_scopes or []) %}{% include "frontends/f0ckv2/snippets/cap-image.html" %}{% endif %}
   </form>
   {% elif not session %}

@@ -1,5 +1,6 @@
 {#- partials/comments.blade.php + commentform.blade.php. The list is loaded by w0bm.js from
     /api/comments/:id; the form posts to /api/comments. -#}
+{%- from "snippets/comment-poll.html" import poll -%}
 {#- Message of the day above the comment form (hidden when empty or turned off in the settings);
     w0bm.js renders it like f0ckm (inline Markdown) and updates it live -#}
 {%- set w0bm_motd_off = (session and session.show_motd == false) %}
@@ -19,7 +20,9 @@
     {% with back_anchor = "comment_container_scrollable" %}{% include "frontends/w0bm/partials/back.html" %}{% endwith %}
     <div class="sees panel panel-default">
         <div class="fickfackfoo panel-body">
-            <textarea name="content" placeholder="Write something" id="cinput" class="form-control" required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+            {#- not required with polls: a comment can be just a poll (the server checks it isn't empty) -#}
+            <textarea name="content" placeholder="Write something" id="cinput" class="form-control"{% if not enable_comment_polls %} required{% endif %}{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+            {% if enable_comment_polls %}{% include "frontends/w0bm/partials/pollbuilder.html" %}{% endif %}
         </div>
         <div class="commbordersoos">
             <div id="comment_tools" class="commentform-panel-footer"><button type="submit" class="btn btn-primary btn-sm">Post</button>
@@ -52,6 +55,8 @@
     start instead of popping in when the list is replaced. They need JavaScript (w0bm-js-only). -#}
 {%- set w0bm_user = (session.user if (session and session.user) else none) %}
 {%- set w0bm_is_mod = w0bm_user and (session.admin or session.is_moderator) %}
+{#- where a poll's plain vote / delete form returns to (nojs.rs), the comment's anchor added -#}
+{%- set w0bm_poll_back = (url.pathname ~ url.search) if (url is defined and url) else ("/" ~ item.id) %}
 {%- set w0bm_can_reply = w0bm_user and not (item.is_comments_locked and not is_mod_or_admin) and not (session.is_anon and anon_permissions and not anon_permissions.comment) %}
 {%- macro wactions(c) -%}
 <span class="w0bm-c-actions w0bm-js-only">
@@ -63,7 +68,7 @@
 {%- endmacro -%}
 {%- macro wcomment(c) -%}
 <div class="panel panel-default{% if c.is_pinned %} w0bm-pinned{% endif %}" id="c{{ c.id }}" data-id="{{ c.id }}">
-    <div class="panel-body w0bm-static-body"><a class="w0bm-cid" href="#c{{ c.id }}" title="Link to this comment">#{{ c.id }}</a>{% if c.replied_by %}<div class="w0bm-replies">↳ {% for r in c.replied_by %}<a href="#c{{ r }}">&gt;&gt;{{ r }}</a> {% endfor %}</div>{% endif %}{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+    <div class="panel-body w0bm-static-body"><a class="w0bm-cid" href="#c{{ c.id }}" title="Link to this comment">#{{ c.id }}</a>{% if c.replied_by %}<div class="w0bm-replies">↳ {% for r in c.replied_by %}<a href="#c{{ r }}">&gt;&gt;{{ r }}</a> {% endfor %}</div>{% endif %}{{ c.content_html|safe }}{{ c.attachments_html|safe }}{{ poll(c.poll, w0bm_poll_back ~ "#c" ~ c.id, csrf_token) }}</div>
     <div class="panel-footer">by {% if c.username %}<a href="/user/{{ c.username|lower }}"{% if c.username_color %} class="w0bm-usercolor" style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<span>{{ (c.name or "anonymous") }}</span>{% endif %} <small><time class="timeago" data-toggle="tooltip" data-placement="top" datetime="{{ c.iso }}" title="{{ c.iso }}">{{ c.timeago }}</time></small>{% if c.is_pinned %} <i class="fa fa-thumb-tack" title="pinned"></i>{% endif %}{{ wactions(c) }}</div>
 </div>
 {%- endmacro -%}

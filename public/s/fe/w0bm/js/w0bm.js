@@ -2163,6 +2163,8 @@
       else if (m.startsWith('audio')) body.insertAdjacentHTML('beforeend', '<br><audio src="' + escapeHTML(url) + '" controls preload="metadata"></audio>');
       else body.insertAdjacentHTML('beforeend', '<br><a href="' + escapeHTML(url) + '" download>' + escapeHTML(f.original_filename || url) + '</a>');
     });
+    // the comment's poll: the shared markup (f0ck-core.js f0ckPoll, which also votes and redraws it)
+    if (c.poll && window.f0ckPoll && !(c.is_deleted && !DATA.is_mod)) body.insertAdjacentHTML('beforeend', window.f0ckPoll.render(c.poll));
     const foot = document.createElement('div');
     foot.className = 'panel-footer';
     const name = c.is_anon ? 'Anonymous' + (c.anon_short_fingerprint ? ' (' + c.anon_short_fingerprint + ')' : '') : (c.display_name || c.username);
@@ -2217,6 +2219,13 @@
     }
   }
   loadComments();
+  // a poll voted on or deleted (f0ck-core.js redraws it in place): keep the list's data up to date,
+  // so a later redraw of the list shows it the same
+  if (commentBox) on(document, 'f0ck:poll', (e) => {
+    const d = e.detail || {};
+    const c = comments.find((x) => Number(x.id) === Number(d.comment_id));
+    if (c) c.poll = d.poll || null;
+  });
 
   commentBox?.addEventListener('click', async (e) => {
     const ts = e.target.closest('.comment_clickable_timestamp');
@@ -2349,14 +2358,24 @@
     let lastComment = '';
     let capTries = 0;
     const ta = commentForm.querySelector('textarea');
+    // the poll fields back to new after posting: empty, anonymous votes, closed
+    const pollBox = commentForm.querySelector('.w0bm-pollbuilder');
+    const resetPoll = () => {
+      if (!pollBox) return;
+      pollBox.querySelectorAll('input[type="text"], textarea').forEach((el) => { el.value = ''; });
+      pollBox.querySelectorAll('input[type="checkbox"]').forEach((el) => { el.checked = el.defaultChecked; });
+      pollBox.open = false;
+    };
     ta.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commentForm.requestSubmit(); }
     });
     commentForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(commentForm);
-      const sig = fd.get('content') + '|' + (fd.get('parent_id') || '');
-      if (!String(fd.get('content') || '').trim()) return;
+      // a comment can be just a poll (partials/pollbuilder.html)
+      const pollQ = String(fd.get('poll_question') || '').trim();
+      const sig = fd.get('content') + '|' + (fd.get('parent_id') || '') + '|' + pollQ;
+      if (!String(fd.get('content') || '').trim() && !pollQ) return;
       if (sig === lastComment) { flash('error', "nope. just don't. seriously... don't."); return; }
       if (player && player.el.tagName === 'VIDEO' && /\b\d{1,2}:\d{2}\b/.test(fd.get('content')) === false && player.currentTime() > 0) {
         fd.set('video_time', String(player.currentTime()));
@@ -2370,6 +2389,7 @@
         lastComment = sig;
         ta.value = '';
         ta.blur();
+        resetPoll();
         commentForm.querySelector('input[name="parent_id"]')?.remove();
         commentForm.querySelector('cap-widget')?.remove();
         await loadComments(r.data.comment ? r.data.comment.id : null);

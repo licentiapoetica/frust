@@ -13,6 +13,8 @@
 //  - keys: "/" search; on a f0ck ← → (or Shift+P / Shift+N) previous / next, r random, k play /
 //    pause, j / l back / forward 10 s, m mute, f full screen
 //  - custom emojis :name: in comments as pictures, and the emoji picker
+//  - comment polls: votes and live updates are f0ck-core.js' (f0ckPoll, its own capture listener);
+//    here only the poll fields of the comment form (sent while open, emptied after posting)
 //  - Flash items: starts the Ruffle player; the player volume is remembered
 //  - moderators: the × on a tag removes it
 //  - pages change in place: a click on a link of the site (or a search) fetches the page and swaps
@@ -222,7 +224,8 @@
     ta.rows = Math.min(12, Math.max(1, ta.value.split('\n').length));
   };
   document.addEventListener('input', e => {
-    if (e.target.matches?.('#comment-form textarea, .fy-comment-edit textarea')) growField(e.target);
+    // (not the poll's options: that field keeps its rows and can be pulled bigger)
+    if (e.target.matches?.('#comment-form textarea[name="content"], .fy-comment-edit textarea')) growField(e.target);
   });
 
   // ── live regions: swap [data-fy-live="name"] in from a fresh render of this page ──
@@ -413,6 +416,17 @@
     bar.querySelector('span').textContent = id ? `${name ? '@' + name + ' ' : ''}#${id}` : '';
   };
 
+  // the poll fields of the comment form, empty and closed again after the comment went out (a refused
+  // poll keeps them, with the message, to be fixed)
+  const resetPoll = (form) => {
+    const toggle = form.querySelector('.fy-poll-toggle');
+    if (!toggle) return;
+    ['poll_question', 'poll_options'].forEach(name => { if (form.elements[name]) form.elements[name].value = ''; });
+    const anon = form.elements.poll_anonymous;
+    if (anon) anon.checked = anon.defaultChecked;
+    toggle.checked = false;
+  };
+
   // a confirmation inside the page (the viewer may block confirm())
   const ask = (question) => new Promise(resolve => {
     let ok = false;
@@ -472,6 +486,13 @@
       body.content = String(body.content || '').trim();
       if (!body.content) return;
       body.parent_id = body.parent_id || null;
+      // the poll's fields (snippets/comments.html) only while they are open: closing them drops the poll
+      const pollToggle = form.querySelector('.fy-poll-toggle');
+      if (pollToggle && !pollToggle.checked) {
+        delete body.poll_question;
+        delete body.poll_options;
+        delete body.poll_anonymous;
+      }
       if (window.f0ckCaptchaGate) {
         try { await window.f0ckCaptchaGate('comment'); } catch { return; }
       }
@@ -492,6 +513,7 @@
         // the emoji picker goes with the sent comment (emoji-picker.js keeps its controller here)
         form.elements.content._f0ckEmojiPicker?.close();
         setReply(form, '', '');
+        resetPoll(form);
       } else if (form.elements.tagname) {
         form.elements.tagname.value = '';
       }

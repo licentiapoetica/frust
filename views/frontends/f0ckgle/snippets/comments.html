@@ -4,6 +4,7 @@
     (data-fg-live) from a fresh render of the page, also when a comment arrives live, and shows the
     custom emojis :name: as pictures (the server copy has them as text). Reply without
     JavaScript: a link (?reply=<id>) that fills the form's parent_id. -#}
+{%- from "snippets/comment-poll.html" import poll -%}
 {%- set here_path = (url.pathname if (url and url.pathname) else ("/" ~ item.id)) -%}
 {%- set reply_to = (parse_int(url.qs.reply) if (url and url.qs and url.qs.reply) else none) -%}
 {%- set me = ((session.user or "")|lower if session else "") -%}
@@ -16,6 +17,9 @@
     {% for b in (c.backlinks or []) %}<a href="#c{{ b }}" class="fg-quote">&gt;&gt;{{ b }}</a> {% endfor %}
   </div>
   <div class="fg-comment-body">{{ c.content_html|safe }}{{ c.attachments_html|safe }}</div>
+  {#- its poll (shared markup, snippets/comment-poll.html): plain vote forms without JavaScript,
+      with it f0ck-core.js (f0ckPoll) votes and redraws it in place, also on live votes -#}
+  {% if c.poll %}<div class="fg-comment-poll">{{ poll(c.poll, here_path ~ "#c" ~ c.id, csrf_token) }}</div>{% endif %}
   {% if is_mod_or_admin %}
   {#- mods edit a comment in place, as in f0ckm: Edit swaps the text for this field (with the
       emoji picker), Cancel brings the text back. Without JavaScript the Edit link opens it
@@ -63,7 +67,11 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="back" value="{{ here_path }}#comments">
     <p class="fg-dim fg-reply-to"{% if not reply_to %} hidden{% endif %}>Replying to <span>#{{ (reply_to or "") }}</span> &middot; <a href="{{ here_path }}#comments" class="fg-reply-cancel">cancel</a></p>
-    <textarea name="content" rows="3" placeholder="Join the discussion" required{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+    <textarea name="content" rows="3" placeholder="Join the discussion"{% if not enable_comment_polls %} required{% endif %}{% if comment_max_length %} maxlength="{{ comment_max_length }}"{% endif %}></textarea>
+    {#- a poll with the comment (question, options one per line, anonymous or public votes): the
+        shared fields, sent along by f0ckgle.js too. A comment may be just a poll, so the text is
+        only required without polls -#}
+    {% if enable_comment_polls %}{% include "snippets/comment-poll-builder.html" %}{% endif %}
     {% if "comment" in (captcha_scopes or []) %}{% include "frontends/f0ckgle/snippets/cap-image.html" %}{% endif %}
     {#- the custom emojis: a picker that inserts :name: (JavaScript, f0ckgle.js; the list comes
         from /api/v2/emojis). Without JavaScript :name: can still be typed. -#}

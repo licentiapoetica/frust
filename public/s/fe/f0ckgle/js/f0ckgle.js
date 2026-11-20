@@ -9,6 +9,8 @@
 //  - custom emojis :name: in comments as pictures, and the emoji picker
 //  - videos: f0ckm's player (v0ck); Flash items: starts the Ruffle player
 //  - moderators: the × on a tag removes it
+//  - comment polls: voting and live redraws are f0ck-core.js' (f0ckPoll, a capture listener that
+//    stops the submit before the one here); a new comment's poll fields are sent with it
 (() => {
   'use strict';
   let page = {};
@@ -236,7 +238,9 @@
     }
     if (isComment) {
       body.content = String(body.content || '').trim();
-      if (!body.content) return;
+      // a comment may be just a poll (its fields: snippets/comment-poll-builder.html, sent as they
+      // are; an invalid poll comes back as an error and the comment is not posted)
+      if (!body.content && !String(body.poll_question || '').trim()) return;
       body.parent_id = body.parent_id || null;
       if (window.f0ckCaptchaGate) {
         try { await window.f0ckCaptchaGate('comment'); } catch { return; }
@@ -254,6 +258,14 @@
       if (isComment) {
         form.elements.content.value = '';
         setReply(form, '', '');
+        // the poll fields: empty again (anonymous checked, as rendered) and folded away
+        form.querySelectorAll('.poll-builder-nojs').forEach(d => {
+          d.querySelectorAll('input, textarea').forEach(f => {
+            if (f.type === 'checkbox') f.checked = f.defaultChecked;
+            else f.value = '';
+          });
+          d.open = false;
+        });
       } else if (form.elements.tagname) {
         form.elements.tagname.value = '';
       }

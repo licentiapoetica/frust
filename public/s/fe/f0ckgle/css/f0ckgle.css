@@ -1955,6 +1955,135 @@ html.no-js .fg-comment-tools {
   color: var(--fg-dim);
 }
 
+/* ── comment polls: the shared markup and layout (/s/css/comment-poll.css, loaded before this file
+   by snippets/head.html) in f0ckgle's colours, light and dark through the --fg-* palette ── */
+body {
+  --poll-accent: var(--fg-blue);
+  --poll-border: var(--fg-border);
+  --poll-bg: var(--fg-bg);
+  --poll-option-bg: var(--fg-bg);
+  --poll-muted: var(--fg-dim);
+  --poll-danger: var(--fg-danger);
+  --poll-font: var(--fg-font);
+  --poll-dialog-bg: var(--fg-bg);
+  --poll-dialog-fg: var(--fg-text);
+}
+
+html.fg-user-font body {
+  --poll-font: inherit;
+}
+
+/* under the comment text, in line with it (the item page); a result's snippet on comments_user */
+.fg-comment-poll {
+  margin-left: 2.375rem;
+}
+
+.fg-result-text > .fg-comment-poll {
+  margin-left: 0;
+}
+
+.fg-comment-poll .comment-poll {
+  padding: .75rem 1rem;
+  box-shadow: var(--fg-shadow);
+  border-color: transparent;
+}
+
+.fg-comment-poll .poll-question {
+  color: var(--fg-text);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.fg-comment-poll .poll-option-btn {
+  min-height: 2.25rem;
+  padding: .375rem .75rem;
+  color: var(--fg-text);
+}
+
+.fg-comment-poll button.poll-option-btn:hover {
+  background: var(--fg-hover);
+}
+
+.fg-comment-poll .poll-option-voted .poll-option-btn {
+  color: var(--fg-blue-soft-text);
+  font-weight: 700;
+}
+
+.fg-comment-poll .poll-option-pct {
+  color: var(--fg-muted);
+}
+
+.fg-comment-poll .poll-footer {
+  font-size: .75rem;
+}
+
+.fg-comment-poll .poll-public-badge,
+.fg-comment-poll .poll-anon-badge {
+  color: var(--fg-dim);
+}
+
+.fg-comment-poll .poll-expired-badge {
+  border-color: var(--fg-border);
+  background: var(--fg-surface-2);
+  color: var(--fg-muted);
+}
+
+.fg-comment-poll .poll-delete-btn {
+  color: var(--fg-link);
+  text-decoration: none;
+}
+
+.fg-comment-poll .poll-delete-btn:hover,
+.fg-comment-poll .poll-delete-btn:focus-visible {
+  text-decoration: underline;
+}
+
+.fg-comment-poll .is-closed .poll-option-btn {
+  color: var(--fg-muted);
+}
+
+/* the poll fields of the comment form (snippets/comment-poll-builder.html): a link-like "Create
+   poll" that unfolds into fields like the comment field (the form lines its children up right) */
+.fg-comment-form .poll-builder-nojs {
+  align-self: stretch;
+  margin: 0;
+}
+
+.fg-comment-form .poll-builder-nojs > summary {
+  width: max-content;
+  color: var(--fg-link);
+  font-size: .8125rem;
+}
+
+.fg-comment-form .poll-builder-nojs > summary:hover {
+  text-decoration: underline;
+}
+
+.fg-comment-form .poll-builder-nojs input[type="text"],
+.fg-comment-form .poll-builder-nojs textarea {
+  max-width: none;
+  margin: 0 0 .5rem;
+  padding: .625rem .75rem;
+  border: 1px solid var(--fg-border);
+  background: var(--fg-field);
+  color: inherit;
+}
+
+.fg-comment-form .poll-builder-nojs input[type="text"]:focus,
+.fg-comment-form .poll-builder-nojs textarea:focus {
+  border-color: var(--fg-blue);
+  outline: 0;
+}
+
+.fg-comment-form .poll-builder-nojs .poll-anon-toggle {
+  color: var(--fg-muted);
+  font-size: .8125rem;
+}
+
+.fg-comment-form .poll-builder-nojs .poll-anon-toggle input {
+  accent-color: var(--fg-blue);
+}
+
 /* ── image captcha (no JavaScript) ── */
 .fg-imgcap {
   display: flex;

@@ -4,6 +4,7 @@
 {% block innerclass %}fucklaravel{% endblock %}
 {% block title %}Comments of {{ user.user }} - {{ domain }}{% endblock %}
 {% block content %}
+{%- from "snippets/comment-poll.html" import poll %}
 {% set page = ((url.qs.page|int) if (url and url.qs and url.qs.page) else 1) %}
 <div class="page-header">
     {% if user.avatar_file %}<img class="w0bm-avatar" src="/a/{{ user.avatar_file }}" alt="">{% elif (user.avatar and (user.avatar > 0)) %}<img class="w0bm-avatar" src="/t/{{ user.avatar }}.webp" alt="">{% endif %}
@@ -12,9 +13,12 @@
 <h3>Comments</h3>
 <div class="row jkh">
     <div class="col-md" id="list">
+        {%- set poll_back = (url.pathname ~ url.search) if (url is defined and url) else ("/user/" ~ (user.user|lower|urlencode) ~ "/comments") %}
         {% for c in comments %}
-        <div class="panel panel-default">
+        <div class="panel panel-default" id="c{{ c.id }}">
             <div class="panel-body w0bm-cmd" data-id="{{ c.id }}">{{ c.content }}</div>
+            {#- the comment's poll: beside the text, which w0bm.js replaces with its formatting -#}
+            {% if c.poll %}<div class="panel-body w0bm-cmd-poll">{{ poll(c.poll, poll_back ~ "#c" ~ c.id, csrf_token) }}</div>{% endif %}
             <div class="panel-footer">Upload: <a href="/{{ (c.item_slug or c.item_id) }}#c{{ c.id }}">/{{ (c.item_slug or c.item_id) }}</a> | <time class="timeago" data-toggle="tooltip" datetime="{{ c.created_at }}" title="{{ c.created_at }}">{{ c.created_at|time_ago }}</time></div>
         </div>
         {% endfor %}

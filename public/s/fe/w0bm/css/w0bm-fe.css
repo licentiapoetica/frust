@@ -776,6 +776,89 @@ a.w0bm-tag-nsfl {
     font-family: 'UnifrakturCook', 'Old English Text MT', serif;
 }
 
+/* ── Comment polls ─────────────────────────────────────────────────────────────────────────
+   The shared markup (snippets/comment-poll.html = f0ckPoll.render() in f0ck-core.js), laid out by
+   /s/css/comment-poll.css; w0bm's colours here. The poll fields of the comment form:
+   partials/pollbuilder.html. */
+body {
+    --poll-accent: #1fb2b0;
+    --poll-border: #383737;
+    --poll-bg: rgba(0, 0, 0, 0.2);
+    --poll-option-bg: #1c1c1d;
+    --poll-muted: #888;
+    --poll-danger: #e74c3c;
+    --poll-dialog-bg: #232222;
+    --poll-dialog-fg: #eee;
+}
+.commentwrapper .comment-poll,
+.w0bm-cmd-poll .comment-poll {
+    color: #c8c8c8;
+    line-height: 1.3;
+    /* the server-rendered comment keeps its line breaks with pre-line */
+    white-space: normal;
+}
+.w0bm-cmd-poll.panel-body {
+    padding-top: 0;
+}
+.comment-poll .poll-question {
+    color: #fff;
+}
+.comment-poll .poll-option-voters a {
+    line-height: 0;
+}
+/* the voters' pictures stay small (w0bm's comment images are allowed to fill the comment) */
+.commentwrapper .panel-body img.poll-voter-avatar {
+    max-width: 20px;
+}
+.comment-poll .poll-delete-btn {
+    font-size: inherit;
+}
+/* the poll fields under the comment box */
+#commentForm .w0bm-pollbuilder {
+    margin: 4px 0 0;
+}
+#commentForm .w0bm-pollbuilder > summary {
+    display: inline-block;
+    font-size: 12px;
+    color: #888;
+    user-select: none;
+}
+#commentForm .w0bm-pollbuilder > summary:hover,
+#commentForm .w0bm-pollbuilder[open] > summary {
+    color: #1fb2b0;
+}
+#commentForm .w0bm-pollbuilder > summary::-webkit-details-marker {
+    display: none;
+}
+#commentForm .w0bm-pollbuilder .form-control {
+    max-width: none;
+    height: auto;
+    min-height: 0;
+    margin: 0 0 4px;
+    color: #c8c8c8;
+    background: rgba(90, 88, 88, 0.4);
+    border: 1px solid #000;
+    box-shadow: none;
+    transition: none;
+}
+#commentForm .w0bm-pollbuilder textarea.form-control {
+    resize: vertical;
+}
+#commentForm .w0bm-pollbuilder .poll-anon-toggle {
+    margin: 0;
+    font-size: 12px;
+    font-weight: normal;
+    color: #c8c8c8;
+}
+#commentForm .w0bm-pollbuilder .poll-anon-toggle input {
+    margin: 0;
+}
+/* with polls the comment text isn't required (a comment can be just a poll), so the box is always
+   :valid, which w0bmcustom.css opens to 8em: keep it small while it's empty and not in use */
+#commentForm textarea#cinput:not([required]):placeholder-shown:not(:focus) {
+    height: 2.7em;
+}
+
 /* ── Exclude-tag button next to each tag (form .f0ck-exclude-form, f0ck-core.js) ─────────── */
 #tag-display .f0ck-exclude-form {
     display: inline;
