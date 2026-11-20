@@ -976,7 +976,15 @@
     if (data.tags != null) applyFreshTags(slide, data.tags);
   }
 
+  // The tag button's count after a pill was removed by hand
+  function syncTagCount(slide) {
+    const countEl = slide.querySelector('.js-tag-count');
+    if (countEl) countEl.textContent = slide.querySelectorAll('.scroll-tag-pill').length;
+  }
+
   function applyFreshTags(slide, tagString) {
+    const countEl = slide.querySelector('.js-tag-count');
+    if (countEl) countEl.textContent = tagString ? tagString.split(', ').filter(t => t.trim()).length : 0;
     const metaInner = slide.querySelector('.scroll-meta-inner');
     if (!metaInner) return;
     let tagsDiv = slide.querySelector('.scroll-tags');
@@ -1012,7 +1020,7 @@
                 headers: { ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}) }
               });
               const data = await resp.json();
-              if (data.success) pill.remove();
+              if (data.success) { pill.remove(); syncTagCount(slide); }
               else console.warn('[scroller] tag delete failed', data.msg);
             } catch (err) { console.error('[scroller] tag delete error', err); }
           });
@@ -1456,6 +1464,7 @@
       ${window.scrollerLoggedIn ? `
       <button class="scroll-btn js-tag-btn" data-id="${item.id}" title="${_i.add_tag || 'Add tag'}">
         <div class="scroll-btn-icon"><i class="fa-solid fa-tag"></i></div>
+        <span class="scroll-btn-count js-tag-count">${item.tags ? item.tags.split(', ').filter(t => t.trim()).length : 0}</span>
       </button>` : ''}
       <button class="scroll-btn js-share-btn" data-id="${item.id}" title="${_i.share_label || 'Share'}">
         <div class="scroll-btn-icon"><i class="fa-solid fa-share-nodes"></i></div>
@@ -1655,7 +1664,7 @@
               headers: { ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}) }
             });
             const data = await resp.json();
-            if (data.success) pill.remove();
+            if (data.success) { pill.remove(); syncTagCount(slide); }
             else console.warn('[scroller] tag delete failed', data.msg);
           } catch (err) { console.error('[scroller] tag delete error', err); }
         });
@@ -2507,7 +2516,9 @@
       if (!data.success) throw new Error(data.msg || '');
       tagBarTags = tagBarTags.filter(t => t !== tag);
       renderTagChips();
-      slideForItem(itemId)?.querySelectorAll('.scroll-tag-pill').forEach(p => { if (p.dataset.tag === tag) p.remove(); });
+      const tagSlide = slideForItem(itemId);
+      tagSlide?.querySelectorAll('.scroll-tag-pill').forEach(p => { if (p.dataset.tag === tag) p.remove(); });
+      if (tagSlide) syncTagCount(tagSlide);
     } catch (err) {
       chip.classList.remove('is-busy');
       showShareToast(err.message || tr('tag_failed', 'Couldn’t change the tags.'), true);
