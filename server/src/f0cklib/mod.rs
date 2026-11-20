@@ -597,24 +597,22 @@ pub(crate) fn tag_filter_sql(tag: &str, is_strict: bool, tagger: Option<&str>, w
         }
         return q;
     }
+    // The matching tags first (one pass over tags), then their items by tags_assign(tag_id). Joining
+    // tags per item instead made Postgres, which can't size a LIKE pattern known only at run time,
+    // walk every item of the feed and look up each of its tags (~4x slower on a tag page).
+    let matching = |term: &str| sql!("any(array(select t.id from tags t where t.normalized like (select '%' || slugify(", term, ") || '%')))");
     for (i, term) in terms.iter().enumerate() {
         if i > 0 {
             q.push(" ");
         }
         if with_albums {
-            q.append(&sql!(
-                "and (items.id in (\n            select ta.item_id from tags_assign ta join tags t on t.id = ta.tag_id where t.normalized like (select '%' || slugify(",
-                term.as_str(),
-                ") || '%')\n          ) or items.id in (\n            select ai.item_id from album_items ai join album_items_tags_assign aita on aita.album_item_id = ai.id join tags t on t.id = aita.tag_id where t.normalized like (select '%' || slugify(",
-                term.as_str(),
-                ") || '%')\n          ))"
-            ));
+            q.push("and (items.id in (select ta.item_id from tags_assign ta where ta.tag_id = ")
+                .append(&matching(term))
+                .push(") or items.id in (select ai.item_id from album_items ai join album_items_tags_assign aita on aita.album_item_id = ai.id where aita.tag_id = ")
+                .append(&matching(term))
+                .push("))");
         } else {
-            q.append(&sql!(
-                "and items.id in (select ta.item_id from tags_assign ta join tags t on t.id = ta.tag_id where t.normalized like (select '%' || slugify(",
-                term.as_str(),
-                ") || '%'))"
-            ));
+            q.push("and items.id in (select ta.item_id from tags_assign ta where ta.tag_id = ").append(&matching(term)).push(")");
         }
     }
     q
@@ -959,3 +957,4 @@ mod mime_filter_tests {
         assert_eq!(crate::settings::filter_mimes(&cfg, None), ["image", "video"]);
     }
 }
+
