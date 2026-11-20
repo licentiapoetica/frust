@@ -92,6 +92,7 @@
 
             <div class="audit-toolbar">
                 <span class="audit-range">{% if summary.total %}Newest first, {{ first|locale_number }}–{{ last|locale_number }} of {{ summary.total|locale_number }}{% endif %}</span>
+                {% if can_export %}
                 <form class="audit-export" method="get" action="/mod/audit/export">
                     {% for p in filter_pairs %}<input type="hidden" name="{{ p.name }}" value="{{ p.value }}">{% endfor %}
                     <select name="format" class="adm-text adm-select" aria-label="Export format">
@@ -100,6 +101,7 @@
                     </select>
                     <button type="submit" class="adm-btn" title="Download {{ ("these" if filter_active else "all") }} entries"><i class="fa-solid fa-download" aria-hidden="true"></i> Export</button>
                 </form>
+                {% endif %}
             </div>
 
             <ol class="audit-list" id="audit-list">

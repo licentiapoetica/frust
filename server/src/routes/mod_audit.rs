@@ -1,6 +1,6 @@
 //! Audit log page (`/mod/audit`, permission `mod_audit`): every moderation and admin action, with
-//! filters (category, action, who, target, text, dates), a summary of what matches, CSV/JSON
-//! export of the filtered entries, and for admins the log's retention and manual pruning.
+//! filters (category, action, who, target, text, dates) and a summary of what matches; for admins
+//! also CSV/JSON export of the filtered entries and the log's retention and manual pruning.
 //!
 //! Everything is plain links and forms (works without JavaScript); `views/mod/audit.js` loads
 //! older entries while scrolling and adds new ones live (`audit_entry` events, see crate::audit).
@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, HashMap};
 
 pub fn register(r: &mut Router) {
     use crate::http::Guard::{Auth, Perm};
-    r.get_g(r"^\/mod\/audit\/export\/?$", Perm(P::ModAudit), export);
+    r.get_g(r"^\/mod\/audit\/export\/?$", Auth, export);
     r.post_g(r"^\/mod\/audit\/retention\/?$", Auth, set_retention);
     r.post_g(r"^\/mod\/audit\/prune\/?$", Auth, prune);
     r.get_g(r"^\/mod\/audit\/?$", Perm(P::ModAudit), page);
@@ -314,6 +314,8 @@ fn page_data(f: &Filter, page: i64, rows: Vec<Row>, matched: &[Row], all: &[Row]
         "last": (offset + PAGE_SIZE).min(total),
         "prev_href": (page > 1).then(|| page_href(page - 1)),
         "next_href": (page < pages).then(|| page_href(page + 1)),
+        // Export, retention and pruning: admins only
+        "can_export": !manage.is_null(),
         "manage": manage,
         "tmp": null,
     })
@@ -327,7 +329,7 @@ fn csv_cell(s: &str) -> String {
     if s.contains([',', '"', '\n', '\r']) { format!("\"{}\"", s.replace('"', "\"\"")) } else { s }
 }
 
-/// `GET /mod/audit/export?format=csv|json&<filters>`: the matching entries, newest first.
+/// `GET /mod/audit/export?format=csv|json&<filters>` (admins): the matching entries, newest first.
 async fn export(st: AppState, req: Req) -> Res {
     let f = filter_of(&req);
     let w = f.sql();
@@ -525,5 +527,13 @@ mod tests {
         assert!(page.contains(r#"action="/mod/audit/retention""#) && page.contains(r#"name="days" class="adm-text audit-days" min="0" max="36500" step="1" value="90""#));
         assert!(page.contains(r#"<input type="checkbox" name="confirm" value="1" required>"#));
         assert!(page.contains(r#"<option value="other">Other (1)</option>"#));
+        assert!(page.contains(r#"action="/mod/audit/export""#));
+
+        // moderators: no export, no admin forms
+        let mut ctx = page_data(&f, 1, vec![], &matched, &all, &names, Value::Null);
+        ctx.as_object_mut().unwrap().extend(base.as_object().unwrap().clone());
+        ctx["session"]["admin"] = json!(false);
+        let html = env.get_template("mod/audit.html").unwrap().render(crate::tpl::to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{e:#}"));
+        assert!(!html.contains("/mod/audit/export") && !html.contains("/mod/audit/retention") && !html.contains("/mod/audit/prune"));
     }
 }
