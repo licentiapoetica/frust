@@ -103,7 +103,9 @@ services:
 
   f0ckm-db:
     container_name: f0ckm-db
-    image: postgres:17
+    # The Postgres major version that made f0ckm-data/postgres (a folder only works with its own).
+    # ./install.sh keeps PG_MAJOR in .env and upgrades older databases (dump and restore, rollback kept).
+    image: postgres:${PG_MAJOR:-17}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-f0ckm}
       POSTGRES_USER: ${POSTGRES_USER:-f0ckm}

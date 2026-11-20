@@ -25,6 +25,13 @@
 # that already has tables asks first (unattended: IMPORT_DB_REPLACE=1). The dump is loaded into a
 # separate database and only swapped in once it loaded completely, so a failed import changes nothing.
 # Uploaded files are not in the dump: copy them into f0ckm-data/ (see docker-compose.yml for the folders).
+#
+# Postgres: a new install starts on the current version (PG_TARGET below, kept as PG_MAJOR in .env). An
+# older database is upgraded on the next run, by itself: f0ckm is stopped, the database dumped (into
+# f0ckm-data/pg-upgrade/), restored into a new Postgres, checked table by table, and f0ckm started again.
+# The old folder stays as f0ckm-data/postgres-<old version>; when anything fails, it is put back.
+# ./install.sh --rollback-db goes back to it afterwards (losing what was written since). PG_UPGRADE=0
+# in .env stays on the old version; ./install.sh --upgrade-db upgrades anyway.
 set -euo pipefail
 
 say()  { printf '\033[1m==> %s\033[0m\n' "$*"; }
@@ -32,10 +39,14 @@ warn() { printf '\033[33mwarning: %s\033[0m\n' "$*" >&2; }
 die()  { printf '\033[31merror: %s\033[0m\n' "$*" >&2; exit 1; }
 
 IMPORT_DB=${IMPORT_DB:-}
+UPGRADE_DB=
+ROLLBACK_DB=
 while [ $# -gt 0 ]; do
     case $1 in
         --import-db) [ $# -ge 2 ] || die "--import-db needs a dump file"; IMPORT_DB=$2; shift 2 ;;
         --import-db=*) IMPORT_DB=${1#*=}; shift ;;
+        --upgrade-db) UPGRADE_DB=1; shift ;;
+        --rollback-db) ROLLBACK_DB=1; shift ;;
         -h|--help) sed -n '2,/^set -euo/{/^set -euo/d;s/^# \{0,1\}//;p}' "$0"; exit 0 ;;
         *) die "unknown option '$1' (see ./install.sh --help)" ;;
     esac
@@ -216,6 +227,96 @@ SITE_DOMAIN=${DOMAIN:-$(config_domain)}
 anubis_on() { grep -q '^COMPOSE_FILE=.*docker-compose\.anubis\.yml' .env; }
 env_sed() { if [ -w .env ]; then sed -i "$1" .env; else as_root sed -i "$1" .env; fi; }
 env_add() { printf '%s\n' "$1" | { if [ -w .env ]; then cat >> .env; else as_root tee -a .env >/dev/null; fi; }; }
+env_get() { sed -n "s/^$1=//p" .env | tail -n 1; }
+env_set() { env_sed "/^$1=/d"; env_add "$1=$2"; }
+
+# ── Postgres version ─────────────────────────────────────────────────────────────
+# f0ckm-data/postgres only works with the Postgres major version that made it; docker-compose.yml runs
+# postgres:$PG_MAJOR from .env. New databases start on PG_TARGET, older ones are upgraded to it.
+PG_TARGET=19
+PGDATA_DIR=f0ckm-data/postgres
+PGU_DIR=f0ckm-data/pg-upgrade
+PGU_FROM=       # set while an upgrade has moved the old folder away (the EXIT trap puts it back)
+PGU_DONE=       # the version upgraded from, for the closing notes
+# f0ckm-data belongs to the app user (or root); Postgres' folder in it to the container's postgres user
+fs() { if [ -w f0ckm-data ]; then "$@"; else as_root "$@"; fi; }
+db_running() { [ "$(docker inspect -f '{{.State.Running}}' f0ckm-db 2>/dev/null)" = true ]; }
+db_wait() {
+    local i
+    for i in $(seq 1 60); do
+        [ "$(docker inspect -f '{{.State.Health.Status}}' f0ckm-db 2>/dev/null)" = healthy ] && return 0
+        sleep 2
+    done
+    return 1
+}
+# The major version of the database in f0ckm-data/postgres, empty when there is none yet. The folder is
+# the container user's (mode 700): read through the running container, otherwise as root.
+pg_data_version() {
+    [ -e "$PGDATA_DIR" ] || return 0
+    if db_running && docker exec f0ckm-db test -f /data/postgres/PG_VERSION 2>/dev/null; then
+        docker exec f0ckm-db cat /data/postgres/PG_VERSION
+    elif as_root test -f "$PGDATA_DIR/PG_VERSION"; then
+        as_root cat "$PGDATA_DIR/PG_VERSION"
+    fi
+}
+# Every table's exact row count ("table|rows" lines), to compare a database before and after
+pg_counts() {
+    local q
+    q=$(docker exec f0ckm-db psql -U "$1" -d "$2" -v ON_ERROR_STOP=1 -Atqc "SELECT string_agg(format('SELECT %L, count(*) FROM %I.%I', tablename, schemaname, tablename), ' UNION ALL ' ORDER BY tablename) FROM pg_tables WHERE schemaname = 'public'")
+    docker exec f0ckm-db psql -U "$1" -d "$2" -v ON_ERROR_STOP=1 -Atqc "$q ORDER BY 1"
+}
+# Put the kept folder of Postgres $1 back in place of the one Postgres $2 made (kept as well) and start
+# everything on $1 again
+db_restore_old() {
+    local from=$1 to=$2 why=$3
+    docker stop f0ckm >/dev/null 2>&1 || true
+    compose stop f0ckm-db >/dev/null 2>&1 || true
+    if [ -e "$PGDATA_DIR" ]; then fs mv "$PGDATA_DIR" "$PGDATA_DIR-$to-$why-$(date +%Y%m%d-%H%M%S)"; fi
+    fs mv "$PGDATA_DIR-$from" "$PGDATA_DIR"
+    env_set PG_MAJOR "$from"
+    compose up -d
+}
+# EXIT trap while an upgrade runs: anything that ends the run (an error, die, Ctrl-C) after the old
+# folder was moved away puts it back, so the site runs on the old Postgres as before
+pg_upgrade_failed() {
+    local rc=$?
+    trap - EXIT
+    [ -n "$PGU_FROM" ] || exit "$rc"
+    set +e
+    warn "the upgrade to Postgres $PG_TARGET did not finish; going back to Postgres $PGU_FROM"
+    if db_restore_old "$PGU_FROM" "$PG_TARGET" failed; then
+        warn "back on Postgres $PGU_FROM with the database as it was; the upgrade's dump is in $PGU_DIR/"
+        warn "nothing is upgraded until you run ./install.sh again (PG_UPGRADE=0 in .env: never)"
+    else
+        warn "going back failed too. By hand: $COMPOSE down; mv $PGDATA_DIR $PGDATA_DIR-$PG_TARGET-failed;"
+        warn "mv $PGDATA_DIR-$PGU_FROM $PGDATA_DIR; set PG_MAJOR=$PGU_FROM in .env; $COMPOSE up -d"
+    fi
+    exit "$rc"
+}
+
+# --rollback-db: back to the folder an upgrade kept (everything written since the upgrade is lost)
+if [ -n "$ROLLBACK_DB" ]; then
+    pg_now=$(pg_data_version)
+    [ -n "$pg_now" ] || die "there is no database in $PGDATA_DIR"
+    pg_old=
+    for d in "$PGDATA_DIR"-*; do
+        # only postgres-<version> (not postgres-19-failed-<date> and the like)
+        [[ ${d##*/} =~ ^postgres-([0-9]+)$ ]] || continue
+        v=${BASH_REMATCH[1]}
+        [ "$v" -lt "$pg_now" ] && { [ -z "$pg_old" ] || [ "$v" -gt "$pg_old" ]; } && pg_old=$v
+    done
+    [ -n "$pg_old" ] || die "no kept database of an older Postgres ($PGDATA_DIR-<version>) to go back to"
+    warn "going back from Postgres $pg_now to the Postgres $pg_old database kept by the upgrade:"
+    warn "everything written since the upgrade (uploads, comments, accounts, ...) is lost"
+    ans=; [ -t 0 ] && read -r -p "Type 'rollback' to continue: " ans
+    [ "$ans" = rollback ] || [ "${ROLLBACK_DB_CONFIRM:-}" = 1 ] || die "rollback cancelled, nothing was changed (unattended: ROLLBACK_DB_CONFIRM=1)"
+    db_restore_old "$pg_old" "$pg_now" rolledback
+    # Or the next ./install.sh would upgrade it straight away again
+    env_set PG_UPGRADE 0
+    say "Back on Postgres $pg_old; the Postgres $pg_now folder is kept as $(ls -d "$PGDATA_DIR-$pg_now"-rolledback-* | tail -n 1)"
+    echo "    PG_UPGRADE=0 is set in .env, so ./install.sh stays on Postgres $pg_old; ./install.sh --upgrade-db upgrades again"
+    exit 0
+fi
 # Asked once per install (fresh or one from before Anubis); ANUBIS= in .env keeps the answer
 if [ -z "${ANUBIS:-}" ] && [ -n "$SITE_DOMAIN" ] && ! anubis_on && ! grep -q '^ANUBIS=' .env && [ -t 0 ]; then
     echo "Bot protection (Anubis) for $SITE_DOMAIN: browsers solve a short proof of work once before they get in."
@@ -513,9 +614,89 @@ import_db() {
     docker stop f0ckm >/dev/null 2>&1 || true
     sql postgres "DROP DATABASE IF EXISTS \"$name\" WITH (FORCE)"
     sql postgres "ALTER DATABASE \"$tmp\" RENAME TO \"$name\""
-    say "Imported $(sql "$name" "SELECT count(*) FROM items") items and $(sql "$name" "SELECT count(*) FROM \"user\"") users; f0ckm updates the schema on its first start"
+    say "Imported $(sql "$name" "SELECT count(*) FROM items") items and $(sql "$name" "SELECT count(*) FROM \"user\"") users${PGU_FROM:+ into Postgres $PG_TARGET}"
+    [ -n "$PGU_FROM" ] && return
+    echo "    f0ckm updates the schema on its first start."
     echo "    Uploaded files are not part of the dump: copy them into f0ckm-data/ (folders: docker-compose.yml)"
 }
+
+# Upgrade the database from Postgres $1 to $2: dump with the new pg_dump, move the old folder aside,
+# restore into a new cluster (import_db), compare every table's row count. Up to the move nothing is
+# changed; after it, any failure puts the old folder back (pg_upgrade_failed).
+pg_upgrade_db() {
+    local from=$1 to=$2 user name size free need dump
+    say "Upgrading the database from Postgres $from to $to"
+    echo "    (dump and restore; the old database stays in $PGDATA_DIR-$from for ./install.sh --rollback-db)"
+    [ ! -e "$PGDATA_DIR-$from" ] || die "$PGDATA_DIR-$from already exists (kept by an earlier upgrade?); move it elsewhere, then run ./install.sh again. Nothing was changed"
+    docker pull -q "postgres:$to" >/dev/null || die "can't download postgres:$to; nothing was changed"
+    { compose up -d f0ckm-db && db_wait; } || die "the Postgres $from database did not start (see: $COMPOSE logs f0ckm-db); nothing was changed"
+    user=$(docker exec f0ckm-db printenv POSTGRES_USER); name=$(docker exec f0ckm-db printenv POSTGRES_DB)
+
+    # Room for the dump and the new database next to the kept old one
+    size=$(docker exec f0ckm-db psql -U "$user" -d "$name" -Atqc "SELECT pg_database_size(current_database())")
+    free=$(( $(df -Pk f0ckm-data | awk 'NR == 2 { print $4 }') * 1024 ))
+    need=$(( size * 2 + 512 * 1024 * 1024 ))
+    [ "$free" -ge "$need" ] || die "the upgrade needs $(( need / 1048576 )) MB free next to f0ckm-data, there are $(( free / 1048576 )) MB; nothing was changed"
+
+    # The dump holds the whole database (password hashes too): readable by this user only
+    fs mkdir -p "$PGU_DIR"
+    [ -O "$PGU_DIR" ] || as_root chown "$(id -u):$(id -g)" "$PGU_DIR"
+    chmod 700 "$PGU_DIR"
+    dump=$PGU_DIR/$name-pg$from-$(date +%Y%m%d-%H%M%S).dump
+
+    say "Stopping f0ckm and dumping the database (with the pg_dump of Postgres $to)"
+    docker stop f0ckm >/dev/null 2>&1 || true
+    pg_counts "$user" "$name" > "$PGU_DIR/counts-pg$from.txt" \
+        || { docker start f0ckm >/dev/null 2>&1; die "counting the tables failed; nothing was changed"; }
+    # The newer pg_dump reads the old server (Postgres recommends it), in the database container's network
+    docker run --rm --network container:f0ckm-db -e PGPASSWORD="$(docker exec f0ckm-db printenv POSTGRES_PASSWORD)" \
+        "postgres:$to" pg_dump -h 127.0.0.1 -U "$user" -d "$name" -Fc > "$dump" \
+        && docker run --rm -i --network none "postgres:$to" pg_restore -l < "$dump" >/dev/null \
+        || { docker start f0ckm >/dev/null 2>&1; die "the dump failed (see above); nothing was changed, f0ckm runs on Postgres $from again"; }
+    chmod 600 "$dump"
+    say "Dumped $(( $(stat -c %s "$dump") / 1048576 )) MB to $dump"
+
+    say "Moving the Postgres $from database to $PGDATA_DIR-$from and starting Postgres $to"
+    compose stop f0ckm-db >/dev/null
+    PGU_FROM=$from
+    trap pg_upgrade_failed EXIT
+    fs mv "$PGDATA_DIR" "$PGDATA_DIR-$from"
+    env_set PG_MAJOR "$to"
+    IMPORT_DB=$dump IMPORT_DB_REPLACE=1 import_db
+
+    say "Updating the planner statistics and comparing every table"
+    docker exec f0ckm-db vacuumdb -U "$user" -d "$name" --analyze-in-stages -q
+    pg_counts "$user" "$name" > "$PGU_DIR/counts-pg$to.txt"
+    if ! diff "$PGU_DIR/counts-pg$from.txt" "$PGU_DIR/counts-pg$to.txt" >&2; then
+        die "the restored database differs from the old one (above: < Postgres $from, > Postgres $to)"
+    fi
+    trap - EXIT
+    PGU_FROM=
+    PGU_DONE=$from
+    say "Database upgraded to Postgres $to ($(wc -l < "$PGU_DIR/counts-pg$to.txt") tables, every row count the same)"
+}
+
+# Which Postgres runs the database: pinned in .env, upgraded when older than PG_TARGET
+pg_have=$(pg_data_version)
+if [ -z "$pg_have" ]; then
+    # No database yet: Postgres creates it, in the current version
+    [ "$(env_get PG_MAJOR)" = "$PG_TARGET" ] || env_set PG_MAJOR "$PG_TARGET"
+else
+    [[ $pg_have =~ ^[0-9]+$ ]] || die "can't tell which Postgres made $PGDATA_DIR (PG_VERSION says '$pg_have')"
+    if [ "$(env_get PG_MAJOR)" != "$pg_have" ]; then
+        [ -z "$(env_get PG_MAJOR)" ] || warn "PG_MAJOR=$(env_get PG_MAJOR) in .env, but Postgres $pg_have made the database; using $pg_have"
+        env_set PG_MAJOR "$pg_have"
+    fi
+    if [ "$pg_have" -lt "$PG_TARGET" ]; then
+        if [ "${PG_UPGRADE:-$(env_get PG_UPGRADE)}" = 0 ] && [ -z "$UPGRADE_DB" ]; then
+            say "Staying on Postgres $pg_have (PG_UPGRADE=0 in .env); ./install.sh --upgrade-db moves it to $PG_TARGET"
+        else
+            pg_upgrade_db "$pg_have" "$PG_TARGET"
+            env_sed '/^PG_UPGRADE=/d'
+        fi
+    fi
+fi
+
 [ -n "$IMPORT_DB" ] && import_db
 
 compose up -d
@@ -610,4 +791,10 @@ else
     say "Done: http://localhost:1337"
 fi
 echo "    Logs: ${SUDO:+sudo }$COMPOSE logs -f f0ckm    Settings: config.yaml (picked up live)"
+if [ -n "$PGU_DONE" ]; then
+    echo
+    say "The database now runs on Postgres $PG_TARGET"
+    echo "    Kept for going back: $PGDATA_DIR-$PGU_DONE (./install.sh --rollback-db; loses what was written since)"
+    echo "    and the dump in $PGU_DIR/. Once the site works, free the space: sudo rm -rf $PGDATA_DIR-$PGU_DONE $PGU_DIR"
+fi
 [ -z "$DOCKER_GROUP_NOTE" ] || warn "$DOCKER_GROUP_NOTE"
