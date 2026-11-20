@@ -375,7 +375,8 @@ window.F0ckLive = (() => {
     // onerror is always followed by onclose, so reconnecting is handled there only
     sock.onclose = (ev) => {
       if (ws !== sock) return; // replaced by a newer socket
-      console.warn('Notification socket closed', ev.code, ev.reason);
+      // Expected (server restart, proxy, network change) and handled by reconnecting below
+      window.f0ckDebug('[F0ckLive] Socket closed', ev.code, ev.reason);
       ws = null;
       // Tab hidden: don't retry now, ensure() reconnects when it is visible again
       if (document.hidden) {
@@ -397,6 +398,26 @@ window.F0ckLive = (() => {
   };
 
   const isOpen = () => !!ws && ws.readyState < WebSocket.CLOSING;
+
+  // Leaving the page: close cleanly (code 1000) instead of letting the browser drop the socket
+  // (1006), and let the page into the back/forward cache, which an open socket keeps it out of.
+  let closedForPagehide = false;
+  window.addEventListener('pagehide', () => {
+    clearTimeout(retryTimer);
+    if (!ws) return;
+    closedForPagehide = true;
+    ws.onclose = null;
+    try { ws.close(1000); } catch (e) {}
+    ws = null;
+  });
+  // Back from the back/forward cache: open it again
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted && closedForPagehide) {
+      closedForPagehide = false;
+      retryCount = 0;
+      connect();
+    }
+  });
 
   // Reconnect if the socket died (e.g. while the tab was hidden)
   const ensure = () => {
