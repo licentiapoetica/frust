@@ -1330,6 +1330,54 @@ mod tests {
         env.get_template("admin/maintenance.html").unwrap();
     }
 
+    /// The abyss (scroller.html): the comment and tag sheets, and a page data block that parses.
+    #[test]
+    fn scroller_sheets_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let base = serde_json::json!({
+            "domain": "example.org", "lang": "en", "themes_json": "[]", "anon_permissions_json": "{}",
+            "allowed_comment_images_json": "[]", "scroller_mime_cats": ["video", "image"], "captcha_scopes": [],
+            "comment_max_length": 2000, "_scrollerShowSfw": true,
+        });
+        let render = |ctx: &serde_json::Value| env.get_template("scroller.html").unwrap().render(to_jvalue(ctx)).unwrap();
+        let data_of = |out: &str| -> serde_json::Value {
+            let start = out.find(r#"id="scroller-data">"#).expect("data block") + r#"id="scroller-data">"#.len();
+            let end = start + out[start..].find("</script>").unwrap();
+            serde_json::from_str(&out[start..end]).unwrap_or_else(|e| panic!("{e}: {}", &out[start..end]))
+        };
+        let sheets = |out: &str| -> String {
+            let a = out.find("<!-- COMMENTS SHEET").expect("comments sheet");
+            let b = out.find("<!-- SHARE PANEL").expect("share panel");
+            out[a..b].to_string()
+        };
+
+        let mut ctx = base.clone();
+        ctx["session"] = serde_json::json!({ "user": "bob", "display_name": "Bob", "avatar_file": "bob.webp", "csrf_token": "tok" });
+        let out = render(&ctx);
+        // F0CKM_DUMP_SCROLLER=<dir> writes the page out, to look at it in a browser
+        if let Ok(dir) = std::env::var("F0CKM_DUMP_SCROLLER") {
+            std::fs::write(PathBuf::from(dir).join("scroller.html"), &out).unwrap();
+        }
+        let part = sheets(&out);
+        for id in ["comments-close-btn", "comments-open-link", "comment-send-btn", "tag-bar", "tag-backdrop", "tag-bar-current", "scroll-tag-suggestions", "scroll-tag-send-btn"] {
+            assert!(part.contains(&format!(r#"id="{id}""#)), "{id}\n{part}");
+        }
+        assert!(part.contains(r#"<img class="ig-self-avatar" src="/a/bob.webp""#), "{part}");
+        assert!(part.contains(">Post</button>") && part.contains(r#"maxlength="2000""#), "{part}");
+        assert!(!part.contains("style=") && !part.contains("<script") && !part.contains("border-radius"), "{part}");
+        let data = data_of(&out);
+        assert_eq!(data["i18n"]["view_replies"], "View {n} more replies");
+        assert_eq!(data["i18n"]["tag_posts"], "{n} posts");
+        assert_eq!(data["session"]["avatar"], "/a/bob.webp");
+
+        // logged out: a login note instead of the input, no tag sheet
+        let out = render(&base);
+        let part = sheets(&out);
+        assert!(part.contains(r#"class="comments-login-note""#) && !part.contains("comment-input") && !part.contains(r#"id="tag-bar""#), "{part}");
+        assert!(data_of(&out)["session"].is_null());
+    }
+
     /// snippets/comments-static.html (no-JavaScript item comments) renders the thread markup.
     #[test]
     fn static_comments_snippet_renders() {

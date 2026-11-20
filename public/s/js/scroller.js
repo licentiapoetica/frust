@@ -990,6 +990,8 @@
       if (idLink) metaInner.insertBefore(tagsDiv, idLink); else metaInner.appendChild(tagsDiv);
     }
     const newTags = tagString.split(', ').map(t => t.trim()).filter(Boolean);
+    // The list is complete: drop pills of removed tags
+    tagsDiv.querySelectorAll('.scroll-tag-pill').forEach(p => { if (!newTags.includes(p.dataset.tag)) p.remove(); });
     const existingTags = new Set([...tagsDiv.querySelectorAll('.scroll-tag-pill')].map(p => p.dataset.tag));
     for (const tag of newTags) {
       if (!existingTags.has(tag)) {
@@ -1312,6 +1314,7 @@
     slide.className = 'scroll-slide';
     slide.dataset.id = item.id;
     if (item.local_id) slide.dataset.localId = item.local_id;
+    if (item.username && !item.is_external) slide.dataset.uploader = item.username;
     slide._thumbnail = item.thumbnail; // stored for canvas redraw + applyCanvasBg fallback
 
     const bgCanvas = document.createElement('canvas');
@@ -2299,7 +2302,9 @@
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     btn.querySelector('.label').textContent = open
       ? tr('hide_replies', 'Hide replies')
-      : tr('view_replies', 'View {n} more replies').replace('{n}', box.children.length);
+      : (box.children.length === 1
+        ? tr('view_reply_one', 'View 1 more reply')
+        : tr('view_replies', 'View {n} more replies').replace('{n}', box.children.length));
   }
   function addReply(thread, el, open) {
     let box = thread.querySelector(':scope > .comment-replies');
@@ -2525,7 +2530,11 @@
       const r = await fetch(`/api/v2/tags/${itemId}`, { headers: { Accept: 'application/json' } });
       const d = await r.json();
       if (tagBarItemId !== String(itemId)) return;
-      if (d.success && Array.isArray(d.tags)) { tagBarTags = cleanTagList(d.tags); renderTagChips(); }
+      if (d.success && Array.isArray(d.tags)) {
+        tagBarTags = cleanTagList(d.tags);
+        renderTagChips();
+        if (slide) applyFreshTags(slide, tagBarTags.join(', ')); // the slide may show an older list
+      }
     } catch {}
   }
   function closeTagBar() {
@@ -2856,8 +2865,8 @@
     return picker;
   }
 
-  // Puts text at the remembered caret position (the picker and the quick reactions keep the
-  // keyboard closed on phones, so the textarea may not have focus)
+  // Puts text at the remembered caret position (the picker keeps the keyboard closed on
+  // phones, so the textarea may not have focus)
   function insertAtCaret(text) {
     if (!commentInput) return;
     const val = commentInput.value;
@@ -3090,14 +3099,6 @@
     commentInput.rows = 1;
     while (commentInput.rows < 5 && commentInput.scrollHeight > commentInput.clientHeight + 1) commentInput.rows++;
   }
-
-  // Quick reactions above the input: tap to add the emoji
-  document.getElementById('comment-quick-reactions')?.addEventListener('click', e => {
-    const b = e.target.closest('button[data-emoji]');
-    if (!b) return;
-    insertAtCaret(b.dataset.emoji);
-    b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
-  });
 
   // ── Post comment ──────────────────────────────────────────────────────────
   if (commentSendBtn) {
@@ -3934,6 +3935,16 @@
               document.cookie = `f0ck_banned=${encodeURIComponent(JSON.stringify(tombstoneData))}; Path=/; Max-Age=31536000; SameSite=Lax`;
             } catch (err) {}
             window.location.href = data.data?.redirect || '/banned';
+            return;
+          }
+          // New comments: into the open sheet / the slide's count
+          if (data.type === 'comments' && data.data) { onLiveComment(data.data); return; }
+          // Tag changes (anyone's): the slide's pills and the open tag sheet
+          if (data.type === 'tags' && data.data && data.data.item_id != null && Array.isArray(data.data.tags) && !data.data.subf0ck_id) {
+            const fresh = cleanTagList(data.data.tags);
+            const slide = slideForItem(data.data.item_id);
+            if (slide) applyFreshTags(slide, fresh.join(', '));
+            if (tagBarItemId === String(data.data.item_id)) { tagBarTags = fresh; renderTagChips(); }
             return;
           }
           if (data.type === 'notify') {

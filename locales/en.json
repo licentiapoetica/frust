@@ -917,6 +917,7 @@
     "post_comment": "Post",
     "quote": "Quote",
     "view_replies": "View {n} more replies",
+    "view_reply_one": "View 1 more reply",
     "hide_replies": "Hide replies",
     "author": "Uploader",
     "pinned": "Pinned",

@@ -88,6 +88,7 @@
       "clear_filter": {{ (t("scroller.clear_filter") or "Clear filter")|string|tojson }},
       "quote": {{ t("scroller.quote")|string|tojson }},
       "view_replies": {{ t("scroller.view_replies")|string|tojson }},
+      "view_reply_one": {{ t("scroller.view_reply_one")|string|tojson }},
       "hide_replies": {{ t("scroller.hide_replies")|string|tojson }},
       "author": {{ t("scroller.author")|string|tojson }},
       "pinned": {{ t("scroller.pinned")|string|tojson }},
@@ -432,9 +433,6 @@
       <div id="reply-indicator">
         <span class="reply-indicator-text"></span>
         <button id="reply-cancel-btn" type="button" title="{{ t("scroller.close") }}"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="ig-quick-reactions" id="comment-quick-reactions">
-        {% for e in ["❤️", "🙌", "🔥", "👏", "😢", "😍", "😮", "😂"] %}<button type="button" data-emoji="{{ e }}">{{ e }}</button>{% endfor %}
       </div>
       <div class="comment-input-row">
         <img class="ig-self-avatar" src="{{ ("/a/" ~ session.avatar_file if session.avatar_file else (("/t/" ~ session.avatar) ~ ".webp" if session.avatar else "/a/default.png")) }}" alt="" data-on="error:img-fallback" data-fallback="/a/default.png">
