@@ -815,7 +815,18 @@ class v0ck {
 
     // Attempt autoplay and show overlay if blocked
     const shouldAutoplay = !isBlurredDetail && window.f0ckSession?.disable_autoplay !== true;
-    if (shouldAutoplay) {
+    // Ask first where the browser can tell (Firefox): a blocked play() logs a console warning
+    // even when its rejection is caught.
+    let autoplayBlocked = false;
+    try {
+      if (typeof navigator.getAutoplayPolicy === 'function') {
+        const policy = navigator.getAutoplayPolicy(video);
+        autoplayBlocked = policy === 'disallowed' || (policy === 'allowed-muted' && !video.muted);
+      }
+    } catch (e) {}
+    if (shouldAutoplay && autoplayBlocked && video.paused) {
+      player.classList.add('v0ck_initial');
+    } else if (shouldAutoplay) {
       if (!video.paused) {
         player.classList.remove('v0ck_initial');
       } else {
