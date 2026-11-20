@@ -378,21 +378,10 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
         q.push(" group by items.id, items.slug ").append(&order_by).push(" limit ").bind(limit);
         q
     };
-    // The `n` items closest to `id`: up to n on each side, walked in id order, then the nearest n.
-    // (Ordering every item of the context by abs(id - x) sorted the whole feed.)
-    let nearest = |id: i32, n: i64| -> Sql {
-        let mut q = Sql::new("select * from ((");
-        q.append(&neighbour(sql!("and items.id < ", id), Sql::new("order by items.id desc"), n))
-            .push(") union all (")
-            .append(&neighbour(sql!("and items.id > ", id), Sql::new("order by items.id asc"), n))
-            .push(") ) near order by abs(near.id - ")
-            .bind(id)
-            .push(") asc limit ")
-            .bind(n);
-        q
-    };
+    // Items for the strip around the current one (the nearest NEAR of the context).
+    const NEAR: i64 = 7;
     let id32 = itemid as i32;
-    let (next_item, prev_item, start_item, end_item, cheat_items) = if o.random {
+    let (next_item, prev_item, start_item, end_item, cheat_ids) = if o.random {
         // prev/next are a random pick; first/last stay the real ends of the context (tag, user, ...)
         let qs = [
             neighbour(sql!("and items.id != ", id32), Sql::new("order by random()"), 1),
@@ -402,23 +391,25 @@ pub async fn getf0ck(st: &AppState, o: &FeedOpts<'_>) -> anyhow::Result<Value> {
         let (next, start, end) = tokio::try_join!(qs[0].fetch_all(&st.db), qs[1].fetch_all(&st.db), qs[2].fetch_all(&st.db))?;
         (next.clone(), next, start, end, vec![])
     } else {
+        // Up to NEAR items on each side, walked in id order: the first of each side is next/prev,
+        // the nearest NEAR of both are the strip. (Separate next/prev queries walked the same index
+        // again; every guest item page and its two prefetches ran them.)
         let qs = [
-            neighbour(sql!("and items.id > ", id32), Sql::new("order by items.id asc"), 1),
-            neighbour(sql!("and items.id < ", id32), Sql::new("order by items.id desc"), 1),
+            neighbour(sql!("and items.id > ", id32), Sql::new("order by items.id asc"), NEAR),
+            neighbour(sql!("and items.id < ", id32), Sql::new("order by items.id desc"), NEAR),
             neighbour(Sql::empty(), Sql::new("order by items.id asc"), 1),
             neighbour(Sql::empty(), Sql::new("order by items.id desc"), 1),
-            nearest(id32, 7),
         ];
-        let (a, b, c, d, e) = tokio::try_join!(
-            qs[0].fetch_all(&st.db),
-            qs[1].fetch_all(&st.db),
-            qs[2].fetch_all(&st.db),
-            qs[3].fetch_all(&st.db),
-            qs[4].fetch_all(&st.db),
-        )?;
-        (a, b, c, d, e)
+        let (above, below, start, end) =
+            tokio::try_join!(qs[0].fetch_all(&st.db), qs[1].fetch_all(&st.db), qs[2].fetch_all(&st.db), qs[3].fetch_all(&st.db))?;
+        let mut near: Vec<i64> = above.iter().chain(below.iter()).filter_map(|r| r.i64("id")).collect();
+        near.sort_by_key(|id| (id - itemid).abs());
+        near.truncate(NEAR as usize);
+        let next = above.into_iter().take(1).collect();
+        let prev = below.into_iter().take(1).collect();
+        (next, prev, start, end, near)
     };
-    let mut cheat: Vec<i64> = std::iter::once(itemid).chain(cheat_items.iter().filter_map(|r| r.i64("id"))).collect();
+    let mut cheat: Vec<i64> = std::iter::once(itemid).chain(cheat_ids).collect();
     cheat.sort();
 
     // 3. Metadata
