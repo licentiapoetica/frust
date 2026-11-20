@@ -12,6 +12,12 @@
   padding: 0;
 }
 
+/* VCR (loader logo, comment links): this page has no f0ckm.css to declare it; preloaded in scroller.html */
+@font-face {
+  font-family: 'VCR';
+  src: url('/s/vcr.ttf') format('truetype');
+}
+
 /* Kill all mobile tap highlights globally */
 * {
   -webkit-tap-highlight-color: transparent;

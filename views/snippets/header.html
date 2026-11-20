@@ -32,7 +32,11 @@
       {% endif %}
     }
   </style>
+  {#- VCR is the navbar brand's font: preload it only when the brand shows text in it (not an
+      image alone, not the admin's brand font), or the browser warns about an unused preload -#}
+  {% if (not brand_font) and (custom_navbar_brand_text or not custom_brand_image) %}
   <link rel="preload" href="/s/vcr.ttf" as="font" type="font/ttf" crossorigin>
+  {% endif %}
   <link rel="stylesheet" href="/s/fa/all.min.css">
   <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
   {% if (not private_society or session) %}
