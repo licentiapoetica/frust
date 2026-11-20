@@ -23260,14 +23260,18 @@ div#flash,
   display: block;
 }
 
+/* No shadow: the site's .modal-content (and the light theme's) would add one */
+.chan-rehost-modal .chan-rehost-modal-content.modal-content {
+  box-shadow: none !important;
+}
+
 .chan-rehost-modal .chan-rehost-modal-content,
 .chan-rehost-modal.chan-rehost-popup-mode .chan-rehost-modal-content {
   position: fixed !important;
   width: 270px !important;
   max-width: calc(100vw - 20px) !important;
-  background: #18181b !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  background: var(--dropdown-bg) !important;
+  border: 1px solid color-mix(in srgb, var(--white) 18%, transparent) !important;
   padding: 10px 12px !important;
   text-align: left !important;
   box-sizing: border-box !important;
@@ -23292,13 +23296,13 @@ div#flash,
   justify-content: space-between;
   margin-bottom: 8px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid color-mix(in srgb, var(--white) 8%, transparent);
 }
 
 .chan-rehost-popup-title {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #d4d4d8;
+  color: var(--white);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -23307,14 +23311,14 @@ div#flash,
 }
 
 .chan-rehost-popup-title i {
-  color: #4ade80;
+  color: var(--accent);
   font-size: 0.82rem;
 }
 
 .chan-rehost-popup-close {
   background: none;
   border: none;
-  color: #71717a;
+  color: var(--text-muted, #888);
   font-size: 1.15rem;
   cursor: pointer;
   padding: 0 4px;
@@ -23323,7 +23327,7 @@ div#flash,
 }
 
 .chan-rehost-popup-close:hover {
-  color: #fff;
+  color: var(--white);
 }
 
 .chan-rehost-ratings.chan-rehost-popup-ratings {
@@ -23337,9 +23341,9 @@ div#flash,
   padding: 6px 2px;
   font-size: 0.72rem;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: #a1a1aa;
+  border: 1px solid color-mix(in srgb, var(--white) 12%, transparent);
+  background: color-mix(in srgb, var(--white) 5%, transparent);
+  color: var(--text-muted, #888);
   cursor: pointer;
   transition: all 0.12s ease;
   display: flex;
@@ -23350,8 +23354,8 @@ div#flash,
 }
 
 .chan-rehost-ratings.chan-rehost-popup-ratings .chan-rehost-pill:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: color-mix(in srgb, var(--white) 12%, transparent);
+  color: var(--white);
 }
 
 .chan-rehost-popup-actions {
@@ -23365,8 +23369,8 @@ div#flash,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: #16a34a !important;
-  color: #fff !important;
+  background: var(--accent) !important;
+  color: var(--black) !important;
   border: none !important;
   padding: 6px 12px;
   font-size: 0.8rem;
@@ -23376,7 +23380,7 @@ div#flash,
 }
 
 .chan-rehost-popup-save-btn:hover {
-  background: #15803d !important;
+  background: rgba(var(--accent-rgb), 0.85) !important;
 }
 
 .chan-rehost-popup-save-btn:disabled {
@@ -23385,11 +23389,10 @@ div#flash,
 }
 
 .chan-rehost-modal-content {
-  background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--dropdown-bg);
+  border: 1px solid color-mix(in srgb, var(--white) 14%, transparent);
   width: 92%;
   max-width: 480px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
   padding: 22px 24px;
   text-align: left;
   box-sizing: border-box;
@@ -23400,20 +23403,20 @@ div#flash,
   justify-content: space-between;
   margin-bottom: 18px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  border-bottom: 1px solid color-mix(in srgb, var(--white) 9%, transparent);
 }
 .chan-rehost-modal-title {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--white);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 .chan-rehost-modal-post-link {
   font-size: 0.85rem;
-  color: #4ade80;
+  color: var(--accent);
   text-decoration: none;
   font-weight: 600;
   margin-left: 6px;
@@ -23424,14 +23427,14 @@ div#flash,
 .chan-rehost-modal-close {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted, #888);
   font-size: 1.4rem;
   cursor: pointer;
   padding: 2px 6px;
   line-height: 1;
 }
 .chan-rehost-modal-close:hover {
-  color: #fff;
+  color: var(--white);
 }
 .chan-rehost-form-group {
   margin-bottom: 16px;
@@ -23440,7 +23443,7 @@ div#flash,
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #aaa;
+  color: var(--text-muted, #888);
   margin-bottom: 7px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -23454,9 +23457,9 @@ div#flash,
   padding: 8px 4px;
   font-size: 0.82rem;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: #ccc;
+  border: 1px solid color-mix(in srgb, var(--white) 12%, transparent);
+  background: color-mix(in srgb, var(--white) 5%, transparent);
+  color: var(--white);
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
@@ -23465,43 +23468,43 @@ div#flash,
   gap: 5px;
 }
 .chan-rehost-pill:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: color-mix(in srgb, var(--white) 12%, transparent);
+  color: var(--white);
 }
 .chan-rehost-pill.active.untagged {
-  background: #3f3f46;
-  border-color: #71717a;
+  background: var(--badge-untagged);
+  border-color: var(--badge-untagged);
   color: #fff;
 }
 .chan-rehost-pill.active.sfw {
-  background: #15803d;
-  border-color: #22c55e;
+  background: var(--badge-sfw);
+  border-color: var(--badge-sfw);
   color: #fff;
 }
 .chan-rehost-pill.active.nsfw {
-  background: #b91c1c;
-  border-color: #ef4444;
+  background: var(--badge-nsfw);
+  border-color: var(--badge-nsfw);
   color: #fff;
 }
 .chan-rehost-pill.active.nsfl {
-  background: #450a0a;
-  border-color: #991b1b;
-  color: #fca5a5;
+  background: var(--badge-nsfl);
+  border-color: var(--badge-nsfl);
+  color: #fff;
 }
 .chan-rehost-input {
   width: 100%;
   box-sizing: border-box;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: color-mix(in srgb, var(--black) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--white) 15%, transparent);
   padding: 9px 12px;
-  color: #fff;
+  color: var(--white);
   font-family: inherit;
   font-size: 0.88rem;
   outline: none;
   transition: border-color 0.15s;
 }
 .chan-rehost-input:focus {
-  border-color: #3b82f6;
+  border-color: var(--accent);
 }
 .chan-rehost-textarea {
   resize: vertical;
@@ -23520,7 +23523,7 @@ div#flash,
   transition: background 0.15s, color 0.15s;
 }
 .chan-rehost-edit-btn:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: color-mix(in srgb, var(--white) 20%, transparent) !important;
 }
 /* Tap-to-activate sliders on touch devices (see f0ckm.js): locked sliders let touches through to the page,
    so scrolling over them can't change a value; a tap unlocks one */
@@ -34987,13 +34990,12 @@ body:has(#main > .container.adm.up) #bg {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 :where(.chan-catalogue-page) .chan-thread-card:hover {
   transform: translateY(-3px);
   border-color: rgba(var(--accent-rgb), 0.4);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 :where(.chan-catalogue-page) .chan-thread-thumb-link {
@@ -35430,7 +35432,7 @@ html:not(.no-js) .chan-page .chan-nojs-only {
   border: 1px solid var(--border-color, color-mix(in srgb, var(--white) 8%, transparent));
   border-radius: 0;
   padding: 14px 18px;
-  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, background-color 0.2s;
   scroll-margin-top: 80px;
 }
 
@@ -35470,7 +35472,8 @@ html:not(.no-js) .chan-page .chan-nojs-only {
 }
 
 body:where(:has(.chan-thread-page)).onara-modal-open:not(.onara-modal-closing) .chan-thumb-link.onara-active .chan-thumb-img {
-  box-shadow: 0 0 0 2px var(--accent), 0 0 15px rgba(var(--accent-rgb), 0.6) !important;
+  outline: 2px solid var(--accent) !important;
+  outline-offset: -2px;
 }
 
 body:where(:has(.chan-thread-page)).onara-modal-open:not(.onara-modal-closing) .chan-post-card:not(.onara-active):not(.active-thread-post) {
@@ -35495,8 +35498,8 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-post-card.active-t
 }
 
 body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-active .chan-thumb-img {
-  box-shadow: none !important;
-  transition: box-shadow 0.25s ease !important;
+  outline: none !important;
+  transition: outline-color 0.25s ease !important;
 }
 
 :where(body:has(.chan-thread-page)) .chan-post-rehosted-pill {
@@ -35533,7 +35536,6 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
   z-index: 2;
 }
 
@@ -35691,7 +35693,6 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   font-size: 0.65rem;
   pointer-events: none;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
   z-index: 2;
 }
 
@@ -35805,7 +35806,7 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   cursor: default;
 }
 
-:where(body:has(.chan-thread-page)) .chan-rehost-btn.loading {
+:where(body:has(.chan-thread-page)) .chan-rehost-btn.is-busy {
   opacity: 0.6;
   pointer-events: none;
 }
@@ -35861,7 +35862,7 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   color: #ff4b4b;
 }
 
-:where(body:has(.chan-thread-page)) .chan-card-fav-btn.loading {
+:where(body:has(.chan-thread-page)) .chan-card-fav-btn.is-busy {
   opacity: 0.6;
   pointer-events: none;
 }
@@ -35931,7 +35932,6 @@ body:where(:has(.chan-thread-page)).onara-modal-closing .chan-thumb-link.onara-a
   color: var(--white) !important;
   background: rgba(var(--accent-rgb), 0.35) !important;
   border-color: rgba(var(--accent-rgb), 0.6) !important;
-  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.35);
 }
 
 :where(body:has(.chan-thread-page)) .chan-ref,

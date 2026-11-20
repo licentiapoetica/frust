@@ -125,10 +125,12 @@
 
   async function rehost(form) {
     const btn = form.querySelector('button');
-    if (!btn || btn.classList.contains('loading')) return;
+    if (!btn || btn.classList.contains('is-busy')) return;
     const before = Array.from(btn.childNodes, (n) => n.cloneNode(true));
-    btn.classList.add('loading');
-    btn.replaceChildren(icon('fa-solid fa-circle-notch fa-spin'), ' Rehosting…');
+    btn.classList.add('is-busy');
+    // Same size while busy: only the icon turns into a spinner
+    btn.replaceChildren(icon('fa-solid fa-circle-notch fa-spin'), ' Rehost');
+    btn.setAttribute('aria-busy', 'true');
     try {
       const data = await post(form);
       const box = form.closest('.chan-rehost-container');
@@ -139,7 +141,8 @@
         window.openChanRehostModal({ itemId: Number(data.item_id), anchorEl: edit });
       }
     } catch (err) {
-      btn.classList.remove('loading');
+      btn.classList.remove('is-busy');
+      btn.removeAttribute('aria-busy');
       btn.replaceChildren(...before);
       flash(err.message || 'Rehosting failed', 'error');
     }
@@ -147,12 +150,12 @@
 
   async function favourite(form) {
     const btn = form.querySelector('.chan-card-fav-btn');
-    if (!btn || btn.classList.contains('loading')) return;
+    if (!btn || btn.classList.contains('is-busy')) return;
     const wasFaved = btn.classList.contains('favorited');
     const rehostFirst = !!form.querySelector('input[name="fav"]');
     // Shown at once; undone if the server says no
     setFavButton(btn, !wasFaved);
-    btn.classList.add('loading');
+    btn.classList.add('is-busy');
     if (navigator.vibrate) navigator.vibrate(50);
     try {
       const data = await post(form);
@@ -170,7 +173,7 @@
       setFavButton(btn, wasFaved);
       flash(err.message || 'Could not update the favorite', 'error');
     } finally {
-      btn.classList.remove('loading');
+      btn.classList.remove('is-busy');
     }
   }
 
