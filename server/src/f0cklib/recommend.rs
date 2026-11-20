@@ -74,7 +74,7 @@ impl Common {
         let mut q = Sql::new("AND ");
         q.push(&self.modequery).push(" ");
         if let Some(gf) = &self.globalfilter {
-            q.push("AND NOT EXISTS (SELECT 1 FROM tags_assign WHERE item_id = items.id AND (").push(gf).push(")) ");
+            q.push("AND ").push(&super::hidden_items_sql(gf, "items.id")).push(" ");
         }
         if !self.excluded.is_empty() {
             q.push("AND NOT EXISTS (SELECT 1 FROM tags_assign WHERE item_id = items.id AND tag_id = ANY(").bind(self.excluded.clone()).push("::int[])) ");

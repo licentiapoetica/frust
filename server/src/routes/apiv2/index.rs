@@ -633,7 +633,7 @@ async fn items_get(st: AppState, req: Req) -> Res {
     q.push(&modequery).push(" and active = true ").append(&visibility).push(" ");
     if s::is_anon_session(session) {
         if let Some(gf) = f0cklib::global_filter(&st, &cfg, session) {
-            q.push(r#"and not exists (select 1 from tags_assign where item_id = "items".id and ("#).push(&gf).push(")) ");
+            q.push("and ").push(&f0cklib::hidden_items_sql(&gf, r#""items".id"#)).push(" ");
         }
     }
     if !excluded.is_empty() {

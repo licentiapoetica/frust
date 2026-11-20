@@ -136,18 +136,28 @@ pub(crate) fn global_filter(st: &AppState, cfg: &Config, session: Option<&Sessio
     if tags.is_empty() {
         return None;
     }
-    Some(tags.iter().map(|n| format!("tag_id = {n}")).collect::<Vec<_>>().join(" or "))
+    // One array, not `tag_id = a or tag_id = b or …`: with ~150 nsfp tags the OR chain became
+    // ~150 index probes per item checked (100 % CPU on w0bm). Only integers, safe to inline.
+    Some(format!("tag_id = any('{{{}}}'::int[])", tags.iter().map(i64::to_string).collect::<Vec<_>>().join(",")))
 }
 
-/// `and not exists (... globalfilter)` for guests and anonymous sessions, empty otherwise.
+/// `<col> not in (items carrying a filtered tag)` for a [`global_filter`] condition. The subquery
+/// runs once and is hashed; a correlated `not exists (… item_id = items.id …)` probed tags_assign
+/// again for every item the listing looked at. (tags_assign.item_id is part of its primary key, so
+/// never null and `not in` means the same as `not exists`.)
+pub(crate) fn hidden_items_sql(gf: &str, col: &str) -> String {
+    format!("{col} not in (select item_id from tags_assign where {gf})")
+}
+
+/// `and <items.id not in nsfp items>` for guests and anonymous sessions, empty otherwise.
 pub(crate) fn global_filter_sql(st: &AppState, cfg: &Config, session: Option<&Session>) -> Sql {
     if !is_anon_session(session) {
         return Sql::empty();
     }
     match global_filter(st, cfg, session) {
         Some(gf) => {
-            let mut q = Sql::new("and not exists (select 1 from tags_assign where item_id = items.id and (");
-            q.push(&gf).push("))");
+            let mut q = Sql::new("and ");
+            q.push(&hidden_items_sql(&gf, "items.id"));
             q
         }
         None => Sql::empty(),
