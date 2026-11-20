@@ -559,7 +559,7 @@ async fn generic(st: AppState, req: Req) -> Res {
     data["session"] = session_value(page_session);
 
     if is_item && data["item"].is_object() {
-        item_template_flags(&cfg, &mut data, page_session, req.session());
+        item_template_flags(&st, &mut data, page_session, req.session());
         // ?meta=1: the "extract metadata" tool's tag suggestions rendered with the page, so the
         // frontends' edit dialogs (f0ckgle, f0ckyou) offer them without JavaScript too
         // (meta_fields, or meta_error with the reason). Only for whoever may manage the item.
@@ -686,17 +686,15 @@ pub(crate) async fn hall_choices(st: &AppState, s: &Session, item_id: i32) -> se
     out
 }
 
-pub(crate) fn item_template_flags(cfg: &crate::config::Config, data: &mut Value, session: Option<&Session>, real_session: Option<&Session>) {
-    let is_anon = session.map(|s| s.is_anon || s.user == "anonymous" || s.user.starts_with("anon_")).unwrap_or(false);
+pub(crate) fn item_template_flags(st: &AppState, data: &mut Value, session: Option<&Session>, real_session: Option<&Session>) {
+    let cfg = &st.cfg();
     let item_user = data["item"]["username"].as_str().unwrap_or("").to_string();
     let is_mod_or_admin = session.map(|s| s.admin || s.is_moderator).unwrap_or(false);
     let owns = session.map(|s| !s.user.is_empty() && !item_user.is_empty() && s.user.to_lowercase() == item_user.to_lowercase()).unwrap_or(false);
-    let can_manage = !is_anon && (is_mod_or_admin || owns);
+    let can_manage = crate::perms::may_edit_item(st, session, owns);
     let owner_name = s::session_owner_name(session);
-    let can_rate = can_manage
-        || (is_anon
-            && s::can_anon_do(cfg, "rate_item")
-            && owner_name.map(|n| !item_user.is_empty() && n.to_lowercase() == item_user.to_lowercase()).unwrap_or(false));
+    let owns_as = owner_name.map(|n| !item_user.is_empty() && n.to_lowercase() == item_user.to_lowercase()).unwrap_or(false);
+    let can_rate = crate::perms::may_rate_item(st, session, owns_as);
     let mime = data["item"]["mime"].as_str().unwrap_or("").to_string();
     let mimes = cfg.mimes();
     let ext = mimes.get(&mime).and_then(Value::as_str);

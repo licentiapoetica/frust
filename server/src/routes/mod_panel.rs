@@ -12,6 +12,7 @@
 //! * Pending files are served by basename only, after percent-decoding (like the deleted route).
 
 use crate::db::{Row, RowExt};
+use crate::perms::P;
 use crate::http::{Req, Res, Router, files, html, json_raw, raw, reply};
 use crate::media::{self, delete as mdelete, is_plain_name, queue};
 use crate::social::helpers::{audit_log, js_number, js_str, notify};
@@ -23,29 +24,29 @@ use serde_json::{Map, Value, json};
 use std::path::{Path, PathBuf};
 
 pub fn register(r: &mut Router) {
-    use crate::http::Guard::{Auth, ModAuth};
+    use crate::http::Guard::{Auth, ModAuth, Perm};
     r.get_g(r"^\/mod(\/)?$", ModAuth, dashboard);
-    r.get_g(r"^\/mod\/reports\/?$", ModAuth, reports_page);
-    r.get_g(r"^\/mod\/approve\/?", ModAuth, approve_queue);
-    r.get_g(r"^\/mod\/trash\/?$", ModAuth, trash_page);
-    r.post_g(r"^\/mod\/approve\/?", ModAuth, approve);
+    r.get_g(r"^\/mod\/reports\/?$", Perm(P::ModReports), reports_page);
+    r.get_g(r"^\/mod\/approve\/?", Perm(P::ModApprove), approve_queue);
+    r.get_g(r"^\/mod\/trash\/?$", Perm(P::ModDeleteItems), trash_page);
+    r.post_g(r"^\/mod\/approve\/?", Perm(P::ModApprove), approve);
     r.post_g(r"^\/mod\/deny\/?", ModAuth, deny);
-    r.get_g(r"^\/mod\/audit\/?", ModAuth, audit);
+    r.get_g(r"^\/mod\/audit\/?", Perm(P::ModAudit), audit);
     r.post_g(r"^\/mod\/deny-multi\/?", ModAuth, deny_multi);
-    r.get_g(r"^\/mod\/pending\/(?<type>[btca])\/(?<file>.+)", ModAuth, pending_file);
-    r.get_g(r"^\/mod\/deleted\/(?<type>[bt])\/(?<file>.+)", ModAuth, deleted_file);
-    r.post_g(r"^\/mod\/album-item\/deny\/?$", ModAuth, album_item_deny);
-    r.post_g(r"^\/mod\/trash\/restore\/?$", ModAuth, trash_restore);
+    r.get_g(r"^\/mod\/pending\/(?<type>[btca])\/(?<file>.+)", Perm(P::ModApprove), pending_file);
+    r.get_g(r"^\/mod\/deleted\/(?<type>[bt])\/(?<file>.+)", Perm(P::ModDeleteItems), deleted_file);
+    r.post_g(r"^\/mod\/album-item\/deny\/?$", Perm(P::ModDeleteItems), album_item_deny);
+    r.post_g(r"^\/mod\/trash\/restore\/?$", Perm(P::ModDeleteItems), trash_restore);
     r.post_g(r"^\/mod\/trash\/purge\/?$", Auth, trash_purge);
     r.post_g(r"^\/mod\/(?:purge-trash-all|trash\/purge-all)\/?$", Auth, purge_all);
-    r.get_g(r"^\/mod\/motd\/?$", ModAuth, motd_page);
-    r.post_g(r"^\/mod\/motd\/?$", ModAuth, motd_save);
-    r.post_g(r"^\/mod\/pin\/?", ModAuth, pin);
-    r.post_g(r"^\/mod\/unpin\/?", ModAuth, unpin);
-    r.post_g(r"^\/mod\/lists\/add\/?$", ModAuth, halls_add);
-    r.post_g(r"^\/mod\/lists\/remove\/?$", ModAuth, halls_remove);
-    r.post_g(r"^\/mod\/lists\/update\/?$", ModAuth, halls_update);
-    r.get_g(r"^\/mod\/lists\/?$", ModAuth, halls_page);
+    r.get_g(r"^\/mod\/motd\/?$", Perm(P::ModMotd), motd_page);
+    r.post_g(r"^\/mod\/motd\/?$", Perm(P::ModMotd), motd_save);
+    r.post_g(r"^\/mod\/pin\/?", Perm(P::ModEditItems), pin);
+    r.post_g(r"^\/mod\/unpin\/?", Perm(P::ModEditItems), unpin);
+    r.post_g(r"^\/mod\/lists\/add\/?$", Perm(P::ModLists), halls_add);
+    r.post_g(r"^\/mod\/lists\/remove\/?$", Perm(P::ModLists), halls_remove);
+    r.post_g(r"^\/mod\/lists\/update\/?$", Perm(P::ModLists), halls_update);
+    r.get_g(r"^\/mod\/lists\/?$", Perm(P::ModLists), halls_page);
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -570,6 +571,11 @@ async fn deny(st: AppState, mut req: Req) -> Res {
         .await?;
     let Some(item) = item else { return jr(200, json!({ "success": false, "msg": "Item not found" })) };
 
+    // A pending upload is denied in the approval queue, a live one deleted
+    let need = if item.bool("active") { P::ModDeleteItems } else { P::ModApprove };
+    if !item.bool("is_deleted") && !crate::perms::can(&st, req.session(), need) {
+        return Ok(crate::perms::denied(need));
+    }
     if item.bool("is_deleted") {
         // Purge (admins only)
         if !is_admin(&req) {
@@ -635,6 +641,10 @@ async fn deny_multi(st: AppState, mut req: Req) -> Res {
         else {
             continue;
         };
+        let need = if item.bool("active") { P::ModDeleteItems } else { P::ModApprove };
+        if !item.bool("is_deleted") && !crate::perms::can(&st, req.session(), need) {
+            continue;
+        }
         if item.bool("is_deleted") {
             if !admin {
                 continue;

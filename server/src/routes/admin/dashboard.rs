@@ -14,8 +14,8 @@ pub fn register(r: &mut Router) {
     r.get_g(r"^\/admin(\/)?$", Guard::Auth, dashboard);
     r.get_g(r"^\/admin\/sessions(\/)?$", Guard::Auth, sessions_page);
     r.post_g(r"^\/api\/v2\/admin\/sessions\/delete\/?$", Guard::Auth, session_delete);
-    r.get_g(r"^\/admin\/approve\/?", Guard::ModAuth, approve_redirect);
-    r.get_g(r"^\/admin\/deny\/?", Guard::ModAuth, deny_redirect);
+    r.get_g(r"^\/admin\/approve\/?", crate::http::Guard::Perm(crate::perms::P::ModApprove), approve_redirect);
+    r.get_g(r"^\/admin\/deny\/?", crate::http::Guard::Perm(crate::perms::P::ModApprove), deny_redirect);
     r.post_g(r"^\/admin\/deny-multi\/?", Guard::Auth, |_st, _req| async { Ok(location(307, "/mod/deny-multi")) });
     r.post_g(r"^\/admin\/purge-trash-all\/?", Guard::Auth, |_st, _req| async { Ok(location(307, "/mod/purge-trash-all")) });
 
@@ -41,7 +41,7 @@ pub fn register(r: &mut Router) {
     r.get_g(r"^\/admin\/terms\/?$", Guard::Auth, |st, req| text_page(st, req, PageText::Terms));
     r.post_g(r"^\/admin\/terms\/?$", Guard::Auth, |st, req| text_save(st, req, PageText::Terms));
 
-    r.get_g(r"^\/admin\/lists\/?$", Guard::ModAuth, halls_page);
+    r.get_g(r"^\/admin\/lists\/?$", crate::http::Guard::Perm(crate::perms::P::ModLists), halls_page);
     r.get_g(r"^\/admin\/chat\/?$", Guard::Auth, chat_page);
     r.get_g(r"^\/admin\/koepfe\/?$", Guard::Auth, koepfe_page);
     r.get_g(r"^\/api\/v2\/admin\/koepfe\/?$", Guard::Auth, koepfe_list);
@@ -103,6 +103,7 @@ async fn dashboard(st: AppState, req: Req) -> Res {
         "manual_approval": s.manual_approval,
         "min_tags": s.min_tags,
         "trusted_uploads": s.trusted_uploads,
+        "upload_size": upload_size_data(&st, &cfg),
         "registration_open": st.settings.registration_open(&cfg),
         "registration_web_toggle_enabled": cfg.enabled("websrv.open_registration_web_toggle"),
         "registration_applications": s.registration_applications,
@@ -422,14 +423,68 @@ fn parse_int(v: Option<String>) -> Option<i64> {
     v.as_deref().and_then(crate::social::helpers::js_parse_int)
 }
 
+/// Upload size settings for the admin panel: the values set there (MiB, empty: the config's)
+/// and the config values they replace.
+fn upload_size_data(st: &AppState, cfg: &crate::config::Config) -> Value {
+    let s = st.settings.get();
+    let mib = |b: f64| crate::util::js_num((b / (1024.0 * 1024.0) * 100.0).round() / 100.0);
+    json!({
+        "max_mib": if s.max_file_size > 0 { mib(s.max_file_size as f64) } else { String::new() },
+        "multiplier": if s.upload_multiplier > 0.0 { crate::util::js_num(s.upload_multiplier) } else { String::new() },
+        "config_max_mib": mib(crate::settings::config_max_file_size(cfg)),
+        "config_multiplier": crate::util::js_num(crate::settings::config_upload_multiplier(cfg)),
+        "limit": crate::util::format_size_f(st.settings.upload_limit(cfg, false)),
+        "limit_large": crate::util::format_size_f(st.settings.upload_limit(cfg, true)),
+    })
+}
+
+/// An on/off field: "on", or the no-JS form's hidden "off" followed by the checkbox's "on" (the
+/// body joins repeated fields with commas, the last one wins).
+fn switch(body: &Value, key: &str) -> Option<bool> {
+    body_str(body, key).map(|v| v.rsplit(',').next() == Some("on"))
+}
+
+/// Upload size limit field in MiB: `Some(0)` for empty (the config's), `None` for invalid.
+fn parse_max_mib(v: &str) -> Option<i64> {
+    let v = v.trim().replace(',', ".");
+    if v.is_empty() {
+        return Some(0);
+    }
+    let mib = v.parse::<f64>().ok().filter(|m| m.is_finite() && *m > 0.0 && *m <= 1024.0 * 1024.0)?;
+    Some((mib * 1024.0 * 1024.0).round() as i64)
+}
+
+/// Multiplier field: `Some(0.0)` for empty (the config's), `None` for invalid (below 1).
+fn parse_multiplier(v: &str) -> Option<f64> {
+    let v = v.trim().replace(',', ".");
+    if v.is_empty() {
+        return Some(0.0);
+    }
+    v.parse::<f64>().ok().filter(|m| m.is_finite() && *m >= 1.0 && *m <= 1000.0)
+}
+
 async fn settings_save(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
     let body = req.post().await?.clone();
-    let manual_approval = body_str(&body, "manual_approval").as_deref() == Some("on");
-    let registration_open = body_str(&body, "registration_open").as_deref() == Some("on");
+    let manual_approval = switch(&body, "manual_approval") == Some(true);
+    let registration_open = switch(&body, "registration_open") == Some(true);
     // Left out by clients that don't know them: unchanged
-    let applications = body_str(&body, "registration_applications").map(|v| v == "on");
-    let applications_email = body_str(&body, "applications_require_email").map(|v| v == "on");
+    let applications = switch(&body, "registration_applications");
+    let applications_email = switch(&body, "applications_require_email");
+    let max_file_size = match body_str(&body, "max_file_size_mib") {
+        None => None,
+        Some(v) => match parse_max_mib(&v) {
+            Some(b) => Some(b),
+            None => return settings_error(&req, "Max upload size: a number of MB above 0, or empty for the config value"),
+        },
+    };
+    let upload_multiplier = match body_str(&body, "upload_multiplier") {
+        None => None,
+        Some(v) => match parse_multiplier(&v) {
+            Some(m) => Some(m),
+            None => return settings_error(&req, "Upload multiplier: a number from 1 to 1000, or empty for the config value"),
+        },
+    };
     let min_tags = parse_int(body_str(&body, "min_tags")).unwrap_or(0).max(0);
     // The old `Math.max(0, parseInt(x) ?? 3)` stored "NaN" for a non-numeric value; default to 3 instead.
     let trusted_uploads = parse_int(body_str(&body, "trusted_uploads")).unwrap_or(0).max(0);
@@ -447,7 +502,23 @@ async fn settings_save(st: AppState, mut req: Req) -> Res {
     }
     save_setting(&st, "min_tags", &min_tags.to_string()).await?;
     save_setting(&st, "trusted_uploads", &trusted_uploads.to_string()).await?;
+    match max_file_size {
+        Some(0) => crate::settings::remove(&st, "max_file_size").await?,
+        Some(b) => save_setting(&st, "max_file_size", &b.to_string()).await?,
+        None => {}
+    }
+    match upload_multiplier {
+        Some(m) if m == 0.0 => crate::settings::remove(&st, "upload_multiplier").await?,
+        Some(m) => save_setting(&st, "upload_multiplier", &crate::util::js_num(m)).await?,
+        None => {}
+    }
     st.settings.update(|s| {
+        if let Some(b) = max_file_size {
+            s.max_file_size = b;
+        }
+        if let Some(m) = upload_multiplier {
+            s.upload_multiplier = m;
+        }
         s.manual_approval = manual_approval;
         if web_toggle {
             s.registration_open = registration_open;
@@ -473,11 +544,17 @@ async fn settings_save(st: AppState, mut req: Req) -> Res {
                 "applications_require_email": s.applications_require_email,
                 "min_tags": s.min_tags,
                 "trusted_uploads": s.trusted_uploads,
+                "upload_size": upload_size_data(&st, &cfg),
             }),
             200,
         ));
     }
-    Ok(location(302, "/admin"))
+    Ok(location(302, "/admin#settings"))
+}
+
+/// A rejected settings form (the plain form's `back` turns it into a flash message, nojs.rs).
+fn settings_error(_req: &Req, msg: &str) -> Res {
+    Ok(json_resp(&json!({ "success": false, "msg": msg }), 400))
 }
 
 #[derive(Clone, Copy)]

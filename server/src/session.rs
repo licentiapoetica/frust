@@ -4,10 +4,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Columns selected for a session (user + user_options + session row + anon identity).
-pub const SESSION_COLUMNS: &str = r#""user".id, "user".login, "user".user, "user".admin, "user".is_moderator, "user".groups, "user".banned, "user".ban_reason, "user".ban_expires, "user".force_password_change, "user_sessions".id as sess_id, "user_sessions".csrf_token, "user_options".mode, "user_options".theme, "user_options".fullscreen, "user_options".excluded_tags, "user_options".avatar, "user_options".avatar_file, "user_options".banner_file, "user_options".banner_position, "user_options".banner_size, "user_options".banner_repeat, "user_options".show_motd, "user_options".strict_mode, "user_options".show_background, "user_options".use_new_layout, "user_options".username_color, "user_options".font, "user_options".font_weight, "user_options".font_sizes, "user_options".disable_autoplay, "user_options".disable_swiping, "user_options".favorites_private, "user_options".hide_fav_badge, "user_options".default_upload_visibility, "user_options".description, "user_options".display_name, "user_options".ruffle_volume, "user_options".ruffle_background, "user_options".quote_emojis, "user_options".embed_youtube_in_comments, "user_options".hide_koepfe, "user_options".language, "user_options".use_alternative_infobox, "user_options".use_alternative_steuerung, "user_options".receive_system_notifications, "user_options".receive_user_notifications, "user_options".do_not_disturb, "user_options".comment_display_mode, "user_options".force_comment_display_mode, "anon_identities".fingerprint as anon_fingerprint"#;
+pub const SESSION_COLUMNS: &str = r#""user".id, "user".login, "user".user, "user".admin, "user".is_moderator, "user".groups, "user".permissions, "user".banned, "user".ban_reason, "user".ban_expires, "user".force_password_change, "user_sessions".id as sess_id, "user_sessions".csrf_token, "user_options".mode, "user_options".theme, "user_options".fullscreen, "user_options".excluded_tags, "user_options".avatar, "user_options".avatar_file, "user_options".banner_file, "user_options".banner_position, "user_options".banner_size, "user_options".banner_repeat, "user_options".show_motd, "user_options".strict_mode, "user_options".show_background, "user_options".use_new_layout, "user_options".username_color, "user_options".font, "user_options".font_weight, "user_options".font_sizes, "user_options".disable_autoplay, "user_options".disable_swiping, "user_options".favorites_private, "user_options".hide_fav_badge, "user_options".default_upload_visibility, "user_options".description, "user_options".display_name, "user_options".ruffle_volume, "user_options".ruffle_background, "user_options".quote_emojis, "user_options".embed_youtube_in_comments, "user_options".hide_koepfe, "user_options".language, "user_options".use_alternative_infobox, "user_options".use_alternative_steuerung, "user_options".receive_system_notifications, "user_options".receive_user_notifications, "user_options".do_not_disturb, "user_options".comment_display_mode, "user_options".force_comment_display_mode, "anon_identities".fingerprint as anon_fingerprint"#;
 
 /// Same user/user_options columns, without session-row fields (impersonation target).
-pub const USER_COLUMNS: &str = r#""user".id, "user".login, "user".user, "user".admin, "user".is_moderator, "user".groups, "user".banned, "user".ban_reason, "user".ban_expires, "user".force_password_change, "user_options".mode, "user_options".theme, "user_options".fullscreen, "user_options".excluded_tags, "user_options".avatar, "user_options".avatar_file, "user_options".show_motd, "user_options".strict_mode, "user_options".show_background, "user_options".use_new_layout, "user_options".username_color, "user_options".font, "user_options".font_weight, "user_options".font_sizes, "user_options".disable_autoplay, "user_options".disable_swiping, "user_options".favorites_private, "user_options".hide_fav_badge, "user_options".default_upload_visibility, "user_options".description, "user_options".display_name, "user_options".ruffle_volume, "user_options".ruffle_background, "user_options".quote_emojis, "user_options".embed_youtube_in_comments, "user_options".hide_koepfe, "user_options".language, "user_options".use_alternative_infobox, "user_options".use_alternative_steuerung, "user_options".receive_system_notifications, "user_options".receive_user_notifications, "user_options".do_not_disturb, "user_options".comment_display_mode, "user_options".force_comment_display_mode"#;
+pub const USER_COLUMNS: &str = r#""user".id, "user".login, "user".user, "user".admin, "user".is_moderator, "user".groups, "user".permissions, "user".banned, "user".ban_reason, "user".ban_expires, "user".force_password_change, "user_options".mode, "user_options".theme, "user_options".fullscreen, "user_options".excluded_tags, "user_options".avatar, "user_options".avatar_file, "user_options".show_motd, "user_options".strict_mode, "user_options".show_background, "user_options".use_new_layout, "user_options".username_color, "user_options".font, "user_options".font_weight, "user_options".font_sizes, "user_options".disable_autoplay, "user_options".disable_swiping, "user_options".favorites_private, "user_options".hide_fav_badge, "user_options".default_upload_visibility, "user_options".description, "user_options".display_name, "user_options".ruffle_volume, "user_options".ruffle_background, "user_options".quote_emojis, "user_options".embed_youtube_in_comments, "user_options".hide_koepfe, "user_options".language, "user_options".use_alternative_infobox, "user_options".use_alternative_steuerung, "user_options".receive_system_notifications, "user_options".receive_user_notifications, "user_options".do_not_disturb, "user_options".comment_display_mode, "user_options".force_comment_display_mode"#;
 
 fn de_i64_lenient<'de, D: serde::Deserializer<'de>>(d: D) -> Result<i64, D::Error> {
     let v = Value::deserialize(d)?;
@@ -22,6 +22,11 @@ fn de_opt_i64_lenient<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<i
 fn de_bool_lenient<'de, D: serde::Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
     let v = Value::deserialize(d)?;
     Ok(crate::config::truthy(&v))
+}
+
+/// `{"comment": false, ...}` (jsonb), anything else as empty.
+fn de_perm_map<'de, D: serde::Deserializer<'de>>(d: D) -> Result<std::collections::BTreeMap<String, bool>, D::Error> {
+    Ok(crate::perms::parse_overrides(&Value::deserialize(d)?))
 }
 
 fn de_vec_or_empty<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(d: D) -> Result<Vec<T>, D::Error> {
@@ -41,6 +46,9 @@ pub struct Session {
     pub is_moderator: bool,
     #[serde(deserialize_with = "de_vec_or_empty")]
     pub groups: Vec<String>,
+    /// The user's own permission overrides (`"user".permissions`), crate::perms
+    #[serde(deserialize_with = "de_perm_map")]
+    pub permissions: std::collections::BTreeMap<String, bool>,
     #[serde(deserialize_with = "de_bool_lenient")]
     pub banned: bool,
     pub ban_reason: Option<String>,
@@ -111,6 +119,9 @@ pub struct Session {
     pub fingerprint: Option<String>,
     pub anon_login: Option<String>,
     pub can_chan: bool,
+    /// Every permission and whether this session has it (crate::perms; set per request for the
+    /// templates and scripts: `session.can.comment`)
+    pub can: std::collections::BTreeMap<String, bool>,
     /// Pending items (admins only).
     pub pending_count: Option<i64>,
     pub own_pending_count: Option<i64>,

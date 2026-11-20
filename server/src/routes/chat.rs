@@ -48,8 +48,9 @@ fn disabled() -> Res {
     j(json!({ "success": false }), 404)
 }
 
-fn is_staff(req: &Req) -> bool {
-    req.session().is_some_and(|s| s.admin || s.is_moderator)
+/// May moderate the chat (the `mod_chat` permission).
+fn is_staff(st: &AppState, req: &Req) -> bool {
+    crate::perms::can(st, req.session(), crate::perms::P::ModChat)
 }
 
 fn forbidden() -> Res {
@@ -118,6 +119,9 @@ async fn post_message(st: AppState, mut req: Req) -> Res {
     if s.banned {
         return j(json!({ "success": false, "msg": "You are banned" }), 403);
     }
+    if !crate::perms::can(&st, Some(&s), crate::perms::P::Chat) {
+        return Ok(crate::perms::denied(crate::perms::P::Chat));
+    }
     let message = req.post_str("message").await.unwrap_or_default().trim().to_string();
     if message.is_empty() || message.encode_utf16().count() > MAX_MSG_LEN {
         return j(json!({ "success": false, "msg": "Invalid message" }), 400);
@@ -184,7 +188,7 @@ async fn set_background(st: AppState, mut req: Req) -> Res {
     if !enabled(&st) {
         return disabled();
     }
-    if !is_staff(&req) {
+    if !is_staff(&st, &req) {
         return forbidden();
     }
     let body = req.post_value().await;
@@ -230,7 +234,7 @@ async fn set_topic(st: AppState, mut req: Req) -> Res {
     if !enabled(&st) {
         return disabled();
     }
-    if !is_staff(&req) {
+    if !is_staff(&st, &req) {
         return forbidden();
     }
     let raw = req.post_str("topic").await.unwrap_or_default().trim().to_string();
@@ -251,7 +255,7 @@ async fn delete_message(st: AppState, req: Req) -> Res {
     if !enabled(&st) {
         return disabled();
     }
-    if !is_staff(&req) {
+    if !is_staff(&st, &req) {
         return forbidden();
     }
     let id = req.param("id").and_then(|i| i.parse::<i64>().ok()).unwrap_or(0);
@@ -276,7 +280,7 @@ async fn clear(st: AppState, req: Req) -> Res {
     if !enabled(&st) {
         return disabled();
     }
-    if !is_staff(&req) {
+    if !is_staff(&st, &req) {
         return forbidden();
     }
     let r: anyhow::Result<()> = async {

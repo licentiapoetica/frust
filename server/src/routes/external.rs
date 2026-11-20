@@ -453,6 +453,9 @@ async fn rehost(st: AppState, mut req: Req) -> Res {
         return Ok(fail(400, "Only 4chan media URLs are supported for rehosting"));
     };
     let Some(session) = req.session().cloned() else { return Ok(fail(401, "Unauthorized")) };
+    if !crate::perms::can(&st, Some(&session), crate::perms::P::Upload) {
+        return Ok(crate::perms::denied(crate::perms::P::Upload));
+    }
     match rehost_inner(&st, &body, &source, &session).await {
         Ok(r) => Ok(r),
         Err(e) => {
@@ -466,7 +469,7 @@ async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSou
     let cfg = st.cfg();
     let rating = body["rating"].as_str().map(str::to_lowercase).filter(|r| matches!(r.as_str(), "sfw" | "nsfw" | "nsfl"));
     let owner = s::session_owner_name(Some(session)).unwrap_or_default();
-    let max_bytes = cfg.int("main.maxfilesize").filter(|&n| n > 0).map(|n| n as u64).unwrap_or(100 * 1024 * 1024);
+    let max_bytes = st.settings.upload_limit(&cfg, crate::perms::can(st, Some(session), crate::perms::P::UploadLarge)) as u64;
 
     // Without bypass, a 4chan file that is already on the site is not downloaded again
     let bypass = st.settings.bypass_duplicate_check();
@@ -509,7 +512,7 @@ async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSou
     }
 
     let filename = format!("{uuid}.{ext}");
-    let manual = st.settings.manual_approval();
+    let manual = crate::routes::uploads::needs_approval(st, session, &owner).await;
     let dest_dir = if manual { cfg.paths.pending.join("b") } else { cfg.paths.b.clone() };
     tokio::fs::create_dir_all(&dest_dir).await?;
     let dest_path = dest_dir.join(&filename);
@@ -648,7 +651,7 @@ async fn rehost_details_inner(st: &AppState, req: &Req, session: &crate::session
     let uname = row.string("username").to_lowercase();
     let is_owner = !uname.is_empty() && owner.as_deref() == Some(uname.as_str());
     let is_admin = session.admin || session.is_moderator;
-    let is_chan_user = s::can_use_chan(&cfg, Some(session));
+    let is_chan_user = s::can_use_chan(st, Some(session));
 
     let tags = &body["tags"];
     let comment = body["comment"].as_str().map(str::trim).filter(|c| !c.is_empty());

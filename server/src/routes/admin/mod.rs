@@ -16,6 +16,7 @@ mod applications;
 mod bans;
 mod dashboard;
 mod maintenance;
+pub(crate) mod permissions;
 mod upload_page;
 mod users;
 pub(crate) use users::delete_account;
@@ -31,6 +32,7 @@ pub fn register(r: &mut Router) {
     dashboard::register(r);
     applications::register(r);
     maintenance::register(r);
+    permissions::register(r);
     bans::register(r);
     users::register(r);
     upload_page::register(r);

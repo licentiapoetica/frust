@@ -299,6 +299,9 @@ fn cipher_fields(body: &Value) -> Result<(String, String), Res> {
 
 async fn send(st: AppState, mut req: Req) -> Res {
     let s = gate!(st, req);
+    if !crate::perms::can(&st, Some(&s), crate::perms::P::Message) {
+        return Ok(crate::perms::denied(crate::perms::P::Message));
+    }
     let Some(recipient) = param_i32(&req, "userId") else { return jfail(404, "Recipient not found") };
     if recipient as i64 == s.id {
         return jfail(400, "Can't DM yourself");
@@ -563,6 +566,11 @@ async fn attachment_upload(st: AppState, mut req: Req) -> Res {
     let Some(s) = req.session.clone() else { return afail(401, "Unauthorized") };
     if !csrf_header(&req, &s) {
         return afail(403, "CSRF mismatch");
+    }
+    for p in [crate::perms::P::Message, crate::perms::P::MessageFiles] {
+        if !crate::perms::can(&st, Some(&s), p) {
+            return Ok(crate::perms::denied(p));
+        }
     }
     let rid = req.param("id").and_then(|r| r.parse::<i32>().ok()).unwrap_or(0);
     if rid == 0 || rid as i64 == s.id {

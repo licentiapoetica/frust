@@ -27,6 +27,7 @@ mod media_gate;
 mod migrations;
 mod net_guard;
 mod nojs;
+mod perms;
 mod private_items;
 mod proc;
 mod pwa;

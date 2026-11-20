@@ -26,6 +26,26 @@ pub fn register(r: &mut Router) {
     r.pre(Method::POST, r"^\/api\/v2\/items\/(?<id>[^/]+)\/thumbnail$", None, rethumb::handle_rethumb_upload);
 }
 
+/// Does an upload by `owner` (the name its items carry) go to the approval queue? Manual
+/// approval, or fewer than the trusted threshold of their uploads live, unless the session has the
+/// `upload_skip_approval` permission.
+pub(crate) async fn needs_approval(st: &AppState, session: &Session, owner: &str) -> bool {
+    if crate::perms::can(st, Some(session), crate::perms::P::UploadSkipApproval) {
+        return false;
+    }
+    if st.settings.manual_approval() {
+        return true;
+    }
+    let trusted = st.settings.trusted_uploads();
+    if trusted <= 0 {
+        return false;
+    }
+    match sql!("SELECT count(*) as count FROM items WHERE username = ", owner.to_string(), " AND is_deleted = false").fetch_scalar::<i64, _>(&st.db).await {
+        Ok(c) => c.unwrap_or(0) < trusted,
+        Err(_) => true,
+    }
+}
+
 /// `sendJson(res, data, code)`: `application/json` without charset.
 pub(crate) fn send(v: Value, code: u16) -> Res {
     Ok(json_raw(&v, code))

@@ -17,7 +17,7 @@
 
 use crate::db::RowExt;
 use crate::session::Session;
-use crate::settings::{can_anon_do, is_anon_session, is_anonymize_session};
+use crate::settings::is_anonymize_session;
 use crate::social::helpers::js_str;
 use crate::sql;
 use crate::state::AppState;
@@ -61,14 +61,10 @@ pub struct Viewer {
 impl Viewer {
     pub fn of(st: &AppState, session: Option<&Session>) -> Viewer {
         let cfg = st.cfg();
-        // anonymous identities vote when the site lets them (anon_permissions.poll_vote)
-        let may_vote = match session {
-            Some(s) => !is_anon_session(Some(s)) || can_anon_do(&cfg, "poll_vote"),
-            None => false,
-        };
+        let may_vote = crate::perms::can(st, session, crate::perms::P::PollVote);
         Viewer {
             user_id: session.map(|s| s.id),
-            is_mod: session.is_some_and(|s| s.admin || s.is_moderator),
+            is_mod: crate::perms::can(st, session, crate::perms::P::ModComments),
             may_vote,
             anonymized: is_anonymize_session(&cfg, session),
             all_voters: false,

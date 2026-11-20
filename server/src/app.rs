@@ -485,7 +485,6 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
         }
 
         if has_session {
-            session.can_chan = s::can_use_chan(&cfg, Some(&session));
 
             // Ban check (account)
             static BAN_EXEMPT: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"^/(banned|logout)(/)?$").unwrap());
@@ -564,6 +563,10 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
                 }
             }
 
+            // Permissions of the (impersonated / previewed) session, for the templates and scripts
+            session.can = crate::perms::all(&cfg, &st.settings.permissions(), &session);
+            session.can_chan = session.can.get("chan").copied().unwrap_or(false);
+
             // Last action (fire and forget)
             if !path.starts_with("/api/notifications") {
                 let st2 = st.clone();
@@ -612,7 +615,7 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
                 });
             }
 
-            if !session.admin && !session.is_moderator {
+            if !session.can.get("upload_unlimited").copied().unwrap_or(false) {
                 let count = match st.caches.upload_count.get(&session.user) {
                     Some(c) => c,
                     None => {
@@ -633,8 +636,7 @@ async fn session_middleware(st: &AppState, req: &mut Req) -> Result<Option<Respo
             session.min_tags = st.settings.min_tags();
             session.mimes_json = crate::util::json_string(&Value::Object(cfg.mimes()));
             session.allowed_mimes = cfg.mimes().keys().cloned().collect::<Vec<_>>().join(",");
-            let mult = if session.admin { cfg.f64("main.adminmultiplier").unwrap_or(1.0) } else { 1.0 };
-            let max = cfg.f64("main.maxfilesize").unwrap_or(0.0) * mult;
+            let max = st.settings.upload_limit(&cfg, session.can.get("upload_large").copied().unwrap_or(false));
             session.max_file_size = crate::util::format_size_f(max);
             session.max_file_size_bytes = max.floor() as i64;
 
@@ -785,13 +787,19 @@ async fn impersonation_target(st: &AppState, cookie: &str, session_cookie: &str)
         return None;
     }
     let uid = crate::config::as_int(&data["uid"])?;
+    user_session(st, uid).await
+}
+
+/// A session for the account `uid` (without a session row): for impersonation, and to check the
+/// permissions of an account acting through the bot.
+pub async fn user_session(st: &AppState, uid: i64) -> Option<Session> {
     let mut q = sql!("SELECT ");
     q.push(USER_COLUMNS).push(r#" FROM "user" LEFT JOIN "user_options" ON "user_options".user_id = "user".id WHERE "user".id = "#).bind(uid as i32).push(" LIMIT 1");
     match q.fetch_optional(&st.db).await {
         Ok(Some(r)) => Session::from_row(r).ok(),
         Ok(None) => None,
         Err(e) => {
-            tracing::error!("[IMPERSONATE] lookup failed: {e}");
+            tracing::error!("[SESSION] user lookup failed: {e}");
             None
         }
     }

@@ -6,6 +6,7 @@ use crate::db::RowExt;
 use crate::http::{Req, Res};
 use crate::media::multipart::{self, FilePart, Form, Limits, MpError};
 use crate::media::{self, TempPath, mime, queue};
+use crate::perms::{self, P};
 use crate::session::Session;
 use crate::settings as s;
 use crate::sql;
@@ -98,8 +99,8 @@ pub async fn handle_upload(st: AppState, mut req: Req) -> Res {
         }
     }
     let Some(session) = req.session.clone() else { return fail(401, "Unauthorized") };
-    if s::is_anon_session(Some(&session)) && !s::can_anon_do(&cfg, "upload") {
-        return fail(403, "Uploading requires a registered account or anonymous upload permission");
+    if !perms::can(&st, Some(&session), P::Upload) {
+        return Ok(perms::denied(P::Upload));
     }
     if !session.api_key_auth && !csrf_header_ok(&req, &session) {
         return fail(403, "Invalid CSRF token");
@@ -108,10 +109,7 @@ pub async fn handle_upload(st: AppState, mut req: Req) -> Res {
         return send(json!({ "success": false, "msg": "Please complete the captcha.", "captcha_required": "upload" }), 403);
     }
 
-    let mut max = cfg.f64("main.maxfilesize").filter(|m| *m > 0.0).unwrap_or(150.0 * 1024.0 * 1024.0);
-    if session.admin {
-        max = (max * cfg.f64("main.adminmultiplier").filter(|m| *m != 0.0).unwrap_or(10.0)).floor();
-    }
+    let max = st.settings.upload_limit(&cfg, perms::can(&st, Some(&session), P::UploadLarge));
 
     let ct = req.content_type().to_string();
     let form = if ct.contains("multipart/form-data") {
@@ -119,7 +117,7 @@ pub async fn handle_upload(st: AppState, mut req: Req) -> Res {
         let body = req.take_body().unwrap_or_else(Body::empty);
         match multipart::parse(body, &boundary, declared_len(&req), &cfg.paths.tmp, Limits::total(max as u64)).await {
             Ok(f) => f,
-            Err(MpError::TooLarge) => return too_large(&cfg, &session),
+            Err(MpError::TooLarge) => return too_large(&session, max),
             Err(MpError::Invalid(e)) => {
                 tracing::warn!("[UPLOAD] Malformed multipart body from {}: {e}", session.user);
                 Form::default()
@@ -128,9 +126,9 @@ pub async fn handle_upload(st: AppState, mut req: Req) -> Res {
         }
     } else if ct.contains("application/json") || ct.contains("application/x-www-form-urlencoded") {
         if declared_len(&req).is_some_and(|l| l as f64 > max) {
-            return too_large(&cfg, &session);
+            return too_large(&session, max);
         }
-        let Ok(bytes) = req.body_bytes(max as usize).await else { return too_large(&cfg, &session) };
+        let Ok(bytes) = req.body_bytes(max as usize).await else { return too_large(&session, max) };
         if ct.contains("application/json") {
             match serde_json::from_slice::<Value>(&bytes) {
                 Ok(v) => Form::from_json(&v),
@@ -149,11 +147,9 @@ pub async fn handle_upload(st: AppState, mut req: Req) -> Res {
     }
 }
 
-fn too_large(cfg: &Config, session: &Session) -> Res {
-    let boosted = session.admin || session.is_moderator;
-    let limit = cfg.f64("main.maxfilesize").unwrap_or(0.0) * if boosted { cfg.f64("main.adminmultiplier").unwrap_or(1.0) } else { 1.0 };
+fn too_large(session: &Session, limit: f64) -> Res {
     tracing::error!("[UPLOAD HANDLER ERROR] [BODY_TOO_LARGE] User: {}. Limit: {}", session.user, crate::util::format_size_f(limit));
-    fail(413, "File too large")
+    fail(413, &format!("File too large (max {})", crate::util::format_size_f(limit)))
 }
 
 async fn process(st: &AppState, req: &Req, cfg: &Config, session: Session, form: &Form, max: f64) -> Res {
@@ -219,6 +215,9 @@ async fn process(st: &AppState, req: &Req, cfg: &Config, session: Session, form:
     }
     if input_url.is_some() && cfg.is_false("websrv.web_url_upload") {
         return fail(403, "URL uploads are disabled");
+    }
+    if input_url.is_some() && !perms::can(st, Some(&session), P::UploadUrl) {
+        return Ok(perms::denied(P::UploadUrl));
     }
     if let Some(u) = &input_url {
         if validate_remote_url(u).is_none() {
@@ -323,16 +322,8 @@ async fn process(st: &AppState, req: &Req, cfg: &Config, session: Session, form:
     }
 
     let owner = s::session_owner_name(Some(&session)).unwrap_or_else(|| session.user.clone());
-    let staff = session.admin || session.is_moderator;
-    let mut manual = st.settings.manual_approval();
-    let trusted = st.settings.trusted_uploads();
-    if trusted > 0 && !staff {
-        match sql!("SELECT count(*) as count FROM items WHERE username = ", owner.clone(), " AND is_deleted = false").fetch_scalar::<i64, _>(&st.db).await {
-            Ok(c) if c.unwrap_or(0) >= trusted => {}
-            _ => manual = true,
-        }
-    }
-    if !manual && !staff {
+    let manual = super::needs_approval(st, &session, &owner).await;
+    if !manual && !perms::can(st, Some(&session), P::UploadUnlimited) {
         let since = now - 12 * 3600;
         let c = sql!("SELECT count(*) as count FROM items WHERE username = ", owner.clone(), " AND stamp > ", since as i32, " AND is_deleted = false")
             .fetch_scalar::<i64, _>(&st.db)

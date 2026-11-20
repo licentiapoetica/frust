@@ -33,7 +33,7 @@ pub async fn handle_rethumb_upload(st: AppState, mut req: Req) -> Res {
         }
     };
     let owner = crate::settings::session_owner_name(Some(&session)).unwrap_or_default();
-    if !session.admin && !session.is_moderator && owner != item.string("username") {
+    if !crate::perms::may_edit_item(&st, Some(&session), owner == item.string("username")) {
         return fail(403, "Insufficient permissions");
     }
     if !mime::is_flash(&item.string("mime")) {

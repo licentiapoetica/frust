@@ -1357,7 +1357,8 @@ CREATE TABLE public."user" (
     reset_expires timestamp without time zone,
     last_seen integer DEFAULT 0,
     force_password_change boolean DEFAULT false,
-    groups text[] DEFAULT '{}'::text[]
+    groups text[] DEFAULT '{}'::text[],
+    permissions jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 

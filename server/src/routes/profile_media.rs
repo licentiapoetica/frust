@@ -171,6 +171,9 @@ async fn avatar_upload(st: AppState, mut req: Req) -> Res {
         Ok(s) => s,
         Err(r) => return r,
     };
+    if !crate::perms::can(&st, Some(&s), crate::perms::P::ProfileMedia) {
+        return Ok(crate::perms::denied(crate::perms::P::ProfileMedia));
+    }
     let form = match read_form(&st, &mut req, MAX_IMAGE + 64 * 1024, "Invalid content type", "File too large (5 MB max for avatars)").await {
         Ok(f) => f,
         Err(r) => return r,
@@ -291,6 +294,9 @@ async fn banner_upload(st: AppState, mut req: Req) -> Res {
         Ok(s) => s,
         Err(r) => return r,
     };
+    if !crate::perms::can(&st, Some(&s), crate::perms::P::ProfileMedia) {
+        return Ok(crate::perms::denied(crate::perms::P::ProfileMedia));
+    }
     // The cropped banner is ≤ 5 MB; the optional uncropped original may be bigger.
     let form = match read_form(&st, &mut req, 40 * MB, "Invalid content type", "File too large (5 MB max for banners)").await {
         Ok(f) => f,

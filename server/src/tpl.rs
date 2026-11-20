@@ -914,7 +914,13 @@ pub fn globals(st: &AppState, cfg: &Config) -> Map<String, Value> {
     put("enable_expiring_uploads", json!(crate::settings::enable_expiring_uploads(cfg)));
     put("enable_item_slugs", json!(crate::settings::enable_item_slugs(cfg)));
     put("enable_anonymous_access", json!(crate::settings::enable_anonymous_access(cfg)));
-    let perms = Value::Object(crate::settings::anon_permissions(cfg));
+    // The yes/no actions follow the anonymous accounts' permission defaults (crate::perms)
+    let mut anon_perms = crate::settings::anon_permissions(cfg);
+    let pc = st.settings.permissions();
+    for (p, key) in crate::perms::ANON_CONFIG_KEYS {
+        anon_perms.insert(key.to_string(), json!(pc.role_default(cfg, crate::perms::Role::Anon, crate::perms::info(*p))));
+    }
+    let perms = Value::Object(anon_perms);
     put("anon_permissions_json", json!(json_script(&perms)));
     put("anon_permissions", perms);
     put("default_upload_visibility", json!(default_upload_visibility));
@@ -1037,7 +1043,7 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
         .unwrap_or(cfg.enabled("websrv.user_alternative_steuerung"));
 
     let is_anonymized = crate::settings::is_anonymize_session(&cfg, session);
-    let can_chan = crate::settings::can_use_chan(&cfg, session);
+    let can_chan = crate::settings::can_use_chan(st, session);
 
     if let Some(Value::Object(item)) = data.get_mut("item") {
         if item.get("size").map(Value::is_number).unwrap_or(false) {
@@ -1180,8 +1186,7 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
                 .unwrap_or_default();
             ctx.insert("logout_url".into(), json!(crate::auth::logout_url(&csrf)));
             ctx.insert("csrf_token".into(), json!(csrf));
-            let mult = if session.map(|s| s.admin).unwrap_or(false) { cfg.f64("main.adminmultiplier").unwrap_or(1.0) } else { 1.0 };
-            let max = cfg.f64("main.maxfilesize").unwrap_or(0.0) * mult;
+            let max = st.settings.upload_limit(&cfg, crate::perms::can(st, session, crate::perms::P::UploadLarge));
             ctx.insert("max_file_size".into(), json!(crate::util::format_size_f(max)));
             ctx.insert("max_file_size_bytes".into(), json!(max.floor() as i64));
             if ctx.get("web_url_upload").map(Value::is_null).unwrap_or(true) {
@@ -3148,7 +3153,8 @@ mod tests {
         };
         let users = serde_json::json!([
             user(Some(1), "bob", serde_json::json!({ "admin": true, "email": "bob@f0ck.test" })),
-            user(Some(2), "yotap", serde_json::json!({ "display_name": "Yo Tap", "groups": ["4chan"], "failed_attempts": 6.0, "force_comment_display_mode": 1, "comment_display_mode": 1 })),
+            user(Some(2), "yotap", serde_json::json!({ "display_name": "Yo Tap", "groups": ["4chan", "trusted"], "failed_attempts": 6.0, "force_comment_display_mode": 1, "comment_display_mode": 1,
+                "permissions": { "comment": false }, "perms_effective": { "comment": false, "upload": true } })),
             user(Some(3), "newbie", serde_json::json!({ "activated": false, "upload_count": 0.0 })),
             user(Some(4), "troll", serde_json::json!({ "banned": true, "ban_reason": "spam", "ban_expires": "2026-12-01T00:00:00Z", "is_moderator": true })),
             user(Some(5), "deleted_user", serde_json::json!({ "banned": true, "activated": false })),
@@ -3157,14 +3163,16 @@ mod tests {
         let ctx = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "session": { "user": "bob", "id": 1, "admin": true },
             "users": users, "back": "/admin/users?q=o", "prevUrl": null, "nextUrl": "/admin/users?q=o&page=2", "openRow": "2", "rawQ": "o", "q": "o",
             "page": 1, "total": 6, "hasMore": true, "onlyLegacy": false, "status": "", "role": "", "totalLabel": "registered members",
-            "emptyMsg": "No users matched your search.", "totals": {}, "log_user_ips": true, "tmp": null });
+            "emptyMsg": "No users matched your search.", "totals": {}, "log_user_ips": true, "tmp": null,
+            "perm_catalog": crate::perms::catalog_json(), "perm_groups": ["4chan", "vip"] });
         let html = env.get_template("admin/users.html").unwrap().render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{e:#}"));
         if let Ok(dir) = std::env::var("F0CKM_DUMP_ADMIN_USERS") {
             std::fs::write(PathBuf::from(dir).join("users.html"), &html).unwrap();
         }
         let row = |id: &str| {
             let start = html.find(&format!("id=\"user-row-{id}\"")).unwrap_or_else(|| panic!("row {id}"));
-            let end = html[start..].find("</details>").unwrap() + start;
+            // the row's own </details> starts a line (the nested permission overrides are indented)
+            let end = html[start..].find("\n</details>").unwrap() + start;
             html[start..end].to_string()
         };
         let page = &html[html.find("id=\"admin-users\"").unwrap()..html.find("id=\"admin-users-data\"").unwrap()];
@@ -3194,6 +3202,58 @@ mod tests {
         assert!(html.contains("<form class=\"adm-users-filters\" id=\"user-filters\" method=\"get\" action=\"/admin/users\""));
         assert!(html.contains("href=\"/admin/users?q=o&amp;page=2\""));
         assert!(html.contains("<a href=\"#create-user-modal\""));
+        // groups: every known one to tick, the user's own extra ones ticked; permission overrides
+        let yo = row("2");
+        assert!(yo.contains("name=\"groups\" value=\"vip\">") && yo.contains("name=\"groups\" value=\"4chan\" checked>") && yo.contains("name=\"groups\" value=\"trusted\" checked>"));
+        assert!(yo.contains(">trusted<") && yo.contains("action=\"/api/v2/admin/users/set-permissions\""));
+        assert!(yo.contains("name=\"perm_comment\" value=\"deny\" checked>") && yo.contains("name=\"perm_upload\" value=\"inherit\" checked>"));
+        assert!(yo.contains("name=\"clear\" value=\"1\"") && yo.contains("id=\"user-perms-2\""));
+        assert!(yo.contains("not allowed now") && !yo.contains("perm_mod_ban"), "mod powers only for moderators");
+        assert!(row("4").contains("perm_mod_ban"));
+        assert!(me.contains("Admins have every permission") && !me.contains("set-permissions"));
+    }
+
+    /// Admin panel → Permissions: the role table (moderator powers only for moderators), the groups,
+    /// plain forms that come back to their place without JavaScript.
+    #[test]
+    fn admin_permissions_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let cfg = crate::media::test_cfg("{}");
+        let mut pc = crate::perms::PermConfig::default();
+        pc.roles.insert("user".into(), std::collections::BTreeMap::from([("comment".to_string(), false)]));
+        pc.groups.insert("trusted".into(), std::collections::BTreeMap::from([("upload_large".to_string(), true)]));
+        let ctx = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "session": { "user": "bob", "id": 1, "admin": true },
+            "catalog": crate::perms::catalog_json(),
+            "roles": crate::perms::Role::ALL.iter().map(|r| serde_json::json!({ "key": r.key(), "label": r.label() })).collect::<Vec<_>>(),
+            "role_values": crate::perms::roles_json(&cfg, &pc),
+            "groups": [
+                { "name": "4chan", "members": 2, "perms": { "chan": true }, "configured": true },
+                { "name": "trusted", "members": 1, "perms": { "upload_large": true }, "configured": true },
+                { "name": "vip", "members": 3, "perms": {}, "configured": false },
+            ],
+            "anon_access": true, "tmp": null });
+        let html = env.get_template("admin/permissions.html").unwrap().render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{e:#}"));
+        if let Ok(dir) = std::env::var("F0CKM_DUMP_ADMIN_PERMS") {
+            std::fs::write(PathBuf::from(dir).join("permissions.html"), &html).unwrap();
+        }
+        let page = &html[html.find("id=\"perm-page\"").unwrap()..html.find("/s/js/views/admin/permissions.js").unwrap()];
+        assert!(!page.contains("border-radius") && !page.contains(" style=\"") && !page.contains("<script>"));
+        // the role table: the user default set to no, the rest default; mod powers only for mods
+        let sel = |name: &str| {
+            let at = page.find(&format!("name=\"{name}\"")).unwrap_or_else(|| panic!("{name}"));
+            page[at..at + page[at..].find("</select>").unwrap()].to_string()
+        };
+        assert!(sel("user.comment").contains("<option value=\"deny\" selected>") && page.contains("name=\"user.comment\" class=\"adm-text adm-select adm-perm-select is-set\""));
+        assert!(sel("anon.upload").contains("<option value=\"default\" selected>Default (no)</option>"));
+        assert!(sel("mod.upload_large").contains("Default (yes)"));
+        assert!(page.contains("name=\"mod.mod_ban\"") && !page.contains("name=\"user.mod_ban\"") && !page.contains("name=\"anon.mod_ban\""));
+        // groups: their own rules, removal only where there are any, a form for a new one
+        assert!(page.contains("<input type=\"hidden\" name=\"name\" value=\"trusted\">"));
+        assert!(page.matches("action=\"/admin/permissions/group/delete\"").count() == 2);
+        assert!(page.contains("no permissions yet") && page.contains("id=\"perm-new-group\""));
+        assert!(page.contains("name=\"back\" value=\"/admin/permissions#perm-roles\""));
+        assert!(page.matches("class=\"adm-form-actions adm-nojs-only\"").count() == 4, "a no-JS save button per form");
     }
 
     #[test]

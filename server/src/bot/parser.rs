@@ -9,6 +9,7 @@
 //!   (`!link`); Matrix only in `upload_channel_id` if set; Telegram also forwarded messages and the
 //!   rest of a media group started with `!w`.
 
+use crate::perms::{self, P};
 use super::events::Runtime;
 use super::{Client, Kind, Message, get_level, pipeline};
 use crate::config::Config;
@@ -49,12 +50,6 @@ const TG_MEDIA_KEYS: [&str; 7] = ["video", "audio", "photo", "document", "animat
 /// Media groups (Telegram albums) whose first message carried `!w`.
 static MEDIA_GROUPS: Lazy<Mutex<HashSet<String>>> = Lazy::new(|| Mutex::new(HashSet::new()));
 
-/// Upload size limit in bytes before the admin multiplier: `main.maxfilesize`, or 150 MiB when it
-/// is missing or not positive (same default as the web upload). Without the fallback every bot
-/// upload was "too large".
-pub(crate) fn max_file_size(cfg: &Config) -> f64 {
-    cfg.f64("main.maxfilesize").filter(|m| *m > 0.0).unwrap_or(150.0 * 1024.0 * 1024.0)
-}
 
 fn trigger_word(cfg: &Config) -> String {
     cfg.str_or("main.trigger", "!w").to_string()
@@ -558,7 +553,22 @@ pub async fn run(rt: Arc<Runtime>, e: Message) -> Result<()> {
         }
     }
 
-    let ctx = Upload { rt: rt.clone(), cfg: cfg.clone(), website_user, rating, tags };
+    // The linked website account's permissions (an unlinked IRC upload has the defaults)
+    let mut large = false;
+    if let Some((uid, _)) = &website_user {
+        if let Some(sess) = crate::app::user_session(st, *uid).await {
+            if sess.banned {
+                e.reply("Your website account is banned.").await;
+                return Ok(());
+            }
+            if !perms::can(st, Some(&sess), P::Upload) {
+                e.reply(&perms::denied_msg(P::Upload)).await;
+                return Ok(());
+            }
+            large = perms::can(st, Some(&sess), P::UploadLarge);
+        }
+    }
+    let ctx = Upload { rt: rt.clone(), cfg: cfg.clone(), website_user, rating, tags, large };
     for link in links {
         if !ctx.process(&e, &link).await? {
             break;
@@ -590,6 +600,8 @@ struct Upload {
     rt: Arc<Runtime>,
     cfg: Arc<Config>,
     website_user: Option<(i64, String)>,
+    /// The big upload size (`upload_large` of the linked account)
+    large: bool,
     rating: Option<Rating>,
     tags: Vec<String>,
 }
@@ -613,8 +625,7 @@ impl Upload {
         }
         let uuid = pipeline::gen_uuid();
         let level = get_level(cfg, &e.user).0;
-        let base_max = max_file_size(cfg);
-        let max_bytes = if level > 50 { base_max * cfg.f64("main.adminmultiplier").unwrap_or(1.0) } else { base_max };
+        let max_bytes = st.settings.upload_limit(cfg, level > 50 || self.large);
 
         // extension probe
         let ext = match s {
@@ -1089,9 +1100,9 @@ mod tests {
 
     #[test]
     fn size_limit_fallback() {
-        assert_eq!(max_file_size(&test_cfg(json!({ "main": { "maxfilesize": 1000 } }))), 1000.0);
-        assert_eq!(max_file_size(&test_cfg(json!({ "main": {} }))), 150.0 * 1024.0 * 1024.0);
-        assert_eq!(max_file_size(&test_cfg(json!({ "main": { "maxfilesize": 0 } }))), 150.0 * 1024.0 * 1024.0);
+        assert_eq!(crate::settings::config_max_file_size(&test_cfg(json!({ "main": { "maxfilesize": 1000 } }))), 1000.0);
+        assert_eq!(crate::settings::config_max_file_size(&test_cfg(json!({ "main": {} }))), 150.0 * 1024.0 * 1024.0);
+        assert_eq!(crate::settings::config_max_file_size(&test_cfg(json!({ "main": { "maxfilesize": 0 } }))), 150.0 * 1024.0 * 1024.0);
     }
 
     #[test]

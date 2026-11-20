@@ -22,13 +22,13 @@ fn msg(code: u16, m: &str) -> Res {
     send(json!({ "success": false, "msg": m }), code)
 }
 
-/// Halls enabled, admin or moderator, CSRF token from the header or `?csrf_token=`.
+/// Halls enabled, the `mod_lists` permission, CSRF token from the header or `?csrf_token=`.
 /// `Err(None)` means "halls disabled": fall through to a 404 like the old router.
 fn guard(st: &AppState, req: &Req) -> Result<Session, Option<Res>> {
     if st.cfg().is_false("websrv.halls_enabled") {
         return Err(None);
     }
-    let Some(s) = req.session().filter(|s| s.is_admin_or_mod()).cloned() else {
+    let Some(s) = req.session().filter(|s| crate::perms::can(st, Some(s), crate::perms::P::ModLists)).cloned() else {
         return Err(Some(msg(403, "Unauthorized")));
     };
     let token = req.header("x-csrf-token").or_else(|| req.query("csrf_token"));

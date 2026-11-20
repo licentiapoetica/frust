@@ -9,7 +9,8 @@
 use crate::db::{Row, RowExt, Sql};
 use crate::http::{Req, Res, Router, html, html_code, json_resp, redirect, reply};
 use crate::session::Session;
-use crate::settings::{can_anon_do, enable_item_slugs, is_anon_session, is_anonymize_session};
+use crate::perms::{self, P};
+use crate::settings::{enable_item_slugs, is_anon_session, is_anonymize_session};
 use crate::social::comments as sc;
 use crate::social::polls;
 use crate::social::helpers::{
@@ -58,6 +59,11 @@ fn forbidden() -> Res {
 
 fn is_admin_or_mod(s: &Session) -> bool {
     s.admin || s.is_moderator
+}
+
+/// May moderate anyone's comments (the `mod_comments` permission).
+fn mod_comments(st: &AppState, s: &Session) -> bool {
+    perms::can(st, Some(s), P::ModComments)
 }
 
 /// Route param that the regex guarantees to be digits, as an `integer` bind.
@@ -114,7 +120,7 @@ async fn get_item_comments(st: AppState, req: Req) -> Res {
             "is_subscribed": is_subscribed,
             "is_locked": is_locked,
             "user_id": session.map(|s| json!(s.id)).unwrap_or(Value::Null),
-            "is_admin": session.map(is_admin_or_mod).unwrap_or(false),
+            "is_admin": session.is_some_and(|s| mod_comments(&st, s)),
         }))
     }
     .await;
@@ -382,8 +388,8 @@ fn is_long(content: &str, files: usize) -> bool {
 async fn post_comment(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
     let Some(session) = req.session().cloned() else { return j(json!({ "success": false, "message": "Unauthorized" }), 401) };
-    if is_anon_session(Some(&session)) && !can_anon_do(&cfg, "comment") {
-        return j(json!({ "success": false, "message": "Anonymous commenting is disabled" }), 403);
+    if !perms::can(&st, Some(&session), P::Comment) {
+        return Ok(perms::denied(P::Comment));
     }
     // No JavaScript: the image captcha in the comment form stands in for the Cap popup (cap_image.rs)
     if let Some(id) = req.post_str("cap-image-id").await {
@@ -410,6 +416,7 @@ async fn post_comment(st: AppState, mut req: Req) -> Res {
     // checked first: a broken poll is reported instead of posting the comment without it.
     let poll = if polls::enabled(&st) {
         match polls::draft_from_body(&body) {
+            Ok(Some(_)) if !perms::can(&st, Some(&session), P::CommentPoll) => return Ok(perms::denied(P::CommentPoll)),
             Ok(Some(d)) => Some(polls::filter_words(&st, d).await),
             Ok(None) => None,
             Err(m) => return j(json!({ "success": false, "message": m }), 400),
@@ -461,7 +468,7 @@ async fn post_comment_inner(
         return Ok(json_resp(&json!({ "success": false, "message": "Item not found" }), 404));
     }
 
-    if !is_admin_or_mod(session) {
+    if !mod_comments(st, session) {
         let lock = sql!("SELECT COALESCE(is_comments_locked, false) as is_locked FROM items WHERE id = ", item_id).fetch_optional(&st.db).await?;
         if lock.map(|l| l.bool("is_locked")).unwrap_or(false) {
             return Ok(json_resp(&json!({ "success": false, "message": "This thread is locked" }), 403));
@@ -750,10 +757,20 @@ async fn subscribe_toggle(st: AppState, mut req: Req) -> Res {
     if !crate::f0cklib::may_access_item(&st, Some(s), item_id).await.unwrap_or(false) {
         return j(json!({ "success": false, "msg": "Item not found" }), 404);
     }
+    // Unsubscribing always works; subscribing needs the permission
+    let may_subscribe = perms::can(&st, Some(s), P::Subscribe);
+    if wanted == Some(true) && !may_subscribe {
+        return Ok(perms::denied(P::Subscribe));
+    }
     let me = s.id as i32;
     let r: anyhow::Result<bool> = async {
         let existing = sql!("SELECT is_subscribed FROM comment_subscriptions WHERE user_id = ", me, " AND item_id = ", item_id).fetch_optional(&st.db).await?;
         Ok(match existing {
+            Some(_) if !may_subscribe => {
+                sql!("UPDATE comment_subscriptions SET is_subscribed = false WHERE user_id = ", me, " AND item_id = ", item_id).execute(&st.db).await?;
+                false
+            }
+            None if !may_subscribe => false,
             Some(e) => {
                 let subscribed = wanted.unwrap_or(!e.bool("is_subscribed"));
                 sql!("UPDATE comment_subscriptions SET is_subscribed = ", subscribed, " WHERE user_id = ", me, " AND item_id = ", item_id).execute(&st.db).await?;
@@ -786,7 +803,7 @@ async fn delete_comment(st: AppState, mut req: Req) -> Res {
         let cfg = st.cfg();
         let can_delete_own = crate::settings::allow_comment_deletion(&cfg);
         let is_owner = comment.i64("user_id") == Some(session.id);
-        if !is_admin_or_mod(&session) && (!can_delete_own || !is_owner) {
+        if !mod_comments(&st, &session) && (!can_delete_own || !is_owner || !perms::can(&st, Some(&session), P::CommentDelete)) {
             return Ok(json_resp(&json!({ "success": false, "message": "Forbidden" }), 403));
         }
         let reason = if h::js_truthy(body.get("reason")) {
@@ -852,7 +869,7 @@ async fn delete_comment(st: AppState, mut req: Req) -> Res {
 
 async fn delete_attachment(st: AppState, mut req: Req) -> Res {
     let Some(session) = req.session().cloned() else { return unauthorized() };
-    if !is_admin_or_mod(&session) {
+    if !mod_comments(&st, &session) {
         return forbidden();
     }
     let body = req.post_value().await;
@@ -933,7 +950,7 @@ async fn delete_attachment(st: AppState, mut req: Req) -> Res {
 
 async fn edit_comment(st: AppState, mut req: Req) -> Res {
     let Some(session) = req.session().cloned() else { return unauthorized() };
-    if !is_admin_or_mod(&session) {
+    if !mod_comments(&st, &session) {
         return forbidden();
     }
     let body = req.post_value().await;
@@ -970,7 +987,7 @@ async fn edit_comment(st: AppState, mut req: Req) -> Res {
 
 async fn pin_comment(st: AppState, req: Req) -> Res {
     let Some(session) = req.session() else { return unauthorized() };
-    if !is_admin_or_mod(session) {
+    if !mod_comments(&st, session) {
         return forbidden();
     }
     let Some(comment_id) = param_i32(&req, "id") else { return j(json!({ "success": false }), 500) };
@@ -997,7 +1014,7 @@ async fn pin_comment(st: AppState, req: Req) -> Res {
 
 async fn lock_thread(st: AppState, req: Req) -> Res {
     let Some(session) = req.session() else { return unauthorized() };
-    if !is_admin_or_mod(session) {
+    if !mod_comments(&st, session) {
         return forbidden();
     }
     let Some(item_id) = param_i32(&req, "itemid") else { return j(json!({ "success": false }), 500) };
@@ -1517,6 +1534,9 @@ fn frame_attachments_html(files: &[Value], content: &str) -> String {
 
 async fn subscribe_all_uploads(st: AppState, req: Req) -> Res {
     let Some(s) = req.session() else { return j(json!({ "success": false, "message": "Unauthorized" }), 401) };
+    if !perms::can(&st, Some(s), P::Subscribe) {
+        return Ok(perms::denied(P::Subscribe));
+    }
     let r = sql!(
         "INSERT INTO comment_subscriptions (user_id, item_id) SELECT ",
         s.id as i32,
@@ -1581,8 +1601,11 @@ async fn poll_attach(st: AppState, mut req: Req) -> Res {
         let Some(comment) = sql!("SELECT id, item_id, user_id FROM comments WHERE id = ", comment_id, " AND is_deleted = false").fetch_optional(&st.db).await? else {
             return Ok(json_resp(&json!({ "success": false, "message": "Comment not found" }), 404));
         };
-        if comment.i64("user_id") != Some(session.id) && !is_admin_or_mod(&session) {
+        if comment.i64("user_id") != Some(session.id) && !mod_comments(&st, &session) {
             return Ok(json_resp(&json!({ "success": false, "message": "Forbidden" }), 403));
+        }
+        if !perms::can(&st, Some(&session), P::CommentPoll) {
+            return Ok(perms::denied(P::CommentPoll));
         }
         let draft = match polls::draft_from_body(&body) {
             Ok(Some(d)) => polls::filter_words(&st, d).await,
@@ -1669,7 +1692,7 @@ async fn poll_vote(st: AppState, mut req: Req) -> Res {
         return poll_error(403, "Polls are disabled");
     }
     if !polls::Viewer::of(&st, Some(&session)).may_vote {
-        return poll_error(403, "Anonymous poll voting is disabled");
+        return Ok(perms::denied(P::PollVote));
     }
     let Some(poll_id) = param_i32(&req, "pollId") else { return poll_error(404, "Poll not found") };
     let body = req.post_value().await;
@@ -1737,7 +1760,7 @@ async fn poll_delete(st: AppState, req: Req) -> Res {
             return Ok(json_resp(&json!({ "success": false, "message": "Poll not found" }), 404));
         };
         let own = ctx.i64("author_id") == Some(session.id);
-        if !own && !is_admin_or_mod(&session) {
+        if !own && !mod_comments(&st, &session) {
             return Ok(json_resp(&json!({ "success": false, "message": "Forbidden" }), 403));
         }
         let comment_id = ctx.i64("comment_id").unwrap_or(0) as i32;

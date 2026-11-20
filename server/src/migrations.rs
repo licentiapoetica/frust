@@ -339,6 +339,8 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"CREATE INDEX IF NOT EXISTS idx_favorites_item_id ON favorites(item_id)"#,
     // tag lookups by name (`normalized = (select slugify($1))`) scanned every tag
     r#"CREATE INDEX IF NOT EXISTS idx_tags_normalized ON tags(normalized)"#,
+    // Per-user permission overrides ({"comment": false, ...}), see crate::perms
+    r#"ALTER TABLE "user" ADD COLUMN IF NOT EXISTS permissions jsonb DEFAULT '{}'::jsonb NOT NULL"#,
 ];
 
 #[cfg(test)]

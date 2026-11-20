@@ -587,6 +587,8 @@ pub enum Guard {
     ChanAuth,
     /// lib.apiKeyAuth — X-Api-Key header
     ApiKeyAuth,
+    /// A session with this permission (crate::perms; a moderator power: a moderator or admin)
+    Perm(crate::perms::P),
 }
 
 fn unauthorized() -> Response {
@@ -603,7 +605,6 @@ fn pw_exempt(path: &str, extra: &[&str]) -> bool {
 
 /// Run a guard; `Some(response)` means the request is rejected.
 pub async fn check_guard(st: &AppState, req: &mut Req, guard: Guard) -> Option<Response> {
-    let cfg = st.cfg();
     match guard {
         Guard::Auth | Guard::AdminAuth => {
             let Some(s) = req.session.as_ref() else { return Some(unauthorized()) };
@@ -640,9 +641,9 @@ pub async fn check_guard(st: &AppState, req: &mut Req, guard: Guard) -> Option<R
             let Some(s) = req.session.as_ref().filter(|s| !s.user.is_empty()) else {
                 return Some(if is_api { fail(401, "Unauthorized") } else { redirect("/login") });
             };
-            if !crate::settings::can_use_chan(&cfg, Some(s)) {
+            if !crate::settings::can_use_chan(st, Some(s)) {
                 return Some(if is_api {
-                    fail(403, "4chan group required")
+                    crate::perms::denied(crate::perms::P::Chan)
                 } else {
                     reply(403, "text/html", CHAN_DENIED_HTML)
                 });
@@ -650,10 +651,20 @@ pub async fn check_guard(st: &AppState, req: &mut Req, guard: Guard) -> Option<R
             None
         }
         Guard::ApiKeyAuth => api_key_auth(st, req).await,
+        Guard::Perm(p) => {
+            let is_api = req.path.starts_with("/api/") || req.is_xhr() || req.accepts_json() || req.method != axum::http::Method::GET;
+            let Some(s) = req.session.as_ref().filter(|s| !s.user.is_empty()) else {
+                return Some(if is_api { fail(401, "Unauthorized") } else { redirect("/login") });
+            };
+            if !crate::perms::can(st, Some(s), p) {
+                return Some(if is_api { crate::perms::denied(p) } else { crate::routes::halls::error_page(st, req, &crate::perms::denied_msg(p), 403) });
+            }
+            (s.force_password_change && !pw_exempt(&req.path, &[])).then(password_change_required)
+        }
     }
 }
 
-const CHAN_DENIED_HTML: &str = r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Access Denied</title><link rel="stylesheet" href="/s/css/f0ckm.css"></head><body class="chan-denied"><div class="chan-denied-box"><div class="chan-denied-icon">🍀</div><h2 class="chan-denied-title">Access Restricted</h2><p class="chan-denied-text">This 4chan viewer is only accessible to users with the <strong>4chan</strong> group.</p><a href="/" class="chan-denied-link">← Return to Home</a></div></body></html>"#;
+const CHAN_DENIED_HTML: &str = r#"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Access Denied</title><link rel="stylesheet" href="/s/css/f0ckm.css"></head><body class="chan-denied"><div class="chan-denied-box"><div class="chan-denied-icon">🍀</div><h2 class="chan-denied-title">Access Restricted</h2><p class="chan-denied-text">This 4chan viewer is only accessible to users with the <strong>4chan viewer</strong> permission.</p><a href="/" class="chan-denied-link">← Return to Home</a></div></body></html>"#;
 
 async fn api_key_auth(st: &AppState, req: &mut Req) -> Option<Response> {
     let Some(key) = req.header("x-api-key").map(str::to_string) else {

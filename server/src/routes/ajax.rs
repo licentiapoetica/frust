@@ -192,7 +192,7 @@ async fn prepare_item(st: &AppState, req: &Req, data: &mut Value, itemid: &str, 
     if data["item"].is_object() {
         // getf0ck already computed item.show_repost_row; keep its value
         let repost = data["item"].get("show_repost_row").cloned();
-        super::index::item_template_flags(&cfg, data, session, session);
+        super::index::item_template_flags(st, data, session, session);
         match repost {
             Some(v) => data["item"]["show_repost_row"] = v,
             None => {

@@ -14,9 +14,9 @@ pub fn register(r: &mut Router) {
     r.exact(Method::GET, "/api/v2/memes", None, list_memes);
     r.post(r"\/api\/v2\/admin\/memes\/(?<id>\d+)\/delete", delete_meme);
     // meme.mjs
-    r.get_g(r"^\/meme$", Guard::UserAuth, select_page);
-    r.get_g(r"^\/meme\/custom$", Guard::UserAuth, custom_page);
-    r.get_g(r"^\/meme\/(?<id>[a-z0-9-]+)$", Guard::UserAuth, creator_page);
+    r.get_g(r"^\/meme$", Guard::Perm(crate::perms::P::Meme), select_page);
+    r.get_g(r"^\/meme\/custom$", Guard::Perm(crate::perms::P::Meme), custom_page);
+    r.get_g(r"^\/meme\/(?<id>[a-z0-9-]+)$", Guard::Perm(crate::perms::P::Meme), creator_page);
     // index.mjs bypass middleware
     r.pre(Method::POST, r"^\/api\/v2\/admin\/memes$", None, upload_meme);
     r.pre(Method::POST, r"^\/api\/v2\/admin\/memes\/(?<id>\d+)\/edit$", None, edit_meme);

@@ -7,8 +7,9 @@ use crate::state::AppState;
 use serde_json::{Value, json};
 
 pub fn register(r: &mut Router) {
-    use crate::http::Guard::{LoggedIn, ModAuth};
-    r.post_g(r"^\/api\/v2\/mod\/warnings\/issue\/?$", ModAuth, issue);
+    use crate::http::Guard::{LoggedIn, Perm};
+    use crate::perms::P;
+    r.post_g(r"^\/api\/v2\/mod\/warnings\/issue\/?$", Perm(P::ModWarn), issue);
     r.get_g(r"^\/api\/v2\/user\/warnings\/?$", LoggedIn, list);
     r.post_g(r"^\/api\/v2\/user\/warnings\/(?<id>\d+)\/acknowledge\/?$", LoggedIn, acknowledge);
 }

@@ -7,6 +7,7 @@ use crate::config::Config;
 use crate::db::RowExt;
 use crate::http::{Group, Req, Res, Router, json_resp, with_header};
 use crate::media::{self, mime, queue};
+use crate::perms::{self, P};
 use crate::routes::uploads::{assign_tag, ensure_tag};
 use crate::routes::uploads::upload::validate_remote_url;
 use crate::session::Session;
@@ -34,14 +35,15 @@ fn j(v: Value, code: u16) -> Res {
 /// `uploadApiAuth`: a session; anonymous ones need the upload permission, others must be
 /// registered users.
 async fn upload_auth(st: &AppState, req: &mut Req) -> Option<Res> {
-    let cfg = st.cfg();
     let Some(sess) = req.session() else {
         return Some(j(json!({ "success": false, "msg": "Unauthorized" }), 401));
     };
-    if s::is_anon_session(Some(sess)) {
-        if !s::can_anon_do(&cfg, "upload") {
-            return Some(j(json!({ "success": false, "msg": "Action requires a registered account or anonymous upload permission" }), 403));
+    for p in [P::Upload, P::UploadUrl] {
+        if !perms::can(st, Some(sess), p) {
+            return Some(Ok(perms::denied(p)));
         }
+    }
+    if s::is_anon_session(Some(sess)) {
         return None;
     }
     crate::http::check_guard(st, req, crate::http::Guard::RegisteredUser).await.map(Ok)
@@ -249,7 +251,10 @@ struct UrlJob {
     url: String,
     owner: String,
     user_id: i64,
-    admin: bool,
+    /// The big upload size (`upload_large` permission)
+    large: bool,
+    /// Goes to the approval queue (crate::routes::uploads::needs_approval)
+    manual: bool,
     display_name: Value,
     rating: Option<String>,
     tags: Vec<String>,
@@ -316,7 +321,7 @@ async fn upload_url_inner(st: &AppState, cfg: &Config, req: &mut Req) -> anyhow:
         return Ok(j(json!({ "success": false, "msg": format!("At least {min_tags} tag{} required", if min_tags != 1 { "s" } else { "" }) }), 400));
     }
     let owner = s::session_owner_name(Some(&session)).unwrap_or_else(|| session.user.clone());
-    if !session.is_admin_or_mod() {
+    if !perms::can(st, Some(&session), P::UploadUnlimited) {
         let since = (crate::util::now_secs() - 12 * 3600) as i32;
         let n: i64 = sql!("SELECT count(*) as count FROM items WHERE username = ", owner.as_str(), " AND stamp > ", since, " AND is_deleted = false")
             .fetch_scalar(&st.db)
@@ -350,7 +355,7 @@ async fn upload_url_inner(st: &AppState, cfg: &Config, req: &mut Req) -> anyhow:
             return Ok(j(json!({ "success": false, "msg": "This URL has already been uploaded", "repost": rep }), 409));
         }
     }
-    let manual = st.settings.manual_approval();
+    let manual = crate::routes::uploads::needs_approval(st, &session, &owner).await;
     let mut visibility = target_visibility(cfg, req, &session, field("visibility"));
     let expiry = field("expiry")
         .filter(|v| !v.is_empty())
@@ -369,7 +374,8 @@ async fn upload_url_inner(st: &AppState, cfg: &Config, req: &mut Req) -> anyhow:
         url,
         owner,
         user_id: session.id,
-        admin: session.admin,
+        large: perms::can(st, Some(&session), P::UploadLarge),
+        manual,
         display_name: session.display_name.clone().filter(|d| !d.is_empty()).map(Value::String).unwrap_or(Value::Null),
         rating,
         tags,
@@ -787,10 +793,7 @@ fn with_ext(p: &Path, ext: &str) -> PathBuf {
 
 /// Download, check and store the file → item id (`None`: duplicate, already reported).
 async fn process(st: &AppState, cfg: &Config, job: &UrlJob, job_id: &str, uuid: &str) -> Result<Option<i64>, CmdErr> {
-    let mut max = cfg.f64("main.maxfilesize").unwrap_or(0.0);
-    if job.admin {
-        max = (max * cfg.f64("main.adminmultiplier").unwrap_or(1.0)).floor();
-    }
+    let max = st.settings.upload_limit(cfg, job.large);
     let mut source = download(cfg, job, job_id, uuid, max).await?;
     set_progress(job_id, json!({ "stage": "analyzing", "percent": 100, "speed": null, "eta": null }));
     let size = tokio::fs::metadata(&source).await?.len() as f64;
@@ -866,7 +869,7 @@ async fn process(st: &AppState, cfg: &Config, job: &UrlJob, job_id: &str, uuid: 
     }
 
     let filename = source.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-    let manual = st.settings.manual_approval();
+    let manual = job.manual;
     let dest_dir = if manual { cfg.paths.pending.join("b") } else { cfg.paths.b.clone() };
     tokio::fs::create_dir_all(&dest_dir).await?;
     let dest_path = dest_dir.join(&filename);

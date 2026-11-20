@@ -211,6 +211,9 @@ async fn end_other_sessions(st: &AppState, user_id: i32, keep_sess_id: i64) -> a
 // ── avatar ──────────────────────────────────────────────────────────────────
 
 async fn set_avatar(st: AppState, mut req: Req) -> Res {
+    if !crate::perms::can(&st, req.session(), crate::perms::P::ProfileMedia) {
+        return Ok(crate::perms::denied(crate::perms::P::ProfileMedia));
+    }
     let body = req.post_value().await;
     if !crate::config::truthy(body.get("avatar").unwrap_or(&Value::Null)) {
         return j(json!({ "msg": "no avatar provided", "debug": body }), 400);
@@ -234,6 +237,9 @@ async fn set_avatar(st: AppState, mut req: Req) -> Res {
 }
 
 async fn use_custom_avatar(st: AppState, req: Req) -> Res {
+    if !crate::perms::can(&st, req.session(), crate::perms::P::ProfileMedia) {
+        return Ok(crate::perms::denied(crate::perms::P::ProfileMedia));
+    }
     let row = sql!("select avatar_file from user_options where user_id = ", uid(&req)).fetch_optional(&st.db).await?;
     let Some(file) = row.and_then(|r| r.str("avatar_file").filter(|f| !f.is_empty()).map(str::to_string)) else {
         return j(json!({ "success": false, "msg": "No custom avatar uploaded" }), 400);
@@ -457,6 +463,9 @@ async fn default_upload_visibility(st: AppState, mut req: Req) -> Res {
 }
 
 async fn username_color(st: AppState, mut req: Req) -> Res {
+    if !crate::perms::can(&st, req.session(), crate::perms::P::ProfileText) {
+        return Ok(crate::perms::denied(crate::perms::P::ProfileText));
+    }
     static COLOR: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| regex::Regex::new(r"(?i)^#([0-9A-F]{3}){1,2}$").unwrap());
     let body = req.post_value().await;
     let color = js_str(body.get("color")).filter(|c| crate::config::truthy(&body["color"]) && COLOR.is_match(c));
@@ -644,6 +653,9 @@ fn optional_text(body: &Value, k: &str, max: usize) -> Result<Option<String>, ()
 }
 
 async fn display_name(st: AppState, mut req: Req) -> Res {
+    if !crate::perms::can(&st, req.session(), crate::perms::P::ProfileText) {
+        return Ok(crate::perms::denied(crate::perms::P::ProfileText));
+    }
     let body = req.post_value().await;
     let Ok(clean) = optional_text(&body, "display_name", 32) else { return fail("Invalid display name format", 400) };
     let s = req.session().cloned().unwrap_or_default();
@@ -660,6 +672,9 @@ async fn display_name(st: AppState, mut req: Req) -> Res {
 }
 
 async fn description(st: AppState, mut req: Req) -> Res {
+    if !crate::perms::can(&st, req.session(), crate::perms::P::ProfileText) {
+        return Ok(crate::perms::denied(crate::perms::P::ProfileText));
+    }
     if !st.cfg().truthy("websrv.enable_profile_description") {
         return fail("Profile descriptions are disabled", 403);
     }
@@ -863,6 +878,9 @@ async fn api_key_get(st: AppState, req: Req) -> Res {
 }
 
 async fn api_key_regenerate(st: AppState, mut req: Req) -> Res {
+    if !crate::perms::can(&st, req.session(), crate::perms::P::ApiKeys) {
+        return Ok(crate::perms::denied(crate::perms::P::ApiKeys));
+    }
     if api_keys_disabled(&st) {
         return fail("API keys are disabled", 403);
     }
@@ -1073,6 +1091,9 @@ async fn invites_get(st: AppState, req: Req) -> Res {
 }
 
 async fn invites_create(st: AppState, req: Req) -> Res {
+    if !crate::perms::can(&st, req.session(), crate::perms::P::Invite) {
+        return Ok(crate::perms::denied(crate::perms::P::Invite));
+    }
     if invites_disabled(&st) {
         return fail("Invite system is disabled", 403);
     }

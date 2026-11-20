@@ -19,6 +19,13 @@ pub struct SiteSettings {
     /// Applications need an email address (admin panel, else `websrv.registration_applications_require_email`)
     pub applications_require_email: bool,
     pub trusted_uploads: i64,
+    /// Upload size limit in bytes (admin panel → Uploads), 0: `main.maxfilesize`
+    pub max_file_size: i64,
+    /// Factor on the upload limit for big uploads (the `upload_large` permission; admin panel →
+    /// Uploads), 0: `main.adminmultiplier`
+    pub upload_multiplier: f64,
+    /// Permission defaults per role and the groups' permissions (admin panel → Permissions)
+    pub permissions: crate::perms::PermConfig,
     pub bypass_duplicate_check: bool,
     pub protect_files: bool,
     pub private_messages: bool,
@@ -81,6 +88,9 @@ impl Settings {
                 registration_applications: cfg.truthy("websrv.registration_applications"),
                 applications_require_email: cfg.truthy("websrv.registration_applications_require_email"),
                 trusted_uploads: 0,
+                max_file_size: 0,
+                upload_multiplier: 0.0,
+                permissions: Default::default(),
                 bypass_duplicate_check: false,
                 protect_files: false,
                 private_messages: true,
@@ -134,6 +144,31 @@ impl Settings {
     }
     pub fn trusted_uploads(&self) -> i64 {
         self.inner.read().trusted_uploads
+    }
+    /// Upload size limit in bytes before the multiplier: admin panel, else `main.maxfilesize`,
+    /// else 150 MiB.
+    pub fn max_file_size(&self, cfg: &Config) -> f64 {
+        let set = self.inner.read().max_file_size;
+        if set > 0 {
+            return set as f64;
+        }
+        config_max_file_size(cfg)
+    }
+    /// Factor for big uploads: admin panel, else `main.adminmultiplier`, else 1 (never below 1).
+    pub fn upload_multiplier(&self, cfg: &Config) -> f64 {
+        let set = self.inner.read().upload_multiplier;
+        if set > 0.0 {
+            return set.max(1.0);
+        }
+        config_upload_multiplier(cfg)
+    }
+    /// Upload size limit in bytes; `large`: with the multiplier (the `upload_large` permission).
+    pub fn upload_limit(&self, cfg: &Config, large: bool) -> f64 {
+        let max = self.max_file_size(cfg);
+        if large { (max * self.upload_multiplier(cfg)).floor() } else { max.floor() }
+    }
+    pub fn permissions(&self) -> crate::perms::PermConfig {
+        self.inner.read().permissions.clone()
     }
     pub fn bypass_duplicate_check(&self) -> bool {
         self.inner.read().bypass_duplicate_check
@@ -219,6 +254,16 @@ impl Settings {
 
 // ── Config-based settings ─────────────────────────────────────────────────────
 
+/// `main.maxfilesize`, or 150 MiB when it is missing or not positive.
+pub fn config_max_file_size(cfg: &Config) -> f64 {
+    cfg.f64("main.maxfilesize").filter(|m| *m > 0.0).unwrap_or(150.0 * 1024.0 * 1024.0)
+}
+
+/// `main.adminmultiplier`, or 1 when it is missing or below 1.
+pub fn config_upload_multiplier(cfg: &Config) -> f64 {
+    cfg.f64("main.adminmultiplier").filter(|m| *m >= 1.0).unwrap_or(1.0)
+}
+
 pub fn shitpost_mode(cfg: &Config) -> bool {
     cfg.truthy("websrv.shitpost_mode")
 }
@@ -263,6 +308,11 @@ pub fn dm_attachment_expiry_days(cfg: &Config) -> i64 {
         Some(v) if v > 0 => v,
         _ => 90,
     }
+}
+
+/// The built-in default of one `anonymous_permissions` key (a yes/no one).
+pub fn default_anon_permission(key: &str) -> Option<bool> {
+    default_anon_permissions().get(key).and_then(Value::as_bool)
 }
 
 fn default_anon_permissions() -> Map<String, Value> {
@@ -462,16 +512,9 @@ pub fn session_owner_name(session: Option<&Session>) -> Option<String> {
     Some(s.user.clone()).filter(|u| !u.is_empty())
 }
 
-/// 4chan viewer & rehost access.
-pub fn can_use_chan(cfg: &Config, session: Option<&Session>) -> bool {
-    let Some(s) = session else { return false };
-    if s.admin {
-        return true;
-    }
-    if s.groups.iter().any(|g| g == "4chan") {
-        return true;
-    }
-    s.is_anon && can_anon_do(cfg, "chan")
+/// 4chan viewer & rehost access (the `chan` permission, crate::perms).
+pub fn can_use_chan(st: &crate::state::AppState, session: Option<&Session>) -> bool {
+    crate::perms::can(st, session, crate::perms::P::Chan)
 }
 
 pub fn check_anon_permission(cfg: &Config, session: Option<&Session>, action: &str) -> bool {
@@ -529,6 +572,9 @@ pub async fn load_from_db(st: &crate::state::AppState) {
                 "registration_applications" => s.registration_applications = b,
                 "applications_require_email" => s.applications_require_email = b,
                 "trusted_uploads" => s.trusted_uploads = as_int(&Value::String(val)).unwrap_or(0).max(0),
+                "max_file_size" => s.max_file_size = val.trim().parse::<i64>().unwrap_or(0).max(0),
+                "upload_multiplier" => s.upload_multiplier = val.trim().parse::<f64>().ok().filter(|m| m.is_finite() && *m >= 1.0).unwrap_or(0.0),
+                "permissions" => s.permissions = crate::perms::PermConfig::parse(&val),
                 "enable_cleanup" => s.enable_cleanup = b,
                 "cleanup_start_date" => s.cleanup_start_date = val,
                 "cleanup_end_date" => s.cleanup_end_date = val,

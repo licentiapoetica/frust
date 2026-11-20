@@ -11,16 +11,16 @@ use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 
 pub fn register(r: &mut Router) {
-    r.get_g(r"^\/admin\/bans(\/)?$", Guard::ModAuth, bans_page);
-    r.post_g(r"^\/api\/v2\/admin\/bans\/fingerprint\/ban\/?$", Guard::ModAuth, fingerprint_ban);
-    r.post_g(r"^\/api\/v2\/admin\/bans\/fingerprint\/unban\/?$", Guard::ModAuth, fingerprint_unban);
-    r.post_g(r"^\/api\/v2\/admin\/bans\/ip\/ban\/?$", Guard::ModAuth, ip_ban);
-    r.post_g(r"^\/api\/v2\/admin\/bans\/ip\/unban\/?$", Guard::ModAuth, ip_unban);
-    r.post_g(r"^\/api\/v2\/admin\/bans\/hardware\/ban\/?$", Guard::ModAuth, hardware_ban);
-    r.post_g(r"^\/api\/v2\/admin\/bans\/hardware\/unban\/?$", Guard::ModAuth, hardware_unban);
+    r.get_g(r"^\/admin\/bans(\/)?$", crate::http::Guard::Perm(crate::perms::P::ModBan), bans_page);
+    r.post_g(r"^\/api\/v2\/admin\/bans\/fingerprint\/ban\/?$", crate::http::Guard::Perm(crate::perms::P::ModBan), fingerprint_ban);
+    r.post_g(r"^\/api\/v2\/admin\/bans\/fingerprint\/unban\/?$", crate::http::Guard::Perm(crate::perms::P::ModBan), fingerprint_unban);
+    r.post_g(r"^\/api\/v2\/admin\/bans\/ip\/ban\/?$", crate::http::Guard::Perm(crate::perms::P::ModBan), ip_ban);
+    r.post_g(r"^\/api\/v2\/admin\/bans\/ip\/unban\/?$", crate::http::Guard::Perm(crate::perms::P::ModBan), ip_unban);
+    r.post_g(r"^\/api\/v2\/admin\/bans\/hardware\/ban\/?$", crate::http::Guard::Perm(crate::perms::P::ModBan), hardware_ban);
+    r.post_g(r"^\/api\/v2\/admin\/bans\/hardware\/unban\/?$", crate::http::Guard::Perm(crate::perms::P::ModBan), hardware_unban);
     r.get_g(r"^\/admin\/user\/(?<userId>\d+)\/ips(\/)?$", Guard::Auth, user_ips);
-    r.post_g(r"^\/api\/v2\/admin\/ban\/?$", Guard::ModAuth, user_ban);
-    r.post_g(r"^\/api\/v2\/admin\/unban\/?$", Guard::ModAuth, user_unban);
+    r.post_g(r"^\/api\/v2\/admin\/ban\/?$", crate::http::Guard::Perm(crate::perms::P::ModBan), user_ban);
+    r.post_g(r"^\/api\/v2\/admin\/unban\/?$", crate::http::Guard::Perm(crate::perms::P::ModBan), user_unban);
 }
 
 fn rows(v: Vec<Row>) -> Value {

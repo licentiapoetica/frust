@@ -1,7 +1,8 @@
 //! Item mutations of apiv2/index.mjs: tag rename, title, delete (post / album entry), favourites,
 //! OC flag, visibility, re-thumbnailing, expiry and rating.
 
-use super::{is_staff, j};
+use crate::perms::{self, P};
+use super::j;
 use crate::db::{Row, RowExt};
 use crate::f0cklib::recommend::spawn_update_user_affinity;
 use crate::http::{Guard, Req, Res};
@@ -69,7 +70,7 @@ pub(super) async fn set_title(st: AppState, mut req: Req) -> Res {
         return j(json!({ "success": false, "msg": "Item not found" }), 404);
     };
     let owner = session.user == item.string("username");
-    if !owner && !session.is_admin_or_mod() {
+    if !perms::may_edit_item(&st, Some(&session), owner) {
         return j(json!({ "success": false, "msg": "Forbidden" }), 403);
     }
     let title = js_str(post.get("title")).map(|t| t.trim().to_string()).filter(|t| !t.is_empty()).map(|t| crate::util::utf16_prefix(&t, 500));
@@ -181,7 +182,7 @@ pub(super) async fn delete_album_item(st: AppState, mut req: Req) -> Res {
         return j(json!({ "success": false, "msg": "Item is not an album" }), 400);
     }
     let owner = !session.user.is_empty() && !item.string("username").is_empty() && session.user.to_lowercase() == item.string("username").to_lowercase();
-    if !session.is_admin_or_mod() && !owner {
+    if !((owner && perms::can(&st, Some(&session), P::EditOwnItems)) || perms::can(&st, Some(&session), P::ModDeleteItems)) {
         return j(json!({ "success": false, "msg": "Unauthorized" }), 403);
     }
     let sub_id = present(post.get("sub_id")).or_else(|| present(post.get("subf0ck_id"))).and_then(|v| js_str(Some(v))).filter(|v| !v.is_empty());
@@ -312,8 +313,8 @@ pub(super) async fn toggle_fav(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
     let post = req.post_value().await;
     let session: Session = req.session().cloned().unwrap_or_default();
-    if s::is_anon_session(Some(&session)) && !s::can_anon_do(&cfg, "favorite") {
-        return j(json!({ "success": false, "msg": "Anonymous favorites are disabled" }), 403);
+    if !perms::can(&st, Some(&session), P::Fav) {
+        return Ok(perms::denied(P::Fav));
     }
     let raw = present(post.get("postid")).and_then(|v| js_str(Some(v))).or_else(|| req.query("postid").map(str::to_string));
     let Some(raw) = raw else {
@@ -422,11 +423,10 @@ pub(super) async fn toggle_fav(st: AppState, mut req: Req) -> Res {
 // ── POST /favorites/import ──────────────────────────────────────────────────
 
 pub(super) async fn favorites_import(st: AppState, mut req: Req) -> Res {
-    let cfg = st.cfg();
     let post = req.post_value().await;
     let session: Session = req.session().cloned().unwrap_or_default();
-    if s::is_anon_session(Some(&session)) && !s::can_anon_do(&cfg, "favorite") {
-        return j(json!({ "success": false, "msg": "Anonymous favorites are disabled" }), 403);
+    if !perms::can(&st, Some(&session), P::Fav) {
+        return Ok(perms::denied(P::Fav));
     }
     let num = |s: &str| crate::social::helpers::js_number(s);
     let raw: Vec<f64> = match post.get("ids") {
@@ -494,7 +494,7 @@ pub(super) async fn toggle_oc(st: AppState, mut req: Req) -> Res {
     let (Some(postid), Some(item)) = (postid, item) else {
         return j(json!({ "success": false, "msg": "Item not found" }), 404);
     };
-    if item.string("username") != session.user && !session.is_admin_or_mod() {
+    if !perms::may_edit_item(&st, Some(&session), item.string("username") == session.user) {
         return j(json!({ "success": false, "msg": "Unauthorized" }), 403);
     }
     let old = item.bool("is_oc");
@@ -584,8 +584,8 @@ pub(super) async fn set_visibility(st: AppState, mut req: Req) -> Res {
     let Some(item) = item else {
         return j(json!({ "success": false, "msg": "Item not found" }), 404);
     };
-    let staff = session.is_admin_or_mod();
-    if item.string("username") != session.user && !staff {
+    let staff = perms::can(&st, Some(&session), P::ModEditItems);
+    if !perms::may_edit_item(&st, Some(&session), item.string("username") == session.user) {
         return j(json!({ "success": false, "msg": "Unauthorized" }), 403);
     }
     if visibility == 3 && !staff {
@@ -606,8 +606,8 @@ pub(super) async fn bulk_visibility(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
     let post = req.post_value().await;
     let session: Session = req.session().cloned().unwrap_or_default();
-    if !is_staff(Some(&session)) {
-        return j(json!({ "success": false, "msg": "Bulk selection is only available to administrators and moderators" }), 403);
+    if !perms::can(&st, Some(&session), P::ModEditItems) {
+        return Ok(perms::denied(P::ModEditItems));
     }
     if cfg.is_false("enable_private_uploads") && !session.admin {
         return j(json!({ "success": false, "msg": "Private uploads feature disabled" }), 403);
@@ -688,7 +688,7 @@ async fn owned_item(st: &AppState, req: &Req, cols: &str) -> anyhow::Result<Resu
     };
     let session = req.session();
     let owner = session.map(|s| s.user == item.string("username")).unwrap_or(false);
-    if !owner && !is_staff(session) {
+    if !perms::may_edit_item(st, session, owner) {
         return Ok(Err(j(json!({ "success": false, "msg": "Unauthorized" }), 403)));
     }
     Ok(Ok(item))
@@ -734,7 +734,7 @@ pub(super) async fn set_expiry(st: AppState, mut req: Req) -> Res {
         Err(res) => return res,
     };
     // An unavailable item (takedown) can't be made to expire, or purged, by its uploader
-    if item.i64("visibility") == Some(3) && !req.session().is_some_and(|s| s.is_admin_or_mod()) {
+    if item.i64("visibility") == Some(3) && !perms::can(&st, req.session(), P::ModEditItems) {
         return j(json!({ "success": false, "msg": "This item was made unavailable by a moderator" }), 403);
     }
     let id = item.i64("id").unwrap_or(0);
@@ -771,12 +771,13 @@ pub(super) async fn rating(st: AppState, mut req: Req) -> Res {
     let Some(sess) = req.session() else {
         return j(json!({ "success": false, "msg": "Unauthorized" }), 401);
     };
-    if s::is_anon_session(Some(sess)) {
-        if !s::can_anon_do(&cfg, "rate_item") {
-            return j(json!({ "success": false, "msg": "Anonymous rating is disabled" }), 403);
+    if !perms::can(&st, Some(sess), P::Rate) && !perms::can(&st, Some(sess), P::ModEditItems) {
+        return Ok(perms::denied(P::Rate));
+    }
+    if !s::is_anon_session(Some(sess)) {
+        if let Some(res) = crate::http::check_guard(&st, &mut req, Guard::RegisteredUser).await {
+            return Ok(res);
         }
-    } else if let Some(res) = crate::http::check_guard(&st, &mut req, Guard::RegisteredUser).await {
-        return Ok(res);
     }
     let post = req.post_value().await;
     let session: Session = req.session().cloned().unwrap_or_default();
@@ -793,7 +794,7 @@ pub(super) async fn rating(st: AppState, mut req: Req) -> Res {
     let owner_name = s::session_owner_name(Some(&session)).unwrap_or_default();
     let item_user = item.string("username");
     let is_owner = !item_user.is_empty() && !owner_name.is_empty() && item_user.to_lowercase() == owner_name.to_lowercase();
-    if !is_owner && !session.is_admin_or_mod() {
+    if !perms::may_rate_item(&st, Some(&session), is_owner) {
         return j(json!({ "success": false, "msg": "Unauthorized" }), 403);
     }
     let nsfl_id: i32 = match sql!("SELECT id FROM tags WHERE normalized = 'nsfl' LIMIT 1").fetch_scalar::<i32, _>(&st.db).await? {

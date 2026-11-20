@@ -19,6 +19,7 @@
 //! * Cancelling an attachment keeps the file when another attachment still uses it (identical
 //!   uploads are stored once and symlinked).
 
+use crate::perms::{self, P};
 use crate::db::RowExt;
 use crate::http::{Req, Res, Router, json_raw};
 use crate::media::multipart::{self, FilePart, MpError, Part};
@@ -131,17 +132,18 @@ async fn upload(st: AppState, mut req: Req) -> Res {
     if !crate::routes::uploads::csrf_header_ok(&req, &session) {
         return fail(403, "Invalid CSRF token");
     }
-    if !session.is_admin_or_mod() && upload_rate_limited(session.id) {
+    let unlimited = perms::can(&st, Some(&session), P::UploadUnlimited);
+    if !unlimited && upload_rate_limited(session.id) {
         return fail(429, "Too many uploads, please wait a few minutes.");
     }
     if !crate::cap::allowed(&st.cfg(), &req, &session, crate::cap::Scope::Comment) {
         return send(json!({ "success": false, "msg": "Please complete the captcha.", "captcha_required": "comment" }), 403);
     }
     let cfg = st.cfg();
-    if crate::settings::is_anon_session(Some(&session))
-        && (!crate::settings::can_anon_do(&cfg, "comment") || !crate::settings::can_anon_do(&cfg, "comment_attachments"))
-    {
-        return fail(403, "Anonymous comment file uploads are disabled");
+    for p in [P::Comment, P::CommentFiles] {
+        if !perms::can(&st, Some(&session), p) {
+            return Ok(perms::denied(p));
+        }
     }
     if !cfg.truthy("websrv.allow_fileupload_comments") {
         return fail(403, "Comment file uploads are disabled");
@@ -152,8 +154,8 @@ async fn upload(st: AppState, mut req: Req) -> Res {
     };
 
     let mut max_file = cfg.f64("websrv.fileupload_comments_size").filter(|v| *v > 0.0).unwrap_or(10.0 * 1024.0 * 1024.0);
-    if session.admin {
-        max_file = (max_file * cfg.f64("main.adminmultiplier").filter(|v| *v != 0.0).unwrap_or(3.5)).floor();
+    if perms::can(&st, Some(&session), P::UploadLarge) {
+        max_file = (max_file * st.settings.upload_multiplier(&cfg)).floor();
     }
     let max_file = max_file as u64;
 
@@ -202,7 +204,7 @@ async fn upload(st: AppState, mut req: Req) -> Res {
     }
     // Files waiting to be attached count against a per-user quota until a comment uses them (or
     // purge_unattached removes them): /c/ is public at once, so it can't serve as free file hosting
-    if !session.is_admin_or_mod() {
+    if !unlimited {
         let pending: i64 = sql!("SELECT COALESCE(SUM(size), 0)::bigint FROM comment_files WHERE user_id = ", session.id as i32, " AND comment_id IS NULL")
             .fetch_scalar(&st.db)
             .await

@@ -9,10 +9,9 @@ use crate::state::AppState;
 use serde_json::{Value, json};
 
 pub fn register(r: &mut Router) {
-    use crate::http::Guard::ModAuth;
     r.post(r"^\/api\/v2\/report\/?$", submit);
-    r.get_g(r"^\/api\/v2\/mod\/reports\/?$", ModAuth, list);
-    r.post_g(r"^\/api\/v2\/mod\/reports\/(?<id>\d+)\/resolve\/?$", ModAuth, resolve);
+    r.get_g(r"^\/api\/v2\/mod\/reports\/?$", crate::http::Guard::Perm(crate::perms::P::ModReports), list);
+    r.post_g(r"^\/api\/v2\/mod\/reports\/(?<id>\d+)\/resolve\/?$", crate::http::Guard::Perm(crate::perms::P::ModReports), resolve);
 }
 
 const VALID_CATEGORIES: [&str; 6] = ["wrong_rating", "spam", "duplicate", "copyright", "illegal", "other"];
@@ -45,6 +44,10 @@ fn opt_id(v: Option<&Value>) -> Result<Option<i32>, ()> {
 // ── POST /api/v2/report ─────────────────────────────────────────────────────
 
 async fn submit(st: AppState, mut req: Req) -> Res {
+    // Visitors without an account may report (with a captcha); accounts need the permission
+    if req.session().is_some_and(|s| !s.user.is_empty()) && !crate::perms::can(&st, req.session(), crate::perms::P::Report) {
+        return Ok(crate::perms::denied(crate::perms::P::Report));
+    }
     let body = req.post().await?.clone();
     let reason = js_str(body.get("reason")).unwrap_or_default();
 

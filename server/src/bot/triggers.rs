@@ -288,9 +288,8 @@ async fn f0ck(rt: Arc<Runtime>, e: Message) -> Result<()> {
             .await;
         }
         Some("limit") => {
-            let max = super::parser::max_file_size(&cfg);
-            let mult = cfg.f64("main.adminmultiplier").unwrap_or(1.0);
-            e.reply(&format!("up to {} ({} for admins)", fs(max), fs(max * mult))).await;
+            let (max, large) = (st.settings.upload_limit(&cfg, false), st.settings.upload_limit(&cfg, true));
+            e.reply(&format!("up to {} ({} with big uploads)", fs(max), fs(large))).await;
         }
         Some("thumb") => {
             let ids: Vec<i32> = sql!("SELECT id FROM items").fetch_scalar_list(&st.db).await?;

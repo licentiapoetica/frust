@@ -2,6 +2,7 @@
 
 use crate::db::RowExt;
 use crate::http::{Guard, Group, Req, Res, Router, json_resp};
+use crate::perms::{self, P};
 use crate::session::Session;
 use crate::settings as s;
 use crate::social::helpers::{audit_log, js_str, log_anon_activity, notify};
@@ -16,8 +17,8 @@ pub fn register(r: &mut Router) {
     g.get_g(r"$", Guard::LoggedIn, get_item_tags);
     g.post_g(r"$", Guard::LoggedIn, add_tag);
     g.put_g(r"\/cycle-rating$", Guard::LoggedIn, cycle_rating);
-    g.put_g(r"\/toggle$", Guard::ModAuth, toggle);
-    g.delete_g(r"\/(?<tagname>.*)", Guard::ModAuth, delete_tag);
+    g.put_g(r"\/toggle$", crate::http::Guard::Perm(crate::perms::P::ModEditItems), toggle);
+    g.delete_g(r"\/(?<tagname>.*)", crate::http::Guard::Perm(crate::perms::P::ModTags), delete_tag);
 }
 
 const PROTECTED: [&str; 3] = ["sfw", "nsfw", "nsfl"];
@@ -133,7 +134,6 @@ fn item_not_found() -> Res {
 // ── POST /api/v2/tags/bulk ──────────────────────────────────────────────────
 
 async fn bulk(st: AppState, mut req: Req) -> Res {
-    let cfg = st.cfg();
     if !is_mod_or_admin(req.session()) {
         return j(json!({ "success": false, "msg": "Bulk selection is only available to administrators and moderators" }), 403);
     }
@@ -165,8 +165,8 @@ async fn bulk(st: AppState, mut req: Req) -> Res {
 
     match action.as_str() {
         "add" => {
-            if !s::check_anon_permission(&cfg, req.session(), "tag") {
-                return j(json!({ "success": false, "msg": "Anonymous tagging is disabled" }), 403);
+            if !perms::can(&st, req.session(), P::ModTags) {
+                return Ok(perms::denied(P::ModTags));
             }
             let Some(raw) = raw_tags(&body).filter(|t| !t.is_empty()) else {
                 return j(json!({ "success": false, "msg": "No tags provided" }), 400);
@@ -221,6 +221,9 @@ async fn bulk(st: AppState, mut req: Req) -> Res {
             )
         }
         "remove" => {
+            if !perms::can(&st, req.session(), P::ModTags) {
+                return Ok(perms::denied(P::ModTags));
+            }
             let Some(raw) = raw_tags(&body).filter(|t| !t.is_empty()) else {
                 return j(json!({ "success": false, "msg": "No tags provided to remove" }), 400);
             };
@@ -256,8 +259,8 @@ async fn bulk(st: AppState, mut req: Req) -> Res {
             )
         }
         "set_rating" => {
-            if !s::check_anon_permission(&cfg, req.session(), "rate_item") {
-                return j(json!({ "success": false, "msg": "Anonymous rating is disabled" }), 403);
+            if !perms::can(&st, req.session(), P::ModEditItems) {
+                return Ok(perms::denied(P::ModEditItems));
             }
             let rating = first_truthy(&body, &["rating"]).and_then(|v| js_str(Some(&v))).unwrap_or_default().to_lowercase();
             if !PROTECTED.contains(&rating.as_str()) {
@@ -348,9 +351,8 @@ async fn get_item_tags(st: AppState, req: Req) -> Res {
 // ── POST /api/v2/tags/:postid ───────────────────────────────────────────────
 
 async fn add_tag(st: AppState, mut req: Req) -> Res {
-    let cfg = st.cfg();
-    if !s::check_anon_permission(&cfg, req.session(), "tag") {
-        return j(json!({ "success": false, "msg": "Anonymous tagging is disabled" }), 403);
+    if !perms::can(&st, req.session(), P::Tag) {
+        return Ok(perms::denied(P::Tag));
     }
     let body = req.post().await?.clone();
     let raw_tagname = first_truthy(&body, &["tagname"]).and_then(|v| js_str(Some(&v)));
@@ -442,8 +444,8 @@ async fn add_tag(st: AppState, mut req: Req) -> Res {
 
 async fn cycle_rating(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
-    if !s::check_anon_permission(&cfg, req.session(), "rate_item") {
-        return j(json!({ "success": false, "msg": "Anonymous rating is disabled" }), 403);
+    if !perms::can(&st, req.session(), P::Rate) && !perms::can(&st, req.session(), P::ModEditItems) {
+        return Ok(perms::denied(P::Rate));
     }
     let Some(postid) = postid(&req) else {
         return j(json!({ "success": false, "msg": "missing postid" }), 200);
@@ -457,7 +459,7 @@ async fn cycle_rating(st: AppState, mut req: Req) -> Res {
     let owner = s::session_owner_name(req.session());
     let item_user = item.str("username").unwrap_or("");
     let is_owner = !item_user.is_empty() && owner.as_deref().map(|o| !o.is_empty() && o.to_lowercase() == item_user.to_lowercase()).unwrap_or(false);
-    if !is_owner && !is_mod_or_admin(req.session()) {
+    if !perms::may_rate_item(&st, req.session(), is_owner) {
         return j(json!({ "success": false, "msg": "Unauthorized" }), 403);
     }
 

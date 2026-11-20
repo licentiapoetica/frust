@@ -5,7 +5,7 @@ use super::halls::{basename, build_mosaic, custom_dir, error_page, mode_param, m
 use crate::db::{Row, RowExt};
 use crate::http::{Req, Res, Router, html, json_raw, raw, redirect};
 use crate::session::Session;
-use crate::settings::{can_anon_do, is_anonymize_session, session_owner_name};
+use crate::settings::{is_anonymize_session, session_owner_name};
 use crate::social::helpers::{js_number, js_str};
 use crate::social::{comments as sc, feed_bridge, halls};
 use crate::sql;
@@ -75,6 +75,15 @@ fn require_login(req: &Req) -> Result<&Session, Response> {
     let mut r = raw(302, "");
     r.headers_mut().insert(header::LOCATION, HeaderValue::from_static("/login"));
     Err(r)
+}
+
+/// [`require_login`] for changing lists: also the `lists` permission.
+fn require_lists<'a>(st: &AppState, req: &'a Req) -> Result<&'a Session, Response> {
+    let s = require_login(req)?;
+    if !crate::perms::can(st, Some(s), crate::perms::P::Lists) {
+        return Err(crate::perms::denied(crate::perms::P::Lists));
+    }
+    Ok(s)
 }
 
 /// The user whose halls a request manages: the visitor's own, or for an admin the `user_id` in the
@@ -302,14 +311,13 @@ async fn hall_item(st: AppState, req: Req) -> Res {
     if let Some(Value::Object(mut item)) = data.get("item").cloned().filter(crate::config::truthy) {
         // The old code referenced an undeclared `item` here (ReferenceError on every request);
         // it clearly meant `data.item`.
-        let is_anon = session.map(Session::is_anonymous_user).unwrap_or(false);
         let item_user = item.get("username").and_then(Value::as_str).unwrap_or("").to_string();
         let is_mod_or_admin = session.map(|s| s.admin || s.is_moderator).unwrap_or(false);
-        let can_manage = !is_anon
-            && session.map(|s| s.admin || s.is_moderator || (!s.user.is_empty() && !item_user.is_empty() && s.user.to_lowercase() == item_user.to_lowercase())).unwrap_or(false);
+        let owns = session.is_some_and(|s| !s.user.is_empty() && !item_user.is_empty() && s.user.to_lowercase() == item_user.to_lowercase());
+        let can_manage = crate::perms::may_edit_item(&st, session, owns);
         let owner = session_owner_name(session);
-        let can_rate = can_manage
-            || (is_anon && can_anon_do(&cfg, "rate_item") && owner.map(|o| !item_user.is_empty() && o.to_lowercase() == item_user.to_lowercase()).unwrap_or(false));
+        let owns_as = owner.map(|o| !item_user.is_empty() && o.to_lowercase() == item_user.to_lowercase()).unwrap_or(false);
+        let can_rate = crate::perms::may_rate_item(&st, session, owns_as);
         let mime = item.get("mime").and_then(Value::as_str).unwrap_or("").to_string();
         let mimes = cfg.mimes();
         let ext = mimes.get(&mime).and_then(Value::as_str);
@@ -538,7 +546,7 @@ async fn api_create(st: AppState, mut req: Req) -> Res {
     if !userhalls_enabled(&st) {
         return disabled();
     }
-    let uid = match require_login(&req) {
+    let uid = match require_lists(&st, &req) {
         Ok(s) => match target_user(&req, s) {
             Some(u) => u,
             None => return jr(json!({ "success": false, "msg": "invalid user_id" }), 404),
@@ -567,7 +575,7 @@ async fn api_update(st: AppState, mut req: Req) -> Res {
     if !userhalls_enabled(&st) {
         return disabled();
     }
-    let uid = match require_login(&req) {
+    let uid = match require_lists(&st, &req) {
         Ok(s) => match target_user(&req, s) {
             Some(u) => u,
             None => return jr(json!({ "success": false, "msg": "invalid user_id" }), 404),
@@ -601,7 +609,7 @@ async fn api_delete(st: AppState, req: Req) -> Res {
     if !userhalls_enabled(&st) {
         return disabled();
     }
-    let s = match require_login(&req) {
+    let s = match require_lists(&st, &req) {
         Ok(s) => s,
         Err(r) => return Ok(r),
     };
@@ -618,7 +626,7 @@ async fn api_delete(st: AppState, req: Req) -> Res {
 }
 
 async fn api_add_item(st: AppState, mut req: Req) -> Res {
-    let uid = match require_login(&req) {
+    let uid = match require_lists(&st, &req) {
         Ok(s) => s.id,
         Err(r) => return Ok(r),
     };
@@ -653,7 +661,7 @@ async fn api_item_form(st: AppState, mut req: Req) -> Res {
     if !userhalls_enabled(&st) {
         return disabled();
     }
-    let uid = match require_login(&req) {
+    let uid = match require_lists(&st, &req) {
         Ok(s) if s.is_anonymous_user() => return jr(json!({ "success": false, "msg": "Login required" }), 401),
         Ok(s) => s.id,
         Err(r) => return Ok(r),
@@ -706,7 +714,7 @@ async fn api_item_form(st: AppState, mut req: Req) -> Res {
 }
 
 async fn api_remove_item(st: AppState, req: Req) -> Res {
-    let uid = match require_login(&req) {
+    let uid = match require_lists(&st, &req) {
         Ok(s) => s.id,
         Err(r) => return Ok(r),
     };
@@ -723,15 +731,15 @@ async fn api_remove_item(st: AppState, req: Req) -> Res {
     jr(result, code)
 }
 
-async fn api_image_stub(_st: AppState, req: Req) -> Res {
-    if let Err(r) = require_login(&req) {
+async fn api_image_stub(st: AppState, req: Req) -> Res {
+    if let Err(r) = require_lists(&st, &req) {
         return Ok(r);
     }
     jr(json!({ "success": false, "msg": "Send as multipart/form-data" }), 400)
 }
 
 async fn api_image_delete(st: AppState, req: Req) -> Res {
-    let uid = match require_login(&req) {
+    let uid = match require_lists(&st, &req) {
         Ok(s) => match target_user(&req, s) {
             Some(u) => u,
             None => return jr(json!({ "success": false, "msg": "invalid user_id" }), 404),
@@ -782,6 +790,9 @@ async fn image_upload(st: AppState, mut req: Req) -> Res {
     let resp = async {
         if form_post && bad_token(multipart_text(&body, &boundary, "csrf_token").as_deref()) {
             return jr(json!({ "success": false, "msg": "Invalid CSRF token" }), 403);
+        }
+        if !crate::perms::can(&st, Some(&session), crate::perms::P::Lists) {
+            return Ok(crate::perms::denied(crate::perms::P::Lists));
         }
         let Some(uid) = target_user(&req, &session) else { return jr(json!({ "success": false, "msg": "invalid user_id" }), 404) };
         let Some(hall) = sql!("SELECT id FROM user_halls WHERE user_id = ", uid as i32, " AND slug = ", &slug, " LIMIT 1").fetch_optional(&st.db).await? else {

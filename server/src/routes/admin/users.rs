@@ -13,6 +13,7 @@ pub fn register(r: &mut Router) {
     r.post_g(r"^\/api\/v2\/admin\/users\/set-password\/?$", Guard::Auth, set_password);
     r.post_g(r"^\/api\/v2\/admin\/users\/set-role\/?$", Guard::Auth, set_role);
     r.post_g(r"^\/api\/v2\/admin\/users\/set-groups\/?$", Guard::Auth, set_groups);
+    r.post_g(r"^\/api\/v2\/admin\/users\/set-permissions\/?$", Guard::Auth, set_permissions);
     r.post_g(r"^\/api\/v2\/admin\/users\/lock-layout\/?$", Guard::Auth, lock_layout);
     r.post_g(r"^\/api\/v2\/admin\/users\/delete\/?$", Guard::Auth, delete_user);
     r.post_g(r"^\/api\/v2\/admin\/users\/reassign-uploads\/?$", Guard::Auth, reassign_uploads);
@@ -154,7 +155,7 @@ async fn users_page(st: AppState, req: Req) -> Res {
         }
         let users = sql!(
             r#"WITH filtered_users AS (
-                SELECT u.id, u.login, u.user, u.email, u.created_at, u.banned, u.ban_reason, u.ban_expires, u.is_moderator, u.admin, u.groups, u.activated,
+                SELECT u.id, u.login, u.user, u.email, u.created_at, u.banned, u.ban_reason, u.ban_expires, u.is_moderator, u.admin, u.groups, u.permissions, u.activated,
                        uo.avatar_file, uo.display_name, uo.force_comment_display_mode, uo.comment_display_mode,
                        (SELECT token FROM invite_tokens WHERE used_by = u.id ORDER BY created_at DESC LIMIT 1) as reg_method
                 FROM "user" u
@@ -208,6 +209,8 @@ async fn users_page(st: AppState, req: Req) -> Res {
     };
 
     let has_more = users.len() as i64 == limit;
+    let cfg = st.cfg();
+    let pc = st.settings.permissions();
     // Counters as numbers so the template can compare them (postgres.js returned bigint strings,
     // which JavaScript coerced in `u.failed_attempts > 0`).
     let users: Vec<Value> = users
@@ -217,6 +220,22 @@ async fn users_page(st: AppState, req: Req) -> Res {
                 if let Some(n) = u.f64(k) {
                     u.insert(k.into(), json!(n));
                 }
+            }
+            // What the account may do now (crate::perms), next to its own overrides
+            if u.i64("id").is_some() {
+                let overrides = crate::perms::parse_overrides(u.val("permissions"));
+                let who = crate::session::Session {
+                    id: u.i64("id").unwrap_or(0),
+                    user: u.string("user"),
+                    login: u.string("login"),
+                    admin: u.bool("admin"),
+                    is_moderator: u.bool("is_moderator"),
+                    groups: u.val("groups").as_array().map(|a| a.iter().filter_map(|g| g.as_str().map(str::to_string)).collect()).unwrap_or_default(),
+                    permissions: overrides.clone(),
+                    ..Default::default()
+                };
+                u.insert("perms_effective".into(), json!(crate::perms::all(&cfg, &pc, &who)));
+                u.insert("permissions".into(), json!(overrides));
             }
             Value::Object(u)
         })
@@ -263,6 +282,9 @@ async fn users_page(st: AppState, req: Req) -> Res {
         "emptyMsg": empty_msg,
         "totals": totals(&st).await,
         "log_user_ips": crate::settings::log_user_ips(&st.cfg()),
+        // Permission overrides and groups (crate::perms)
+        "perm_catalog": crate::perms::catalog_json(),
+        "perm_groups": super::permissions::known_groups(&st).await.into_iter().map(|(g, _)| g).collect::<Vec<_>>(),
         "tmp": null,
     });
 
@@ -380,6 +402,38 @@ async fn set_groups(st: AppState, mut req: Req) -> Res {
         crate::audit::log(&st, sid(&req), "admin_set_groups", "user", uid.to_string(), json!({ "target_login": login, "groups": groups })).await;
         let shown = if groups.is_empty() { "none".to_string() } else { groups.join(", ") };
         Ok(json!({ "success": true, "groups": groups, "msg": format!("Groups for \"{login}\" updated to: {shown}") }))
+    }
+    .await;
+    answer(r, 200)
+}
+
+/// `POST /api/v2/admin/users/set-permissions`: the account's own permission overrides,
+/// `perm_<key>` = `allow` / `deny` / anything else (inherit: groups and role default);
+/// `clear=1` drops them all. Answers with what the account may do now (`effective`).
+async fn set_permissions(st: AppState, mut req: Req) -> Res {
+    let body = req.post().await?.clone();
+    let r = async {
+        let uid = require_id(&body, "user_id")?;
+        let target = target_user(&st, uid).await?;
+        let clear = body_str(&body, "clear").is_some_and(|v| v.rsplit(',').next() == Some("1"));
+        let mut overrides = serde_json::Map::new();
+        for perm in crate::perms::PERMS.iter().filter(|_| !clear) {
+            match body_str(&body, &format!("perm_{}", perm.key)).as_deref().map(|v| v.rsplit(',').next().unwrap_or("")) {
+                Some("allow") => overrides.insert(perm.key.to_string(), json!(true)),
+                Some("deny") => overrides.insert(perm.key.to_string(), json!(false)),
+                _ => None,
+            };
+        }
+        let value = Value::Object(overrides);
+        sql!(r#"UPDATE "user" SET permissions = "#, value.clone(), " WHERE id = ", uid).execute(&st.db).await?;
+        let login = target.string("login");
+        crate::audit::log(&st, sid(&req), "admin_set_permissions", "user", uid.to_string(), json!({ "target_login": login, "permissions": value })).await;
+        let n = value.as_object().map(|m| m.len()).unwrap_or(0);
+        let effective = match crate::app::user_session(&st, uid as i64).await {
+            Some(s) => json!(crate::perms::all(&st.cfg(), &st.settings.permissions(), &s)),
+            None => Value::Null,
+        };
+        Ok(json!({ "success": true, "permissions": value, "count": n, "effective": effective, "msg": format!("Permissions for \"{login}\" saved ({n} override{})", if n == 1 { "" } else { "s" }) }))
     }
     .await;
     answer(r, 200)

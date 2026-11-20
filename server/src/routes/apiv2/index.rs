@@ -47,11 +47,11 @@ pub fn register(r: &mut Router) {
     g.get(r"\/items\/suggest$", items_suggest);
     g.get(r"\/search\/syntax$", search_syntax);
     g.get(r"\/search\/preview$", search_preview);
-    g.put_g(r"\/tags\/rename\/(?<tagname>.*)", Guard::ModAuth, items::tags_rename);
+    g.put_g(r"\/tags\/rename\/(?<tagname>.*)", crate::http::Guard::Perm(crate::perms::P::ModTags), items::tags_rename);
     g.patch_g(r"\/items\/(?<id>\d+)\/title$", Guard::RegisteredUser, items::set_title);
     // the same as a plain form post (no JavaScript: f0ckyou's Edit dialog)
     g.post_g(r"\/items\/(?<id>\d+)\/title$", Guard::RegisteredUser, items::set_title);
-    g.post_g(r"\/admin\/deletepost$", Guard::ModAuth, items::delete_post);
+    g.post_g(r"\/admin\/deletepost$", crate::http::Guard::Perm(crate::perms::P::ModDeleteItems), items::delete_post);
     g.post_g(r"\/admin\/delete-album-item$", Guard::LoggedIn, items::delete_album_item);
     g.post_g(r"\/togglefav$", Guard::LoggedIn, items::toggle_fav);
     g.post_g(r"\/favorites\/import$", Guard::LoggedIn, items::favorites_import);
