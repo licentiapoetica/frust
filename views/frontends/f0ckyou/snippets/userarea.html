@@ -9,7 +9,7 @@
 {%- set ua_me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
 {%- set ua_link = "/user/" ~ (ua_me|encode_uri_component) -%}
 {%- set ua_mode = (mode if mode is number else 0) -%}
-{%- set ua_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
+{%- set ua_upload = (session and (session.can.upload if session.can else (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload)))) -%}
 {% if ua_upload %}<a class="fy-create" id="nav-upload-link" href="/upload" title="Upload (u)" aria-haspopup="dialog" aria-expanded="false">{{ fy.ico("upload") }}<span>Upload</span></a>{% endif %}
 {% if (session and private_messages and not session.is_anon) %}<a class="fy-iconbtn fy-hide-narrow" href="/messages" title="Messages">{{ fy.ico("mail") }}<span id="dm-badge" class="fy-badge">0</span><span class="fy-sr">Messages</span></a>{% endif %}
 {% if session %}

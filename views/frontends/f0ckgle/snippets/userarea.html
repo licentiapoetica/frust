@@ -3,7 +3,7 @@
     JavaScript; f0ckgle.js closes them on an outside click. -#}
 {%- set me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
 {%- set cur_mode = (mode if mode is number else 0) -%}
-{%- set can_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
+{%- set can_upload = (session and (session.can.upload if session.can else (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload)))) -%}
 <div class="fg-user">
   {% if (session and private_messages and not session.is_anon) %}<a class="fg-user-link" href="/messages">f0ckmail<span id="dm-badge" class="fg-dm-badge">0</span></a>{% endif %}
   <a class="fg-user-link" href="/mime?back=%2Fp%2F1" title="every f0ck, newest first, no type filter">Browse all f0cks</a>

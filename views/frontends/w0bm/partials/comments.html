@@ -10,6 +10,8 @@
 {% if session %}
 {% if (item.is_comments_locked and not is_mod_or_admin) %}
 <div class="panel panel-default w0bm-locked"><div class="panel-body">🔒 Comments are disabled on this upload.</div></div>
+{% elif (session.can and not session.can.comment) %}
+<div class="panel panel-default w0bm-locked"><div class="panel-body">🔒 You don't have permission to comment.</div></div>
 {% elif (session.is_anon and anon_permissions and not anon_permissions.comment) %}
 <div class="panel panel-default w0bm-locked"><div class="panel-body">🔒 Anonymous comments are disabled.</div></div>
 {% else %}
@@ -57,7 +59,7 @@
 {%- set w0bm_is_mod = w0bm_user and (session.admin or session.is_moderator) %}
 {#- where a poll's plain vote / delete form returns to (nojs.rs), the comment's anchor added -#}
 {%- set w0bm_poll_back = (url.pathname ~ url.search) if (url is defined and url) else ("/" ~ item.id) %}
-{%- set w0bm_can_reply = w0bm_user and not (item.is_comments_locked and not is_mod_or_admin) and not (session.is_anon and anon_permissions and not anon_permissions.comment) %}
+{%- set w0bm_can_reply = w0bm_user and not (item.is_comments_locked and not is_mod_or_admin) and not (session.is_anon and anon_permissions and not anon_permissions.comment) and (session.can.comment if session.can else true) %}
 {%- macro wactions(c) -%}
 <span class="w0bm-c-actions w0bm-js-only">
 {%- if w0bm_can_reply %}<a class="reply_comment w0bm-cact" href="#" title="Reply" aria-label="Reply"><i class="fa fa-reply"></i></a>{% endif -%}

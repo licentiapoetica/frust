@@ -36,7 +36,7 @@
   </form>
   {% endif %}
   <div class="fg-comment-actions">
-    {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" data-reply="{{ c.id }}" data-name="{{ (c.name or "anonymous") }}">Reply</a>{% endif %}
+    {% if session and not item.is_comments_locked and (session.can.comment if session.can else true) %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" data-reply="{{ c.id }}" data-name="{{ (c.name or "anonymous") }}">Reply</a>{% endif %}
     {% if session and (is_mod_or_admin or (allow_comment_deletion and c.username and (c.username|lower) == me)) %}
     <form method="post" action="/api/comments/{{ c.id }}/delete" class="fg-inline fg-ajax" data-fg-refresh="comments comments-head" data-fg-confirm="Delete this comment?">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -60,7 +60,7 @@
     <p class="fg-dim">No discussions yet. Be the first.</p>
     {% endfor %}
   </div>
-  {% if session and not item.is_comments_locked %}
+  {% if session and not item.is_comments_locked and (session.can.comment if session.can else true) %}
   <form method="post" action="/api/comments" class="fg-comment-form fg-ajax" id="comment-form" data-fg-refresh="comments comments-head" data-fg-comment>
     <input type="hidden" name="item_id" value="{{ item.id }}">
     <input type="hidden" name="parent_id" value="{{ (reply_to or "") }}">

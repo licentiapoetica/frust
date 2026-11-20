@@ -12,12 +12,12 @@
   <div class="v2-comment-head">
     {% if c.username %}<a href="/user/{{ c.username|lower|encode_uri_component }}"><img class="v2-comment-ava" src="{{ c.avatar_src }}" alt="" loading="lazy"></a><a class="v2-comment-name{% if c.username_color %} v2-namecolor{% endif %}" href="/user/{{ c.username|lower|encode_uri_component }}"{% if c.username_color %} style="--user-color: {{ c.username_color }}"{% endif %}>{{ c.name }}</a>{% else %}<img class="v2-comment-ava" src="/s/fe/f0ckv2/img/default.png" alt=""><span class="v2-comment-name">{{ (c.name or "anonymous") }}</span>{% endif %}
     {#- the id replies to the comment, like [re] -#}
-    {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" class="v2-comment-id" title="reply">#{{ c.id }}</a>{% else %}<a href="#c{{ c.id }}" class="v2-comment-id">#{{ c.id }}</a>{% endif %}
+    {% if session and not item.is_comments_locked and (session.can.comment if session.can else true) %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" class="v2-comment-id" title="reply">#{{ c.id }}</a>{% else %}<a href="#c{{ c.id }}" class="v2-comment-id">#{{ c.id }}</a>{% endif %}
     <time class="v2-comment-time" tooltip="{{ c.iso }}">{{ c.timeago }}</time>
     {% if c.is_pinned %}<span class="badge badge-light">pinned</span>{% endif %}
     {% for b in (c.backlinks or []) %}<a href="#c{{ b }}" class="v2-quote">&gt;&gt;{{ b }}</a> {% endfor %}
     <span class="v2-comment-actions">
-      {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" title="reply">[re]</a>{% endif %}
+      {% if session and not item.is_comments_locked and (session.can.comment if session.can else true) %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" title="reply">[re]</a>{% endif %}
       {% if session and (is_mod_or_admin or (allow_comment_deletion and c.username and (c.username|lower) == me)) %}
       <form method="post" action="/api/comments/{{ c.id }}/delete" class="v2-inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -47,7 +47,7 @@
     <p class="v2-empty">no comments yet</p>
     {% endfor %}
   </div>
-  {% if session and not item.is_comments_locked %}
+  {% if session and not item.is_comments_locked and (session.can.comment if session.can else true) %}
   <form method="post" action="/api/comments" class="v2-comment-form" id="comment-form">
     <input type="hidden" name="item_id" value="{{ item.id }}">
     <input type="hidden" name="parent_id" value="{{ (reply_to or "") }}">

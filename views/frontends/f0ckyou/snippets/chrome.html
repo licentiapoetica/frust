@@ -11,7 +11,7 @@
 {%- set fy_cur = (fy_nav if (fy_nav is defined and fy_nav) else "") -%}
 {%- set fy_me = (((session.login if (session.is_anon and session.login) else session.user))|lower if session else "") -%}
 {%- set fy_ulink = ("/user/" ~ (fy_me|encode_uri_component)) if session else "" -%}
-{%- set fy_can_upload = (session and (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload))) -%}
+{%- set fy_can_upload = (session and (session.can.upload if session.can else (not session.is_anon or (enable_anonymous_access and anon_permissions and anon_permissions.upload)))) -%}
 {%- set fy_staff = (session and (session.admin or session.is_moderator)) -%}
 {#- guide entries: [href, icon, label, key] -#}
 {%- set fy_main = [["/", "home", "Home", "home"], ["/random", "shuffle", "Random", "random"]]

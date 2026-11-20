@@ -28,7 +28,7 @@
           <li><a href="/user/{{ me|encode_uri_component }}">my profile</a></li>
           <li><a href="/user/{{ me|encode_uri_component }}/uploads">my f0cks</a></li>
           <li><a href="/user/{{ me|encode_uri_component }}/favs">my favs</a></li>
-          {% if not session.is_anon %}<li><a href="/upload">upload</a></li>{% endif %}
+          {% if (session.can.upload if session.can else not session.is_anon) %}<li><a href="/upload">upload</a></li>{% endif %}
           {% if (manual_approval and not session.is_anon) %}<li><a href="/pending">pending{% if session.own_pending_count %} ({{ session.own_pending_count }}){% endif %}</a></li>{% endif %}
           {% if private_messages and not session.is_anon %}<li><a href="/messages">messages <span id="dm-badge" class="v2-dm-badge">0</span></a></li>{% endif %}
           <li><a href="/settings">settings</a></li>

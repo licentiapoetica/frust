@@ -42,7 +42,7 @@
     </form>
     {% endif %}
     <div class="fy-comment-actions">
-      {% if session and not item.is_comments_locked %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" data-reply="{{ c.id }}" data-name="{{ (c.name or "anonymous") }}">Reply</a>{% endif %}
+      {% if session and not item.is_comments_locked and (session.can.comment if session.can else true) %}<a href="{{ here_path }}?reply={{ c.id }}#comment-form" data-reply="{{ c.id }}" data-name="{{ (c.name or "anonymous") }}">Reply</a>{% endif %}
       {% if session and (is_mod_or_admin or (allow_comment_deletion and c.username and (c.username|lower) == me)) %}
       <form method="post" action="/api/comments/{{ c.id }}/delete" class="fy-inline fy-ajax" data-fy-refresh="comments comments-head" data-fy-confirm="Delete this comment?">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -59,7 +59,7 @@
 {%- set comment_total = (sc|length) + (sc|selectattr("replies")|map(attribute="replies")|map("length")|sum) -%}
 <section class="fy-comments" id="comments" data-item-id="{{ item.id }}">
   <h2 class="fy-comments-head" data-fy-live="comments-head">{{ comment_total|locale_number }} Comment{% if comment_total != 1 %}s{% endif %}{% if item.is_comments_locked %} <span class="fy-dim">&middot; {{ fy.ico("lock") }} locked</span>{% endif %}</h2>
-  {% if session and not item.is_comments_locked %}
+  {% if session and not item.is_comments_locked and (session.can.comment if session.can else true) %}
   <form method="post" action="/api/comments" class="fy-comment-form fy-ajax" id="comment-form" data-fy-refresh="comments comments-head" data-fy-comment>
     <span class="fy-comment-ava">{{ fy.avatar(session.avatar_file, session.avatar, (session.display_name or session.user)) }}</span>
     <div class="fy-comment-form-main">

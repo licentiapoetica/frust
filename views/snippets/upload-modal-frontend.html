@@ -2,7 +2,7 @@
     anywhere) with f0ckm's upload form. Included by snippets/frontend-scripts.html after f0ck-core.js.
     Not on /upload, which has the frontend's own form. The frontend's CSS gives #upload-drag-modal and
     #drop-overlay f0ckm's colour variables (--accent, --accent-rgb, --bg, ...): views/frontends/README.md -#}
-{% if (session and not (url and url.pathname == "/upload") and (not session.is_anon or (enable_anonymous_access and anon_permissions.upload))) %}
+{% if (session and not (url and url.pathname == "/upload") and (session.can.upload if session.can else (not session.is_anon or (enable_anonymous_access and anon_permissions.upload)))) %}
 <link rel="stylesheet" href="/s/css/fa-layered.css?v={{ mtime("/public/s/css/fa-layered.css") }}">
 <link rel="stylesheet" href="/s/css/upload.css?v={{ mtime("/public/s/css/upload.css") }}">
 <link rel="stylesheet" href="/s/css/upload-modal.css?v={{ mtime("/public/s/css/upload-modal.css") }}">

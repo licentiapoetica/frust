@@ -36,6 +36,7 @@
     "user_id": {% if (session and session.id) %} {{ session.id|safe }} {% else %} null {% endif %},
     "is_admin": {% if (session and session.admin) %} true {% else %} false {% endif %},
     "is_moderator": {% if (session and session.is_moderator) %} true {% else %} false {% endif %},
+    "can": {% if (session and session.can is defined and session.can) %}{{ session.can|tojson }}{% else %}{}{% endif %},
     "enable_swf": {% if enable_swf %} true {% else %} false {% endif %},
     "enable_danmaku": {% if enable_danmaku %} true {% else %} false {% endif %},
     "enable_global_chat": {% if enable_global_chat %} true {% else %} false {% endif %},

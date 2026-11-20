@@ -308,6 +308,8 @@
             {% include "snippets/comments-static.html" %}
             {% if (item.is_comments_locked and not is_mod_or_admin) %}
             <div class="lock-notice">🔒 Comments are disabled on this thread.</div>
+            {% elif (session and session.can and not session.can.comment) %}
+            <div class="lock-notice">🔒 You don't have permission to comment.</div>
             {% elif ((session and session.is_anon) and not anon_permissions.comment) %}
             <div class="lock-notice">🔒 Anonymous comments are disabled.</div>
             {% else %}

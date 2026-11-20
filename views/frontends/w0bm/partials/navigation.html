@@ -36,7 +36,7 @@
                 {% if (not session.is_anon or (enable_anonymous_access and anon_permissions.filter)) %}
                 <li><a href="#filterselectmodal" data-toggle="modal" data-target="#filterselectmodal"><i class="fa fa-filter"></i><span class="hidden-sm"> Filter</span></a></li>
                 {% endif %}
-                {% if (not session.is_anon or (enable_anonymous_access and anon_permissions.upload)) %}
+                {% if (session.can.upload if session.can else (not session.is_anon or (enable_anonymous_access and anon_permissions.upload))) %}
                 <li><a href="/upload"><i class="fa fa-cloud-upload"></i><span class="hidden-sm"> Upload</span></a></li>
                 {% endif %}
                 <li><a href="/user/{{ ((session.login if (session.is_anon and session.login) else session.user))|lower }}/favs" title="Favorites"><i class="fa fa-heart"></i></a></li>

@@ -14,7 +14,7 @@
   <!-- Nav links: desktop always-on, mobile hidden until toggled -->
   <div class="nav-collapse" id="navbarContent">
       <div class="nav-links">
-        {% if (not session.is_anon or (enable_anonymous_access and anon_permissions.upload)) %}
+        {% if (session.can.upload if session.can else (not session.is_anon or (enable_anonymous_access and anon_permissions.upload))) %}
         <a id="nav-upload-link" class="navbar-upload-link"><i class="fa-solid fa-angle-up"></i> {{ t("nav.upload") }}</a>
         {% endif %}
         {% if meme_creator %}
