@@ -292,6 +292,7 @@ async fn users_page(st: AppState, req: Req) -> Res {
         "log_user_ips": crate::settings::log_user_ips(&st.cfg()),
         // Permission overrides and groups (crate::perms)
         "perm_catalog": crate::perms::catalog_json(),
+        "perm_off": crate::perms::features_off_json(&st),
         "perm_groups": super::permissions::known_groups(&st).await.into_iter().map(|(g, _)| g).collect::<Vec<_>>(),
         "tmp": null,
     });

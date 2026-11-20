@@ -10,7 +10,7 @@
 
         <section class="adm-section" id="perm-roles">
             <h2 class="adm-section-title"><i class="fa-solid fa-user-shield"></i> Role defaults</h2>
-            <p class="adm-perm-hint">"Default" is the built-in value in brackets{% if not anon_access %}. Anonymous accounts are off (<code>enable_anonymous_access</code>), so their column has no effect{% endif %}.</p>
+            <p class="adm-perm-hint">Greyed-out actions are turned off on this site, so nobody can use them whatever is set here. "Default" is the built-in value in brackets{% if not anon_access %}. Anonymous accounts are off (<code>enable_anonymous_access</code>), so their column has no effect{% endif %}.</p>
             <form method="post" action="/admin/permissions/roles" class="adm-perm-form" data-perm-autosave>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="back" value="/admin/permissions#perm-roles">
@@ -26,8 +26,9 @@
                         <tbody>
                             <tr class="adm-perm-section"><th colspan="{{ roles|length + 1 }}" scope="colgroup">{{ sec.name }}</th></tr>
                             {% for p in sec.perms %}
-                            <tr id="perm-{{ p.key }}">
-                                <th scope="row"><span class="adm-perm-label">{{ p.label }}</span><span class="adm-perm-desc">{{ p.desc }}</span></th>
+                            {% set off = (perm_off[p.key] if (perm_off is defined and p.key in perm_off) else none) %}
+                            <tr id="perm-{{ p.key }}"{% if off %} class="is-off"{% endif %}>
+                                <th scope="row"><span class="adm-perm-label">{{ p.label }}{% if off %} <span class="adm-perm-off" title="Nobody can use it while {{ off }} is off">off on this site</span>{% endif %}</span><span class="adm-perm-desc">{{ p.desc }}</span></th>
                                 {% for r in roles %}
                                 {% set rv = role_values[r.key] %}
                                 <td data-label="{{ r.label }}">
@@ -77,8 +78,9 @@
                                 <tr class="adm-perm-section"><th colspan="2" scope="colgroup">{{ sec.name }}</th></tr>
                                 {% for p in sec.perms %}
                                 {% set gv = (g.perms[p.key] if p.key in g.perms else none) %}
-                                <tr>
-                                    <th scope="row"><span class="adm-perm-label">{{ p.label }}</span></th>
+                                {% set off = (perm_off[p.key] if (perm_off is defined and p.key in perm_off) else none) %}
+                                <tr{% if off %} class="is-off"{% endif %}>
+                                    <th scope="row"><span class="adm-perm-label">{{ p.label }}{% if off %} <span class="adm-perm-off" title="Nobody can use it while {{ off }} is off">off on this site</span>{% endif %}</span></th>
                                     <td>
                                         <select name="perm_{{ p.key }}" class="adm-text adm-select adm-perm-select{% if gv is not none %} is-set{% endif %}" aria-label="{{ p.label }}: {{ g.name }}">
                                             <option value="inherit"{% if gv is none %} selected{% endif %}>—</option>

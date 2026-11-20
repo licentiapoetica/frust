@@ -361,6 +361,35 @@ pub fn denied(p: P) -> axum::response::Response {
     crate::http::json_resp(&json!({ "success": false, "msg": denied_msg(p), "permission": info(p).key }), 403)
 }
 
+/// The site switch that has the feature behind a permission turned off (config or admin
+/// settings), if it is off: nobody can use it then, whatever the permission says. The admin pages
+/// grey such permissions out.
+pub fn feature_off(st: &crate::state::AppState, p: P) -> Option<&'static str> {
+    let cfg = st.cfg();
+    let comments_off = cfg.is_false("enable_comments");
+    let off = |cond: bool, why: &'static str| cond.then_some(why);
+    match p {
+        P::UploadUrl => off(!cfg.truthy("websrv.web_url_upload"), "websrv.web_url_upload"),
+        P::Comment | P::CommentDelete => off(comments_off, "enable_comments"),
+        P::CommentFiles => off(comments_off, "enable_comments").or(off(!cfg.truthy("websrv.allow_fileupload_comments"), "websrv.allow_fileupload_comments")),
+        P::CommentPoll | P::PollVote => off(comments_off, "enable_comments").or(off(!cfg.truthy("websrv.enable_comment_polls"), "websrv.enable_comment_polls")),
+        P::Lists => off(cfg.is_false("websrv.userhalls_enabled"), "websrv.userhalls_enabled"),
+        P::ModLists => off(cfg.is_false("websrv.halls_enabled") && cfg.is_false("websrv.userhalls_enabled"), "websrv.halls_enabled"),
+        P::Message => off(!st.settings.private_messages(), "websrv.private_messages"),
+        P::MessageFiles => off(!st.settings.private_messages(), "websrv.private_messages").or(off(!st.settings.dm_attachments(), "websrv.dm_attachments")),
+        P::Chat | P::ModChat => off(!cfg.truthy("websrv.enable_global_chat"), "websrv.enable_global_chat"),
+        P::Meme => off(!cfg.truthy("websrv.meme_creator"), "websrv.meme_creator"),
+        P::ApiKeys => off(cfg.is_false("websrv.enable_user_api_keys"), "websrv.enable_user_api_keys"),
+        P::Invite => off(cfg.is_false("websrv.enable_user_invites"), "websrv.enable_user_invites"),
+        _ => None,
+    }
+}
+
+/// `{ perm key: switch }` for every permission whose feature is off on this site.
+pub fn features_off_json(st: &crate::state::AppState) -> Value {
+    Value::Object(PERMS.iter().filter_map(|perm| feature_off(st, perm.p).map(|why| (perm.key.to_string(), json!(why)))).collect::<Map<_, _>>())
+}
+
 /// The catalog for the admin pages: sections with their permissions.
 pub fn catalog_json() -> Value {
     let mut sections: Vec<(&str, Vec<Value>)> = Vec::new();

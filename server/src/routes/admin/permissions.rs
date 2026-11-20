@@ -47,6 +47,7 @@ async fn page(st: AppState, req: Req) -> Res {
     let data = json!({
         "session": req.session_value(),
         "catalog": perms::catalog_json(),
+        "perm_off": perms::features_off_json(&st),
         "roles": Role::ALL.iter().map(|r| json!({ "key": r.key(), "label": r.label() })).collect::<Vec<_>>(),
         "role_values": perms::roles_json(&cfg, &pc),
         "groups": groups,

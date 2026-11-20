@@ -250,7 +250,7 @@
             <summary class="adm-user-perms-head">
                 <h3>Permission overrides</h3>
                 <span class="adm-user-chip{% if ov %} is-on{% endif %}" data-perm-count>{{ ov|length }} override{{ ("s" if ov|length != 1 else "") }}</span>
-                <span class="adm-user-hint">Inherit = from their groups and role. ✓/✗ = what they can do now.</span>
+                <span class="adm-user-hint">Inherit = from their groups and role. ✓/✗ = what they can do now. Greyed out = turned off on this site.</span>
                 <i class="fa fa-chevron-down adm-user-perms-toggle" aria-hidden="true"></i>
             </summary>
             <form class="adm-user-form adm-user-perms-form" method="post" action="/api/v2/admin/users/set-permissions">
@@ -263,8 +263,14 @@
                         <legend>{{ sec.name }}</legend>
                         {% for p in sec.perms %}
                         {% set o = (ov[p.key] if p.key in ov else none) %}
-                        <div class="adm-user-perm" title="{{ p.desc }}">
+                        {#- A feature that is off on the whole site: greyed out, nobody can use it -#}
+                        {% set off = (perm_off[p.key] if (perm_off is defined and p.key in perm_off) else none) %}
+                        <div class="adm-user-perm{% if off %} is-off{% endif %}" title="{% if off %}Off on this site ({{ off }}). {% endif %}{{ p.desc }}">
+                            {% if off %}
+                            <span class="adm-user-perm-now is-off" aria-label="off on this site">–</span>
+                            {% else %}
                             <span class="adm-user-perm-now{% if eff[p.key] %} is-yes{% endif %}" data-perm-now="{{ p.key }}" aria-label="{{ ("allowed now" if eff[p.key] else "not allowed now") }}">{{ ("✓" if eff[p.key] else "✗") }}</span>
+                            {% endif %}
                             <span class="adm-user-perm-name">{{ p.label }}</span>
                             <span class="adm-user-perm-seg" role="radiogroup" aria-label="{{ p.label }}">
                                 <label class="is-inherit"><input type="radio" name="perm_{{ p.key }}" value="inherit"{% if o is none %} checked{% endif %}><span>Inherit</span></label>

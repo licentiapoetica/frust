@@ -3221,7 +3221,7 @@ mod tests {
             "users": users, "back": "/admin/users?q=o", "prevUrl": null, "nextUrl": "/admin/users?q=o&page=2", "openRow": "2", "rawQ": "o", "q": "o",
             "page": 1, "total": 6, "hasMore": true, "onlyLegacy": false, "status": "", "role": "", "totalLabel": "registered members",
             "emptyMsg": "No users matched your search.", "totals": {}, "log_user_ips": true, "tmp": null,
-            "perm_catalog": crate::perms::catalog_json(), "perm_groups": ["4chan", "vip"] });
+            "perm_catalog": crate::perms::catalog_json(), "perm_groups": ["4chan", "vip"], "perm_off": { "chat": "websrv.enable_global_chat" } });
         let html = env.get_template("admin/users.html").unwrap().render(to_jvalue(&ctx)).unwrap_or_else(|e| panic!("{e:#}"));
         if let Ok(dir) = std::env::var("F0CKM_DUMP_ADMIN_USERS") {
             std::fs::write(PathBuf::from(dir).join("users.html"), &html).unwrap();
@@ -3268,6 +3268,8 @@ mod tests {
         assert!(yo.contains("not allowed now") && !yo.contains("perm_mod_ban"), "mod powers only for moderators");
         assert!(row("4").contains("perm_mod_ban"));
         assert!(me.contains("Admins have every permission") && !me.contains("set-permissions"));
+        // a feature that is off on the site: greyed out, no ✓/✗
+        assert!(yo.contains("class=\"adm-user-perm is-off\" title=\"Off on this site (websrv.enable_global_chat). ") && !yo.contains("data-perm-now=\"chat\""));
         // warnings: a form for everyone but yourself
         assert!(yo.contains("action=\"/api/v2/mod/warnings/issue\"") && yo.contains("name=\"reason\" class=\"adm-text\" required") && !me.contains("warnings/issue"));
     }
@@ -3284,6 +3286,7 @@ mod tests {
         pc.groups.insert("trusted".into(), std::collections::BTreeMap::from([("upload_large".to_string(), true)]));
         let ctx = serde_json::json!({ "domain": "f0ck.test", "csrf_token": "tok", "session": { "user": "bob", "id": 1, "admin": true },
             "catalog": crate::perms::catalog_json(),
+            "perm_off": { "chat": "websrv.enable_global_chat" },
             "roles": crate::perms::Role::ALL.iter().map(|r| serde_json::json!({ "key": r.key(), "label": r.label() })).collect::<Vec<_>>(),
             "role_values": crate::perms::roles_json(&cfg, &pc),
             "groups": [
@@ -3305,6 +3308,7 @@ mod tests {
         };
         assert!(sel("user.comment").contains("<option value=\"deny\" selected>") && page.contains("name=\"user.comment\" class=\"adm-text adm-select adm-perm-select is-set\""));
         assert!(sel("anon.upload").contains("<option value=\"default\" selected>Default (no)</option>"));
+        assert!(page.contains("<tr id=\"perm-chat\" class=\"is-off\">") && page.contains("off on this site</span>"));
         assert!(sel("mod.upload_large").contains("Default (yes)"));
         assert!(page.contains("name=\"mod.mod_ban\"") && !page.contains("name=\"user.mod_ban\"") && !page.contains("name=\"anon.mod_ban\""));
         // groups: their own rules, removal only where there are any, a form for a new one
