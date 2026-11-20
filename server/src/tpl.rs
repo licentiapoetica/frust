@@ -3211,6 +3211,8 @@ mod tests {
         assert!(yo.contains("not allowed now") && !yo.contains("perm_mod_ban"), "mod powers only for moderators");
         assert!(row("4").contains("perm_mod_ban"));
         assert!(me.contains("Admins have every permission") && !me.contains("set-permissions"));
+        // warnings: a form for everyone but yourself
+        assert!(yo.contains("action=\"/api/v2/mod/warnings/issue\"") && yo.contains("name=\"reason\" class=\"adm-text\" required") && !me.contains("warnings/issue"));
     }
 
     /// Admin panel → Permissions: the role table (moderator powers only for moderators), the groups,

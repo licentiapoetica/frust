@@ -26620,6 +26620,27 @@ html:not(.no-js) .adm-users .adm-users-apply {
   color: #ff8787;
 }
 
+.adm-users button.adm-btn-warn {
+  border-color: rgba(252, 196, 25, 0.5);
+  color: #ffd43b;
+}
+
+.adm-users button.adm-btn-warn:hover:not(:disabled) {
+  background: rgba(252, 196, 25, 0.12);
+  border-color: #fcc419;
+  color: #ffd43b;
+}
+
+/* Warn: the reason takes the room left of the button */
+.adm-users .adm-user-warn .adm-text[name="reason"] {
+  flex: 1 1 160px;
+}
+
+:where(.adm-users) .adm-user-chip.is-warn {
+  border-color: rgba(252, 196, 25, 0.5);
+  color: #ffd43b;
+}
+
 /* Ban: the reason gets its own line, duration and button below */
 .adm-users .adm-user-ban .adm-text[name="reason"] {
   flex-basis: 100%;

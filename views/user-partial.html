@@ -71,12 +71,15 @@
                         {% endif %}
                         {% if (session.admin or session.is_moderator) %}
                             {% if (session.admin or not user.admin) %}
-                                {% if user.banned %}
+                                {% if session.can and not session.can.mod_ban %}
+                                {% elif user.banned %}
                                 <button id="unban-user-btn" class="btn btn-sm btn-outline-success user-profile-action-btn user-profile-action-btn-success" title="{{ t("profile.unban_btn") }}"><i class="fa-solid fa-unlock"></i></button>
                                 {% else %}
                                 <button id="ban-user-btn" class="btn btn-sm btn-outline-danger user-profile-action-btn user-profile-action-btn-accent" title="{{ t("profile.ban_btn") }}"><i class="fa-solid fa-ban"></i></button>
                                 {% endif %}
+                                {% if not session.can or session.can.mod_warn %}
                                 <button id="warn-user-btn" class="btn btn-sm btn-outline-warning user-profile-action-btn user-profile-action-btn-warning" title="{{ t("profile.warn_btn") }}"><i class="fa-solid fa-triangle-exclamation"></i></button>
+                                {% endif %}
                             {% endif %}
                         {% endif %}
                     {% endif %}

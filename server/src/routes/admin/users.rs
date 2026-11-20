@@ -105,7 +105,9 @@ async fn users_page(st: AppState, req: Req) -> Res {
                    EXTRACT(DAY FROM (now() - pu.created_at)) as age_days,
                    COALESCE(ic.upload_count, 0) as upload_count,
                    0::bigint as comment_count,
-                   0::bigint as failed_attempts
+                   0::bigint as failed_attempts,
+                   0::bigint as warning_count,
+                   0::bigint as warning_unread
             FROM paginated_users pu
             LEFT JOIN LATERAL (
                 SELECT COUNT(*) as upload_count FROM items WHERE (username = pu.login OR username = pu.user) AND is_deleted = false
@@ -169,7 +171,9 @@ async fn users_page(st: AppState, req: Req) -> Res {
                    EXTRACT(DAY FROM (now() - pu.created_at)) as age_days,
                    COALESCE(ic.upload_count, 0) as upload_count,
                    COALESCE(cc.comment_count, 0) as comment_count,
-                   COALESCE(la.failed_attempts, 0) as failed_attempts
+                   COALESCE(la.failed_attempts, 0) as failed_attempts,
+                   COALESCE(wc.warning_count, 0) as warning_count,
+                   COALESCE(wc.warning_unread, 0) as warning_unread
             FROM paginated_users pu
             LEFT JOIN LATERAL (
                 SELECT COUNT(*) as upload_count FROM items WHERE (username = pu.login OR username = pu.user) AND is_deleted = false
@@ -180,7 +184,11 @@ async fn users_page(st: AppState, req: Req) -> Res {
             LEFT JOIN LATERAL (
                 SELECT COUNT(*) as failed_attempts FROM login_attempts
                 WHERE username = pu.login AND success = false AND type = 'login' AND attempted_at > now() - interval '10 hours'
-            ) la ON true"#
+            ) la ON true
+            LEFT JOIN LATERAL (
+                SELECT COUNT(*) as warning_count, COUNT(*) FILTER (WHERE acknowledged = false) as warning_unread
+                FROM user_warnings WHERE user_id = pu.id
+            ) wc ON pu.id IS NOT NULL"#
         )
         .fetch_all(&st.db)
         .await?;
@@ -216,7 +224,7 @@ async fn users_page(st: AppState, req: Req) -> Res {
     let users: Vec<Value> = users
         .into_iter()
         .map(|mut u| {
-            for k in ["upload_count", "comment_count", "failed_attempts", "age_days"] {
+            for k in ["upload_count", "comment_count", "failed_attempts", "warning_count", "warning_unread", "age_days"] {
                 if let Some(n) = u.f64(k) {
                     u.insert(k.into(), json!(n));
                 }

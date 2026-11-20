@@ -23,6 +23,7 @@
                 {% if is_self %}<span class="adm-user-chip is-you">you</span>{% endif %}
                 {% if u.admin %}<span class="adm-user-chip is-admin">Admin</span>{% elif u.is_moderator %}<span class="adm-user-chip is-mod">Mod</span>{% endif %}
                 {% for g in user_groups %}<span class="adm-user-chip is-group">{{ g }}</span>{% endfor %}
+                {% if u.warning_count %}<span class="adm-user-chip is-warn" title="Warnings{% if u.warning_unread %} ({{ u.warning_unread }} not seen yet){% endif %}"><i class="fa fa-triangle-exclamation"></i> {{ u.warning_count }}</span>{% endif %}
                 {% if u.id %}<span class="adm-user-chip{% if not (u.permissions is defined and u.permissions) %} adm-users-hidden{% endif %}" title="Own permission overrides" data-perm-chip><i class="fa fa-key"></i> <span>{{ (u.permissions|length if (u.permissions is defined and u.permissions) else 0) }}</span></span>{% endif %}
                 {% if u.force_comment_display_mode %}<span class="adm-user-chip" title="Comment layout locked"><i class="fa fa-lock"></i> {{ ("Linear" if u.comment_display_mode == 1 else "Tree") }}</span>{% endif %}
             </span>
@@ -86,6 +87,18 @@
                 </select>
                 <button type="submit" class="adm-btn adm-btn-danger"><i class="fa fa-ban"></i> Ban</button>
             </form>
+            {% endif %}
+            {% if not is_self %}
+            {#- A warning: the user sees it once (notification + popup) until they acknowledge it -#}
+            <form class="adm-user-form adm-user-line adm-user-warn" method="post" action="/api/v2/mod/warnings/issue">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="back" value="{{ row_back }}">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <input type="text" name="reason" class="adm-text" required maxlength="1000" placeholder="Warning (shown to the user)" aria-label="Warning reason">
+                <button type="submit" class="adm-btn adm-btn-warn"><i class="fa fa-triangle-exclamation"></i> Warn</button>
+            </form>
+            {% endif %}
+            {% if u.warning_count %}
+            <p class="adm-user-hint adm-user-warn-count">{{ u.warning_count }} warning{{ ("s" if u.warning_count != 1 else "") }} so far{% if u.warning_unread %}, {{ u.warning_unread }} not seen yet{% endif %}</p>
             {% endif %}
             {% if u.failed_attempts > 0 %}
             <form class="adm-user-form adm-user-line" method="post" action="/api/v2/admin/users/reset-login-attempts">
