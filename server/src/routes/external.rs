@@ -456,13 +456,43 @@ async fn rehost(st: AppState, mut req: Req) -> Res {
     if !crate::perms::can(&st, Some(&session), crate::perms::P::Upload) {
         return Ok(crate::perms::denied(crate::perms::P::Upload));
     }
+    // `fav=add`: also a favourite (the 4chan thread's fav button, one plain form without JavaScript)
+    let want_fav = body.get("fav").and_then(Value::as_str).is_some_and(|v| v.rsplit(',').next() == Some("add"));
     match rehost_inner(&st, &body, &source, &session).await {
+        Ok(r) if want_fav && r.status().is_success() => Ok(with_favourite(&st, &session, r).await),
         Ok(r) => Ok(r),
         Err(e) => {
             tracing::error!("[REHOST] Error: {e:#}");
             Ok(fail(500, "Rehost failed"))
         }
     }
+}
+
+/// A successful rehost reply, with the rehosted item added to the user's favourites.
+async fn with_favourite(st: &AppState, session: &crate::session::Session, resp: Response) -> Response {
+    let (parts, body) = resp.into_parts();
+    let Ok(bytes) = axum::body::to_bytes(body, 1 << 20).await else { return fail(500, "Rehost failed") };
+    let mut v: Value = match serde_json::from_slice(&bytes) {
+        Ok(v) => v,
+        Err(_) => return Response::from_parts(parts, axum::body::Body::from(bytes)),
+    };
+    let Some(id) = v["item_id"].as_i64() else { return Response::from_parts(parts, axum::body::Body::from(bytes)) };
+    if !crate::perms::can(st, Some(session), crate::perms::P::Fav) {
+        v["msg"] = json!(crate::perms::denied_msg(crate::perms::P::Fav));
+        return json(v, 200);
+    }
+    match sql!(r#"INSERT INTO "favorites" (item_id, user_id) VALUES ("#, id as i32, ", ", session.id as i32, ") ON CONFLICT DO NOTHING").execute(&st.db).await {
+        Ok(_) => {
+            crate::f0cklib::recommend::spawn_update_user_affinity(st, session.id, id, 5.0);
+            v["favorited"] = json!(true);
+            v["msg"] = json!(if v["repost"] == json!(true) { "Already on the site: added to your favourites" } else { "Rehosted and added to your favourites" });
+        }
+        Err(e) => {
+            tracing::error!("[REHOST] favourite failed: {e}");
+            v["msg"] = json!("Rehosted, but adding it to your favourites failed");
+        }
+    }
+    json(v, 200)
 }
 
 async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSource, session: &crate::session::Session) -> anyhow::Result<Response> {

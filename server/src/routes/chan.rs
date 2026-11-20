@@ -18,6 +18,8 @@ use std::collections::{HashMap, HashSet};
 
 pub fn register(r: &mut Router) {
     // No route for a bare `/4` (or `/4/`, the router strips trailing slashes): that is item 4.
+    // The board field of the catalogue (a GET form, so it also works without JavaScript)
+    r.get_g(r"^\/4\/(?:catalogue|catalog)\/?$", Guard::ChanAuth, go_to_board);
     r.get_g(r"^\/4\/(?<board>[a-z0-9]+)\/(?:catalogue|catalog)\/?$", Guard::ChanAuth, catalogue);
     r.get_g(r"^\/4\/(?<board>[a-z0-9]+)\/(?<thread>\d+)\/?$", Guard::ChanAuth, thread);
     r.get_g(r"^\/4\/(?<board>[a-z0-9]+)\/(?<thread>\d+)\/(?<post>\d+)\/?$", Guard::ChanAuth, thread_item);
@@ -607,11 +609,17 @@ async fn catalogue(st: AppState, req: Req) -> Res {
             })
         })
         .collect();
+    let q: String = req.query("q").unwrap_or("").trim().chars().take(100).collect();
+    let sort = catalogue_sort(req.query("sort"));
+    let (threads, shown) = filter_sort_catalogue(threads, &q, sort);
     let common: Vec<Value> = COMMON_BOARDS.iter().map(|(id, name, icon)| json!({ "id": id, "name": name, "icon": icon })).collect();
     let d = domain(&st);
     let data = json!({
         "board": board,
         "threads": threads,
+        "q": q,
+        "sort": sort,
+        "shown": shown,
         "common_boards": common,
         "session": req.session_value(),
         "domain": d,
@@ -623,6 +631,65 @@ async fn catalogue(st: AppState, req: Req) -> Res {
         }
     });
     Ok(html(crate::tpl::render(&st, Some(&req), "chan/catalogue", data)))
+}
+
+/// `?sort=` of the catalogue: bump order unless one of the others.
+fn catalogue_sort(v: Option<&str>) -> &'static str {
+    match v {
+        Some("replies") => "replies",
+        Some("images") => "images",
+        Some("date-new") => "date-new",
+        Some("date-old") => "date-old",
+        _ => "bump",
+    }
+}
+
+/// The catalogue's filter (`q`: post number, subject or text) and order (stickies first). Every
+/// thread stays in the list; the ones the filter leaves out get `hidden` (catalogue.js filters
+/// and sorts in place from there, `bump` keeps the board's order). Returns the visible count.
+fn filter_sort_catalogue(threads: Vec<Value>, q: &str, sort: &str) -> (Vec<Value>, usize) {
+    let ql = q.to_lowercase();
+    let n = |t: &Value, k: &str| t[k].as_i64().unwrap_or(0);
+    let mut out: Vec<Value> = threads
+        .into_iter()
+        .enumerate()
+        .map(|(i, mut t)| {
+            let hay = format!("{} {} {}", js_str(&t["no"]), t["sub"].as_str().unwrap_or(""), t["com"].as_str().unwrap_or("")).to_lowercase();
+            t["bump"] = json!(i);
+            t["hidden"] = json!(!ql.is_empty() && !hay.contains(&ql));
+            t
+        })
+        .collect();
+    out.sort_by(|a, b| {
+        let sticky = |t: &Value| t["sticky"] == json!(true);
+        sticky(b).cmp(&sticky(a)).then_with(|| match sort {
+            "replies" => n(b, "replies").cmp(&n(a, "replies")),
+            "images" => n(b, "images").cmp(&n(a, "images")),
+            "date-new" => n(b, "time").cmp(&n(a, "time")),
+            "date-old" => n(a, "time").cmp(&n(b, "time")),
+            _ => n(a, "bump").cmp(&n(b, "bump")),
+        })
+    });
+    let shown = out.iter().filter(|t| t["hidden"] != json!(true)).count();
+    (out, shown)
+}
+
+/// `?show=` of a thread: all posts, only the ones with media, or only rehosted ones.
+fn thread_show(v: Option<&str>) -> &'static str {
+    match v {
+        Some("media") => "media",
+        Some("rehosted") => "rehosted",
+        _ => "all",
+    }
+}
+
+/// `GET /4/catalogue?board=<name>`: the catalogue of the board typed into the board field.
+async fn go_to_board(_st: AppState, req: Req) -> Res {
+    let board = req.query("board").unwrap_or("").trim().trim_matches('/').to_lowercase();
+    if board.is_empty() || board.len() > 12 || !board.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit()) {
+        return Ok(redirect("/4/wsg/catalogue"));
+    }
+    Ok(redirect(&format!("/4/{board}/catalogue")))
 }
 
 /// Thread JSON from the API; must contain posts.
@@ -672,6 +739,7 @@ fn thread_view_data(st: &AppState, req: &Req, board: &str, tid: i64, posts: &[Va
         "media_count": media_count,
         "first_media_no": first_media,
         "rehosts_count": rehosts.order.len(),
+        "show": thread_show(req.query("show")),
         "session": req.session_value(),
         "csrf_token": req.session().and_then(|s| s.csrf_token.clone()).unwrap_or_default(),
         "domain": d,
@@ -1052,6 +1120,27 @@ async fn thread_media(st: AppState, req: Req) -> Res {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn catalogue_filter_and_sort() {
+        let t = |no: i64, sub: &str, replies: i64, time: i64, sticky: bool| json!({ "no": no, "sub": sub, "com": "", "replies": replies, "images": 0, "time": time, "sticky": sticky });
+        let threads = vec![t(1, "alpha", 5, 30, false), t(2, "beta", 9, 10, false), t(3, "rules", 0, 20, true), t(4, "alphabet", 1, 40, false)];
+        let order = |v: &[Value]| v.iter().map(|t| t["no"].as_i64().unwrap()).collect::<Vec<_>>();
+        let (v, shown) = filter_sort_catalogue(threads.clone(), "", "bump");
+        assert_eq!((order(&v), shown), (vec![3, 1, 2, 4], 4), "stickies first, then the board's order");
+        let (v, _) = filter_sort_catalogue(threads.clone(), "", "replies");
+        assert_eq!(order(&v), vec![3, 2, 1, 4]);
+        let (v, _) = filter_sort_catalogue(threads.clone(), "", "date-new");
+        assert_eq!(order(&v), vec![3, 4, 1, 2]);
+        let (v, shown) = filter_sort_catalogue(threads.clone(), "ALPHA", "bump");
+        assert_eq!(shown, 2);
+        assert_eq!(v.iter().filter(|t| t["hidden"] == json!(true)).count(), 2, "left out threads stay, hidden");
+        let (_, shown) = filter_sort_catalogue(threads, "2", "bump");
+        assert_eq!(shown, 1, "post numbers match");
+        assert_eq!(catalogue_sort(Some("nope")), "bump");
+        assert_eq!(thread_show(Some("rehosted")), "rehosted");
+        assert_eq!(thread_show(Some("x")), "all");
+    }
 
     #[test]
     fn entities() {

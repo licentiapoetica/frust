@@ -3329,6 +3329,66 @@ mod tests {
         assert!(yo.contains("action=\"/api/v2/mod/warnings/issue\"") && yo.contains("name=\"reason\" class=\"adm-text\" required") && !me.contains("warnings/issue"));
     }
 
+    /// 4chan catalogue and thread: plain links and forms (no JavaScript needed), the filter state
+    /// rendered on the server, the page scripts inside #main (they run on in-place navigation).
+    /// `F0CKM_DUMP_CHAN=<dir>` writes both pages out.
+    #[test]
+    fn chan_pages_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let session = serde_json::json!({ "user": "bob", "id": 1, "admin": true, "csrf_token": "tok" });
+        let cat = serde_json::json!({ "domain": "f0ck.test", "session": session, "tmp": null, "board": "wsg", "q": "cat", "sort": "replies", "shown": 1,
+            "common_boards": [{ "id": "wsg", "name": "Worksafe GIF", "icon": "fa-film" }, { "id": "b", "name": "Random", "icon": "fa-dice" }],
+            "threads": [
+                { "no": 11, "sub": "cat thread", "com": "meow", "replies": 9, "images": 3, "time": 100, "sticky": false, "closed": false, "thumb": "/x/11s.jpg", "bump": 1, "hidden": false },
+                { "no": 22, "sub": "dogs", "com": "woof", "replies": 2, "images": 1, "time": 200, "sticky": false, "closed": false, "thumb": null, "bump": 0, "hidden": true, "local_id": 5, "local_path": 5 },
+            ] });
+        let html = env.get_template("chan/catalogue.html").unwrap().render(to_jvalue(&cat)).unwrap_or_else(|e| panic!("{e:#}"));
+        let main = &html[html.find("id=\"main\"").unwrap()..];
+        assert!(main.contains("data-chan-path=\"/4/wsg/catalogue\""));
+        assert!(main.contains("<form class=\"chan-board-custom-form\" method=\"get\" action=\"/4/catalogue\">") && main.contains("name=\"board\""));
+        assert!(main.contains("action=\"/4/wsg/catalogue\" role=\"search\"") && main.contains("name=\"q\" value=\"cat\""));
+        assert!(main.contains("<option value=\"replies\" selected>") && main.contains("href=\"/4/wsg/catalogue?sort=replies\" id=\"chan-search-clear\" class=\"is-shown\""));
+        assert!(main.contains("class=\"chan-thread-card is-hidden\" data-no=\"22\" data-bump=\"0\"") && main.contains("class=\"chan-thread-card\" data-no=\"11\""));
+        assert!(main.contains("id=\"chan-no-results\" class=\"chan-empty-state\""), "results shown: no empty note");
+        let cat_scripts = &main[..main.find("<div class=\"chan-catalogue-grid\"").unwrap()];
+        assert!(cat_scripts.contains("catalogue.actions.js"));
+        let in_main = &main[..main.find("</div>\n</div>").unwrap()];
+        assert!(in_main.contains("/s/js/views/chan/catalogue.js"), "the page script runs on in-place navigation");
+        assert!(!in_main.contains(" style=\"") && !in_main.contains("data-on=\"submit"));
+
+        let post = |no: i64, media: bool, local: Option<i64>, fav: bool| serde_json::json!({ "no": no, "name": "Anonymous", "iso_str": "2026-01-01T00:00:00Z", "date_str": "x", "timeago": "1d",
+            "has_media": media, "ext": ".webm", "tim": 1700000000000i64 + no, "filename": "clip", "w": 640, "h": 360, "fsize": "1 MB", "thumb": "/t.jpg", "is_video": true,
+            "external_media_url": format!("https://i.4cdn.org/wsg/{no}.webm"), "dest": format!("/media/{no}.webm"), "local_id": local, "local_path": local, "user_has_favorited": fav, "com_raw": "hi", "com_formatted": "hi", "replies": [] });
+        let thr = serde_json::json!({ "domain": "f0ck.test", "session": session, "csrf_token": "tok", "tmp": null, "board": "wsg", "tid": 100, "show": "media",
+            "op": { "sub": "op" }, "media_count": 2, "first_media_no": 100, "rehosts_count": 1,
+            "posts": [post(100, true, None, false), post(101, true, Some(7), true), post(102, false, None, false)] });
+        let html = env.get_template("chan/thread.html").unwrap().render(to_jvalue(&thr)).unwrap_or_else(|e| panic!("{e:#}"));
+        if let Ok(dir) = std::env::var("F0CKM_DUMP_CHAN") {
+            std::fs::write(PathBuf::from(&dir).join("thread.html"), &html).unwrap();
+            let cat_html = env.get_template("chan/catalogue.html").unwrap().render(to_jvalue(&cat)).unwrap();
+            std::fs::write(PathBuf::from(&dir).join("catalogue.html"), cat_html).unwrap();
+        }
+        let main = &html[html.find("id=\"main\"").unwrap()..];
+        assert!(main.contains("data-chan-path=\"/4/wsg/100\""));
+        // filters: links, the current one active, posts it leaves out hidden
+        assert!(main.contains("href=\"/4/wsg/100?show=media\" class=\"chan-toggle-btn active\""));
+        assert!(main.contains("href=\"/4/wsg/100\" class=\"chan-toggle-btn\" id=\"filter-all-btn\""));
+        let card = |no: i64| { let at = main.find(&format!("id=\"p{no}\"")).unwrap(); &main[main[..at].rfind("<article").unwrap()..at] };
+        assert!(card(102).contains("is-hidden") && !card(100).contains("is-hidden"));
+        // not rehosted: a rehost form and a rehost-and-favourite form; rehosted: the favourite toggle
+        assert!(main.contains("action=\"/api/v2/scroller/rehost\" class=\"chan-rehost-form\""));
+        assert!(main.contains("<input type=\"hidden\" name=\"fav\" value=\"add\">"));
+        assert!(main.contains("name=\"postid\" value=\"7\">") && main.contains("<input type=\"hidden\" name=\"action\" value=\"delete\">"));
+        assert!(main.contains("name=\"back\" value=\"/4/wsg/100?show=media#p100\""));
+        assert!(main.contains("<a href=\"/7\" class=\"chan-rehost-edit-btn\" data-item-id=\"7\""));
+        assert!(main.contains("data-inline=\"/media/100.webm\" data-kind=\"video\""), "a click plays it in the post");
+        let in_main = &main[..main.find("</div>\n</div>").unwrap()];
+        assert_eq!(in_main.matches("name=\"csrf_token\" value=\"tok\"").count(), 3, "rehost + rehost-and-favourite, favourite toggle");
+        assert!(in_main.contains("/s/js/views/chan/thread.js"), "the page script is inside #main");
+        assert!(!in_main.contains(" style=\"") && !in_main.contains("<button type=\"button\" class=\"chan-rehost-btn"));
+    }
+
     /// Admin panel → Permissions: the role table (moderator powers only for moderators), the groups,
     /// plain forms that come back to their place without JavaScript.
     #[test]
