@@ -156,8 +156,8 @@
                                     <i class="iconset fa-solid fa-triangle-exclamation report-item-btn" data-item-id="{{ item.id }}" title="Report this post"></i>
                                     <a href="#report-modal" class="iconset fa-solid fa-triangle-exclamation nojs-modal-link" title="Report this post"></a>
                                     {% if (session and not session.is_anon and ((halls_enabled and is_mod_or_admin) or userhalls_enabled)) %}
-                                    <i class="iconset fa-solid fa-layer-group" id="a_hall" data-item-id="{{ item.id }}" data-halls="{{ halls_slugs }}" data-user-halls="{{ user_halls_slugs }}" data-current-hall="{{ (tmp.hall.slug if (tmp.hall and tmp.hall is mapping) else (tmp.hall or "")) }}" data-current-user-hall="{{ (tmp.userHall.slug if (tmp.userHall and tmp.userHall is mapping) else (tmp.userHall or "")) }}" data-current-user-hall-owner="{{ (tmp.userHallOwner or "") }}" title="{{ t("hall.modal_title") }}"></i>
-                                    <a href="#halls-modal" class="iconset fa-solid fa-layer-group nojs-modal-link" title="{{ t("hall.modal_title") }}"></a>
+                                    <i class="iconset fa-solid fa-list" id="a_hall" data-item-id="{{ item.id }}" data-halls="{{ halls_slugs }}" data-user-halls="{{ user_halls_slugs }}" data-current-hall="{{ (tmp.hall.slug if (tmp.hall and tmp.hall is mapping) else (tmp.hall or "")) }}" data-current-user-hall="{{ (tmp.userHall.slug if (tmp.userHall and tmp.userHall is mapping) else (tmp.userHall or "")) }}" data-current-user-hall-owner="{{ (tmp.userHallOwner or "") }}" title="{{ t("hall.modal_title") }}"></i>
+                                    <a href="#halls-modal" class="iconset fa-solid fa-list nojs-modal-link" title="{{ t("hall.modal_title") }}"></a>
                                     {% endif %}
                                     {% if can_manage_item %}
                                     {% if enable_oc %}
@@ -199,7 +199,7 @@
                 </div>
 
                 <span id="hall-badge-container">{% if (halls_enabled and item.primaryHall) %}<span class="badge hall-badge-wrap">
-                    <a href="/list/{{ item.primaryHall.slug }}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> {{ item.primaryHall.name }}</a>{% if (item.otherHalls and item.otherHalls|length) %}<span class="hall-overflow-pill">+{{ item.otherHalls|length }}<span class="hall-overflow-tooltip">{% for key, oh in item.otherHalls|entries %}<a href="/list/{{ oh.slug }}">{{ oh.name }}</a>{% endfor %}</span></span>{% endif %}
+                    <a href="/list/{{ item.primaryHall.slug }}" class="hall-badge-primary"><i class="fa-solid fa-list"></i> {{ item.primaryHall.name }}</a>{% if (item.otherHalls and item.otherHalls|length) %}<span class="hall-overflow-pill">+{{ item.otherHalls|length }}<span class="hall-overflow-tooltip">{% for key, oh in item.otherHalls|entries %}<a href="/list/{{ oh.slug }}">{{ oh.name }}</a>{% endfor %}</span></span>{% endif %}
                 </span>{% endif %}</span>
 
 
@@ -233,8 +233,8 @@
                     <i class="iconset fa-solid fa-triangle-exclamation report-item-btn" data-item-id="{{ item.id }}" title="Report this post"></i>
                     <a href="#report-modal" class="iconset fa-solid fa-triangle-exclamation nojs-modal-link" title="Report this post"></a>
                     {% if (session and not session.is_anon and ((halls_enabled and is_mod_or_admin) or userhalls_enabled)) %}
-                    <i class="iconset fa-solid fa-layer-group" id="a_hall" data-item-id="{{ item.id }}" data-halls="{{ halls_slugs }}" data-user-halls="{{ user_halls_slugs }}" data-current-hall="{{ (tmp.hall.slug if (tmp.hall and tmp.hall is mapping) else (tmp.hall or "")) }}" data-current-user-hall="{{ (tmp.userHall.slug if (tmp.userHall and tmp.userHall is mapping) else (tmp.userHall or "")) }}" data-current-user-hall-owner="{{ (tmp.userHallOwner or "") }}" title="{{ t("hall.modal_title") }}"></i>
-                    <a href="#halls-modal" class="iconset fa-solid fa-layer-group nojs-modal-link" title="{{ t("hall.modal_title") }}"></a>
+                    <i class="iconset fa-solid fa-list" id="a_hall" data-item-id="{{ item.id }}" data-halls="{{ halls_slugs }}" data-user-halls="{{ user_halls_slugs }}" data-current-hall="{{ (tmp.hall.slug if (tmp.hall and tmp.hall is mapping) else (tmp.hall or "")) }}" data-current-user-hall="{{ (tmp.userHall.slug if (tmp.userHall and tmp.userHall is mapping) else (tmp.userHall or "")) }}" data-current-user-hall-owner="{{ (tmp.userHallOwner or "") }}" title="{{ t("hall.modal_title") }}"></i>
+                    <a href="#halls-modal" class="iconset fa-solid fa-list nojs-modal-link" title="{{ t("hall.modal_title") }}"></a>
                     {% endif %}
                     {% if can_manage_item %}
                     {% if enable_oc %}

@@ -22345,7 +22345,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   existingWrap.remove();
                   return;
               }
-              existingWrap.outerHTML = `<span class="badge hall-badge-wrap"><a href="/list/${escapeHtml(hallSlug)}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(hallName || hallSlug)}</a></span>`;
+              existingWrap.outerHTML = `<span class="badge hall-badge-wrap"><a href="/list/${escapeHtml(hallSlug)}" class="hall-badge-primary"><i class="fa-solid fa-list"></i> ${escapeHtml(hallName || hallSlug)}</a></span>`;
               return;
           }
           // Dynamically create container and insert at the appropriate place
@@ -22372,13 +22372,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (action === 'add') {
-          const badgeHtml = `<span class="badge hall-badge-wrap"><a href="/list/${escapeHtml(hallSlug)}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(hallName || hallSlug)}</a></span>`;
+          const badgeHtml = `<span class="badge hall-badge-wrap"><a href="/list/${escapeHtml(hallSlug)}" class="hall-badge-primary"><i class="fa-solid fa-list"></i> ${escapeHtml(hallName || hallSlug)}</a></span>`;
           container.innerHTML = badgeHtml;
       } else if (action === 'remove') {
           const remaining = liveHallBtn ? (liveHallBtn.dataset.halls || '').split(',').filter(Boolean) : [];
           if (remaining.length > 0) {
               const nextSlug = remaining[0];
-              const badgeHtml = `<span class="badge hall-badge-wrap"><a href="/list/${escapeHtml(nextSlug)}" class="hall-badge-primary"><i class="fa-solid fa-layer-group"></i> ${escapeHtml(nextSlug)}</a></span>`;
+              const badgeHtml = `<span class="badge hall-badge-wrap"><a href="/list/${escapeHtml(nextSlug)}" class="hall-badge-primary"><i class="fa-solid fa-list"></i> ${escapeHtml(nextSlug)}</a></span>`;
               container.innerHTML = badgeHtml;
           } else {
               container.innerHTML = '';
