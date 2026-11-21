@@ -14107,7 +14107,7 @@ window.cancelAnimFrame = (function () {
     const anyLink = target.closest('a');
     if (anyLink && anyLink.hostname === window.location.hostname && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && anyLink.target !== '_blank') {
       const pathname = anyLink.pathname;
-      const isSpecialLink = anyLink.classList.contains('removetag') || anyLink.classList.contains('admin-deltag') || anyLink.classList.contains('mode-btn') || anyLink.classList.contains('btn-approve-async') || anyLink.classList.contains('btn-deny-async') || anyLink.getAttribute('href') === '#' || !!anyLink.closest('.rating-tag');
+      const isSpecialLink = anyLink.classList.contains('removetag') || anyLink.classList.contains('admin-deltag') || anyLink.classList.contains('mode-btn') || anyLink.classList.contains('btn-approve-async') || anyLink.classList.contains('btn-deny-async') || anyLink.getAttribute('href') === '#' || !!anyLink.closest('.rating-tag') || anyLink.id === 'nav-search-btn'; // the magnifier opens the search overlay, its href is the no-JS way
 
       const targetUrl = anyLink.href;
       const currentUrl = window.location.href.split('#')[0];
