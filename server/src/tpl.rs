@@ -2551,6 +2551,13 @@ mod tests {
         assert!(footer.contains("<input type=\"radio\" name=\"proposed_rating\" value=\"nsfw\" class=\"rm-rating-radio\" disabled>"));
         assert!(footer.contains("<input type=\"radio\" name=\"proposed_rating\" value=\"sfw\" class=\"rm-rating-radio\">"));
         assert_eq!(footer.matches("rm-rating-pick\"").count(), 1, "only in the post report");
+        assert!(footer.contains("class=\"modal-overlay footer-hidden report-modal\" data-report-kind=\"item\""));
+        // may rate: the row is hidden (f0ckm.js shows it per post); guests only tick "wrong rating"
+        assert!(render("snippets/footer.html", false).contains("report-modal rm-no-rating\" data-report-kind=\"item\""));
+        let mut guest = ctx(false);
+        guest.as_object_mut().unwrap().remove("session");
+        let guest = env.get_template("snippets/footer.html").unwrap().render(to_jvalue(&guest)).unwrap();
+        assert!(guest.contains("value=\"wrong_rating\"") && !guest.contains("proposed_rating"));
 
         // the other frontends' report forms: a select without the current rating
         for (view, link) in [
@@ -2567,6 +2574,9 @@ mod tests {
             let html = render(view, true);
             assert!(html.contains("name=\"proposed_rating\""), "{view}");
             assert!(html.contains("<option value=\"sfw\">") && !html.contains("<option value=\"nsfw\">"), "{view}");
+            // guests (and whoever may rate) report a wrong rating without proposing one
+            let other = render(view, false);
+            assert!(!other.contains("proposed_rating") && other.contains("value=\"wrong_rating\""), "{view}");
         }
     }
 

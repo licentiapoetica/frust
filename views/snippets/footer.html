@@ -47,7 +47,7 @@
   {"p": "report-comment", "set": "reasons_comment", "title": t("report.title_comment"), "intro": t("report.intro_comment"),
    "cats": ["harassment", "hate_speech", "threats", "private_info", "spam", "off_topic", "impersonation", "misinformation", "illegal", "other"]}
 ] %}
-<div id="{{ rm.p }}-modal" class="modal-overlay footer-hidden report-modal" data-report-kind="{{ "comment" if rm.p == "report-comment" else "item" }}">
+<div id="{{ rm.p }}-modal" class="modal-overlay footer-hidden report-modal{% if (rm.p == "report" and not can_propose_rating) %} rm-no-rating{% endif %}" data-report-kind="{{ "comment" if rm.p == "report-comment" else "item" }}">
   <a href="#_" class="lm-nojs-backdrop" tabindex="-1" aria-hidden="true"></a>
   <div class="modal-content report-modal-content">
   <form method="post" action="/api/v2/report" class="report-form">
@@ -68,9 +68,11 @@
         <span class="rm-check"><i class="fa-solid fa-check"></i></span>
         <span class="rm-text"><strong>{{ t("report." ~ rm.set ~ "." ~ c ~ ".label") }}</strong><span>{{ t("report." ~ rm.set ~ "." ~ c ~ ".desc") }}</span></span>
       </label>
-      {% if (c == "wrong_rating" and rm.p == "report") %}
+      {% if ((c == "wrong_rating" and rm.p == "report") and (session and session.user and not session.is_anon)) %}
       {#- The rating the reporter proposes (shown while "wrong rating" is ticked); a moderator can
-          apply it from the reports page. The post's current rating can't be picked. #}
+          apply it from the reports page. The post's current rating can't be picked. Accounts only
+          (guests just tick "wrong rating"); hidden by .rm-no-rating where the post may not get a
+          proposal (can_propose_rating; f0ckm.js sets it per post). #}
       {%- set rm_cur = ((("nsfl" if item.is_nsfl else ("nsfw" if item.is_nsfw else ("sfw" if item.is_sfw else "")))) if (item is defined and item) else "") %}
       <div class="rm-rating-pick" role="radiogroup" aria-label="{{ t("report.proposed_rating") }}">
         <span class="rm-rating-pick-label">{{ t("report.proposed_rating") }}</span>

@@ -30,7 +30,7 @@
                             <span class="w0bm-report-cat-text"><strong>{{ t("report." ~ set[1] ~ "." ~ c ~ ".label") }}</strong><span>{{ t("report." ~ set[1] ~ "." ~ c ~ ".desc") }}</span></span>
                         </label>
                         {% endfor %}
-                        {% if set[0] == "item" %}
+                        {% if (set[0] == "item" and can_propose_rating) %}
                         {#- A proposed rating makes it a "wrong rating" report a moderator can apply (routes/reports.rs) -#}
                         {%- set w0_cur = ("nsfl" if item.is_nsfl else ("nsfw" if item.is_nsfw else ("sfw" if item.is_sfw else ""))) %}
                         <label class="w0bm-rate-pick">{{ t("report.proposed_rating") }}

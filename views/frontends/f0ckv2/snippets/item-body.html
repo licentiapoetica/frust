@@ -177,10 +177,12 @@
         <label><input type="checkbox" name="categories[]" value="other"> {{ t("report.reasons_item.other.label")|lower }}</label>
       </div>
       {#- A proposed rating makes it a "wrong rating" report a moderator can apply (routes/reports.rs) #}
+      {% if can_propose_rating %}
       {%- set v2_cur = (v2_rating[0].normalized if v2_rating else "") %}
       <label class="v2-rate-pick">{{ t("report.proposed_rating")|lower }}
         <select name="proposed_rating" class="v2-input v2-input-small"><option value="">{{ t("report.proposed_rating_none")|lower }}</option>{% for r in ["sfw", "nsfw", "nsfl"] %}{% if (r != v2_cur and (r != "nsfl" or enable_nsfl)) %}<option value="{{ r }}">{{ r }}</option>{% endif %}{% endfor %}</select>
       </label>
+      {% endif %}
       <textarea name="reason" class="v2-input" rows="3" maxlength="1000" placeholder="what's wrong?"></textarea>
       {% if captcha_enabled %}<cap-widget class="cap-dark js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% include "frontends/f0ckv2/snippets/cap-image.html" %}{% endif %}
       <div><button type="submit">send report</button> <span class="v2-report-msg" role="status"></span></div>

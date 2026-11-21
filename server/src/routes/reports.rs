@@ -77,6 +77,10 @@ async fn submit(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
     let proposed = js_str(body.get("proposed_rating")).map(|r| r.trim().to_lowercase()).filter(|r| !r.is_empty());
     if let Some(r) = &proposed {
+        // Guests and anonymous accounts only report a wrong rating; proposing one takes an account
+        if crate::settings::is_anon_session(req.session()) {
+            return j(json!({ "success": false, "msg": "Sign in to propose a rating." }), 403);
+        }
         let Some(item) = item_id.filter(|_| comment_id.is_none()) else {
             return j(json!({ "success": false, "msg": "A rating can only be proposed for a post." }), 400);
         };

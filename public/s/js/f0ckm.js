@@ -12036,6 +12036,44 @@ window.cancelAnimFrame = (function () {
         const doc = parser.parseFromString(html, 'text/html');
         const incomingMain = doc.getElementById('main');
 
+        const waitLink = (link) => {
+          return new Promise((resolve) => {
+            link.onload = () => resolve();
+            link.onerror = () => resolve(); // Resolve on error too to not block forever
+            // Fallback for browsers that don't support onload on link
+            setTimeout(resolve, 2000);
+          });
+        };
+
+        // Abyss: load its stylesheets before touching the page. They stay inactive (media="print")
+        // so the current page keeps its look, and are switched on in the same task as the markup
+        // swap. Otherwise the closed panels show unstyled, then slide away once scroller.css lands.
+        const abyssSheets = [];
+        if (isAbyss && incomingMain) {
+          document.head.querySelectorAll('[data-pjax-abyss]').forEach(el => el.remove());
+          const abyssLinks = [];
+          doc.head.querySelectorAll('style, link[rel="stylesheet"]').forEach(style => {
+            let sheet;
+            if (style.tagName === 'LINK') {
+              // The scroller's own stylesheet (scroller.css); skip ones this page already has.
+              const href = style.getAttribute('href');
+              if (document.head.querySelector(`link[rel="stylesheet"][href="${href}"]`)) return;
+              sheet = document.createElement('link');
+              sheet.rel = 'stylesheet';
+              sheet.href = href;
+              abyssLinks.push(waitLink(sheet));
+            } else {
+              sheet = document.createElement('style');
+              sheet.textContent = style.textContent;
+            }
+            sheet.media = 'print';
+            sheet.setAttribute('data-pjax-abyss', '1');
+            document.head.appendChild(sheet);
+            abyssSheets.push(sheet);
+          });
+          if (abyssLinks.length) await Promise.all(abyssLinks);
+        }
+
         // Detect if the response is a full page (with <html> and <body>) or a partial snippet
         const isFullPage = html.toLowerCase().includes('<body') || html.toLowerCase().includes('<html');
 
@@ -12103,7 +12141,8 @@ window.cancelAnimFrame = (function () {
           // Sync classes carefully — preserve transition classes!
           const preserveClasses = ['grid-transition', 'show'];
           const currentPreserved = preserveClasses.filter(c => main.classList.contains(c));
-          
+
+          abyssSheets.forEach(sheet => sheet.removeAttribute('media'));
           main.innerHTML = '';
           main.className = incomingMain.className || '';
           currentPreserved.forEach(c => main.classList.add(c));
@@ -12136,15 +12175,6 @@ window.cancelAnimFrame = (function () {
                   existing.remove();
               }
           });
-
-          const waitLink = (link) => {
-            return new Promise((resolve) => {
-              link.onload = () => resolve();
-              link.onerror = () => resolve(); // Resolve on error too to not block forever
-              // Fallback for browsers that don't support onload on link
-              setTimeout(resolve, 2000); 
-            });
-          };
 
           // Move children from incomingMain to main
           // IMPORTANT: Scripts moved from DOMParser are inert. We must clone them to execute.
@@ -12228,28 +12258,6 @@ window.cancelAnimFrame = (function () {
           // to specificity, and height:100% on #main fails because .pagewrapper
           // has height:auto. Directly forcing inline styles is more reliable.
           if (isAbyss) {
-            // Still inject scroller head styles (theming, snap, etc.)
-            document.head.querySelectorAll('[data-pjax-abyss]').forEach(el => el.remove());
-            const abyssLinks = [];
-            doc.head.querySelectorAll('style, link[rel="stylesheet"]').forEach(style => {
-              if (style.tagName === 'LINK') {
-                // The scroller's own stylesheet (scroller.css); skip ones this page already has.
-                const href = style.getAttribute('href');
-                if (document.head.querySelector(`link[rel="stylesheet"][href="${href}"]`)) return;
-                const l = document.createElement('link');
-                l.rel = 'stylesheet';
-                l.href = href;
-                l.setAttribute('data-pjax-abyss', '1');
-                document.head.appendChild(l);
-                abyssLinks.push(waitLink(l));
-                return;
-              }
-              const s = document.createElement('style');
-              s.setAttribute('data-pjax-abyss', '1');
-              s.textContent = style.textContent;
-              document.head.appendChild(s);
-            });
-            if (abyssLinks.length) await Promise.all(abyssLinks);
             document.body.classList.add('scroller-active');
             document.title = doc.title || document.title;
 
@@ -21829,8 +21837,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // The rating proposal row: only for posts, the post's current rating can't be picked
-    const setRatingPick = (modal, itemId, current) => {
-        modal.classList.toggle('rm-no-rating', !itemId);
+    const setRatingPick = (modal, canPropose, current) => {
+        modal.classList.toggle('rm-no-rating', !canPropose);
         modal.querySelectorAll('.rm-rating-radio').forEach(r => {
             if (current !== undefined) r.disabled = !!r.value && r.value === current;
         });
@@ -21844,7 +21852,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (reason) reason.value = '';
         resetCategories(modal);
         clearError(modal);
-        if (modal === itemModal) setRatingPick(modal, target.item_id, target.current_rating);
+        if (modal === itemModal) {
+            const tagsBox = target.item_id ? document.querySelector(`#tags[data-item-id="${target.item_id}"]`) : null;
+            setRatingPick(modal, tagsBox && tagsBox.dataset.canPropose === 'true', target.current_rating);
+        }
         modal.style.display = 'flex';
         document.body.classList.add('modal-open');
     };
