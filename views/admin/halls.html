@@ -11,7 +11,7 @@
       <select id="new-hall-rating" class="adm-halls-create-input">
         <option value="sfw">🟢 SFW</option>
         <option value="nsfw">🔴 NSFW</option>
-        <option value="nsfl">💀 NSFL</option>
+        {% if enable_nsfl %}<option value="nsfl">💀 NSFL</option>{% endif %}
       </select>
       <span id="new-hall-slug-preview" class="adm-halls-slug-preview"></span>
       <button id="btn-create-hall" class="hm-btn adm-halls-create-btn">{{ t("hall.create_hall_btn") }}</button>
@@ -48,7 +48,7 @@
             <select class="hall-rating-input adm-halls-input">
               <option value="sfw" {% if (h.rating == "sfw" or not h.rating) %} selected {% endif %}>🟢 SFW</option>
               <option value="nsfw" {% if h.rating == "nsfw" %} selected {% endif %}>🔴 NSFW</option>
-              <option value="nsfl" {% if h.rating == "nsfl" %} selected {% endif %}>💀 NSFL</option>
+              {% if enable_nsfl or h.rating == "nsfl" %}<option value="nsfl" {% if h.rating == "nsfl" %} selected {% endif %}>💀 NSFL</option>{% endif %}
             </select>
           </div>
           <div class="adm-halls-card-actions">

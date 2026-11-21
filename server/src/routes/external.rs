@@ -497,7 +497,8 @@ async fn with_favourite(st: &AppState, session: &crate::session::Session, resp: 
 
 async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSource, session: &crate::session::Session) -> anyhow::Result<Response> {
     let cfg = st.cfg();
-    let rating = body["rating"].as_str().map(str::to_lowercase).filter(|r| matches!(r.as_str(), "sfw" | "nsfw" | "nsfl"));
+    // NSFL only while the site has it (enable_nsfl)
+    let rating = body["rating"].as_str().map(str::to_lowercase).filter(|r| matches!(r.as_str(), "sfw" | "nsfw") || (r == "nsfl" && cfg.enable_nsfl()));
     let owner = s::session_owner_name(Some(session)).unwrap_or_default();
     let max_bytes = st.settings.upload_limit(&cfg, crate::perms::can(st, Some(session), crate::perms::P::UploadLarge)) as u64;
 
@@ -710,6 +711,9 @@ async fn rehost_details_inner(st: &AppState, req: &Req, session: &crate::session
         Value::String(s) if s.is_empty() => None,
         v => Some(js_str(v).trim().to_lowercase()),
     };
+    if rating.as_deref() == Some("nsfl") && !cfg.enable_nsfl() {
+        return Ok(fail(400, "NSFL is turned off on this site"));
+    }
     if let Some(r) = rating {
         let tag = match r.as_str() {
             "sfw" => Some(1),

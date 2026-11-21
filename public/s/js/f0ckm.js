@@ -14282,7 +14282,7 @@ window.cancelAnimFrame = (function () {
             <button type="button" class="chan-rehost-pill untagged active" data-rating="untagged" title="Untagged"><i class="fa-solid fa-question"></i> Untagged</button>
             <button type="button" class="chan-rehost-pill sfw" data-rating="sfw" title="Safe for Work"><i class="fa-solid fa-shield"></i> SFW</button>
             <button type="button" class="chan-rehost-pill nsfw" data-rating="nsfw" title="Not Safe for Work"><i class="fa-solid fa-eye-slash"></i> NSFW</button>
-            <button type="button" class="chan-rehost-pill nsfl" data-rating="nsfl" title="Not Safe for Life"><i class="fa-solid fa-skull"></i> NSFL</button>
+            ${(window.f0ckSession && window.f0ckSession.enable_nsfl) ? '<button type="button" class="chan-rehost-pill nsfl" data-rating="nsfl" title="Not Safe for Life"><i class="fa-solid fa-skull"></i> NSFL</button>' : ''}
           </div>
           <div class="chan-rehost-popup-actions">
             <button type="button" class="btn btn-primary chan-rehost-modal-save chan-rehost-popup-save-btn">
@@ -24068,9 +24068,9 @@ window.BulkSelection = (() => {
             <button type="button" class="bulk-menu-item rating-nsfw" data-rating="nsfw">
               <i class="fa-solid fa-triangle-exclamation"></i> NSFW
             </button>
-            <button type="button" class="bulk-menu-item rating-nsfl" data-rating="nsfl">
+            ${(window.f0ckSession && window.f0ckSession.enable_nsfl) ? `<button type="button" class="bulk-menu-item rating-nsfl" data-rating="nsfl">
               <i class="fa-solid fa-skull-crossbones"></i> NSFL
-            </button>
+            </button>` : ''}
           </div>
         </div>
         <div class="bulk-dropdown-wrap">

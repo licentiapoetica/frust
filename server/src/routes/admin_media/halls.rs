@@ -189,7 +189,9 @@ async fn update(st: AppState, mut req: Req) -> Res {
     let body = req.post().await.cloned().unwrap_or(Value::Null);
     let name = body.get("name").and_then(Value::as_str).map(str::trim).filter(|n| !n.is_empty()).map(str::to_string);
     let description = body.get("description").and_then(Value::as_str).map(str::to_string);
-    let rating = body.get("rating").and_then(Value::as_str).filter(|r| ["sfw", "nsfw", "nsfl"].contains(r)).map(str::to_string);
+    // NSFL only while the site has it (enable_nsfl); otherwise the rating stays as it is
+    let nsfl_on = st.cfg().enable_nsfl();
+    let rating = body.get("rating").and_then(Value::as_str).filter(|r| ["sfw", "nsfw"].contains(r) || (*r == "nsfl" && nsfl_on)).map(str::to_string);
 
     let apply = |target: String| {
         let (st, name, description, rating) = (st.clone(), name.clone(), description.clone(), rating.clone());
@@ -260,7 +262,8 @@ async fn create(st: AppState, mut req: Req) -> Res {
     };
     let name = body.get("name").and_then(Value::as_str).unwrap_or("").trim().to_string();
     let slug = slugify_hall(body.get("slug").and_then(Value::as_str).unwrap_or(""));
-    let rating = body.get("rating").and_then(Value::as_str).filter(|r| ["sfw", "nsfw", "nsfl"].contains(r)).unwrap_or("sfw").to_string();
+    let nsfl_on = st.cfg().enable_nsfl();
+    let rating = body.get("rating").and_then(Value::as_str).filter(|r| ["sfw", "nsfw"].contains(r) || (*r == "nsfl" && nsfl_on)).unwrap_or("sfw").to_string();
     if name.is_empty() {
         return msg(400, "Name is required");
     }
