@@ -771,7 +771,7 @@ pub(super) async fn rating(st: AppState, mut req: Req) -> Res {
     let Some(sess) = req.session() else {
         return j(json!({ "success": false, "msg": "Unauthorized" }), 401);
     };
-    if !perms::can(&st, Some(sess), P::Rate) && !perms::can(&st, Some(sess), P::ModEditItems) {
+    if !perms::may_rate_some(&st, Some(sess)) {
         return Ok(perms::denied(P::Rate));
     }
     if !s::is_anon_session(Some(sess)) {

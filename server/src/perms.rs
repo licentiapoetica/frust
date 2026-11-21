@@ -38,6 +38,7 @@ pub enum P {
     Fav,
     Tag,
     Rate,
+    RateAny,
     Report,
     Subscribe,
     Lists,
@@ -106,6 +107,7 @@ pub const PERMS: &[Perm] = &[
     perm(P::Fav, "fav", "Items", "Favourite", "Add items to their favourites.", true, true, true),
     perm(P::Tag, "tag", "Items", "Add tags", "Add tags to items.", true, true, true),
     perm(P::Rate, "rate", "Items", "Rate own uploads", "Change the rating (sfw / nsfw / nsfl) of their own uploads.", true, false, true),
+    perm(P::RateAny, "rate_any", "Items", "Rate any upload", "Change the rating (sfw / nsfw / nsfl) of anyone's uploads. Without it they can only propose a rating, which a moderator applies from the reports.", false, false, true),
     perm(P::Report, "report", "Items", "Report", "Report items, comments and users to the moderators.", true, true, true),
     perm(P::Subscribe, "subscribe", "Items", "Subscribe", "Subscribe to items' comments and to their own uploads.", true, true, true),
     perm(P::Lists, "lists", "Items", "Lists", "Make their own lists and add items to them (when lists are on).", true, false, true),
@@ -341,9 +343,15 @@ pub fn may_edit_item(st: &crate::state::AppState, s: Option<&Session>, is_owner:
     (is_owner && can(st, s, P::EditOwnItems)) || can(st, s, P::ModEditItems)
 }
 
-/// May change an item's rating: its uploader with `rate`, anyone with `mod_edit_items`.
+/// May change an item's rating: its uploader with `rate`, anyone with `rate_any` or `mod_edit_items`.
 pub fn may_rate_item(st: &crate::state::AppState, s: Option<&Session>, is_owner: bool) -> bool {
-    (is_owner && can(st, s, P::Rate)) || can(st, s, P::ModEditItems)
+    (is_owner && can(st, s, P::Rate)) || can(st, s, P::RateAny) || can(st, s, P::ModEditItems)
+}
+
+/// May rate at least some items (own uploads, any upload, or as a moderator): the rating
+/// endpoints' first check, before the item is known ([`may_rate_item`] decides per item).
+pub fn may_rate_some(st: &crate::state::AppState, s: Option<&Session>) -> bool {
+    can(st, s, P::Rate) || can(st, s, P::RateAny) || can(st, s, P::ModEditItems)
 }
 
 /// Every permission of the session (`session.can`).

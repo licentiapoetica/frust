@@ -444,7 +444,7 @@ async fn add_tag(st: AppState, mut req: Req) -> Res {
 
 async fn cycle_rating(st: AppState, mut req: Req) -> Res {
     let cfg = st.cfg();
-    if !perms::can(&st, req.session(), P::Rate) && !perms::can(&st, req.session(), P::ModEditItems) {
+    if !perms::may_rate_some(&st, req.session()) {
         return Ok(perms::denied(P::Rate));
     }
     let Some(postid) = postid(&req) else {
