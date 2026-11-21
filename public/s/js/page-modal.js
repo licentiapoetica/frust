@@ -273,6 +273,12 @@
   // Capture phase: runs before the global AJAX link handler
   document.addEventListener('click', (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    // The account dropdown is a button, not a link: using it (menu or avatar → profile) leaves the modal.
+    // Not stopped, so the dropdown still opens and the avatar still navigates.
+    if (isOpen && e.target.closest?.('#nav-user-toggle, #nav-visitor-toggle')) {
+      close();
+      return;
+    }
     const a = e.target.closest?.('a[href]');
     if (!a) return;
 
