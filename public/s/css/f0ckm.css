@@ -25543,8 +25543,34 @@ a.mq-btn.mq-btn-danger:hover {
 
 :where(.adm) .adm-perm-table {
   width: 100%;
-  border-collapse: collapse;
+  /* Separate (not collapsed) borders, so the sticky header keeps its bottom line while stuck. */
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.88em;
+}
+
+/* Role defaults: the column header stays under the navbar while the page scrolls. A scrolling
+   wrapper would pin it to the wrapper instead, so wide screens let the table overflow normally;
+   narrow ones (where it has to scroll sideways) scroll inside a box with the header on top. */
+:where(.adm-perms) #perm-roles .adm-perm-table thead th {
+  top: var(--navbar-h, 50px);
+}
+
+@media (min-width: 900px) {
+  :where(.adm-perms) #perm-roles .adm-perm-table-wrap {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 899px) {
+  :where(.adm-perms) #perm-roles .adm-perm-table-wrap {
+    max-height: 70vh;
+    overflow: auto;
+  }
+
+  :where(.adm-perms) #perm-roles .adm-perm-table thead th {
+    top: 0;
+  }
 }
 
 :where(.adm) .adm-perm-table th,
@@ -25558,6 +25584,8 @@ a.mq-btn.mq-btn-danger:hover {
 :where(.adm) .adm-perm-table thead th {
   position: sticky;
   top: 0;
+  /* Above the dimmed (opacity) cells of turned-off rows, which would paint over it. */
+  z-index: 2;
   font-size: 0.75em;
   font-weight: 700;
   text-transform: uppercase;
