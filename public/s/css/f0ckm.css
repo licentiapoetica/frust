@@ -25591,7 +25591,9 @@ a.mq-btn.mq-btn-danger:hover {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--adm-muted);
-  background: var(--adm-surface);
+  /* --adm-surface is translucent: lay it over the solid page colour, or the rows show through
+     while the header is stuck. */
+  background: linear-gradient(var(--adm-surface), var(--adm-surface)), var(--bg, #111);
   white-space: nowrap;
 }
 
