@@ -14586,10 +14586,10 @@ window.cancelAnimFrame = (function () {
     if (target.closest('#chan-item-rehost-btn')) {
       e.preventDefault();
       const btn = target.closest('#chan-item-rehost-btn');
-      if (btn && !btn.classList.contains('loading') && !btn.classList.contains('rehosted')) {
+      if (btn && !btn.classList.contains('is-busy') && !btn.classList.contains('rehosted')) {
         const mediaUrl = btn.dataset.url;
         if (mediaUrl) {
-          btn.classList.add('loading');
+          btn.classList.add('is-busy');
           const origHtml = btn.innerHTML;
           btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
 
@@ -14612,7 +14612,7 @@ window.cancelAnimFrame = (function () {
 
               const data = await resp.json();
               if (data.success && data.item_id) {
-                btn.classList.remove('loading');
+                btn.classList.remove('is-busy');
                 btn.classList.add('rehosted');
 
                 const timeEl = document.querySelector('time.timeago');
@@ -14639,13 +14639,13 @@ window.cancelAnimFrame = (function () {
                   window.openChanRehostModal({ itemId: data.item_id, anchorEl: newAnchor });
                 }
               } else {
-                btn.classList.remove('loading');
+                btn.classList.remove('is-busy');
                 btn.innerHTML = origHtml;
                 alert(data.msg || data.message || 'Rehost failed');
               }
             } catch (err) {
               console.error('[CHAN-REHOST] Error:', err);
-              btn.classList.remove('loading');
+              btn.classList.remove('is-busy');
               btn.innerHTML = origHtml;
               alert('Rehost failed due to network error');
             }

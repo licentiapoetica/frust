@@ -23522,7 +23522,8 @@ div#flash,
   justify-content: center;
   transition: background 0.15s, color 0.15s;
 }
-.chan-rehost-edit-btn:hover {
+/* The item page's edit button looks like the other action-row buttons, hover included */
+.chan-rehost-edit-btn:not(.item-chan-edit-btn):hover {
   background: color-mix(in srgb, var(--white) 20%, transparent) !important;
 }
 /* Tap-to-activate sliders on touch devices (see f0ckm.js): locked sliders let touches through to the page,
@@ -30065,39 +30066,6 @@ pre.text-raw {
   white-space: nowrap;
   flex-shrink: 0;
 }
-
-.chan-rehosted-wrap > button.chan-rehost-edit-btn.item-chan-edit-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 7px;
-  font-size: 0.8rem;
-  background: color-mix(in srgb, var(--white) 10%, transparent);
-  color: var(--white);
-  border: 1px solid color-mix(in srgb, var(--white) 20%, transparent);
-  cursor: pointer;
-}
-
-/* Icon only, a 30px square like the other action-row buttons */
-#chan-item-rehost-btn.item-chan-rehost-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  min-width: 30px;
-  box-sizing: border-box;
-  white-space: nowrap;
-  flex-shrink: 0;
-  font-size: 0.8rem;
-  background: rgba(var(--accent-rgb), 0.15);
-  color: var(--accent);
-  border: 1px solid rgba(var(--accent-rgb), 0.3);
-  cursor: pointer;
-  font-weight: 600;
-}
-
 
 /* Icons inside the rehost controls follow the button's text: the user infobox styles every
    <i> in its action box as a big accent-coloured icon with a right margin */
