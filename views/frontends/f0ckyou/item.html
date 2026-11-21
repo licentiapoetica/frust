@@ -147,6 +147,7 @@
         {% if item.burn_after_read %}<div><dt>Burn after read</dt><dd title="Only the first person to open it sees it, then it's deleted">{{ ("opened, being deleted" if item.burn_claimed else "not opened yet") }}</dd></div>{% endif %}
         {% if (item.visibility and item.visibility > 0) %}<div><dt>Visibility</dt><dd>{{ fy.ico("lock") }} {{ (["public", "unlisted", "private", "unavailable (451)"][(item.visibility|int)] if (item.visibility|int) <= 3 else "private") }}</dd></div>{% endif %}
         <div><dt>Rating</dt><dd><span class="fy-rating fy-rate-{{ fy_rating }}">{{ ("unrated" if fy_rating == "untagged" else fy_rating|upper) }}</span>
+          {% if can_propose_rating %}<a href="#report" class="fy-propose-rating">{{ t("report.propose_rating_title") }}</a>{% endif %}
           {% if can_rate_item %}
           {% for r in ["sfw", "nsfw", "nsfl"] %}{% if r != "nsfl" or enable_nsfl %}
           <form method="post" action="/api/v2/item/{{ item.id }}/rating" class="fy-inline fy-ajax" data-fy-refresh="desc">
@@ -294,6 +295,10 @@
       <label><input type="checkbox" name="categories[]" value="illegal"> {{ t("report.reasons_item.illegal.label") }}</label>
       <label><input type="checkbox" name="categories[]" value="other"> {{ t("report.reasons_item.other.label") }}</label>
     </div>
+    {#- A proposed rating makes it a "wrong rating" report a moderator can apply (routes/reports.rs) #}
+    <label class="fy-rate-pick">{{ t("report.proposed_rating") }}
+      <select name="proposed_rating"><option value="">{{ t("report.proposed_rating_none") }}</option>{% for r in ["sfw", "nsfw", "nsfl"] %}{% if (r != fy_rating and (r != "nsfl" or enable_nsfl)) %}<option value="{{ r }}">{{ r|upper }}</option>{% endif %}{% endfor %}</select>
+    </label>
     <textarea name="reason" rows="3" maxlength="1000" placeholder="Describe the problem"></textarea>
     {% if captcha_enabled %}<cap-widget class="js-only" data-cap-api-endpoint="/api/cap/" {% include "snippets/cap-i18n.html" %}></cap-widget>{% include "frontends/f0ckyou/snippets/cap-image.html" %}{% endif %}
     <div class="fy-modal-btns"><a href="#_" class="fy-btn-text">Cancel</a><button type="submit" class="fy-btn-blue">Report</button></div>

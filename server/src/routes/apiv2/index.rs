@@ -7,6 +7,7 @@
 //! that can never match. The live route is in scroller.mjs.
 
 mod items;
+pub(crate) use items::set_item_rating;
 pub(crate) mod meta;
 pub mod views;
 

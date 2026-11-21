@@ -546,6 +546,9 @@
     "submit": "Submit",
     "intro": "Select one or more reasons and optionally add details below.",
     "intro_comment": "What is wrong with this comment? Select one or more reasons and optionally add details below.",
+    "propose_rating_title": "Propose a different rating",
+    "proposed_rating": "Correct rating",
+    "proposed_rating_none": "not sure",
     "reasons_item": {
       "wrong_rating": { "label": "Wrong Rating", "desc": "Content is marked SFW but should be NSFW, or vice versa." },
       "spam": { "label": "Spam", "desc": "Repeated, unwanted, or promotional content." },

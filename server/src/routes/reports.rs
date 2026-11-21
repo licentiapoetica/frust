@@ -12,6 +12,7 @@ pub fn register(r: &mut Router) {
     r.post(r"^\/api\/v2\/report\/?$", submit);
     r.get_g(r"^\/api\/v2\/mod\/reports\/?$", crate::http::Guard::Perm(crate::perms::P::ModReports), list);
     r.post_g(r"^\/api\/v2\/mod\/reports\/(?<id>\d+)\/resolve\/?$", crate::http::Guard::Perm(crate::perms::P::ModReports), resolve);
+    r.post_g(r"^\/api\/v2\/mod\/reports\/(?<id>\d+)\/apply-rating\/?$", crate::http::Guard::Perm(crate::perms::P::ModReports), apply_rating);
 }
 
 /// Reasons offered when reporting a post (or a user).
@@ -69,13 +70,31 @@ async fn submit(st: AppState, mut req: Req) -> Res {
         _ => vec![],
     };
     let valid: &[&str] = if comment_id.is_some() { &COMMENT_CATEGORIES } else { &ITEM_CATEGORIES };
-    let categories: Vec<String> = cats.into_iter().filter(|c| valid.contains(&c.as_str())).collect();
+    let mut categories: Vec<String> = cats.into_iter().filter(|c| valid.contains(&c.as_str())).collect();
+
+    // A rating proposal (visitors who may not rate the item themselves): the rating the reporter
+    // thinks is right, applied by a moderator from the reports page (apply_rating)
+    let cfg = st.cfg();
+    let proposed = js_str(body.get("proposed_rating")).map(|r| r.trim().to_lowercase()).filter(|r| !r.is_empty());
+    if let Some(r) = &proposed {
+        let Some(item) = item_id.filter(|_| comment_id.is_none()) else {
+            return j(json!({ "success": false, "msg": "A rating can only be proposed for a post." }), 400);
+        };
+        if !["sfw", "nsfw"].contains(&r.as_str()) && !(r == "nsfl" && cfg.enable_nsfl()) {
+            return j(json!({ "success": false, "msg": "Invalid rating." }), 400);
+        }
+        if current_rating(&st, item).await.as_deref() == Some(r.as_str()) {
+            return j(json!({ "success": false, "msg": format!("The post is already rated {}.", r.to_uppercase()) }), 400);
+        }
+        if !categories.iter().any(|c| c == "wrong_rating") {
+            categories.insert(0, "wrong_rating".into());
+        }
+    }
 
     if reason.trim().is_empty() && categories.is_empty() {
         return j(json!({ "success": false, "msg": "Please select at least one reason or provide a description." }), 400);
     }
 
-    let cfg = st.cfg();
     let ip = req.real_ip();
     if crate::cap::required(&cfg, &req) {
         let token = js_str(body.get("cap-token"));
@@ -88,9 +107,32 @@ async fn submit(st: AppState, mut req: Req) -> Res {
         }
     }
 
-    let reporter = req.session().map(|s| s.id as i32);
+    let reporter = req.session().map(|s| s.id as i32).filter(|id| *id > 0);
+    // A second proposal for the same post replaces the reporter's pending one (no new notification)
+    if let (Some(r), Some(uid), Some(item)) = (&proposed, reporter, item_id) {
+        let updated = sql!(
+            "UPDATE reports SET proposed_rating = ",
+            r.as_str(),
+            ", categories = ",
+            categories.clone(),
+            ", reason = ",
+            reason.trim(),
+            ", created_at = now() WHERE id = (SELECT id FROM reports WHERE status = 'pending' AND reporter_id = ",
+            uid,
+            " AND item_id = ",
+            item,
+            " AND proposed_rating IS NOT NULL ORDER BY id DESC LIMIT 1) RETURNING id"
+        )
+        .fetch_scalar::<i32, _>(&st.db)
+        .await;
+        match updated {
+            Ok(Some(_)) => return j(json!({ "success": true, "msg": "Rating proposal updated." }), 200),
+            Ok(None) => {}
+            Err(e) => return err500(e),
+        }
+    }
     let ins = sql!(
-        "INSERT INTO reports (reporter_id, reporter_ip, item_id, comment_id, user_id, reason, categories) VALUES (",
+        "INSERT INTO reports (reporter_id, reporter_ip, item_id, comment_id, user_id, reason, categories, proposed_rating) VALUES (",
         reporter,
         ", ",
         crate::security::storable_ip(&cfg, &ip),
@@ -104,6 +146,8 @@ async fn submit(st: AppState, mut req: Req) -> Res {
         reason.trim(),
         ", ",
         categories,
+        ", ",
+        proposed.clone(),
         ") RETURNING id"
     )
     .fetch_scalar::<i32, _>(&st.db)
@@ -136,7 +180,21 @@ async fn submit(st: AppState, mut req: Req) -> Res {
     if let Err(e) = notify.await {
         tracing::error!("[REPORT] Failed to send notifications: {e:#}");
     }
-    j(json!({ "success": true, "msg": "Report submitted successfully." }), 200)
+    let msg = if proposed.is_some() { "Rating proposal sent to the moderators." } else { "Report submitted successfully." };
+    j(json!({ "success": true, "msg": msg }), 200)
+}
+
+/// The item's rating tag (sfw/nsfw/nsfl), if it has one.
+async fn current_rating(st: &AppState, item_id: i32) -> Option<String> {
+    sql!(
+        "SELECT t.normalized FROM tags_assign ta JOIN tags t ON t.id = ta.tag_id WHERE ta.item_id = ",
+        item_id,
+        " AND t.normalized IN ('sfw', 'nsfw', 'nsfl') ORDER BY ta.tag_id DESC LIMIT 1"
+    )
+    .fetch_scalar::<String, _>(&st.db)
+    .await
+    .ok()
+    .flatten()
 }
 
 // ── GET /api/v2/mod/reports ─────────────────────────────────────────────────
@@ -271,4 +329,48 @@ async fn resolve(st: AppState, mut req: Req) -> Res {
         }
         Err(e) => err500(format!("{e:#}")),
     }
+}
+
+// ── POST /api/v2/mod/reports/:id/apply-rating ───────────────────────────────
+
+/// Accept a rating proposal: give the post the proposed rating and resolve this report together
+/// with the other pending proposals for the post that are only about its rating.
+async fn apply_rating(st: AppState, req: Req) -> Res {
+    let Some(id) = req.param("id").and_then(|s| s.parse::<i32>().ok()) else { return j(json!({ "success": false, "msg": "Report not found." }), 404) };
+    let Some(session) = req.session().cloned() else { return j(json!({ "success": false, "msg": "Unauthorized" }), 401) };
+    if !crate::perms::may_rate_item(&st, Some(&session), false) {
+        return Ok(crate::perms::denied(crate::perms::P::RateAny));
+    }
+    let Some(report) = sql!("SELECT item_id, proposed_rating, status FROM reports WHERE id = ", id).fetch_optional(&st.db).await? else {
+        return j(json!({ "success": false, "msg": "Report not found." }), 404);
+    };
+    let (Some(item_id), Some(rating)) = (report.i64("item_id").map(|i| i as i32), report.str("proposed_rating").map(str::to_string)) else {
+        return j(json!({ "success": false, "msg": "This report proposes no rating." }), 400);
+    };
+    if report.str("status") != Some("pending") {
+        return j(json!({ "success": false, "msg": "This report was already handled." }), 409);
+    }
+    let live = sql!("SELECT 1 FROM items WHERE id = ", item_id, " AND active = true AND is_deleted = false").fetch_optional(&st.db).await?.is_some();
+    if !live {
+        return j(json!({ "success": false, "msg": "Item not found" }), 404);
+    }
+    let set = crate::routes::apiv2::index::set_item_rating(&st, &session, item_id, None, Some(&rating), Value::Null, None).await?;
+    let uid = session.id as i32;
+    let resolved: Vec<i32> = sql!(
+        "UPDATE reports SET status = 'resolved', resolved_by = ",
+        uid,
+        " WHERE status = 'pending' AND item_id = ",
+        item_id,
+        " AND (id = ",
+        id,
+        " OR (proposed_rating IS NOT NULL AND categories <@ ARRAY['wrong_rating']::text[])) RETURNING id"
+    )
+    .fetch_all(&st.db)
+    .await?
+    .iter()
+    .filter_map(|r| r.i64("id").map(|i| i as i32))
+    .collect();
+    sql!("UPDATE notifications SET is_read = true WHERE type = 'report' AND reference_id = ANY(", resolved.clone(), ")").execute(&st.db).await?;
+    audit_log(&st, uid as i64, "resolve_report", "report", &id.to_string(), Some(json!({ "status": "resolved", "applied_rating": set.rating, "item_id": item_id }))).await;
+    j(json!({ "success": true, "rating": set.rating, "resolved": resolved, "msg": format!("Post rated {} and report resolved.", set.rating.to_uppercase()) }), 200)
 }

@@ -30,6 +30,13 @@
                             <span class="w0bm-report-cat-text"><strong>{{ t("report." ~ set[1] ~ "." ~ c ~ ".label") }}</strong><span>{{ t("report." ~ set[1] ~ "." ~ c ~ ".desc") }}</span></span>
                         </label>
                         {% endfor %}
+                        {% if set[0] == "item" %}
+                        {#- A proposed rating makes it a "wrong rating" report a moderator can apply (routes/reports.rs) -#}
+                        {%- set w0_cur = ("nsfl" if item.is_nsfl else ("nsfw" if item.is_nsfw else ("sfw" if item.is_sfw else ""))) %}
+                        <label class="w0bm-rate-pick">{{ t("report.proposed_rating") }}
+                            <select name="proposed_rating" class="form-control"><option value="">{{ t("report.proposed_rating_none") }}</option>{% for r in ["sfw", "nsfw", "nsfl"] %}{% if (r != w0_cur and (r != "nsfl" or enable_nsfl)) %}<option value="{{ r }}">{{ r|upper }}</option>{% endif %}{% endfor %}</select>
+                        </label>
+                        {% endif %}
                     </div>
                     {% endfor %}
                     <textarea class="form-control" id="reportText" name="reason" rows="3" placeholder="{{ (t("report.placeholder") or "Details (optional)") }}"></textarea>

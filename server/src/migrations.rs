@@ -345,6 +345,8 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"CREATE INDEX IF NOT EXISTS idx_tags_normalized ON tags(normalized)"#,
     // Per-user permission overrides ({"comment": false, ...}), see crate::perms
     r#"ALTER TABLE "user" ADD COLUMN IF NOT EXISTS permissions jsonb DEFAULT '{}'::jsonb NOT NULL"#,
+    // Rating proposals: a "wrong rating" report can carry the rating the reporter suggests (sfw/nsfw/nsfl)
+    r#"ALTER TABLE reports ADD COLUMN IF NOT EXISTS proposed_rating text"#,
     // Audit log: an entry's target history (`/mod/audit?target_type=..&target_id=..`)
     r#"CREATE INDEX IF NOT EXISTS idx_audit_log_target ON audit_log(target_type, target_id)"#,
 ];

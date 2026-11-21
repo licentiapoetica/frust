@@ -3267,6 +3267,17 @@ div#parent.emojis-box {
     margin-bottom: 10px;
 }
 /* the reasons of the other kind (post / comment) */
+/* Report: proposed rating (partials/report.html) */
+.w0bm-rate-pick {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+    font-weight: normal;
+}
+.w0bm-rate-pick select.form-control {
+    width: auto;
+}
 .w0bm-report-cats[hidden] {
     display: none;
 }

@@ -1186,6 +1186,12 @@ form.pk-signup-done .reg-fields {
   grid-template-columns: 1fr 1fr;
 }
 
+/* Report: proposed rating (snippets/item-body.html #report) */
+.v2-rate-pick {
+  display: block;
+  margin: 4px 0;
+}
+
 .v2-report-msg.error {
   color: #ff6b6b;
 }

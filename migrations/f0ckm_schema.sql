@@ -1232,7 +1232,8 @@ CREATE TABLE public.reports (
     status text DEFAULT 'pending'::text,
     resolved_by integer,
     created_at timestamp with time zone DEFAULT now(),
-    categories text[] DEFAULT '{}'::text[]
+    categories text[] DEFAULT '{}'::text[],
+    proposed_rating text
 );
 
 

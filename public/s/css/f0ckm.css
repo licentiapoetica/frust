@@ -25083,6 +25083,46 @@ a.mq-btn.mq-btn-danger:hover {
   letter-spacing: 0.4px;
 }
 
+/* Rating proposal (a "wrong rating" report with a proposed rating) */
+.rp-proposal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82em;
+  color: #aaa;
+}
+
+.rp-proposal-label {
+  margin-right: 2px;
+}
+
+.rp-proposal-note {
+  font-style: italic;
+  color: #777;
+}
+
+.rp-rating {
+  display: inline-block;
+  padding: 1px 7px;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: #fff;
+  background: var(--badge-untagged);
+}
+
+.rp-rating-sfw { background: var(--badge-sfw); }
+.rp-rating-nsfw { background: var(--badge-nsfw); }
+.rp-rating-nsfl { background: var(--badge-nsfl); }
+
+.rp-btn-apply-rating {
+  color: #fff;
+}
+
+.rp-btn-apply-rating.rp-apply-sfw { background: var(--badge-sfw); }
+.rp-btn-apply-rating.rp-apply-nsfw { background: var(--badge-nsfw); }
+.rp-btn-apply-rating.rp-apply-nsfl { background: var(--badge-nsfl); }
+
 /* Reason */
 .rp-reason {
   font-size: 0.85em;
@@ -31756,6 +31796,106 @@ div.embed-responsive.embed-responsive-16by9.item-media-pdf {
 :is(#report-modal, #report-comment-modal) .rm-danger .report-cat-check:checked + .rm-check {
   background: var(--danger, #ff5c5c);
   border-color: var(--danger, #ff5c5c);
+}
+
+/* Rating proposal (footer.html): shown while "wrong rating" is ticked, hidden for user reports */
+#report-modal .rm-rating-pick {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--rm-surface);
+  border: 1px solid var(--rm-border);
+  border-top: 0;
+  margin-top: -6px;
+}
+
+#report-modal .report-form:has(.report-cat-check[value="wrong_rating"]:checked) .rm-rating-pick {
+  display: flex;
+}
+
+#report-modal.rm-no-rating .rm-rating-pick {
+  display: none;
+}
+
+#report-modal .rm-rating-pick-label {
+  margin-right: 4px;
+  font-size: 0.85em;
+  color: var(--rm-muted);
+}
+
+#report-modal .rm-rating-opt {
+  position: relative;
+  cursor: pointer;
+}
+
+#report-modal .rm-rating-radio {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+
+#report-modal .rm-rating-opt span {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1px solid var(--rm-border);
+  font-size: 0.8em;
+  font-weight: 700;
+  color: var(--rm-muted);
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+#report-modal .rm-rating-opt:hover span {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--rm-text);
+}
+
+#report-modal .rm-rating-radio:checked + span {
+  border-color: var(--rm-accent);
+  color: var(--rm-text);
+}
+
+#report-modal .rm-rating-sfw .rm-rating-radio:checked + span {
+  background: var(--badge-sfw);
+  border-color: var(--badge-sfw);
+  color: #fff;
+}
+
+#report-modal .rm-rating-nsfw .rm-rating-radio:checked + span {
+  background: var(--badge-nsfw);
+  border-color: var(--badge-nsfw);
+  color: #fff;
+}
+
+#report-modal .rm-rating-nsfl .rm-rating-radio:checked + span {
+  background: var(--badge-nsfl);
+  border-color: var(--badge-nsfl);
+  color: #fff;
+}
+
+#report-modal .rm-rating-radio:focus-visible + span {
+  outline: 2px solid var(--rm-accent);
+  outline-offset: 2px;
+}
+
+#report-modal .rm-rating-radio:disabled + span {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+/* Rating badge of a post the visitor may not rate: opens the report dialog to propose one */
+.rating-tag.can-propose,
+#tags[data-can-propose="true"] .rating-tag {
+  cursor: pointer;
+}
+
+.rating-tag a.rating-propose-link {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 :is(#report-modal, #report-comment-modal) textarea.mod-reason {

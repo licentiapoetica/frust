@@ -1069,6 +1069,12 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
             if crate::config::truthy(v) { v.clone() } else { json!(0) }
         });
 
+    // Rating proposal: a signed-in visitor who may not rate the post clicks its rating badge to
+    // suggest one (a "wrong rating" report with `proposed_rating`, routes/reports.rs)
+    let can_propose_rating = !can_rate_item
+        && data.get("item").is_some_and(|i| i.is_object() && !crate::config::truthy(&i["is_chan"]))
+        && data.get("session").is_some_and(|sv| sv["user"].as_str().is_some_and(|u| !u.is_empty()) && !crate::config::truthy(&sv["is_anon"]))
+        && session.is_none_or(|s| crate::perms::can(st, Some(s), crate::perms::P::Report));
     let session_value = data.get("session").cloned();
     for (k, v) in data {
         ctx.insert(k, v);
@@ -1120,6 +1126,7 @@ pub fn render(st: &AppState, req: Option<&Req>, view: &str, data: Value) -> Stri
     ctx.insert("anon_anonymize".into(), json!(crate::settings::anon_anonymize(&cfg)));
     ctx.insert("can_chan".into(), json!(can_chan));
     ctx.insert("can_rate_item".into(), json!(can_rate_item));
+    ctx.insert("can_propose_rating".into(), json!(can_propose_rating));
     ctx.insert("is_mod_area".into(), json!(is_mod_area));
     ctx.insert("item_has_dimensions".into(), json!(item_has_dims));
     ctx.insert("user_alternative_infobox".into(), json!(use_alt_infobox));
@@ -2513,6 +2520,53 @@ mod tests {
                 assert!(rehosted.contains("class=\"id-link\" data-item-id=\"6250458\">6BHrY1UUphB</a>"));
                 assert!(fresh.contains("href=\"/4/wsg/6250450/6250458\" class=\"id-link\" data-item-id=\"6250458\">6250458</a>"));
             }
+        }
+    }
+
+    /// Rating proposals: a visitor who may not rate the post (can_propose_rating) gets its rating
+    /// badge as a link to the report dialog, and every frontend's report form a proposed rating
+    /// (without the post's current one); someone who may rate gets neither link.
+    #[test]
+    fn rating_proposals_render() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let tags = serde_json::json!([{ "id": 2, "tag": "nsfw", "normalized": "nsfw", "badge": "badge-danger" }]);
+        let item = serde_json::json!({ "id": 7, "username": "al", "mime": "video/mp4", "dest": "/b/7.mp4", "tags": tags, "is_nsfw": true, "favorites": [],
+            "timestamp": { "timeago": "now", "timefull": "x" }, "src": { "long": "", "short": null } });
+        let ctx = |propose: bool| serde_json::json!({ "item": item, "session": { "user": "bob", "id": 1 }, "csrf_token": "tok", "enable_nsfl": true,
+            "url": { "pathname": "/7", "search": "", "qs": {} }, "here": "/7", "pagination": {}, "link": { "main": "/", "suffix": "" },
+            "can_rate_item": !propose, "can_propose_rating": propose, "captcha_scopes": [] });
+        let render = |view: &str, propose: bool| env.get_template(view).unwrap_or_else(|e| panic!("{view}: {e}")).render(to_jvalue(&ctx(propose))).unwrap_or_else(|e| panic!("{view}: {e:#}"));
+
+        for view in ["item-partial-modern.html", "item-partial-legacy.html"] {
+            let html = render(view, true);
+            assert!(html.contains("data-can-propose=\"true\""), "{view}");
+            assert!(html.contains("rating-tag is-nsfw  can-propose ") && html.contains("<a href=\"#report-modal\" class=\"rating-label rating-propose-link\""), "{view}");
+            let rater = render(view, false);
+            assert!(rater.contains("can-cycle") && !rater.contains("rating-propose-link"), "{view}");
+        }
+        // f0ckm's report dialog: the rating row after "wrong rating", the current rating disabled
+        let footer = render("snippets/footer.html", true);
+        assert!(footer.contains("<div class=\"rm-rating-pick\""), "{footer}");
+        assert!(footer.contains("<input type=\"radio\" name=\"proposed_rating\" value=\"nsfw\" class=\"rm-rating-radio\" disabled>"));
+        assert!(footer.contains("<input type=\"radio\" name=\"proposed_rating\" value=\"sfw\" class=\"rm-rating-radio\">"));
+        assert_eq!(footer.matches("rm-rating-pick\"").count(), 1, "only in the post report");
+
+        // the other frontends' report forms: a select without the current rating
+        for (view, link) in [
+            ("frontends/f0ckgle/item.html", "<a href=\"#report\" class=\"fg-propose-rating\">"),
+            ("frontends/f0ckyou/item.html", "<a href=\"#report\" class=\"fy-propose-rating\">"),
+            ("frontends/f0ckv2/item.html", "<a href=\"#report\" class=\"v2-propose-rating\">"),
+            ("frontends/w0bm/partials/tags.html", "<a href=\"#webmreportmodal\" data-toggle=\"modal\" data-target=\"#webmreportmodal\">"),
+        ] {
+            let html = render(view, true);
+            assert!(html.contains(link), "{view}");
+            assert!(!render(view, false).contains(link), "{view}");
+        }
+        for view in ["frontends/f0ckgle/item.html", "frontends/f0ckyou/item.html", "frontends/f0ckv2/item.html", "frontends/w0bm/partials/report.html"] {
+            let html = render(view, true);
+            assert!(html.contains("name=\"proposed_rating\""), "{view}");
+            assert!(html.contains("<option value=\"sfw\">") && !html.contains("<option value=\"nsfw\">"), "{view}");
         }
     }
 

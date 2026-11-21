@@ -2171,6 +2171,32 @@ html.fg-user-font body {
   gap: .25rem 1rem;
 }
 
+/* Report: proposed rating (item.html #report) */
+.fg-rate-pick {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .5rem 0;
+}
+
+.fg-rate-pick select {
+  height: 2.25rem;
+  padding: 0 .5rem;
+  border: 1px solid var(--fg-border);
+  background: var(--fg-field);
+  color: var(--fg-text);
+}
+
+.fg-rate-pick select:focus {
+  border-color: var(--fg-blue);
+  outline: 0;
+}
+
+.fg-propose-rating {
+  margin-left: .375rem;
+  font-size: .875em;
+}
+
 .fg-modal-btns {
   display: flex;
   justify-content: flex-end;

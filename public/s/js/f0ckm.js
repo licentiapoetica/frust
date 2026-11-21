@@ -13741,6 +13741,9 @@ window.cancelAnimFrame = (function () {
       const canCycle = ratingTag.classList.contains('can-cycle') || ratingTag.id === 'a_toggle' || !!document.querySelector('#tags[data-can-manage="true"]');
       if (canCycle && window.cycleRating) {
         window.cycleRating(ratingTag);
+      } else if (window.f0ckProposeRating && (ratingTag.classList.contains('can-propose') || ratingTag.closest('#tags[data-can-propose="true"]'))) {
+        // May not rate this post: propose a rating to the moderators (report dialog, "wrong rating")
+        window.f0ckProposeRating(ratingTag);
       }
       return false;
     }
@@ -21822,6 +21825,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const resetCategories = (modal) => {
         modal.querySelectorAll('.report-cat-check').forEach(cb => { cb.checked = false; });
+        modal.querySelectorAll('.rm-rating-radio').forEach(r => { r.checked = r.value === ''; });
+    };
+
+    // The rating proposal row: only for posts, the post's current rating can't be picked
+    const setRatingPick = (modal, itemId, current) => {
+        modal.classList.toggle('rm-no-rating', !itemId);
+        modal.querySelectorAll('.rm-rating-radio').forEach(r => {
+            if (current !== undefined) r.disabled = !!r.value && r.value === current;
+        });
     };
 
     // target: { item_id } | { comment_id } | { reported_user_id }
@@ -21832,8 +21844,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (reason) reason.value = '';
         resetCategories(modal);
         clearError(modal);
+        if (modal === itemModal) setRatingPick(modal, target.item_id, target.current_rating);
         modal.style.display = 'flex';
         document.body.classList.add('modal-open');
+    };
+
+    // Rating badge of a post the visitor may not rate (f0ckm.js click handler): the post report
+    // with "wrong rating" ticked, so the rating row is open
+    window.f0ckProposeRating = (badge) => {
+        if (!itemModal) return;
+        const itemId = badge.dataset.itemId || badge.closest('[data-item-id]')?.dataset.itemId || window.getCurrentItemId?.();
+        if (!itemId) return;
+        const rating = badge.dataset.rating;
+        openReport(itemModal, { item_id: itemId, current_rating: ['sfw', 'nsfw', 'nsfl'].includes(rating) ? rating : '' });
+        const wrong = itemModal.querySelector('.report-cat-check[value="wrong_rating"]');
+        if (wrong) wrong.checked = true;
+        itemModal.querySelector('.rm-rating-radio:not(:disabled):not([value=""])')?.focus();
     };
 
     const closeReport = (modal) => {
@@ -21875,7 +21901,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemBtn = e.target.closest('.report-item-btn');
         if (itemBtn) {
             e.preventDefault();
-            openReport(itemModal, { item_id: itemBtn.dataset.itemId });
+            openReport(itemModal, { item_id: itemBtn.dataset.itemId, current_rating: document.querySelector(`#tags[data-item-id="${itemBtn.dataset.itemId}"] .rating-tag`)?.dataset.rating || '' });
         }
 
         const commentBtn = e.target.closest('.report-comment-btn');
@@ -21924,7 +21950,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let target = {};
             try { target = JSON.parse(modal.dataset.reportTarget || '{}'); } catch (err) {}
             const payload = new URLSearchParams();
-            Object.keys(target).forEach((k) => { if (target[k]) payload.append(k, target[k]); });
+            Object.keys(target).forEach((k) => { if (target[k] && k !== 'current_rating') payload.append(k, target[k]); });
+            const proposed = modal.querySelector('.rm-rating-radio:checked');
+            if (proposed && proposed.value && target.item_id && checkedCategories.includes('wrong_rating')) payload.append('proposed_rating', proposed.value);
             if (reason) payload.append('reason', reason);
             if (checkedCategories.length) payload.append('categories', checkedCategories.join(','));
             if (rcToken) payload.append('cap-token', rcToken);
@@ -21946,7 +21974,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.success) {
                     closeReport(modal);
                     reportReason.value = '';
-                    if (window.showFlash) window.showFlash((window.f0ckI18n && window.f0ckI18n.report_success) || 'Report submitted successfully.', 'success');
+                    const okMsg = payload.has('proposed_rating') ? data.msg : ((window.f0ckI18n && window.f0ckI18n.report_success) || 'Report submitted successfully.');
+                    if (window.showFlash) window.showFlash(okMsg, 'success');
                 } else {
                     const errMsg = data.msg || (window.f0ckI18n && window.f0ckI18n.report_error) || 'An error occurred.';
                     showError(modal, errMsg);

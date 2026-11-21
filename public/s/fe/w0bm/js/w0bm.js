@@ -966,7 +966,7 @@
       form.querySelectorAll('.w0bm-report-cats').forEach((set) => {
         const on = set.dataset.reportKind === k;
         set.hidden = !on;
-        set.querySelectorAll('input').forEach((cb) => { cb.disabled = !on; cb.checked = false; });
+        set.querySelectorAll('input, select').forEach((cb) => { cb.disabled = !on; if (cb.tagName === 'SELECT') cb.value = ''; else cb.checked = false; });
       });
       if (title) title.textContent = title.dataset[k === 'comment' ? 'titleComment' : 'titleItem'] || title.textContent;
       const intro = form.querySelector('.w0bm-report-intro');

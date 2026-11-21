@@ -68,6 +68,18 @@
         <span class="rm-check"><i class="fa-solid fa-check"></i></span>
         <span class="rm-text"><strong>{{ t("report." ~ rm.set ~ "." ~ c ~ ".label") }}</strong><span>{{ t("report." ~ rm.set ~ "." ~ c ~ ".desc") }}</span></span>
       </label>
+      {% if (c == "wrong_rating" and rm.p == "report") %}
+      {#- The rating the reporter proposes (shown while "wrong rating" is ticked); a moderator can
+          apply it from the reports page. The post's current rating can't be picked. #}
+      {%- set rm_cur = ((("nsfl" if item.is_nsfl else ("nsfw" if item.is_nsfw else ("sfw" if item.is_sfw else "")))) if (item is defined and item) else "") %}
+      <div class="rm-rating-pick" role="radiogroup" aria-label="{{ t("report.proposed_rating") }}">
+        <span class="rm-rating-pick-label">{{ t("report.proposed_rating") }}</span>
+        <label class="rm-rating-opt"><input type="radio" name="proposed_rating" value="" class="rm-rating-radio" checked><span>{{ t("report.proposed_rating_none") }}</span></label>
+        {% for r in ["sfw", "nsfw", "nsfl"] %}{% if (r != "nsfl" or enable_nsfl) %}
+        <label class="rm-rating-opt rm-rating-{{ r }}"><input type="radio" name="proposed_rating" value="{{ r }}" class="rm-rating-radio"{% if rm_cur == r %} disabled{% endif %}><span>{{ r|upper }}</span></label>
+        {% endif %}{% endfor %}
+      </div>
+      {% endif %}
       {% endfor %}
     </div>
     <textarea id="{{ rm.p }}-reason" name="reason" class="mod-reason rm-reason" placeholder="{{ t("report.placeholder") }}"></textarea>

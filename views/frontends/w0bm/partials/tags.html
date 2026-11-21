@@ -8,6 +8,8 @@
                 <li id="tagadder" class="addtagsy">[+Add Tag]</li>
             </label>
             {% endif %}
+            {#- May not rate this post: propose a rating (the report modal, partials/report.html) -#}
+            {% if can_propose_rating %}<li class="addtagsy"><a href="#webmreportmodal" data-toggle="modal" data-target="#webmreportmodal">[{{ t("report.propose_rating_title") }}]</a></li>{% endif %}
             <li class="addtagsy"><a href="/about">About </a></li>
             <li class="addtagsy"><a href="/rules">Rules </a></li>
             <li class="addtagsy"><a href="/terms">Terms </a></li>

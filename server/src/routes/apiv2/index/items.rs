@@ -766,7 +766,6 @@ pub(super) async fn set_expiry(st: AppState, mut req: Req) -> Res {
 // ── POST /item/:id/rating ───────────────────────────────────────────────────
 
 pub(super) async fn rating(st: AppState, mut req: Req) -> Res {
-    let cfg = st.cfg();
     // ratingAuth
     let Some(sess) = req.session() else {
         return j(json!({ "success": false, "msg": "Unauthorized" }), 401);
@@ -797,10 +796,6 @@ pub(super) async fn rating(st: AppState, mut req: Req) -> Res {
     if !perms::may_rate_item(&st, Some(&session), is_owner) {
         return j(json!({ "success": false, "msg": "Unauthorized" }), 403);
     }
-    let nsfl_id: i32 = match sql!("SELECT id FROM tags WHERE normalized = 'nsfl' LIMIT 1").fetch_scalar::<i32, _>(&st.db).await? {
-        Some(id) => id,
-        None => cfg.int("nsfl_tag_id").filter(|&n| n != 0).unwrap_or(11517) as i32,
-    };
 
     let subf0ck: Value = [post.get("subf0ck_id").cloned(), req.query("subf0ck_id").map(|q| json!(q))]
         .into_iter()
@@ -827,6 +822,33 @@ pub(super) async fn rating(st: AppState, mut req: Req) -> Res {
         .flatten()
         .find(crate::config::truthy)
         .and_then(|v| v.as_str().map(str::to_string));
+    let res = set_item_rating(&st, &session, itemid, album_item_id, req_rating.as_deref(), subf0ck.clone(), sub_str.as_deref()).await?;
+    j(json!({ "success": true, "itemid": itemid, "subf0ck_id": subf0ck, "rating": res.rating, "tags": res.tags }), 200)
+}
+
+/// What [`set_item_rating`] changed.
+pub(crate) struct RatingSet {
+    pub rating: &'static str,
+    pub tags: Vec<Value>,
+}
+
+/// Set an item's (or one album entry's) rating tag: `rating` sfw/nsfw/nsfl, or `None` to cycle
+/// SFW → NSFW → NSFL (when enabled) → SFW. Logs it, regenerates the blurred thumbnail and sends the
+/// live tag update. The caller checks the permission (rating route, applied rating proposals).
+pub(crate) async fn set_item_rating(
+    st: &AppState,
+    session: &Session,
+    itemid: i32,
+    album_item_id: Option<i32>,
+    req_rating: Option<&str>,
+    subf0ck: Value,
+    sub_str: Option<&str>,
+) -> anyhow::Result<RatingSet> {
+    let cfg = st.cfg();
+    let nsfl_id: i32 = match sql!("SELECT id FROM tags WHERE normalized = 'nsfl' LIMIT 1").fetch_scalar::<i32, _>(&st.db).await? {
+        Some(id) => id,
+        None => cfg.int("nsfl_tag_id").filter(|&n| n != 0).unwrap_or(11517) as i32,
+    };
     let uid = session.id as i32;
     let rating_ids = vec![1, 2, nsfl_id];
 
@@ -846,7 +868,7 @@ pub(super) async fn rating(st: AppState, mut req: Req) -> Res {
         .fetch_scalar(&mut *tx)
         .await?,
     };
-    let new_id: i32 = match req_rating.as_deref() {
+    let new_id: i32 = match req_rating {
         Some("sfw") => 1,
         Some("nsfw") => 2,
         Some("nsfl") => nsfl_id,
@@ -932,8 +954,8 @@ pub(super) async fn rating(st: AppState, mut req: Req) -> Res {
     }
     details.insert("new".into(), json!(new_rating));
     details.insert("subf0ck_id".into(), subf0ck.clone());
-    audit_log(&st, session.id, "update_rating", "item", &itemid.to_string(), Some(Value::Object(details))).await;
-    let tags = crate::util::get_tags(&st, itemid as i64, Some(&session), sub_str.as_deref()).await?;
-    notify(&st, "tags", &json!({ "item_id": itemid, "subf0ck_id": subf0ck, "fresh": true, "tags": tags })).await;
-    j(json!({ "success": true, "itemid": itemid, "subf0ck_id": subf0ck, "rating": new_rating, "tags": tags }), 200)
+    audit_log(st, session.id, "update_rating", "item", &itemid.to_string(), Some(Value::Object(details))).await;
+    let tags = crate::util::get_tags(st, itemid as i64, Some(session), sub_str).await?;
+    notify(st, "tags", &json!({ "item_id": itemid, "subf0ck_id": subf0ck, "fresh": true, "tags": tags })).await;
+    Ok(RatingSet { rating: new_rating, tags })
 }

@@ -530,6 +530,9 @@
     "submit": "Absenden",
     "intro": "Wählen Sie einen oder mehrere Gründe und fügen Sie unten optional Details hinzu.",
     "intro_comment": "Was stimmt mit diesem Kommentar nicht? Wählen Sie einen oder mehrere Gründe und fügen Sie unten optional Details hinzu.",
+    "propose_rating_title": "Andere Einstufung vorschlagen",
+    "proposed_rating": "Richtige Einstufung",
+    "proposed_rating_none": "weiß ich nicht",
     "reasons_item": {
       "wrong_rating": { "label": "Falsche Einstufung", "desc": "Der Inhalt ist als SFW markiert, sollte aber NSFW sein, oder umgekehrt." },
       "spam": { "label": "Spam", "desc": "Wiederholte, unerwünschte oder werbliche Inhalte." },

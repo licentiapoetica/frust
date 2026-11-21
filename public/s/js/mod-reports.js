@@ -46,7 +46,7 @@ function relTime(d) {
 window.currentPage = window.currentPage || 1;
 
 // Report card / pagination buttons: data-on="click:rp-call" data-args='["fnName", ...args]' calls window[fnName](...args)
-var RP_CALLABLE = ['resolveReport', 'adminDeleteItem', 'modToggleUnavailable', 'adminDeleteComment', 'modWarnUser', 'adminBanUser', 'loadReports'];
+var RP_CALLABLE = ['resolveReport', 'applyRatingProposal', 'adminDeleteItem', 'modToggleUnavailable', 'adminDeleteComment', 'modWarnUser', 'adminBanUser', 'loadReports'];
 F0ckActions.define('rp-call', function(el, e, fn) {
     if (RP_CALLABLE.indexOf(fn) === -1 || typeof window[fn] !== 'function') return;
     window[fn].apply(window, Array.prototype.slice.call(arguments, 3));
@@ -141,7 +141,22 @@ window.loadReports = async function(page) {
             var catsHtml = cats.length ? '<div class="rp-cats">' + cats.map(catBadge).join('') + '</div>' : '';
             var reasonHtml = r.reason ? '<div class="rp-reason">' + rpEsc(r.reason) + '</div>' : '';
 
+            // Rating proposal: the post's rating now → the one the reporter proposes
+            var proposed = ['sfw', 'nsfw', 'nsfl'].indexOf(r.proposed_rating) !== -1 ? r.proposed_rating : '';
+            var curRating = '';
+            (Array.isArray(r.item_tags) ? r.item_tags : []).forEach(function(t) {
+                if (['sfw', 'nsfw', 'nsfl'].indexOf(t.normalized) !== -1) curRating = t.normalized;
+            });
+            var ratingChip = function(v) { return '<span class="rp-rating rp-rating-' + (v || 'untagged') + '">' + (v ? v.toUpperCase() : '?') + '</span>'; };
+            var proposalHtml = proposed
+                ? '<div class="rp-proposal"><span class="rp-proposal-label">Proposed rating</span>' + ratingChip(curRating) + '<i class="fa-solid fa-arrow-right"></i>' + ratingChip(proposed) +
+                  (curRating === proposed ? '<span class="rp-proposal-note">already applied</span>' : '') + '</div>'
+                : '';
+
             var actions = '';
+            if (status === 'pending' && proposed && curRating !== proposed && r.resolved_item_id) {
+                actions += '<button class="rp-btn rp-btn-apply-rating rp-apply-' + proposed + '" data-on="click:rp-call" data-args=\'["applyRatingProposal",' + r.id + ',"' + proposed + '"]\'><i class="fa-solid fa-check-double"></i> Rate ' + proposed.toUpperCase() + '</button>';
+            }
             if (status === 'pending') {
                 actions += '<button class="rp-btn rp-btn-resolve" data-on="click:rp-call" data-args=\'["resolveReport",' + r.id + ',"resolved"]\'><i class="fa-solid fa-check"></i> Resolve</button>';
                 actions += '<button class="rp-btn rp-btn-reject" data-on="click:rp-call" data-args=\'["resolveReport",' + r.id + ',"rejected"]\'><i class="fa-solid fa-xmark"></i> Reject</button>';
@@ -188,7 +203,7 @@ window.loadReports = async function(page) {
                 '</div>' +
                 '<div class="rp-card-body">' +
                     previewHtml +
-                    '<div class="rp-info">' + catsHtml + reasonHtml + '</div>' +
+                    '<div class="rp-info">' + catsHtml + proposalHtml + reasonHtml + '</div>' +
                 '</div>' +
                 '<div class="rp-card-actions">' + actions + '</div>';
 
@@ -235,6 +250,28 @@ window.resolveReport = function(id, action) {
             throw new Error(data.msg || 'Failed to update report');
         }
     }, { hideReason: true });
+};
+
+// Accept a rating proposal: the post gets the rating, the report (and the post's other pending
+// rating proposals) are resolved
+window.applyRatingProposal = async function(id, rating) {
+    var csrfToken = window.f0ckSession && window.f0ckSession.csrf_token;
+    try {
+        var res = await fetch('/api/v2/mod/reports/' + id + '/apply-rating', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken || '' },
+            body: new URLSearchParams()
+        });
+        var data = await res.json();
+        if (window.showFlash) window.showFlash(data.msg || (data.success ? 'Rated ' + rating.toUpperCase() : 'Failed'), data.success ? 'success' : 'error');
+        if (data.success) {
+            window.loadReports(window.currentPage);
+            if (window.NotificationSystemInstance && typeof window.NotificationSystemInstance.pollDebounced === 'function')
+                window.NotificationSystemInstance.pollDebounced();
+        }
+    } catch (e) {
+        if (window.showFlash) window.showFlash('Network error', 'error');
+    }
 };
 
 window.adminDeleteComment = function(id) {

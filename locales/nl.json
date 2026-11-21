@@ -543,6 +543,9 @@
     "submit": "Indienen",
     "intro": "Kies een of meer redenen en voeg hieronder eventueel details toe.",
     "intro_comment": "Wat is er mis met deze reactie? Kies een of meer redenen en voeg hieronder eventueel details toe.",
+    "propose_rating_title": "Andere classificatie voorstellen",
+    "proposed_rating": "Juiste classificatie",
+    "proposed_rating_none": "weet niet",
     "reasons_item": {
       "wrong_rating": { "label": "Verkeerde classificatie", "desc": "De inhoud is als SFW gemarkeerd maar zou NSFW moeten zijn, of andersom." },
       "spam": { "label": "Spam", "desc": "Herhaalde, ongewenste of reclame-inhoud." },

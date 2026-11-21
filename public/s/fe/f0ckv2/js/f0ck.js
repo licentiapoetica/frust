@@ -502,6 +502,7 @@ window.v2Page.onPage(() => {
         item_id: fd.get('item_id'),
         reason: fd.get('reason') || '',
         categories: fd.getAll('categories[]'),
+        proposed_rating: fd.get('proposed_rating') || undefined,
         'cap-token': fd.get('cap-token') || undefined,
         csrf_token: fd.get('csrf_token')
       };

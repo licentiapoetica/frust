@@ -38,17 +38,17 @@
         {% endif %}
 
         <div class="sidebar-tags-container">
-            <span class="badge badge-dark item-modern-tags" id="tags" data-item-id="{{ (item.local_id or item.id) }}" data-can-manage="{{ ("true" if can_manage_item else "false") }}" data-can-rate="{{ ("true" if can_rate_item else "false") }}">
+            <span class="badge badge-dark item-modern-tags" id="tags" data-item-id="{{ (item.local_id or item.id) }}" data-can-manage="{{ ("true" if can_manage_item else "false") }}" data-can-rate="{{ ("true" if can_rate_item else "false") }}" data-can-propose="{{ ("true" if can_propose_rating else "false") }}">
                 {% if ((not item.is_sfw and not item.is_nsfw) and not item.is_nsfl) %}
-                <span class="badge badge-untagged rating-tag is-untagged {% if can_rate_item %} can-cycle {% endif %}" data-item-id="{{ (item.local_id or item.id) }}" data-rating="untagged">
-                    <span class="rating-label">?</span>
+                <span class="badge badge-untagged rating-tag is-untagged {% if can_rate_item %} can-cycle {% elif can_propose_rating %} can-propose {% endif %}" data-item-id="{{ (item.local_id or item.id) }}" data-rating="untagged">
+                    {% if can_propose_rating %}<a href="#report-modal" class="rating-label rating-propose-link" title="{{ t("report.propose_rating_title") }}">?</a>{% else %}<span class="rating-label">?</span>{% endif %}
                 </span>
                 {% endif %}
                 {% if item.tags is defined %}
                 {% for key, tag in item.tags|entries %}
                 {% if ((tag.normalized == "sfw" or tag.normalized == "nsfw") or tag.normalized == "nsfl") %}
-                <span class="badge {{ tag.badge }} rating-tag is-{{ tag.normalized }} {% if can_rate_item %} can-cycle {% endif %}" data-item-id="{{ (item.local_id or item.id) }}" data-rating="{{ tag.normalized }}">
-                    <span class="rating-label">{{ tag.tag }}</span>
+                <span class="badge {{ tag.badge }} rating-tag is-{{ tag.normalized }} {% if can_rate_item %} can-cycle {% elif can_propose_rating %} can-propose {% endif %}" data-item-id="{{ (item.local_id or item.id) }}" data-rating="{{ tag.normalized }}">
+                    {% if can_propose_rating %}<a href="#report-modal" class="rating-label rating-propose-link" title="{{ t("report.propose_rating_title") }}">{{ tag.tag }}</a>{% else %}<span class="rating-label">{{ tag.tag }}</span>{% endif %}
                 </span>
                 {% else %}
                 <span {% if (((not is_anonymized and session) and not session.is_anon) and (tag.display_name or tag.user)) %} tooltip="{{ (tag.display_name or tag.user) }}" {% endif %} class="badge {{ tag.badge }} tag-badge {% if tag.is_excluded %} tag-is-excluded {% endif %}" data-tag-id="{{ tag.id }}" data-tag="{{ tag.tag }}" data-tag-normalized="{{ tag.normalized }}">
