@@ -25553,7 +25553,9 @@ a.mq-btn.mq-btn-danger:hover {
    wrapper would pin it to the wrapper instead, so wide screens let the table overflow normally;
    narrow ones (where it has to scroll sideways) scroll inside a box with the header on top. */
 :where(.adm-perms) #perm-roles .adm-perm-table thead th {
-  top: var(--navbar-h, 50px);
+  /* 1px under the navbar (which paints above it): --navbar-h is a fractional measurement, and
+     rounding otherwise left a 1px slit where the rows showed through. */
+  top: calc(var(--navbar-h, 50px) - 1px);
 }
 
 @media (min-width: 900px) {
