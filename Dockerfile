@@ -3,7 +3,7 @@
 # ── 1. f0ckm binary ──────────────────────────────────────────────────────────────
 # Rust on Alpine targets musl and links statically, so the binary runs on the plain Alpine runtime.
 # No OpenSSL: TLS is rustls/ring, passkeys (webauthn-rs ≥ 0.6) are pure Rust.
-FROM rust:1.99-alpine3.22 AS build
+FROM rust:1.100-alpine3.22 AS build
 RUN apk add --no-cache musl-dev gcc
 WORKDIR /build/server
 COPY server/Cargo.toml server/Cargo.lock ./
