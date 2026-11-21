@@ -1705,6 +1705,19 @@
 
     let userManuallySelectedNonTagTab = false;
 
+    // Tabs that only exist on a tag, favs or 4chan page: they open by themselves, so they are never
+    // saved as the visitor's choice. Leaving that page goes back to the saved tab.
+    const CONTEXT_SIDEBAR_TABS = new Set(['tag', 'favs', 'chan']);
+    const preferredSidebarTab = () => {
+        let saved = null;
+        try { saved = localStorage.getItem('sidebar_active_tab'); } catch (_) {}
+        if (saved === 'videos') saved = 'recommendations';
+        if (saved && !CONTEXT_SIDEBAR_TABS.has(saved) && document.querySelector(`.sidebar-tab[data-tab="${CSS.escape(saved)}"]`)) {
+            return saved;
+        }
+        return document.querySelector('.sidebar-tab[data-tab="comments"]') ? 'comments' : 'recommendations';
+    };
+
     const updateTagTabVisibility = (forceSwitchToTag = false) => {
         const tag = getCurrentTag();
         const tagBtn = document.getElementById('sidebar-tab-tag');
@@ -1744,7 +1757,7 @@
 
             const activeTab = document.querySelector('.sidebar-tab.active')?.dataset.tab;
             if (activeTab === 'tag') {
-                switchSidebarTab('recommendations');
+                switchSidebarTab(preferredSidebarTab());
             }
         }
     };
@@ -2199,11 +2212,11 @@
 
             const activeTab = document.querySelector('.sidebar-tab.active')?.dataset.tab;
             if (activeTab === 'favs') {
-                // Fall back to tag tab if available, else recommendations
+                // Fall back to tag tab if available, else the visitor's saved tab
                 if (getCurrentTag()) {
                     switchSidebarTab('tag');
                 } else {
-                    switchSidebarTab('recommendations');
+                    switchSidebarTab(preferredSidebarTab());
                 }
             }
         }
@@ -2415,7 +2428,7 @@
                 if (getCurrentTag()) {
                     switchSidebarTab('tag');
                 } else {
-                    switchSidebarTab('recommendations');
+                    switchSidebarTab(preferredSidebarTab());
                 }
             }
         }
@@ -2475,9 +2488,11 @@
             }
         });
 
-        try {
-            localStorage.setItem('sidebar_active_tab', normalizedTab);
-        } catch (_) {}
+        if (!CONTEXT_SIDEBAR_TABS.has(normalizedTab)) {
+            try {
+                localStorage.setItem('sidebar_active_tab', normalizedTab);
+            } catch (_) {}
+        }
 
         if (normalizedTab === 'recommendations') {
             if (!recommendationsLoaded) {
@@ -2523,21 +2538,14 @@
         }
 
         // Restore persisted active tab if any
-        let savedTab = 'comments';
-        try {
-            savedTab = localStorage.getItem('sidebar_active_tab') || 'comments';
-        } catch (_) {}
-
         if (getCurrentChanContext()) {
             switchSidebarTab('chan');
         } else if (getCurrentFavsUser()) {
             switchSidebarTab('favs');
         } else if (getCurrentTag()) {
             switchSidebarTab('tag');
-        } else if (savedTab === 'videos' || savedTab === 'recommendations') {
-            switchSidebarTab('recommendations');
         } else {
-            switchSidebarTab(savedTab);
+            switchSidebarTab(preferredSidebarTab());
         }
     };
 
@@ -2662,12 +2670,8 @@
         if (tag) {
             userManuallySelectedNonTagTab = false;
             switchSidebarTab('tag');
-        } else {
-            let savedTab = 'comments';
-            try { savedTab = localStorage.getItem('sidebar_active_tab'); } catch (_) {}
-            if (savedTab === 'videos' || savedTab === 'recommendations') {
-                loadRecommendations(false);
-            }
+        } else if (document.querySelector('.sidebar-tab.active')?.dataset.tab === 'recommendations') {
+            loadRecommendations(false);
         }
     };
 
