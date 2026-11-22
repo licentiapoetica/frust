@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@cap.js/wasm": "0.0.8",
-    "@cap.js/widget": "0.1.62",
+    "@cap.js/widget": "0.1.63",
     "@ruffle-rs/ruffle": "0.7.1",
     "bad-apple-virus": "github:licentiapoetica/bad_apple_virus",
     "jszip": "3.10.2",
