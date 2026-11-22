@@ -678,6 +678,8 @@
     "ban_1w": "1 Week",
     "ban_1m": "1 Maand",
     "ban_permanent": "Permanent",
+    "ban_custom": "Aangepast",
+    "ban_custom_placeholder": "bijv. 90m, 36h, 10d, 2w, 3mo",
     "warn_modal_title": "Waarschuwing Geven",
     "warn_modal_reason": "Reden voor waarschuwing:",
     "warn_modal_hint": "Deze reden zal zichtbaar zijn voor de gebruiker, en zij moeten deze erkennen om het bericht te verwijderen.",

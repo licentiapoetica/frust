@@ -83,6 +83,7 @@
                 e.preventDefault();
                 const reason = document.getElementById('ban-reason').value;
                 const duration = document.getElementById('ban-duration').value;
+                const duration_custom = document.getElementById('ban-duration-custom').value;
 
                 try {
                     const res = await fetch('/api/v2/admin/ban', {
@@ -91,7 +92,7 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-Token': window.f0ckSession?.csrf_token
                         },
-                        body: JSON.stringify({ user_id: userId, reason, duration })
+                        body: JSON.stringify({ user_id: userId, reason, duration, duration_custom })
                     });
                     const data = await res.json();
                     if (data.success) {

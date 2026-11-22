@@ -336,23 +336,27 @@ window.adminBanUser = function(userId) {
     var isAdmin = window.f0ckSession && window.f0ckSession.admin;
     var promptHtml =
         '<p>This will restrict the user from accessing their account and performing most actions.</p>' +
-        '<div style="margin-top:10px;"><label>Ban Duration:</label>' +
-        '<select id="ban-duration-select" class="form-control" style="margin-top:5px;">' +
+        '<div class="rp-ban-duration"><label for="ban-duration-select">Ban Duration:</label>' +
+        '<select id="ban-duration-select" class="form-control">' +
         (isAdmin ? '<option value="permanent">Permanent</option>' : '') +
         '<option value="1">1 Hour</option><option value="6">6 Hours</option><option value="24">24 Hours (1 Day)</option>' +
         (!isAdmin ? '<option value="48">48 Hours (2 Days)</option>' : '') +
         (isAdmin ? '<option value="168">168 Hours (1 Week)</option>' : '') +
         (isAdmin ? '<option value="720">720 Hours (1 Month)</option>' : '') +
-        '</select></div>';
+        '<option value="custom">Custom</option>' +
+        '</select>' +
+        '<input type="text" id="ban-duration-custom-input" class="form-control ban-duration-custom" placeholder="e.g. 90m, 36h, 10d, 2w, 3mo" aria-label="Custom ban duration" maxlength="32">' +
+        '</div>';
     window.ModAction.confirm('Ban User ID ' + userId, promptHtml, async (reason) => {
         var duration = document.getElementById('ban-duration-select').value;
         var params = new URLSearchParams();
         params.append('user_id', userId); params.append('reason', reason); params.append('duration', duration);
+        params.append('duration_custom', document.getElementById('ban-duration-custom-input').value);
         var res = await fetch('/api/v2/admin/ban', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
         var data = await res.json();
         if (data.success) { if (window.showFlash) window.showFlash('User banned cleanly.', 'success'); }
         else throw new Error(data.msg || 'Unknown error');
-    });
+    }, { unsafeContent: true }); // static markup; the sanitizer would strip the select and input
 };
 
 (function() {

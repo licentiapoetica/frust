@@ -215,7 +215,9 @@
                     <option value="168">{{ t("profile.ban_1w") }}</option>
                     <option value="720">{{ t("profile.ban_1m") }}</option>
                     <option value="permanent">{{ t("profile.ban_permanent") }}</option>
+                    <option value="custom">{{ t("profile.ban_custom") }}</option>
                 </select>
+                <input type="text" id="ban-duration-custom" class="user-profile-mod-input ban-duration-custom" placeholder="{{ t("profile.ban_custom_placeholder") }}" aria-label="{{ t("profile.ban_custom") }}" maxlength="32">
             </div>
             <div class="user-profile-mod-actions">
                 <button type="button" id="ban-modal-close" class="user-profile-mod-btn user-profile-mod-btn-cancel">{{ t("profile.ban_modal_cancel") }}</button>

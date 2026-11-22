@@ -7,7 +7,7 @@ use crate::http::{Guard, Req, Res, Router, html, json_resp, reply};
 use crate::security::{AnonBan, ban_anonymous_user};
 use crate::sql;
 use crate::state::AppState;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde_json::{Value, json};
 
 pub fn register(r: &mut Router) {
@@ -42,24 +42,78 @@ fn answer(r: anyhow::Result<Value>) -> Res {
     ))
 }
 
-/// Ban end for a `duration` in hours; `None` = permanent (`'permanent'` or empty).
-fn ban_expiry(duration: Option<&str>) -> anyhow::Result<Option<DateTime<Utc>>> {
+/// Longest ban length in hours (about 114 years).
+const MAX_BAN_HOURS: i64 = 1_000_000;
+
+/// A typed ban length: a plain number is hours (what the preset options send), anything else is
+/// number + unit pairs like `90m`, `36h`, `10d`, `2w`, `3mo`, `1y` or `1d 12h`.
+fn parse_ban_length(text: &str) -> Option<Duration> {
+    let text = text.trim().to_ascii_lowercase();
+    if text.is_empty() {
+        return None;
+    }
+    if text.bytes().all(|b| b.is_ascii_digit()) {
+        let hours: i64 = text.parse().ok()?;
+        return (1..=MAX_BAN_HOURS).contains(&hours).then(|| Duration::hours(hours));
+    }
+    let mut minutes = 0i64;
+    let mut rest = text.as_str();
+    while !rest.is_empty() {
+        let digits = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+        let n: i64 = rest[..digits].parse().ok()?;
+        rest = rest[digits..].trim_start();
+        let letters = rest.find(|c: char| !c.is_ascii_alphabetic()).unwrap_or(rest.len());
+        let unit = match &rest[..letters] {
+            "m" | "min" | "mins" | "minute" | "minutes" => 1,
+            "h" | "hr" | "hrs" | "hour" | "hours" => 60,
+            "d" | "day" | "days" => 60 * 24,
+            "w" | "week" | "weeks" => 60 * 24 * 7,
+            "mo" | "month" | "months" => 60 * 24 * 30,
+            "y" | "year" | "years" => 60 * 24 * 365,
+            _ => return None,
+        };
+        minutes = minutes.checked_add(n.checked_mul(unit)?)?;
+        rest = rest[letters..].trim_start();
+    }
+    (1..=MAX_BAN_HOURS * 60).contains(&minutes).then(|| Duration::minutes(minutes))
+}
+
+/// The length a ban form asked for: the `duration` preset, or `duration_custom` when the preset is
+/// `custom`. A custom pick with nothing typed stays `custom`, which is refused instead of permanent.
+fn requested_duration(body: &Value) -> Option<String> {
+    let duration = body_str(body, "duration");
+    if duration.as_deref().map(str::trim) != Some("custom") {
+        return duration;
+    }
+    let custom = body_str(body, "duration_custom").map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
+    Some(custom.unwrap_or_else(|| "custom".into()))
+}
+
+/// Length of a ban; `None` = permanent (`'permanent'` or empty).
+fn ban_length(duration: Option<&str>) -> anyhow::Result<Option<Duration>> {
     match duration.map(str::trim) {
-        None | Some("") | Some("permanent") => Ok(None),
-        Some(d) => {
-            let hours = crate::social::helpers::js_parse_int(d).ok_or_else(|| anyhow::anyhow!("Invalid duration"))?;
-            Ok(Some(Utc::now() + chrono::Duration::hours(hours.clamp(-1_000_000, 1_000_000))))
-        }
+        None | Some("") => Ok(None),
+        Some(d) if d.eq_ignore_ascii_case("permanent") => Ok(None),
+        Some(d) => parse_ban_length(d).map(Some).ok_or_else(|| anyhow::anyhow!("Invalid duration. Use for example 90m, 36h, 10d, 2w, 3mo or 1y.")),
     }
 }
 
-/// Moderators can ban for at most 48 hours; admins without limit.
+/// Ban end for a `duration`; `None` = permanent.
+fn ban_expiry(duration: Option<&str>) -> anyhow::Result<Option<DateTime<Utc>>> {
+    Ok(ban_length(duration)?.map(|d| Utc::now() + d))
+}
+
+/// Moderators can ban for at most 48 hours; admins without limit. An unreadable length passes
+/// here and is refused as invalid by `ban_expiry`.
 fn mod_duration_error(is_admin: bool, duration: Option<&str>) -> Option<&'static str> {
     if is_admin {
         return None;
     }
-    let hours = duration.and_then(crate::social::helpers::js_parse_int);
-    (duration == Some("permanent") || hours.map(|h| h > 48).unwrap_or(true)).then_some("Moderators can only issue bans for up to 48 hours.")
+    match ban_length(duration) {
+        Ok(Some(d)) if d <= Duration::hours(48) => None,
+        Err(_) => None,
+        _ => Some("Moderators can only issue bans for up to 48 hours."),
+    }
 }
 
 /// 403 `{ success: false, msg }` for a refused ban.
@@ -167,7 +221,7 @@ async fn anon_ban(st: &AppState, req: &Req, body: &Value, hardware: bool) -> any
     let fp = body_str(body, field).filter(|s| !s.is_empty()).ok_or_else(|| {
         anyhow::anyhow!(if hardware { "Missing hardware fingerprint" } else { "Missing fingerprint" })
     })?;
-    let duration = body_str(body, "duration");
+    let duration = requested_duration(body);
     let expires = ban_expiry(duration.as_deref())?;
     let reason = body_str(body, "reason").filter(|r| !r.is_empty());
     let result = ban_anonymous_user(
@@ -184,7 +238,7 @@ async fn anon_ban(st: &AppState, req: &Req, body: &Value, hardware: bool) -> any
         },
     )
     .await?;
-    let details = json!({ field: fp, "reason": body.get("reason"), "duration": body.get("duration") });
+    let details = json!({ field: fp, "reason": body.get("reason"), "duration": duration });
     crate::audit::log(st, sid(req), if hardware { "ban_hardware" } else { "ban_fingerprint" }, if hardware { "hardware" } else { "fingerprint" }, None, details).await;
     Ok(json!({ "success": true, "result": result }))
 }
@@ -196,7 +250,7 @@ fn anon_ban_user_id(body: &Value) -> Option<i64> {
 /// Role and duration checks of a fingerprint / hardware ban; `Some(msg)` refuses it.
 async fn check_anon_ban(st: &AppState, req: &Req, body: &Value) -> anyhow::Result<Option<&'static str>> {
     let is_admin = req.session().map(|s| s.admin).unwrap_or(false);
-    if let Some(msg) = mod_duration_error(is_admin, body_str(body, "duration").as_deref()) {
+    if let Some(msg) = mod_duration_error(is_admin, requested_duration(body).as_deref()) {
         return Ok(Some(msg));
     }
     match anon_ban_user_id(body) {
@@ -255,12 +309,13 @@ async fn hardware_unban(st: AppState, mut req: Req) -> Res {
 async fn ip_ban(st: AppState, mut req: Req) -> Res {
     let body = req.post().await?.clone();
     let cfg = st.cfg();
-    if let Some(msg) = mod_duration_error(req.session().map(|s| s.admin).unwrap_or(false), body_str(&body, "duration").as_deref()) {
+    let duration = requested_duration(&body);
+    if let Some(msg) = mod_duration_error(req.session().map(|s| s.admin).unwrap_or(false), duration.as_deref()) {
         return refuse(msg);
     }
     let r = async {
         let ip = body_str(&body, "ip").filter(|s| !s.is_empty()).ok_or_else(|| anyhow::anyhow!("Missing IP address"))?;
-        let expires = ban_expiry(body_str(&body, "duration").as_deref())?;
+        let expires = ban_expiry(duration.as_deref())?;
         // Already a stored hash (banned from the IP list) or a raw address typed by the moderator
         let is_hash = ip.len() == 64 && ip.bytes().all(|b| b.is_ascii_hexdigit());
         let ip_hash = if is_hash { ip.to_lowercase() } else { crate::security::hash_ip(&cfg, &ip) };
@@ -275,7 +330,7 @@ async fn ip_ban(st: AppState, mut req: Req) -> Res {
         )
         .execute(&st.db)
         .await?;
-        crate::audit::log(&st, sid(&req), "ban_ip", "ip", None, json!({ "ip": ip, "reason": body.get("reason"), "duration": body.get("duration") })).await;
+        crate::audit::log(&st, sid(&req), "ban_ip", "ip", None, json!({ "ip": ip, "reason": body.get("reason"), "duration": duration })).await;
         // Broadcast the ban to live SSE clients
         let payload = json!({ "ip": ip, "ipHash": ip_hash, "reason": prefix(&reason, 300), "expires": iso(expires) });
         let _ = sql!("SELECT pg_notify('bans', ", payload.to_string(), ")").execute(&st.db).await;
@@ -322,7 +377,7 @@ async fn user_ban(st: AppState, mut req: Req) -> Res {
     let r: anyhow::Result<Result<(), &'static str>> = async {
         let user_id = body_id(&body, "user_id").ok_or_else(|| anyhow::anyhow!("User not found"))? as i32;
         let reason = body_str(&body, "reason");
-        let duration = body_str(&body, "duration");
+        let duration = requested_duration(&body);
         let Some(target) = sql!(r#"select admin, "user", login from "user" where id = "#, user_id, " limit 1").fetch_optional(&st.db).await? else {
             anyhow::bail!("User not found");
         };
@@ -376,7 +431,7 @@ async fn user_ban(st: AppState, mut req: Req) -> Res {
             "ban_user",
             "user",
             user_id.to_string(),
-            json!({ "reason": body.get("reason"), "duration": body.get("duration"), "target_user": target.val("user") }),
+            json!({ "reason": body.get("reason"), "duration": duration, "target_user": target.val("user") }),
         )
         .await;
         // Terminate all sessions of this user
@@ -425,5 +480,49 @@ mod tests {
         assert!(ban_expiry(Some("abc")).is_err());
         let e = ban_expiry(Some("24")).unwrap().unwrap();
         assert!((e - Utc::now()).num_minutes() > 23 * 60);
+    }
+
+    #[test]
+    fn custom_lengths() {
+        let mins = |s| parse_ban_length(s).map(|d| d.num_minutes());
+        assert_eq!(mins("36"), Some(36 * 60));
+        assert_eq!(mins("90m"), Some(90));
+        assert_eq!(mins("36h"), Some(36 * 60));
+        assert_eq!(mins("10D"), Some(10 * 1440));
+        assert_eq!(mins("2w"), Some(14 * 1440));
+        assert_eq!(mins("3mo"), Some(90 * 1440));
+        assert_eq!(mins("1y"), Some(365 * 1440));
+        assert_eq!(mins("1d 12h"), Some(36 * 60));
+        assert_eq!(mins("2 hours 30 min"), Some(150));
+        for bad in ["", "0", "0h", "-5", "-5h", "h", "5x", "1.5h", "custom", "99999999999999999999", "9999999y"] {
+            assert_eq!(mins(bad), None, "{bad}");
+        }
+    }
+
+    #[test]
+    fn custom_pick_needs_a_value() {
+        let d = |v: Value| requested_duration(&v);
+        assert_eq!(d(json!({ "duration": "24", "duration_custom": "3d" })).as_deref(), Some("24"));
+        assert_eq!(d(json!({ "duration": "custom", "duration_custom": " 3d " })).as_deref(), Some("3d"));
+        // Nothing typed must fail, never fall through to a permanent ban
+        let empty = d(json!({ "duration": "custom", "duration_custom": " " }));
+        assert!(ban_expiry(empty.as_deref()).is_err());
+    }
+
+    #[test]
+    fn moderator_limit_reads_units() {
+        assert!(mod_duration_error(false, Some("48h")).is_none());
+        assert!(mod_duration_error(false, Some("2d")).is_none());
+        assert!(mod_duration_error(false, Some("3d")).is_some());
+        assert!(mod_duration_error(false, Some("49")).is_some());
+        assert!(mod_duration_error(false, Some("permanent")).is_some());
+        assert!(mod_duration_error(false, None).is_some());
+        assert!(mod_duration_error(true, Some("permanent")).is_none());
+    }
+
+    #[test]
+    fn permanent_ban_binds_a_timestamp_null() {
+        let exp: crate::db::Bind = None::<DateTime<Utc>>.into();
+        assert!(sql!("update t set ban_expires = ", exp).sql().ends_with("/* timestamptz */"));
     }
 }

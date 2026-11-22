@@ -90,6 +90,7 @@ async function submitBan(e) {
     const value = document.getElementById('ban-target-value').value.trim();
     const reason = document.getElementById('ban-reason').value.trim();
     const duration = document.getElementById('ban-duration').value;
+    const duration_custom = document.getElementById('ban-duration-custom').value;
     const cascadeIps = document.getElementById('ban-cascade-ips').checked;
     const userId = document.getElementById('ban-target-user-id').value;
 
@@ -102,10 +103,10 @@ async function submitBan(e) {
             : (type === 'hardware' ? '/api/v2/admin/bans/hardware/ban' : '/api/v2/admin/bans/ip/ban');
 
         const payload = type === 'fingerprint'
-            ? { fingerprint: value, reason, duration, ban_ips: cascadeIps, user_id: userId || undefined, csrf_token: csrfToken }
+            ? { fingerprint: value, reason, duration, duration_custom, ban_ips: cascadeIps, user_id: userId || undefined, csrf_token: csrfToken }
             : (type === 'hardware'
-                ? { hw_fingerprint: value, reason, duration, ban_ips: cascadeIps, user_id: userId || undefined, csrf_token: csrfToken }
-                : { ip: value, reason, duration, csrf_token: csrfToken });
+                ? { hw_fingerprint: value, reason, duration, duration_custom, ban_ips: cascadeIps, user_id: userId || undefined, csrf_token: csrfToken }
+                : { ip: value, reason, duration, duration_custom, csrf_token: csrfToken });
 
         const res = await fetch(endpoint, {
             method: 'POST',

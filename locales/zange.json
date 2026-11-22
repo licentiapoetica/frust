@@ -665,6 +665,8 @@
     "ban_1w": "1 Woche",
     "ban_1m": "1 Monat",
     "ban_permanent": "Dauerhaft",
+    "ban_custom": "Benutzerdefiniert",
+    "ban_custom_placeholder": "z. B. 90m, 36h, 10d, 2w, 3mo",
     "warn_modal_title": "Verwarnung aussprechen",
     "warn_modal_reason": "Grund für die Verwarnung:",
     "warn_modal_hint": "Dieser Grund wird für den Benutzer sichtbar sein, und er muss ihn anerkennen, um die Nachricht zu schließen.",

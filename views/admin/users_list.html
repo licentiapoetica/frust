@@ -84,7 +84,9 @@
                     <option value="168">7 days</option>
                     <option value="720">30 days</option>
                     <option value="permanent" selected>Permanent</option>
+                    <option value="custom">Custom</option>
                 </select>
+                <input type="text" name="duration_custom" class="adm-text ban-duration-custom" placeholder="e.g. 90m, 36h, 10d, 2w, 3mo" aria-label="Custom ban duration" maxlength="32">
                 <button type="submit" class="adm-btn adm-btn-danger"><i class="fa fa-ban"></i> Ban</button>
             </form>
             {% endif %}

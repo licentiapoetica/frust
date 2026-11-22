@@ -681,6 +681,8 @@
     "ban_1w": "1 Week",
     "ban_1m": "1 Month",
     "ban_permanent": "Permanent",
+    "ban_custom": "Custom",
+    "ban_custom_placeholder": "e.g. 90m, 36h, 10d, 2w, 3mo",
     "warn_modal_title": "Issue Warning",
     "warn_modal_reason": "Reason for Warning:",
     "warn_modal_hint": "This reason will be visible to the user, and they must acknowledge it to dismiss the message.",

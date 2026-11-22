@@ -4167,3 +4167,12 @@ html.gchat-skin-w0bm #gchat-reopen-bubble {
     --f0ck-ac-accent: #1fb2b0;
     --f0ck-ac-muted: #888;
 }
+
+/* Ban menu: the custom length field shows once "custom" is picked, also without JavaScript */
+.ban-duration-custom {
+    margin-top: 6px;
+}
+
+select:not(:has(option[value="custom"]:checked)) + .ban-duration-custom {
+    display: none;
+}

@@ -27382,6 +27382,27 @@ html:not(.no-js) .adm-users .adm-users-apply {
   flex: 1 1 auto;
 }
 
+/* Ban forms: the custom length field shows once "Custom" is picked, also without JavaScript */
+.ban-duration-custom {
+  margin-top: 6px;
+}
+
+select:not(:has(option[value="custom"]:checked)) + .ban-duration-custom {
+  display: none;
+}
+
+.adm-users .adm-user-line .ban-duration-custom {
+  margin-top: 0;
+}
+
+.rp-ban-duration {
+  margin-top: 10px;
+}
+
+.rp-ban-duration select {
+  margin-top: 5px;
+}
+
 :where(.adm-users) .adm-user-hint {
   margin: 0 0 8px;
   font-size: 0.78em;
