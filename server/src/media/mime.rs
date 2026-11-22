@@ -133,6 +133,15 @@ mod tests {
     }
 
     #[test]
+    fn mp3_is_stored_as_mp3() {
+        for stored in ["mpg", "mp3"] {
+            let cfg = crate::media::test_cfg(&format!("mimes: {{ audio/mpeg: {stored}, video/mpeg: mp4 }}"));
+            assert_eq!(ext_for(&cfg, "audio/mpeg").as_deref(), Some("mp3"), "config says {stored}");
+            assert_eq!(ext_for(&cfg, "video/mpeg").as_deref(), Some("mp4"));
+        }
+    }
+
+    #[test]
     fn allowed_categories() {
         let mimes = s(&["image/png", "image/gif", "video/mp4", "audio/mpeg", "application/pdf", "application/zip"]);
         assert_eq!(allowed_from(&mimes, None), mimes);

@@ -657,7 +657,10 @@ impl Upload {
                 }
             }
         };
-        let ext_ok = ext.as_deref().is_some_and(|x| cfg.mimes().values().any(|v| v.as_str() == Some(x.to_lowercase().as_str())));
+        // .mpg isn't a stored extension, but MPEG video links are taken and transcoded to MP4 below
+        let ext_ok = ext.as_deref().map(str::to_lowercase).is_some_and(|x| {
+            cfg.mimes().values().any(|v| v.as_str() == Some(x.as_str())) || (x == "mpg" && cfg.mimes().contains_key("video/mpeg"))
+        });
         if s != Site::Mxc && !ext_ok {
             // fix: the old message echoed the raw link — for Telegram files that includes the bot token
             let msg = trunc(&format!("lol, go f0ck yourself (mime schmime: {} for {shown})", ext.as_deref().unwrap_or("undefined")), 1024);

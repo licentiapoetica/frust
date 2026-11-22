@@ -195,9 +195,14 @@ impl Config {
         self.int("websrv.port").and_then(|p| u16::try_from(p).ok()).unwrap_or(1499)
     }
 
-    /// Mime → extension map (`cfg.mimes`).
+    /// Mime → extension map (`cfg.mimes`). Older configs store MP3s (`audio/mpeg`) as `.mpg`;
+    /// that is read as `mp3` so they don't need editing.
     pub fn mimes(&self) -> serde_json::Map<String, Value> {
-        self.get("mimes").as_object().cloned().unwrap_or_default()
+        let mut mimes = self.get("mimes").as_object().cloned().unwrap_or_default();
+        if let Some(ext) = mimes.get_mut("audio/mpeg").filter(|e| e.as_str() == Some("mpg")) {
+            *ext = Value::String("mp3".into());
+        }
+        mimes
     }
 
     /// `cfg.nsfp` as tag ids.
