@@ -12,6 +12,6 @@
     "@ruffle-rs/ruffle": "0.7.1",
     "bad-apple-virus": "github:licentiapoetica/bad_apple_virus",
     "jszip": "3.10.2",
-    "marked": "18.2.0"
+    "marked": "18.2.1"
   }
 }
