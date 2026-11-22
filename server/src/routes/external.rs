@@ -516,7 +516,7 @@ async fn rehost_inner(st: &AppState, body: &Value, source: &chan_http::RehostSou
     chan_http::download(&cfg, &source.download, &tmp.path, max_bytes).await?;
 
     let mime_type = mime::detect(&tmp.path).await?;
-    let Some(ext) = mime::ext_for(&cfg, &mime_type) else { anyhow::bail!("Unsupported file type: {mime_type}") };
+    let Some(ext) = mime::stored_ext(&cfg, &tmp.path, &mime_type).await else { anyhow::bail!("Unsupported file type: {mime_type}") };
     if media::sound_required(&cfg, &mime_type) && media::video_has_no_sound(&tmp.path).await {
         return Ok(fail(400, media::NO_SOUND_MSG));
     }

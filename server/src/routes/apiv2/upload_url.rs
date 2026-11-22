@@ -752,7 +752,7 @@ async fn curl_fallback(cfg: &Config, url: &str, uuid: &str, max: f64, proxy: Opt
         return Err(CmdErr::plain(sanitize_error(&e, url)));
     }
     let m = mime::detect(&tmp).await?;
-    match mime::ext_for(cfg, &m) {
+    match mime::stored_ext(cfg, &tmp, &m).await {
         Some(ext) => {
             let fin = cfg.paths.tmp.join(format!("{uuid}.{ext}"));
             tokio::fs::rename(&tmp, &fin).await?;
@@ -802,11 +802,13 @@ async fn process(st: &AppState, cfg: &Config, job: &UrlJob, job_id: &str, uuid: 
         return Err(CmdErr::plain(format!("File too large. Max: {}, Got: {}", crate::util::format_size_f(max), crate::util::format_size_f(size))));
     }
     let mut mime_t = mime::detect(&source).await?;
-    if let Some(expected) = mime::ext_for(cfg, &mime_t) {
+    if let Some(expected) = mime::stored_ext(cfg, &source, &mime_t).await {
         let cur = source.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
         let jpg_pair = (cur == "jpg" && expected == "jpeg") || (cur == "jpeg" && expected == "jpg");
-        if cur == "unknown_video" || (cur != expected && !jpg_pair) {
-            let n = with_ext(&source, &expected);
+        // compared on the whole name: `expected` can have two parts (tar.gz)
+        let has_expected = source.file_name().is_some_and(|n| n.to_string_lossy().to_lowercase().ends_with(&format!(".{expected}")));
+        if cur == "unknown_video" || (!has_expected && !jpg_pair) {
+            let n = source.with_file_name(format!("{uuid}.{expected}"));
             tokio::fs::rename(&source, &n).await?;
             source = n;
         }

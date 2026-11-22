@@ -71,7 +71,7 @@ struct Delivery {
 static DELIVERY: Lazy<Mutex<HashMap<i64, Delivery>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 fn stem(f: &str) -> &str {
-    f.rsplit_once('.').map(|(b, _)| b).unwrap_or(f)
+    crate::media::mime::file_stem(f)
 }
 
 fn load(rows: &[crate::db::Row], files: &[crate::db::Row], ix: &mut Index) {

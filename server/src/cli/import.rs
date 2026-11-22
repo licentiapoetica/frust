@@ -325,7 +325,7 @@ async fn import_one(st: &AppState, opts: &Opts, path: &Path, allowed: &[String],
         }
     }
 
-    let ext = mime::ext_for(&cfg, &actual).unwrap_or_else(|| "bin".into());
+    let ext = mime::stored_ext(&cfg, &tmp.path, &actual).await.unwrap_or_else(|| "bin".into());
     let filename = format!("{uuid}.{ext}");
     let dest_path = cfg.paths.b.join(&filename);
     let size = tokio::fs::metadata(&tmp.path).await?.len() as i64;

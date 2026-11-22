@@ -774,7 +774,7 @@ async fn file_upload(
             }
         }
     }
-    let ext = mime::ext_for(cfg, &actual).unwrap_or_else(|| "bin".into());
+    let ext = mime::stored_ext(cfg, &tmp.path, &actual).await.unwrap_or_else(|| "bin".into());
     let filename = format!("{uuid}.{ext}");
     let dest_path = cfg.paths.pending.join("b").join(&filename);
 
@@ -1020,7 +1020,7 @@ async fn album_items(
         }
         let (sum, sub_phash, sub_dims) = analyse_sub(&sub_tmp.path, &sub_mime).await;
         let sum = sum?;
-        let sub_ext = mime::ext_for(cfg, &sub_mime).unwrap_or_else(|| "webp".into());
+        let sub_ext = mime::stored_ext(cfg, &sub_tmp.path, &sub_mime).await.unwrap_or_else(|| "webp".into());
         let sub_filename = format!("{sub_uuid}.{sub_ext}");
         let sub_dest = b_dir.join(&sub_filename);
         let sub_size = tokio::fs::metadata(&sub_tmp.path).await.map(|m| m.len() as i64).unwrap_or(sub.size as i64);

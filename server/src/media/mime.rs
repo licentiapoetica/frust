@@ -102,6 +102,55 @@ pub fn ext_for(cfg: &Config, mime: &str) -> Option<String> {
     cfg.mimes().get(mime).and_then(|e| e.as_str()).map(str::to_string)
 }
 
+/// Two-part extensions of compressed tar archives.
+const TAR_EXTS: [&str; 3] = ["tar.gz", "tar.bz2", "tar.xz"];
+
+/// The extension to store a file under: [`ext_for`], except that a compressed tar keeps its full
+/// `.tar.gz` / `.tar.bz2` / `.tar.xz`. Decided from the content, so it works on every upload route.
+pub async fn stored_ext(cfg: &Config, path: &Path, mime: &str) -> Option<String> {
+    let ext = ext_for(cfg, mime)?;
+    let wrapped = match mime {
+        "application/gzip" => Some(("zcat", TAR_EXTS[0])),
+        "application/x-bzip2" => Some(("bzcat", TAR_EXTS[1])),
+        "application/x-xz" => Some(("xzcat", TAR_EXTS[2])),
+        _ => None,
+    };
+    if let Some((tool, tar_ext)) = wrapped {
+        if holds_tar(path, tool).await {
+            return Some(tar_ext.to_string());
+        }
+    }
+    Some(ext)
+}
+
+/// Does the compressed file start with a tar header? Only the first block is decompressed: the
+/// tool is killed when `child` drops, so a decompression bomb costs nothing.
+async fn holds_tar(path: &Path, tool: &str) -> bool {
+    use tokio::io::AsyncReadExt;
+    let Ok(file) = tokio::fs::File::open(path).await else { return false };
+    let Ok(mut child) = tokio::process::Command::new(tool)
+        .stdin(file.into_std().await)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .kill_on_drop(true)
+        .spawn()
+    else {
+        return false;
+    };
+    let Some(mut out) = child.stdout.take() else { return false };
+    let mut block = [0u8; 512];
+    let read = tokio::time::timeout(std::time::Duration::from_secs(10), out.read_exact(&mut block)).await;
+    matches!(read, Ok(Ok(_))) && block[257..262] == *b"ustar"
+}
+
+/// A stored file name without its extension, two-part tar extensions included.
+pub fn file_stem(name: &str) -> &str {
+    TAR_EXTS
+        .iter()
+        .find_map(|e| name.strip_suffix(e)?.strip_suffix('.'))
+        .unwrap_or_else(|| name.rsplit_once('.').map_or(name, |(stem, _)| stem))
+}
+
 /// Image detection from the first bytes (meta_extract_handler): JPEG, PNG, WebP, GIF, TIFF.
 pub fn sniff_image(magic: &[u8]) -> bool {
     let b = |i: usize| magic.get(i).copied();
@@ -139,6 +188,35 @@ mod tests {
             assert_eq!(ext_for(&cfg, "audio/mpeg").as_deref(), Some("mp3"), "config says {stored}");
             assert_eq!(ext_for(&cfg, "video/mpeg").as_deref(), Some("mp4"));
         }
+    }
+
+    #[test]
+    fn stems_drop_the_whole_extension() {
+        assert_eq!(file_stem("abc.tar.gz"), "abc");
+        assert_eq!(file_stem("abc.tar.bz2"), "abc");
+        assert_eq!(file_stem("abc.tar.xz"), "abc");
+        assert_eq!(file_stem("abc.gz"), "abc");
+        assert_eq!(file_stem("abc.webp"), "abc");
+        assert_eq!(file_stem("abc"), "abc");
+    }
+
+    #[tokio::test]
+    async fn compressed_tars_keep_their_full_extension() {
+        let dir = std::env::temp_dir().join(format!("f0ckm_tar_test_{}", crate::util::random_hex(8)));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("a.txt"), "hello").unwrap();
+        let script = "tar czf t.gz a.txt && tar cjf t.bz2 a.txt && tar cJf t.xz a.txt && \
+                      gzip -c a.txt > p.gz && bzip2 -c a.txt > p.bz2 && xz -c a.txt > p.xz";
+        let made = std::process::Command::new("sh").args(["-c", script]).current_dir(&dir).status().unwrap();
+        assert!(made.success(), "needs tar, gzip, bzip2 and xz");
+        let cfg = crate::media::test_cfg("mimes: { application/gzip: gz, application/x-bzip2: bz2, application/x-xz: xz, image/png: png }");
+        for (ext, mime) in [("gz", "application/gzip"), ("bz2", "application/x-bzip2"), ("xz", "application/x-xz")] {
+            assert_eq!(stored_ext(&cfg, &dir.join(format!("t.{ext}")), mime).await, Some(format!("tar.{ext}")));
+            assert_eq!(stored_ext(&cfg, &dir.join(format!("p.{ext}")), mime).await.as_deref(), Some(ext), "not a tar");
+        }
+        assert_eq!(stored_ext(&cfg, &dir.join("a.txt"), "image/png").await.as_deref(), Some("png"));
+        assert_eq!(stored_ext(&cfg, &dir.join("a.txt"), "text/plain").await, None);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

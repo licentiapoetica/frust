@@ -648,7 +648,8 @@ async fn local_dest(st: &AppState, remote_dest: &str, rid: i64) -> Result<String
     if !taken {
         return Ok(remote_dest.to_string());
     }
-    let ext: String = remote_dest.rsplit_once('.').map(|(_, e)| e.chars().filter(|c| c.is_ascii_alphanumeric()).take(10).collect()).unwrap_or_default();
+    let stem = crate::media::mime::file_stem(remote_dest);
+    let ext: String = remote_dest[stem.len()..].trim_start_matches('.').chars().filter(|c| c.is_ascii_alphanumeric() || *c == '.').take(10).collect();
     Ok(if ext.is_empty() { format!("remote_{rid}") } else { format!("remote_{rid}.{ext}") })
 }
 

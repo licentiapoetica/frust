@@ -288,6 +288,7 @@ pub async fn clean(st: &AppState, args: &Args) -> Result<i32> {
     let mut extensions: Vec<String> = cfg.mimes().values().filter_map(|v| v.as_str().map(str::to_lowercase)).collect();
     extensions.push("mov".into());
     extensions.push("mpg".into()); // MP3s uploaded before they were stored as .mp3
+    extensions.push("tar".into()); // the name check reads the part after the first dot: x.tar.gz
     let invalid_b: Vec<&String> = files_b.iter().filter(|f| f.split('.').nth(1).map(|e| !extensions.contains(&e.to_lowercase())).unwrap_or(true)).collect();
     let invalid_t: Vec<&String> = files_t.iter().filter(|f| !f.ends_with(".webp")).collect();
     let spare_b: Vec<PathBuf> = files_b.iter().filter(|f| !ref_b.contains(*f)).map(|f| b_dir.join(f)).collect();

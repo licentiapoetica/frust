@@ -818,6 +818,13 @@ impl Upload {
             return Ok(false);
         }
 
+        // A compressed tar keeps its full extension (.tar.gz)
+        if let Some(ext) = crate::media::mime::stored_ext(cfg, &source, &mime).await.filter(|e| e.starts_with("tar.")) {
+            let out = source.with_file_name(format!("{uuid}.{ext}"));
+            tokio::fs::rename(&source, &out).await?;
+            source = out;
+        }
+
         let checksum = pipeline::sha256_file(&source).await?;
         let mut repost = pipeline::check_repost_sum(st, &checksum).await?;
         let mut phash = None;

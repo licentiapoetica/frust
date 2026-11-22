@@ -354,7 +354,7 @@ async fn process_file(st: &AppState, session: &Session, file: &FilePart, mut mim
             }
         }
     }
-    let mut ext = crate::media::mime::ext_for(&cfg, &mime).filter(|e| !e.is_empty()).unwrap_or_else(|| "bin".into());
+    let mut ext = crate::media::mime::stored_ext(&cfg, &tmp, &mime).await.filter(|e| !e.is_empty()).unwrap_or_else(|| "bin".into());
 
     // GIF → WebP (small) or WebM (large), when that is smaller
     let mut converted_gif = false;
