@@ -267,7 +267,7 @@ async fn ip_ban(st: AppState, mut req: Req) -> Res {
         // With hashing on, the raw address is never persisted, not even in the ban list
         let stored = if is_hash || crate::settings::hash_user_ips(&cfg) { ip_hash.clone() } else { ip.clone() };
         let reason = body_str(&body, "reason").filter(|r| !r.is_empty()).unwrap_or_else(|| "Banned by moderator".into());
-        let exp_bind: crate::db::Bind = expires.map(Into::into).unwrap_or(crate::db::Bind::Null);
+        let exp_bind: crate::db::Bind = expires.into();
         sql!(
             "INSERT INTO banned_ips (ip, ip_hash, banned_by, reason, expires_at) VALUES (", stored, ", ", ip_hash.clone(), ", ", sid(&req) as i32, ", ",
             reason.clone(), ", ", exp_bind,
@@ -340,7 +340,7 @@ async fn user_ban(st: AppState, mut req: Req) -> Res {
             anyhow::bail!("Invalid duration");
         }
         let expires = ban_expiry(duration.as_deref())?;
-        let exp_bind: crate::db::Bind = expires.map(Into::into).unwrap_or(crate::db::Bind::Null);
+        let exp_bind: crate::db::Bind = expires.into();
         sql!(r#"update "user" set banned = true, ban_reason = "#, reason.clone(), ", ban_expires = ", exp_bind, " where id = ", user_id)
             .execute(&st.db)
             .await?;

@@ -54,6 +54,7 @@ pub enum Bind {
     NullText,
     NullI32,
     NullI64,
+    NullTimestamptz,
 }
 
 impl Bind {
@@ -67,7 +68,7 @@ impl Bind {
             Bind::F64(_) => "float8",
             Bind::Text(_) | Bind::NullText => "text",
             Bind::Json(_) => "jsonb",
-            Bind::Timestamptz(_) => "timestamptz",
+            Bind::Timestamptz(_) | Bind::NullTimestamptz => "timestamptz",
             Bind::I32Array(_) => "int4[]",
             Bind::I64Array(_) => "int8[]",
             Bind::TextArray(_) => "text[]",
@@ -107,6 +108,7 @@ bind_from!(Option<&str>, v => v.map(|s| Bind::Text(s.to_string())).unwrap_or(Bin
 bind_from!(Option<i32>, v => v.map(Bind::I32).unwrap_or(Bind::NullI32));
 bind_from!(Option<i64>, v => v.map(Bind::I64).unwrap_or(Bind::NullI64));
 bind_from!(Option<bool>, v => v.map(Bind::Bool).unwrap_or(Bind::Null));
+bind_from!(Option<DateTime<Utc>>, v => v.map(Bind::Timestamptz).unwrap_or(Bind::NullTimestamptz));
 
 const PLACEHOLDER: char = '\u{1}';
 
@@ -179,7 +181,7 @@ impl Sql {
     #[cfg(test)]
     pub fn inline(&self) -> String {
         let lit = |b: &Bind| match b {
-            Bind::Null | Bind::NullText | Bind::NullI32 | Bind::NullI64 => "NULL".to_string(),
+            Bind::Null | Bind::NullText | Bind::NullI32 | Bind::NullI64 | Bind::NullTimestamptz => "NULL".to_string(),
             Bind::Bool(v) => v.to_string(),
             Bind::I16(v) => format!("{v}::int2"),
             Bind::I32(v) => format!("{v}::int4"),
@@ -226,6 +228,7 @@ impl Sql {
                 Bind::NullText => a.add(None::<String>),
                 Bind::NullI32 => a.add(None::<i32>),
                 Bind::NullI64 => a.add(None::<i64>),
+                Bind::NullTimestamptz => a.add(None::<DateTime<Utc>>),
                 Bind::Bool(v) => a.add(*v),
                 Bind::I16(v) => a.add(*v),
                 Bind::I32(v) => a.add(*v),

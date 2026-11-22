@@ -339,10 +339,7 @@ pub async fn ban_anonymous_user(st: &AppState, b: AnonBan) -> anyhow::Result<Val
     let mut fp = b.fingerprint.clone();
     let mut hw = b.hw_fingerprint.clone();
     let banned_by = b.banned_by.map(|v| v as i32);
-    let expires: crate::db::Bind = match b.expires {
-        Some(e) => e.into(),
-        None => crate::db::Bind::Null,
-    };
+    let expires: crate::db::Bind = b.expires.into();
 
     if let (Some(uid), None) = (user_id, &fp) {
         fp = first_str(st, sql!("select fingerprint from anon_identities where user_id = ", uid as i32, " limit 1"), "fingerprint").await;
