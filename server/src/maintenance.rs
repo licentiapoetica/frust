@@ -182,7 +182,7 @@ pub fn render_page(st: &AppState, req: &Req, m: &Maintenance, preview: bool) -> 
 
 /// Paths that stay reachable: signing in (admins have to get in), captchas, CSP reports and the
 /// few root files browsers fetch by themselves. `/s/` (static files) never gets here.
-fn is_open_path(path: &str) -> bool {
+pub(crate) fn is_open_path(path: &str) -> bool {
     static OPEN: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
         regex::Regex::new(r"^/(login|logout|api/cap|api/csp-report|api/v2/auth|api/v2/settings/passkeys/login|manifest\.json|sw\.js|robots\.txt|favicon\.(ico|png|gif))(/.*)?$").unwrap()
     });

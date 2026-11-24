@@ -106,6 +106,10 @@ pub async fn dispatch(st: &AppState, mut req: Req) -> Res {
     let Some(m) = router.find(&req.path, &req.method) else {
         return Ok(not_found_route(&req.method, &req.path));
     };
+    // Clients fetching far more items/files than a person would get a check page that never ends
+    if let Some(r) = crate::scraper_guard::check(st, &req, &m.params).await {
+        return Ok(r);
+    }
     req.params = m.params;
     // A plain form post (no JavaScript) with `back`: answer with a redirect back (crate::nojs)
     let back = crate::nojs::form_back(&mut req).await;
@@ -253,7 +257,7 @@ fn static_cache_headers(st: &AppState, req: &Req) {
 }
 
 /// Minimal session row for media gating (id, user, admin, mod, banned, anon fingerprint).
-async fn media_user(st: &AppState, session_cookie: &str) -> Option<Row> {
+pub(crate) async fn media_user(st: &AppState, session_cookie: &str) -> Option<Row> {
     let hash = crate::util::sha256(session_cookie);
     if let Some(r) = st.caches.session.get(&hash) {
         return Some(r);

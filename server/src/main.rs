@@ -33,6 +33,7 @@ mod proc;
 mod pwa;
 mod remote;
 mod routes;
+mod scraper_guard;
 mod security;
 mod smtp;
 mod session;

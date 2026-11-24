@@ -1,0 +1,34 @@
+{#- Scraper trap (crate::scraper_guard): standalone, for clients that fetched far more items/files than a
+    person would. Looks like a browser check; scraper-trap.js works on a proof of work it can never
+    finish (trap.difficulty leading zero hex digits). Own CSS (scraper-trap.css), no site CSS.
+    Without JavaScript (and with it) the page reloads now and then: once the block runs out, the
+    visitor gets the page they asked for. -#}
+<!doctype html>
+<html lang="{{ (lang or "en") }}" class="no-js">
+<head>
+  <meta charset="utf-8" />
+  <title>Checking your browser…</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta http-equiv="refresh" content="900" />
+  <link rel="icon" {% if (custom_favicon and (custom_favicon|length > 0)) %}href="{{ custom_favicon }}"{% else %} type="image/gif" href="/s/img/favicon.gif"{% endif %} />
+  <link rel="stylesheet" href="/s/css/scraper-trap.css?v={{ mtime("/public/s/css/scraper-trap.css") }}">
+</head>
+<body class="st-body">
+  <main class="st-box" id="st-trap" data-challenge="{{ trap.challenge }}" data-difficulty="{{ trap.difficulty }}">
+    <div class="st-spinner" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <h1 class="st-title">Checking your browser…</h1>
+    <p class="st-text">{{ domain }} makes sure you are not a bot. This can take a while; keep this page open.</p>
+    <progress class="st-progress" max="{{ trap.difficulty }}" value="0"></progress>
+    <dl class="st-stats st-js">
+      <div><dt>Difficulty</dt><dd>{{ trap.difficulty }}</dd></div>
+      <div><dt>Hashes</dt><dd id="st-hashes">0</dd></div>
+      <div><dt>Speed</dt><dd id="st-speed">–</dd></div>
+      <div><dt>Best</dt><dd id="st-best">0/{{ trap.difficulty }}</dd></div>
+    </dl>
+    <p class="st-text st-nojs">This page reloads by itself.</p>
+    <p class="st-id">challenge {{ trap.challenge }}</p>
+  </main>
+  <script src="/s/js/views/scraper-trap.js?v={{ mtime("/public/s/js/views/scraper-trap.js") }}"></script>
+</body>
+</html>

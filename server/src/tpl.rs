@@ -1298,6 +1298,20 @@ mod tests {
         assert_eq!(out, "on #42|a-b");
     }
 
+    /// views/scraper-trap.html (scraper_guard::trap): the challenge and difficulty reach the script,
+    /// assets come from files, nothing inline.
+    #[test]
+    fn scraper_trap_renders() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let ctx = serde_json::json!({ "domain": "example.org", "trap": { "challenge": "ab12cd34", "difficulty": crate::scraper_guard::TRAP_DIFFICULTY } });
+        let out = env.get_template("scraper-trap.html").unwrap().render(to_jvalue(&ctx)).unwrap();
+        let d = crate::scraper_guard::TRAP_DIFFICULTY;
+        assert!(out.contains(&format!(r#"id="st-trap" data-challenge="ab12cd34" data-difficulty="{d}""#)), "{out}");
+        assert!(out.contains(r#"<script src="/s/js/views/scraper-trap.js?v="#) && out.contains(r#"href="/s/css/scraper-trap.css?v="#), "{out}");
+        assert!(out.contains("example.org makes sure") && !out.contains("style=") && !out.contains("<style"), "{out}");
+    }
+
     /// views/maintenance.html renders the admin's text, the video and the glitch attributes; the
     /// admin form parses.
     #[test]

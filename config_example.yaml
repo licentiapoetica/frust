@@ -102,6 +102,19 @@ nsfp:
   - 2
   - 3
   - 4
+# Scraper guard: a client that opens far more items / downloads far more original files (/b/) than a
+# person would gets a "checking your browser" page whose proof of work never finishes, until the block
+# runs out (also for its files: they get that page instead). Counted are distinct items and files in a
+# sliding window; guests per IP (the /64 for IPv6), signed-in users per account. Admins and
+# moderators are never counted. .onion guests share one address and aren't counted. Blocks are kept
+# in memory (a restart lifts them); each one is logged as "[SCRAPER] Blocked ...".
+scraper_guard:
+  enabled: true
+  window_minutes: 60
+  guest_limit: 1500      # distinct items + files per window (an item page and its file are 2)
+  member_limit: 3000
+  block_hours: 6
+  status: 200            # HTTP status of the check page (API calls get 429)
 websrv:
   port: "1337"
   # Extra origins allowed to call /api/ with cookies (CORS). The site URL and main.onion are always allowed.

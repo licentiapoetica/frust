@@ -1,0 +1,135 @@
+/*
+ * scraper-trap.css: the check page blocked scrapers get (views/scraper-trap.html,
+ * server/src/scraper_guard.rs). Standalone: the page loads no site CSS. Square corners, no shadows.
+ */
+
+:root {
+  --st-bg: #0d0d0d;
+  --st-surface: #151515;
+  --st-border: #2c2c2c;
+  --st-text: #d6d6d6;
+  --st-muted: #7a7a7a;
+  --st-accent: #9f0;
+  --st-font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --st-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body.st-body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--st-bg);
+  color: var(--st-text);
+  font: 15px/1.5 var(--st-font);
+}
+
+body.st-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.st-box {
+  width: 100%;
+  max-width: 460px;
+  padding: 28px 24px 18px;
+  background: var(--st-surface);
+  border: 1px solid var(--st-border);
+  text-align: center;
+}
+
+.st-title {
+  margin: 18px 0 6px;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.st-text {
+  margin: 0 0 16px;
+  color: var(--st-muted);
+  font-size: 0.9rem;
+}
+
+/* four squares chasing each other */
+.st-spinner {
+  display: inline-grid;
+  grid-template-columns: 14px 14px;
+  gap: 4px;
+}
+.st-spinner span {
+  width: 14px;
+  height: 14px;
+  background: var(--st-accent);
+  opacity: 0.15;
+  animation: st-blink 1.2s infinite steps(1);
+}
+.st-spinner span:nth-child(2) { animation-delay: 0.3s; }
+.st-spinner span:nth-child(4) { animation-delay: 0.6s; }
+.st-spinner span:nth-child(3) { animation-delay: 0.9s; }
+
+@keyframes st-blink {
+  0%, 24% { opacity: 1; }
+  25%, 100% { opacity: 0.15; }
+}
+
+.st-progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 0 0 16px;
+  border: 1px solid var(--st-border);
+  background: var(--st-bg);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.st-progress::-webkit-progress-bar { background: var(--st-bg); }
+.st-progress::-webkit-progress-value { background: var(--st-accent); }
+.st-progress::-moz-progress-bar { background: var(--st-accent); }
+
+.st-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  margin: 0 0 14px;
+  background: var(--st-border);
+  border: 1px solid var(--st-border);
+}
+.st-stats div {
+  padding: 6px 4px;
+  background: var(--st-surface);
+}
+.st-stats dt {
+  color: var(--st-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.st-stats dd {
+  margin: 0;
+  font-family: var(--st-mono);
+  font-size: 0.85rem;
+}
+
+.st-id {
+  margin: 0;
+  color: var(--st-muted);
+  font-family: var(--st-mono);
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+/* Without JavaScript nothing is being worked on: no numbers, the reload note instead */
+html.no-js .st-js,
+html:not(.no-js) .st-nojs { display: none; }
+
+@media (max-width: 420px) {
+  .st-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-spinner span { animation-duration: 4s; }
+}
