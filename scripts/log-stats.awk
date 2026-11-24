@@ -2,7 +2,11 @@
 # log-stats.awk: what clients do, read from f0ckm's own log, nginx access logs and Anubis' log, to
 # see how real guests behave next to scrapers (scraper_guard limits). Plain POSIX awk (mawk, gawk,
 # busybox). Every line is recognised by itself, so logs can be mixed and concatenated in any order;
-# gzipped ones go through zcat. LC_ALL=C: in other locales awk reads "0.81" as 0 (decimal comma).
+# scripts/log-stats.sh does the rest: rotated and compressed files, directories, the locale.
+#
+#   scripts/log-stats.sh /var/log/nginx/f0ckm.access.log* > stats.txt
+#
+# By hand: gzipped files through zcat; LC_ALL=C, in other locales awk reads "0.81" as 0.
 #
 #   zcat -f /var/log/nginx/access.log* | LC_ALL=C awk -f scripts/log-stats.awk
 #   docker compose logs --no-color f0ckm f0ckm-nginx anubis | LC_ALL=C awk -f scripts/log-stats.awk
