@@ -196,7 +196,7 @@ match(line, /\[[0-9]+\/[A-Za-z]+\/[0-9]+:[0-9]+:[0-9]+:[0-9]+ [-+][0-9]+\] "/) {
     if (CUAN[c] == 1) CUA1[c] = ua
     u = uaclass(ua)
     UAREQ[u]++
-    if (!((u, c) in UACL)) { UACL[u, c] = 1; UACLN[u]++; CCLASS[c] = (c in CCLASS) ? CCLASS[c] "+" u : u }
+    if (!((u, c) in UACL)) { UACL[u, c] = 1; UACLN[u]++; cls = (c in CCLASS) ? CCLASS[c] "+" u : u; CCLASS[c] = cls }
     if (!((c, hour) in CHSEEN)) { CHSEEN[c, hour] = 1; CHOURS[c]++ }
     HREQ_NG[hour]++
     if (THING != "") {
