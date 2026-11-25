@@ -409,7 +409,8 @@ pub async fn check(st: &AppState, req: &Req, params: &HashMap<String, String>) -
     let now = crate::util::now_secs() as u64;
     let open = is_open_path(&req.path);
     let enforcing = g.mode == Mode::Block;
-    let blocked = !open && enforcing && GUARD.block_of(&key, now).is_some_and(|b| b.enforced);
+    let exempt = is_own_fetcher(req);
+    let blocked = !open && !exempt && enforcing && GUARD.block_of(&key, now).is_some_and(|b| b.enforced);
     let (kind, thing) = kind(req, params);
     let user_id = match who {
         Who::Member(id) => Some(id),
@@ -429,6 +430,9 @@ pub async fn check(st: &AppState, req: &Req, params: &HashMap<String, String>) -
     );
     if blocked {
         return Some(trap(st, req, &g));
+    }
+    if exempt {
+        return None;
     }
     let limit = if user_id.is_some() { g.member_limit } else { g.guest_limit } as u64;
     let estimate = estimate.filter(|e| *e > limit)?;
@@ -460,6 +464,18 @@ pub async fn check(st: &AppState, req: &Req, params: &HashMap<String, String>) -
         }
     });
     enforcing.then(|| trap(st, req, &g))
+}
+
+/// Fetchers of the site's own setup, counted (they show on the admin page) but never blocked:
+/// Anubis' OpenGraph fetcher reads a page's preview tags for everyone it challenges (link preview
+/// bots, crawlers), all from Anubis' address, and would cache the check page as the preview. Only
+/// believed straight from the private network without forwarding headers: through nginx every
+/// request has X-Real-IP, so a client sending that user agent from outside is still counted.
+fn is_own_fetcher(req: &Req) -> bool {
+    req.user_agent().starts_with("Anubis-OGTag-Fetcher/")
+        && req.tor_circuit.is_none()
+        && req.remote.is_some_and(|r| crate::http::is_proxy_addr(r.ip()))
+        && ["x-real-ip", "x-forwarded-for", "forwarded", "cf-connecting-ip", "true-client-ip"].iter().all(|h| req.header(h).is_none())
 }
 
 /// The answer for a blocked client: API and script calls get a 429, everything else (pages and
@@ -635,6 +651,31 @@ pub fn ua_class(ua: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn req(peer: &str, headers: &[(&str, &str)]) -> Req {
+        let mut h = axum::http::HeaderMap::new();
+        for (k, v) in headers {
+            h.insert(axum::http::HeaderName::from_bytes(k.as_bytes()).unwrap(), HeaderValue::from_str(v).unwrap());
+        }
+        Req::new(Method::GET, &"/123".parse().unwrap(), h, axum::body::Body::empty(), Some(peer.parse().unwrap()))
+    }
+
+    #[test]
+    fn anubis_og_fetcher_is_never_blocked_but_cant_be_faked() {
+        let ua = ("user-agent", "Anubis-OGTag-Fetcher/1.0");
+        assert!(is_own_fetcher(&req("172.18.0.4:4000", &[ua])));
+        assert!(is_own_fetcher(&req("127.0.0.1:4000", &[ua])));
+        // through nginx (a visitor sending that user agent): X-Real-IP is there
+        assert!(!is_own_fetcher(&req("172.18.0.4:4000", &[ua, ("x-real-ip", "198.51.100.7")])));
+        assert!(!is_own_fetcher(&req("172.18.0.4:4000", &[ua, ("x-forwarded-for", "198.51.100.7")])));
+        // straight from the internet, or another user agent
+        assert!(!is_own_fetcher(&req("203.0.113.9:4000", &[ua])));
+        assert!(!is_own_fetcher(&req("172.18.0.4:4000", &[("user-agent", "curl/8.5.0")])));
+        // the Tor port
+        let mut r = req("172.18.0.4:4000", &[ua]);
+        r.tor_circuit = Some(7);
+        assert!(!is_own_fetcher(&r));
+    }
 
     fn rec(g: &Guard, key: &str, thing: u64, now: u64, window: u64) -> Option<u64> {
         g.record(key, Kind::Item, Some(thing), None, false, false, "ua", now, window)

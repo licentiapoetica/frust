@@ -287,7 +287,10 @@ scraper_guard:
 ```
 
 Many people behind one address (mobile carriers, universities) count as one guest; the admin page
-shows whether real visitors come close to the limit.
+shows whether real visitors come close to the limit. Anubis' OpenGraph fetcher (it reads a page's
+preview tags for everyone Anubis challenges, all from Anubis' address) is counted but never blocked;
+that holds only for requests straight from the private network without `X-Real-IP`, so a client
+faking its user agent through nginx is not exempt.
 
 [scripts/log-stats.sh](scripts/log-stats.sh) gives the same kind of numbers from existing nginx,
 f0ckm and Anubis logs (rotated and compressed ones included), e.g. from before the guard ran:
