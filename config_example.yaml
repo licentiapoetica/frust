@@ -183,6 +183,9 @@ websrv:
   hide_sidebar_default: true
   koepfe: []
   enable_tor_hs: false
+  # Port for the .onion service (config/tor/torrc: HiddenServicePort 80 f0ckm:1338 with
+  # HiddenServiceExportCircuitID haproxy). Only takes connections from loopback / the private network.
+  tor_port: 1338
   enable_global_chat: false
   enable_danmaku: true
   bad_apple:          # Konami code (↑↑↓↓←→←→BA): "Bad Apple!!" played with desktop windows over the page

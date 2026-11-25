@@ -275,7 +275,16 @@ Many people behind one address (mobile carriers, universities) count as one gues
 
 ## Tor Hidden Service (.onion)
 
-Tor is bundled in `docker-compose.yml` and always runs next to f0ckm. It is the SOCKS proxy for outgoing fetches (`main.socks: socks5h://tor:9050` in `config.yaml`) and serves a hidden service pointing to the application (`f0ckm:1337`).
+Tor is bundled in `docker-compose.yml` and always runs next to f0ckm. It is the SOCKS proxy for outgoing fetches (`main.socks: socks5h://tor:9050` in `config.yaml`) and serves a hidden service pointing to the application's Tor port (`f0ckm:1338`, `websrv.tor_port`).
+
+On that port Tor starts every connection with a PROXY line naming the visitor's circuit
+(`HiddenServiceExportCircuitID haproxy` in [config/tor/torrc](config/tor/torrc)). f0ckm uses the
+circuit as the visitor's address, so .onion visitors are told apart like clearnet IPs (scraper guard,
+rate limits, bans) instead of all sharing the Tor container's. Forwarding headers (`X-Real-IP`) are
+never believed there, and the port only takes connections from loopback and the private network.
+The port is opened while `websrv.enable_tor_hs` is on. Your own Tor: point `HiddenServicePort` at
+f0ckm's Tor port and add `HiddenServiceExportCircuitID haproxy` (without it .onion still works, but
+every visitor shares one address).
 
 When running `docker compose up -d`, Tor automatically generates a `.onion` address for your node. You can find your onion address by running:
 

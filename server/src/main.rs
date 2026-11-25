@@ -40,6 +40,7 @@ mod session;
 mod settings;
 mod social;
 mod state;
+mod tor_listener;
 mod tpl;
 mod util;
 mod webauthn;
@@ -465,6 +466,18 @@ async fn main() -> Result<()> {
     let _config_watcher = watch_config(&st);
 
     let app = axum::Router::new().fallback(app::handle).with_state(st.clone());
+    // The .onion service's own port (crate::tor_listener): Tor tells f0ckm each visitor's circuit there
+    if st.cfg().truthy("websrv.enable_tor_hs") {
+        let tor_port = st.cfg().int("websrv.tor_port").and_then(|p| u16::try_from(p).ok()).unwrap_or(1338);
+        let tor_addr = SocketAddr::from(([0, 0, 0, 0], tor_port));
+        match tokio::net::TcpListener::bind(tor_addr).await {
+            Ok(l) => {
+                tracing::info!("[BOOT] Tor service port on {tor_addr}");
+                tokio::spawn(tor_listener::serve(l, app.clone()));
+            }
+            Err(e) => tracing::error!("[BOOT] cannot listen on {tor_addr} for the Tor service: {e}"),
+        }
+    }
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr).await.with_context(|| format!("cannot listen on {addr}"))?;
     tracing::info!("[BOOT] listening on {addr}");
@@ -478,9 +491,6 @@ const HEADER_READ_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// `axum::serve` with [`HEADER_READ_TIMEOUT`]; requests carry `ConnectInfo<SocketAddr>` as before.
 async fn serve(listener: tokio::net::TcpListener, app: axum::Router) -> Result<()> {
-    use hyper_util::rt::{TokioIo, TokioTimer};
-    use hyper_util::service::TowerToHyperService;
-    use tower::ServiceExt;
     loop {
         let (stream, remote) = match listener.accept().await {
             Ok(c) => c,
@@ -491,19 +501,29 @@ async fn serve(listener: tokio::net::TcpListener, app: axum::Router) -> Result<(
                 continue;
             }
         };
-        let _ = stream.set_nodelay(true);
-        let svc = app.clone().map_request(move |mut req: axum::http::Request<hyper::body::Incoming>| {
-            req.extensions_mut().insert(axum::extract::ConnectInfo(remote));
-            req.map(axum::body::Body::new)
-        });
-        tokio::spawn(async move {
-            // HTTP/1 only, like axum::serve was built here (no http2 feature)
-            let mut builder = hyper::server::conn::http1::Builder::new();
-            builder.timer(TokioTimer::new()).header_read_timeout(HEADER_READ_TIMEOUT);
-            let conn = builder.serve_connection(TokioIo::new(stream), TowerToHyperService::new(svc)).with_upgrades();
-            if let Err(e) = conn.await {
-                tracing::trace!("[HTTP] connection {remote}: {e:#}");
-            }
-        });
+        tokio::spawn(serve_connection(stream, remote, None, app.clone()));
+    }
+}
+
+/// One connection: HTTP/1 with [`HEADER_READ_TIMEOUT`]. Requests carry `ConnectInfo(remote)` and,
+/// from the Tor port, the visitor's circuit (tor_listener::Circuit).
+async fn serve_connection(stream: tokio::net::TcpStream, remote: SocketAddr, circuit: Option<tor_listener::Circuit>, app: axum::Router) {
+    use hyper_util::rt::{TokioIo, TokioTimer};
+    use hyper_util::service::TowerToHyperService;
+    use tower::ServiceExt;
+    let _ = stream.set_nodelay(true);
+    let svc = app.map_request(move |mut req: axum::http::Request<hyper::body::Incoming>| {
+        req.extensions_mut().insert(axum::extract::ConnectInfo(remote));
+        if let Some(c) = circuit {
+            req.extensions_mut().insert(c);
+        }
+        req.map(axum::body::Body::new)
+    });
+    // HTTP/1 only, like axum::serve was built here (no http2 feature)
+    let mut builder = hyper::server::conn::http1::Builder::new();
+    builder.timer(TokioTimer::new()).header_read_timeout(HEADER_READ_TIMEOUT);
+    let conn = builder.serve_connection(TokioIo::new(stream), TowerToHyperService::new(svc)).with_upgrades();
+    if let Err(e) = conn.await {
+        tracing::trace!("[HTTP] connection {remote}: {e:#}");
     }
 }

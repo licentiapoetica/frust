@@ -628,6 +628,7 @@ fn req_with_session(req: &Req, session: Option<Session>) -> Req {
     );
     r.path = req.path.clone();
     r.trust_cdn_headers = req.trust_cdn_headers;
+    r.tor_circuit = req.tor_circuit;
     r.cookies = req.cookies.clone();
     r.params = req.params.clone();
     r.session = session;

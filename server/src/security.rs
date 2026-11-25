@@ -75,6 +75,10 @@ pub fn rate_key(ip: &str) -> String {
     match ip.parse::<std::net::IpAddr>() {
         Ok(std::net::IpAddr::V6(v6)) if v6.to_ipv4_mapped().is_none() => {
             let s = v6.segments();
+            // Tor circuits (crate::tor_listener) all share one /64: each one is its own visitor
+            if crate::tor_listener::is_circuit_addr(v6) {
+                return v6.to_string();
+            }
             format!("{:x}:{:x}:{:x}:{:x}::/64", s[0], s[1], s[2], s[3])
         }
         _ => ip.to_string(),
@@ -475,5 +479,7 @@ mod tests {
         assert_eq!(super::rate_key("2001:db8:1:2:aaaa::1"), super::rate_key("2001:db8:1:2:bbbb::9"));
         assert_ne!(super::rate_key("2001:db8:1:2::1"), super::rate_key("2001:db8:1:3::1"));
         assert_eq!(super::rate_key("198.51.100.7"), "198.51.100.7");
+        // Tor circuits are told apart
+        assert_ne!(super::rate_key("fc00:dead:beef:4dad::1:2"), super::rate_key("fc00:dead:beef:4dad::1:3"));
     }
 }

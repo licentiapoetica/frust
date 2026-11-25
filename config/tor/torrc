@@ -6,4 +6,7 @@ SocksPort 0.0.0.0:9050
 # Tor Hidden Service (v3 Onion Service) configuration
 # Tor will automatically generate private keys and hostnames in /var/lib/tor/f0ckm_hs/
 HiddenServiceDir /var/lib/tor/f0ckm_hs/
-HiddenServicePort 80 f0ckm:1337
+# f0ckm's Tor port (websrv.tor_port): Tor names each visitor's circuit in a PROXY line, so .onion
+# visitors are told apart like clearnet IPs (scraper guard, rate limits) instead of sharing one address
+HiddenServicePort 80 f0ckm:1338
+HiddenServiceExportCircuitID haproxy

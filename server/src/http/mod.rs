@@ -49,7 +49,7 @@ const MAX_FORM_FIELDS: usize = 10_000;
 
 /// Loopback or private-network address (RFC 1918, IPv6 unique-local), the places a reverse proxy
 /// in front of f0ckm connects from.
-fn is_proxy_addr(ip: std::net::IpAddr) -> bool {
+pub fn is_proxy_addr(ip: std::net::IpAddr) -> bool {
     use std::net::IpAddr;
     match ip {
         IpAddr::V4(v4) => v4.is_loopback() || v4.is_private(),
@@ -84,6 +84,9 @@ pub struct Req {
     pub remote: Option<SocketAddr>,
     /// `websrv.behind_cloudflare`: believe `CF-Connecting-IP` / `True-Client-IP` from the proxy.
     pub trust_cdn_headers: bool,
+    /// Came in on the Tor listener (crate::tor_listener): the circuit's id. Such a request is an
+    /// .onion visit whatever its Host header says, and never "from a proxy".
+    pub tor_circuit: Option<u32>,
     pub session: Option<Session>,
     pub mode: i64,
     pub theme: String,
@@ -204,6 +207,7 @@ impl Req {
             params: HashMap::new(),
             remote,
             trust_cdn_headers: false,
+            tor_circuit: None,
             session: None,
             mode: 0,
             theme: String::new(),
@@ -376,7 +380,7 @@ impl Req {
     }
 
     pub fn is_onion(&self) -> bool {
-        self.host_without_port().ends_with(".onion")
+        self.tor_circuit.is_some() || self.host_without_port().ends_with(".onion")
     }
 
     pub fn is_localhost(&self) -> bool {
@@ -387,6 +391,10 @@ impl Req {
     /// Only then are forwarding headers believed: a client that connects directly can send any
     /// `X-Forwarded-For` / `CF-Connecting-IP` it likes. A request built in code (no socket) counts as one.
     pub fn from_proxy(&self) -> bool {
+        // Tor listener: the address is Tor's per-circuit one, the headers are the visitor's own
+        if self.tor_circuit.is_some() {
+            return false;
+        }
         match self.remote.map(|r| r.ip()) {
             None => true,
             Some(ip) => is_proxy_addr(ip),
