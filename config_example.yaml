@@ -102,14 +102,15 @@ nsfp:
   - 2
   - 3
   - 4
-# Scraper guard: a client that opens far more items / downloads far more original files (/b/) than a
-# person would gets a "checking your browser" page whose proof of work never finishes, until the block
-# runs out (also for its files: they get that page instead). Counted are distinct items and files in a
-# sliding window; guests per IP (the /64 for IPv6), signed-in users per account. Admins and
-# moderators are never counted. .onion guests share one address and aren't counted. Blocks are kept
-# in memory (a restart lifts them); each one is logged as "[SCRAPER] Blocked ...".
+# Scraper guard (admin panel → Scrapers, where these are set once saved there): counts per client the
+# distinct items it opens and original files (/b/) it downloads in a sliding window, and logs per hour
+# what each client fetched. Guests per IP (the /64 for IPv6, kept as a keyed hash), signed-in users
+# per account, .onion visitors per Tor circuit (websrv.tor_port); admins and moderators never.
+# mode: off | log (count and record who would be blocked) | block (over the limit: a "checking your
+# browser" page whose proof of work never finishes, for pages and files, until the block runs out).
+# Start with log and set the limits from the admin page's numbers.
 scraper_guard:
-  enabled: true
+  mode: log
   window_minutes: 60
   guest_limit: 1500      # distinct items + files per window (an item page and its file are 2)
   member_limit: 3000
@@ -148,6 +149,7 @@ websrv:
   retention_login_attempts_days: 30  # failed/successful login attempts (hashed IP + username)
   retention_sessions_days: 365       # sessions unused this long are deleted
   retention_fingerprint_days: 365    # device fingerprint of anonymous identities inactive this long
+  retention_scraper_days: 30         # scraper guard: per-hour request counts per client, past blocks
   description: Example Description
   # Themes visitors can pick in the settings (all available ones); theme is the site default
   themes:

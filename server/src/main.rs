@@ -462,6 +462,7 @@ async fn main() -> Result<()> {
 
     spawn_background_tasks(&st);
     retention::start(&st);
+    scraper_guard::start(&st);
     bot::start(&st);
     let _config_watcher = watch_config(&st);
 

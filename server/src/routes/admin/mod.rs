@@ -4,6 +4,7 @@
 //! * `dashboard` — /admin, site settings, MOTD and page texts, cleanup, sessions, tokens and
 //!   invite requests, Köpfe list, halls/chat pages
 //! * `maintenance` — maintenance mode and its page
+//! * `scrapers` — scraper guard: settings, live clients, blocks, activity statistics
 //! * `bans` — ban lists and (un)ban APIs, per-user IP history
 //! * `users` — user management and admin impersonation
 //! * `upload_page` — GET /upload
@@ -16,6 +17,7 @@ mod applications;
 mod bans;
 mod dashboard;
 mod maintenance;
+mod scrapers;
 pub(crate) mod permissions;
 mod upload_page;
 mod users;
@@ -32,6 +34,7 @@ pub fn register(r: &mut Router) {
     dashboard::register(r);
     applications::register(r);
     maintenance::register(r);
+    scrapers::register(r);
     permissions::register(r);
     bans::register(r);
     users::register(r);

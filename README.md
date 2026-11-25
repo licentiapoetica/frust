@@ -251,18 +251,34 @@ are MIT-licensed, so replacing them on your server is fine; the "Protected by An
 
 Anubis checks a client once, then lets it in for days, and files pass it unchecked. f0ckm itself counts
 what each client fetches: the distinct items it opens and the distinct original files (`/b/`) it
-downloads in a sliding window. A client far above what a person does gets a "checking your browser"
-page whose proof of work never finishes ([views/scraper-trap.html](views/scraper-trap.html)), for
-pages and files alike (a scraper saves that page instead of the file); API calls get a 429. The block
-runs out after `block_hours`, then the page reloads into the one asked for. Works with or without Anubis.
+downloads in a sliding window. Guests are counted per IP (the /64 for IPv6, kept only as a keyed
+hash), signed-in users per account, `.onion` visitors per Tor circuit (see below); admins and
+moderators never.
 
-Guests are counted per IP (the /64 for IPv6), signed-in users per account; admins and moderators never.
-`.onion` guests all come from the Tor service's address and aren't counted. Blocks live in memory (a
-restart lifts them) and are logged as `[SCRAPER] Blocked ...`. Settings, `scraper_guard` in config.yaml:
+**Admin panel → Scrapers** (`/admin/scrapers`) has the settings, the busiest clients right now, the
+blocks (with a button to lift one), and what clients did over the last day / week / month: items and
+files per client and hour (median, 90 %, 99 %, max, how many went over a number), what clients
+load by how busy they were (people also load thumbnails and assets and come from a page; scrapers
+often fetch only items and files), and the busiest clients with their user agents.
+
+Modes:
+
+- `log` (default): count and record who *would* be blocked, block nobody. Start here and set the
+  limits from the numbers on the admin page.
+- `block`: a client over its limit gets a "checking your browser" page whose proof of work never
+  finishes ([views/scraper-trap.html](views/scraper-trap.html)), for pages and files alike (a scraper
+  saves that page instead of the file); API calls get a 429. The block runs out after `block_hours`,
+  then the page reloads into the one asked for.
+- `off`: nothing is counted.
+
+Per client and hour the counts go to `scraper_activity` (kept `websrv.retention_scraper_days`, 30 by
+default), blocks to `scraper_blocks`; both survive restarts. Blocks are also logged as
+`[SCRAPER] Blocked ...` (`Would block (log only)` in log mode). The settings live in the database once
+saved on the admin page; until then `scraper_guard` in config.yaml:
 
 ```yaml
 scraper_guard:
-  enabled: true
+  mode: log              # off | log | block
   window_minutes: 60
   guest_limit: 1500      # distinct items + files per window (an item page and its file are 2)
   member_limit: 3000
@@ -270,8 +286,12 @@ scraper_guard:
   status: 200            # HTTP status of the check page
 ```
 
-Many people behind one address (mobile carriers, universities) count as one guest; raise
-`guest_limit` if real visitors get caught.
+Many people behind one address (mobile carriers, universities) count as one guest; the admin page
+shows whether real visitors come close to the limit.
+
+[scripts/log-stats.sh](scripts/log-stats.sh) gives the same kind of numbers from existing nginx,
+f0ckm and Anubis logs (rotated and compressed ones included), e.g. from before the guard ran:
+`scripts/log-stats.sh /var/log/nginx/f0ckm.access.log* > stats.txt`.
 
 ## Tor Hidden Service (.onion)
 

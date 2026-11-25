@@ -68,6 +68,8 @@ pub struct SiteSettings {
     pub motd: String,
     /// Maintenance mode and its page (admin panel → Maintenance), see crate::maintenance
     pub maintenance: crate::maintenance::Maintenance,
+    /// Scraper guard (admin panel → Scrapers); `None`: config.yaml's, see crate::scraper_guard
+    pub scraper_guard: Option<crate::scraper_guard::GuardConfig>,
     pub about_text: String,
     pub rules_text: String,
     pub terms_text: String,
@@ -123,6 +125,7 @@ impl Settings {
                 fy_brand_size: 0,
                 motd: String::new(),
                 maintenance: Default::default(),
+                scraper_guard: None,
                 about_text: String::new(),
                 rules_text: String::new(),
                 terms_text: String::new(),
@@ -211,6 +214,9 @@ impl Settings {
     }
     pub fn audit_retention_days(&self) -> i64 {
         self.inner.read().audit_retention_days
+    }
+    pub fn scraper_guard(&self) -> Option<crate::scraper_guard::GuardConfig> {
+        self.inner.read().scraper_guard.clone()
     }
     pub fn maintenance_on(&self) -> bool {
         self.inner.read().maintenance.enabled
@@ -575,6 +581,7 @@ pub async fn load_from_db(st: &crate::state::AppState) {
             match key.as_str() {
                 "motd" => s.motd = val,
                 "maintenance" => s.maintenance = crate::maintenance::parse(&val),
+                "scraper_guard" => s.scraper_guard = crate::scraper_guard::parse(&val),
                 "manual_approval" => s.manual_approval = b,
                 "min_tags" => s.min_tags = as_int(&Value::String(val)).unwrap_or(0).max(0),
                 "registration_open" => s.registration_open = b,

@@ -7,6 +7,7 @@
 //!   `retention_login_attempts_days`  `login_attempts` rows are deleted
 //!   `retention_sessions_days`        sessions unused for this long are deleted
 //!   `retention_fingerprint_days`     hardware fingerprint is cleared from anonymous identities inactive this long
+//!   `retention_scraper_days`         scraper guard: `scraper_activity` rows and past `scraper_blocks` are deleted
 //!
 //! Audit log entries are deleted after the admin's audit retention (`audit_retention_days`, set on
 //! the audit log page, a site setting; 0 = kept forever).
@@ -31,6 +32,7 @@ pub struct Retention {
     pub login_attempts: i64,
     pub sessions: i64,
     pub fingerprint: i64,
+    pub scraper: i64,
 }
 
 /// `days(key)`: missing/null/'' → default; otherwise `parseInt`, non-positive or NaN → 0 (forever).
@@ -58,6 +60,7 @@ pub fn get_retention(cfg: &Config) -> Retention {
         login_attempts: days(cfg, "login_attempts", 30),
         sessions: days(cfg, "sessions", 365),
         fingerprint: days(cfg, "fingerprint", 365),
+        scraper: days(cfg, "scraper", 30),
     }
 }
 
@@ -101,6 +104,12 @@ pub async fn run_retention(st: &AppState) {
     if r.login_attempts > 0 {
         let c = before(r.login_attempts);
         step!("login_attempts", sql!("delete from login_attempts where attempted_at < ", @c));
+    }
+
+    if r.scraper > 0 {
+        let c = before(r.scraper);
+        step!("scraper_activity", sql!("delete from scraper_activity where hour < ", @c));
+        step!("scraper_blocks", sql!("delete from scraper_blocks where expires_at < ", @c));
     }
 
     if r.sessions > 0 {
@@ -170,8 +179,8 @@ mod tests {
     #[test]
     fn periods() {
         let c = crate::media::test_cfg("websrv: {}");
-        assert_eq!(get_retention(&c), Retention { ip: 30, activity_log: 90, login_attempts: 30, sessions: 365, fingerprint: 365 });
+        assert_eq!(get_retention(&c), Retention { ip: 30, activity_log: 90, login_attempts: 30, sessions: 365, fingerprint: 365, scraper: 30 });
         let c = crate::media::test_cfg("websrv: { retention_ip_days: 0, retention_sessions_days: '7', retention_activity_log_days: -3, retention_login_attempts_days: 'x', retention_fingerprint_days: '' }");
-        assert_eq!(get_retention(&c), Retention { ip: 0, activity_log: 0, login_attempts: 0, sessions: 7, fingerprint: 365 });
+        assert_eq!(get_retention(&c), Retention { ip: 0, activity_log: 0, login_attempts: 0, sessions: 7, fingerprint: 365, scraper: 30 });
     }
 }

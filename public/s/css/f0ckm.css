@@ -26404,6 +26404,147 @@ a.mq-btn.mq-btn-danger:hover {
   margin-top: 16px;
 }
 
+/* ---- admin: scrapers (views/admin/scrapers.html) ---- */
+:where(.adm) .adm-sg-status {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--adm-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+:where(.adm) .adm-sg-mode-block { color: #ff5a4f; }
+:where(.adm) .adm-sg-mode-log { color: var(--accent); }
+:where(.adm) .adm-sg-mode-off { color: #999; }
+
+:where(.adm) .adm-sg-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+:where(.adm) .adm-sg-sub {
+  margin: 20px 0 6px;
+  font-size: 1rem;
+}
+
+:where(.adm) .adm-sg-empty {
+  padding: 12px;
+  border: 1px dashed var(--adm-border);
+  color: #999;
+}
+
+/* wide tables scroll sideways inside their box; the page itself never does */
+:where(.adm) .adm-sg-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--adm-border);
+}
+
+:where(.adm) .adm-sg-table {
+  width: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+:where(.adm) .adm-sg-table th,
+:where(.adm) .adm-sg-table td {
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+:where(.adm) .adm-sg-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+:where(.adm) .adm-sg-num-bad,
+:where(.adm) .adm-sg-over td:first-child {
+  color: #ff5a4f;
+}
+
+:where(.adm) .adm-sg-over {
+  background: rgba(255, 60, 50, 0.08);
+}
+
+:where(.adm) .adm-sg-who-member { color: var(--accent); }
+:where(.adm) .adm-sg-who-onion { color: #b48cff; }
+:where(.adm) .adm-sg-who-guest { font-family: monospace; }
+
+:where(.adm) .adm-sg-tag {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid var(--adm-border);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #bbb;
+}
+
+:where(.adm) .adm-sg-tag-bad,
+:where(.adm) .adm-sg-ua-tool,
+:where(.adm) .adm-sg-ua-headless,
+:where(.adm) .adm-sg-ua-empty {
+  border-color: #ff5a4f;
+  color: #ff5a4f;
+}
+
+:where(.adm) .adm-sg-ua-bot { border-color: #e0a030; color: #e0a030; }
+
+:where(.adm) .adm-sg-ua-text {
+  display: inline-block;
+  max-width: 20em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  color: #999;
+}
+
+:where(.adm) .adm-sg-inline {
+  display: inline-block;
+  margin: 0;
+}
+
+:where(.adm) .adm-sg-inline .adm-btn {
+  padding: 2px 10px;
+}
+
+:where(.adm) .adm-sg-meter {
+  width: 70px;
+  height: 8px;
+  vertical-align: middle;
+  border: 1px solid var(--adm-border);
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+:where(.adm) .adm-sg-meter::-webkit-meter-bar { background: transparent; border: 0; }
+:where(.adm) .adm-sg-meter::-webkit-meter-optimum-value { background: var(--accent); }
+:where(.adm) .adm-sg-meter::-webkit-meter-suboptimum-value { background: #e0a030; }
+:where(.adm) .adm-sg-meter::-webkit-meter-even-less-good-value { background: #ff5a4f; }
+:where(.adm) .adm-sg-meter:-moz-meter-optimum::-moz-meter-bar { background: var(--accent); }
+:where(.adm) .adm-sg-meter:-moz-meter-sub-optimum::-moz-meter-bar { background: #e0a030; }
+:where(.adm) .adm-sg-meter:-moz-meter-sub-sub-optimum::-moz-meter-bar { background: #ff5a4f; }
+
+:where(.adm) .adm-sg-periods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+:where(.adm) .adm-sg-periods a {
+  padding: 3px 10px;
+  border: 1px solid var(--adm-border);
+  color: inherit;
+  text-decoration: none;
+}
+
+:where(.adm) .adm-sg-periods a.adm-sg-period-on,
+:where(.adm) .adm-sg-periods a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ---- admin/mod subpages: shared bits (identical inline styles on several pages) ---- */
 /* Intro line under the page heading: terms, rules, about, motd (admin + mod), cleanup */
 #main .adm-page-intro {

@@ -1035,6 +1035,7 @@ async fn privacy(st: AppState, req: Req) -> Res {
         ("login", retention_days(&cfg, "login_attempts", 30)),
         ("sessions", retention_days(&cfg, "sessions", 365)),
         ("fp", retention_days(&cfg, "fingerprint", 365)),
+        ("scraper", retention_days(&cfg, "scraper", 30)),
     ];
     let log_ips = s::log_user_ips(&cfg);
     let hash_ips = s::hash_user_ips(&cfg);
@@ -1055,6 +1056,7 @@ async fn privacy(st: AppState, req: Req) -> Res {
         "ip_secret_env": crate::security::ip_hash_secrets(&cfg).source.starts_with("env"),
         "domain": cfg.str_or("main.url.domain", ""),
         "frontend_switch": crate::tpl::frontend_switch_enabled(&cfg),
+        "scraper": crate::scraper_guard::settings(&st).mode != crate::scraper_guard::Mode::Off,
         "ret": ret,
         "ret_on": ret_on,
     });

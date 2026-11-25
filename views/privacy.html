@@ -55,6 +55,7 @@
         <div class="pv-row"><span>Unused sessions</span><span class="{% if pv.ret_on.sessions %}pv-ok{% else %} pv-warn{% endif %}">{{ pv.ret.sessions }}</span><span>Session deleted after this long without use; that device is logged out.</span></div>
         {% if pv.hw %}<div class="pv-row"><span>Device fingerprint</span><span class="{% if pv.ret_on.fp %}pv-ok{% else %} pv-warn{% endif %}">{{ pv.ret.fp }}</span><span>Cleared from anonymous identities that haven't been used for this long.</span></div>{% endif %}
         <div class="pv-row"><span>Recent views</span><span class="pv-ok">10 minutes</span><span>Rows deleted (the item, and your account id or, for guests, a keyed hash of the day, IP and browser that changes daily). The item keeps only its view count.</span></div>
+        {% if pv.scraper %}<div class="pv-row"><span>Request counts (scraper protection)</span><span class="{% if pv.ret_on.scraper %}pv-ok{% else %} pv-warn{% endif %}">{{ pv.ret.scraper }}</span><span>Rows deleted (per hour: keyed hash of the IP, or account, or Tor circuit; numbers of requests by kind; user agent). Past blocks deleted too.</span></div>{% endif %}
         <div class="pv-row"><span>Active bans</span><span>Until expiry</span><span>Banned IP hashes and fingerprints are kept until the ban expires or is lifted.</span></div>
         <div class="pv-row"><span>Your content</span><span>Until deleted</span><span>Uploads, comments, favourites and your account itself.</span></div>
       </div>
@@ -119,6 +120,14 @@
     <section class="pv-sec">
       <h2><i class="fa-solid fa-list-check"></i> Anonymous activity log</h2>
       <p><code>anon_activity_log</code> records these actions of anonymous identities: login/session handshake, favourite, unfavourite, favourites import. Each row holds the action, target item, time, identity fingerprint{% if pv.hw %}, device fingerprint{% endif %}{% if pv.log_ips %}, IP{% if pv.hash_ips %} (hashed){% endif %}{% endif %}. It exists for moderation and ban cascades.</p>
+    </section>
+    {% endif %}
+
+    {# ── Scraper protection ── #}
+    {% if pv.scraper %}
+    <section class="pv-sec">
+      <h2><i class="fa-solid fa-robot"></i> Scraper protection</h2>
+      <p>To notice programs that download the whole site, the server counts per visitor and hour how many requests of each kind it makes (pages, items, files, thumbnails, other files, API calls, requests with a referer) and the browser's user agent string. A guest is counted under a keyed hash (<code>HMAC-SHA256</code>, cut to 16 hex characters) of the IP address (the /64 for IPv6), a signed-in user under the account, a Tor visitor under the Tor circuit's number. The raw IP is not stored. The counts are kept in <code>scraper_activity</code> for {{ pv.ret.scraper }}; a visitor that fetches far more than a person would gets a waiting page for a few hours, recorded in <code>scraper_blocks</code>. Admins see these numbers to set the limits.</p>
     </section>
     {% endif %}
 

@@ -349,6 +349,45 @@ pub const STARTUP_MIGRATIONS: &[&str] = &[
     r#"ALTER TABLE reports ADD COLUMN IF NOT EXISTS proposed_rating text"#,
     // Audit log: an entry's target history (`/mod/audit?target_type=..&target_id=..`)
     r#"CREATE INDEX IF NOT EXISTS idx_audit_log_target ON audit_log(target_type, target_id)"#,
+    // Scraper guard (scraper_guard.rs): per client and hour what it fetched, for the admin page
+    r#"CREATE TABLE IF NOT EXISTS scraper_activity (
+      hour timestamp with time zone NOT NULL,
+      client character varying(80) NOT NULL,
+      user_id integer,
+      onion boolean DEFAULT false NOT NULL,
+      requests integer DEFAULT 0 NOT NULL,
+      items integer DEFAULT 0 NOT NULL,
+      files integer DEFAULT 0 NOT NULL,
+      thumbs integer DEFAULT 0 NOT NULL,
+      assets integer DEFAULT 0 NOT NULL,
+      pages integer DEFAULT 0 NOT NULL,
+      api integer DEFAULT 0 NOT NULL,
+      referer integer DEFAULT 0 NOT NULL,
+      peak integer DEFAULT 0 NOT NULL,
+      ua_class character varying(16),
+      user_agent character varying(255),
+      CONSTRAINT scraper_activity_pkey PRIMARY KEY (hour, client),
+      CONSTRAINT scraper_activity_user_id_fkey FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE SET NULL
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_scraper_activity_client ON scraper_activity(client, hour)"#,
+    // Scraper guard blocks (enforced = false: log-only mode, the client would have been blocked)
+    r#"CREATE TABLE IF NOT EXISTS scraper_blocks (
+      client character varying(80) NOT NULL,
+      created_at timestamp with time zone DEFAULT now() NOT NULL,
+      user_id integer,
+      onion boolean DEFAULT false NOT NULL,
+      user_agent character varying(255),
+      estimate integer NOT NULL,
+      limit_at integer NOT NULL,
+      enforced boolean DEFAULT true NOT NULL,
+      expires_at timestamp with time zone NOT NULL,
+      lifted_at timestamp with time zone,
+      lifted_by integer,
+      CONSTRAINT scraper_blocks_pkey PRIMARY KEY (client, created_at),
+      CONSTRAINT scraper_blocks_user_id_fkey FOREIGN KEY (user_id) REFERENCES "user"(id) ON DELETE SET NULL,
+      CONSTRAINT scraper_blocks_lifted_by_fkey FOREIGN KEY (lifted_by) REFERENCES "user"(id) ON DELETE SET NULL
+    )"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_scraper_blocks_expires_at ON scraper_blocks(expires_at)"#,
 ];
 
 #[cfg(test)]

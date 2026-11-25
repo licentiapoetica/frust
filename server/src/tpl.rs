@@ -1312,6 +1312,70 @@ mod tests {
         assert!(out.contains("example.org makes sure") && !out.contains("style=") && !out.contains("<style"), "{out}");
     }
 
+    /// views/admin/scrapers.html (routes/admin/scrapers.rs) with every table filled, and empty.
+    /// `F0CKM_DUMP_SCRAPERS=<file>` writes the filled page out.
+    #[test]
+    fn admin_scrapers_renders() {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+        let env = build_env(root.join("views"), Arc::new(I18n::new(root.join("locales"))));
+        let who = |k: &str, g: &str, t: &str, u: Option<&str>| serde_json::json!({ "key": k, "group": g, "text": t, "user": u });
+        let ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36";
+        let filled = serde_json::json!({
+            "csrf_token": "tok",
+            "sg": {
+                "mode": "log", "saved": false, "window_minutes": 60, "guest_limit": 1500, "member_limit": 3000, "block_hours": 6, "status": 200,
+                "live_count": 41,
+                "live": [
+                    { "who": who("ip:0123456789abcdef", "guest", "ip 01234567", None), "estimate": 1720, "limit": 1500, "meter": 1500, "over": true,
+                      "requests": 3440, "items": 1720, "files": 1720, "thumbs": 0, "assets": 0, "pages": 0, "api": 0, "referer_pct": 0,
+                      "onion": false, "ua": ua, "ua_class": "browser", "blocked": { "left": "5 h 59 min", "enforced": true } },
+                    { "who": who("u:12", "member", "alice", Some("alice")), "estimate": 40, "limit": 3000, "meter": 40, "over": false,
+                      "requests": 310, "items": 22, "files": 18, "thumbs": 160, "assets": 70, "pages": 25, "api": 15, "referer_pct": 96,
+                      "onion": true, "ua": "Mozilla/5.0 Firefox/140.0", "ua_class": "browser", "blocked": null },
+                    { "who": who("tor:77", "onion", "circuit 77", None), "estimate": 3, "limit": 1500, "meter": 3, "over": false,
+                      "requests": 9, "items": 3, "files": 0, "thumbs": 4, "assets": 2, "pages": 0, "api": 0, "referer_pct": 100,
+                      "onion": true, "ua": "python-requests/2.32", "ua_class": "tool", "blocked": { "left": "1 h 2 min", "enforced": false } },
+                ],
+                "active": [ { "who": who("ip:0123456789abcdef", "guest", "ip 01234567", None), "created": "2026-11-25 14:03", "estimate": 1501, "limit": 1500,
+                              "enforced": true, "onion": false, "ua": ua, "ua_class": "browser", "status": "blocked, 5 h 59 min left" } ],
+                "history": [ { "who": who("tor:77", "onion", "circuit 77", None), "created": "2026-11-24 09:12", "estimate": 1600, "limit": 1500,
+                               "enforced": false, "onion": true, "ua": "", "ua_class": "empty", "status": "log only (not blocked)" } ],
+                "days": 7, "periods": [1, 7, 30, 90], "thresholds": [50, 100, 250, 500, 1000, 1500, 3000],
+                "groups": [
+                    { "key": "guest", "title": "Guests (per IP)", "clients": 812, "hours": 1904, "requests": 90211, "p50": 6, "p90": 41, "p99": 220, "max": 4012,
+                      "over": [190, 61, 9, 3, 2, 1, 1], "over_limit": 1, "limit": 1500 },
+                    { "key": "member", "title": "Signed-in users", "clients": 64, "hours": 410, "requests": 30111, "p50": 18, "p90": 96, "p99": 380, "max": 610,
+                      "over": [80, 31, 6, 1, 0, 0, 0], "over_limit": 0, "limit": 3000 },
+                ],
+                "mix": [ { "bucket": "1–49", "clients": 700, "requests": 50000, "items": 12, "files": 10, "thumbs": 40, "assets": 25, "pages": 8, "api": 5, "referer": 92 },
+                         { "bucket": "1000+", "clients": 2, "requests": 8000, "items": 50, "files": 50, "thumbs": 0, "assets": 0, "pages": 0, "api": 0, "referer": 0 } ],
+                "top": [ { "who": who("ip:0123456789abcdef", "guest", "ip 01234567", None), "max_h": 4012, "peak": 1720, "hours": 3, "things": 8000, "requests": 8000,
+                           "thumbs": 0, "assets": 0, "referer": 0, "ua": ua, "ua_class": "browser", "last": "2026-11-25 14:00" } ],
+                "tor_port": 1338, "tor_on": true,
+            },
+        });
+        let out = env.get_template("admin/scrapers.html").unwrap().render(to_jvalue(&filled)).unwrap();
+        if let Ok(p) = std::env::var("F0CKM_DUMP_SCRAPERS") {
+            std::fs::write(p, &out).unwrap();
+        }
+        assert!(out.contains(r#"<input type="hidden" name="client" value="ip:0123456789abcdef">"#), "{out}");
+        assert!(out.contains(r#"<a href="/user/alice">alice</a>"#) && out.contains("circuit 77"), "{out}");
+        assert!(out.contains(r#"<meter class="adm-sg-meter" min="0" max="1500" low="750" high="1200" optimum="0" value="1500"></meter> 1720/1500"#), "{out}");
+        assert!(out.contains(r#"<input type="radio" name="mode" value="log" checked>"#) && out.contains("settings from config.yaml until saved here"), "{out}");
+        assert!(out.contains("over (log only)") && out.contains("log only (not blocked)"), "{out}");
+        // the page's own part (the shared header has its allowed dynamic <style>)
+        let own = &out[out.find(r#"id="adm-sg""#).unwrap()..out.find(r#"<script src="/s/js/views/admin/scrapers.js"#).unwrap()];
+        assert!(!own.contains("style=") && !own.contains("<style") && !own.contains("<script"), "{own}");
+
+        let mut empty = filled.clone();
+        for k in ["live", "active", "history", "groups", "mix", "top"] {
+            empty["sg"][k] = serde_json::json!([]);
+        }
+        empty["sg"]["mode"] = serde_json::json!("off");
+        let out = env.get_template("admin/scrapers.html").unwrap().render(to_jvalue(&empty)).unwrap();
+        assert!(out.contains("The guard is off: nothing is counted.") && out.contains("Nobody is blocked.") && out.contains("No activity recorded"), "{out}");
+    }
+
     /// views/maintenance.html renders the admin's text, the video and the glitch attributes; the
     /// admin form parses.
     #[test]

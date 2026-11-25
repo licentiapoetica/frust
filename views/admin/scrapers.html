@@ -1,0 +1,256 @@
+{% include (shell_header or "snippets/header.html") %}
+{#- Scraper guard (routes/admin/scrapers.rs, crate::scraper_guard). Plain forms with `back` work without
+    JavaScript; scrapers.js sends them with fetch and refreshes the [data-sg-live] parts in place. -#}
+{%- macro who(w) -%}
+<span class="adm-sg-who adm-sg-who-{{ w.group }}">{% if w.user %}<a href="/user/{{ w.user }}">{{ w.text }}</a>{% else %}{{ w.text }}{% endif %}</span>
+{%- endmacro -%}
+{%- macro ua(text, cls) -%}
+<span class="adm-sg-ua"><span class="adm-sg-tag adm-sg-ua-{{ cls }}">{{ cls }}</span> <span class="adm-sg-ua-text" title="{{ text }}">{{ text }}</span></span>
+{%- endmacro -%}
+{%- macro lift_form(key) -%}
+<form method="post" action="/api/v2/admin/scrapers/lift" class="adm-sg-form adm-sg-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="back" value="/admin/scrapers?days={{ sg.days }}">
+    <input type="hidden" name="client" value="{{ key }}">
+    <button type="submit" class="adm-btn adm-btn-ghost">Lift</button>
+</form>
+{%- endmacro -%}
+<div class="pagewrapper">
+<div id="main" class="admin-container">
+    {% include "snippets/admin-back.html" %}
+    <div class="container adm adm-sg" id="adm-sg">
+        <h2>Scrapers</h2>
+        <p class="adm-page-intro">Counts what every client fetches: the distinct items it opens and original files it downloads. A client far above what a person does gets a "checking your browser" page that never finishes (in block mode), until its block runs out. Admins and moderators are never counted. Guests are counted per IP (kept only as a keyed hash), signed-in users per account, Tor visitors per circuit.</p>
+
+        <p class="adm-sg-status" data-sg-live="status">
+            Mode: <strong class="adm-sg-mode adm-sg-mode-{{ sg.mode }}">{% if sg.mode == "block" %}blocking{% elif sg.mode == "log" %}log only{% else %}off{% endif %}</strong>
+            · {{ sg.live_count }} client{% if sg.live_count != 1 %}s{% endif %} this hour
+            · {{ sg.active|length }} blocked
+            {% if not sg.saved %}· <span class="adm-muted">settings from config.yaml until saved here</span>{% endif %}
+        </p>
+
+        <section class="adm-section">
+            <h2 class="adm-section-title"><i class="fa-solid fa-sliders"></i> Settings</h2>
+            <form method="post" action="/api/v2/admin/scrapers/settings" class="adm-sg-form adm-panel">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="back" value="/admin/scrapers?days={{ sg.days }}">
+                <div class="adm-row adm-row-wrap">
+                    <div class="adm-row-text">
+                        <label>Mode</label>
+                        <p>Start with log only and watch the numbers below for a while: they show what your visitors really do, and who would have been blocked.</p>
+                    </div>
+                    <div class="adm-sg-modes">
+                        <label class="adm-check"><input type="radio" name="mode" value="off"{% if sg.mode == "off" %} checked{% endif %}> Off</label>
+                        <label class="adm-check"><input type="radio" name="mode" value="log"{% if sg.mode == "log" %} checked{% endif %}> Log only</label>
+                        <label class="adm-check"><input type="radio" name="mode" value="block"{% if sg.mode == "block" %} checked{% endif %}> Block</label>
+                    </div>
+                </div>
+                <div class="adm-row adm-row-wrap">
+                    <div class="adm-row-text">
+                        <label for="sg-guest">Guest limit</label>
+                        <p>Distinct items + original files per window for one guest IP (an item page and its file are 2). Many people behind one address (mobile carriers, universities) count as one.</p>
+                    </div>
+                    <input type="number" id="sg-guest" name="guest_limit" class="adm-text adm-number" min="1" value="{{ sg.guest_limit }}">
+                </div>
+                <div class="adm-row adm-row-wrap">
+                    <div class="adm-row-text">
+                        <label for="sg-member">Signed-in limit</label>
+                        <p>The same per account.</p>
+                    </div>
+                    <input type="number" id="sg-member" name="member_limit" class="adm-text adm-number" min="1" value="{{ sg.member_limit }}">
+                </div>
+                <div class="adm-row adm-row-wrap">
+                    <div class="adm-row-text">
+                        <label for="sg-window">Window (minutes)</label>
+                        <p>The sliding window the limits count in.</p>
+                    </div>
+                    <input type="number" id="sg-window" name="window_minutes" class="adm-text adm-number" min="1" max="1440" value="{{ sg.window_minutes }}">
+                </div>
+                <div class="adm-row adm-row-wrap">
+                    <div class="adm-row-text">
+                        <label for="sg-hours">Block for (hours)</label>
+                        <p>How long a client over the limit gets the check page. In log-only mode, it is recorded once in this time.</p>
+                    </div>
+                    <input type="number" id="sg-hours" name="block_hours" class="adm-text adm-number" min="1" max="8760" value="{{ sg.block_hours }}">
+                </div>
+                <div class="adm-row adm-row-wrap">
+                    <div class="adm-row-text">
+                        <label for="sg-status">Check page status</label>
+                        <p>HTTP status of the check page. 200 by default: scrapers tend to stop retrying on an error, and save the page they got as the file they asked for. API calls get 429.</p>
+                    </div>
+                    <input type="number" id="sg-status" name="status" class="adm-text adm-number" min="200" max="599" value="{{ sg.status }}">
+                </div>
+                <div class="adm-row">
+                    <button type="submit" class="adm-btn adm-btn-primary">Save</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="adm-section" data-sg-live="now">
+            <h2 class="adm-section-title"><i class="fa-solid fa-satellite-dish"></i> Right now</h2>
+            <p class="adm-muted">The busiest clients of this hour, by their count in the window. Refreshes by itself.</p>
+            {% if sg.live %}
+            <div class="adm-sg-scroll">
+                <table class="clean-table adm-sg-table">
+                    <thead><tr><th>Client</th><th>Block</th><th>In window</th><th>Requests</th><th>Items</th><th>Files</th><th>Thumbs</th><th>Assets</th><th>Pages</th><th>API</th><th>Referer</th><th>User agent</th></tr></thead>
+                    <tbody>
+                    {% for c in sg.live %}
+                    <tr{% if c.over %} class="adm-sg-over"{% endif %}>
+                        <td>{{ who(c.who) }}{% if c.onion and c.who.group != "onion" %} <span class="adm-sg-tag">onion</span>{% endif %}</td>
+                        <td>{% if c.blocked %}{% if c.blocked.enforced %}<span class="adm-sg-tag adm-sg-tag-bad">{{ c.blocked.left }}</span> {{ lift_form(c.who.key) }}{% else %}<span class="adm-sg-tag">over (log only)</span>{% endif %}{% endif %}</td>
+                        <td class="adm-sg-num"><meter class="adm-sg-meter" min="0" max="{{ c.limit }}" low="{{ (c.limit * 0.5)|int }}" high="{{ (c.limit * 0.8)|int }}" optimum="0" value="{{ c.meter }}"></meter> {{ c.estimate }}/{{ c.limit }}</td>
+                        <td class="adm-sg-num">{{ c.requests }}</td>
+                        <td class="adm-sg-num">{{ c.items }}</td>
+                        <td class="adm-sg-num">{{ c.files }}</td>
+                        <td class="adm-sg-num">{{ c.thumbs }}</td>
+                        <td class="adm-sg-num">{{ c.assets }}</td>
+                        <td class="adm-sg-num">{{ c.pages }}</td>
+                        <td class="adm-sg-num">{{ c.api }}</td>
+                        <td class="adm-sg-num">{{ c.referer_pct }}%</td>
+                        <td>{{ ua(c.ua, c.ua_class) }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="adm-sg-empty">{% if sg.mode == "off" %}The guard is off: nothing is counted.{% else %}Nobody counted this hour yet.{% endif %}</p>
+            {% endif %}
+        </section>
+
+        <section class="adm-section" data-sg-live="blocks">
+            <h2 class="adm-section-title"><i class="fa-solid fa-ban"></i> Blocks</h2>
+            {% if sg.active %}
+            <div class="adm-sg-scroll">
+                <table class="clean-table adm-sg-table">
+                    <thead><tr><th>Client</th><th></th><th>Since (UTC)</th><th>Count</th><th>Status</th><th>User agent</th></tr></thead>
+                    <tbody>
+                    {% for b in sg.active %}
+                    <tr>
+                        <td>{{ who(b.who) }}</td>
+                        <td>{{ lift_form(b.who.key) }}</td>
+                        <td>{{ b.created }}</td>
+                        <td class="adm-sg-num">{{ b.estimate }}/{{ b.limit }}</td>
+                        <td>{{ b.status }}</td>
+                        <td>{{ ua(b.ua, b.ua_class) }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="adm-sg-empty">Nobody is blocked.</p>
+            {% endif %}
+            {% if sg.history %}
+            <h3 class="adm-sg-sub">Earlier (and log-only)</h3>
+            <div class="adm-sg-scroll">
+                <table class="clean-table adm-sg-table">
+                    <thead><tr><th>Client</th><th>Since (UTC)</th><th>Count</th><th>Status</th><th>User agent</th></tr></thead>
+                    <tbody>
+                    {% for b in sg.history %}
+                    <tr>
+                        <td>{{ who(b.who) }}</td>
+                        <td>{{ b.created }}</td>
+                        <td class="adm-sg-num">{{ b.estimate }}/{{ b.limit }}</td>
+                        <td>{{ b.status }}</td>
+                        <td>{{ ua(b.ua, b.ua_class) }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </section>
+
+        <section class="adm-section" data-sg-live="stats">
+            <h2 class="adm-section-title"><i class="fa-solid fa-chart-column"></i> Activity</h2>
+            <nav class="adm-sg-periods" aria-label="Period">
+                {% for d in sg.periods %}
+                <a href="/admin/scrapers?days={{ d }}"{% if d == sg.days %} class="adm-sg-period-on" aria-current="true"{% endif %}>{% if d == 1 %}24 hours{% else %}{{ d }} days{% endif %}</a>
+                {% endfor %}
+            </nav>
+            {% if sg.groups %}
+            <h3 class="adm-sg-sub">Items + files per client and clock hour</h3>
+            <p class="adm-muted">Of every hour a client was active. "Over N": clients that went over N in at least one hour. "Over limit" uses the limits above (counted per clock hour here, so it is close to, not the same as, the sliding window).</p>
+            <div class="adm-sg-scroll">
+                <table class="clean-table adm-sg-table">
+                    <thead><tr><th></th><th>Clients</th><th>Hours</th><th>Median</th><th>90%</th><th>99%</th><th>Max</th>{% for t in sg.thresholds %}<th>Over {{ t }}</th>{% endfor %}<th>Over limit</th></tr></thead>
+                    <tbody>
+                    {% for gr in sg.groups %}
+                    <tr>
+                        <td>{{ gr.title }}</td>
+                        <td class="adm-sg-num">{{ gr.clients }}</td>
+                        <td class="adm-sg-num">{{ gr.hours }}</td>
+                        <td class="adm-sg-num">{{ gr.p50 }}</td>
+                        <td class="adm-sg-num">{{ gr.p90 }}</td>
+                        <td class="adm-sg-num">{{ gr.p99 }}</td>
+                        <td class="adm-sg-num">{{ gr.max }}</td>
+                        {% for o in gr.over %}<td class="adm-sg-num">{{ o }}</td>{% endfor %}
+                        <td class="adm-sg-num{% if gr.over_limit %} adm-sg-num-bad{% endif %}">{{ gr.over_limit }} <span class="adm-muted">(&gt;{{ gr.limit }})</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="adm-sg-sub">What clients load, by their busiest hour</h3>
+            <p class="adm-muted">Share of their requests. People also load thumbnails and assets and come from a page (referer); scrapers often fetch only items and files.</p>
+            <div class="adm-sg-scroll">
+                <table class="clean-table adm-sg-table">
+                    <thead><tr><th>Busiest hour</th><th>Clients</th><th>Requests</th><th>Items</th><th>Files</th><th>Thumbs</th><th>Assets</th><th>Pages</th><th>API</th><th>Referer</th></tr></thead>
+                    <tbody>
+                    {% for m in sg.mix %}
+                    <tr>
+                        <td>{{ m.bucket }}</td>
+                        <td class="adm-sg-num">{{ m.clients }}</td>
+                        <td class="adm-sg-num">{{ m.requests }}</td>
+                        <td class="adm-sg-num">{{ m.items }}%</td>
+                        <td class="adm-sg-num">{{ m.files }}%</td>
+                        <td class="adm-sg-num">{{ m.thumbs }}%</td>
+                        <td class="adm-sg-num">{{ m.assets }}%</td>
+                        <td class="adm-sg-num">{{ m.pages }}%</td>
+                        <td class="adm-sg-num">{{ m.api }}%</td>
+                        <td class="adm-sg-num">{{ m.referer }}%</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="adm-sg-sub">Busiest clients</h3>
+            <div class="adm-sg-scroll">
+                <table class="clean-table adm-sg-table">
+                    <thead><tr><th>Client</th><th>Max/hour</th><th>Peak in window</th><th>Hours</th><th>Items+files</th><th>Requests</th><th>Thumbs</th><th>Assets</th><th>Referer</th><th>Last (UTC)</th><th>User agent</th></tr></thead>
+                    <tbody>
+                    {% for t in sg.top %}
+                    <tr>
+                        <td>{{ who(t.who) }}</td>
+                        <td class="adm-sg-num">{{ t.max_h }}</td>
+                        <td class="adm-sg-num">{{ t.peak }}</td>
+                        <td class="adm-sg-num">{{ t.hours }}</td>
+                        <td class="adm-sg-num">{{ t.things }}</td>
+                        <td class="adm-sg-num">{{ t.requests }}</td>
+                        <td class="adm-sg-num">{{ t.thumbs }}%</td>
+                        <td class="adm-sg-num">{{ t.assets }}%</td>
+                        <td class="adm-sg-num">{{ t.referer }}%</td>
+                        <td>{{ t.last }}</td>
+                        <td>{{ ua(t.ua, t.ua_class) }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="adm-sg-empty">No activity recorded in this period yet. Counts are written every minute.</p>
+            {% endif %}
+        </section>
+
+        <section class="adm-section">
+            <h2 class="adm-section-title"><i class="fa-solid fa-user-secret"></i> Tor</h2>
+            <p class="adm-muted">{% if sg.tor_on %}.onion visitors are counted per Tor circuit when Tor sends f0ckm the circuit on port {{ sg.tor_port }} (config/tor/torrc: <code>HiddenServicePort 80 f0ckm:{{ sg.tor_port }}</code> and <code>HiddenServiceExportCircuitID haproxy</code>). A hidden service still pointing at the main port works, but its visitors can't be told apart and aren't counted.{% else %}The .onion service is off (websrv.enable_tor_hs).{% endif %}</p>
+        </section>
+    </div>
+    <script src="/s/js/views/admin/scrapers.js?v={{ mtime("/public/s/js/views/admin/scrapers.js") }}"></script>
+</div>
+</div>
+{% include (shell_footer or "snippets/footer.html") %}

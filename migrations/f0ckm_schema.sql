@@ -18,6 +18,9 @@ ALTER TABLE IF EXISTS ONLY public.webauthn_credentials DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_warnings DROP CONSTRAINT IF EXISTS user_warnings_admin_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.user_video_views DROP CONSTRAINT IF EXISTS user_video_views_video_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.scraper_blocks DROP CONSTRAINT IF EXISTS scraper_blocks_user_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.scraper_blocks DROP CONSTRAINT IF EXISTS scraper_blocks_lifted_by_fkey;
+ALTER TABLE IF EXISTS ONLY public.scraper_activity DROP CONSTRAINT IF EXISTS scraper_activity_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.remote_users DROP CONSTRAINT IF EXISTS remote_users_user_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.remote_items DROP CONSTRAINT IF EXISTS remote_items_item_id_fkey;
 ALTER TABLE IF EXISTS ONLY public.item_view_marks DROP CONSTRAINT IF EXISTS item_view_marks_item_id_fkey;
@@ -87,6 +90,8 @@ DROP INDEX IF EXISTS public.idx_tags_normalized;
 DROP INDEX IF EXISTS public.items_phash;
 DROP INDEX IF EXISTS public.idx_webauthn_credentials_user_id;
 DROP INDEX IF EXISTS public.idx_user_video_views_video_id;
+DROP INDEX IF EXISTS public.idx_scraper_blocks_expires_at;
+DROP INDEX IF EXISTS public.idx_scraper_activity_client;
 DROP INDEX IF EXISTS public.idx_item_view_marks_seen_at;
 DROP INDEX IF EXISTS public.idx_user_warnings_user_status;
 DROP INDEX IF EXISTS public.idx_user_last_seen;
@@ -168,6 +173,8 @@ ALTER TABLE IF EXISTS ONLY public.tags_assign DROP CONSTRAINT IF EXISTS tags_ass
 ALTER TABLE IF EXISTS ONLY public.tags_assign DROP CONSTRAINT IF EXISTS tags_assign_item_id_tag_id_primary;
 ALTER TABLE IF EXISTS ONLY public.sticker_packs DROP CONSTRAINT IF EXISTS sticker_packs_tg_name_key;
 ALTER TABLE IF EXISTS ONLY public.sticker_packs DROP CONSTRAINT IF EXISTS sticker_packs_pkey;
+ALTER TABLE IF EXISTS ONLY public.scraper_blocks DROP CONSTRAINT IF EXISTS scraper_blocks_pkey;
+ALTER TABLE IF EXISTS ONLY public.scraper_activity DROP CONSTRAINT IF EXISTS scraper_activity_pkey;
 ALTER TABLE IF EXISTS ONLY public.site_settings DROP CONSTRAINT IF EXISTS site_settings_pkey;
 ALTER TABLE IF EXISTS ONLY public.reports DROP CONSTRAINT IF EXISTS reports_pkey;
 ALTER TABLE IF EXISTS ONLY public.private_messages DROP CONSTRAINT IF EXISTS private_messages_pkey;
@@ -259,6 +266,8 @@ DROP TABLE IF EXISTS public.tags;
 DROP SEQUENCE IF EXISTS public.tags_id_seq;
 DROP SEQUENCE IF EXISTS public.sticker_packs_id_seq;
 DROP TABLE IF EXISTS public.sticker_packs;
+DROP TABLE IF EXISTS public.scraper_blocks;
+DROP TABLE IF EXISTS public.scraper_activity;
 DROP TABLE IF EXISTS public.site_settings;
 DROP SEQUENCE IF EXISTS public.reports_id_seq;
 DROP TABLE IF EXISTS public.reports;
@@ -1258,6 +1267,48 @@ ALTER SEQUENCE public.reports_id_seq OWNED BY public.reports.id;
 
 
 --
+-- Name: scraper_activity; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.scraper_activity (
+    hour timestamp with time zone NOT NULL,
+    client character varying(80) NOT NULL,
+    user_id integer,
+    onion boolean DEFAULT false NOT NULL,
+    requests integer DEFAULT 0 NOT NULL,
+    items integer DEFAULT 0 NOT NULL,
+    files integer DEFAULT 0 NOT NULL,
+    thumbs integer DEFAULT 0 NOT NULL,
+    assets integer DEFAULT 0 NOT NULL,
+    pages integer DEFAULT 0 NOT NULL,
+    api integer DEFAULT 0 NOT NULL,
+    referer integer DEFAULT 0 NOT NULL,
+    peak integer DEFAULT 0 NOT NULL,
+    ua_class character varying(16),
+    user_agent character varying(255)
+);
+
+
+--
+-- Name: scraper_blocks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.scraper_blocks (
+    client character varying(80) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    user_id integer,
+    onion boolean DEFAULT false NOT NULL,
+    user_agent character varying(255),
+    estimate integer NOT NULL,
+    limit_at integer NOT NULL,
+    enforced boolean DEFAULT true NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    lifted_at timestamp with time zone,
+    lifted_by integer
+);
+
+
+--
 -- Name: site_settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2233,6 +2284,22 @@ ALTER TABLE ONLY public.reports
 
 
 --
+-- Name: scraper_activity scraper_activity_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.scraper_activity
+    ADD CONSTRAINT scraper_activity_pkey PRIMARY KEY (hour, client);
+
+
+--
+-- Name: scraper_blocks scraper_blocks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.scraper_blocks
+    ADD CONSTRAINT scraper_blocks_pkey PRIMARY KEY (client, created_at);
+
+
+--
 -- Name: site_settings site_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2825,6 +2892,20 @@ CREATE INDEX idx_item_view_marks_seen_at ON public.item_view_marks USING btree (
 
 
 --
+-- Name: idx_scraper_activity_client; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_scraper_activity_client ON public.scraper_activity USING btree (client, hour);
+
+
+--
+-- Name: idx_scraper_blocks_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_scraper_blocks_expires_at ON public.scraper_blocks USING btree (expires_at);
+
+
+--
 -- Name: idx_user_video_views_video_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3354,6 +3435,30 @@ ALTER TABLE ONLY public.remote_items
 
 ALTER TABLE ONLY public.remote_users
     ADD CONSTRAINT remote_users_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE CASCADE;
+
+
+--
+-- Name: scraper_activity scraper_activity_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.scraper_activity
+    ADD CONSTRAINT scraper_activity_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE SET NULL;
+
+
+--
+-- Name: scraper_blocks scraper_blocks_lifted_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.scraper_blocks
+    ADD CONSTRAINT scraper_blocks_lifted_by_fkey FOREIGN KEY (lifted_by) REFERENCES public."user"(id) ON DELETE SET NULL;
+
+
+--
+-- Name: scraper_blocks scraper_blocks_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.scraper_blocks
+    ADD CONSTRAINT scraper_blocks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public."user"(id) ON DELETE SET NULL;
 
 
 --
