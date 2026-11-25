@@ -15,7 +15,8 @@
 # Memory grows with distinct (client, item) pairs; for many GB of logs, run it per month.
 #
 # Formats:
-#   nginx  `combined` or nginx-proxy's `vhost` (host first): IP, time, request, status, referer, UA
+#   nginx  `combined`, nginx-proxy's `vhost` (host first) or similar ("IP - [time]"): IP, time,
+#          request, status, referer, UA
 #   f0ckm  "<RFC3339 time>  INFO  1.23ms  GET  200  /path" (no IP: site-wide numbers only)
 #   anubis JSON lines with "msg"
 # Anything else is counted as unparsed (a few masked samples are shown).
@@ -160,15 +161,17 @@ function distribution(title, A, unit,    k, n, i, over) {
 
 { line = $0; gsub(/\033\[[0-9;]*m/, "", line); gsub(/\r/, "", line) }
 
-# nginx: ... IP - user [25/Nov/2026:00:35:30 +0100] "GET /x HTTP/1.1" 200 123 "ref" "ua" ...
+# nginx: ... IP - user [25/Nov/2026:00:35:30 +0100] (or "IP - [", "host IP - user [") "GET /x HTTP/1.1" 200 123 "ref" "ua" ...
 match(line, /\[[0-9]+\/[A-Za-z]+\/[0-9]+:[0-9]+:[0-9]+:[0-9]+ [-+][0-9]+\] "/) {
     pre = substr(line, 1, RSTART - 1)
     ts = substr(line, RSTART + 1, RLENGTH - 4)
     rest = substr(line, RSTART + RLENGTH - 1)
+    # the client: the last IP before the time (combined: "IP - user", others "IP -", vhost "host IP - user")
     nw = split(pre, w, " ")
-    if (nw < 3) { bad(); next }
-    ip = w[nw - 2]
-    if (ip !~ /^[0-9a-fA-F:.]+$/) { bad(); next }
+    ip = ""
+    for (i = nw; i >= 1 && ip == ""; i--)
+        if (w[i] ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ || (w[i] ~ /:/ && w[i] ~ /^[0-9a-fA-F:.]+$/)) ip = w[i]
+    if (ip == "") { bad(); next }
     np = split(rest, q, "\"")
     split(q[2], rq, " "); method = rq[1]; path = rq[2]
     split(q[3], sb, " "); status = sb[1]; bytes = sb[2] + 0
