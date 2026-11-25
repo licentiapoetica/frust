@@ -193,7 +193,6 @@ match(line, /\[[0-9]+\/[A-Za-z]+\/[0-9]+:[0-9]+:[0-9]+:[0-9]+ [-+][0-9]+\] "/) {
     if (ref != "" && ref != "-") CREF[c]++
     UA_C[c, ua]++
     if (!((c, ua) in CUA_SEEN)) { CUA_SEEN[c, ua] = 1; CUAN[c]++ }
-    if (CUAN[c] == 1) CUA1[c] = ua
     u = uaclass(ua)
     UAREQ[u]++
     if (!((u, c) in UACL)) { UACL[u, c] = 1; UACLN[u]++; cls = (c in CCLASS) ? CCLASS[c] "+" u : u; CCLASS[c] = cls }
@@ -310,12 +309,14 @@ END {
         print ""
         printf "== nginx: top %d clients by max things in one hour ==\n", TOP
         printf "  %-7s %-16s %6s %6s %6s %7s %6s %6s %6s %6s %5s %4s %5s  %s\n", "client", "net", "max/h", "max/d", "things", "reqs", "items", "files", "thumbs", "assets", "4xx%", "hrs", "refr%", "class | top user agent"
+        # each client's most used user agent and its share of the client's requests
+        for (k in UA_C) { split(k, kk, SUBSEP); if (UA_C[k] > CUATOPN[kk[1]]) { CUATOPN[kk[1]] = UA_C[k]; CUATOP[kk[1]] = kk[2] } }
         m = topn(CMAXH, TOP)
         for (i = 1; i <= m; i++) {
             c = TOPK[i]
             printf "  %-7s %-16s %6d %6d %6d %7d %6d %6d %6d %6d %4.0f%% %4d %4.0f%%  %s | %s%s\n", c, CMASK[c], CMAXH[c], CMAXD[c], CTH[c], CREQ[c],
                 CK[c, "item"], CK[c, "file"], CK[c, "thumb"], CK[c, "asset"], 100 * C4[c] / CREQ[c], CHOURS[c], 100 * CREF[c] / CREQ[c],
-                CCLASS[c], substr(CUA1[c], 1, 90), (CUAN[c] > 1 ? " (+" (CUAN[c] - 1) " UAs)" : "")
+                CCLASS[c], substr(CUATOP[c], 1, 90), (CUAN[c] > 1 ? sprintf(" (%.0f%% of its requests; +%d UAs)", 100 * CUATOPN[c] / CREQ[c], CUAN[c] - 1) : "")
         }
 
         print ""
